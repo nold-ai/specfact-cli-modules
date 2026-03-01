@@ -1,0 +1,12 @@
+name: nold-ai/specfact-backlog
+version: 0.39.0
+commands:
+  - backlog
+tier: official
+publisher: nold-ai
+bundle_dependencies: []
+description: Official SpecFact backlog bundle package.
+category: backlog
+bundle_group_command: backlog
+integrity:
+  checksum: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
