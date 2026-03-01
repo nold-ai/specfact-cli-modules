@@ -1,5 +1,5 @@
 name: nold-ai/specfact-codebase
-version: 0.39.0
+version: 0.40.0
 commands:
   - code
 tier: official
