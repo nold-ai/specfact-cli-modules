@@ -1,0 +1,257 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "specfact-cli-modules"
+version = "0.1.0"
+description = "Central module registry for SpecFact CLI marketplace"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+
+[tool.hatch.envs.default]
+type = "virtual"
+path = ".venv"
+dependencies = [
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytest-asyncio>=1.2.0",
+    "basedpyright>=1.32.1",
+    "ruff>=0.14.2",
+    "pylint>=4.0.2",
+]
+
+[tool.hatch.envs.default.scripts]
+dev-deps = "bash -lc 'if [ -n \"$SPECFACT_CLI_REPO\" ]; then pip install -e \"$SPECFACT_CLI_REPO\"; elif [ -d ../specfact-cli ]; then pip install -e ../specfact-cli; else echo \"Set SPECFACT_CLI_REPO to your specfact-cli checkout path\" >&2; exit 1; fi'"
+format = "ruff check . --fix && ruff format ."
+type-check = "basedpyright --pythonpath $(python -c 'import sys; print(sys.executable)') src tests tools {args}"
+lint = "ruff format . --check && basedpyright --pythonpath $(python -c 'import sys; print(sys.executable)') src tests tools && ruff check . && PYLINTHOME=.pylint.d pylint src tests tools"
+test = "pytest tests {args}"
+
+# Modules-repo scoped parity commands
+yaml-lint = "python tools/validate_repo_manifests.py"
+smart-test = "python tools/smart_test_coverage.py run {args}"
+smart-test-status = "python tools/smart_test_coverage.py status"
+smart-test-check = "python tools/smart_test_coverage.py check"
+contract-test = "python tools/contract_first_smart_test.py run {args}"
+contract-test-contracts = "python tools/contract_first_smart_test.py contracts {args}"
+contract-test-exploration = "python tools/contract_first_smart_test.py exploration {args}"
+contract-test-scenarios = "python tools/contract_first_smart_test.py scenarios {args}"
+contract-test-status = "python tools/contract_first_smart_test.py status"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/specfact_cli_modules"]
+
+[tool.isort]
+profile = "ruff"
+multi_line_output = 3
+line_length = 120
+
+[tool.basedpyright]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+useLibraryCodeForTypes = true
+extraPaths = [
+    "packages/specfact-project/src",
+    "packages/specfact-backlog/src",
+    "packages/specfact-codebase/src",
+    "packages/specfact-spec/src",
+    "packages/specfact-govern/src",
+]
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportMissingModuleSource = "none"
+reportImportCycles = false
+reportUnusedImport = true
+reportUnusedClass = true
+reportUnusedFunction = true
+reportUnusedVariable = true
+venvPath = "."
+venv = ".venv"
+
+[[tool.basedpyright.override]]
+module = [
+    "pytest.*",
+    "setuptools.*",
+]
+reportMissingImports = false
+
+[[tool.basedpyright.override]]
+module = [
+    "specfact_project.*",
+    "specfact_backlog.*",
+    "specfact_codebase.*",
+    "specfact_spec.*",
+    "specfact_govern.*",
+]
+typeCheckingMode = "basic"
+reportMissingImports = false
+reportAttributeAccessIssue = false
+
+[tool.pytest.ini_options]
+minversion = "8.4.2"
+addopts = "-ra -v --import-mode=importlib"
+pythonpath = [
+    "src",
+    "packages/specfact-project/src",
+    "packages/specfact-backlog/src",
+    "packages/specfact-codebase/src",
+    "packages/specfact-spec/src",
+    "packages/specfact-govern/src",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "contract: contract-oriented checks",
+    "integration: integration tests",
+    "e2e: end-to-end tests",
+]
+
+[tool.coverage.run]
+branch = true
+parallel = false
+source = ["src", "packages", "tools"]
+relative_files = true
+data_file = "logs/tests/coverage/.coverage"
+omit = [
+    "*/tests/*",
+    "src/**/__init__.py",
+    "packages/**/__init__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 80
+precision = 2
+
+[tool.pylint.messages_control]
+disable = [
+    "C0114",
+    "C0115",
+    "C0116",
+    "C0103",
+    "R0903",
+    "R0913",
+    "R0912",
+    "R0915",
+    "W0511",
+    "C0413",
+    "E0401",
+    "E0611",
+    "E1101",
+    "E0601",
+    "E1126",
+    "E0603",
+    "E1136",
+    "E0110",
+]
+
+[tool.pylint.master]
+init-hook = """
+import sys
+import os
+sys.path.insert(0, 'tools')
+sys.path.insert(0, os.path.join(os.getcwd(), 'src'))
+"""
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.design]
+max-args = 8
+max-locals = 20
+max-returns = 8
+max-branches = 15
+max-statements = 60
+max-parents = 8
+max-attributes = 12
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "C4",
+    "T10",
+    "T20",
+    "SIM",
+    "PIE",
+    "RET",
+    "RUF",
+]
+ignore = [
+    "E501",
+    "C901",
+    "PLR0913",
+    "PLR0912",
+    "PLR0915",
+    "PLR2004",
+    "PLR0911",
+    "PLR0917",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+    "A003",
+    "S101",
+    "T20",
+    "BLE001",
+    "EM101",
+    "EM102",
+    "TRY003",
+    "ERA001",
+    "PD",
+    "NPY",
+    "AIR",
+    "PERF",
+    "LOG",
+    "G",
+    "INP",
+    "SLF",
+    "SLOT",
+    "TCH",
+    "INT",
+    "PYI",
+    "RUF012",
+    "RUF001",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["S101", "PLR2004", "T20", "SLF001"]
+"tools/**/*" = ["T20", "S101", "INP001", "PLR2004"]
+"packages/**/commands.py" = ["B008"]
+
+[tool.ruff.lint.isort]
+force-single-line = false
+force-wrap-aliases = false
+combine-as-imports = true
+split-on-trailing-comma = true
+lines-after-imports = 2
+known-first-party = [
+    "specfact_project",
+    "specfact_backlog",
+    "specfact_codebase",
+    "specfact_spec",
+    "specfact_govern",
+    "specfact_cli_modules",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

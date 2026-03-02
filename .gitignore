@@ -1,0 +1,14 @@
+# Virtual envs
+.venv/
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.pylint.d/
+
+# Test and coverage artifacts
+.coverage
+.coverage_cache/
+logs/
