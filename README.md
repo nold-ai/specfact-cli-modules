@@ -35,6 +35,13 @@ hatch run smart-test
 hatch run test
 ```
 
+To mirror CI locally with git hooks, enable pre-commit:
+
+```bash
+pre-commit install
+pre-commit run --all-files
+```
+
 Scope notes:
 - `ruff` runs on the full repo.
 - `basedpyright` and `pylint` are scoped to `src/`, `tests/`, and `tools/` for modules-repo infrastructure parity.

@@ -23,6 +23,8 @@ dependencies = [
     "basedpyright>=1.32.1",
     "ruff>=0.14.2",
     "pylint>=4.0.2",
+    "pre-commit>=3.7.0",
+    "typer>=0.20.0",
 ]
 
 [tool.hatch.envs.default.scripts]

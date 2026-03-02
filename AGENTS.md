@@ -27,6 +27,15 @@ hatch run smart-test
 hatch run test
 ```
 
+## Pre-commit (local)
+
+Install and run pre-commit hooks so they mirror the CI quality gates:
+
+```bash
+pre-commit install
+pre-commit run --all-files
+```
+
 ## Scope rules
 
 - Keep bundle package code under `packages/`.
