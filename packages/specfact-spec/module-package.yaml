@@ -1,11 +1,11 @@
 name: nold-ai/specfact-spec
-version: 0.40.0
+version: 0.40.1
 commands:
-  - spec
+- spec
 tier: official
 publisher: nold-ai
 bundle_dependencies:
-  - nold-ai/specfact-project
+- nold-ai/specfact-project
 description: Official SpecFact specification bundle package.
 category: spec
 bundle_group_command: spec

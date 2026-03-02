@@ -1,7 +1,7 @@
 name: nold-ai/specfact-codebase
-version: 0.40.0
+version: 0.40.1
 commands:
-  - code
+- code
 tier: official
 publisher: nold-ai
 bundle_dependencies: []

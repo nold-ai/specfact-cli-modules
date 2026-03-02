@@ -1,7 +1,7 @@
 name: nold-ai/specfact-backlog
-version: 0.40.0
+version: 0.40.1
 commands:
-  - backlog
+- backlog
 tier: official
 publisher: nold-ai
 bundle_dependencies: []
