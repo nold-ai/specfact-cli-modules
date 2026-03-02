@@ -2,8 +2,11 @@
 .venv/
 
 # Python caches
+__pycache__/*.pyc
 __pycache__/
+**/__pycache__/
 *.pyc
+**/*.pyc
 .pytest_cache/
 .ruff_cache/
 .pylint.d/
