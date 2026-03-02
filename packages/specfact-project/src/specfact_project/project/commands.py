@@ -19,7 +19,6 @@ from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
-
 from specfact_cli.contracts.module_interface import ModuleIOContract
 from specfact_cli.models.project import (
     BundleManifest,
@@ -234,7 +233,6 @@ def _collect_backlog_health_metrics(adapter: str, project_id: str, template: str
     from backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
     from backlog_core.analyzers.dependency import DependencyAnalyzer
     from backlog_core.graph.builder import BacklogGraphBuilder
-
     from specfact_cli.adapters.registry import AdapterRegistry
 
     adapter_instance = AdapterRegistry.get_adapter(adapter)

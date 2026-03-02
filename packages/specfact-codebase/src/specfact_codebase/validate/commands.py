@@ -12,7 +12,6 @@ from pathlib import Path
 import typer
 from beartype import beartype
 from icontract import require
-
 from specfact_cli.contracts.module_interface import ModuleIOContract
 from specfact_cli.modules import module_io_shim
 from specfact_cli.runtime import debug_log_operation, debug_print, get_configured_console, is_debug_mode

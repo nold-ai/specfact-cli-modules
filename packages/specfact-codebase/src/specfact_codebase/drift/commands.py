@@ -14,7 +14,6 @@ import typer
 from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
-
 from specfact_cli.contracts.module_interface import ModuleIOContract
 from specfact_cli.modules import module_io_shim
 from specfact_cli.runtime import debug_log_operation, debug_print, is_debug_mode
@@ -89,7 +88,6 @@ def detect_drift(
         )
         debug_print("[dim]drift detect: started[/dim]")
     from rich.console import Console
-
     from specfact_cli.utils.structure import SpecFactStructure
 
     console = Console()

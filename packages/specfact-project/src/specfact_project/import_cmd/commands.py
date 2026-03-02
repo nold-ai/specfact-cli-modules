@@ -18,7 +18,6 @@ import typer
 from beartype import beartype
 from icontract import require
 from rich.progress import Progress
-
 from specfact_cli import runtime
 from specfact_cli.adapters.registry import AdapterRegistry
 from specfact_cli.contracts.module_interface import ModuleIOContract
@@ -518,7 +517,6 @@ def _update_source_tracking(plan_bundle: PlanBundle, repo: Path) -> None:
         import os
 
         from rich.progress import Progress
-
         from specfact_cli.utils.terminal import get_progress_config
 
         # In test mode, use sequential processing to avoid ThreadPoolExecutor deadlocks
@@ -624,7 +622,6 @@ def _extract_relationships_and_graph(
 
     console.print("\n[cyan]🔍 Enhanced analysis: Extracting relationships, contracts, and graph dependencies...[/cyan]")
     from rich.progress import Progress, SpinnerColumn, TextColumn
-
     from specfact_cli.analyzers.graph_analyzer import GraphAnalyzer
     from specfact_cli.analyzers.relationship_mapper import RelationshipMapper
     from specfact_cli.utils.optional_deps import check_cli_tool_available
@@ -858,7 +855,6 @@ def _extract_contracts(
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
             from rich.progress import Progress
-
             from specfact_cli.utils.terminal import get_progress_config
 
             # In test mode, use sequential processing to avoid ThreadPoolExecutor deadlocks
@@ -1058,7 +1054,6 @@ def _extract_contracts(
             )
 
         from rich.progress import Progress
-
         from specfact_cli.utils.terminal import get_progress_config
 
         progress_columns, progress_kwargs = get_progress_config()
@@ -1346,7 +1341,6 @@ def _build_enrichment_context(
         # Check if any source data changed (relationships, contracts, features)
         # This can be slow for large bundles - show progress
         from rich.progress import SpinnerColumn, TextColumn
-
         from specfact_cli.utils.terminal import get_progress_config
 
         _progress_columns, progress_kwargs = get_progress_config()
@@ -1378,7 +1372,6 @@ def _build_enrichment_context(
         console.print("\n[cyan]📊 Building enrichment context...[/cyan]")
         # Building context can be slow for large bundles - show progress
         from rich.progress import SpinnerColumn, TextColumn
-
         from specfact_cli.utils.enrichment_context import build_enrichment_context
         from specfact_cli.utils.terminal import get_progress_config
 

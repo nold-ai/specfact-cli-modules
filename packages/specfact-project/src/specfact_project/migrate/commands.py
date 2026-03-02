@@ -15,7 +15,6 @@ import typer
 from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
-
 from specfact_cli.models.plan import Feature
 from specfact_cli.modules import module_io_shim
 from specfact_cli.runtime import debug_log_operation, debug_print, is_debug_mode

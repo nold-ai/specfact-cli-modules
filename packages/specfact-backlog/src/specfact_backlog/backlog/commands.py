@@ -36,8 +36,6 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.prompt import Confirm
 from rich.table import Table
-from typer.core import TyperGroup
-
 from specfact_cli.adapters.registry import AdapterRegistry
 from specfact_cli.backlog.adapters.base import BacklogAdapter
 from specfact_cli.backlog.ai_refiner import BacklogAIRefiner
@@ -50,6 +48,7 @@ from specfact_cli.models.project import BundleManifest, ProjectBundle
 from specfact_cli.models.validation import ValidationReport
 from specfact_cli.runtime import debug_log_operation, is_debug_mode
 from specfact_cli.templates.registry import BacklogTemplate, TemplateRegistry
+from typer.core import TyperGroup
 
 
 class _BacklogCommandGroup(TyperGroup):
@@ -4427,7 +4426,6 @@ def map_fields(
     import re
 
     import requests
-
     from specfact_cli.backlog.mappers.template_config import FieldMappingConfig
     from specfact_cli.utils.auth_tokens import get_token
 

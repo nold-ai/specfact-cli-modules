@@ -20,7 +20,6 @@ from icontract import ensure, require
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
-
 from specfact_cli.integrations.specmatic import (
     check_backward_compatibility,
     check_specmatic_available,
@@ -541,7 +540,6 @@ def generate_tests(
         specfact spec generate-tests --bundle legacy-api --force  # Bypass cache
     """
     from rich.console import Console
-
     from specfact_cli.telemetry import telemetry
     from specfact_cli.utils.progress import load_bundle_with_progress
     from specfact_cli.utils.structure import SpecFactStructure
