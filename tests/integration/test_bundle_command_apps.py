@@ -9,7 +9,9 @@ COMMAND_MODULES = [
     "specfact_project.plan.commands",
     "specfact_project.project.commands",
     "specfact_backlog.backlog.commands",
+    "specfact_codebase.code.commands",
     "specfact_codebase.analyze.commands",
+    "specfact_govern.govern.commands",
     "specfact_spec.spec.commands",
     "specfact_govern.enforce.commands",
 ]

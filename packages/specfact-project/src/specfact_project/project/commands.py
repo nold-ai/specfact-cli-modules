@@ -39,10 +39,13 @@ from specfact_cli.utils.progress import load_bundle_with_progress, save_bundle_w
 from specfact_cli.utils.structure import SpecFactStructure
 from specfact_cli.versioning import ChangeAnalyzer, bump_version, validate_semver
 
+from specfact_project.sync.commands import app as sync_app
+
 
 app = typer.Typer(help="Manage project bundles with persona workflows")
 version_app = typer.Typer(help="Manage project bundle versions")
 app.add_typer(version_app, name="version")
+app.add_typer(sync_app, name="sync")
 console = Console()
 _MODULE_IO_CONTRACT = ModuleIOContract
 import_to_bundle = module_io_shim.import_to_bundle
