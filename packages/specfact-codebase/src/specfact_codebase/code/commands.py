@@ -9,6 +9,7 @@ from specfact_codebase.drift.commands import app as drift_app
 from specfact_codebase.repro.commands import app as repro_app
 from specfact_codebase.validate.commands import app as validate_app
 
+
 app = typer.Typer(
     help="Codebase quality commands: analyze, drift, validate, repro.",
     no_args_is_help=True,

@@ -7,6 +7,7 @@ import typer
 from specfact_govern.enforce.commands import app as enforce_app
 from specfact_govern.patch_mode.commands import app as patch_app
 
+
 app = typer.Typer(
     help="Governance and quality gates: enforce, patch.",
     no_args_is_help=True,
