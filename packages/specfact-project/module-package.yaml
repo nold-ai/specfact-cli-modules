@@ -1,7 +1,7 @@
 name: nold-ai/specfact-project
-version: 0.40.8
+version: 0.40.9
 commands:
-- project
+  - project
 tier: official
 publisher:
   name: nold-ai
@@ -11,4 +11,5 @@ description: Official SpecFact project bundle package.
 category: project
 bundle_group_command: project
 integrity:
-  checksum: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  checksum: sha256:c8268e5ae3645ef958ba1829310a53fac8b8ca2f2219c722bd01e0213bec2390
+  signature: pkbusZNv+KSgwZ3vWYBmhHm5m07ujKAhx1Ftzgi19K7GVKfvSbog6MmsK3pc/E3p3pPQIbox7SqPgoWZPCVhAw==

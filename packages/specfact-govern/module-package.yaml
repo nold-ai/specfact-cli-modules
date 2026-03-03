@@ -1,15 +1,16 @@
 name: nold-ai/specfact-govern
-version: 0.40.8
+version: 0.40.9
 commands:
-- govern
+  - govern
 tier: official
 publisher:
   name: nold-ai
   email: hello@noldai.com
 bundle_dependencies:
-- nold-ai/specfact-project
+  - nold-ai/specfact-project
 description: Official SpecFact governance bundle package.
 category: govern
 bundle_group_command: govern
 integrity:
-  checksum: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  checksum: sha256:8ee2cc8198841cc46ca2bf63d803bd175742cd143fd53cb16cc4271d6c9ce0e6
+  signature: nulG9tkSRnxD8gBvxBsBxttqz2K+Oiz2TA2MDJkRE22Ixsa395TwY082J+ZIyT9AEJz55dQmC3PB2ELMwnFvCw==
