@@ -1,5 +1,5 @@
 name: nold-ai/specfact-backlog
-version: 0.40.1
+version: 0.40.2
 commands:
 - backlog
 tier: official
