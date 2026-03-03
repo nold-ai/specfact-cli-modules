@@ -2,41 +2,53 @@
   "modules": [
     {
       "id": "nold-ai/specfact-project",
-      "latest_version": "0.40.2",
-      "download_url": "modules/specfact-project-0.40.2.tar.gz",
-      "checksum_sha256": "123bb72ac14015e6b585c1f7095365a88e3580e16b41b238c559e4e1182c25ff",
+      "latest_version": "0.40.6",
+      "download_url": "modules/specfact-project-0.40.6.tar.gz",
+      "checksum_sha256": "352c60a09916ce36c4a6d32daad79acd3809c00081ae00ad345e48440adb4092",
       "tier": "official",
-      "publisher": "nold-ai",
+      "publisher": {
+        "name": "nold-ai",
+        "email": "hello@noldai.com"
+      },
       "bundle_dependencies": [],
       "description": "Official SpecFact project bundle package."
     },
     {
       "id": "nold-ai/specfact-backlog",
-      "latest_version": "0.40.2",
-      "download_url": "modules/specfact-backlog-0.40.2.tar.gz",
-      "checksum_sha256": "07e2ed09eb7a780350513415f1ada910101592304a2440cbcceddc09b0797a14",
+      "latest_version": "0.40.6",
+      "download_url": "modules/specfact-backlog-0.40.6.tar.gz",
+      "checksum_sha256": "55e18cc73e540d335a79436842908fb0d6f32be664443a8b47fff76238b4f011",
       "tier": "official",
-      "publisher": "nold-ai",
+      "publisher": {
+        "name": "nold-ai",
+        "email": "hello@noldai.com"
+      },
       "bundle_dependencies": [],
       "description": "Official SpecFact backlog bundle package."
     },
     {
       "id": "nold-ai/specfact-codebase",
-      "latest_version": "0.40.2",
-      "download_url": "modules/specfact-codebase-0.40.2.tar.gz",
-      "checksum_sha256": "8f0e63d795737cb95bc9b9bb94393ad510a568fe5051a3389527cb20630d1a2b",
+      "latest_version": "0.40.6",
+      "download_url": "modules/specfact-codebase-0.40.6.tar.gz",
+      "checksum_sha256": "145ec268bebf6a560bd40b2098591205b09903d83805b740baed36f2e5a53fc9",
       "tier": "official",
-      "publisher": "nold-ai",
+      "publisher": {
+        "name": "nold-ai",
+        "email": "hello@noldai.com"
+      },
       "bundle_dependencies": [],
       "description": "Official SpecFact codebase bundle package."
     },
     {
       "id": "nold-ai/specfact-spec",
-      "latest_version": "0.40.2",
-      "download_url": "modules/specfact-spec-0.40.2.tar.gz",
-      "checksum_sha256": "734baa9da1f2ea3eb92093aaaa46068b079b040101ed97f3514b95995f5e59a1",
+      "latest_version": "0.40.6",
+      "download_url": "modules/specfact-spec-0.40.6.tar.gz",
+      "checksum_sha256": "050382abf1cb7ddc172c33261f0cc6a70261c791e5af5488692af4e374f9c787",
       "tier": "official",
-      "publisher": "nold-ai",
+      "publisher": {
+        "name": "nold-ai",
+        "email": "hello@noldai.com"
+      },
       "bundle_dependencies": [
         "nold-ai/specfact-project"
       ],
@@ -44,11 +56,14 @@
     },
     {
       "id": "nold-ai/specfact-govern",
-      "latest_version": "0.40.2",
-      "download_url": "modules/specfact-govern-0.40.2.tar.gz",
-      "checksum_sha256": "26052f0d95fcd29a4614f15d818ad28ab678bed16919a4ca3cc8d5c712906048",
+      "latest_version": "0.40.6",
+      "download_url": "modules/specfact-govern-0.40.6.tar.gz",
+      "checksum_sha256": "064153f07c3de334614d5b90212c9d39643cd9bb84e155b19a05cebb0639ea8d",
       "tier": "official",
-      "publisher": "nold-ai",
+      "publisher": {
+        "name": "nold-ai",
+        "email": "hello@noldai.com"
+      },
       "bundle_dependencies": [
         "nold-ai/specfact-project"
       ],

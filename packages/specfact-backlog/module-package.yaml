@@ -1,9 +1,11 @@
 name: nold-ai/specfact-backlog
-version: 0.40.2
+version: 0.40.6
 commands:
 - backlog
 tier: official
-publisher: nold-ai
+publisher:
+  name: nold-ai
+  email: hello@noldai.com
 bundle_dependencies: []
 description: Official SpecFact backlog bundle package.
 category: backlog

@@ -1,9 +1,11 @@
 name: nold-ai/specfact-spec
-version: 0.40.2
+version: 0.40.6
 commands:
 - spec
 tier: official
-publisher: nold-ai
+publisher:
+  name: nold-ai
+  email: hello@noldai.com
 bundle_dependencies:
 - nold-ai/specfact-project
 description: Official SpecFact specification bundle package.
