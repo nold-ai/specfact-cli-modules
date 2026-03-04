@@ -1,5 +1,5 @@
 name: nold-ai/specfact-backlog
-version: 0.40.13
+version: 0.40.15
 commands:
   - backlog
 tier: official
@@ -7,9 +7,10 @@ publisher:
   name: nold-ai
   email: hello@noldai.com
 bundle_dependencies: []
+core_compatibility: '>=0.40.0,<1.0.0'
 description: Official SpecFact backlog bundle package.
 category: backlog
 bundle_group_command: backlog
 integrity:
-  checksum: sha256:d4adde629345bf657f510447ebf3387783610b6af42346205ce43b1f3b06039b
-  signature: BF9szfY/BN1T/kpZEWXMuYraNw4+mRiHwozRbi6tjUu2vw50OFWdDK4bOK9sZriHGzjlWxm/sB1VxMCE5VS8Bg==
+  checksum: sha256:6a1b68fdc47f6916110808c91c04f8ce714b3d3a7d8d44351a58a108f7cd7435
+  signature: dM4vj7Hd2rMMYO5A8D9EhsyPnIS4SumuF2UFsQYdzx1u8TFM5v+C0Quu+d3p11rfaN7QoRAhMzd4cIP0UFCUDg==
