@@ -22,10 +22,15 @@ hatch run format
 hatch run type-check
 hatch run lint
 hatch run yaml-lint
+hatch run verify-modules-signature --require-signature --enforce-version-bump
 hatch run contract-test
 hatch run smart-test
 hatch run test
 ```
+
+CI orchestration runs in `.github/workflows/pr-orchestrator.yml` and enforces:
+- module signature + version-bump verification
+- matrix quality gates on Python 3.11/3.12/3.13
 
 ## Pre-commit (local)
 
@@ -42,3 +47,29 @@ pre-commit run --all-files
 - Keep registry metadata in `registry/index.json` and `packages/*/module-package.yaml`.
 - `type-check` and `lint` are scoped to `src/`, `tests/`, and `tools/` for repo tooling quality.
 - Use `tests/` for bundle behavior and migration parity tests.
+- This repository hosts official nold-ai bundles only; third-party bundles publish from their own repositories.
+
+## Bundle versioning policy
+
+### SemVer rules
+
+- `patch`: bug fix with no command/API change
+- `minor`: new command, option, or public API addition
+- `major`: breaking API/behavior change or command removal
+
+### core_compatibility rules
+
+- When a bundle requires a newer minimum `specfact-cli`, update `core_compatibility` in:
+  - `packages/<bundle>/module-package.yaml`
+  - `registry/index.json` entry metadata (when field is carried there)
+- Treat `core_compatibility` review as mandatory on each version bump.
+
+### Release process
+
+1. Branch from `main`.
+2. Bump bundle version in `packages/<bundle>/module-package.yaml`.
+3. Run publish pre-check:
+   - `python scripts/publish-module.py --bundle <bundle>`
+4. Publish with project tooling (`scripts/publish-module.py --bundle <name>` wrapper + packaging flow).
+5. Update `registry/index.json` with new `latest_version`, artifact URL, and checksum.
+6. Tag release and merge via PR after quality gates pass.

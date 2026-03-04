@@ -15,12 +15,13 @@ from beartype import beartype
 from icontract import ensure, require
 from rich.table import Table
 from specfact_cli.contracts.module_interface import ModuleIOContract
-from specfact_cli.enrichers.constitution_enricher import ConstitutionEnricher
 from specfact_cli.modules import module_io_shim
 from specfact_cli.runtime import debug_log_operation, debug_print, get_configured_console, is_debug_mode
 from specfact_cli.utils import print_error, print_info, print_success
 from specfact_cli.utils.sdd_discovery import list_all_sdds
 from specfact_cli.utils.structure import SpecFactStructure
+
+from specfact_spec.enrichers.constitution_enricher import ConstitutionEnricher
 
 
 app = typer.Typer(

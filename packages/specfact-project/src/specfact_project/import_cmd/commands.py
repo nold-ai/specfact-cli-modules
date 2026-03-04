@@ -43,8 +43,8 @@ sync_with_bundle = module_io_shim.sync_with_bundle
 validate_bundle = module_io_shim.validate_bundle
 
 if TYPE_CHECKING:
-    from specfact_cli.generators.openapi_extractor import OpenAPIExtractor
-    from specfact_cli.generators.test_to_openapi import OpenAPITestConverter
+    from specfact_project.generators.openapi_extractor import OpenAPIExtractor
+    from specfact_project.generators.test_to_openapi import OpenAPITestConverter
 
 
 _CONTRACT_WORKER_EXTRACTOR: OpenAPIExtractor | None = None
@@ -67,8 +67,8 @@ def _import_callback() -> None:
 
 def _init_contract_worker(repo_path: str, contracts_dir: str) -> None:
     """Initialize per-process contract extraction state."""
-    from specfact_cli.generators.openapi_extractor import OpenAPIExtractor
-    from specfact_cli.generators.test_to_openapi import OpenAPITestConverter
+    from specfact_project.generators.openapi_extractor import OpenAPIExtractor
+    from specfact_project.generators.test_to_openapi import OpenAPITestConverter
 
     global _CONTRACT_WORKER_CONTRACTS_DIR
     global _CONTRACT_WORKER_EXTRACTOR
@@ -153,7 +153,7 @@ def _convert_plan_bundle_to_project_bundle(plan_bundle: PlanBundle, bundle_name:
     Returns:
         ProjectBundle instance
     """
-    from specfact_cli.migrations.plan_migrator import get_latest_schema_version
+    from specfact_project.migrations.plan_migrator import get_latest_schema_version
 
     # Create manifest with latest schema version
     manifest = BundleManifest(
@@ -189,7 +189,7 @@ def _check_incremental_changes(
     # Note: enrichment doesn't force full regeneration - it only adds/updates features
     # Contracts should only be regenerated if source files changed, not just because enrichment was applied
 
-    from specfact_cli.utils.incremental_check import check_incremental_changes
+    from specfact_project.utils.incremental_check import check_incremental_changes
 
     try:
         progress_columns, progress_kwargs = get_progress_config()
@@ -415,9 +415,9 @@ def _analyze_codebase(
     incremental_callback: Any | None = None,
 ) -> PlanBundle:
     """Analyze codebase using AI agent or AST fallback."""
-    from specfact_cli.agents.analyze_agent import AnalyzeAgent
-    from specfact_cli.agents.registry import get_agent
-    from specfact_cli.analyzers.code_analyzer import CodeAnalyzer
+    from specfact_project.agents.analyze_agent import AnalyzeAgent
+    from specfact_project.agents.registry import get_agent
+    from specfact_project.analyzers.code_analyzer import CodeAnalyzer
 
     if routing_result.execution_mode == "agent":
         console.print("[dim]Mode: CoPilot (AI-first import)[/dim]")
@@ -494,7 +494,7 @@ def _update_source_tracking(plan_bundle: PlanBundle, repo: Path) -> None:
     import os
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    from specfact_cli.utils.source_scanner import SourceArtifactScanner
+    from specfact_project.utils.source_scanner import SourceArtifactScanner
 
     console.print("\n[cyan]🔗 Linking source files to features...[/cyan]")
     scanner = SourceArtifactScanner(repo)
@@ -622,10 +622,11 @@ def _extract_relationships_and_graph(
 
     console.print("\n[cyan]🔍 Enhanced analysis: Extracting relationships, contracts, and graph dependencies...[/cyan]")
     from rich.progress import Progress, SpinnerColumn, TextColumn
-    from specfact_cli.analyzers.graph_analyzer import GraphAnalyzer
-    from specfact_cli.analyzers.relationship_mapper import RelationshipMapper
     from specfact_cli.utils.optional_deps import check_cli_tool_available
     from specfact_cli.utils.terminal import get_progress_config
+
+    from specfact_project.analyzers.graph_analyzer import GraphAnalyzer
+    from specfact_project.analyzers.relationship_mapper import RelationshipMapper
 
     # Show spinner while checking pyan3 and collecting file hashes
     _progress_columns, progress_kwargs = get_progress_config()
@@ -659,7 +660,7 @@ def _extract_relationships_and_graph(
         changed_files: set[Path] = set()
         if incremental_changes and plan_bundle:
             setup_progress.update(setup_task, description="[cyan]Checking for changed files...")
-            from specfact_cli.utils.incremental_check import get_changed_files
+            from specfact_project.utils.incremental_check import get_changed_files
 
             # get_changed_files iterates through all features and checks file hashes
             # This can be slow for large bundles - show progress
@@ -821,8 +822,8 @@ def _extract_contracts(
     import os
     from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 
-    from specfact_cli.generators.openapi_extractor import OpenAPIExtractor
-    from specfact_cli.generators.test_to_openapi import OpenAPITestConverter
+    from specfact_project.generators.openapi_extractor import OpenAPIExtractor
+    from specfact_project.generators.test_to_openapi import OpenAPITestConverter
 
     contracts_generated = 0
     contracts_dir = bundle_dir / "contracts"
@@ -1354,7 +1355,7 @@ def _build_enrichment_context(
             try:
                 existing_hash = hashlib.sha256(context_path.read_bytes()).hexdigest()
                 # Build temporary context to compare hash
-                from specfact_cli.utils.enrichment_context import build_enrichment_context
+                from specfact_project.utils.enrichment_context import build_enrichment_context
 
                 check_progress.update(check_task, description="[cyan]Building temporary context for comparison...")
                 temp_context = build_enrichment_context(
@@ -1372,8 +1373,9 @@ def _build_enrichment_context(
         console.print("\n[cyan]📊 Building enrichment context...[/cyan]")
         # Building context can be slow for large bundles - show progress
         from rich.progress import SpinnerColumn, TextColumn
-        from specfact_cli.utils.enrichment_context import build_enrichment_context
         from specfact_cli.utils.terminal import get_progress_config
+
+        from specfact_project.utils.enrichment_context import build_enrichment_context
 
         _progress_columns, progress_kwargs = get_progress_config()
         with Progress(
@@ -1422,7 +1424,7 @@ def _apply_enrichment(
         raise typer.Exit(1)
 
     console.print(f"\n[cyan]📝 Applying enrichment from: {enrichment}[/cyan]")
-    from specfact_cli.utils.enrichment_parser import EnrichmentParser, apply_enrichment
+    from specfact_project.utils.enrichment_parser import EnrichmentParser, apply_enrichment
 
     try:
         parser = EnrichmentParser()
@@ -1690,7 +1692,7 @@ def _suggest_constitution_bootstrap(repo: Path) -> None:
 
         is_test_env = os.environ.get("TEST_MODE") == "true" or os.environ.get("PYTEST_CURRENT_TEST") is not None
         if is_test_env:
-            from specfact_cli.enrichers.constitution_enricher import ConstitutionEnricher
+            from specfact_project.enrichers.constitution_enricher import ConstitutionEnricher
 
             specify_dir.mkdir(parents=True, exist_ok=True)
             enricher = ConstitutionEnricher()
@@ -1705,7 +1707,7 @@ def _suggest_constitution_bootstrap(repo: Path) -> None:
                     default=True,
                 )
                 if suggest_constitution:
-                    from specfact_cli.enrichers.constitution_enricher import ConstitutionEnricher
+                    from specfact_project.enrichers.constitution_enricher import ConstitutionEnricher
 
                     console.print("[dim]Generating bootstrap constitution...[/dim]")
                     specify_dir.mkdir(parents=True, exist_ok=True)
@@ -1734,8 +1736,9 @@ def _enrich_for_speckit_compliance(plan_bundle: PlanBundle) -> None:
     """
     console.print("\n[cyan]🔧 Enriching plan for tool compliance...[/cyan]")
     try:
-        from specfact_cli.enrichers.plan_enricher import PlanEnricher
         from specfact_cli.utils.terminal import get_progress_config
+
+        from specfact_project.enrichers.plan_enricher import PlanEnricher
 
         # Use PlanEnricher for consistent enrichment (same as plan review --auto-enrich)
         console.print("[dim]Enhancing vague acceptance criteria, incomplete requirements, generic tasks...[/dim]")
@@ -1958,8 +1961,9 @@ def from_bridge(
         specfact import from-bridge --repo ./my-project --write  # Auto-detect adapter
         specfact import from-bridge --repo ./my-project --dry-run  # Preview changes
     """
-    from specfact_cli.sync.bridge_probe import BridgeProbe
     from specfact_cli.utils.structure import SpecFactStructure
+
+    from specfact_project.sync_runtime.bridge_probe import BridgeProbe
 
     if is_debug_mode():
         debug_log_operation(
@@ -2009,7 +2013,7 @@ def from_bridge(
         raise typer.Exit(1)
 
     # Use adapter's detect() method
-    from specfact_cli.sync.bridge_probe import BridgeProbe
+    from specfact_project.sync_runtime.bridge_probe import BridgeProbe
 
     probe = BridgeProbe(repo)
     capabilities = probe.detect()
@@ -2090,7 +2094,7 @@ def from_bridge(
             progress.update(task, description=f"✓ Discovered {len(features)} features")
 
             # Step 2: Import artifacts using BridgeSync (adapter-agnostic)
-            from specfact_cli.sync.bridge_sync import BridgeSync
+            from specfact_project.sync_runtime.bridge_sync import BridgeSync
 
             bridge_sync = BridgeSync(repo, bridge_config=bridge_config)
             protocol = None
@@ -2100,7 +2104,8 @@ def from_bridge(
             protocol_path = repo / ".specfact" / "protocols" / "workflow.protocol.yaml"
             if protocol_path.exists():
                 from specfact_cli.models.protocol import Protocol
-                from specfact_cli.utils.yaml_utils import load_yaml
+
+                from specfact_project.utils.yaml_utils import load_yaml
 
                 try:
                     protocol_data = load_yaml(protocol_path)
@@ -2120,9 +2125,10 @@ def from_bridge(
             bundle_dir = SpecFactStructure.project_dir(base_path=repo, bundle_name=bundle_name)
 
             # Load or create project bundle
-            from specfact_cli.migrations.plan_migrator import get_latest_schema_version
             from specfact_cli.models.project import BundleManifest, BundleVersions, Product, ProjectBundle
             from specfact_cli.utils.bundle_loader import load_project_bundle, save_project_bundle
+
+            from specfact_project.migrations.plan_migrator import get_latest_schema_version
 
             if bundle_dir.exists() and (bundle_dir / "bundle.manifest.yaml").exists():
                 plan_bundle = load_project_bundle(bundle_dir, validate_hashes=False)
@@ -2228,7 +2234,7 @@ def from_bridge(
             # For Spec-Kit adapter, also generate protocol, Semgrep rules and GitHub Actions if supported
             # These are Spec-Kit-specific enhancements, not core import functionality
             if adapter_lower == "speckit":
-                from specfact_cli.importers.speckit_converter import SpecKitConverter
+                from specfact_project.importers.speckit_converter import SpecKitConverter
 
                 converter = SpecKitConverter(repo)
                 # Step 3: Generate protocol (Spec-Kit specific)
@@ -2241,7 +2247,8 @@ def from_bridge(
                         protocol_path = repo / ".specfact" / "protocols" / "workflow.protocol.yaml"
                         if protocol_path.exists():
                             from specfact_cli.models.protocol import Protocol
-                            from specfact_cli.utils.yaml_utils import load_yaml
+
+                            from specfact_project.utils.yaml_utils import load_yaml
 
                             try:
                                 protocol_data = load_yaml(protocol_path)
@@ -2273,8 +2280,9 @@ def from_bridge(
             # Handle file existence errors (conversion already completed above with individual try/except blocks)
             # If plan_bundle or protocol are None, try to load existing ones
             if plan_bundle is None or protocol is None:
-                from specfact_cli.migrations.plan_migrator import get_current_schema_version
                 from specfact_cli.models.plan import PlanBundle, Product
+
+                from specfact_project.migrations.plan_migrator import get_current_schema_version
 
                 if plan_bundle is None:
                     plan_bundle = PlanBundle(
@@ -2291,7 +2299,8 @@ def from_bridge(
                     protocol_path = repo / ".specfact" / "protocols" / "workflow.protocol.yaml"
                     if protocol_path.exists():
                         from specfact_cli.models.protocol import Protocol
-                        from specfact_cli.utils.yaml_utils import load_yaml
+
+                        from specfact_project.utils.yaml_utils import load_yaml
 
                         try:
                             protocol_data = load_yaml(protocol_path)

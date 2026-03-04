@@ -1,0 +1,80 @@
+title: SpecFact CLI Modules Documentation
+description: Official nold-ai bundle documentation for specfact-cli-modules.
+baseurl: "/specfact-cli-modules"
+url: "https://nold-ai.github.io"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+plugins:
+  - jekyll-feed
+  - jekyll-relative-links
+  - jekyll-sitemap
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .git
+  - .github
+  - .cursor
+  - .specfact
+  - tests
+  - tools
+  - packages
+  - tests
+  - tools
+  - scripts
+  - registry
+
+source: .
+destination: _site
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default
+  - scope:
+      path: ""
+      type: pages
+      exclude:
+        - "assets/**"
+    values:
+      permalink: /:basename/
+  - scope:
+      path: "getting-started"
+    values:
+      layout: default
+  - scope:
+      path: "guides"
+    values:
+      layout: default
+  - scope:
+      path: "reference"
+    values:
+      layout: default
+theme: minima
+minima:
+  social:
+    github:
+      username: nold-ai
+      repository: specfact-cli-modules
+  author:
+    name: NOLD AI
+    email: hello@noldai.com
+  skin: auto
+  show_excerpts: true
+
+sass:
+  style: compressed
+  sourcemap: never
+
+footer:
+  copyright: "© 2026 NOLD AI"
+  trademark: >
+    Official bundle documentation lives in this repository.

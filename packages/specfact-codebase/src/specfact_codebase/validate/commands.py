@@ -15,9 +15,10 @@ from icontract import require
 from specfact_cli.contracts.module_interface import ModuleIOContract
 from specfact_cli.modules import module_io_shim
 from specfact_cli.runtime import debug_log_operation, debug_print, get_configured_console, is_debug_mode
-from specfact_cli.validators.sidecar.crosshair_summary import format_summary_line
-from specfact_cli.validators.sidecar.models import SidecarConfig
-from specfact_cli.validators.sidecar.orchestrator import initialize_sidecar_workspace, run_sidecar_validation
+
+from specfact_codebase.validators.sidecar.crosshair_summary import format_summary_line
+from specfact_codebase.validators.sidecar.models import SidecarConfig
+from specfact_codebase.validators.sidecar.orchestrator import initialize_sidecar_workspace, run_sidecar_validation
 
 
 app = typer.Typer(name="validate", help="Validation commands", suggest_commands=False)

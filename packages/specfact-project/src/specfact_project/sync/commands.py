@@ -300,7 +300,7 @@ def _perform_sync_operation(
                 is_test_env = os.environ.get("TEST_MODE") == "true" or os.environ.get("PYTEST_CURRENT_TEST") is not None
                 if is_test_env:
                     # Auto-generate bootstrap constitution in test mode
-                    from specfact_cli.enrichers.constitution_enricher import ConstitutionEnricher
+                    from specfact_project.enrichers.constitution_enricher import ConstitutionEnricher
 
                     enricher = ConstitutionEnricher()
                     enriched_content = enricher.bootstrap(repo, constitution_path)
@@ -314,7 +314,7 @@ def _perform_sync_operation(
                             default=True,
                         )
                         if suggest_bootstrap:
-                            from specfact_cli.enrichers.constitution_enricher import ConstitutionEnricher
+                            from specfact_project.enrichers.constitution_enricher import ConstitutionEnricher
 
                             console.print("[dim]Generating bootstrap constitution...[/dim]")
                             enricher = ConstitutionEnricher()
@@ -350,7 +350,7 @@ def _perform_sync_operation(
         console.print("[bold green]✓[/bold green] Detected SpecFact structure")
 
     # Use BridgeSync for adapter-agnostic sync operations
-    from specfact_cli.sync.bridge_sync import BridgeSync
+    from specfact_project.sync_runtime.bridge_sync import BridgeSync
 
     bridge_sync = BridgeSync(repo, bridge_config=bridge_config)
 
@@ -777,9 +777,10 @@ def _sync_tool_to_specfact(
     Returns:
         Tuple of (merged_bundle, features_updated, features_added)
     """
-    from specfact_cli.generators.plan_generator import PlanGenerator
     from specfact_cli.utils.structure import SpecFactStructure
     from specfact_cli.validators.schema import validate_plan_bundle
+
+    from specfact_project.generators.plan_generator import PlanGenerator
 
     plan_path = SpecFactStructure.get_default_plan_path(repo)
     existing_bundle: PlanBundle | None = None
@@ -815,7 +816,7 @@ def _sync_tool_to_specfact(
         if is_valid and bundle:
             existing_bundle = bundle
             # Deduplicate existing features by normalized key (clean up duplicates from previous syncs)
-            from specfact_cli.utils.feature_keys import normalize_feature_key
+            from specfact_project.utils.feature_keys import normalize_feature_key
 
             seen_normalized_keys: set[str] = set()
             deduplicated_features: list[Feature] = []
@@ -829,7 +830,7 @@ def _sync_tool_to_specfact(
             if duplicates_removed > 0:
                 existing_bundle.features = deduplicated_features
                 # Write back deduplicated bundle immediately to clean up the plan file
-                from specfact_cli.generators.plan_generator import PlanGenerator
+                from specfact_project.generators.plan_generator import PlanGenerator
 
                 if task is not None:
                     progress.update(
@@ -873,7 +874,7 @@ def _sync_tool_to_specfact(
 
     if project_bundle is None:
         # Create new ProjectBundle with latest schema version
-        from specfact_cli.migrations.plan_migrator import get_latest_schema_version
+        from specfact_project.migrations.plan_migrator import get_latest_schema_version
 
         manifest = BundleManifest(
             versions=BundleVersions(schema=get_latest_schema_version(), project="0.1.0"),
@@ -948,7 +949,7 @@ def _sync_tool_to_specfact(
     except Exception:
         # If loading fails after imports, something went wrong - create minimal bundle
         if project_bundle is None:
-            from specfact_cli.migrations.plan_migrator import get_latest_schema_version
+            from specfact_project.migrations.plan_migrator import get_latest_schema_version
 
             manifest = BundleManifest(
                 versions=BundleVersions(schema=get_latest_schema_version(), project="0.1.0"),
@@ -981,7 +982,7 @@ def _sync_tool_to_specfact(
         if task is not None:
             progress.update(task, description="[cyan]Merging with existing plan bundle...[/cyan]")
         # Use normalized keys for matching to handle different key formats (e.g., FEATURE-001 vs 001_FEATURE_NAME)
-        from specfact_cli.utils.feature_keys import normalize_feature_key
+        from specfact_project.utils.feature_keys import normalize_feature_key
 
         # Build a map of normalized_key -> (index, original_key) for existing features
         normalized_key_map: dict[str, tuple[int, str]] = {}
@@ -1393,7 +1394,7 @@ def sync_bridge(
         debug_print("[dim]sync bridge: started[/dim]")
 
     # Auto-detect adapter if not specified
-    from specfact_cli.sync.bridge_probe import BridgeProbe
+    from specfact_project.sync_runtime.bridge_probe import BridgeProbe
 
     if adapter == "speckit" or adapter == "auto":
         probe = BridgeProbe(repo)
@@ -1503,7 +1504,7 @@ def sync_bridge(
     with telemetry.track_command("sync.bridge", telemetry_metadata) as record:
         # Handle export-only mode (SpecFact → DevOps)
         if sync_mode == "export-only":
-            from specfact_cli.sync.bridge_sync import BridgeSync
+            from specfact_project.sync_runtime.bridge_sync import BridgeSync
 
             console.print(f"[bold cyan]Exporting OpenSpec change proposals to {adapter_value}...[/bold cyan]")
 
@@ -1621,7 +1622,8 @@ def sync_bridge(
         # Handle read-only mode (OpenSpec → SpecFact)
         if sync_mode == "read-only":
             from specfact_cli.models.bridge import BridgeConfig
-            from specfact_cli.sync.bridge_sync import BridgeSync
+
+            from specfact_project.sync_runtime.bridge_sync import BridgeSync
 
             console.print(f"[bold cyan]Syncing OpenSpec artifacts (read-only) from:[/bold cyan] {repo}")
 
@@ -1814,7 +1816,7 @@ def sync_bridge(
             raise typer.Exit(1)
 
         if adapter_value in ("github", "ado") and sync_mode == "bidirectional":
-            from specfact_cli.sync.bridge_sync import BridgeSync
+            from specfact_project.sync_runtime.bridge_sync import BridgeSync
 
             resolved_bundle = bundle or _infer_bundle_name(resolved_repo)
             if not resolved_bundle:
@@ -1912,7 +1914,7 @@ def sync_bridge(
 
         # Watch mode implementation (using bridge-based watch)
         if watch:
-            from specfact_cli.sync.bridge_watch import BridgeWatch
+            from specfact_project.sync_runtime.bridge_watch import BridgeWatch
 
             console.print("[bold cyan]Watch mode enabled[/bold cyan]")
             console.print(f"[dim]Watching for changes every {interval} seconds[/dim]\n")
@@ -1929,7 +1931,7 @@ def sync_bridge(
 
         # Legacy watch mode (for backward compatibility during transition)
         if False:  # Disabled - use bridge watch above
-            from specfact_cli.sync.watcher import FileChange, SyncWatcher
+            from specfact_project.sync_runtime.watcher import FileChange, SyncWatcher
 
             @beartype
             @require(lambda changes: isinstance(changes, list), "Changes must be a list")
@@ -2134,7 +2136,7 @@ def sync_repository(
         )
         debug_print("[dim]sync repository: started[/dim]")
 
-    from specfact_cli.sync.repository_sync import RepositorySync
+    from specfact_project.sync_runtime.repository_sync import RepositorySync
 
     telemetry_metadata = {
         "watch": watch,
@@ -2160,7 +2162,7 @@ def sync_repository(
         sync = RepositorySync(resolved_repo, target, confidence_threshold=confidence)
 
         if watch:
-            from specfact_cli.sync.watcher import FileChange, SyncWatcher
+            from specfact_project.sync_runtime.watcher import FileChange, SyncWatcher
 
             console.print("[bold cyan]Watch mode enabled[/bold cyan]")
             console.print(f"[dim]Watching for changes every {interval} seconds[/dim]\n")
@@ -2385,13 +2387,14 @@ def sync_intelligent(
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
 
-    from specfact_cli.sync.change_detector import ChangeDetector
-    from specfact_cli.sync.code_to_spec import CodeToSpecSync
-    from specfact_cli.sync.spec_to_code import SpecToCodeSync
-    from specfact_cli.sync.spec_to_tests import SpecToTestsSync
     from specfact_cli.telemetry import telemetry
     from specfact_cli.utils.progress import load_bundle_with_progress
     from specfact_cli.utils.structure import SpecFactStructure
+
+    from specfact_project.sync_runtime.change_detector import ChangeDetector
+    from specfact_project.sync_runtime.code_to_spec import CodeToSpecSync
+    from specfact_project.sync_runtime.spec_to_code import SpecToCodeSync
+    from specfact_project.sync_runtime.spec_to_tests import SpecToTestsSync
 
     repo_path = repo.resolve()
     bundle_dir = SpecFactStructure.project_dir(base_path=repo_path, bundle_name=bundle)
@@ -2483,7 +2486,7 @@ def sync_intelligent(
             console.print("[dim]Watching for changes...[/dim]")
             console.print("[yellow]Press Ctrl+C to stop[/yellow]\n")
 
-            from specfact_cli.sync.watcher import SyncWatcher
+            from specfact_project.sync_runtime.watcher import SyncWatcher
 
             def sync_callback(_changes: list) -> None:
                 """Handle file changes and trigger sync."""

@@ -257,8 +257,9 @@ def to_contracts(
             console.print("[yellow]→[/yellow] Use --bundle option or run 'specfact plan select' to set active plan")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
-    from specfact_cli.generators.openapi_extractor import OpenAPIExtractor
     from specfact_cli.telemetry import telemetry
+
+    from specfact_project.generators.openapi_extractor import OpenAPIExtractor
 
     repo_path = repo.resolve()
     bundle_dir = SpecFactStructure.project_dir(base_path=repo_path, bundle_name=bundle)

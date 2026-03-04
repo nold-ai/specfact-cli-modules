@@ -12,7 +12,8 @@ import typer
 from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
-from specfact_cli.utils.auth_tokens import (
+
+from specfact_backlog.backlog.auth_tokens import (
     clear_all_tokens,
     clear_token,
     get_token,

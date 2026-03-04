@@ -19,9 +19,6 @@ from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
 from specfact_cli import runtime
-from specfact_cli.analyzers.ambiguity_scanner import AmbiguityFinding
-from specfact_cli.comparators.plan_comparator import PlanComparator
-from specfact_cli.generators.report_generator import ReportFormat, ReportGenerator
 from specfact_cli.models.deviation import Deviation, DeviationSeverity, DeviationType, ValidationReport
 from specfact_cli.models.enforcement import EnforcementConfig
 from specfact_cli.models.plan import Business, Feature, Idea, PlanBundle, Product, Release, Story
@@ -46,6 +43,10 @@ from specfact_cli.utils import (
 from specfact_cli.utils.progress import load_bundle_with_progress, save_bundle_with_progress
 from specfact_cli.utils.structured_io import StructuredFormat, load_structured_file
 from specfact_cli.validators.schema import validate_plan_bundle
+
+from specfact_project.analyzers.ambiguity_scanner import AmbiguityFinding
+from specfact_project.comparators.plan_comparator import PlanComparator
+from specfact_project.generators.report_generator import ReportFormat, ReportGenerator
 
 
 app = typer.Typer(help="Manage development plans, features, and stories")
@@ -1911,7 +1912,7 @@ def compare(
             config_path = SpecFactStructure.get_enforcement_config_path(base_path)
             if config_path.exists():
                 try:
-                    from specfact_cli.utils.yaml_utils import load_yaml
+                    from specfact_project.utils.yaml_utils import load_yaml
 
                     config_data = load_yaml(config_path)
                     enforcement_config = EnforcementConfig(**config_data)
@@ -2356,8 +2357,9 @@ def upgrade(
         specfact plan upgrade --all             # Upgrade all plans
         specfact plan upgrade --all --dry-run   # Preview upgrades without changes
     """
-    from specfact_cli.migrations.plan_migrator import PlanMigrator, get_current_schema_version
     from specfact_cli.utils.structure import SpecFactStructure
+
+    from specfact_project.migrations.plan_migrator import PlanMigrator, get_current_schema_version
 
     current_version = get_current_schema_version()
     migrator = PlanMigrator()
@@ -2756,7 +2758,7 @@ def promote(
 
                 # Check coverage status for critical categories
                 if validate:
-                    from specfact_cli.analyzers.ambiguity_scanner import (
+                    from specfact_project.analyzers.ambiguity_scanner import (
                         AmbiguityScanner,
                         AmbiguityStatus,
                         TaxonomyCategory,
@@ -2849,7 +2851,7 @@ def promote(
                         raise typer.Exit(1)
 
                 # Check coverage status for critical categories
-                from specfact_cli.analyzers.ambiguity_scanner import (
+                from specfact_project.analyzers.ambiguity_scanner import (
                     AmbiguityScanner,
                     AmbiguityStatus,
                     TaxonomyCategory,
@@ -3045,7 +3047,7 @@ def _handle_auto_enrichment(bundle: PlanBundle, bundle_dir: Path, auto_enrich: b
     print_info(
         "Auto-enriching project bundle (enhancing vague acceptance criteria, incomplete requirements, generic tasks)..."
     )
-    from specfact_cli.enrichers.plan_enricher import PlanEnricher
+    from specfact_project.enrichers.plan_enricher import PlanEnricher
 
     enricher = PlanEnricher()
     enrichment_summary = enricher.enrich_plan(bundle)
@@ -3105,7 +3107,8 @@ def _output_findings(
     """
     from rich.console import Console
     from rich.table import Table
-    from specfact_cli.analyzers.ambiguity_scanner import AmbiguityStatus
+
+    from specfact_project.analyzers.ambiguity_scanner import AmbiguityStatus
 
     console = Console()
 
@@ -3151,7 +3154,7 @@ def _output_findings(
 
         # Also show coverage summary
         if report.coverage:
-            from specfact_cli.analyzers.ambiguity_scanner import TaxonomyCategory
+            from specfact_project.analyzers.ambiguity_scanner import TaxonomyCategory
 
             console.print("\n[bold]Coverage Summary:[/bold]")
             # Count findings per category by status
@@ -3263,7 +3266,7 @@ def _deduplicate_features(bundle: PlanBundle) -> int:
     Returns:
         Number of duplicates removed
     """
-    from specfact_cli.utils.feature_keys import normalize_feature_key
+    from specfact_project.utils.feature_keys import normalize_feature_key
 
     seen_normalized_keys: set[str] = set()
     deduplicated_features: list[Feature] = []
@@ -3669,7 +3672,7 @@ def _scan_and_prepare_questions(
     Returns:
         Tuple of (questions_to_ask, report, scanner)
     """
-    from specfact_cli.analyzers.ambiguity_scanner import (
+    from specfact_project.analyzers.ambiguity_scanner import (
         AmbiguityScanner,
         TaxonomyCategory,
     )
@@ -3752,7 +3755,8 @@ def _handle_no_questions_case(
         report: Ambiguity report
     """
     from rich.console import Console
-    from specfact_cli.analyzers.ambiguity_scanner import AmbiguityStatus, TaxonomyCategory
+
+    from specfact_project.analyzers.ambiguity_scanner import AmbiguityStatus, TaxonomyCategory
 
     console = Console()
 
@@ -4100,7 +4104,8 @@ def _display_review_summary(
         today_session: Today's clarification session
     """
     from rich.console import Console
-    from specfact_cli.analyzers.ambiguity_scanner import AmbiguityStatus
+
+    from specfact_project.analyzers.ambiguity_scanner import AmbiguityStatus
 
     console = Console()
 
@@ -4135,7 +4140,7 @@ def _display_review_summary(
     # Coverage summary (updated after questions)
     console.print("\n[bold]Updated Coverage Summary:[/bold]")
     if updated_report.coverage:
-        from specfact_cli.analyzers.ambiguity_scanner import TaxonomyCategory
+        from specfact_project.analyzers.ambiguity_scanner import TaxonomyCategory
 
         # Count findings that can still generate questions (unclear findings)
         # Use the same logic as _scan_and_prepare_questions to count unclear findings
@@ -4330,10 +4335,11 @@ def review(
 
     from datetime import date
 
-    from specfact_cli.analyzers.ambiguity_scanner import (
+    from specfact_cli.models.plan import ClarificationSession
+
+    from specfact_project.analyzers.ambiguity_scanner import (
         AmbiguityStatus,
     )
-    from specfact_cli.models.plan import ClarificationSession
 
     # Detect operational mode
     mode = detect_mode()
@@ -4379,11 +4385,11 @@ def review(
 
             # Show initial coverage summary BEFORE questions (so user knows what's missing)
             if questions_to_ask:
-                from specfact_cli.analyzers.ambiguity_scanner import AmbiguityStatus
+                from specfact_project.analyzers.ambiguity_scanner import AmbiguityStatus
 
                 console.print("\n[bold]Initial Coverage Summary:[/bold]")
                 if report.coverage:
-                    from specfact_cli.analyzers.ambiguity_scanner import TaxonomyCategory
+                    from specfact_project.analyzers.ambiguity_scanner import TaxonomyCategory
 
                     # Count findings that can still generate questions (unclear findings)
                     # Use the same logic as _scan_and_prepare_questions to count unclear findings
@@ -5158,7 +5164,7 @@ def _identify_vague_criteria_to_remove(
     Returns:
         List of vague criteria strings to remove
     """
-    from specfact_cli.utils.acceptance_criteria import (
+    from specfact_project.utils.acceptance_criteria import (
         is_code_specific_criteria,
         is_simplified_format_criteria,
     )
@@ -5239,7 +5245,7 @@ def _integrate_clarification(
     Returns:
         List of integration points (section paths)
     """
-    from specfact_cli.analyzers.ambiguity_scanner import TaxonomyCategory
+    from specfact_project.analyzers.ambiguity_scanner import TaxonomyCategory
 
     integration_points: list[str] = []
 
@@ -5510,7 +5516,8 @@ def _get_smart_answer(
         User answer (processed if Yes/No detected)
     """
     from rich.console import Console
-    from specfact_cli.analyzers.ambiguity_scanner import TaxonomyCategory
+
+    from specfact_project.analyzers.ambiguity_scanner import TaxonomyCategory
 
     console = Console()
 

@@ -21,4 +21,8 @@ repos:
         entry: hatch run yaml-lint
         language: system
         pass_filenames: false
-
+      - id: check-bundle-imports
+        name: Enforce bundle import boundaries
+        entry: hatch run check-bundle-imports
+        language: system
+        pass_filenames: false

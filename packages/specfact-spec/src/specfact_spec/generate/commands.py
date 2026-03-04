@@ -12,8 +12,6 @@ from typing import Any
 import typer
 from beartype import beartype
 from icontract import ensure, require
-from specfact_cli.generators.contract_generator import ContractGenerator
-from specfact_cli.migrations.plan_migrator import load_plan_bundle
 from specfact_cli.models.plan import Product
 from specfact_cli.models.project import BundleManifest, ProjectBundle
 from specfact_cli.models.sdd import SDDManifest
@@ -29,6 +27,9 @@ from specfact_cli.utils.env_manager import (
 )
 from specfact_cli.utils.optional_deps import check_cli_tool_available
 from specfact_cli.utils.structured_io import load_structured_file
+
+from specfact_spec.generators.contract_generator import ContractGenerator
+from specfact_spec.migrations.plan_migrator import load_plan_bundle
 
 
 app = typer.Typer(help="Generate artifacts from SDD and plans")
