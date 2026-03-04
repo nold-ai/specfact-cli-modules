@@ -104,7 +104,7 @@ def detect_drift(
             console.print("[yellow]→[/yellow] Use --bundle option or run 'specfact plan select' to set active plan")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
-    from specfact_cli.sync.drift_detector import DriftDetector
+    from specfact_codebase.sync.drift_detector import DriftDetector
 
     repo_path = repo.resolve()
 

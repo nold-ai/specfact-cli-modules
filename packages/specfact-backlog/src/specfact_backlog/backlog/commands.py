@@ -37,20 +37,20 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.prompt import Confirm
 from rich.table import Table
 from specfact_cli.adapters.registry import AdapterRegistry
-from specfact_cli.backlog.adapters.base import BacklogAdapter
-from specfact_cli.backlog.ai_refiner import BacklogAIRefiner
-from specfact_cli.backlog.filters import BacklogFilters
-from specfact_cli.backlog.template_detector import TemplateDetector, get_effective_required_sections
 from specfact_cli.models.backlog_item import BacklogItem
 from specfact_cli.models.dor_config import DefinitionOfReady
 from specfact_cli.models.plan import Product
 from specfact_cli.models.project import BundleManifest, ProjectBundle
 from specfact_cli.models.validation import ValidationReport
 from specfact_cli.runtime import debug_log_operation, is_debug_mode
-from specfact_cli.templates.registry import BacklogTemplate, TemplateRegistry
 from typer.core import TyperGroup
 
+from specfact_backlog.backlog.adapters.interface import BacklogAdapter
+from specfact_backlog.backlog.ai_refiner import BacklogAIRefiner
 from specfact_backlog.backlog.auth_commands import auth_app
+from specfact_backlog.backlog.filters import BacklogFilters
+from specfact_backlog.backlog.template_detector import TemplateDetector, get_effective_required_sections
+from specfact_backlog.templates.registry import BacklogTemplate, TemplateRegistry
 
 
 class _BacklogCommandGroup(TyperGroup):
@@ -596,7 +596,7 @@ def _resolve_backlog_provider_framework(provider: str) -> str | None:
         mapping_path = Path.cwd() / ".specfact" / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
         if mapping_path.exists():
             with contextlib.suppress(Exception):
-                from specfact_cli.backlog.mappers.template_config import FieldMappingConfig
+                from specfact_backlog.backlog.mappers.template_config import FieldMappingConfig
 
                 config = FieldMappingConfig.from_file(mapping_path)
                 configured = str(config.framework or "").strip().lower()
@@ -2099,7 +2099,7 @@ def _load_ado_framework_template_config(framework: str) -> dict[str, Any]:
             file_path = root / filename
             if file_path.exists():
                 with contextlib.suppress(Exception):
-                    from specfact_cli.backlog.mappers.template_config import FieldMappingConfig
+                    from specfact_backlog.backlog.mappers.template_config import FieldMappingConfig
 
                     cfg = FieldMappingConfig.from_file(file_path)
                     return cfg.model_dump()
@@ -2324,7 +2324,7 @@ def _parse_refinement_output_fields(content: str) -> dict[str, Any]:
     parsed: dict[str, Any] = {}
 
     # First parse markdown-heading style using existing GitHub field semantics.
-    from specfact_cli.backlog.mappers.github_mapper import GitHubFieldMapper
+    from specfact_backlog.backlog.mappers.github_mapper import GitHubFieldMapper
 
     heading_mapper = GitHubFieldMapper()
     heading_fields = heading_mapper.extract_fields({"body": normalized, "labels": []})
@@ -2572,7 +2572,7 @@ def _fetch_backlog_items(
     Returns:
         List of BacklogItem instances (filtered)
     """
-    from specfact_cli.backlog.adapters.base import BacklogAdapter
+    from specfact_backlog.backlog.adapters.interface import BacklogAdapter
 
     registry = AdapterRegistry()
 
@@ -3546,7 +3546,7 @@ def refine(
                     sys.exit(1)
                 # Validate file format by attempting to load it
                 try:
-                    from specfact_cli.backlog.mappers.template_config import FieldMappingConfig
+                    from specfact_backlog.backlog.mappers.template_config import FieldMappingConfig
 
                     FieldMappingConfig.from_file(mapping_path)
                     init_progress.update(validate_task, description="[green]✓[/green] Field mapping validated")
@@ -4430,8 +4430,9 @@ def map_fields(
     import re
 
     import requests
-    from specfact_cli.backlog.mappers.template_config import FieldMappingConfig
-    from specfact_cli.utils.auth_tokens import get_token
+
+    from specfact_backlog.backlog.auth_tokens import get_token
+    from specfact_backlog.backlog.mappers.template_config import FieldMappingConfig
 
     def _normalize_provider_selection(raw: Any) -> list[str]:
         alias_map = {
@@ -5364,7 +5365,7 @@ def map_fields(
     }
 
     # Load default mappings from AdoFieldMapper
-    from specfact_cli.backlog.mappers.ado_mapper import AdoFieldMapper
+    from specfact_backlog.backlog.mappers.ado_mapper import AdoFieldMapper
 
     default_mappings = (
         framework_field_mappings

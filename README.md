@@ -1,6 +1,15 @@
 # specfact-cli-modules
 Central module registry for SpecFact CLI marketplace.
 
+## Repository scope
+
+This repository hosts official nold-ai bundles only.
+
+- Official bundles are maintained under `packages/`.
+- Third-party bundles are published from third-party repositories and are not hosted here.
+- Bundle and module documentation changes are made in this repository under `docs/`.
+- GitHub Pages documentation target: `https://nold-ai.github.io/specfact-cli-modules/`.
+
 ## Local development (IDE / Cursor)
 
 Bundle packages import from `specfact_cli` (models, runtime, validators, etc.). Use Hatch so that this repo and your local `specfact-cli` checkout share one dev environment.
@@ -30,6 +39,7 @@ hatch run format
 hatch run type-check
 hatch run lint
 hatch run yaml-lint
+hatch run verify-modules-signature --require-signature --enforce-version-bump
 hatch run contract-test
 hatch run smart-test
 hatch run test

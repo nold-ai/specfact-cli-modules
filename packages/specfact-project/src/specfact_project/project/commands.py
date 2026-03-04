@@ -31,15 +31,15 @@ from specfact_cli.modules import module_io_shim
 from specfact_cli.registry.registry import CommandRegistry
 from specfact_cli.runtime import debug_log_operation, debug_print, get_configured_console, is_debug_mode
 from specfact_cli.utils import print_error, print_info, print_section, print_success, print_warning
-from specfact_cli.utils.persona_ownership import (
-    check_persona_ownership as shared_check_persona_ownership,
-    match_section_pattern as shared_match_section_pattern,
-)
 from specfact_cli.utils.progress import load_bundle_with_progress, save_bundle_with_progress
 from specfact_cli.utils.structure import SpecFactStructure
 from specfact_cli.versioning import ChangeAnalyzer, bump_version, validate_semver
 
 from specfact_project.sync.commands import app as sync_app
+from specfact_project.utils.persona_ownership import (
+    check_persona_ownership as shared_check_persona_ownership,
+    match_section_pattern as shared_match_section_pattern,
+)
 
 
 app = typer.Typer(help="Manage project bundles with persona workflows")
@@ -1176,7 +1176,7 @@ def export_persona(
     persona_mapping = bundle_obj.manifest.personas[persona]
 
     # Initialize exporter with template support
-    from specfact_cli.generators.persona_exporter import PersonaExporter
+    from specfact_project.generators.persona_exporter import PersonaExporter
 
     # Check for project-specific templates
     project_templates_dir = repo / ".specfact" / "templates" / "persona"
@@ -1300,7 +1300,8 @@ def import_persona(
         debug_print("[dim]project import: started[/dim]")
 
     from specfact_cli.models.persona_template import PersonaTemplate, SectionType, TemplateSection
-    from specfact_cli.parsers.persona_importer import PersonaImporter, PersonaImportError
+
+    from specfact_project.parsers.persona_importer import PersonaImporter, PersonaImportError
 
     # Get bundle name
     if bundle is None:
@@ -2084,8 +2085,9 @@ def merge_bundles(
         specfact project merge --bundle legacy-api --base main --ours feature-1 --theirs feature-2 --persona-ours developer --persona-theirs developer
     """
     _refresh_console()
-    from specfact_cli.merge.resolver import MergeStrategy, PersonaMergeResolver
     from specfact_cli.utils.git import GitOperations
+
+    from specfact_project.merge.resolver import MergeStrategy, PersonaMergeResolver
 
     # Get bundle name
     if bundle is None:
@@ -2313,7 +2315,7 @@ def resolve_conflict(
     bundle_obj = _load_bundle_with_progress(bundle_dir, validate_hashes=False)
 
     # Parse resolution
-    from specfact_cli.merge.resolver import PersonaMergeResolver
+    from specfact_project.merge.resolver import PersonaMergeResolver
 
     resolver = PersonaMergeResolver()
 

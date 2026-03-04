@@ -22,7 +22,8 @@ from specfact_cli.runtime import debug_log_operation, debug_print, is_debug_mode
 from specfact_cli.telemetry import telemetry
 from specfact_cli.utils.env_manager import check_tool_in_env, detect_env_manager, detect_source_directories
 from specfact_cli.utils.structure import SpecFactStructure
-from specfact_cli.validators.repro_checker import ReproChecker
+
+from specfact_codebase.validators.repro_checker import ReproChecker
 
 
 app = typer.Typer(help="Run validation suite for reproducibility")
@@ -244,7 +245,7 @@ def main(
     if sidecar and not sidecar_bundle:
         raise typer.BadParameter("--sidecar-bundle is required when --sidecar is used")
 
-    from specfact_cli.utils.yaml_utils import dump_yaml
+    from specfact_codebase.utils.yaml_utils import dump_yaml
 
     console.print("[bold cyan]Running validation suite...[/bold cyan]")
     console.print(f"[dim]Repository: {repo}[/dim]")
@@ -388,9 +389,9 @@ def main(
 
         # Run sidecar validation if requested (after main checks)
         if sidecar and sidecar_bundle:
-            from specfact_cli.validators.sidecar.models import SidecarConfig
-            from specfact_cli.validators.sidecar.orchestrator import run_sidecar_validation
-            from specfact_cli.validators.sidecar.unannotated_detector import detect_unannotated_in_repo
+            from specfact_codebase.validators.sidecar.models import SidecarConfig
+            from specfact_codebase.validators.sidecar.orchestrator import run_sidecar_validation
+            from specfact_codebase.validators.sidecar.unannotated_detector import detect_unannotated_in_repo
 
             console.print("\n[bold cyan]Running sidecar validation for unannotated code...[/bold cyan]")
 

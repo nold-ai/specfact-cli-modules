@@ -1,0 +1,545 @@
+---
+layout: default
+title: Getting Started with SpecFact CLI
+permalink: /getting-started/installation/
+---
+
+# Getting Started with SpecFact CLI
+
+This guide will help you get started with SpecFact CLI in under 60 seconds.
+
+> **Primary Use Case**: SpecFact CLI is designed for **brownfield code modernization** - reverse-engineering existing codebases into documented specs with runtime contract enforcement. See [First Steps](first-steps.md) for brownfield workflows.
+
+## Installation
+
+### Option 1: uvx (CLI-only Mode)
+
+No installation required - run directly:
+
+```bash
+uvx specfact-cli@latest --help
+```
+
+**Best for**: Quick testing, CI/CD, one-off commands
+
+**Limitations**: CLI-only mode uses AST-based analysis which may show 0 features for simple test cases. For better results, use interactive AI Assistant mode (Option 2).
+
+### Option 2: pip (Interactive AI Assistant Mode)
+
+**Required for**: IDE integration, slash commands, enhanced feature detection
+
+```bash
+# System-wide
+pip install specfact-cli
+
+# User install
+pip install --user specfact-cli
+
+# Virtual environment (recommended)
+python -m venv .venv
+source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
+pip install specfact-cli
+```
+
+**Optional**: For enhanced graph-based dependency analysis, see [Enhanced Analysis Dependencies](../installation/enhanced-analysis-dependencies.md).
+
+**After installation (required)**: select workflow bundles on first run:
+
+```bash
+# Navigate to your project
+cd /path/to/your/project
+
+# Required on first run
+specfact init --profile solo-developer
+
+# Other valid profile presets
+specfact init --profile backlog-team
+specfact init --profile api-first-team
+specfact init --profile enterprise-full-stack
+
+# Or explicit bundle selection
+specfact init --install backlog,codebase
+specfact init --install all
+```
+
+Then set up IDE integration:
+
+```bash
+# Initialize IDE integration (one-time per project)
+specfact init ide
+
+# Or specify IDE explicitly
+specfact init ide --ide cursor
+specfact init ide --ide vscode
+
+# Install required packages for contract enhancement
+specfact init --install-deps
+
+# Initialize for specific IDE and install dependencies
+specfact init ide --ide cursor --install-deps
+```
+
+**Note**: Interactive mode requires Python 3.11+ and automatically uses your IDE workspace (no `--repo .` needed in slash commands).
+
+### Option 3: Container
+
+```bash
+# Docker
+docker run --rm -v $(pwd):/workspace ghcr.io/nold-ai/specfact-cli:latest --help
+
+# Podman
+podman run --rm -v $(pwd):/workspace ghcr.io/nold-ai/specfact-cli:latest --help
+```
+
+### Option 4: GitHub Action
+
+Create `.github/workflows/specfact.yml`:
+
+```yaml
+name: SpecFact CLI Validation
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "Time budget in seconds"
+        required: false
+        default: "90"
+        type: string
+      mode:
+        description: "Enforcement mode (block, warn, log)"
+        required: false
+        default: "block"
+        type: choice
+        options:
+          - block
+          - warn
+          - log
+
+jobs:
+  specfact-validation:
+    name: Contract Validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install SpecFact CLI
+        run: pip install specfact-cli
+
+      - name: Set up CrossHair Configuration
+        run: specfact repro setup
+
+      - name: Run Contract Validation
+        run: specfact repro --verbose --budget 90
+
+      - name: Generate PR Comment
+        if: github.event_name == 'pull_request'
+        run: python -m specfact_cli.utils.github_annotations
+        env:
+          SPECFACT_REPORT_PATH: .specfact/projects/<bundle-name>/reports/enforcement/report-*.yaml
+```
+
+## First Steps
+
+### Operational Modes
+
+SpecFact CLI supports two operational modes:
+
+- **CLI-only Mode** (uvx): Fast, AST-based analysis for automation
+  - Works immediately with `uvx specfact-cli@latest`
+  - No installation required
+  - May show 0 features for simple test cases (AST limitations)
+  - Best for: CI/CD, quick testing, one-off commands
+
+- **Interactive AI Assistant Mode** (pip + `specfact init --profile ...`): Enhanced semantic understanding
+  - Requires `pip install specfact-cli` and first-run bundle selection (`--profile` or `--install`)
+  - Better feature detection and semantic understanding
+  - IDE integration with slash commands
+  - Automatically uses IDE workspace (no `--repo .` needed)
+  - Best for: Development, legacy code analysis, complex projects
+
+**Mode Selection**:
+
+```bash
+# CLI-only mode (uvx - no installation)
+uvx specfact-cli@latest import from-code my-project --repo .
+
+# Interactive mode (pip + specfact init - recommended)
+# After: pip install specfact-cli && specfact init
+# Then use slash commands in IDE: /specfact.01-import legacy-api --repo .
+```
+
+**Note**: Mode is auto-detected based on whether `specfact` command is available and IDE integration is set up.
+
+### Installed Command Topology
+
+Fresh install exposes only core commands:
+
+- `specfact init`
+- `specfact backlog auth`
+- `specfact module`
+- `specfact upgrade`
+
+Category groups appear after bundle installation:
+
+- `specfact project ...`
+- `specfact backlog ...`
+- `specfact code ...`
+- `specfact spec ...`
+- `specfact govern ...`
+
+Profile outcomes:
+
+| Profile | Installed bundles | Available groups |
+|---|---|---|
+| `solo-developer` | `specfact-codebase` | `code` |
+| `backlog-team` | `specfact-project`, `specfact-backlog`, `specfact-codebase` | `project`, `backlog`, `code` |
+| `api-first-team` | `specfact-spec`, `specfact-codebase` (+`specfact-project` dependency) | `project`, `code`, `spec` |
+| `enterprise-full-stack` | all five bundles | `project`, `backlog`, `code`, `spec`, `govern` |
+
+### Upgrading from Pre-Slimming Versions
+
+If you upgraded from a version where workflow modules were bundled in core, reinstall/refresh bundled modules:
+
+```bash
+specfact module init --scope project
+specfact module init
+```
+
+If CI/CD is non-interactive, ensure your bootstrap includes profile/install selection:
+
+```bash
+specfact init --profile enterprise-full-stack
+# or
+specfact init --install all
+```
+
+### For Greenfield Projects
+
+Start a new contract-driven project:
+
+```bash
+specfact plan init --interactive
+```
+
+This will guide you through creating:
+
+- Initial project idea and narrative
+- Product themes and releases
+- First features and stories
+- Protocol state machine
+
+**With IDE Integration (Interactive AI Assistant Mode):**
+
+```bash
+# Step 1: Install SpecFact CLI
+pip install specfact-cli
+
+# Step 2: Navigate to your project
+cd /path/to/your/project
+
+# Step 3: Initialize IDE integration (one-time per project)
+specfact init
+# Or specify IDE: specfact init ide --ide cursor
+
+# Step 4: Use slash command in IDE chat
+/specfact.02-plan init legacy-api
+# Or use other plan operations: /specfact.02-plan add-feature --bundle legacy-api --key FEATURE-001 --title "User Auth"
+```
+
+**Important**:
+
+- Interactive mode automatically uses your IDE workspace
+- Slash commands use numbered format: `/specfact.01-import`, `/specfact.02-plan`, etc.
+- Commands are numbered for natural workflow progression (01-import → 02-plan → 03-review → 04-sdd → 05-enforce → 06-sync)
+- No `--repo .` parameter needed in interactive mode (uses workspace automatically)
+- The AI assistant will prompt you for bundle names and other inputs if not provided
+
+See [IDE Integration Guide](../guides/ide-integration.md) for detailed setup instructions.
+
+### For Spec-Kit Migration
+
+Convert an existing GitHub Spec-Kit project:
+
+```bash
+# Preview what will be migrated
+specfact import from-bridge --adapter speckit --repo ./my-speckit-project --dry-run
+
+# Execute migration (one-time import)
+specfact import from-bridge \
+  --adapter speckit \
+  --repo ./my-speckit-project \
+  --write
+
+# Ongoing bidirectional sync (after migration)
+specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
+```
+
+**Bidirectional Sync:**
+
+Keep Spec-Kit and SpecFact artifacts synchronized:
+
+```bash
+# One-time sync
+specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional
+
+# Continuous watch mode
+specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
+```
+
+**Note**: SpecFact CLI uses a plugin-based adapter registry pattern. All adapters (Spec-Kit, OpenSpec, GitHub, etc.) are registered in `AdapterRegistry` and accessed via `specfact sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
+
+### For Brownfield Projects
+
+Analyze existing code to generate specifications.
+
+**With IDE Integration (Interactive AI Assistant Mode - Recommended):**
+
+```bash
+# Step 1: Install SpecFact CLI
+pip install specfact-cli
+
+# Step 2: Navigate to your project
+cd /path/to/your/project
+
+# Step 3: Initialize IDE integration (one-time per project)
+specfact init
+# Or specify IDE: specfact init ide --ide cursor
+
+# Step 4: Use slash command in IDE chat
+/specfact.01-import legacy-api
+# Or let the AI assistant prompt you for bundle name and other options
+```
+
+**Important for IDE Integration**:
+
+- Interactive mode automatically uses your IDE workspace (no `--repo .` needed in interactive mode)
+- Slash commands use numbered format: `/specfact.01-import`, `/specfact.02-plan`, etc. (numbered for workflow ordering)
+- Commands follow natural progression: 01-import → 02-plan → 03-review → 04-sdd → 05-enforce → 06-sync
+- The AI assistant will prompt you for bundle names and confidence thresholds if not provided
+- Better feature detection than CLI-only mode (semantic understanding vs AST-only)
+- **Do NOT use `--mode copilot` with IDE slash commands** - IDE integration automatically provides enhanced prompts
+
+**CLI-Only Mode (Alternative - for CI/CD or when IDE integration is not available):**
+
+```bash
+# Analyze repository (CI/CD mode - fast)
+specfact import from-code my-project \
+  --repo ./my-project \
+  --shadow-only \
+  --report analysis.md
+
+# Analyze with CoPilot mode (enhanced prompts - CLI only, not for IDE)
+specfact --mode copilot import from-code my-project \
+  --repo ./my-project \
+  --confidence 0.7 \
+  --report analysis.md
+
+# Review generated plan
+cat analysis.md
+```
+
+**Note**: `--mode copilot` is for CLI usage only. When using IDE integration, use slash commands (e.g., `/specfact.01-import`) instead - IDE integration automatically provides enhanced prompts without needing the `--mode copilot` flag.
+
+See [IDE Integration Guide](../guides/ide-integration.md) for detailed setup instructions.
+
+**Sync Changes:**
+
+Keep plan artifacts updated as code changes:
+
+```bash
+# One-time sync
+specfact sync repository --repo . --target .specfact
+
+# Continuous watch mode
+specfact sync repository --repo . --watch
+```
+
+## Next Steps
+
+1. **Explore Commands**: See [Command Reference](../reference/commands.md)
+2. **Learn Use Cases**: Read [Use Cases](../guides/use-cases.md)
+3. **Understand Architecture**: Check [Architecture](../reference/architecture.md)
+4. **Set Up IDE Integration**: See [IDE Integration Guide](../guides/ide-integration.md)
+
+## Quick Tips
+
+- **Python 3.11+ required**: SpecFact CLI requires Python 3.11 or higher
+- **Start in shadow mode**: Use `--shadow-only` to observe without blocking
+- **Use dry-run**: Always preview with `--dry-run` before writing changes
+- **Check reports**: Generate reports with `--report <filename>` for review
+- **Progressive enforcement**: Start with `minimal`, move to `balanced`, then `strict`
+- **CLI-only vs Interactive**: Use `uvx` for quick testing, `pip install + specfact init` for better results
+- **IDE integration**: Use `specfact init` to set up slash commands in IDE (requires pip install)
+- **Slash commands**: Use numbered format `/specfact.01-import`, `/specfact.02-plan`, etc. (numbered for workflow ordering)
+- **Global flags**: Place `--no-banner` before the command: `specfact --no-banner <command>`
+- **Bridge adapter sync**: Use `sync bridge --adapter <adapter-name>` for external tool integration (Spec-Kit, OpenSpec, GitHub, etc.)
+- **Repository sync**: Use `sync repository` for code change tracking
+- **Semgrep (optional)**: Install `pip install semgrep` for async pattern detection in `specfact repro`
+
+---
+
+## Supported Project Management Tools
+
+SpecFact CLI automatically detects and works with the following Python project management tools. **No configuration needed** - it detects your project's environment manager automatically!
+
+### Automatic Detection
+
+When you run SpecFact CLI commands on a repository, it automatically:
+
+1. **Detects the environment manager** by checking for configuration files
+2. **Detects source directories** (`src/`, `lib/`, or package name from `pyproject.toml`)
+3. **Builds appropriate commands** using the detected environment manager
+4. **Checks tool availability** and skips with clear messages if tools are missing
+
+### Supported Tools
+
+#### 1. **hatch** - Modern Python project manager
+
+- **Detection**: `[tool.hatch]` section in `pyproject.toml`
+- **Command prefix**: `hatch run`
+- **Example**: `hatch run pytest tests/`
+- **Use case**: Modern Python projects using hatch for build and dependency management
+
+#### 2. **poetry** - Dependency management and packaging
+
+- **Detection**: `[tool.poetry]` section in `pyproject.toml` or `poetry.lock` file
+- **Command prefix**: `poetry run`
+- **Example**: `poetry run pytest tests/`
+- **Use case**: Projects using Poetry for dependency management
+
+#### 3. **uv** - Fast Python package installer and resolver
+
+- **Detection**: `[tool.uv]` section in `pyproject.toml`, `uv.lock`, or `uv.toml` file
+- **Command prefix**: `uv run`
+- **Example**: `uv run pytest tests/`
+- **Use case**: Projects using uv for fast package management
+
+#### 4. **pip** - Standard Python package installer
+
+- **Detection**: `requirements.txt` or `setup.py` file
+- **Command prefix**: Direct tool invocation (no prefix)
+- **Example**: `pytest tests/`
+- **Use case**: Traditional Python projects using pip and virtual environments
+
+### Detection Priority
+
+SpecFact CLI checks in this order:
+
+1. `pyproject.toml` for tool sections (`[tool.hatch]`, `[tool.poetry]`, `[tool.uv]`)
+2. Lock files (`poetry.lock`, `uv.lock`, `uv.toml`)
+3. Fallback to `requirements.txt` or `setup.py` for pip-based projects
+
+### Source Directory Detection
+
+SpecFact CLI automatically detects source directories:
+
+- **Standard layouts**: `src/`, `lib/`
+- **Package name**: Extracted from `pyproject.toml` (e.g., `my-package` → `my_package/`)
+- **Root-level**: Falls back to root directory if no standard layout found
+
+### Example: Working with Different Projects
+
+```bash
+# Hatch project
+cd /path/to/hatch-project
+specfact repro --repo .  # Automatically uses "hatch run" for tools
+
+# Poetry project
+cd /path/to/poetry-project
+specfact repro --repo .  # Automatically uses "poetry run" for tools
+
+# UV project
+cd /path/to/uv-project
+specfact repro --repo .  # Automatically uses "uv run" for tools
+
+# Pip project
+cd /path/to/pip-project
+specfact repro --repo .  # Uses direct tool invocation
+```
+
+### External Repository Support
+
+SpecFact CLI works seamlessly on **external repositories** without requiring:
+
+- ❌ SpecFact CLI adoption
+- ❌ Specific project structures
+- ❌ Manual configuration
+- ❌ Tool installation in global environment
+
+**All commands automatically adapt to the target repository's environment and structure.**
+
+This makes SpecFact CLI ideal for:
+
+- **OSS validation workflows** - Validate external open-source projects
+- **Multi-project environments** - Work with different project structures
+- **CI/CD pipelines** - Validate any Python project without setup
+
+## Common Commands
+
+```bash
+# Check version
+specfact --version
+
+# Get help
+specfact --help
+specfact <command> --help
+
+# Initialize plan (bundle name as positional argument)
+specfact plan init my-project --interactive
+
+# Add feature
+specfact plan add-feature --key FEATURE-001 --title "My Feature"
+
+# Validate everything
+specfact repro
+
+# Set enforcement level
+specfact enforce stage --preset balanced
+```
+
+## Getting Help
+
+- **Documentation**: [docs/](.)
+- **Issues**: [GitHub Issues](https://github.com/nold-ai/specfact-cli/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/nold-ai/specfact-cli/discussions)
+- **Email**: [hello@noldai.com](mailto:hello@noldai.com)
+
+## Development Setup
+
+For contributors:
+
+```bash
+# Clone repository
+git clone https://github.com/nold-ai/specfact-cli.git
+cd specfact-cli
+
+# Install with dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+hatch run contract-test-full
+
+# Format code
+hatch run format
+
+# Run linters
+hatch run lint
+```
+
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for detailed contribution guidelines.

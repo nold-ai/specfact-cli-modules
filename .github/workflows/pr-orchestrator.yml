@@ -1,0 +1,150 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: pr-orchestrator
+
+on:
+  pull_request:
+    branches: [main, dev]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  push:
+    branches: [main, dev]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      code_changed: ${{ steps.out.outputs.code_changed }}
+      skip_tests_dev_to_main: ${{ steps.out.outputs.skip_tests_dev_to_main }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - "**"
+              - "!**/*.md"
+              - "!docs/**"
+      - id: out
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "code_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code_changed=${{ steps.filter.outputs.code }}" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "$EVENT_NAME" = "pull_request" ] && [ "$PR_BASE_REF" = "main" ] && [ "$PR_HEAD_REF" = "dev" ]; then
+            echo "skip_tests_dev_to_main=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip_tests_dev_to_main=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify-module-signatures:
+    name: verify-module-signatures
+    needs: [changes]
+    if: needs.changes.outputs.code_changed == 'true'
+    runs-on: ubuntu-latest
+    env:
+      SPECFACT_MODULE_PUBLIC_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PUBLIC_SIGN_KEY }}
+      SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM: ${{ secrets.SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install verifier dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml cryptography cffi
+      - name: Verify bundled module signatures and version bumps
+        run: |
+          BASE_REF=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
+          fi
+          if [ -z "${SPECFACT_MODULE_PUBLIC_SIGN_KEY:-}" ] && [ -z "${SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM:-}" ]; then
+            echo "warning: no public signing key secret set; verifier must resolve key from repo/default path"
+          fi
+          if [ -n "$BASE_REF" ]; then
+            python scripts/verify-modules-signature.py --require-signature --enforce-version-bump --version-check-base "$BASE_REF"
+          else
+            python scripts/verify-modules-signature.py --require-signature --enforce-version-bump
+          fi
+
+  quality:
+    name: quality (${{ matrix.python-version }})
+    needs: [changes, verify-module-signatures]
+    if: needs.changes.outputs.code_changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Skip full run (dev->main PR)
+        if: needs.changes.outputs.skip_tests_dev_to_main == 'true'
+        run: echo "Dev->main PR detected; skipping quality jobs."
+      - name: Checkout
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        uses: actions/checkout@v4
+      - name: Setup Python
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Hatch
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install hatch
+      - name: Bootstrap hatch env
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch env create
+      - name: Install specfact-cli dependency
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run pip install specfact-cli
+      - name: Format
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run format
+      - name: Type Check
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run type-check
+      - name: Lint
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run lint
+      - name: YAML/Registry Validation
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run yaml-lint
+      - name: Bundle Import Boundary Check
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run check-bundle-imports
+      - name: Contract Test
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run contract-test
+      - name: Smart Test
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run smart-test
+      - name: Test
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: hatch run test

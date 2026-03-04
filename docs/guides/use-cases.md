@@ -1,0 +1,662 @@
+---
+layout: default
+title: Use Cases
+permalink: /use-cases/
+---
+
+# Use Cases
+
+Detailed use cases and examples for SpecFact CLI.
+
+> **Primary Use Case**: Brownfield code modernization (Use Case 1)  
+> **Secondary Use Case**: Adding enforcement to Spec-Kit projects (Use Case 2)  
+> **Alternative**: Greenfield spec-first development (Use Case 3)  
+> **Validation Use Case**: Sidecar validation of external codebases (Use Case 4) 🆕
+
+**CLI-First Approach**: SpecFact works offline, requires no account, and integrates with your existing workflow. Works with VS Code, Cursor, GitHub Actions, pre-commit hooks, or any IDE. No platform to learn, no vendor lock-in.
+
+---
+
+## Use Case 1: Brownfield Code Modernization ⭐ PRIMARY
+
+**Problem**: Existing codebase with no specs, no documentation, or outdated documentation. Need to understand legacy code and add quality gates incrementally without breaking existing functionality.
+
+**Solution**: Reverse engineer existing code into documented specs, then progressively enforce contracts to prevent regressions during modernization.
+
+### Steps
+
+#### 1. Analyze Code
+
+```bash
+# CI/CD mode (fast, deterministic) - Full repository
+specfact import from-code \
+  --repo . \
+  --shadow-only \
+  --confidence 0.7 \
+  --report analysis.md
+
+# Partial analysis (large codebases or monorepos)
+specfact import from-code \
+  --repo . \
+  --entry-point src/core \
+  --confidence 0.7 \
+  --bundle core-module \
+  --report analysis-core.md
+
+# CoPilot mode (enhanced prompts, interactive)
+specfact --mode copilot import from-code \
+  --repo . \
+  --confidence 0.7 \
+  --report analysis.md
+```
+
+**With IDE Integration:**
+
+```bash
+# First, initialize IDE integration
+specfact init ide --ide cursor
+
+# Then use slash command in IDE chat
+/specfact.01-import legacy-api --repo . --confidence 0.7
+```
+
+See [IDE Integration Guide](ide-integration.md) for setup instructions. See [Integration Showcases](../examples/integration-showcases/) for real examples of bugs fixed via IDE integrations.
+
+**What it analyzes (AI-First / CoPilot Mode):**
+
+- Semantic understanding of codebase (LLM)
+- Multi-language support (Python, TypeScript, JavaScript, PowerShell, etc.)
+- Actual priorities, constraints, unknowns from code context
+- Meaningful scenarios from acceptance criteria
+- High-quality Spec-Kit compatible artifacts
+
+**What it analyzes (AST-Based / CI/CD Mode):**
+
+- Module dependency graph (Python-only)
+- Commit history for feature boundaries
+- Test files for acceptance criteria
+- Type hints for API surfaces
+- Async patterns for anti-patterns
+
+**CoPilot Enhancement:**
+
+- Context injection (current file, selection, workspace)
+- Enhanced prompts for semantic understanding
+- Interactive assistance for complex codebases
+- Multi-language analysis support
+
+#### 2. Review Auto-Generated Plan
+
+```bash
+cat analysis.md
+```
+
+**Expected sections:**
+
+- **Features Detected** - With confidence scores
+- **Stories Inferred** - From commit messages
+- **API Surface** - Public functions/classes
+- **Async Patterns** - Detected issues
+- **State Machine** - Inferred from code flow
+
+#### 3. Sync Repository Changes (Optional)
+
+Keep plan artifacts updated as code changes:
+
+```bash
+# One-time sync
+specfact sync repository --repo . --target .specfact
+
+# Continuous watch mode
+specfact sync repository --repo . --watch --interval 5
+```
+
+**What it tracks:**
+
+- Code changes → Plan artifact updates
+- Deviations from manual plans
+- Feature/story extraction from code
+
+#### 4. Compare with Manual Plan (if exists)
+
+```bash
+specfact plan compare \
+  --manual .specfact/projects/manual-plan \
+  --auto .specfact/projects/auto-derived \
+  --output-format markdown \
+  --out .specfact/projects/<bundle-name>/reports/comparison/deviation-report.md
+```
+
+**With CoPilot:**
+
+```bash
+# Use slash command in IDE chat (after specfact init)
+/specfact.compare --bundle legacy-api
+# Or with explicit paths: /specfact.compare --manual main.bundle.yaml --auto auto.bundle.yaml
+```
+
+**CoPilot Enhancement:**
+
+- Deviation explanations
+- Fix suggestions
+- Interactive deviation review
+
+**Output:**
+
+```markdown
+# Deviation Report
+
+## Missing Features (in manual but not in auto)
+
+- FEATURE-003: User notifications
+  - Confidence: N/A (not detected in code)
+  - Recommendation: Implement or remove from manual plan
+
+## Extra Features (in auto but not in manual)
+
+- FEATURE-AUTO-001: Database migrations
+  - Confidence: 0.85
+  - Recommendation: Add to manual plan
+
+## Mismatched Stories
+
+- STORY-001: User login
+  - Manual acceptance: "OAuth 2.0 support"
+  - Auto acceptance: "Basic auth only"
+  - Severity: HIGH
+  - Recommendation: Update implementation or manual plan
+```
+
+#### 5. Fix High-Severity Deviations
+
+Focus on:
+
+- **Async anti-patterns** - Blocking I/O in async functions
+- **Missing contracts** - APIs without validation
+- **State machine gaps** - Unreachable states
+- **Test coverage** - Missing acceptance tests
+
+#### 6. Progressive Enforcement
+
+```bash
+# Week 1-2: Shadow mode (observe)
+specfact enforce stage --preset minimal
+
+# Week 3-4: Balanced mode (warn on medium, block high)
+specfact enforce stage --preset balanced
+
+# Week 5+: Strict mode (block medium+)
+specfact enforce stage --preset strict
+```
+
+### Expected Timeline (Brownfield Modernization)
+
+- **Analysis**: 2-5 minutes
+- **Review**: 1-2 hours
+- **High-severity fixes**: 1-3 days
+- **Shadow mode**: 1-2 weeks
+- **Production enforcement**: After validation stabilizes
+
+---
+
+## Use Case 2: GitHub Spec-Kit Migration (Secondary)
+
+**Problem**: You have a Spec-Kit project but need automated enforcement, team collaboration, and production deployment quality gates.
+
+**Solution**: Import Spec-Kit artifacts into SpecFact CLI for automated contract enforcement while keeping Spec-Kit for interactive authoring.
+
+### Steps (Spec-Kit Migration)
+
+#### 1. Preview Migration
+
+```bash
+specfact import from-bridge --adapter speckit --repo ./spec-kit-project --dry-run
+```
+
+**Expected Output:**
+
+```bash
+🔍 Analyzing Spec-Kit project via bridge adapter...
+✅ Found .specify/ directory (modern format)
+✅ Found specs/001-user-authentication/spec.md
+✅ Found specs/001-user-authentication/plan.md
+✅ Found specs/001-user-authentication/tasks.md
+✅ Found .specify/memory/constitution.md
+
+📊 Migration Preview:
+  - Will create: .specfact/projects/<bundle-name>/ (modular project bundle)
+  - Will create: .specfact/protocols/workflow.protocol.yaml (if FSM detected)
+  - Will create: .specfact/gates/config.yaml
+  - Will convert: Spec-Kit features → SpecFact Feature models
+  - Will convert: Spec-Kit user stories → SpecFact Story models
+  
+🚀 Ready to migrate (use --write to execute)
+```
+
+#### 2. Execute Migration
+
+```bash
+specfact import from-bridge \
+  --adapter speckit \
+  --repo ./spec-kit-project \
+  --write \
+  --report migration-report.md
+```
+
+#### 3. Review Generated Contracts
+
+```bash
+# Review using CLI commands
+specfact plan review <bundle-name>
+```
+
+Review:
+
+- `.specfact/projects/<bundle-name>/` - Modular project bundle (converted from Spec-Kit artifacts)
+- `.specfact/protocols/workflow.protocol.yaml` - FSM definition (if protocol detected)
+- `.specfact/enforcement/config.yaml` - Quality gates configuration
+- `.semgrep/async-anti-patterns.yaml` - Anti-pattern rules (if async patterns detected)
+- `.github/workflows/specfact-gate.yml` - CI workflow (optional)
+
+#### 4: Generate Constitution (If Missing)
+
+Before syncing, ensure you have a valid constitution:
+
+```bash
+# Auto-generate from repository analysis (recommended for brownfield)
+specfact sdd constitution bootstrap --repo .
+
+# Validate completeness
+specfact sdd constitution validate
+
+# Or enrich existing minimal constitution
+specfact sdd constitution enrich --repo .
+```
+
+**Note**: The `sync bridge --adapter speckit` command will detect if the constitution is missing or minimal and suggest bootstrap automatically.
+
+#### 5. Enable Bidirectional Sync (Optional)
+
+Keep Spec-Kit and SpecFact synchronized:
+
+```bash
+# One-time bidirectional sync
+specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional
+
+# Continuous watch mode
+specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch --interval 5
+```
+
+**What it syncs:**
+
+- `specs/[###-feature-name]/spec.md`, `plan.md`, `tasks.md` ↔ `.specfact/projects/<bundle-name>/` aspect files
+- `.specify/memory/constitution.md` ↔ SpecFact business context
+- `specs/[###-feature-name]/research.md`, `data-model.md`, `quickstart.md` ↔ SpecFact supporting artifacts
+- `specs/[###-feature-name]/contracts/*.yaml` ↔ SpecFact protocol definitions
+- Automatic conflict resolution with priority rules
+
+#### 6. Enable Enforcement
+
+```bash
+# Start in shadow mode (observe only)
+specfact enforce stage --preset minimal
+
+# After stabilization, enable warnings
+specfact enforce stage --preset balanced
+
+# For production, enable strict mode
+specfact enforce stage --preset strict
+```
+
+#### 7. Validate
+
+```bash
+# First-time setup: Configure CrossHair for contract exploration
+specfact repro setup
+
+# Run validation
+specfact repro --verbose
+```
+
+### Expected Timeline (Spec-Kit Migration)
+
+- **Preview**: < 1 minute
+- **Migration**: 2-5 minutes
+- **Review**: 15-30 minutes
+- **Stabilization**: 1-2 weeks (shadow mode)
+- **Production**: After validation passes
+
+---
+
+## Use Case 3: Greenfield Spec-First Development (Alternative)
+
+**Problem**: Starting a new project, want contract-driven development from day 1.
+
+**Solution**: Use SpecFact CLI for spec-first planning and strict enforcement.
+
+### Steps (Greenfield Development)
+
+#### 1. Create Plan Interactively
+
+```bash
+# Standard interactive mode
+specfact plan init --interactive
+
+# CoPilot mode (enhanced prompts)
+specfact --mode copilot plan init --interactive
+```
+
+**With CoPilot (IDE Integration):**
+
+```bash
+# Use slash command in IDE chat (after specfact init)
+/specfact.02-plan init legacy-api
+# Or update idea: /specfact.02-plan update-idea --bundle legacy-api --title "My Project"
+```
+
+**Interactive prompts:**
+
+```bash
+🎯 SpecFact CLI - Plan Initialization
+
+What's your idea title?
+> Real-time collaboration platform
+
+What's the narrative? (high-level vision)
+> Enable teams to collaborate in real-time with contract-driven quality
+
+What are the product themes? (comma-separated)
+> Developer Experience, Real-time Sync, Quality Assurance
+
+What's the first release name?
+> v0.1
+
+What are the release objectives? (comma-separated)
+> WebSocket server, Client SDK, Basic presence
+
+✅ Plan initialized: .specfact/projects/<bundle-name>/
+```
+
+#### 2. Add Features and Stories
+
+```bash
+# Add feature
+specfact plan add-feature \
+  --key FEATURE-001 \
+  --title "WebSocket Server" \
+  --outcomes "Handle 1000 concurrent connections" \
+  --outcomes "< 100ms message latency" \
+  --acceptance "Given client connection, When message sent, Then delivered within 100ms"
+
+# Add story
+specfact plan add-story \
+  --feature FEATURE-001 \
+  --key STORY-001 \
+  --title "Connection handling" \
+  --acceptance "Accept WebSocket connections" \
+  --acceptance "Maintain heartbeat every 30s" \
+  --acceptance "Graceful disconnect cleanup"
+```
+
+#### 3. Define Protocol
+
+Create `contracts/protocols/workflow.protocol.yaml`:
+
+```yaml
+states:
+  - DISCONNECTED
+  - CONNECTING
+  - CONNECTED
+  - RECONNECTING
+  - DISCONNECTING
+
+start: DISCONNECTED
+
+transitions:
+  - from_state: DISCONNECTED
+    on_event: connect
+    to_state: CONNECTING
+
+  - from_state: CONNECTING
+    on_event: connection_established
+    to_state: CONNECTED
+    guard: handshake_valid
+
+  - from_state: CONNECTED
+    on_event: connection_lost
+    to_state: RECONNECTING
+    guard: should_reconnect
+
+  - from_state: RECONNECTING
+    on_event: reconnect_success
+    to_state: CONNECTED
+
+  - from_state: CONNECTED
+    on_event: disconnect
+    to_state: DISCONNECTING
+```
+
+#### 4. Enable Strict Enforcement
+
+```bash
+specfact enforce stage --preset strict
+```
+
+#### 5. Validate Continuously
+
+```bash
+# First-time setup: Configure CrossHair for contract exploration
+specfact repro setup
+
+# During development
+specfact repro
+
+# In CI/CD
+specfact repro --budget 120 --verbose
+```
+
+### Expected Timeline (Greenfield Development)
+
+- **Planning**: 1-2 hours
+- **Protocol design**: 30 minutes
+- **Implementation**: Per feature/story
+- **Validation**: Continuous (< 90s per check)
+
+---
+
+## Use Case 4: CI/CD Integration
+
+**Problem**: Need automated quality gates in pull requests.
+
+**Solution**: Add SpecFact GitHub Action to PR workflow.
+
+**Terminal Output**: The CLI automatically detects CI/CD environments and uses plain text output (no colors, no animations) for better log readability. Progress updates are visible in CI/CD logs. See [Troubleshooting](troubleshooting.md#terminal-output-issues) for details.
+
+### Steps (CI/CD Integration)
+
+#### 1. Add GitHub Action
+
+Create `.github/workflows/specfact.yml`:
+
+```yaml
+name: SpecFact CLI Validation
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "Time budget in seconds"
+        required: false
+        default: "90"
+        type: string
+
+jobs:
+  specfact-validation:
+    name: Contract Validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install SpecFact CLI
+        run: pip install specfact-cli
+
+      - name: Set up CrossHair Configuration
+        run: specfact repro setup
+
+      - name: Run Contract Validation
+        run: specfact repro --verbose --budget 90
+
+      - name: Generate PR Comment
+        if: github.event_name == 'pull_request'
+        run: python -m specfact_cli.utils.github_annotations
+        env:
+          SPECFACT_REPORT_PATH: .specfact/projects/<bundle-name>/reports/enforcement/report-*.yaml
+```
+
+**Features**:
+
+- ✅ PR annotations for violations
+- ✅ PR comments with violation summaries
+- ✅ Auto-fix suggestions in PR comments
+- ✅ Budget-based blocking
+- ✅ Manual workflow dispatch support
+
+#### 2. Configure Enforcement
+
+Create `.specfact.yaml`:
+
+```yaml
+version: "1.0"
+
+enforcement:
+  preset: balanced  # Block HIGH, warn MEDIUM
+
+repro:
+  budget: 120
+  parallel: true
+  fail_fast: false
+
+analysis:
+  confidence_threshold: 0.7
+  exclude_patterns:
+    - "**/__pycache__/**"
+    - "**/node_modules/**"
+```
+
+#### 3. Test Locally
+
+```bash
+# Before pushing
+specfact repro --verbose
+
+# Apply auto-fixes for violations
+specfact repro --fix --verbose
+
+# If issues found
+specfact enforce stage --preset minimal  # Temporarily allow
+# Fix issues
+specfact enforce stage --preset balanced  # Re-enable
+```
+
+#### 4. Monitor PR Checks
+
+The GitHub Action will:
+
+- Run contract validation
+- Check for async anti-patterns
+- Validate state machine transitions
+- Generate deviation reports
+- Block PR if HIGH severity issues found
+
+### Expected Results
+
+- **Clean PRs**: Pass in < 90s
+- **Blocked PRs**: Clear deviation report
+- **False positives**: < 5% (use override mechanism)
+
+---
+
+## Use Case 5: Multi-Repository Consistency
+
+**Problem**: Multiple microservices need consistent contract enforcement.
+
+**Solution**: Share common plan bundle and enforcement config.
+
+### Steps (Multi-Repository)
+
+#### 1. Create Shared Plan Bundle
+
+In a shared repository:
+
+```bash
+# Create shared plan
+specfact plan init --interactive
+
+# Add common features
+specfact plan add-feature \
+  --key FEATURE-COMMON-001 \
+  --title "API Standards" \
+  --outcomes "Consistent REST patterns" \
+  --outcomes "Standardized error responses"
+```
+
+#### 2. Distribute to Services
+
+```bash
+# In each microservice
+git submodule add https://github.com/org/shared-contracts contracts/shared
+
+# Or copy files
+cp ../shared-contracts/plan.bundle.yaml contracts/shared/
+```
+
+#### 3. Validate Against Shared Plan
+
+```bash
+# In each service
+specfact plan compare \
+  --manual contracts/shared/plan.bundle.yaml \
+  --auto contracts/service/plan.bundle.yaml \
+  --output-format markdown
+```
+
+#### 4. Enforce Consistency
+
+```bash
+# First-time setup: Configure CrossHair for contract exploration
+specfact repro setup
+
+# Add to CI
+specfact repro
+specfact plan compare --manual contracts/shared/plan.bundle.yaml --auto .
+```
+
+### Expected Benefits
+
+- **Consistency**: All services follow same patterns
+- **Reusability**: Shared contracts and protocols
+- **Maintainability**: Update once, apply everywhere
+
+---
+
+See [Commands](../reference/commands.md) for detailed command reference and [Getting Started](../getting-started/README.md) for quick setup.
+
+## Integration Examples
+
+- **[Integration Showcases](../examples/integration-showcases/)** ⭐ - Real bugs fixed via VS Code, Cursor, GitHub Actions integrations
+- **[IDE Integration](ide-integration.md)** - Set up slash commands in your IDE
