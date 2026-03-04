@@ -62,6 +62,9 @@ jobs:
     needs: [changes]
     if: needs.changes.outputs.code_changed == 'true'
     runs-on: ubuntu-latest
+    env:
+      SPECFACT_MODULE_PUBLIC_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PUBLIC_SIGN_KEY }}
+      SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM: ${{ secrets.SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -79,6 +82,9 @@ jobs:
           BASE_REF=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
+          fi
+          if [ -z "${SPECFACT_MODULE_PUBLIC_SIGN_KEY:-}" ] && [ -z "${SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM:-}" ]; then
+            echo "warning: no public signing key secret set; verifier must resolve key from repo/default path"
           fi
           if [ -n "$BASE_REF" ]; then
             python scripts/verify-modules-signature.py --require-signature --enforce-version-bump --version-check-base "$BASE_REF"
