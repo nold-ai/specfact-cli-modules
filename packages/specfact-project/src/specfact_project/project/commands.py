@@ -19,7 +19,6 @@ from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
-
 from specfact_cli.contracts.module_interface import ModuleIOContract
 from specfact_cli.models.project import (
     BundleManifest,
@@ -40,10 +39,13 @@ from specfact_cli.utils.progress import load_bundle_with_progress, save_bundle_w
 from specfact_cli.utils.structure import SpecFactStructure
 from specfact_cli.versioning import ChangeAnalyzer, bump_version, validate_semver
 
+from specfact_project.sync.commands import app as sync_app
+
 
 app = typer.Typer(help="Manage project bundles with persona workflows")
 version_app = typer.Typer(help="Manage project bundle versions")
 app.add_typer(version_app, name="version")
+app.add_typer(sync_app, name="sync")
 console = Console()
 _MODULE_IO_CONTRACT = ModuleIOContract
 import_to_bundle = module_io_shim.import_to_bundle
@@ -234,7 +236,6 @@ def _collect_backlog_health_metrics(adapter: str, project_id: str, template: str
     from backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
     from backlog_core.analyzers.dependency import DependencyAnalyzer
     from backlog_core.graph.builder import BacklogGraphBuilder
-
     from specfact_cli.adapters.registry import AdapterRegistry
 
     adapter_instance = AdapterRegistry.get_adapter(adapter)

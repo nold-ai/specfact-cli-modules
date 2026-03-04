@@ -16,7 +16,6 @@ from icontract import require
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
-
 from specfact_cli.contracts.module_interface import ModuleIOContract
 from specfact_cli.modules import module_io_shim
 from specfact_cli.runtime import debug_log_operation, debug_print, is_debug_mode

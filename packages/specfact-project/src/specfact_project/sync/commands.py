@@ -18,7 +18,6 @@ import typer
 from beartype import beartype
 from icontract import ensure, require
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-
 from specfact_cli import runtime
 from specfact_cli.adapters.registry import AdapterRegistry
 from specfact_cli.models.bridge import AdapterType

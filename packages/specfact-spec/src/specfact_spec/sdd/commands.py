@@ -14,7 +14,6 @@ import typer
 from beartype import beartype
 from icontract import ensure, require
 from rich.table import Table
-
 from specfact_cli.contracts.module_interface import ModuleIOContract
 from specfact_cli.enrichers.constitution_enricher import ConstitutionEnricher
 from specfact_cli.modules import module_io_shim

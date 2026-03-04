@@ -1,0 +1,55 @@
+name: quality-gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Hatch
+        run: python -m pip install --upgrade pip hatch
+
+      - name: Bootstrap hatch env
+        run: hatch env create
+
+      - name: Install specfact-cli dependency
+        run: hatch run pip install specfact-cli
+
+      - name: Format
+        run: hatch run format
+
+      - name: Type Check
+        run: hatch run type-check
+
+      - name: Lint
+        run: hatch run lint
+
+      - name: YAML/Registry Validation
+        run: hatch run yaml-lint
+
+      - name: Contract Test
+        run: hatch run contract-test
+
+      - name: Smart Test
+        run: hatch run smart-test
+
+      - name: Test
+        run: hatch run test

@@ -12,7 +12,6 @@ from typing import Any
 import typer
 from beartype import beartype
 from icontract import ensure, require
-
 from specfact_cli.generators.contract_generator import ContractGenerator
 from specfact_cli.migrations.plan_migrator import load_plan_bundle
 from specfact_cli.models.plan import Product
@@ -540,7 +539,6 @@ def generate_contracts_prompt(
     """
     from rich.prompt import Prompt
     from rich.table import Table
-
     from specfact_cli.utils.progress import load_bundle_with_progress
     from specfact_cli.utils.structure import SpecFactStructure
 
@@ -1588,7 +1586,6 @@ def generate_fix_prompt(
         specfact generate fix-prompt GAP-001 --output fix.md  # Save to specific file
     """
     from rich.table import Table
-
     from specfact_cli.utils.structure import SpecFactStructure
 
     repo_path = Path(".").resolve()
@@ -1927,7 +1924,6 @@ def generate_test_prompt(
         specfact generate test-prompt --bundle legacy-api            # List files needing tests
     """
     from rich.table import Table
-
     from specfact_cli.utils.structure import SpecFactStructure
 
     repo_path = Path(".").resolve()

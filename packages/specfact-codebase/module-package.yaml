@@ -1,12 +1,16 @@
 name: nold-ai/specfact-codebase
-version: 0.40.0
+version: 0.40.14
 commands:
   - code
 tier: official
-publisher: nold-ai
+publisher:
+  name: nold-ai
+  email: hello@noldai.com
 bundle_dependencies: []
+core_compatibility: '>=0.40.0,<1.0.0'
 description: Official SpecFact codebase bundle package.
 category: codebase
 bundle_group_command: codebase
 integrity:
-  checksum: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  checksum: sha256:d5d656df26ec50906cd2c9cadec73fdd28a6964422561df43be53c953be5139e
+  signature: 7jTIqm0X7O+HwERATWe1IiVAVSDKpKaR6ULtCG/47std1Uq3NF9a8L3DgP+hLovYz+ibvGk5Vg0qtkX6NIagCA==

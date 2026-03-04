@@ -7,10 +7,10 @@ from typing import Any
 
 from beartype import beartype
 from icontract import ensure, require
-
 from specfact_cli.models.plan import Product
 from specfact_cli.models.project import BundleManifest, ProjectBundle
 from specfact_cli.models.validation import ValidationReport
+
 from specfact_govern.patch_mode.patch_mode.commands.apply import app
 
 

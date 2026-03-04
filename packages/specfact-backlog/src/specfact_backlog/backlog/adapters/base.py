@@ -8,7 +8,6 @@ from typing import Any
 import yaml
 from beartype import beartype
 from icontract import ensure, require
-
 from specfact_cli.common import get_bridge_logger
 
 

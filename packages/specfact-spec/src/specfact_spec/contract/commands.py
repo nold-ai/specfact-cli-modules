@@ -15,7 +15,6 @@ from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
-
 from specfact_cli.contracts.module_interface import ModuleIOContract
 from specfact_cli.models.contract import (
     ContractIndex,

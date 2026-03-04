@@ -9,9 +9,9 @@ from typing import Annotated
 import typer
 from beartype import beartype
 from icontract import require
-
 from specfact_cli.common import get_bridge_logger
 from specfact_cli.runtime import get_configured_console
+
 from specfact_govern.patch_mode.patch_mode.pipeline.applier import (
     apply_patch_local,
     apply_patch_write,

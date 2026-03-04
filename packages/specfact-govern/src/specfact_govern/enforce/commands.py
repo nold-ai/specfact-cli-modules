@@ -16,7 +16,6 @@ from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
-
 from specfact_cli.models.deviation import Deviation, DeviationSeverity, DeviationType, ValidationReport
 from specfact_cli.models.enforcement import EnforcementConfig, EnforcementPreset
 from specfact_cli.models.plan import Product
@@ -263,7 +262,6 @@ def enforce_sdd(
         )
         debug_print("[dim]enforce sdd: started[/dim]")
     from rich.console import Console
-
     from specfact_cli.models.sdd import SDDManifest
     from specfact_cli.utils.structure import SpecFactStructure
     from specfact_cli.utils.structured_io import StructuredFormat

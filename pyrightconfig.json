@@ -1,0 +1,11 @@
+{
+  "include": ["src", "tests", "tools"],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "standard",
+  "useLibraryCodeForTypes": true,
+  "reportMissingTypeStubs": false,
+  "reportMissingImports": true,
+  "reportMissingModuleSource": "none",
+  "venvPath": ".",
+  "venv": ".venv"
+}

@@ -18,7 +18,6 @@ from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
-
 from specfact_cli import runtime
 from specfact_cli.analyzers.ambiguity_scanner import AmbiguityFinding
 from specfact_cli.comparators.plan_comparator import PlanComparator
@@ -2540,6 +2539,7 @@ def sync(
         specfact plan sync --shared --repo ./project   # Sync specific repo
     """
     from specfact_cli.utils.structure import SpecFactStructure
+
     from specfact_project.sync.commands import sync_spec_kit
 
     telemetry_metadata = {
@@ -2646,7 +2646,6 @@ def promote(
     from datetime import datetime
 
     from rich.console import Console
-
     from specfact_cli.utils.structure import SpecFactStructure
 
     console = Console()
@@ -3106,7 +3105,6 @@ def _output_findings(
     """
     from rich.console import Console
     from rich.table import Table
-
     from specfact_cli.analyzers.ambiguity_scanner import AmbiguityStatus
 
     console = Console()
@@ -3598,7 +3596,6 @@ def _prepare_review_bundle(
     elif not sdd_valid:
         print_warning("SDD manifest validation failed:")
         from rich.console import Console
-
         from specfact_cli.models.deviation import DeviationSeverity
 
         console = Console()
@@ -3615,7 +3612,6 @@ def _prepare_review_bundle(
 
         # Display contract density metrics
         from rich.console import Console
-
         from specfact_cli.validators.contract_validator import calculate_contract_density
 
         console = Console()
@@ -3756,7 +3752,6 @@ def _handle_no_questions_case(
         report: Ambiguity report
     """
     from rich.console import Console
-
     from specfact_cli.analyzers.ambiguity_scanner import AmbiguityStatus, TaxonomyCategory
 
     console = Console()
@@ -3967,7 +3962,6 @@ def _ask_questions_interactive(
     from datetime import date, datetime
 
     from rich.console import Console
-
     from specfact_cli.models.plan import Clarification, ClarificationSession
 
     console = Console()
@@ -4106,7 +4100,6 @@ def _display_review_summary(
         today_session: Today's clarification session
     """
     from rich.console import Console
-
     from specfact_cli.analyzers.ambiguity_scanner import AmbiguityStatus
 
     console = Console()
@@ -4322,7 +4315,6 @@ def review(
         specfact plan review legacy-api --answers '{"Q001": "answer1", "Q002": "answer2"}'  # Non-interactive
     """
     from rich.console import Console
-
     from specfact_cli.utils.structure import SpecFactStructure
 
     console = Console()
@@ -4659,7 +4651,6 @@ def harden(
     is_non_interactive = not interactive
 
     from rich.console import Console
-
     from specfact_cli.utils.structure import SpecFactStructure
 
     console = Console()
@@ -5519,7 +5510,6 @@ def _get_smart_answer(
         User answer (processed if Yes/No detected)
     """
     from rich.console import Console
-
     from specfact_cli.analyzers.ambiguity_scanner import TaxonomyCategory
 
     console = Console()

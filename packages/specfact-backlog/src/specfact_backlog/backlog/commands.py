@@ -36,8 +36,6 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.prompt import Confirm
 from rich.table import Table
-from typer.core import TyperGroup
-
 from specfact_cli.adapters.registry import AdapterRegistry
 from specfact_cli.backlog.adapters.base import BacklogAdapter
 from specfact_cli.backlog.ai_refiner import BacklogAIRefiner
@@ -50,6 +48,9 @@ from specfact_cli.models.project import BundleManifest, ProjectBundle
 from specfact_cli.models.validation import ValidationReport
 from specfact_cli.runtime import debug_log_operation, is_debug_mode
 from specfact_cli.templates.registry import BacklogTemplate, TemplateRegistry
+from typer.core import TyperGroup
+
+from specfact_backlog.backlog.auth_commands import auth_app
 
 
 class _BacklogCommandGroup(TyperGroup):
@@ -59,6 +60,7 @@ class _BacklogCommandGroup(TyperGroup):
         # Ceremony and analytical groups first for discoverability.
         "ceremony": 10,
         "delta": 20,
+        "auth": 25,
         # Core high-impact workflow actions.
         "sync": 30,
         "verify-readiness": 40,
@@ -3225,6 +3227,7 @@ def daily(
 
 
 app.add_typer(ceremony_app, name="ceremony", help="Ceremony-oriented backlog workflows")
+app.add_typer(auth_app, name="auth", help="Authenticate backlog providers")
 
 
 @beartype
@@ -4427,7 +4430,6 @@ def map_fields(
     import re
 
     import requests
-
     from specfact_cli.backlog.mappers.template_config import FieldMappingConfig
     from specfact_cli.utils.auth_tokens import get_token
 
@@ -4612,7 +4614,7 @@ def map_fields(
             token = stored.get("access_token") if isinstance(stored, dict) else None
         if not token:
             console.print("[red]Error:[/red] GitHub token required for github mapping setup")
-            console.print("[yellow]Use:[/yellow] specfact auth github or set GITHUB_TOKEN")
+            console.print("[yellow]Use:[/yellow] specfact backlog auth github or set GITHUB_TOKEN")
             raise typer.Exit(1)
 
         def _github_graphql(query: str, variables: dict[str, Any]) -> dict[str, Any]:
@@ -4637,7 +4639,7 @@ def map_fields(
                 if "required scopes" in lower_combined and "read:project" in lower_combined:
                     raise ValueError(
                         "GitHub token is missing Projects scopes. Re-authenticate with: "
-                        "specfact auth github --scopes repo,read:project,project"
+                        "specfact backlog auth github --scopes repo,read:project,project"
                     )
                 raise ValueError(combined or "GitHub GraphQL returned errors")
             data = payload.get("data")
@@ -4699,7 +4701,7 @@ def map_fields(
                 console.print(f"[dim]Details:[/dim] {repo_issue_types_error}")
             console.print(
                 "[yellow]Hint:[/yellow] Re-authenticate with required scopes and rerun mapping: "
-                "`specfact auth github --scopes repo,read:project,project`."
+                "`specfact backlog auth github --scopes repo,read:project,project`."
             )
             raise typer.Exit(1)
 
@@ -4905,7 +4907,7 @@ def map_fields(
             console.print(f"[red]Error:[/red] Could not discover GitHub ProjectV2 metadata: {message}")
             if "required scopes" in message.lower() or "read:project" in message.lower():
                 console.print(
-                    "[yellow]Hint:[/yellow] Run `specfact auth github --scopes repo,read:project,project` "
+                    "[yellow]Hint:[/yellow] Run `specfact backlog auth github --scopes repo,read:project,project` "
                     "or provide `GITHUB_TOKEN` with those scopes."
                 )
             else:
@@ -5154,7 +5156,7 @@ def map_fields(
         token_type = (stored_token_expired.get("token_type") or "bearer").lower()
         auth_scheme = "bearer" if token_type == "bearer" else "basic"
         console.print(
-            "[yellow]⚠[/yellow] Using expired stored token. If authentication fails, refresh with: specfact auth azure-devops"
+            "[yellow]⚠[/yellow] Using expired stored token. If authentication fails, refresh with: specfact backlog auth azure-devops"
         )
 
     if not api_token:
@@ -5162,7 +5164,7 @@ def map_fields(
         console.print("[yellow]Options:[/yellow]")
         console.print("  1. Use --ado-token option")
         console.print("  2. Set AZURE_DEVOPS_TOKEN environment variable")
-        console.print("  3. Use: specfact auth azure-devops")
+        console.print("  3. Use: specfact backlog auth azure-devops")
         raise typer.Exit(1)
 
     if not ado_org:
