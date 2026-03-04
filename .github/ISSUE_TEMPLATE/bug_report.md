@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a bug in SpecFact CLI
+about: Report a bug in specfact-cli-modules (bundles, manifests, signing, CI/docs)
 title: "[Bug] <Brief Description>"
 labels: bug
 assignees: ''
@@ -16,14 +16,13 @@ A clear and concise description of what the bug is.
 Steps to reproduce the behavior:
 
 ```bash
-# Example command that triggers the bug
-specfact <command> --options
+hatch run <command>
 ```
 
-**Example:**
+Example:
 
 ```bash
-specfact import from-code ./my-legacy-project --confidence 0.8
+hatch run verify-modules-signature --require-signature --enforce-version-bump
 ```
 
 ## Expected Behavior
@@ -38,29 +37,29 @@ What actually happened? Include error messages, stack traces, or unexpected outp
 
 - **OS**: [e.g., Linux, macOS, Windows]
 - **Python Version**: [e.g., 3.11.5]
-- **SpecFact CLI Version**: [e.g., 0.1.0 - run `specfact --version`]
-- **Installation Method**: [e.g., pip, uvx, from source]
+- **Repo Branch**: [e.g., `feature/module-migration-05-modules-repo-quality`]
+- **Relevant Bundle(s)**: [`specfact-project`, `specfact-backlog`, `specfact-codebase`, `specfact-spec`, `specfact-govern`]
 
-## Command Output
+## Validation Output
 
-Include the full command output (with `--verbose` if applicable):
+Include full output from relevant commands:
 
 ```markdown
 Paste command output here
 ```
 
-## Codebase Context (for brownfield issues)
+Typical commands:
 
-If this bug occurs when analyzing legacy code:
-
-- **Project Type**: [e.g., Django, Flask, FastAPI, plain Python]
-- **Codebase Size**: [e.g., ~10K lines, ~100 files]
-- **Python Version in Target Codebase**: [e.g., 3.8, 3.11]
+- `hatch run format`
+- `hatch run type-check`
+- `hatch run lint`
+- `hatch run yaml-lint`
+- `hatch run check-bundle-imports`
+- `hatch run verify-modules-signature --require-signature --enforce-version-bump`
 
 ## Additional Context
 
 Add any other context about the problem here, such as:
 
 - Related issues or PRs
-- Workarounds you've found
-- Impact on your workflow
+- Whether this blocks release/merge to `dev`/`main`

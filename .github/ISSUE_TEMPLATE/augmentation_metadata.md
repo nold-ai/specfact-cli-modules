@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest a new feature or enhancement for SpecFact CLI
+about: Suggest a feature/enhancement for specfact-cli-modules
 title: "[Feature] <Brief Description>"
 labels: enhancement
 assignees: ''
@@ -13,36 +13,26 @@ Provide a clear and concise description of the feature you'd like to see.
 
 ## Use Case
 
-**Primary Use Case**: Is this for brownfield modernization, Spec-Kit integration, or greenfield development?
+Primary use case in modules repo:
 
-Describe the specific scenario where this feature would be helpful:
-
-- **Brownfield Modernization**: Analyzing/refactoring legacy codebases
-- **Spec-Kit Integration**: Enhancing Spec-Kit workflows
-- **Greenfield Development**: New project development
-- **Other**: Describe your use case
+- Bundle behavior enhancement (`specfact-project`, `specfact-backlog`, `specfact-codebase`, `specfact-spec`, `specfact-govern`)
+- Manifest/registry workflow
+- Signing/verification workflow
+- CI/docs workflow
 
 ## Motivation
 
 Explain why this feature would be useful. What problem does it solve?
 
-**Example:**
-> When analyzing large legacy Django projects, I need to exclude test files from analysis to reduce noise in the generated specs.
-
 ## Proposed Solution
 
-Describe how you envision this feature working. Include CLI commands, options, or behaviors.
+Describe the expected behavior and where it should live (`packages/`, `scripts/`, `docs/`, workflows).
 
-**Example Command:**
-
-```bash
-specfact <command> --option value
-```
-
-**Example:**
+Example validation commands:
 
 ```bash
-specfact import from-code ./legacy-project --exclude "tests/**" --confidence 0.7
+hatch run check-bundle-imports
+hatch run verify-modules-signature --require-signature --enforce-version-bump
 ```
 
 ## Alternative Solutions
@@ -55,12 +45,13 @@ Add any other context, examples, or mockups about the feature request here.
 
 ## Impact
 
-- **User Impact:** (e.g., High - frequently requested, Medium - nice to have, Low - minor improvement)
-- **Complexity:** (e.g., Small - 1-2 days, Medium - 1 week, Large - multiple weeks)
-- **Brownfield Relevance:** How does this help with legacy code modernization?
+- **Bundle Impact:** Which official bundles are affected?
+- **Complexity:** (Small / Medium / Large)
+- **Release Risk:** (Low / Medium / High)
+- **Signing/Versioning impact:** Does this require manifest version bumps/re-signing?
 
 ## Related Issues/PRs
 
 List any related issues or pull requests:
 
-- #123
+- #
