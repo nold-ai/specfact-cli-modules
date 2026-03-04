@@ -1,93 +1,66 @@
-# Description
+# Summary
 
-Please include a summary of the change and which issue is fixed. Include relevant motivation and context.
+Describe what changed in `specfact-cli-modules` and why.
 
-**Fixes** #(issue)
+Refs:
+- specfact-cli issue: #
+- related module migration item/change: #
 
-**New Features** #(issue)
+## Scope
 
-**Contract References**: List any contracts (`@icontract` decorators) that this change affects or implements.
+- [ ] Bundle source changes under `packages/`
+- [ ] Registry/manifest changes (`registry/index.json`, `packages/*/module-package.yaml`)
+- [ ] CI/workflow changes (`.github/workflows/*`)
+- [ ] Documentation changes (`docs/*`, `README.md`, `AGENTS.md`)
+- [ ] Security/signing changes (`scripts/sign-modules.py`, `scripts/verify-modules-signature.py`)
 
-## Type of Change
+## Bundle Impact
 
-Please check all that apply:
+List impacted bundles and version updates:
 
-- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
-- [ ] ✨ New feature (non-breaking change which adds functionality)
-- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] 📚 Documentation update
-- [ ] 🔒 Contract enforcement (adding/updating `@icontract` decorators)
-- [ ] 🧪 Test enhancement (scenario tests, property-based tests)
-- [ ] 🔧 Refactoring (code improvement without functionality change)
+- `nold-ai/specfact-project`: `old -> new`
+- `nold-ai/specfact-backlog`: `old -> new`
+- `nold-ai/specfact-codebase`: `old -> new`
+- `nold-ai/specfact-spec`: `old -> new`
+- `nold-ai/specfact-govern`: `old -> new`
 
-## Contract-First Testing Evidence
+## Validation Evidence
 
-**Required for all changes affecting CLI commands or public APIs:**
+Paste command output snippets or link workflow runs.
 
-### Contract Validation
+### Required local gates
 
-- [ ] **Runtime contracts added/updated** (`@icontract` decorators on public APIs)
-- [ ] **Type checking enforced** (`@beartype` decorators applied)
-- [ ] **CrossHair exploration** completed: `hatch run contract-test-exploration`
-- [ ] **Contract violations** reviewed and addressed
+- [ ] `hatch run format`
+- [ ] `hatch run type-check`
+- [ ] `hatch run lint`
+- [ ] `hatch run yaml-lint`
+- [ ] `hatch run check-bundle-imports`
+- [ ] `hatch run contract-test`
+- [ ] `hatch run smart-test` (or `hatch run test`)
 
-### Test Execution
+### Signature + version integrity (required)
 
-- [ ] **Contract validation**: `hatch run contract-test-contracts` ✅
-- [ ] **Contract exploration**: `hatch run contract-test-exploration` ✅
-- [ ] **Scenario tests**: `hatch run contract-test-scenarios` ✅
-- [ ] **Full test suite**: `hatch run contract-test-full` ✅
+- [ ] `hatch run verify-modules-signature --require-signature --enforce-version-bump`
+- [ ] Changed bundle versions were bumped before signing
+- [ ] Manifests re-signed after bundle content changes
 
-### Test Quality
+## CI and Branch Protection
 
-- [ ] **CLI commands tested** with typer test client
-- [ ] **Edge cases covered** with Hypothesis property tests
-- [ ] **Error handling tested** with invalid inputs
-- [ ] **Rich console output verified** manually or with snapshots
+- [ ] PR orchestrator jobs expected:
+  - `verify-module-signatures`
+  - `quality (3.11)`
+  - `quality (3.12)`
+  - `quality (3.13)`
+- [ ] Branch protection required checks are aligned with the above
 
-## How Has This Been Tested?
+## Docs / Pages
 
-**Contract-First Approach**: Describe how contracts and scenario tests validate your changes.
-
-### Manual Testing
-
-- [ ] Tested CLI commands manually
-- [ ] Verified rich console output
-- [ ] Tested with different input scenarios
-- [ ] Checked error messages for clarity
-
-### Automated Testing
-
-- [ ] Contract validation passes
-- [ ] Property-based tests cover edge cases
-- [ ] Scenario tests cover user workflows
-- [ ] All existing tests still pass
-
-### Test Environment
-
-- Python version: (e.g., 3.11, 3.12, 3.13)
-- OS: (e.g., Ubuntu 22.04, macOS 14, Windows 11)
+- [ ] Bundle/module docs updated in this repo (`docs/`)
+- [ ] Pages workflow impact reviewed (`docs-pages.yml`, if changed)
+- [ ] Cross-links from `specfact-cli` docs updated (if applicable)
 
 ## Checklist
 
-- [ ] My code follows the style guidelines (PEP 8, ruff format, isort)
-- [ ] I have performed a self-review of my code
-- [ ] I have added/updated contracts (`@icontract`, `@beartype`)
-- [ ] I have added/updated docstrings (Google style)
-- [ ] I have made corresponding changes to documentation
-- [ ] My changes generate no new warnings (basedpyright, ruff, pylint)
-- [ ] All tests pass locally
-- [ ] I have added tests that prove my fix/feature works
-- [ ] Any dependent changes have been merged
-
-## Quality Gates Status
-
-- [ ] **Type checking** ✅ (`hatch run type-check`)
-- [ ] **Linting** ✅ (`hatch run lint`)
-- [ ] **Contract validation** ✅ (`hatch run contract-test-contracts`)
-- [ ] **Contract exploration** ✅ (`hatch run contract-test-exploration`)
-- [ ] **Scenario tests** ✅ (`hatch run contract-test-scenarios`)
-
-## Screenshots/Recordings (if applicable)
-
-Add screenshots or recordings of CLI output, especially for new commands or UI changes.
+- [ ] Self-review completed
+- [ ] No unrelated files or generated artifacts included
+- [ ] Backward-compatibility/rollout notes documented (if needed)
