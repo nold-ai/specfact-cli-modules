@@ -12,5 +12,5 @@ description: Official SpecFact project bundle package.
 category: project
 bundle_group_command: project
 integrity:
-  checksum: sha256:3bc1dade24042985de74dd12827372aa400291a28c34dd4c54836857a2a5d630
-  signature: SL0IRe5sTcrSA0SiKY1BIGj9t9QlzZWvxERL/+KiC/70YL2nwM0CgVRnCTIFppDfKCF7huzUMdhJTAqavISPAg==
+  checksum: sha256:cbf54cf528dfbfaa4a45ce2faa95ff8b61edf006d415db0bd25cf24c4474b442
+  signature: mAQO8rjHS1XbTQd67gJ8Wo45o7bfSoSSyNaizaROkh4OYhdJi4JokJ7nt4AxCQbR5SGxfEJ2dIrRHv75N7PCCQ==

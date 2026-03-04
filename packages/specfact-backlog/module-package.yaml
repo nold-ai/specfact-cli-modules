@@ -12,5 +12,5 @@ description: Official SpecFact backlog bundle package.
 category: backlog
 bundle_group_command: backlog
 integrity:
-  checksum: sha256:d2c16b76dee7a8ac44d4f4ebc2808bd07c77d36a4142653fda4c7f017b0382e3
-  signature: BJZAFFcCwVN1X1Ha+MNjpOB3NXX2JpCxkQ+DadWSDqR01N7qsw+zLRxQUsmkbdBebQ/LrO2wcQo/xp7j7VVfDw==
+  checksum: sha256:4741ab211456ac7892fa1292d3e5c036beb10ba130be0bdce2b45c39ad8cb89e
+  signature: B1sq25Zc4SLOSOtQdSffud4FcNqH7fpkyP7nkHJxhkAuqeS1cnTdExmTGwa7ccYHnR6WMWLy3ILATOlbf2JVAg==

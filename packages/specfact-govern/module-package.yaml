@@ -13,5 +13,5 @@ description: Official SpecFact governance bundle package.
 category: govern
 bundle_group_command: govern
 integrity:
-  checksum: sha256:664b8844f1c933e54a3da1c8132e948c07b7a827fc344235cba602c14878d4c2
-  signature: qmQRC8O+8YHW4+H0kwNJgWrZBBoj8ds6n7iGVY7ac2PtHCniRuS/zjh+o7H4ieE9LILFFsLJBcEagu6uxPQIBg==
+  checksum: sha256:bc3612baa8dcd322f64d7a5e6ebe40d6caddcfb2769f2d441c4ae58a06ef4fd4
+  signature: ZbAM4ocLj9ZG62jMPJlqqeAXBtCCZ79MaLBuUqF8nxri6AwrXNirTZtqe2pFIUGqTDvWyCB1dbMCMCRiG8N0Aw==

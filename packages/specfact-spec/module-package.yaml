@@ -13,5 +13,5 @@ description: Official SpecFact specification bundle package.
 category: spec
 bundle_group_command: spec
 integrity:
-  checksum: sha256:dad273f3dbe82695e9f9a3d14ea50dc60f4b5f8cd564c0a0b335e731529d771a
-  signature: ad/fc2qzcjZRn8mFFQzpgPAASRxo9Zl3Ueu0loJlWTAmuSCdAAKA+mDT57zBxKzRiM+NNUeWKGXzi2H7tluAAw==
+  checksum: sha256:5f1bc4758088c8a3c513bb26473392bffd09cdfa40638c48170a8a3ec89feee5
+  signature: ooAlA0BeZg3YteavLGXkQXvAlkWskFNj/roeCe5eRkRPu8c5JF6+pRlNQ0S4xUkRagPrapTHs+kHd/WNAVB7DQ==
