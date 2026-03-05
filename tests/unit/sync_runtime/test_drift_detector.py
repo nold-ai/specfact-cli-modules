@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 """
 Unit tests for drift detector.
 
@@ -10,10 +11,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from beartype import beartype
-
 from specfact_cli.models.plan import Feature, Product, Story
 from specfact_cli.models.project import BundleManifest, ProjectBundle
 from specfact_cli.models.source_tracking import SourceTracking
+
 from specfact_project.sync_runtime.drift_detector import DriftDetector, DriftReport
 
 

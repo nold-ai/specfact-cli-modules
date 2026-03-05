@@ -1,6 +1,8 @@
+# pyright: reportMissingImports=false
 """Unit tests for bridge-based watch mode."""
 
 from specfact_cli.models.bridge import AdapterType, ArtifactMapping, BridgeConfig
+
 from specfact_project.sync_runtime.bridge_watch import BridgeWatch, BridgeWatchEventHandler
 from specfact_project.sync_runtime.watcher import FileChange
 

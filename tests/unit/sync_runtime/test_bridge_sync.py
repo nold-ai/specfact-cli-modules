@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 """Unit tests for bridge-based sync functionality."""
 
 from __future__ import annotations
@@ -7,10 +8,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from beartype import beartype
-
 from specfact_cli.adapters.registry import AdapterRegistry
 from specfact_cli.models.bridge import AdapterType, ArtifactMapping, BridgeConfig
 from specfact_cli.models.project import ProjectBundle
+
 from specfact_project.sync_runtime.bridge_sync import BridgeSync, SyncOperation, SyncResult
 
 

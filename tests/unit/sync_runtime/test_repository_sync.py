@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 """
 Unit tests for RepositorySync - Contract-First approach.
 

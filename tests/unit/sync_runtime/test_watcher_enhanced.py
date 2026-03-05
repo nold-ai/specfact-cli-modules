@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 """
 Unit tests for enhanced watch mode with hash-based change detection.
 """

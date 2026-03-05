@@ -1,9 +1,10 @@
+# pyright: reportMissingImports=false
 """Unit tests for bridge probe functionality."""
 
 import pytest
-
 from specfact_cli.models.bridge import AdapterType
 from specfact_cli.models.capabilities import ToolCapabilities
+
 from specfact_project.sync_runtime.bridge_probe import BridgeProbe
 
 
