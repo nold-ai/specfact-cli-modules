@@ -1,0 +1,236 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: publish-modules
+
+on:
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+    inputs:
+      bundles:
+        description: "Comma-separated bundle names (for example: specfact-backlog,specfact-project). Empty = auto-detect."
+        required: false
+        default: ""
+      dry_run:
+        description: "Prepare registry changes but do not push commit"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-modules-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install publish dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml packaging
+
+      - name: Resolve publish bundle set
+        id: bundles
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_BUNDLES: ${{ github.event.inputs.bundles }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          def normalize_bundle(name: str) -> str:
+            cleaned = name.strip()
+            if not cleaned:
+              return ""
+            if not cleaned.startswith("specfact-"):
+              cleaned = f"specfact-{cleaned}"
+            return cleaned
+
+          event_name = os.environ.get("EVENT_NAME", "")
+          dispatch_bundles = os.environ.get("DISPATCH_BUNDLES", "").strip()
+          bundles: list[str] = []
+
+          if event_name == "workflow_dispatch" and dispatch_bundles:
+            bundles = [normalize_bundle(part) for part in dispatch_bundles.split(",")]
+            bundles = sorted({bundle for bundle in bundles if bundle})
+          else:
+            before_sha = os.environ.get("BEFORE_SHA", "").strip()
+            after_sha = os.environ.get("AFTER_SHA", "").strip() or "HEAD"
+            if not before_sha or before_sha == "0000000000000000000000000000000000000000":
+              before_sha = "HEAD~1"
+
+            try:
+              changed = subprocess.check_output(
+                ["git", "diff", "--name-only", before_sha, after_sha, "--", "packages"],
+                text=True,
+              ).splitlines()
+            except subprocess.CalledProcessError:
+              changed = []
+
+            seen: set[str] = set()
+            for path in changed:
+              parts = Path(path).parts
+              if len(parts) < 2:
+                continue
+              if parts[0] != "packages":
+                continue
+              bundle = parts[1]
+              if not bundle.startswith("specfact-"):
+                continue
+              seen.add(bundle)
+            bundles = sorted(seen)
+
+          out_path = Path(os.environ["GITHUB_OUTPUT"])
+          out_path.write_text(
+            f"bundles_json={json.dumps(bundles)}\ncount={len(bundles)}\n",
+            encoding="utf-8",
+          )
+          print(f"Resolved bundles: {bundles}")
+          PY
+
+      - name: Publish changed bundles into registry
+        if: steps.bundles.outputs.count != '0'
+        env:
+          BUNDLES_JSON: ${{ steps.bundles.outputs.bundles_json }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import subprocess
+          import tarfile
+          from pathlib import Path
+
+          import yaml
+
+          repo_root = Path(".").resolve()
+          import os
+
+          bundles = json.loads(os.environ["BUNDLES_JSON"])
+          registry_index_path = repo_root / "registry" / "index.json"
+          registry_modules_dir = repo_root / "registry" / "modules"
+          registry_signatures_dir = repo_root / "registry" / "signatures"
+          registry_modules_dir.mkdir(parents=True, exist_ok=True)
+          registry_signatures_dir.mkdir(parents=True, exist_ok=True)
+
+          registry = json.loads(registry_index_path.read_text(encoding="utf-8"))
+          modules = registry.get("modules")
+          if not isinstance(modules, list):
+            raise ValueError("registry/index.json must contain a 'modules' list")
+
+          ignored_dir_names = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
+          ignored_suffixes = {".pyc", ".pyo"}
+
+          for bundle in bundles:
+            # Keep existing monotonic version guard logic.
+            subprocess.run(
+              ["python", "scripts/publish-module.py", "--bundle", bundle, "--repo-root", "."],
+              check=True,
+            )
+
+            bundle_dir = repo_root / "packages" / bundle
+            manifest_path = bundle_dir / "module-package.yaml"
+            if not manifest_path.exists():
+              raise FileNotFoundError(f"Missing manifest: {manifest_path}")
+
+            manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+            if not isinstance(manifest, dict):
+              raise ValueError(f"Invalid manifest content: {manifest_path}")
+
+            module_id = str(manifest.get("name") or f"nold-ai/{bundle}")
+            version = str(manifest.get("version") or "").strip()
+            if not version:
+              raise ValueError(f"Manifest missing version: {manifest_path}")
+
+            artifact_name = f"{bundle}-{version}.tar.gz"
+            artifact_path = registry_modules_dir / artifact_name
+            signature_path = registry_signatures_dir / f"{bundle}-{version}.tar.sig"
+
+            with tarfile.open(artifact_path, mode="w:gz") as tar:
+              for path in sorted(bundle_dir.rglob("*")):
+                if not path.is_file():
+                  continue
+                rel = path.relative_to(bundle_dir)
+                if any(part in ignored_dir_names for part in rel.parts):
+                  continue
+                if path.suffix.lower() in ignored_suffixes:
+                  continue
+                tar.add(path, arcname=f"{bundle}/{rel.as_posix()}")
+
+            digest = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+            (artifact_path.with_suffix(artifact_path.suffix + ".sha256")).write_text(f"{digest}\n", encoding="utf-8")
+
+            integrity = manifest.get("integrity")
+            if isinstance(integrity, dict):
+              signature_text = str(integrity.get("signature") or "").strip()
+              if signature_text:
+                signature_path.write_text(signature_text + "\n", encoding="utf-8")
+
+            entry = next(
+              (
+                item
+                for item in modules
+                if isinstance(item, dict) and str(item.get("id") or "").strip() == module_id
+              ),
+              None,
+            )
+            if entry is None:
+              entry = {"id": module_id}
+              modules.append(entry)
+
+            entry["latest_version"] = version
+            entry["download_url"] = f"modules/{artifact_name}"
+            entry["checksum_sha256"] = digest
+            if "tier" in manifest:
+              entry["tier"] = manifest["tier"]
+            if "publisher" in manifest:
+              entry["publisher"] = manifest["publisher"]
+            if "bundle_dependencies" in manifest:
+              entry["bundle_dependencies"] = manifest["bundle_dependencies"]
+            if "description" in manifest:
+              entry["description"] = manifest["description"]
+
+            print(f"Published registry artifact for {module_id} v{version}")
+
+          registry_index_path.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Commit registry updates
+        if: steps.bundles.outputs.count != '0'
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          if git diff --quiet -- registry/index.json registry/modules registry/signatures; then
+            echo "No registry changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add registry/index.json registry/modules registry/signatures
+          git commit -m "chore(registry): publish changed modules [skip ci]"
+
+          if [ "${DRY_RUN:-false}" = "true" ]; then
+            echo "Dry run enabled; skipping push."
+            exit 0
+          fi
+
+          git push
