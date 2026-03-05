@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: publish-modules-${{ github.ref }}
@@ -213,10 +214,11 @@ jobs:
           registry_index_path.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
           PY
 
-      - name: Commit registry updates
+      - name: Commit registry updates via PR branch
         if: steps.bundles.outputs.count != '0'
         env:
           DRY_RUN: ${{ github.event.inputs.dry_run }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if git diff --quiet -- registry/index.json registry/modules registry/signatures; then
             echo "No registry changes to commit."
@@ -225,6 +227,11 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          TARGET_BRANCH="${GITHUB_REF_NAME}"
+          PUBLISH_BRANCH="auto/publish-${TARGET_BRANCH}-${GITHUB_RUN_ID}"
+          git checkout -b "${PUBLISH_BRANCH}"
+
           git add registry/index.json registry/modules registry/signatures
           git commit -m "chore(registry): publish changed modules [skip ci]"
 
@@ -233,4 +240,10 @@ jobs:
             exit 0
           fi
 
-          git push
+          git push origin "${PUBLISH_BRANCH}"
+
+          gh pr create \
+            --base "${TARGET_BRANCH}" \
+            --head "${PUBLISH_BRANCH}" \
+            --title "chore(registry): publish changed modules" \
+            --body "Automated registry publish update from workflow run ${GITHUB_RUN_ID}."
