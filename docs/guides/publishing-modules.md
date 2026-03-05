@@ -7,7 +7,7 @@ description: Package and publish SpecFact modules to a registry (tarball, checks
 
 # Publishing modules
 
-This guide describes how to package a SpecFact module for registry publishing: validate structure, create a tarball and checksum, optionally sign the manifest, and automate via CI.
+This guide describes how SpecFact modules are validated and published into this repository's registry (`registry/index.json`, `registry/modules/`, `registry/signatures/`).
 
 ## Module structure
 
@@ -30,32 +30,19 @@ Exclude from the package: `.git`, `__pycache__`, `tests`, `.pytest_cache`, `*.py
 
 ## Script: publish-module.py
 
-Use `scripts/publish-module.py` to validate, package, and optionally sign a module.
+Use `scripts/publish-module.py` as a publish pre-check (monotonic version and manifest/registry consistency):
 
 ```bash
-# Basic: create tarball and SHA-256 checksum
-python scripts/publish-module.py path/to/module -o dist
-
-# Write a registry index fragment (for merging into your registry index)
-python scripts/publish-module.py path/to/module -o dist \
-  --index-fragment dist/entry.yaml \
-  --download-base-url https://registry.example.com/packages/
-
-# Sign the manifest after packaging (requires key)
-python scripts/publish-module.py path/to/module -o dist --sign
-python scripts/publish-module.py path/to/module -o dist --sign --key-file /path/to/private.pem
+python scripts/publish-module.py --bundle specfact-backlog
+python scripts/publish-module.py --bundle backlog
 ```
 
-Options:
+The script validates:
 
-- `module_path`: Path to the module directory or to `module-package.yaml`.
-- `-o` / `--output-dir`: Directory for `<name>-<version>.tar.gz` and `<name>-<version>.tar.gz.sha256`.
-- `--sign`: Run `scripts/sign-modules.py` on the manifest (uses `SPECFACT_MODULE_PRIVATE_SIGN_KEY` or `--key-file`).
-- `--key-file`: Path to PEM private key when using `--sign`.
-- `--index-fragment`: Write a single-module index entry (id, latest_version, download_url, checksum_sha256) to the given path.
-- `--download-base-url`: Base URL for `download_url` in the index fragment.
-
-Namespace and marketplace: If the manifest has `publisher` or `tier`, the script requires `name` in `namespace/name` form and validates format (`^[a-z][a-z0-9-]*/[a-z][a-z0-9-]+$`).
+- target bundle exists under `packages/`
+- manifest version is valid
+- manifest version is greater than current `registry/index.json` `latest_version`
+- `core_compatibility` is present/reviewed (warning)
 
 ## Signing (optional)
 
@@ -68,10 +55,16 @@ For runtime verification, sign the manifest so the tarball includes integrity me
 
 Repository workflow `.github/workflows/publish-modules.yml`:
 
-- **Triggers**: Push to tags matching `*-v*` (e.g. `backlog-v0.29.0`) or manual `workflow_dispatch` with input `module_path`.
-- **Steps**: Checkout → resolve module path from tag → optional **Sign module manifest** (when secrets are set) → run `publish-module.py` → upload `dist/*.tar.gz` and `dist/*.sha256` as artifacts.
-
-Optional signing in CI: Add repository secrets `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`. The workflow signs the manifest before packaging when the key secret is present.
+- **Triggers**:
+  - Push to `dev` and `main` (decoupled modules release flow)
+  - Manual `workflow_dispatch` with optional `bundles` input
+- **Flow**:
+  - Detect changed bundles (or use manual bundle list)
+  - Run `scripts/publish-module.py --bundle <name>` pre-check for each bundle
+  - Package bundle into `registry/modules/<bundle>-<version>.tar.gz`
+  - Update `registry/index.json` (`latest_version`, `download_url`, `checksum_sha256`, metadata)
+  - Persist manifest signature copy to `registry/signatures/<bundle>-<version>.tar.sig` when present
+  - Commit/push registry updates back to the same branch
 
 ## Best practices
 

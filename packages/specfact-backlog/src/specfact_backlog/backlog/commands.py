@@ -23,7 +23,7 @@ from collections.abc import Callable
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import click
 import typer
@@ -4413,6 +4413,11 @@ def map_fields(
     reset: bool = typer.Option(
         False, "--reset", help="Reset custom field mapping to defaults (deletes ado_custom.yaml)"
     ),
+    non_interactive: bool = typer.Option(
+        False,
+        "--non-interactive",
+        help="Auto-map fields without prompts; fails with guidance when required fields cannot be resolved",
+    ),
 ) -> None:
     """
     Interactive command to map ADO fields to canonical field names.
@@ -4498,6 +4503,12 @@ def map_fields(
             selected_providers = ["ado"]
         elif github_project_id or github_project_v2_id or github_type_field_id or github_type_option:
             selected_providers = ["github"]
+        elif non_interactive:
+            console.print(
+                "[red]Error:[/red] Non-interactive mode requires explicit provider selection "
+                "(for example: --provider ado)."
+            )
+            raise typer.Exit(1)
         else:
             try:
                 import questionary  # type: ignore[reportMissingImports]
@@ -5273,13 +5284,18 @@ def map_fields(
         except Exception as e:
             console.print(f"[yellow]⚠[/yellow] Failed to load existing mapping: {e}")
 
-    try:
-        import questionary  # type: ignore[reportMissingImports]
-    except ImportError:
-        console.print(
-            "[red]Interactive field mapping requires the 'questionary' package. Install with: pip install questionary[/red]"
-        )
-        raise typer.Exit(1) from None
+    questionary: Any | None = None
+    if not non_interactive:
+        try:
+            import questionary as questionary_module  # type: ignore[reportMissingImports]
+
+            questionary = questionary_module
+        except ImportError:
+            console.print(
+                "[red]Interactive field mapping requires the 'questionary' package. "
+                "Install with: pip install questionary[/red]"
+            )
+            raise typer.Exit(1) from None
 
     allowed_frameworks = ["scrum", "agile", "safe", "kanban", "default"]
 
@@ -5323,7 +5339,10 @@ def map_fields(
     )
     framework_default = selected_framework or detected_framework or existing_framework or "default"
 
-    if not selected_framework:
+    if not selected_framework and non_interactive:
+        selected_framework = framework_default
+    elif not selected_framework:
+        assert questionary is not None
         framework_choices: list[Any] = []
         for option in allowed_frameworks:
             label = option
@@ -5354,6 +5373,105 @@ def map_fields(
     framework_field_mappings = framework_template.get("field_mappings", {})
     framework_work_item_type_mappings = framework_template.get("work_item_type_mappings", {})
 
+    def _to_canonical_key(field_name: str, fallback_ref: str) -> str:
+        source = (field_name or fallback_ref.split(".")[-1] or fallback_ref).strip().lower()
+        normalized = re.sub(r"[^a-z0-9]+", "_", source).strip("_")
+        if not normalized:
+            normalized = "custom_field"
+        candidate = normalized
+        idx = 2
+        while candidate in canonical_fields:
+            candidate = f"{normalized}_{idx}"
+            idx += 1
+        return candidate
+
+    def _fetch_ado_work_item_types() -> list[str]:
+        work_item_types_url = f"{base_url}/{ado_org}/{ado_project}/_apis/wit/workitemtypes?api-version=7.1"
+        response = requests.get(work_item_types_url, headers=headers, timeout=30)
+        response.raise_for_status()
+        payload = response.json()
+        nodes = payload.get("value", [])
+        return [
+            str(node.get("name") or "").strip()
+            for node in nodes
+            if isinstance(node, dict) and str(node.get("name") or "").strip()
+        ]
+
+    def _extract_allowed_values(raw_allowed: Any) -> list[str]:
+        if not isinstance(raw_allowed, list):
+            return []
+        values: list[str] = []
+        for entry in raw_allowed:
+            if isinstance(entry, dict):
+                value = str(entry.get("value") or entry.get("name") or "").strip()
+            else:
+                value = str(entry or "").strip()
+            if value and value not in values:
+                values.append(value)
+        return values
+
+    def _fetch_allowed_values_for_picklist(picklist_id: str) -> list[str]:
+        if not picklist_id:
+            return []
+        url = f"{base_url}/{ado_org}/_apis/work/processes/lists/{quote(picklist_id, safe='')}?api-version=7.1"
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            payload = response.json()
+        except requests.exceptions.RequestException:
+            return []
+        if not isinstance(payload, dict):
+            return []
+        return _extract_allowed_values(payload.get("items"))
+
+    def _fetch_allowed_values_for_field(field_ref: str) -> list[str]:
+        encoded_ref = quote(field_ref, safe="")
+        url = f"{base_url}/{ado_org}/{ado_project}/_apis/wit/fields/{encoded_ref}?api-version=7.1"
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            payload = response.json()
+        except requests.exceptions.RequestException:
+            return []
+        if not isinstance(payload, dict):
+            return []
+        allowed_values = _extract_allowed_values(payload.get("allowedValues"))
+        if allowed_values:
+            return allowed_values
+        picklist_id = str(payload.get("picklistId") or "").strip()
+        if not picklist_id:
+            return []
+        return _fetch_allowed_values_for_picklist(picklist_id)
+
+    def _fetch_work_item_type_field_metadata(work_item_type: str) -> tuple[list[str], dict[str, list[str]], list[str]]:
+        encoded_type = quote(work_item_type, safe="")
+        url = f"{base_url}/{ado_org}/{ado_project}/_apis/wit/workitemtypes/{encoded_type}/fields?api-version=7.1"
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        payload = response.json()
+        nodes = payload.get("value", [])
+        required_refs: list[str] = []
+        allowed_values_by_field: dict[str, list[str]] = {}
+        unresolved_required: list[str] = []
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            ref_name = str(node.get("referenceName") or "").strip()
+            display_name = str(node.get("name") or ref_name or "<unknown>").strip()
+            always_required = bool(node.get("alwaysRequired"))
+            if always_required and not ref_name:
+                unresolved_required.append(display_name)
+            if not ref_name:
+                continue
+            allowed_values = _extract_allowed_values(node.get("allowedValues"))
+            if not allowed_values and ref_name:
+                allowed_values = _fetch_allowed_values_for_field(ref_name)
+            if allowed_values:
+                allowed_values_by_field[ref_name] = allowed_values
+            if always_required:
+                required_refs.append(ref_name)
+        return required_refs, allowed_values_by_field, unresolved_required
+
     # Canonical fields to map
     canonical_fields = {
         "description": "Description",
@@ -5363,6 +5481,68 @@ def map_fields(
         "priority": "Priority",
         "work_item_type": "Work Item Type",
     }
+
+    selected_work_item_type = ""
+    required_fields_for_selected_type: list[str] = []
+    allowed_values_for_selected_type: dict[str, list[str]] = {}
+    unresolved_required_fields: list[str] = []
+    required_custom_canonical_by_ref: dict[str, str] = {}
+
+    work_item_type_options: list[str] = []
+    try:
+        work_item_type_options = _fetch_ado_work_item_types()
+    except requests.exceptions.RequestException:
+        work_item_type_options = []
+
+    default_story_type = ""
+    if isinstance(framework_work_item_type_mappings, dict):
+        default_story_type = str(framework_work_item_type_mappings.get("story") or "").strip()
+
+    if work_item_type_options:
+        if default_story_type and default_story_type in work_item_type_options:
+            selected_work_item_type = default_story_type
+        else:
+            preferred_work_item_types = [
+                "Product Backlog Item",
+                "User Story",
+                "Story",
+                "Feature",
+                "Issue",
+                "Task",
+                "Bug",
+            ]
+            by_lower = {item.lower(): item for item in work_item_type_options}
+            selected_work_item_type = next(
+                (by_lower[name.lower()] for name in preferred_work_item_types if name.lower() in by_lower),
+                work_item_type_options[0],
+            )
+
+        if not non_interactive:
+            assert questionary is not None
+            try:
+                picked_work_item_type = questionary.select(
+                    "Select ADO work item type for required-field validation metadata",
+                    choices=work_item_type_options,
+                    default=selected_work_item_type,
+                    use_arrow_keys=True,
+                    use_jk_keys=False,
+                ).ask()
+                selected_work_item_type = str(picked_work_item_type or selected_work_item_type).strip()
+            except (KeyboardInterrupt, EOFError):
+                console.print("\n[yellow]Selection cancelled.[/yellow]")
+                raise typer.Exit(0) from None
+
+    if selected_work_item_type:
+        try:
+            (
+                required_fields_for_selected_type,
+                allowed_values_for_selected_type,
+                unresolved_required_fields,
+            ) = _fetch_work_item_type_field_metadata(selected_work_item_type)
+        except requests.exceptions.RequestException:
+            required_fields_for_selected_type = []
+            allowed_values_for_selected_type = {}
+            unresolved_required_fields = []
 
     # Load default mappings from AdoFieldMapper
     from specfact_backlog.backlog.mappers.ado_mapper import AdoFieldMapper
@@ -5411,100 +5591,137 @@ def map_fields(
     # Then override with existing mappings
     combined_mapping.update(existing_mapping)
 
-    # Interactive mapping
-    console.print()
-    console.print(Panel("[bold cyan]Interactive Field Mapping[/bold cyan]", border_style="cyan"))
-    console.print("[dim]Use ↑↓ to navigate, ⏎ to select. Map ADO fields to canonical field names.[/dim]")
-    console.print()
+    # Ensure required custom fields are represented in canonical mapping candidates.
+    field_by_ref: dict[str, dict[str, Any]] = {
+        str(field.get("referenceName") or "").strip(): field
+        for field in relevant_fields
+        if isinstance(field, dict) and str(field.get("referenceName") or "").strip()
+    }
+    for required_ref in required_fields_for_selected_type:
+        if not required_ref:
+            continue
+        if required_ref in combined_mapping:
+            continue
+        field_meta = field_by_ref.get(required_ref, {})
+        display_name = str(field_meta.get("name") or required_ref).strip()
+        canonical_key = _to_canonical_key(display_name, required_ref)
+        required_custom_canonical_by_ref[required_ref] = canonical_key
+        canonical_fields[canonical_key] = f"{display_name} (required custom)"
+        combined_mapping[required_ref] = canonical_key
 
-    new_mapping: dict[str, str] = {}
-
-    # Build choice list with display names
-    field_choices_display: list[str] = ["<no mapping>"]
-    field_choices_refs: list[str] = ["<no mapping>"]
-    for field in relevant_fields:
-        ref_name = field.get("referenceName", "")
-        name = field.get("name", ref_name)
-        display = f"{ref_name} ({name})"
-        field_choices_display.append(display)
-        field_choices_refs.append(ref_name)
-
-    for canonical_field, display_name in canonical_fields.items():
-        # Find current mapping (existing > default)
-        current_ado_fields = [
-            ado_field for ado_field, canonical in combined_mapping.items() if canonical == canonical_field
-        ]
-
-        # Determine default selection
-        default_selection = "<no mapping>"
-        if current_ado_fields:
-            # Find the current mapping in the choices list
-            current_ref = current_ado_fields[0]
-            if current_ref in field_choices_refs:
-                default_selection = field_choices_display[field_choices_refs.index(current_ref)]
-            else:
-                # If current mapping not in available fields, use "<no mapping>"
-                default_selection = "<no mapping>"
-
-        # Use interactive selection menu with questionary
-        console.print(f"[bold]{display_name}[/bold] (canonical: {canonical_field})")
-        if current_ado_fields:
-            console.print(f"[dim]Current: {', '.join(current_ado_fields)}[/dim]")
-        else:
-            console.print("[dim]Current: <no mapping>[/dim]")
-
-        # Find default index
-        default_index = 0
-        if default_selection != "<no mapping>" and default_selection in field_choices_display:
-            default_index = field_choices_display.index(default_selection)
-
-        # Use questionary for interactive selection with arrow keys
-        try:
-            selected_display = questionary.select(
-                f"Select ADO field for {display_name}",
-                choices=field_choices_display,
-                default=field_choices_display[default_index] if default_index < len(field_choices_display) else None,
-                use_arrow_keys=True,
-                use_jk_keys=False,
-            ).ask()
-            if selected_display is None:
-                selected_display = "<no mapping>"
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[yellow]Selection cancelled.[/yellow]")
-            raise typer.Exit(0) from None
-
-        # Convert display name back to reference name
-        if selected_display and selected_display != "<no mapping>" and selected_display in field_choices_display:
-            selected_ref = field_choices_refs[field_choices_display.index(selected_display)]
-            new_mapping[selected_ref] = canonical_field
-
+    if non_interactive:
+        final_mapping = dict(combined_mapping)
+    else:
+        # Interactive mapping
+        console.print()
+        console.print(Panel("[bold cyan]Interactive Field Mapping[/bold cyan]", border_style="cyan"))
+        console.print("[dim]Use ↑↓ to navigate, ⏎ to select. Map ADO fields to canonical field names.[/dim]")
         console.print()
 
-    # Validate mapping
-    console.print("[cyan]Validating mapping...[/cyan]")
-    duplicate_ado_fields = {}
-    for ado_field, canonical in new_mapping.items():
-        if ado_field in duplicate_ado_fields:
-            duplicate_ado_fields[ado_field].append(canonical)
-        else:
-            # Check if this ADO field is already mapped to a different canonical field
-            for other_ado, other_canonical in new_mapping.items():
-                if other_ado == ado_field and other_canonical != canonical:
-                    if ado_field not in duplicate_ado_fields:
-                        duplicate_ado_fields[ado_field] = []
-                    duplicate_ado_fields[ado_field].extend([canonical, other_canonical])
+        new_mapping: dict[str, str] = {}
 
-    if duplicate_ado_fields:
-        console.print("[yellow]⚠[/yellow] Warning: Some ADO fields are mapped to multiple canonical fields:")
-        for ado_field, canonicals in duplicate_ado_fields.items():
-            console.print(f"  {ado_field}: {', '.join(set(canonicals))}")
-        if not Confirm.ask("Continue anyway?", default=False):
-            console.print("[yellow]Mapping cancelled.[/yellow]")
-            raise typer.Exit(0)
+        # Build choice list with display names
+        field_choices_display: list[str] = ["<no mapping>"]
+        field_choices_refs: list[str] = ["<no mapping>"]
+        for field in relevant_fields:
+            ref_name = field.get("referenceName", "")
+            name = field.get("name", ref_name)
+            display = f"{ref_name} ({name})"
+            field_choices_display.append(display)
+            field_choices_refs.append(ref_name)
 
-    # Merge with existing mapping (new mapping takes precedence)
-    final_mapping = existing_mapping.copy()
-    final_mapping.update(new_mapping)
+        for canonical_field, display_name in canonical_fields.items():
+            # Find current mapping (existing > default)
+            current_ado_fields = [
+                ado_field for ado_field, canonical in combined_mapping.items() if canonical == canonical_field
+            ]
+
+            # Determine default selection
+            default_selection = "<no mapping>"
+            if current_ado_fields:
+                # Find the current mapping in the choices list
+                current_ref = current_ado_fields[0]
+                if current_ref in field_choices_refs:
+                    default_selection = field_choices_display[field_choices_refs.index(current_ref)]
+                else:
+                    # If current mapping not in available fields, use "<no mapping>"
+                    default_selection = "<no mapping>"
+
+            # Use interactive selection menu with questionary
+            console.print(f"[bold]{display_name}[/bold] (canonical: {canonical_field})")
+            if current_ado_fields:
+                console.print(f"[dim]Current: {', '.join(current_ado_fields)}[/dim]")
+            else:
+                console.print("[dim]Current: <no mapping>[/dim]")
+
+            # Find default index
+            default_index = 0
+            if default_selection != "<no mapping>" and default_selection in field_choices_display:
+                default_index = field_choices_display.index(default_selection)
+
+            # Use questionary for interactive selection with arrow keys
+            assert questionary is not None
+            try:
+                selected_display = questionary.select(
+                    f"Select ADO field for {display_name}",
+                    choices=field_choices_display,
+                    default=field_choices_display[default_index] if default_index < len(field_choices_display) else None,
+                    use_arrow_keys=True,
+                    use_jk_keys=False,
+                ).ask()
+                if selected_display is None:
+                    selected_display = "<no mapping>"
+            except (KeyboardInterrupt, EOFError):
+                console.print("\n[yellow]Selection cancelled.[/yellow]")
+                raise typer.Exit(0) from None
+
+            # Convert display name back to reference name
+            if selected_display and selected_display != "<no mapping>" and selected_display in field_choices_display:
+                selected_ref = field_choices_refs[field_choices_display.index(selected_display)]
+                new_mapping[selected_ref] = canonical_field
+
+            console.print()
+
+        # Validate mapping
+        console.print("[cyan]Validating mapping...[/cyan]")
+        duplicate_ado_fields = {}
+        for ado_field, canonical in new_mapping.items():
+            if ado_field in duplicate_ado_fields:
+                duplicate_ado_fields[ado_field].append(canonical)
+            else:
+                # Check if this ADO field is already mapped to a different canonical field
+                for other_ado, other_canonical in new_mapping.items():
+                    if other_ado == ado_field and other_canonical != canonical:
+                        if ado_field not in duplicate_ado_fields:
+                            duplicate_ado_fields[ado_field] = []
+                        duplicate_ado_fields[ado_field].extend([canonical, other_canonical])
+
+        if duplicate_ado_fields:
+            console.print("[yellow]⚠[/yellow] Warning: Some ADO fields are mapped to multiple canonical fields:")
+            for ado_field, canonicals in duplicate_ado_fields.items():
+                console.print(f"  {ado_field}: {', '.join(set(canonicals))}")
+            if not Confirm.ask("Continue anyway?", default=False):
+                console.print("[yellow]Mapping cancelled.[/yellow]")
+                raise typer.Exit(0)
+
+        # Merge with existing mapping (new mapping takes precedence)
+        final_mapping = existing_mapping.copy()
+        final_mapping.update(new_mapping)
+
+    missing_required_refs = [ref for ref in required_fields_for_selected_type if ref not in final_mapping]
+    unresolved_required_summary = [item for item in unresolved_required_fields if item]
+    if missing_required_refs or unresolved_required_summary:
+        console.print("[red]Error:[/red] Required ADO fields could not be resolved for mapping.")
+        for missing_ref in missing_required_refs:
+            console.print(f"  - missing mapping for required field: {missing_ref}")
+        for unresolved_label in unresolved_required_summary:
+            console.print(f"  - unresolved required field metadata: {unresolved_label}")
+        if non_interactive:
+            console.print(
+                "[yellow]Hint:[/yellow] Run interactive `specfact backlog map-fields` "
+                "to manually map unresolved required fields."
+            )
+        raise typer.Exit(1)
 
     # Preserve existing work_item_type_mappings if they exist
     # This prevents erasing custom work item type mappings when updating field mappings
@@ -5530,14 +5747,24 @@ def map_fields(
     console.print(Panel("[bold green]✓ Mapping saved successfully[/bold green]", border_style="green"))
     console.print(f"[green]Location:[/green] {custom_mapping_file}")
 
+    settings_update: dict[str, Any] = {
+        "field_mapping_file": ".specfact/templates/backlog/field_mappings/ado_custom.yaml",
+        "ado_org": ado_org,
+        "ado_project": ado_project,
+        "framework": selected_framework,
+    }
+    if selected_work_item_type:
+        settings_update["selected_work_item_type"] = selected_work_item_type
+        settings_update["required_fields_by_work_item_type"] = {
+            selected_work_item_type: required_fields_for_selected_type
+        }
+        settings_update["allowed_values_by_work_item_type"] = {
+            selected_work_item_type: allowed_values_for_selected_type
+        }
+
     provider_cfg_path = _upsert_backlog_provider_settings(
         "ado",
-        {
-            "field_mapping_file": ".specfact/templates/backlog/field_mappings/ado_custom.yaml",
-            "ado_org": ado_org,
-            "ado_project": ado_project,
-            "framework": selected_framework,
-        },
+        settings_update,
         project_id=f"{ado_org}/{ado_project}" if ado_org and ado_project else None,
         adapter="ado",
     )
