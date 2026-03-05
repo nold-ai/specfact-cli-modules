@@ -1,4 +1,5 @@
 # pyright: reportMissingImports=false
+# pylint: disable=import-outside-toplevel,line-too-long,too-many-public-methods,duplicate-code
 """Unit tests for bridge probe functionality."""
 
 import pytest

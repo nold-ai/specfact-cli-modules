@@ -1,4 +1,5 @@
 # pyright: reportMissingImports=false
+# pylint: disable=protected-access,duplicate-code
 """
 Unit tests for RepositorySync - Contract-First approach.
 

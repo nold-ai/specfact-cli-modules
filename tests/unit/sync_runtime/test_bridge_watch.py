@@ -1,4 +1,5 @@
 # pyright: reportMissingImports=false
+# pylint: disable=import-outside-toplevel,protected-access,duplicate-code
 """Unit tests for bridge-based watch mode."""
 
 from specfact_cli.models.bridge import AdapterType, ArtifactMapping, BridgeConfig

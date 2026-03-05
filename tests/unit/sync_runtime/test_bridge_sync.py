@@ -1,4 +1,5 @@
 # pyright: reportMissingImports=false
+# pylint: disable=too-many-lines,import-outside-toplevel,protected-access,reimported,redefined-outer-name,duplicate-code
 """Unit tests for bridge-based sync functionality."""
 
 from __future__ import annotations
