@@ -36,6 +36,9 @@ test = "pytest tests {args}"
 
 # Modules-repo scoped parity commands
 yaml-lint = "python tools/validate_repo_manifests.py"
+check-bundle-imports = "python scripts/check-bundle-imports.py"
+sign-modules = "python scripts/sign-modules.py {args}"
+verify-modules-signature = "python scripts/verify-modules-signature.py {args}"
 smart-test = "python tools/smart_test_coverage.py run {args}"
 smart-test-status = "python tools/smart_test_coverage.py status"
 smart-test-check = "python tools/smart_test_coverage.py check"

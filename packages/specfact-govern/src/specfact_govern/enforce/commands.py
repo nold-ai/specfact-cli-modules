@@ -25,7 +25,8 @@ from specfact_cli.models.validation import ValidationReport as ModuleValidationR
 from specfact_cli.runtime import debug_log_operation, debug_print, is_debug_mode
 from specfact_cli.telemetry import telemetry
 from specfact_cli.utils.structure import SpecFactStructure
-from specfact_cli.utils.yaml_utils import dump_yaml
+
+from specfact_govern.utils.yaml_utils import dump_yaml
 
 
 app = typer.Typer(help="Configure quality gates and enforcement modes")

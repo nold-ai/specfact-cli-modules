@@ -15,3 +15,29 @@ __pycache__/
 .coverage
 .coverage_cache/
 logs/
+
+# Ignore .specify artifacts
+.specify/
+.cursor/commands/speckit.*.md
+/specs/
+
+# Ignore specfact-cli prompt templates
+.cursor/commands/specfact.*.md
+.cursor/commands/opsx-*.md
+.cursor/skills/openspec-*/
+
+.github/prompts/specfact.*.md
+.github/prompts/opsx-*.md
+.github/skills/openspec-*/
+!.github/skills/openspec-workflows/
+
+.claude/commands/opsx/
+.claude/commands/specfact.*.md
+.claude/skills/openspec-*/
+!.claude/skills/openspec-workflows/
+
+.codex/skills/openspec-*/
+!.codex/skills/openspec-workflows/
+
+.vibe/skills/openspec-*/
+!.vibe/skills/openspec-workflows/

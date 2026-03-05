@@ -1,0 +1,578 @@
+---
+# Jekyll frontmatter required for SCSS processing
+# Explicit permalink to prevent Jekyll from applying default permalink pattern
+permalink: /assets/main.css
+---
+
+@import "minima";
+
+// Custom styling for SpecFact CLI documentation
+// These styles override minima theme defaults
+
+:root {
+  /* SpecFact.io color scheme - Documentation theme */
+  --primary-color: #64ffda;
+  --primary-hover: #7affeb;
+  --text-color: #ccd6f6;
+  --text-light: #8892b0;
+  --text-muted: #495670;
+  --bg-color: #0a192f;
+  --bg-light: #112240;
+  --bg-alt: #1d2d50;
+  --border-color: rgba(100, 255, 218, 0.1);
+  --border-hover: rgba(100, 255, 218, 0.3);
+  --code-bg: #1d2d50;
+  --link-color: #64ffda;
+  --link-hover: #7affeb;
+}
+
+// Override body styles with !important to ensure they apply
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  line-height: 1.7 !important;
+  color: var(--text-color) !important;
+  background-color: var(--bg-color) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+// Header styling
+.site-header {
+  border-bottom: 2px solid var(--border-color);
+  background-color: var(--bg-light);
+  padding: 1rem 0;
+  
+  .site-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-decoration: none;
+    
+    &:hover {
+      color: var(--primary-hover);
+    }
+  }
+  
+  .site-nav {
+    .page-link {
+      color: var(--text-color);
+      font-weight: 500;
+      margin: 0 0.5rem;
+      text-decoration: none;
+      transition: color 0.2s;
+      
+      &:hover {
+        color: var(--primary-color);
+      }
+    }
+  }
+}
+
+// Main content area - minima uses .page-content with .wrapper
+.page-content {
+  padding: 2rem 0;
+  color: var(--text-color) !important;
+  background-color: var(--bg-color) !important;
+}
+
+// Ensure all text elements have proper color
+.page-content,
+.page-content * {
+  color: inherit;
+}
+
+// Page content styling (scoped to docs-content to avoid conflicts)
+.docs-content {
+  padding: 2rem 0;
+  color: var(--text-color) !important;
+  background-color: var(--bg-color) !important;
+  
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    color: var(--text-color) !important;
+    border-bottom: 3px solid var(--primary-color);
+    padding-bottom: 0.5rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: var(--text-color) !important;
+  }
+  
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-color) !important;
+  }
+  
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-color) !important;
+  }
+  
+  p {
+    margin-bottom: 1rem;
+    color: var(--text-color) !important;
+  }
+  
+  // Ensure all text in docs-content is visible
+  * {
+    color: inherit;
+  }
+  
+  // Links
+  a {
+    color: var(--link-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+    
+    &:hover {
+      color: var(--link-hover);
+      text-decoration: underline;
+    }
+  }
+  
+  // Lists
+  ul, ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+    color: var(--text-color) !important;
+    
+    li {
+      margin-bottom: 0.5rem;
+      color: var(--text-color) !important;
+      
+      a {
+        color: var(--link-color) !important;
+        
+        &:hover {
+          color: var(--link-hover) !important;
+        }
+      }
+    }
+  }
+  
+  // Tables (common in command reference)
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    background-color: var(--bg-color) !important;
+    
+    th, td {
+      padding: 0.75rem;
+      border: 1px solid var(--border-color);
+      color: var(--text-color) !important;
+    }
+    
+    th {
+      background-color: var(--bg-light) !important;
+      font-weight: 600;
+      color: var(--text-color) !important;
+    }
+    
+    tr {
+      background-color: var(--bg-color) !important;
+    }
+    
+    tr:nth-child(even) {
+      background-color: var(--bg-light) !important;
+    }
+  }
+  
+  // Code blocks - Rouge syntax highlighting
+  .highlighter-rouge {
+    background-color: var(--code-bg) !important;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    
+    .highlight {
+      background-color: var(--code-bg) !important;
+      
+      pre {
+        background-color: var(--code-bg) !important;
+        border: none;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        overflow-x: auto;
+        margin: 0;
+        color: var(--text-color) !important;
+        
+        code {
+          background-color: transparent !important;
+          padding: 0;
+          border: none;
+          color: var(--text-color) !important;
+          font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+        }
+      }
+    }
+  }
+  
+  // Code blocks (fallback for non-Rouge)
+  pre {
+    background-color: var(--code-bg) !important;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+    color: var(--text-color) !important;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    
+    code {
+      background-color: transparent !important;
+      padding: 0;
+      border: none;
+      color: var(--text-color) !important;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    }
+  }
+  
+  // Inline code
+  code {
+    background-color: var(--code-bg) !important;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.9em;
+    border: 1px solid var(--border-color);
+    color: var(--text-color) !important;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  }
+  
+  // Rouge syntax highlighting spans - dark theme colors for readability
+  .highlight {
+    span {
+      background-color: transparent !important;
+      color: var(--text-color) !important;
+    }
+    
+    // Syntax highlighting colors (dark theme optimized)
+    .c { color: #8892b0 !important; } // Comments - muted gray-blue
+    .k { color: #ff6b9d !important; } // Keywords - pink/red
+    .l { color: #64ffda !important; } // Literals - cyan
+    .n { color: var(--text-color) !important; } // Names
+    .o { color: #ff6b9d !important; } // Operators - pink
+    .p { color: #ccd6f6 !important; } // Punctuation - light text
+    .cm { color: #8892b0 !important; } // Comment multiline
+    .cp { color: #8892b0 !important; } // Comment preproc
+    .c1 { color: #8892b0 !important; } // Comment single
+    .cs { color: #8892b0 !important; } // Comment special
+    .gd { color: #ff6b9d !important; } // Generic deleted
+    .ge { font-style: italic !important; } // Generic emph
+    .gr { color: #ff6b9d !important; } // Generic error
+    .gh { color: var(--text-color) !important; font-weight: bold !important; } // Generic heading
+    .gi { color: #64ffda !important; } // Generic inserted - cyan
+    .go { color: #8892b0 !important; } // Generic output
+    .gp { color: #8892b0 !important; } // Generic prompt
+    .gs { font-weight: bold !important; } // Generic strong
+    .gu { color: var(--text-color) !important; font-weight: bold !important; } // Generic subheading
+    .gt { color: #ff6b9d !important; } // Generic traceback
+    .kc { color: #64ffda !important; } // Keyword constant - cyan
+    .kd { color: #ff6b9d !important; } // Keyword declaration - pink
+    .kn { color: #ff6b9d !important; } // Keyword namespace
+    .kp { color: #ff6b9d !important; } // Keyword pseudo
+    .kr { color: #ff6b9d !important; } // Keyword reserved
+    .kt { color: #ff6b9d !important; } // Keyword type
+    .ld { color: #64ffda !important; } // Literal date - cyan
+    .m { color: #64ffda !important; } // Literal number - cyan
+    .s { color: #a8e6cf !important; } // Literal string - light green
+    .na { color: #64ffda !important; } // Name attribute - cyan
+    .nb { color: #64ffda !important; } // Name builtin - cyan
+    .nc { color: #c792ea !important; } // Name class - purple
+    .no { color: #64ffda !important; } // Name constant - cyan
+    .nd { color: #c792ea !important; } // Name decorator - purple
+    .ni { color: #c792ea !important; } // Name entity - purple
+    .ne { color: #ff6b9d !important; font-weight: bold !important; } // Name exception
+    .nf { color: #c792ea !important; } // Name function - purple
+    .nl { color: #64ffda !important; } // Name label - cyan
+    .nn { color: var(--text-color) !important; } // Name namespace
+    .nx { color: var(--text-color) !important; } // Name other
+    .py { color: var(--text-color) !important; } // Name property
+    .nt { color: #64ffda !important; } // Name tag - cyan (YAML keys)
+    .nv { color: #ffd93d !important; } // Name variable - yellow
+    .ow { color: #ff6b9d !important; } // Operator word
+    .w { color: #8892b0 !important; } // Text whitespace
+    .mf { color: #64ffda !important; } // Literal number float
+    .mh { color: #64ffda !important; } // Literal number hex
+    .mi { color: #64ffda !important; } // Literal number integer
+    .mo { color: #64ffda !important; } // Literal number oct
+    .sb { color: #a8e6cf !important; } // Literal string backtick
+    .sc { color: #a8e6cf !important; } // Literal string char
+    .sd { color: #8892b0 !important; } // Literal string doc
+    .s2 { color: #a8e6cf !important; } // Literal string double
+    .se { color: #a8e6cf !important; } // Literal string escape
+    .sh { color: #a8e6cf !important; } // Literal string heredoc
+    .si { color: #a8e6cf !important; } // Literal string interpol
+    .sx { color: #a8e6cf !important; } // Literal string other
+    .sr { color: #a8e6cf !important; } // Literal string regex
+    .s1 { color: #a8e6cf !important; } // Literal string single
+    .ss { color: #a8e6cf !important; } // Literal string symbol
+    .bp { color: var(--text-color) !important; } // Name builtin pseudo
+    .vc { color: #ffd93d !important; } // Name variable class - yellow
+    .vg { color: #ffd93d !important; } // Name variable global - yellow
+    .vi { color: #ffd93d !important; } // Name variable instance - yellow
+    .il { color: #64ffda !important; } // Literal number integer long
+  }
+  
+  // Blockquotes
+  blockquote {
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: var(--text-light);
+    font-style: italic;
+  }
+  
+  // Horizontal rules
+  hr {
+    border: none;
+    border-top: 2px solid var(--border-color);
+    margin: 2rem 0;
+  }
+  
+  // Emoji and special elements
+  .emoji {
+    font-size: 1.2em;
+  }
+  
+  // Primary callout sections
+  .primary {
+    background-color: var(--bg-light);
+    border-left: 4px solid var(--primary-color);
+    padding: 1rem;
+    margin: 1.5rem 0;
+    border-radius: 0.25rem;
+  }
+}
+
+// Docs layout with left navigation
+.wrapper.docs-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.docs-sidebar {
+  flex: 0 0 260px;
+  border-right: 1px solid var(--border-color);
+  background-color: var(--bg-light);
+  padding: 1.5rem 1rem;
+  position: sticky;
+  top: 4rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.docs-sidebar-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+}
+
+.docs-sidebar-title a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.docs-sidebar-title a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.docs-nav {
+  font-size: 0.95rem;
+}
+
+.docs-nav-section {
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+}
+
+.docs-nav ul {
+  list-style: none;
+  margin: 0 0 0.5rem 0;
+  padding-left: 0;
+}
+
+.docs-nav li {
+  margin-bottom: 0.35rem;
+}
+
+.docs-nav a {
+  color: var(--text-color);
+  text-decoration: none;
+}
+
+.docs-nav a:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.docs-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// Footer styling
+.site-footer {
+  border-top: 2px solid var(--border-color);
+  background-color: var(--bg-light);
+  padding: 2rem 0;
+  margin-top: 3rem;
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.9rem;
+  
+  .footer-heading {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+  }
+  
+  .footer-col-wrapper {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+  }
+  
+  a {
+    color: var(--link-color);
+    
+    &:hover {
+      color: var(--link-hover);
+    }
+  }
+}
+
+// Responsive design
+@media screen and (max-width: 768px) {
+  .docs-layout {
+    padding: 1.5rem 1rem;
+    flex-direction: column;
+  }
+
+  .docs-sidebar {
+    position: static;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+  }
+
+  .site-header {
+    .site-title {
+      font-size: 1.25rem;
+    }
+    
+    .site-nav {
+      .page-link {
+        margin: 0 0.25rem;
+        font-size: 0.9rem;
+      }
+    }
+  }
+  
+  .page-content {
+    h1 {
+      font-size: 2rem;
+    }
+    
+    h2 {
+      font-size: 1.75rem;
+    }
+    
+    h3 {
+      font-size: 1.25rem;
+    }
+  }
+  
+  .site-footer {
+    .footer-col-wrapper {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+}
+
+// Mermaid diagram styling
+.mermaid {
+  background-color: var(--bg-light) !important;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  
+  svg {
+    background-color: transparent !important;
+  }
+  
+  // Ensure text is visible
+  text {
+    fill: var(--text-color) !important;
+  }
+  
+  // Node styling
+  .node rect,
+  .node circle,
+  .node ellipse,
+  .node polygon {
+    fill: var(--bg-alt) !important;
+    stroke: var(--primary-color) !important;
+  }
+  
+  // Edge/arrow styling
+  .edgePath path,
+  .flowchart-link {
+    stroke: var(--primary-color) !important;
+  }
+  
+  .arrowheadPath {
+    fill: var(--primary-color) !important;
+  }
+  
+  // Label styling
+  .edgeLabel {
+    background-color: var(--bg-light) !important;
+    color: var(--text-color) !important;
+  }
+  
+  .edgeLabel text {
+    fill: var(--text-color) !important;
+  }
+}
+
+// Print styles
+@media print {
+  .site-header,
+  .site-footer {
+    display: none;
+  }
+  
+  .page-content {
+    max-width: 100%;
+    padding: 0;
+  }
+}
+
