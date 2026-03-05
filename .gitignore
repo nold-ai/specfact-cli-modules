@@ -21,6 +21,9 @@ logs/
 .cursor/commands/speckit.*.md
 /specs/
 
+# Ignore .specfact
+.specfact/
+
 # Ignore specfact-cli prompt templates
 .cursor/commands/specfact.*.md
 .cursor/commands/opsx-*.md
