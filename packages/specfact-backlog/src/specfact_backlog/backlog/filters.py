@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from specfact_cli.backlog.filters import BacklogFilters
+from importlib import import_module
+
+
+BacklogFilters = import_module("specfact_cli.backlog.filters").BacklogFilters
 
 
 __all__ = ["BacklogFilters"]
