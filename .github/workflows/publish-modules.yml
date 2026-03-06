@@ -51,12 +51,17 @@ jobs:
           DISPATCH_BUNDLES: ${{ github.event.inputs.bundles }}
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.sha }}
+          TARGET_REGISTRY_BASE_REF: ${{ github.event.repository.default_branch }}
         run: |
           python - <<'PY'
           import json
           import os
           import subprocess
           from pathlib import Path
+
+          import yaml
+
+          from publish_bundle_selection import resolve_publish_bundles
 
           def normalize_bundle(name: str) -> str:
             cleaned = name.strip()
@@ -66,9 +71,53 @@ jobs:
               cleaned = f"specfact-{cleaned}"
             return cleaned
 
+          def load_registry_versions(payload: dict) -> dict[str, str]:
+            modules = payload.get("modules")
+            if not isinstance(modules, list):
+              return {}
+            result: dict[str, str] = {}
+            for entry in modules:
+              if not isinstance(entry, dict):
+                continue
+              module_id = str(entry.get("id") or "").strip()
+              latest_version = str(entry.get("latest_version") or "").strip()
+              if not module_id or not latest_version:
+                continue
+              bundle_name = module_id.split("/", 1)[-1]
+              if not bundle_name.startswith("specfact-"):
+                continue
+              result[bundle_name] = latest_version
+            return result
+
+          def load_manifest_versions(repo_root: Path) -> dict[str, str]:
+            result: dict[str, str] = {}
+            for manifest_path in sorted((repo_root / "packages").glob("*/module-package.yaml")):
+              manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+              if not isinstance(manifest, dict):
+                continue
+              bundle_name = manifest_path.parent.name
+              version = str(manifest.get("version") or "").strip()
+              if bundle_name.startswith("specfact-") and version:
+                result[bundle_name] = version
+            return result
+
+          def load_baseline_registry(repo_root: Path, base_ref: str) -> dict:
+            normalized = (base_ref or "main").strip() or "main"
+            current_branch = os.environ.get("GITHUB_REF_NAME", "").strip()
+            if normalized == current_branch:
+              return json.loads((repo_root / "registry" / "index.json").read_text(encoding="utf-8"))
+            subprocess.run(["git", "fetch", "origin", normalized, "--depth=1"], check=True)
+            raw = subprocess.check_output(
+              ["git", "show", f"origin/{normalized}:registry/index.json"],
+              text=True,
+            )
+            return json.loads(raw)
+
           event_name = os.environ.get("EVENT_NAME", "")
           dispatch_bundles = os.environ.get("DISPATCH_BUNDLES", "").strip()
+          repo_root = Path(".").resolve()
           bundles: list[str] = []
+          changed_paths: list[str] = []
 
           if event_name == "workflow_dispatch" and dispatch_bundles:
             bundles = [normalize_bundle(part) for part in dispatch_bundles.split(",")]
@@ -80,29 +129,30 @@ jobs:
               before_sha = "HEAD~1"
 
             try:
-              changed = subprocess.check_output(
+              changed_paths = subprocess.check_output(
                 ["git", "diff", "--name-only", before_sha, after_sha, "--", "packages"],
                 text=True,
               ).splitlines()
             except subprocess.CalledProcessError:
-              changed = []
+              changed_paths = []
 
-            seen: set[str] = set()
-            for path in changed:
-              parts = Path(path).parts
-              if len(parts) < 2:
-                continue
-              if parts[0] != "packages":
-                continue
-              bundle = parts[1]
-              if not bundle.startswith("specfact-"):
-                continue
-              seen.add(bundle)
-            bundles = sorted(seen)
+            manifest_versions = load_manifest_versions(repo_root)
+            baseline_registry = load_baseline_registry(repo_root, os.environ.get("TARGET_REGISTRY_BASE_REF", "main"))
+            registry_versions = load_registry_versions(baseline_registry)
+            selection = resolve_publish_bundles(
+              changed_paths=changed_paths,
+              manifest_versions=manifest_versions,
+              registry_versions=registry_versions,
+            )
+            bundles = sorted(selection)
+            reason_map = {bundle: sorted(reasons) for bundle, reasons in selection.items()}
+            print(f"Resolved bundle reasons: {reason_map}")
+          if event_name == "workflow_dispatch" and dispatch_bundles:
+            reason_map = {bundle: ["manual-dispatch"] for bundle in bundles}
 
           out_path = Path(os.environ["GITHUB_OUTPUT"])
           out_path.write_text(
-            f"bundles_json={json.dumps(bundles)}\ncount={len(bundles)}\n",
+            f"bundles_json={json.dumps(bundles)}\ncount={len(bundles)}\nbundle_reasons_json={json.dumps(reason_map)}\n",
             encoding="utf-8",
           )
           print(f"Resolved bundles: {bundles}")
@@ -112,6 +162,8 @@ jobs:
         if: steps.bundles.outputs.count != '0'
         env:
           BUNDLES_JSON: ${{ steps.bundles.outputs.bundles_json }}
+          BUNDLE_REASONS_JSON: ${{ steps.bundles.outputs.bundle_reasons_json }}
+          TARGET_REGISTRY_BASE_REF: ${{ github.event.repository.default_branch }}
         run: |
           python - <<'PY'
           import hashlib
@@ -126,6 +178,7 @@ jobs:
           import os
 
           bundles = json.loads(os.environ["BUNDLES_JSON"])
+          bundle_reasons = json.loads(os.environ.get("BUNDLE_REASONS_JSON", "{}"))
           registry_index_path = repo_root / "registry" / "index.json"
           registry_modules_dir = repo_root / "registry" / "modules"
           registry_signatures_dir = repo_root / "registry" / "signatures"
@@ -141,11 +194,35 @@ jobs:
           ignored_suffixes = {".pyc", ".pyo"}
 
           skipped_bundles: list[str] = []
+          baseline_ref = (os.environ.get("TARGET_REGISTRY_BASE_REF") or "main").strip() or "main"
+          current_branch = os.environ.get("GITHUB_REF_NAME", "").strip()
+          baseline_index_path = repo_root / ".publish-registry-baseline.json"
+
+          if baseline_ref == current_branch:
+            baseline_index_path.write_text(registry_index_path.read_text(encoding="utf-8"), encoding="utf-8")
+          else:
+            subprocess.run(["git", "fetch", "origin", baseline_ref, "--depth=1"], check=True)
+            raw_baseline = subprocess.check_output(
+              ["git", "show", f"origin/{baseline_ref}:registry/index.json"],
+              text=True,
+            )
+            baseline_index_path.write_text(raw_baseline, encoding="utf-8")
 
           for bundle in bundles:
+            reasons = bundle_reasons.get(bundle, [])
+            print(f"Processing {bundle} because of: {', '.join(reasons) if reasons else 'unspecified'}")
             # Keep existing monotonic version guard logic.
             publish_check = subprocess.run(
-              ["python", "scripts/publish-module.py", "--bundle", bundle, "--repo-root", "."],
+              [
+                "python",
+                "scripts/publish-module.py",
+                "--bundle",
+                bundle,
+                "--repo-root",
+                ".",
+                "--registry-index-path",
+                str(baseline_index_path),
+              ],
               check=False,
               capture_output=True,
               text=True,
@@ -244,6 +321,7 @@ jobs:
         env:
           DRY_RUN: ${{ github.event.inputs.dry_run }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUNDLE_REASONS_JSON: ${{ steps.bundles.outputs.bundle_reasons_json }}
         run: |
           if git diff --quiet -- registry/index.json registry/modules registry/signatures; then
             echo "No registry changes to commit."
@@ -267,8 +345,24 @@ jobs:
 
           git push origin "${PUBLISH_BRANCH}"
 
+          REASON_LINES=$(python - <<'PY'
+          import json
+          import os
+
+          reason_map = json.loads(os.environ.get("BUNDLE_REASONS_JSON", "{}"))
+          lines = []
+          for bundle in sorted(reason_map):
+            reasons = ", ".join(reason_map[bundle])
+            lines.append(f"- `{bundle}`: {reasons}")
+          print("\n".join(lines))
+          PY
+          )
+
           gh pr create \
             --base "${TARGET_BRANCH}" \
             --head "${PUBLISH_BRANCH}" \
             --title "chore(registry): publish changed modules" \
-            --body "Automated registry publish update from workflow run ${GITHUB_RUN_ID}."
+            --body "Automated registry publish update from workflow run ${GITHUB_RUN_ID}.
+
+          Bundle selection reasons:
+          ${REASON_LINES}"
