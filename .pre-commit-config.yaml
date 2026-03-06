@@ -1,28 +1,14 @@
 repos:
   - repo: local
     hooks:
-      - id: format
-        name: Run ruff format + autofix
-        entry: hatch run format
+      - id: verify-module-signatures
+        name: Verify module signatures and version bumps
+        entry: hatch run ./scripts/verify-modules-signature.py --require-signature --enforce-version-bump
         language: system
         pass_filenames: false
-      - id: type-check
-        name: Run basedpyright type checks
-        entry: hatch run type-check
-        language: system
-        pass_filenames: false
-      - id: lint
-        name: Run lint suite (ruff + pylint)
-        entry: hatch run lint
-        language: system
-        pass_filenames: false
-      - id: yaml-lint
-        name: Validate module registry manifests
-        entry: hatch run yaml-lint
-        language: system
-        pass_filenames: false
-      - id: check-bundle-imports
-        name: Enforce bundle import boundaries
-        entry: hatch run check-bundle-imports
+        always_run: true
+      - id: modules-quality-checks
+        name: Run modules pre-commit quality checks
+        entry: ./scripts/pre-commit-quality-checks.sh
         language: system
         pass_filenames: false

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: N999
 """Verify bundled module checksums/signatures against full module payload."""
 
 from __future__ import annotations

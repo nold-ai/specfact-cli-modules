@@ -5533,6 +5533,9 @@ def map_fields(
                 raise typer.Exit(0) from None
 
     if selected_work_item_type:
+        console.print(
+            f"[cyan]Fetching required-field metadata for selected work item type: {selected_work_item_type}[/cyan]"
+        )
         try:
             (
                 required_fields_for_selected_type,
@@ -5665,7 +5668,9 @@ def map_fields(
                 selected_display = questionary.select(
                     f"Select ADO field for {display_name}",
                     choices=field_choices_display,
-                    default=field_choices_display[default_index] if default_index < len(field_choices_display) else None,
+                    default=field_choices_display[default_index]
+                    if default_index < len(field_choices_display)
+                    else None,
                     use_arrow_keys=True,
                     use_jk_keys=False,
                 ).ask()

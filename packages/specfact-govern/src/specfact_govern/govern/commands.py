@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import typer
-
 from specfact_cli.modules import module_io_shim
 
 from specfact_govern.enforce.commands import app as enforce_app
