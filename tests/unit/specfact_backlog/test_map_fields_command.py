@@ -109,6 +109,63 @@ def test_map_fields_non_interactive_persists_required_and_allowed_value_metadata
     assert allowed_by_type.get("User Story", {}).get("Custom.FinOpsCategory") == ["Business", "Compliance"]
 
 
+def test_map_fields_reports_progress_for_selected_work_item_type_metadata(monkeypatch, tmp_path: Path) -> None:
+    backlog_commands = importlib.import_module("specfact_backlog.backlog.commands")
+    backlog_app = backlog_commands.app
+    monkeypatch.chdir(tmp_path)
+
+    fields_payload = {
+        "value": [
+            {"referenceName": "System.Description", "name": "Description"},
+            {"referenceName": "Custom.FinOpsCategory", "name": "FinOps Category"},
+        ]
+    }
+    work_item_types_payload = {"value": [{"name": "User Story"}]}
+    work_item_type_fields_payload = {
+        "value": [
+            {
+                "referenceName": "Custom.FinOpsCategory",
+                "name": "FinOps Category",
+                "alwaysRequired": True,
+                "allowedValues": ["Business", "Compliance"],
+            }
+        ]
+    }
+
+    def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
+        if "/_apis/wit/workitemtypes?" in url:
+            return _FakeResponse(work_item_types_payload)
+        if "/_apis/wit/workitemtypes/" in url and "/fields?" in url:
+            return _FakeResponse(work_item_type_fields_payload)
+        if "/_apis/wit/fields?" in url:
+            return _FakeResponse(fields_payload)
+        msg = f"Unexpected URL: {url}"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    result = runner.invoke(
+        backlog_app,
+        [
+            "map-fields",
+            "--provider",
+            "ado",
+            "--ado-org",
+            "noldai",
+            "--ado-project",
+            "specfact-cli",
+            "--ado-token",
+            "token",
+            "--ado-framework",
+            "scrum",
+            "--non-interactive",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Fetching required-field metadata for selected work item type: User Story" in result.output
+
+
 def test_map_fields_non_interactive_fails_when_required_field_cannot_be_mapped(monkeypatch, tmp_path: Path) -> None:
     backlog_commands = importlib.import_module("specfact_backlog.backlog.commands")
     backlog_app = backlog_commands.app
@@ -117,7 +174,9 @@ def test_map_fields_non_interactive_fails_when_required_field_cannot_be_mapped(m
     fields_payload = {"value": [{"referenceName": "System.Description", "name": "Description"}]}
     work_item_types_payload = {"value": [{"name": "User Story"}]}
     # Missing/blank referenceName should be treated as unresolved required field metadata.
-    work_item_type_fields_payload = {"value": [{"referenceName": "", "name": "FinOps Category", "alwaysRequired": True}]}
+    work_item_type_fields_payload = {
+        "value": [{"referenceName": "", "name": "FinOps Category", "alwaysRequired": True}]
+    }
 
     def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
         if "/_apis/wit/workitemtypes?" in url:

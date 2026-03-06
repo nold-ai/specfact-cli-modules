@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: N999
 """Sign SpecFact module manifests with checksum/signature over full module payload."""
 
 from __future__ import annotations
