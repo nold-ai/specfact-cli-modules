@@ -5,6 +5,14 @@ from pathlib import Path
 from packaging.version import InvalidVersion, Version
 
 
+def determine_registry_baseline_ref(*, current_branch: str, default_branch: str) -> str:
+    normalized_current = current_branch.strip()
+    normalized_default = default_branch.strip() or "main"
+    if normalized_current in {"dev", "main"}:
+        return normalized_current
+    return normalized_default
+
+
 def _bundle_from_path(path: str) -> str | None:
     parts = Path(path).parts
     if len(parts) < 2 or parts[0] != "packages":

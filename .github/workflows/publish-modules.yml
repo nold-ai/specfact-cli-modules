@@ -61,7 +61,7 @@ jobs:
 
           import yaml
 
-          from publish_bundle_selection import resolve_publish_bundles
+          from publish_bundle_selection import determine_registry_baseline_ref, resolve_publish_bundles
 
           def normalize_bundle(name: str) -> str:
             cleaned = name.strip()
@@ -102,8 +102,11 @@ jobs:
             return result
 
           def load_baseline_registry(repo_root: Path, base_ref: str) -> dict:
-            normalized = (base_ref or "main").strip() or "main"
             current_branch = os.environ.get("GITHUB_REF_NAME", "").strip()
+            normalized = determine_registry_baseline_ref(
+              current_branch=current_branch,
+              default_branch=(base_ref or "main"),
+            )
             if normalized == current_branch:
               return json.loads((repo_root / "registry" / "index.json").read_text(encoding="utf-8"))
             subprocess.run(["git", "fetch", "origin", normalized, "--depth=1"], check=True)
@@ -173,6 +176,7 @@ jobs:
           from pathlib import Path
 
           import yaml
+          from publish_bundle_selection import determine_registry_baseline_ref
 
           repo_root = Path(".").resolve()
           import os
@@ -194,8 +198,11 @@ jobs:
           ignored_suffixes = {".pyc", ".pyo"}
 
           skipped_bundles: list[str] = []
-          baseline_ref = (os.environ.get("TARGET_REGISTRY_BASE_REF") or "main").strip() or "main"
           current_branch = os.environ.get("GITHUB_REF_NAME", "").strip()
+          baseline_ref = determine_registry_baseline_ref(
+            current_branch=current_branch,
+            default_branch=(os.environ.get("TARGET_REGISTRY_BASE_REF") or "main"),
+          )
           baseline_index_path = repo_root / ".publish-registry-baseline.json"
 
           if baseline_ref == current_branch:
