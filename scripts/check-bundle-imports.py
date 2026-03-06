@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: N999
 """Enforce bundle import boundaries for specfact-cli-modules."""
 
 from __future__ import annotations
