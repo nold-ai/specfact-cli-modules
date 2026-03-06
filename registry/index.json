@@ -56,9 +56,9 @@
     },
     {
       "id": "nold-ai/specfact-govern",
-      "latest_version": "0.40.13",
-      "download_url": "modules/specfact-govern-0.40.13.tar.gz",
-      "checksum_sha256": "efbc86967cd8796c51c839f2611279ada54216c026bf7879e090926b8665d72f",
+      "latest_version": "0.40.15",
+      "download_url": "modules/specfact-govern-0.40.15.tar.gz",
+      "checksum_sha256": "5088d51de6db05c47e3aaff028f5a48bcaaf26e3039ba1fa686758d2d3c8b106",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
