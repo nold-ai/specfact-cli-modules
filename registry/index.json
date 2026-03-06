@@ -4,7 +4,7 @@
       "id": "nold-ai/specfact-project",
       "latest_version": "0.40.16",
       "download_url": "modules/specfact-project-0.40.16.tar.gz",
-      "checksum_sha256": "8cc2260aedf8074cc0984398b25fa5301600c9243be07b77cefaef469192c88e",
+      "checksum_sha256": "f391b04bb9be8f931f4984fdb4900db50c2fd2156f1dff66f77628a14bacaef7",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -17,7 +17,7 @@
       "id": "nold-ai/specfact-backlog",
       "latest_version": "0.40.19",
       "download_url": "modules/specfact-backlog-0.40.19.tar.gz",
-      "checksum_sha256": "2b02bc15e4d404a9b964db2a9b87eb893a18309eacdcba2a09e9793a4682f452",
+      "checksum_sha256": "954192bd809e289d13b00fe60771124de13a50cefe2b147d8d1adaf712459071",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -30,7 +30,7 @@
       "id": "nold-ai/specfact-codebase",
       "latest_version": "0.40.17",
       "download_url": "modules/specfact-codebase-0.40.17.tar.gz",
-      "checksum_sha256": "1aa0191430227d184147113a37f34496d9a44c8288b05ef0a8ab173c09a987dc",
+      "checksum_sha256": "d27486cc723d3410efc8434666d8709c0d8e32b7b02681055fe64f55ba2e7f42",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -43,7 +43,7 @@
       "id": "nold-ai/specfact-spec",
       "latest_version": "0.40.14",
       "download_url": "modules/specfact-spec-0.40.14.tar.gz",
-      "checksum_sha256": "e2e47b514449f2e0636847d574f911d513343da9cb0be0942d3194f1edcd45c2",
+      "checksum_sha256": "cd80e601df3ffc4ae604c5fef6e408da2570d9c96b2d940dad606148f4a7d1f6",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -58,7 +58,7 @@
       "id": "nold-ai/specfact-govern",
       "latest_version": "0.40.17",
       "download_url": "modules/specfact-govern-0.40.17.tar.gz",
-      "checksum_sha256": "7564e1ee44386dffde50fb9099cbc27e37bfcd19943039035e889655be53d9d5",
+      "checksum_sha256": "8dae9d4a5794dedb9b4294e317e366ae390f64f54fbad112c17a2130e01ee82b",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
