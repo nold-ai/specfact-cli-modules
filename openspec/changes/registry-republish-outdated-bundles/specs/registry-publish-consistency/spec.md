@@ -28,6 +28,11 @@ The modules publish workflow SHALL compare bundle manifest versions against an e
 - **THEN** the workflow does not add that bundle solely from the outdated-bundle scan
 - **AND** it remains excluded unless it is otherwise selected by direct change handling.
 
+#### Scenario: Dev publish compares against dev registry state
+- **WHEN** the workflow runs from the `dev` branch
+- **THEN** it uses `dev` as the effective registry baseline for the outdated-bundle scan
+- **AND** it does not reopen an automated publish PR solely because `main` is behind `dev`.
+
 ### Requirement: Automated Publish PR Must Report Why A Bundle Was Included
 
 The automated registry publish PR flow SHALL distinguish bundles selected from the current diff from bundles selected to repair stale registry state.

@@ -14,3 +14,9 @@
 
 - [x] 3.1 Re-run the new workflow/script tests and capture the passing results in `openspec/changes/registry-republish-outdated-bundles/TDD_EVIDENCE.md`.
 - [x] 3.2 Run `openspec validate registry-republish-outdated-bundles --strict`.
+
+## 4. Loop Prevention Delta
+
+- [x] 4.1 Add a regression test for effective baseline selection so `dev` publish runs compare against `dev`, not `main`.
+- [x] 4.2 Update workflow baseline resolution to prevent repeat auto publish PRs on `dev` after registry-only merges.
+- [x] 4.3 Capture the failing and passing regression evidence in `openspec/changes/registry-republish-outdated-bundles/TDD_EVIDENCE.md`.
