@@ -140,12 +140,34 @@ jobs:
           ignored_dir_names = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
           ignored_suffixes = {".pyc", ".pyo"}
 
+          skipped_bundles: list[str] = []
+
           for bundle in bundles:
             # Keep existing monotonic version guard logic.
-            subprocess.run(
+            publish_check = subprocess.run(
               ["python", "scripts/publish-module.py", "--bundle", bundle, "--repo-root", "."],
-              check=True,
+              check=False,
+              capture_output=True,
+              text=True,
             )
+            combined_output = "\n".join(
+              part.strip() for part in (publish_check.stdout, publish_check.stderr) if part and part.strip()
+            )
+            if publish_check.returncode != 0:
+              if "Bundle version must be greater than registry latest_version" in combined_output:
+                print(f"Skipping {bundle}: registry already at manifest version.")
+                if combined_output:
+                  print(combined_output)
+                skipped_bundles.append(bundle)
+                continue
+              if combined_output:
+                print(combined_output)
+              raise subprocess.CalledProcessError(
+                publish_check.returncode,
+                publish_check.args,
+                output=publish_check.stdout,
+                stderr=publish_check.stderr,
+              )
 
             bundle_dir = repo_root / "packages" / bundle
             manifest_path = bundle_dir / "module-package.yaml"
@@ -210,6 +232,9 @@ jobs:
               entry["description"] = manifest["description"]
 
             print(f"Published registry artifact for {module_id} v{version}")
+
+          if skipped_bundles:
+            print(f"Skipped already-published bundles: {skipped_bundles}")
 
           registry_index_path.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
           PY
