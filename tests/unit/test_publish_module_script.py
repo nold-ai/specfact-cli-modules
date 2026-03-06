@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import yaml
 
 from scripts import publish_module
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_publish_module_can_compare_against_explicit_registry_index(tmp_path: Path) -> None:
@@ -117,3 +122,40 @@ def test_publish_module_rejects_when_explicit_registry_baseline_matches_manifest
     )
 
     assert result == 1
+
+
+def test_publish_module_wrapper_runs_when_executed_as_script(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    bundle_dir = repo_root / "packages" / "specfact-backlog"
+    registry_dir = repo_root / "registry"
+    bundle_dir.mkdir(parents=True)
+    registry_dir.mkdir(parents=True)
+
+    (bundle_dir / "module-package.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "nold-ai/specfact-backlog",
+                "version": "0.40.18",
+                "core_compatibility": ">=0.40.0,<0.41.0",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (registry_dir / "index.json").write_text(json.dumps({"modules": []}), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "publish-module.py"),
+            "--bundle",
+            "specfact-backlog",
+            "--repo-root",
+            str(repo_root),
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr or result.stdout
