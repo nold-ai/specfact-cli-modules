@@ -5453,6 +5453,16 @@ def map_fields(
         required_refs: list[str] = []
         allowed_values_by_field: dict[str, list[str]] = {}
         unresolved_required: list[str] = []
+        metadata_follow_up_refs = [
+            str(node.get("referenceName") or "").strip()
+            for node in nodes
+            if isinstance(node, dict)
+            and str(node.get("referenceName") or "").strip()
+            and str(node.get("referenceName") or "").strip() not in system_only_fields
+            and not _extract_allowed_values(node.get("allowedValues"))
+        ]
+        follow_up_total = len(metadata_follow_up_refs)
+        follow_up_index = 0
         for node in nodes:
             if not isinstance(node, dict):
                 continue
@@ -5463,8 +5473,14 @@ def map_fields(
                 unresolved_required.append(display_name)
             if not ref_name:
                 continue
+            if ref_name in system_only_fields:
+                continue
             allowed_values = _extract_allowed_values(node.get("allowedValues"))
             if not allowed_values and ref_name:
+                follow_up_index += 1
+                console.print(
+                    f"[cyan]Fetching field metadata details {follow_up_index}/{follow_up_total}: {display_name}[/cyan]"
+                )
                 allowed_values = _fetch_allowed_values_for_field(ref_name)
             if allowed_values:
                 allowed_values_by_field[ref_name] = allowed_values
