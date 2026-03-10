@@ -64,10 +64,10 @@ def _refresh_console() -> Console:
 @beartype
 def _ensure_backlog_core_loaded() -> None:
     """Ensure backlog-core module package is loaded before importing backlog_core symbols."""
-    if "backlog_core" in sys.modules:
+    if "specfact_backlog.backlog_core" in sys.modules:
         return
     try:
-        __import__("backlog_core")
+        __import__("specfact_backlog.backlog_core")
         return
     except ModuleNotFoundError:
         pass
@@ -77,10 +77,10 @@ def _ensure_backlog_core_loaded() -> None:
         CommandRegistry.get_typer("backlog")
 
     try:
-        __import__("backlog_core")
+        __import__("specfact_backlog.backlog_core")
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
-            "backlog-core module is not available. Ensure module package 'backlog-core' is enabled and installed."
+            "backlog-core module is not available. Ensure module package 'specfact-backlog' is enabled and installed."
         ) from exc
 
 
@@ -233,10 +233,11 @@ def link_backlog(
 def _collect_backlog_health_metrics(adapter: str, project_id: str, template: str) -> dict[str, Any]:
     """Collect backlog health metrics via backlog-core graph analysis."""
     _ensure_backlog_core_loaded()
-    from backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
-    from backlog_core.analyzers.dependency import DependencyAnalyzer
-    from backlog_core.graph.builder import BacklogGraphBuilder
     from specfact_cli.adapters.registry import AdapterRegistry
+
+    from specfact_backlog.backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
+    from specfact_backlog.backlog_core.analyzers.dependency import DependencyAnalyzer
+    from specfact_backlog.backlog_core.graph.builder import BacklogGraphBuilder
 
     adapter_instance = AdapterRegistry.get_adapter(adapter)
     graph_adapter = require_backlog_graph_protocol(adapter_instance)
@@ -313,7 +314,7 @@ def _run_release_readiness_check(
     """Run backlog-core release readiness check and return status summary."""
     try:
         _ensure_backlog_core_loaded()
-        from backlog_core.commands.verify import verify_readiness
+        from specfact_backlog.backlog_core.commands.verify import verify_readiness
 
         verify_readiness(
             project_id=project_id,
@@ -355,7 +356,7 @@ def _resolve_linked_backlog_config(bundle_obj: ProjectBundle) -> tuple[str, str,
 def _fetch_backlog_graph(*, adapter: str, project_id: str, template: str) -> Any:
     """Fetch backlog graph via backlog-core shared helper."""
     _ensure_backlog_core_loaded()
-    from backlog_core.commands.shared import fetch_current_graph
+    from specfact_backlog.backlog_core.commands.shared import fetch_current_graph
 
     return fetch_current_graph(project_id=project_id, adapter=adapter, template=template)
 
@@ -365,7 +366,7 @@ def _fetch_backlog_graph(*, adapter: str, project_id: str, template: str) -> Any
 def generate_roadmap(*, adapter: str, project_id: str, template: str) -> list[str]:
     """Generate roadmap milestones from dependency critical path."""
     _ensure_backlog_core_loaded()
-    from backlog_core.analyzers.dependency import DependencyAnalyzer
+    from specfact_backlog.backlog_core.analyzers.dependency import DependencyAnalyzer
 
     graph = _fetch_backlog_graph(adapter=adapter, project_id=project_id, template=template)
     analyzer = DependencyAnalyzer(graph)
@@ -582,7 +583,7 @@ def devops_flow(
 
     if normalized_stage == "develop" and normalized_action == "sync":
         _ensure_backlog_core_loaded()
-        from backlog_core.commands.sync import sync as backlog_sync
+        from specfact_backlog.backlog_core.commands.sync import sync as backlog_sync
 
         backlog_sync(
             project_id=project_id,
@@ -613,7 +614,7 @@ def devops_flow(
         release_target = extract_release_target(bundle_obj)
         with suppress(ModuleNotFoundError):
             _ensure_backlog_core_loaded()
-            from backlog_core.commands.release_notes import generate_release_notes
+            from specfact_backlog.backlog_core.commands.release_notes import generate_release_notes
 
             notes_path = Path(".specfact/release-notes") / f"{release_target}.md"
             try:

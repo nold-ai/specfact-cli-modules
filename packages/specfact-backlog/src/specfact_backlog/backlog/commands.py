@@ -50,6 +50,15 @@ from specfact_backlog.backlog.ai_refiner import BacklogAIRefiner
 from specfact_backlog.backlog.auth_commands import auth_app
 from specfact_backlog.backlog.filters import BacklogFilters
 from specfact_backlog.backlog.template_detector import TemplateDetector, get_effective_required_sections
+
+# Import migrated backlog-core commands
+from specfact_backlog.backlog_core.commands.add import add
+from specfact_backlog.backlog_core.commands.analyze_deps import analyze_deps
+from specfact_backlog.backlog_core.commands.delta import delta_app as _delta_app
+from specfact_backlog.backlog_core.commands.diff import diff
+from specfact_backlog.backlog_core.commands.promote import promote
+from specfact_backlog.backlog_core.commands.sync import sync
+from specfact_backlog.backlog_core.commands.verify import verify_readiness
 from specfact_backlog.templates.registry import BacklogTemplate, TemplateRegistry
 
 
@@ -3228,6 +3237,15 @@ def daily(
 
 app.add_typer(ceremony_app, name="ceremony", help="Ceremony-oriented backlog workflows")
 app.add_typer(auth_app, name="auth", help="Authenticate backlog providers")
+
+# Register migrated backlog-core commands
+app.command("add")(add)
+app.command("analyze-deps")(analyze_deps)
+app.command("sync")(sync)
+app.command("diff")(diff)
+app.command("promote")(promote)
+app.command("verify-readiness")(verify_readiness)
+app.add_typer(_delta_app, name="delta", help="Backlog delta analysis and impact tracking")
 
 
 @beartype

@@ -1,6 +1,6 @@
 """backlog module in specfact_backlog bundle."""
 
-from specfact_backlog.backlog.commands import app
+# Avoid circular imports - app is available from specfact_backlog.backlog.commands directly
+# from specfact_backlog.backlog.commands import app
 
-
-__all__ = ["app"]
+__all__ = []
