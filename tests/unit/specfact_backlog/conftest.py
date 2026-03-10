@@ -31,6 +31,7 @@ os.environ["PYTHONPATH"] = _new_pythonpath
 # Patch CliRunner to always include proper PYTHONPATH in env
 def _patch_clirunner() -> None:
     """Monkey-patch CliRunner.invoke to always include PYTHONPATH."""
+    # pylint: disable=import-outside-toplevel
     from collections.abc import Callable
 
     from click.testing import Result
@@ -42,7 +43,6 @@ def _patch_clirunner() -> None:
         self: Any,
         cli: Any,
         args: list[str] | None = None,
-        input: str | None = None,
         env: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Result:
@@ -53,7 +53,8 @@ def _patch_clirunner() -> None:
         # Ensure PYTHONPATH is set
         if "PYTHONPATH" not in merged_env:
             merged_env["PYTHONPATH"] = _new_pythonpath
-        return original_invoke(self, cli, args=args, input=input, env=merged_env, **kwargs)
+        # Pass merged env to original invoke
+        return original_invoke(self, cli, args=args, env=merged_env, **kwargs)
 
     # Use Any to bypass type checking for monkey-patch
     CliRunner.invoke = patched_invoke  # type: ignore[method-assign]
@@ -66,9 +67,11 @@ _patch_clirunner()
 # Import after path setup
 from specfact_cli.registry.bridge_registry import BRIDGE_PROTOCOL_REGISTRY
 
+# Trigger protocol registration by importing main module
+from specfact_backlog.backlog_core import main as _main_module  # noqa: F401
+
 # Register backlog graph protocol with bridge registry for tests
 from specfact_backlog.backlog_core.adapters.backlog_protocol import BacklogGraphProtocol
-from specfact_backlog.backlog_core.main import backlog_app  # noqa: F401
 
 
 BRIDGE_PROTOCOL_REGISTRY.register_protocol("backlog_graph", BacklogGraphProtocol)

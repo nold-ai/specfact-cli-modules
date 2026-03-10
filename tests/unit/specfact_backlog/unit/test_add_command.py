@@ -1,5 +1,8 @@
 """Unit tests for backlog add interactive issue creation command."""
 
+# pylint: disable=import-outside-toplevel,redefined-builtin,unused-argument
+# Tests import inside functions for monkeypatch compatibility
+
 from __future__ import annotations
 
 import re

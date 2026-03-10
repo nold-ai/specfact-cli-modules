@@ -1,5 +1,8 @@
 """Unit tests for backlog adapter create_issue contract."""
 
+# pylint: disable=import-outside-toplevel
+# Tests import inside functions for monkeypatch compatibility
+
 from __future__ import annotations
 
 from specfact_cli.adapters.ado import AdoAdapter
