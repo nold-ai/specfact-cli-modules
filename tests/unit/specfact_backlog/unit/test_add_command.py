@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -11,6 +12,12 @@ from specfact_backlog.backlog_core.main import backlog_app
 
 
 runner = CliRunner()
+
+
+def _strip_ansi(text: str) -> str:
+    """Strip ANSI escape codes from text for assertions."""
+    ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
+    return ansi_escape.sub("", text)
 
 
 class _FakeAdapter:
@@ -93,7 +100,7 @@ def test_backlog_add_validates_missing_parent(monkeypatch) -> None:
     )
 
     assert result.exit_code == 1
-    assert "Parent 'FEAT-123' not found" in result.stdout
+    assert "Parent 'FEAT-123' not found" in _strip_ansi(result.stdout)
 
 
 def test_backlog_add_uses_default_hierarchy_when_no_github_custom_mapping_file(monkeypatch, tmp_path: Path) -> None:
@@ -187,7 +194,7 @@ creation_hierarchy:
     )
 
     assert result.exit_code == 1
-    assert "Type 'task' is not allowed under parent type 'story'" in result.stdout
+    assert "Type 'task' is not allowed under parent type 'story'" in _strip_ansi(result.stdout)
 
 
 def test_backlog_add_honors_creation_hierarchy_from_custom_config(monkeypatch, tmp_path: Path) -> None:
