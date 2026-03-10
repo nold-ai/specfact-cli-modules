@@ -48,10 +48,10 @@
 
 ## 6. Documentation
 
-- [ ] 6.1 Update `docs/guides/agile-scrum-workflows.md` to confirm command availability
-- [ ] 6.2 Update `docs/guides/backlog-delta-commands.md` to confirm delta subcommands
-- [ ] 6.3 Update `docs/guides/backlog-dependency-analysis.md` to confirm analyze-deps
-- [ ] 6.4 Update CHANGELOG.md with restored commands
+- [x] 6.1 `docs/guides/agile-scrum-workflows.md` - Commands already documented (add, sync, analyze-deps, verify-readiness, diff, promote, generate-release-notes)
+- [x] 6.2 `docs/guides/backlog-delta-commands.md` - Delta subcommands already documented (status, impact, cost-estimate, rollback-analysis)
+- [x] 6.3 `docs/guides/backlog-dependency-analysis.md` - analyze-deps, trace-impact, verify-readiness already documented
+- [x] 6.4 CHANGELOG.md - No separate file; change tracked in git history and PR descriptions
 
 ## 7. Validation and PR
 
