@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 
 # Calculate repository root
@@ -28,13 +29,22 @@ os.environ["PYTHONPATH"] = _new_pythonpath
 
 
 # Patch CliRunner to always include proper PYTHONPATH in env
-def _patch_clirunner():
+def _patch_clirunner() -> None:
     """Monkey-patch CliRunner.invoke to always include PYTHONPATH."""
     from typer.testing import CliRunner
+    from click.testing import Result
+    from typing import Callable
 
-    original_invoke = CliRunner.invoke
+    original_invoke: Callable[..., Result] = CliRunner.invoke
 
-    def patched_invoke(self, cli, args=None, input=None, env=None, **kwargs):
+    def patched_invoke(
+        self: Any,
+        cli: Any,
+        args: list[str] | None = None,
+        input: str | None = None,
+        env: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> Result:
         # Merge our PYTHONPATH with any existing env
         merged_env = os.environ.copy()
         if env:
@@ -44,7 +54,8 @@ def _patch_clirunner():
             merged_env["PYTHONPATH"] = _new_pythonpath
         return original_invoke(self, cli, args=args, input=input, env=merged_env, **kwargs)
 
-    CliRunner.invoke = patched_invoke
+    # Use Any to bypass type checking for monkey-patch
+    CliRunner.invoke = patched_invoke  # type: ignore[method-assign]
 
 
 _patch_clirunner()
@@ -52,9 +63,11 @@ _patch_clirunner()
 
 # ruff: noqa: E402
 # Import after path setup
-from specfact_backlog.backlog_core.main import backlog_app  # noqa: F401
+from specfact_cli.registry.bridge_registry import BRIDGE_PROTOCOL_REGISTRY
 
 # Register backlog graph protocol with bridge registry for tests
-from specfact_backlog.backlog_core.adapters.backlog_protocol import BacklogGraphProtocol  # noqa: E402
-from specfact_cli.registry.bridge_registry import BRIDGE_PROTOCOL_REGISTRY  # noqa: E402
+from specfact_backlog.backlog_core.adapters.backlog_protocol import BacklogGraphProtocol
+from specfact_backlog.backlog_core.main import backlog_app  # noqa: F401
+
+
 BRIDGE_PROTOCOL_REGISTRY.register_protocol("backlog_graph", BacklogGraphProtocol)

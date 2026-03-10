@@ -7,5 +7,12 @@
   "reportMissingImports": true,
   "reportMissingModuleSource": "none",
   "venvPath": ".",
-  "venv": ".venv"
+  "venv": ".venv",
+  "extraPaths": [
+    "packages/specfact-project/src",
+    "packages/specfact-backlog/src",
+    "packages/specfact-codebase/src",
+    "packages/specfact-spec/src",
+    "packages/specfact-govern/src"
+  ]
 }
