@@ -48,6 +48,10 @@ contract-test-exploration = "python tools/contract_first_smart_test.py explorati
 contract-test-scenarios = "python tools/contract_first_smart_test.py scenarios {args}"
 contract-test-status = "python tools/contract_first_smart_test.py status"
 
+# NOTE: Use 'hatch run test' instead of 'hatch test'
+# The hatch-test environment cannot install specfact-cli from sibling directory
+# The default environment (hatch run) has all dependencies configured correctly
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/specfact_cli_modules"]
 
