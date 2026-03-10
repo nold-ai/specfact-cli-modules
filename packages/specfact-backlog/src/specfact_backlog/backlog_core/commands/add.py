@@ -12,7 +12,6 @@ from beartype import beartype
 from icontract import require
 from specfact_cli.adapters.registry import AdapterRegistry
 from specfact_cli.models.dor_config import DefinitionOfReady
-from specfact_cli.utils.prompts import print_error, print_info, print_success, print_warning, prompt_text
 
 from specfact_backlog.backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
 from specfact_backlog.backlog_core.graph.builder import BacklogGraphBuilder
@@ -20,6 +19,7 @@ from specfact_backlog.backlog_core.graph.config_schema import (
     load_backlog_config_from_backlog_file,
     load_backlog_config_from_spec,
 )
+from specfact_backlog.backlog_core.utils import print_error, print_info, print_success, print_warning, prompt_text
 
 
 DEFAULT_CREATION_HIERARCHY: dict[str, list[str]] = {

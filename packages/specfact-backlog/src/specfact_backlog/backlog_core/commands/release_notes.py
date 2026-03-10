@@ -8,7 +8,8 @@ from typing import Annotated
 
 import typer
 from beartype import beartype
-from specfact_cli.utils.prompts import print_success
+
+from specfact_backlog.backlog_core.utils import print_success
 
 from .shared import fetch_current_graph
 

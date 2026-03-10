@@ -9,10 +9,10 @@ import typer
 from beartype import beartype
 from rich.console import Console
 from rich.table import Table
-from specfact_cli.utils.prompts import print_warning
 
 from specfact_backlog.backlog_core.commands.sync import compute_delta
 from specfact_backlog.backlog_core.graph.models import BacklogGraph
+from specfact_backlog.backlog_core.utils import print_warning
 
 from .shared import fetch_current_graph
 

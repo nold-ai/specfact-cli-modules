@@ -6,7 +6,6 @@ from typing import Any, Protocol, runtime_checkable
 
 from beartype import beartype
 from icontract import ensure, require
-from specfact_cli.registry.bridge_registry import BRIDGE_PROTOCOL_REGISTRY
 
 
 @runtime_checkable
@@ -45,6 +44,3 @@ def require_backlog_graph_protocol(adapter: Any) -> BacklogGraphProtocol:
         )
         raise TypeError(msg)
     return adapter
-
-
-BRIDGE_PROTOCOL_REGISTRY.register_protocol("backlog_graph", BacklogGraphProtocol)

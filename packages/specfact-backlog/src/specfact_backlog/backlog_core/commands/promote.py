@@ -6,9 +6,9 @@ from typing import Annotated
 
 import typer
 from beartype import beartype
-from specfact_cli.utils.prompts import print_info, print_success, print_warning
 
 from specfact_backlog.backlog_core.analyzers.dependency import DependencyAnalyzer
+from specfact_backlog.backlog_core.utils import print_info, print_success, print_warning
 
 from .shared import fetch_current_graph
 

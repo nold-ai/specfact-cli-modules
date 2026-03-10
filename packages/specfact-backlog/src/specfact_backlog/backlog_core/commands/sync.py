@@ -12,11 +12,11 @@ from beartype import beartype
 from rich.console import Console
 from rich.table import Table
 from specfact_cli.adapters.registry import AdapterRegistry
-from specfact_cli.utils.prompts import print_info, print_success, print_warning
 
 from specfact_backlog.backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
 from specfact_backlog.backlog_core.graph.builder import BacklogGraphBuilder
 from specfact_backlog.backlog_core.graph.models import BacklogGraph
+from specfact_backlog.backlog_core.utils import print_info, print_success, print_warning
 
 
 console = Console()

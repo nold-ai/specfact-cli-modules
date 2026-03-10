@@ -53,3 +53,8 @@ _patch_clirunner()
 # ruff: noqa: E402
 # Import after path setup
 from specfact_backlog.backlog_core.main import backlog_app  # noqa: F401
+
+# Register backlog graph protocol with bridge registry for tests
+from specfact_backlog.backlog_core.adapters.backlog_protocol import BacklogGraphProtocol  # noqa: E402
+from specfact_cli.registry.bridge_registry import BRIDGE_PROTOCOL_REGISTRY  # noqa: E402
+BRIDGE_PROTOCOL_REGISTRY.register_protocol("backlog_graph", BacklogGraphProtocol)

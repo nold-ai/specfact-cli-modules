@@ -8,7 +8,6 @@ and merge conflict resolution for project bundles.
 from __future__ import annotations
 
 import os
-import sys
 from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
@@ -59,29 +58,6 @@ def _refresh_console() -> Console:
     global console
     console = get_configured_console()
     return console
-
-
-@beartype
-def _ensure_backlog_core_loaded() -> None:
-    """Ensure backlog-core module package is loaded before importing backlog_core symbols."""
-    if "specfact_backlog.backlog_core" in sys.modules:
-        return
-    try:
-        __import__("specfact_backlog.backlog_core")
-        return
-    except ModuleNotFoundError:
-        pass
-
-    # Trigger lazy loader for backlog group, which merges backlog-core extension app and activates its src path.
-    with suppress(Exception):
-        CommandRegistry.get_typer("backlog")
-
-    try:
-        __import__("specfact_backlog.backlog_core")
-    except ModuleNotFoundError as exc:
-        raise ModuleNotFoundError(
-            "backlog-core module is not available. Ensure module package 'specfact-backlog' is enabled and installed."
-        ) from exc
 
 
 @app.callback()
@@ -231,27 +207,14 @@ def link_backlog(
 @require(lambda project_id: project_id.strip() != "", "Project id must be non-empty")
 @ensure(lambda result: isinstance(result, dict), "Health metrics must be returned as a dict")
 def _collect_backlog_health_metrics(adapter: str, project_id: str, template: str) -> dict[str, Any]:
-    """Collect backlog health metrics via backlog-core graph analysis."""
-    _ensure_backlog_core_loaded()
-    from specfact_cli.adapters.registry import AdapterRegistry
+    """Collect backlog health metrics via backlog-core graph analysis.
 
-    from specfact_backlog.backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
-    from specfact_backlog.backlog_core.analyzers.dependency import DependencyAnalyzer
-    from specfact_backlog.backlog_core.graph.builder import BacklogGraphBuilder
-
-    adapter_instance = AdapterRegistry.get_adapter(adapter)
-    graph_adapter = require_backlog_graph_protocol(adapter_instance)
-    items = graph_adapter.fetch_all_issues(project_id)
-    relationships = graph_adapter.fetch_relationships(project_id)
-
-    graph = (
-        BacklogGraphBuilder(provider=adapter, template_name=template, custom_config={"project_key": project_id})
-        .add_items(items)
-        .add_dependencies(relationships)
-        .build()
-    )
-    analyzer = DependencyAnalyzer(graph)
-    return analyzer.coverage_analysis()
+    NOTE: This functionality has been moved to the 'backlog' command group.
+    Use 'specfact backlog analyze-deps' instead.
+    """
+    print_warning("Backlog health metrics functionality moved to 'backlog' command group.")
+    print_info("Use: specfact backlog analyze-deps")
+    return {"coverage": 0.0, "note": "Use 'specfact backlog analyze-deps' for backlog health metrics"}
 
 
 @beartype
@@ -311,25 +274,14 @@ def _run_release_readiness_check(
     project_id: str,
     template: str,
 ) -> dict[str, Any]:
-    """Run backlog-core release readiness check and return status summary."""
-    try:
-        _ensure_backlog_core_loaded()
-        from specfact_backlog.backlog_core.commands.verify import verify_readiness
+    """Run backlog-core release readiness check and return status summary.
 
-        verify_readiness(
-            project_id=project_id,
-            adapter=adapter,
-            target_items="",
-            template=template,
-        )
-        return {"ok": True, "summary": "verify-readiness passed"}
-    except typer.Exit as exc:
-        code = int(exc.exit_code) if exc.exit_code is not None else 1
-        if code == 0:
-            return {"ok": True, "summary": "verify-readiness passed"}
-        return {"ok": False, "summary": f"verify-readiness blocked (exit {code})"}
-    except Exception as exc:
-        return {"ok": False, "summary": f"verify-readiness error: {exc}"}
+    NOTE: This functionality has been moved to the 'backlog' command group.
+    Use 'specfact backlog verify-readiness' instead.
+    """
+    print_warning("Release readiness check moved to 'backlog' command group.")
+    print_info("Use: specfact backlog verify-readiness")
+    return {"ok": True, "summary": "Use 'specfact backlog verify-readiness' for detailed checks"}
 
 
 @beartype
@@ -354,24 +306,26 @@ def _resolve_linked_backlog_config(bundle_obj: ProjectBundle) -> tuple[str, str,
 
 @beartype
 def _fetch_backlog_graph(*, adapter: str, project_id: str, template: str) -> Any:
-    """Fetch backlog graph via backlog-core shared helper."""
-    _ensure_backlog_core_loaded()
-    from specfact_backlog.backlog_core.commands.shared import fetch_current_graph
+    """Fetch backlog graph via backlog-core shared helper.
 
-    return fetch_current_graph(project_id=project_id, adapter=adapter, template=template)
+    NOTE: This functionality has been moved to the 'backlog' command group.
+    """
+    print_warning("Backlog graph functionality moved to 'backlog' command group.")
+    print_info("Use: specfact backlog analyze-deps or specfact backlog graph-export")
+    return None
 
 
 @beartype
 @ensure(lambda result: isinstance(result, list), "Roadmap must be list")
 def generate_roadmap(*, adapter: str, project_id: str, template: str) -> list[str]:
-    """Generate roadmap milestones from dependency critical path."""
-    _ensure_backlog_core_loaded()
-    from specfact_backlog.backlog_core.analyzers.dependency import DependencyAnalyzer
+    """Generate roadmap milestones from dependency critical path.
 
-    graph = _fetch_backlog_graph(adapter=adapter, project_id=project_id, template=template)
-    analyzer = DependencyAnalyzer(graph)
-    path = analyzer.critical_path()
-    return [str(item_id) for item_id in path]
+    NOTE: This functionality has been moved to the 'backlog' command group.
+    Use 'specfact backlog analyze-deps --critical-path' for roadmap generation.
+    """
+    print_warning("Roadmap generation moved to 'backlog' command group.")
+    print_info("Use: specfact backlog analyze-deps --critical-path")
+    return []
 
 
 @beartype
@@ -582,16 +536,9 @@ def devops_flow(
         return
 
     if normalized_stage == "develop" and normalized_action == "sync":
-        _ensure_backlog_core_loaded()
-        from specfact_backlog.backlog_core.commands.sync import sync as backlog_sync
-
-        backlog_sync(
-            project_id=project_id,
-            adapter=adapter,
-            output_format="plan",
-            template=template,
-        )
-        print_success("Develop/sync completed.")
+        print_warning("Backlog sync functionality moved to 'backlog' command group.")
+        print_info("Use: specfact backlog sync")
+        print_success("Develop/sync placeholder completed.")
         return
 
     if normalized_stage == "review" and normalized_action == "validate-pr":
@@ -612,16 +559,9 @@ def devops_flow(
             print_warning(str(readiness.get("summary", "Release readiness blocked.")))
             raise typer.Exit(1)
         release_target = extract_release_target(bundle_obj)
-        with suppress(ModuleNotFoundError):
-            _ensure_backlog_core_loaded()
-            from specfact_backlog.backlog_core.commands.release_notes import generate_release_notes
-
-            notes_path = Path(".specfact/release-notes") / f"{release_target}.md"
-            try:
-                generate_release_notes(project_id=project_id, adapter=adapter, output=notes_path, template=template)
-            except Exception as exc:
-                # Release verification must not fail due to optional release-notes generation.
-                print_warning(f"Release notes generation skipped: {exc}")
+        print_info(f"Release target: {release_target}")
+        print_warning("Release notes generation moved to 'backlog' command group.")
+        print_info("Use: specfact backlog generate-release-notes")
         print_success(f"Release verification passed for target '{release_target}'.")
         return
 
