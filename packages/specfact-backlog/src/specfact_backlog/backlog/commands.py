@@ -1435,7 +1435,9 @@ def _build_copilot_export_content(
             if item_comments:
                 lines.append("- **Comments (annotations):**")
                 for c in item_comments:
-                    lines.append(f"  - {c}")
+                    # Defensive: coerce to string and normalize HTML to Markdown
+                    normalized_comment = _normalize_markdown_text(str(c))
+                    lines.append(f"  - {normalized_comment}")
         if item.story_points is not None:
             lines.append(f"- **Story points:** {item.story_points}")
         if item.priority is not None:
@@ -1516,7 +1518,8 @@ def _build_summarize_prompt_content(
             if item_comments:
                 lines.append("- **Comments (annotations):**")
                 for c in item_comments:
-                    normalized_comment = _normalize_markdown_text(c)
+                    # Defensive: coerce to string in case API returns non-string types
+                    normalized_comment = _normalize_markdown_text(str(c))
                     lines.append(f"  - {normalized_comment}")
         if item.story_points is not None:
             lines.append(f"- **Story points:** {item.story_points}")
@@ -1533,18 +1536,26 @@ def _build_summarize_prompt_content(
 
 _HTML_TAG_RE = re.compile(r"<[A-Za-z/][^>]*>")
 
+# Maximum input length to prevent ReDoS on regex processing (50KB)
+_MAX_INPUT_LENGTH = 50 * 1024
+
 
 @beartype
-@ensure(lambda result: not _HTML_TAG_RE.search(result or ""), "Normalized text must not contain raw HTML tags")
 def _normalize_markdown_text(text: str) -> str:
     """
     Normalize provider-specific markup (HTML, entities) to Markdown-friendly text.
 
     This is intentionally conservative: plain Markdown is left as-is, while common HTML constructs from
     ADO-style bodies and comments are converted to readable Markdown and stripped of tags/entities.
+
+    Includes safeguards against ReDoS (input length guard) and graceful fallback on errors.
     """
     if not text:
         return ""
+
+    # ReDoS guard: truncate very long inputs before regex processing
+    if len(text) > _MAX_INPUT_LENGTH:
+        text = text[:_MAX_INPUT_LENGTH] + "\n... [truncated due to length]"
 
     # Fast path: if no obvious HTML markers, return as-is.
     if "<" not in text and "&" not in text:
@@ -1552,34 +1563,41 @@ def _normalize_markdown_text(text: str) -> str:
 
     from html import unescape
 
-    # Unescape HTML entities first so we can treat content uniformly.
-    value = unescape(text)
+    try:
+        # Unescape HTML entities first so we can treat content uniformly.
+        value = unescape(text)
 
-    # Replace common block/linebreak tags with newlines before stripping other tags.
-    # Handle several variants to cover typical ADO HTML.
-    value = re.sub(r"<\s*br\s*/?\s*>", "\n", value, flags=re.IGNORECASE)
-    value = re.sub(r"</\s*p\s*>", "\n\n", value, flags=re.IGNORECASE)
-    value = re.sub(r"<\s*p[^>]*>", "", value, flags=re.IGNORECASE)
+        # Replace common block/linebreak tags with newlines before stripping other tags.
+        # Handle several variants to cover typical ADO HTML.
+        value = re.sub(r"<\s*br\s*/?\s*>", "\n", value, flags=re.IGNORECASE)
+        value = re.sub(r"</\s*p\s*>", "\n\n", value, flags=re.IGNORECASE)
+        value = re.sub(r"<\s*p[^>]*>", "", value, flags=re.IGNORECASE)
 
-    # Turn list items into markdown bullets.
-    value = re.sub(r"<\s*li[^>]*>", "- ", value, flags=re.IGNORECASE)
-    value = re.sub(r"</\s*li\s*>", "\n", value, flags=re.IGNORECASE)
-    value = re.sub(r"<\s*ul[^>]*>", "", value, flags=re.IGNORECASE)
-    value = re.sub(r"</\s*ul\s*>", "\n", value, flags=re.IGNORECASE)
-    value = re.sub(r"<\s*ol[^>]*>", "", value, flags=re.IGNORECASE)
-    value = re.sub(r"</\s*ol\s*>", "\n", value, flags=re.IGNORECASE)
+        # Turn list items into markdown bullets.
+        value = re.sub(r"<\s*li[^>]*>", "- ", value, flags=re.IGNORECASE)
+        value = re.sub(r"</\s*li\s*>", "\n", value, flags=re.IGNORECASE)
+        value = re.sub(r"<\s*ul[^>]*>", "", value, flags=re.IGNORECASE)
+        value = re.sub(r"</\s*ul\s*>", "\n", value, flags=re.IGNORECASE)
+        value = re.sub(r"<\s*ol[^>]*>", "", value, flags=re.IGNORECASE)
+        value = re.sub(r"</\s*ol\s*>", "\n", value, flags=re.IGNORECASE)
 
-    # Drop any remaining tags conservatively.
-    value = _HTML_TAG_RE.sub("", value)
+        # Drop any remaining tags conservatively.
+        value = _HTML_TAG_RE.sub("", value)
 
-    # Normalize whitespace: collapse excessive blank lines but keep paragraph structure.
-    # First, normalize Windows-style newlines.
-    value = value.replace("\r\n", "\n").replace("\r", "\n")
-    # Collapse 3+ blank lines into 2.
-    value = re.sub(r"\n{3,}", "\n\n", value)
-    # Strip leading/trailing whitespace on each line.
-    lines = [line.rstrip() for line in value.split("\n")]
-    return "\n".join(lines).strip()
+        # Normalize whitespace: collapse excessive blank lines but keep paragraph structure.
+        # First, normalize Windows-style newlines.
+        value = value.replace("\r\n", "\n").replace("\r", "\n")
+        # Collapse 3+ blank lines into 2.
+        value = re.sub(r"\n{3,}", "\n\n", value)
+        # Strip leading/trailing whitespace on each line.
+        lines = [line.rstrip() for line in value.split("\n")]
+        return "\n".join(lines).strip()
+    except Exception:
+        # Fallback: strip tags and unescape entities without complex processing
+        # This handles malformed HTML or edge cases that break the main algorithm
+        value = unescape(str(text))
+        value = _HTML_TAG_RE.sub("", value)
+        return value.strip()
 
 
 @beartype

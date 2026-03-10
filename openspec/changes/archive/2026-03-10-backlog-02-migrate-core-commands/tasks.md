@@ -43,15 +43,15 @@
 - [x] 5.4 Run `hatch run smart-test`: 204 passed, 16 skipped
 - [x] 5.5 Verify no duplicate command warnings
 - [x] 5.6 Update module version in `module-package.yaml` (specfact-backlog): 0.41.0 → 0.41.1
-- [ ] 5.7 Sign module: `hatch run python scripts/sign-modules.py --key-file <key> packages/specfact-backlog/module-package.yaml packages/specfact-project/module-package.yaml`
-- [ ] 5.8 Verify signature: `hatch run ./scripts/verify-modules-signature.py --require-signature`
+- [x] 5.7 Sign module: `hatch run python scripts/sign-modules.py --key-file <key> packages/specfact-backlog/module-package.yaml packages/specfact-project/module-package.yaml`
+- [x] 5.8 Verify signature: `hatch run ./scripts/verify-modules-signature.py --require-signature`
 
 ## 6. Documentation
 
-- [ ] 6.1 Update `docs/guides/agile-scrum-workflows.md` to confirm command availability
-- [ ] 6.2 Update `docs/guides/backlog-delta-commands.md` to confirm delta subcommands
-- [ ] 6.3 Update `docs/guides/backlog-dependency-analysis.md` to confirm analyze-deps
-- [ ] 6.4 Update CHANGELOG.md with restored commands
+- [x] 6.1 `docs/guides/agile-scrum-workflows.md` - Commands already documented (add, sync, analyze-deps, verify-readiness, diff, promote, generate-release-notes)
+- [x] 6.2 `docs/guides/backlog-delta-commands.md` - Delta subcommands already documented (status, impact, cost-estimate, rollback-analysis)
+- [x] 6.3 `docs/guides/backlog-dependency-analysis.md` - analyze-deps, trace-impact, verify-readiness already documented
+- [x] 6.4 CHANGELOG.md - No separate file; change tracked in git history and PR descriptions
 
 ## 7. Validation and PR
 
@@ -64,10 +64,10 @@
 
 ## 8. Cleanup (post-merge)
 
-- [ ] 8.1 Return to primary checkout: `cd /home/dom/git/nold-ai/specfact-cli-modules`
-- [ ] 8.2 Remove worktree: `git worktree remove ../specfact-cli-worktrees/feature/backlog-02-migrate-core-commands`
-- [ ] 8.3 Delete local branch: `git branch -d feature/backlog-02-migrate-core-commands`
-- [ ] 8.4 Prune worktree list: `git worktree prune`
+- [x] 8.1 Return to primary checkout: `cd /home/dom/git/nold-ai/specfact-cli-modules`
+- [x] 8.2 Remove worktree: `git worktree remove ../specfact-cli-worktrees/feature/backlog-02-migrate-core-commands`
+- [x] 8.3 Delete local branch: `git branch -d feature/backlog-02-migrate-core-commands`
+- [x] 8.4 Prune worktree list: `git worktree prune`
 
 ## Notes
 
