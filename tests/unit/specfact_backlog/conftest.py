@@ -31,9 +31,10 @@ os.environ["PYTHONPATH"] = _new_pythonpath
 # Patch CliRunner to always include proper PYTHONPATH in env
 def _patch_clirunner() -> None:
     """Monkey-patch CliRunner.invoke to always include PYTHONPATH."""
-    from typer.testing import CliRunner
+    from collections.abc import Callable
+
     from click.testing import Result
-    from typing import Callable
+    from typer.testing import CliRunner
 
     original_invoke: Callable[..., Result] = CliRunner.invoke
 
