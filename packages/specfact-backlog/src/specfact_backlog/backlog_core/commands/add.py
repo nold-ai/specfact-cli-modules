@@ -363,6 +363,18 @@ def _resolve_provider_fields_for_create(
 
 
 @beartype
+def _resolve_ado_work_item_type_for_create(issue_type: str, custom_config_path: Path | None) -> str | None:
+    """Resolve ADO create work item type from custom mapping config when available."""
+    if custom_config_path is None:
+        return None
+
+    from specfact_backlog.backlog.mappers.ado_mapper import AdoFieldMapper
+
+    mapper = AdoFieldMapper(custom_mapping_file=custom_config_path)
+    return mapper.resolve_create_work_item_type(issue_type)
+
+
+@beartype
 def _has_github_repo_issue_type_mapping(provider_fields: dict[str, Any] | None, issue_type: str) -> bool:
     """Return True when repository GitHub issue-type mapping metadata is available."""
     if not isinstance(provider_fields, dict):
@@ -619,6 +631,11 @@ def add(
     provider_fields = _resolve_provider_fields_for_create(adapter, template_payload, custom, repo_path)
     if provider_fields:
         payload["provider_fields"] = provider_fields
+
+    if adapter.strip().lower() == "ado":
+        resolved_work_item_type = _resolve_ado_work_item_type_for_create(issue_type, resolved_custom_config)
+        if resolved_work_item_type:
+            payload["work_item_type"] = resolved_work_item_type
 
     if adapter.strip().lower() == "github" and not _has_github_repo_issue_type_mapping(provider_fields, issue_type):
         print_warning(

@@ -150,6 +150,48 @@ def test_ado_create_issue_maps_payload_and_parent_relation(monkeypatch) -> None:
     }
 
 
+def test_ado_create_issue_prefers_explicit_work_item_type(monkeypatch) -> None:
+    """ADO create_issue uses explicit provider work item type when payload provides one."""
+    adapter = AdoAdapter(org="nold-ai", project="specfact-cli", api_token="token")
+
+    captured: dict = {}
+
+    def _fake_patch(url: str, json: list, headers: dict, timeout: int):
+        captured["url"] = url
+        captured["json"] = json
+        captured["headers"] = headers
+        captured["timeout"] = timeout
+        return _DummyResponse(
+            {
+                "id": 902,
+                "_links": {
+                    "html": {"href": "https://dev.azure.com/nold-ai/specfact-cli/_workitems/edit/902"},
+                },
+            }
+        )
+
+    import specfact_cli.adapters.ado as ado_module
+
+    monkeypatch.setattr(ado_module.requests, "patch", _fake_patch)
+
+    result = adapter.create_issue(
+        "nold-ai/specfact-cli",
+        {
+            "type": "story",
+            "work_item_type": "Product Backlog Item",
+            "title": "Implement X",
+            "description": "Body",
+        },
+    )
+
+    assert captured["url"].endswith("/_apis/wit/workitems/$Product%20Backlog%20Item?api-version=7.1")
+    assert result == {
+        "id": "902",
+        "key": "902",
+        "url": "https://dev.azure.com/nold-ai/specfact-cli/_workitems/edit/902",
+    }
+
+
 def test_github_create_issue_sets_projects_type_field_when_configured(monkeypatch) -> None:
     """GitHub create_issue can set ProjectV2 Type field when config is provided."""
     adapter = GitHubAdapter(repo_owner="nold-ai", repo_name="specfact-cli", api_token="token", use_gh_cli=False)

@@ -222,6 +222,29 @@ class AdoFieldMapper(FieldMapper):
         return self.DEFAULT_FIELD_MAPPINGS.copy()
 
     @beartype
+    @require(lambda self, canonical_work_item_type: isinstance(canonical_work_item_type, str), "Type must be str")
+    @ensure(lambda result: result is None or isinstance(result, str), "Must return str or None")
+    def resolve_create_work_item_type(self, canonical_work_item_type: str) -> str | None:
+        """Resolve a canonical backlog type to an ADO-specific work item type for create flows."""
+        normalized = canonical_work_item_type.strip().lower().replace("_", " ").replace("-", " ")
+        if not normalized or not self.custom_mapping:
+            return None
+
+        mappings = self.custom_mapping.work_item_type_mappings or {}
+        if not mappings:
+            return None
+
+        direct = mappings.get(normalized)
+        if isinstance(direct, str) and direct.strip():
+            return direct.strip()
+
+        for configured_key, configured_value in mappings.items():
+            if str(configured_key).strip().lower() == normalized and str(configured_value).strip():
+                return str(configured_value).strip()
+
+        return None
+
+    @beartype
     @require(lambda self, canonical_field: isinstance(canonical_field, str), "Canonical field must be str")
     @ensure(lambda result: isinstance(result, list), "Must return list")
     def _get_write_target_candidates(self, canonical_field: str) -> list[str]:
