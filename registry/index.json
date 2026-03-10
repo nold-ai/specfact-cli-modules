@@ -15,9 +15,9 @@
     },
     {
       "id": "nold-ai/specfact-backlog",
-      "latest_version": "0.41.3",
-      "download_url": "modules/specfact-backlog-0.41.3.tar.gz",
-      "checksum_sha256": "af2ae6c537bb4ea999cc90f5bddf7a1fa9d96cdbca21ec38814c181ce0fc9bb2",
+      "latest_version": "0.41.4",
+      "download_url": "modules/specfact-backlog-0.41.4.tar.gz",
+      "checksum_sha256": "edd55dde188424caa2ade73debc5d70fa90fc4b74845d50011bc157eabc4677a",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
