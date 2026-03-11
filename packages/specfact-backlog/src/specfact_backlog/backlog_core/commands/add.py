@@ -363,6 +363,54 @@ def _resolve_provider_fields_for_create(
 
 
 @beartype
+def _resolve_ado_provider_fields_for_create(
+    *,
+    description: str,
+    acceptance_criteria: str | None,
+    priority: str | None,
+    story_points: int | float | None,
+    business_value: int | float | None = None,
+    custom_config_path: Path | None,
+) -> dict[str, Any] | None:
+    """Resolve explicitly mapped ADO create fields from the custom field-mapping file."""
+    if custom_config_path is None:
+        return None
+
+    from specfact_backlog.backlog.mappers.ado_mapper import AdoFieldMapper
+
+    mapper = AdoFieldMapper(custom_mapping_file=custom_config_path)
+    custom_mapping = getattr(mapper, "custom_mapping", None)
+    field_mappings = getattr(custom_mapping, "field_mappings", None)
+    if not isinstance(field_mappings, dict) or not field_mappings:
+        return None
+
+    supported_values: dict[str, Any] = {
+        "description": description,
+        "acceptance_criteria": acceptance_criteria,
+        "priority": priority,
+        "story_points": story_points,
+        "business_value": business_value,
+    }
+
+    explicit_targets: dict[str, str] = {}
+    for ado_field, canonical_field in field_mappings.items():
+        normalized_canonical = str(canonical_field or "").strip()
+        normalized_target = str(ado_field or "").strip()
+        if not normalized_canonical or not normalized_target:
+            continue
+        if normalized_canonical not in supported_values:
+            continue
+        explicit_targets.setdefault(normalized_canonical, normalized_target)
+
+    mapped_fields = {
+        ado_field: supported_values[canonical_field]
+        for canonical_field, ado_field in explicit_targets.items()
+        if supported_values.get(canonical_field) not in (None, "")
+    }
+    return {"fields": mapped_fields} if mapped_fields else None
+
+
+@beartype
 def _resolve_ado_work_item_type_for_create(issue_type: str, custom_config_path: Path | None) -> str | None:
     """Resolve ADO create work item type from custom mapping config when available."""
     if custom_config_path is None:
@@ -629,6 +677,16 @@ def add(
         payload["sprint"] = sprint
 
     provider_fields = _resolve_provider_fields_for_create(adapter, template_payload, custom, repo_path)
+    if adapter.strip().lower() == "ado":
+        ado_provider_fields = _resolve_ado_provider_fields_for_create(
+            description=body,
+            acceptance_criteria=acceptance_criteria,
+            priority=priority,
+            story_points=parsed_story_points,
+            custom_config_path=resolved_custom_config,
+        )
+        if ado_provider_fields:
+            provider_fields = {**(provider_fields or {}), **ado_provider_fields}
     if provider_fields:
         payload["provider_fields"] = provider_fields
 

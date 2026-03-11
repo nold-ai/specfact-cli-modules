@@ -605,6 +605,165 @@ work_item_type_mappings:
     assert created_payloads[0].get("work_item_type") == "Product Backlog Item"
 
 
+def test_backlog_add_ado_forwards_mapped_custom_fields_for_create(monkeypatch, tmp_path: Path) -> None:
+    """ADO add forwards mapped canonical values through provider_fields for create payloads."""
+    from specfact_cli.adapters.registry import AdapterRegistry
+
+    custom_mapping_file = tmp_path / ".specfact" / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
+    custom_mapping_file.parent.mkdir(parents=True, exist_ok=True)
+    custom_mapping_file.write_text(
+        """
+field_mappings:
+  Custom.Description: description
+  Custom.AcceptanceCriteria: acceptance_criteria
+  Custom.StoryPoints: story_points
+  Custom.Priority: priority
+work_item_type_mappings:
+  story: Product Backlog Item
+""".strip(),
+        encoding="utf-8",
+    )
+
+    created_payloads: list[dict] = []
+    adapter = _FakeAdapter(items=[], relationships=[], created=created_payloads)
+    monkeypatch.setattr(AdapterRegistry, "get_adapter", lambda _adapter: adapter)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(
+        backlog_app,
+        [
+            "add",
+            "--project-id",
+            "dominikusnold/Specfact CLI",
+            "--adapter",
+            "ado",
+            "--type",
+            "story",
+            "--title",
+            "Implement X",
+            "--body",
+            "Body",
+            "--acceptance-criteria",
+            "Ready",
+            "--priority",
+            "1",
+            "--story-points",
+            "5",
+            "--non-interactive",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert created_payloads
+    provider_fields = created_payloads[0].get("provider_fields")
+    assert isinstance(provider_fields, dict)
+    mapped_fields = provider_fields.get("fields")
+    assert isinstance(mapped_fields, dict)
+    assert mapped_fields == {
+        "Custom.Description": "Body",
+        "Custom.AcceptanceCriteria": "Ready",
+        "Custom.StoryPoints": 5,
+        "Custom.Priority": "1",
+    }
+    assert created_payloads[0].get("work_item_type") == "Product Backlog Item"
+
+
+def test_backlog_add_ado_interactive_matches_non_interactive_provider_fields(monkeypatch, tmp_path: Path) -> None:
+    """Interactive and non-interactive ADO add should emit equivalent mapped provider fields."""
+    import importlib
+
+    add_module = importlib.import_module("specfact_backlog.backlog_core.commands.add")
+
+    from specfact_cli.adapters.registry import AdapterRegistry
+
+    custom_mapping_file = tmp_path / ".specfact" / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
+    custom_mapping_file.parent.mkdir(parents=True, exist_ok=True)
+    custom_mapping_file.write_text(
+        """
+field_mappings:
+  Custom.Description: description
+  Custom.AcceptanceCriteria: acceptance_criteria
+  Custom.StoryPoints: story_points
+  Custom.Priority: priority
+work_item_type_mappings:
+  story: Product Backlog Item
+""".strip(),
+        encoding="utf-8",
+    )
+
+    created_payloads: list[dict] = []
+    adapter = _FakeAdapter(items=[], relationships=[], created=created_payloads)
+    monkeypatch.setattr(AdapterRegistry, "get_adapter", lambda _adapter: adapter)
+    monkeypatch.chdir(tmp_path)
+
+    def _select(message: str, _choices: list[str], default: str | None = None) -> str:
+        lowered = message.lower()
+        if "issue type" in lowered:
+            return "story"
+        if "sprint/iteration" in lowered:
+            return "(skip sprint/iteration)"
+        if "description format" in lowered:
+            return "markdown"
+        if "acceptance criteria" in lowered:
+            return "yes"
+        if "add parent issue" in lowered:
+            return "no"
+        return default or "markdown"
+
+    monkeypatch.setattr(add_module, "_select_with_fallback", _select)
+
+    interactive_result = runner.invoke(
+        backlog_app,
+        [
+            "add",
+            "--project-id",
+            "dominikusnold/Specfact CLI",
+            "--adapter",
+            "ado",
+        ],
+        input="Implement X\nBody\n::END::\nReady\n::END::\n1\n5\n",
+    )
+
+    non_interactive_result = runner.invoke(
+        backlog_app,
+        [
+            "add",
+            "--project-id",
+            "dominikusnold/Specfact CLI",
+            "--adapter",
+            "ado",
+            "--type",
+            "story",
+            "--title",
+            "Implement X",
+            "--body",
+            "Body",
+            "--acceptance-criteria",
+            "Ready",
+            "--priority",
+            "1",
+            "--story-points",
+            "5",
+            "--non-interactive",
+        ],
+    )
+
+    assert interactive_result.exit_code == 0
+    assert non_interactive_result.exit_code == 0
+    assert len(created_payloads) == 2
+    expected_provider_fields = {
+        "fields": {
+            "Custom.Description": "Body",
+            "Custom.AcceptanceCriteria": "Ready",
+            "Custom.StoryPoints": 5,
+            "Custom.Priority": "1",
+        }
+    }
+    assert created_payloads[0].get("provider_fields") == expected_provider_fields
+    assert created_payloads[1].get("provider_fields") == expected_provider_fields
+    assert created_payloads[0].get("work_item_type") == created_payloads[1].get("work_item_type")
+
+
 def test_backlog_add_warns_on_ambiguous_create_failure(monkeypatch) -> None:
     """CLI warns user when duplicate-safe create fails with ambiguous transport error."""
     import requests
