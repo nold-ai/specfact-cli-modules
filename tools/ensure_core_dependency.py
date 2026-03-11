@@ -3,15 +3,8 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-
-ROOT = Path(__file__).resolve().parent.parent
+from dev_bootstrap_support import ROOT, ensure_core_dependency
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, str(ROOT / "src"))
-    from specfact_cli_modules.dev_bootstrap import ensure_core_dependency
-
     raise SystemExit(ensure_core_dependency(ROOT))

@@ -6,18 +6,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from dev_bootstrap_support import ROOT as REPO_ROOT, ensure_core_dependency
 
 
 REQUIRED_IMPORTS = ("pydantic", "specfact_cli")
-
-
-def _ensure_core_dependency(repo_root: Path) -> int:
-    sys.path.insert(0, str(repo_root / "src"))
-    from specfact_cli_modules.dev_bootstrap import ensure_core_dependency
-
-    return ensure_core_dependency(repo_root)
 
 
 def _candidate_env_roots(repo_root: Path) -> list[Path]:
@@ -61,7 +53,7 @@ def _resolve_env_root(repo_root: Path) -> Path:
 
 def main() -> int:
     repo_root = REPO_ROOT
-    bootstrap_result = _ensure_core_dependency(repo_root)
+    bootstrap_result = ensure_core_dependency(repo_root)
     if bootstrap_result != 0:
         return bootstrap_result
     env_root = _resolve_env_root(repo_root)
