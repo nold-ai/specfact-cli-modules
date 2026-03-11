@@ -1,5 +1,5 @@
 name: nold-ai/specfact-backlog
-version: 0.41.5
+version: 0.41.7
 commands:
   - backlog
 tier: official
@@ -17,5 +17,5 @@ schema_extensions:
   project_metadata:
     - backlog_core.backlog_config
 integrity:
-  checksum: sha256:bc29edc1f4e81aed92c64e21a50381d84867c6e8171dedb8fab5b457d22128c4
-  signature: 7PP95PuKs99Z3WLPMaF+86pKZPAwPJikZAJkX9DIZSP9aKL/Pa/6W3B7fgWpp96xEoUISZghUtKMtuRHZwwlCA==
+  checksum: sha256:fad15bfeb28a95b8573aa3647747a0ba91f76ced7066b6bb7156d911e894c269
+  signature: cw2SNJcPXmZ1hz0vWUqrCWuumpw9b5vXj4UK/flRsCG0ISfn7z7sOb1vYs8ujg0XgMAIKM5ttIxdL5AlaQuqAQ==
