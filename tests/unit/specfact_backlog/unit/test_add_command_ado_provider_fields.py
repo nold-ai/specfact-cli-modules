@@ -33,7 +33,22 @@ work_item_type_mappings:
     )
 
 
-def _write_ado_backlog_config(tmp_path: Path, *, required_field_ref: str = "Custom.Risk") -> None:
+def _write_ado_backlog_config(
+    tmp_path: Path,
+    *,
+    required_field_ref: str = "Custom.Risk",
+    allowed_values: list[str] | None = None,
+) -> None:
+    allowed_values = allowed_values if allowed_values is not None else ["Medium", "High"]
+    allowed_values_yaml = ""
+    if allowed_values:
+        allowed_lines = "\n".join(f"              - {value}" for value in allowed_values)
+        allowed_values_yaml = f"""
+        allowed_values_by_work_item_type:
+          Product Backlog Item:
+            {required_field_ref}:
+{allowed_lines}
+"""
     spec_dir = tmp_path / ".specfact"
     spec_dir.mkdir(parents=True, exist_ok=True)
     (spec_dir / "backlog-config.yaml").write_text(
@@ -49,11 +64,7 @@ backlog_config:
         required_fields_by_work_item_type:
           Product Backlog Item:
             - {required_field_ref}
-        allowed_values_by_work_item_type:
-          Product Backlog Item:
-            {required_field_ref}:
-              - Medium
-              - High
+{allowed_values_yaml}
 """.strip(),
         encoding="utf-8",
     )
@@ -316,7 +327,7 @@ work_item_type_mappings:
 def test_backlog_add_ado_preserves_string_provider_override_values(monkeypatch, tmp_path: Path) -> None:
     """ADO add keeps string provider overrides unchanged even when they look numeric."""
     _write_ado_custom_mapping(tmp_path)
-    _write_ado_backlog_config(tmp_path, required_field_ref="Custom.ExternalId")
+    _write_ado_backlog_config(tmp_path, required_field_ref="Custom.ExternalId", allowed_values=[])
     custom_mapping_file = tmp_path / ".specfact" / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
     custom_mapping_file.write_text(
         """
@@ -524,6 +535,66 @@ work_item_type_mappings:
 
     assert result.exit_code == 1
     assert "Invalid value for provider field 'Custom.Toggle'" in _strip_ansi(result.stdout)
+    assert not created_payloads
+
+
+def test_backlog_add_ado_rejects_invalid_picklist_provider_override(monkeypatch, tmp_path: Path) -> None:
+    """ADO add should fail fast when override is not one of the persisted allowed picklist values."""
+    _write_ado_custom_mapping(tmp_path)
+    spec_dir = tmp_path / ".specfact"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "backlog-config.yaml").write_text(
+        f"""
+backlog_config:
+  providers:
+    ado:
+      adapter: ado
+      project_id: {ADO_PROJECT_ID}
+      settings:
+        field_mapping_file: .specfact/templates/backlog/field_mappings/ado_custom.yaml
+        selected_work_item_type: Product Backlog Item
+        required_fields_by_work_item_type:
+          Product Backlog Item:
+            - Custom.FinOpsCategory
+        allowed_values_by_work_item_type:
+          Product Backlog Item:
+            Custom.FinOpsCategory:
+              - Business
+              - Compliance
+        required_field_types_by_work_item_type:
+          Product Backlog Item:
+            Custom.FinOpsCategory: string
+""".strip(),
+        encoding="utf-8",
+    )
+    custom_mapping_file = spec_dir / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
+    custom_mapping_file.parent.mkdir(parents=True, exist_ok=True)
+    custom_mapping_file.write_text(
+        """
+field_mappings:
+  Custom.FinOpsCategory: finops_category
+work_item_type_mappings:
+  story: Product Backlog Item
+""".strip(),
+        encoding="utf-8",
+    )
+
+    created_payloads: list[dict] = []
+    result = _invoke_ado_add(
+        monkeypatch,
+        tmp_path,
+        created_payloads,
+        _standard_story_non_interactive_args(
+            "--provider-field",
+            "Custom.FinOpsCategory=Busines",
+            "--repo-path",
+            str(tmp_path),
+        ),
+    )
+
+    assert result.exit_code == 1
+    assert "Invalid value for provider field 'Custom.FinOpsCategory'" in _strip_ansi(result.stdout)
+    assert "Business, Compliance" in _strip_ansi(result.stdout)
     assert not created_payloads
 
 

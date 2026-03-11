@@ -564,6 +564,9 @@ def _upsert_backlog_provider_settings(
 
     def _deep_merge(dst: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
         for key, value in src.items():
+            if value is None:
+                dst.pop(key, None)
+                continue
             if isinstance(value, dict) and isinstance(dst.get(key), dict):
                 _deep_merge(dst[key], value)
             else:
@@ -5830,10 +5833,9 @@ def map_fields(
         settings_update["allowed_values_by_work_item_type"] = {
             selected_work_item_type: allowed_values_for_selected_type
         }
-        if required_field_types_for_selected_type:
-            settings_update["required_field_types_by_work_item_type"] = {
-                selected_work_item_type: required_field_types_for_selected_type
-            }
+        settings_update["required_field_types_by_work_item_type"] = {
+            selected_work_item_type: required_field_types_for_selected_type or None
+        }
 
     provider_cfg_path = _upsert_backlog_provider_settings(
         "ado",

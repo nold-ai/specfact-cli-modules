@@ -468,13 +468,25 @@ def _resolve_ado_required_field_metadata(
 
 
 @beartype
-def _coerce_ado_provider_field_value(field_ref: str, value: Any, field_types_by_ref: dict[str, str]) -> Any:
-    """Coerce provider field value to ADO type when metadata is available."""
+def _normalize_validate_ado_provider_field_value(
+    field_ref: str,
+    value: Any,
+    field_types_by_ref: dict[str, str],
+    allowed_values_by_ref: dict[str, list[str]],
+) -> Any:
+    """Validate ADO picklist constraints and coerce provider field values when metadata is available."""
+    raw_text = str(value).strip()
+    allowed_values = allowed_values_by_ref.get(field_ref, [])
+    if allowed_values and raw_text not in allowed_values:
+        allowed_text = ", ".join(allowed_values)
+        raise ValueError(
+            f"Invalid value for provider field '{field_ref}': expected one of [{allowed_text}] but got '{value}'."
+        )
+
     field_type = str(field_types_by_ref.get(field_ref) or "").strip().lower()
     if not field_type:
         return value
 
-    raw_text = str(value).strip()
     if field_type in {"boolean", "bool"}:
         lowered = raw_text.lower()
         if lowered in {"true", "1", "yes", "y", "on"}:
@@ -607,24 +619,31 @@ def _resolve_ado_provider_fields_for_create(
             if not normalized_ref or not normalized_canonical:
                 continue
             if normalized_ref in override_values:
-                mapped_fields[normalized_ref] = _coerce_ado_provider_field_value(
+                mapped_fields[normalized_ref] = _normalize_validate_ado_provider_field_value(
                     normalized_ref,
                     _normalize_provider_override_value(override_values[normalized_ref]),
                     field_types_by_ref,
+                    allowed_values_by_ref,
                 )
                 continue
             if normalized_canonical in override_values:
-                mapped_fields[normalized_ref] = _coerce_ado_provider_field_value(
+                mapped_fields[normalized_ref] = _normalize_validate_ado_provider_field_value(
                     normalized_ref,
                     _normalize_provider_override_value(override_values[normalized_canonical]),
                     field_types_by_ref,
+                    allowed_values_by_ref,
                 )
                 continue
             if normalized_ref in top_level_fields:
                 continue
             resolved_value = supported_values.get(normalized_canonical)
             if resolved_value not in (None, ""):
-                mapped_fields[normalized_ref] = resolved_value
+                mapped_fields[normalized_ref] = _normalize_validate_ado_provider_field_value(
+                    normalized_ref,
+                    resolved_value,
+                    field_types_by_ref,
+                    allowed_values_by_ref,
+                )
 
     except ValueError as exc:
         print_error(str(exc))
@@ -639,25 +658,32 @@ def _resolve_ado_provider_fields_for_create(
                 continue
             canonical_field = str(field_mappings.get(required_ref) or required_ref).strip()
             if canonical_field in override_values:
-                mapped_fields[required_ref] = _coerce_ado_provider_field_value(
+                mapped_fields[required_ref] = _normalize_validate_ado_provider_field_value(
                     required_ref,
                     _normalize_provider_override_value(override_values[canonical_field]),
                     field_types_by_ref,
+                    allowed_values_by_ref,
                 )
                 continue
             if required_ref in override_values:
-                mapped_fields[required_ref] = _coerce_ado_provider_field_value(
+                mapped_fields[required_ref] = _normalize_validate_ado_provider_field_value(
                     required_ref,
                     _normalize_provider_override_value(override_values[required_ref]),
                     field_types_by_ref,
+                    allowed_values_by_ref,
                 )
                 continue
             resolved_value = supported_values.get(canonical_field)
             if resolved_value not in (None, ""):
-                mapped_fields[required_ref] = resolved_value
+                mapped_fields[required_ref] = _normalize_validate_ado_provider_field_value(
+                    required_ref,
+                    resolved_value,
+                    field_types_by_ref,
+                    allowed_values_by_ref,
+                )
                 continue
             if interactive_mode:
-                mapped_fields[required_ref] = _coerce_ado_provider_field_value(
+                mapped_fields[required_ref] = _normalize_validate_ado_provider_field_value(
                     required_ref,
                     _prompt_required_provider_value(
                         required_ref,
@@ -665,6 +691,7 @@ def _resolve_ado_provider_fields_for_create(
                         allowed_values_by_ref.get(required_ref, []),
                     ),
                     field_types_by_ref,
+                    allowed_values_by_ref,
                 )
                 continue
             missing_required.append(required_ref)

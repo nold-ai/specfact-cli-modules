@@ -471,3 +471,82 @@ def test_map_fields_non_interactive_persists_required_field_types(monkeypatch, t
     ado_settings = cfg.get("backlog_config", {}).get("providers", {}).get("ado", {}).get("settings", {})
     type_by_type = ado_settings.get("required_field_types_by_work_item_type", {})
     assert type_by_type.get("User Story", {}).get("Custom.Toggle") == "boolean"
+
+
+def test_map_fields_clears_stale_required_field_types_for_selected_type(monkeypatch, tmp_path: Path) -> None:
+    backlog_commands = importlib.import_module("specfact_backlog.backlog.commands")
+    backlog_app = backlog_commands.app
+    monkeypatch.chdir(tmp_path)
+
+    config_dir = tmp_path / ".specfact"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / "backlog-config.yaml").write_text(
+        """
+backlog_config:
+  providers:
+    ado:
+      adapter: ado
+      project_id: noldai/specfact-cli
+      settings:
+        selected_work_item_type: User Story
+        required_field_types_by_work_item_type:
+          User Story:
+            Custom.Toggle: boolean
+          Bug:
+            Custom.BugSeverity: string
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fields_payload = {"value": [{"referenceName": "Custom.Toggle", "name": "Toggle"}]}
+    work_item_types_payload = {"value": [{"name": "User Story"}]}
+    work_item_type_fields_payload = {
+        "value": [
+            {
+                "referenceName": "Custom.Toggle",
+                "name": "Toggle",
+                "alwaysRequired": True,
+                "allowedValues": [],
+            }
+        ]
+    }
+
+    def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
+        if "/_apis/wit/workitemtypes?" in url:
+            return _FakeResponse(work_item_types_payload)
+        if "/_apis/wit/workitemtypes/" in url and "/fields?" in url:
+            return _FakeResponse(work_item_type_fields_payload)
+        if "/_apis/wit/fields/Custom.Toggle?" in url:
+            return _FakeResponse({"allowedValues": []})
+        if "/_apis/wit/fields?" in url:
+            return _FakeResponse(fields_payload)
+        msg = f"Unexpected URL: {url}"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    result = runner.invoke(
+        backlog_app,
+        [
+            "map-fields",
+            "--provider",
+            "ado",
+            "--ado-org",
+            "noldai",
+            "--ado-project",
+            "specfact-cli",
+            "--ado-token",
+            "token",
+            "--ado-framework",
+            "scrum",
+            "--non-interactive",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    cfg = _load_yaml(config_dir / "backlog-config.yaml")
+    ado_settings = cfg.get("backlog_config", {}).get("providers", {}).get("ado", {}).get("settings", {})
+    type_by_type = ado_settings.get("required_field_types_by_work_item_type", {})
+    assert "User Story" not in type_by_type
+    assert type_by_type.get("Bug", {}).get("Custom.BugSeverity") == "string"
