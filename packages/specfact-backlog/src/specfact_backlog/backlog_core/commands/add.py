@@ -526,6 +526,22 @@ def _parse_story_points(raw_value: str | None) -> int | float | None:
 
 
 @beartype
+def _parse_business_value(raw_value: str | None) -> int | float | None:
+    if raw_value is None:
+        return None
+    stripped = raw_value.strip()
+    if not stripped:
+        return None
+    try:
+        if "." in stripped:
+            return float(stripped)
+        return int(stripped)
+    except ValueError:
+        print_warning(f"Invalid business value '{raw_value}', keeping as text")
+        return None
+
+
+@beartype
 def add(
     project_id: Annotated[str, typer.Option("--project-id", help="Backlog project identifier")],
     adapter: Annotated[str, typer.Option("--adapter", help="Adapter to use")] = "github",
@@ -541,6 +557,9 @@ def add(
     priority: Annotated[str | None, typer.Option("--priority", help="Priority value (for example 1, high, P1)")] = None,
     story_points: Annotated[
         str | None, typer.Option("--story-points", help="Story points value (integer/float)")
+    ] = None,
+    business_value: Annotated[
+        str | None, typer.Option("--business-value", help="Business value (integer/float, commonly 0-100)")
     ] = None,
     sprint: Annotated[str | None, typer.Option("--sprint", help="Sprint/iteration assignment")] = None,
     body_end_marker: Annotated[
@@ -599,6 +618,8 @@ def add(
 
         if story_points is None and normalized_issue_type in STORY_LIKE_TYPES:
             story_points = prompt_text("Story points (optional)", default="", required=False).strip() or None
+        if business_value is None and adapter.strip().lower() == "ado" and normalized_issue_type in STORY_LIKE_TYPES:
+            business_value = prompt_text("Business value (optional)", default="", required=False).strip() or None
 
     assert issue_type is not None
     assert title is not None
@@ -614,6 +635,7 @@ def add(
         raise typer.Exit(code=1)
 
     parsed_story_points = _parse_story_points(story_points)
+    parsed_business_value = _parse_business_value(business_value)
 
     graph_adapter = require_backlog_graph_protocol(adapter_instance)
 
@@ -683,6 +705,7 @@ def add(
             acceptance_criteria=acceptance_criteria,
             priority=priority,
             story_points=parsed_story_points,
+            business_value=parsed_business_value,
             custom_config_path=resolved_custom_config,
         )
         if ado_provider_fields:
