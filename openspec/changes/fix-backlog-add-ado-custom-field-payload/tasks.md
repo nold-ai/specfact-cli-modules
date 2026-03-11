@@ -22,4 +22,4 @@
 
 - [x] 4.1 Run `openspec validate fix-backlog-add-ado-custom-field-payload --strict`
 - [x] 4.2 Run workflow validation and update `CHANGE_VALIDATION.md` with dependency and consistency analysis
-- [ ] 4.3 Open PR to `dev` from `bugfix/fix-backlog-add-ado-custom-field-payload`
+- [x] 4.3 Open PR to `dev` from `bugfix/fix-backlog-add-ado-custom-field-payload`
