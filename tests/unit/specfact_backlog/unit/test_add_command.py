@@ -386,7 +386,7 @@ def test_backlog_add_interactive_ado_selects_current_iteration(monkeypatch) -> N
             "--adapter",
             "ado",
         ],
-        input="ADO story\nbody line\n::END::\n\n\n",
+        input="ADO story\nbody line\n::END::\n\n\n\n",
     )
 
     assert result.exit_code == 0
@@ -555,7 +555,7 @@ def test_backlog_add_ado_default_template_enables_epic_parent_candidates(monkeyp
             "--adapter",
             "ado",
         ],
-        input="Feature title\nFeature body\n::END::\n\n\n",
+        input="Feature title\nFeature body\n::END::\n\n\n\n",
     )
 
     assert result.exit_code == 0
@@ -695,7 +695,7 @@ def test_backlog_add_interactive_ado_sprint_lookup_uses_project_context(monkeypa
             "--adapter",
             "ado",
         ],
-        input="Story title\nBody\n::END::\n\n\n",
+        input="Story title\nBody\n::END::\n\n\n\n",
     )
 
     assert result.exit_code == 0

@@ -363,6 +363,54 @@ def _resolve_provider_fields_for_create(
 
 
 @beartype
+def _resolve_ado_provider_fields_for_create(
+    *,
+    description: str,
+    acceptance_criteria: str | None,
+    priority: str | None,
+    story_points: int | float | None,
+    business_value: int | float | None = None,
+    custom_config_path: Path | None,
+) -> dict[str, Any] | None:
+    """Resolve explicitly mapped ADO create fields from the custom field-mapping file."""
+    if custom_config_path is None:
+        return None
+
+    from specfact_backlog.backlog.mappers.ado_mapper import AdoFieldMapper
+
+    mapper = AdoFieldMapper(custom_mapping_file=custom_config_path)
+    custom_mapping = getattr(mapper, "custom_mapping", None)
+    field_mappings = getattr(custom_mapping, "field_mappings", None)
+    if not isinstance(field_mappings, dict) or not field_mappings:
+        return None
+
+    supported_values: dict[str, Any] = {
+        "description": description,
+        "acceptance_criteria": acceptance_criteria,
+        "priority": priority,
+        "story_points": story_points,
+        "business_value": business_value,
+    }
+
+    explicit_targets: dict[str, str] = {}
+    for ado_field, canonical_field in field_mappings.items():
+        normalized_canonical = str(canonical_field or "").strip()
+        normalized_target = str(ado_field or "").strip()
+        if not normalized_canonical or not normalized_target:
+            continue
+        if normalized_canonical not in supported_values:
+            continue
+        explicit_targets.setdefault(normalized_canonical, normalized_target)
+
+    mapped_fields = {
+        ado_field: supported_values[canonical_field]
+        for canonical_field, ado_field in explicit_targets.items()
+        if supported_values.get(canonical_field) not in (None, "")
+    }
+    return {"fields": mapped_fields} if mapped_fields else None
+
+
+@beartype
 def _resolve_ado_work_item_type_for_create(issue_type: str, custom_config_path: Path | None) -> str | None:
     """Resolve ADO create work item type from custom mapping config when available."""
     if custom_config_path is None:
@@ -478,6 +526,22 @@ def _parse_story_points(raw_value: str | None) -> int | float | None:
 
 
 @beartype
+def _parse_business_value(raw_value: str | None) -> int | float | None:
+    if raw_value is None:
+        return None
+    stripped = raw_value.strip()
+    if not stripped:
+        return None
+    try:
+        if "." in stripped:
+            return float(stripped)
+        return int(stripped)
+    except ValueError:
+        print_warning(f"Invalid business value '{raw_value}', keeping as text")
+        return None
+
+
+@beartype
 def add(
     project_id: Annotated[str, typer.Option("--project-id", help="Backlog project identifier")],
     adapter: Annotated[str, typer.Option("--adapter", help="Adapter to use")] = "github",
@@ -493,6 +557,9 @@ def add(
     priority: Annotated[str | None, typer.Option("--priority", help="Priority value (for example 1, high, P1)")] = None,
     story_points: Annotated[
         str | None, typer.Option("--story-points", help="Story points value (integer/float)")
+    ] = None,
+    business_value: Annotated[
+        str | None, typer.Option("--business-value", help="Business value (integer/float, commonly 0-100)")
     ] = None,
     sprint: Annotated[str | None, typer.Option("--sprint", help="Sprint/iteration assignment")] = None,
     body_end_marker: Annotated[
@@ -551,6 +618,8 @@ def add(
 
         if story_points is None and normalized_issue_type in STORY_LIKE_TYPES:
             story_points = prompt_text("Story points (optional)", default="", required=False).strip() or None
+        if business_value is None and adapter.strip().lower() == "ado" and normalized_issue_type in STORY_LIKE_TYPES:
+            business_value = prompt_text("Business value (optional)", default="", required=False).strip() or None
 
     assert issue_type is not None
     assert title is not None
@@ -566,6 +635,7 @@ def add(
         raise typer.Exit(code=1)
 
     parsed_story_points = _parse_story_points(story_points)
+    parsed_business_value = _parse_business_value(business_value)
 
     graph_adapter = require_backlog_graph_protocol(adapter_instance)
 
@@ -629,6 +699,17 @@ def add(
         payload["sprint"] = sprint
 
     provider_fields = _resolve_provider_fields_for_create(adapter, template_payload, custom, repo_path)
+    if adapter.strip().lower() == "ado":
+        ado_provider_fields = _resolve_ado_provider_fields_for_create(
+            description=body,
+            acceptance_criteria=acceptance_criteria,
+            priority=priority,
+            story_points=parsed_story_points,
+            business_value=parsed_business_value,
+            custom_config_path=resolved_custom_config,
+        )
+        if ado_provider_fields:
+            provider_fields = {**(provider_fields or {}), **ado_provider_fields}
     if provider_fields:
         payload["provider_fields"] = provider_fields
 
