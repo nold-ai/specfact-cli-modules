@@ -2488,12 +2488,12 @@ def from_code(
     - **Advanced/Configuration**: --confidence, --key-format
 
     **Examples:**
-        specfact import from-code legacy-api --repo .
-        specfact import from-code auth-module --repo . --enrichment enrichment-report.md
-        specfact import from-code my-project --repo . --confidence 0.7 --shadow-only
-        specfact import from-code my-project --repo . --force  # Force full regeneration
-        specfact import from-code my-project --repo .  # Test files excluded by default
-        specfact import from-code my-project --repo . --include-tests  # Include test files in dependency graph
+        specfact code import legacy-api --repo .
+        specfact code import auth-module --repo . --enrichment enrichment-report.md
+        specfact code import my-project --repo . --confidence 0.7 --shadow-only
+        specfact code import my-project --repo . --force  # Force full regeneration
+        specfact code import my-project --repo .  # Test files excluded by default
+        specfact code import my-project --repo . --include-tests  # Include test files in dependency graph
     """
     from specfact_cli.cli import get_current_mode
     from specfact_cli.modes import get_router

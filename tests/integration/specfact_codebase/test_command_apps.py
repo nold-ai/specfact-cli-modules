@@ -8,6 +8,7 @@ import pytest
 COMMAND_MODULES = [
     "specfact_codebase.code.commands",
     "specfact_codebase.analyze.commands",
+    "specfact_codebase.import_cmd.commands",
 ]
 
 

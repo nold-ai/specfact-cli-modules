@@ -2,9 +2,9 @@
   "modules": [
     {
       "id": "nold-ai/specfact-project",
-      "latest_version": "0.40.19",
-      "download_url": "modules/specfact-project-0.40.19.tar.gz",
-      "checksum_sha256": "e6069f55cf18f11d87e6e7c7c378bd75ebdfde7e569b5d075f725b8228e8ab91",
+      "latest_version": "0.40.20",
+      "download_url": "modules/specfact-project-0.40.20.tar.gz",
+      "checksum_sha256": "0f9262a992bf568adb6da572c1980e14fc5546d492178ced17cbf1519f2df6fb",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -28,15 +28,17 @@
     },
     {
       "id": "nold-ai/specfact-codebase",
-      "latest_version": "0.40.17",
-      "download_url": "modules/specfact-codebase-0.40.17.tar.gz",
-      "checksum_sha256": "1aa0191430227d184147113a37f34496d9a44c8288b05ef0a8ab173c09a987dc",
+      "latest_version": "0.41.0",
+      "download_url": "modules/specfact-codebase-0.41.0.tar.gz",
+      "checksum_sha256": "ca1f1356a2b0881aeb1604912ae225ba045761ec6575fbdeb4ff57e1162fa271",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
         "email": "hello@noldai.com"
       },
-      "bundle_dependencies": [],
+      "bundle_dependencies": [
+        "nold-ai/specfact-project"
+      ],
       "description": "Official SpecFact codebase bundle package."
     },
     {
