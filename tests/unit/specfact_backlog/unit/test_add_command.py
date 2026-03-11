@@ -563,6 +563,48 @@ def test_backlog_add_ado_default_template_enables_epic_parent_candidates(monkeyp
     assert created_payloads[0].get("parent_id") == "900"
 
 
+def test_backlog_add_ado_resolves_custom_work_item_type_mapping(monkeypatch, tmp_path: Path) -> None:
+    """ADO add resolves canonical type to configured provider work item type."""
+    from specfact_cli.adapters.registry import AdapterRegistry
+
+    custom_mapping_file = tmp_path / ".specfact" / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
+    custom_mapping_file.parent.mkdir(parents=True, exist_ok=True)
+    custom_mapping_file.write_text(
+        """
+work_item_type_mappings:
+  story: Product Backlog Item
+""".strip(),
+        encoding="utf-8",
+    )
+
+    created_payloads: list[dict] = []
+    adapter = _FakeAdapter(items=[], relationships=[], created=created_payloads)
+    monkeypatch.setattr(AdapterRegistry, "get_adapter", lambda _adapter: adapter)
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(
+        backlog_app,
+        [
+            "add",
+            "--project-id",
+            "dominikusnold/Specfact CLI",
+            "--adapter",
+            "ado",
+            "--type",
+            "story",
+            "--title",
+            "Implement X",
+            "--body",
+            "Body",
+            "--non-interactive",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert created_payloads
+    assert created_payloads[0].get("work_item_type") == "Product Backlog Item"
+
+
 def test_backlog_add_warns_on_ambiguous_create_failure(monkeypatch) -> None:
     """CLI warns user when duplicate-safe create fails with ambiguous transport error."""
     import requests
