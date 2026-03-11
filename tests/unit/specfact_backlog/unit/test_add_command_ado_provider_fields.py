@@ -63,6 +63,19 @@ def _build_ado_add_args(*extra: str) -> list[str]:
     return ["add", "--project-id", ADO_PROJECT_ID, "--adapter", "ado", *extra]
 
 
+def _standard_story_non_interactive_args(*extra: str) -> list[str]:
+    return _build_ado_add_args(
+        "--type",
+        "story",
+        "--title",
+        "Implement X",
+        "--body",
+        "Body",
+        "--non-interactive",
+        *extra,
+    )
+
+
 def _invoke_ado_add(
     monkeypatch, tmp_path: Path, created_payloads: list[dict], args: list[str], *, input_text: str | None = None
 ):
@@ -81,13 +94,7 @@ def test_backlog_add_ado_forwards_mapped_business_value_for_create(monkeypatch, 
         monkeypatch,
         tmp_path,
         created_payloads,
-        _build_ado_add_args(
-            "--type",
-            "story",
-            "--title",
-            "Implement X",
-            "--body",
-            "Body",
+        _standard_story_non_interactive_args(
             "--acceptance-criteria",
             "Ready",
             "--priority",
@@ -96,7 +103,6 @@ def test_backlog_add_ado_forwards_mapped_business_value_for_create(monkeypatch, 
             "5",
             "--business-value",
             "89",
-            "--non-interactive",
         ),
     )
 
@@ -199,16 +205,9 @@ work_item_type_mappings:
         monkeypatch,
         tmp_path,
         created_payloads,
-        _build_ado_add_args(
-            "--type",
-            "story",
-            "--title",
-            "Implement X",
-            "--body",
-            "Body",
+        _standard_story_non_interactive_args(
             "--provider-field",
             "Custom.Risk=High",
-            "--non-interactive",
             "--repo-path",
             str(tmp_path),
         ),
@@ -246,14 +245,7 @@ work_item_type_mappings:
         monkeypatch,
         tmp_path,
         created_payloads,
-        _build_ado_add_args(
-            "--type",
-            "story",
-            "--title",
-            "Implement X",
-            "--body",
-            "Body",
-            "--non-interactive",
+        _standard_story_non_interactive_args(
             "--repo-path",
             str(tmp_path),
         ),
@@ -342,16 +334,9 @@ work_item_type_mappings:
         monkeypatch,
         tmp_path,
         created_payloads,
-        _build_ado_add_args(
-            "--type",
-            "story",
-            "--title",
-            "Implement X",
-            "--body",
-            "Body",
+        _standard_story_non_interactive_args(
             "--provider-field",
             "Custom.ExternalId=0012",
-            "--non-interactive",
             "--repo-path",
             str(tmp_path),
         ),
@@ -417,16 +402,9 @@ work_item_type_mappings:
         monkeypatch,
         tmp_path,
         created_payloads,
-        _build_ado_add_args(
-            "--type",
-            "story",
-            "--title",
-            "Implement X",
-            "--body",
-            "Body",
+        _standard_story_non_interactive_args(
             "--provider-field",
             "Custom.StoryRisk=High",
-            "--non-interactive",
             "--repo-path",
             str(tmp_path),
         ),
@@ -460,15 +438,7 @@ def test_backlog_add_ado_exports_custom_mapping_for_adapter_create(monkeypatch, 
 
     result = runner.invoke(
         backlog_app,
-        _build_ado_add_args(
-            "--type",
-            "story",
-            "--title",
-            "Implement X",
-            "--body",
-            "Body",
-            "--non-interactive",
-        ),
+        _standard_story_non_interactive_args(),
     )
 
     assert result.exit_code == 0
