@@ -1,0 +1,16 @@
+name: nold-ai/specfact-code-review
+version: 0.41.1
+commands:
+  - code
+tier: official
+publisher:
+  name: nold-ai
+  email: hello@noldai.com
+bundle_dependencies: []
+core_compatibility: '>=0.40.0,<1.0.0'
+description: Official SpecFact code review bundle package.
+category: codebase
+bundle_group_command: code
+integrity:
+  checksum: sha256:ded311658555c17d0917576090163046425a14842d07aab4ae6a424aa39880a5
+  signature: IXqozeG/aXKfKEDkQBgq4RWhR55XdypchCCo9UCpcbnbUzLYpwxaGUac9zOYBNk9bfugyBL9A/2X9Nyb9LWaAg==
