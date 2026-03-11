@@ -420,6 +420,113 @@ work_item_type_mappings:
     assert created_payloads[0].get("work_item_type") == "Product Backlog Item"
 
 
+def test_backlog_add_ado_coerces_boolean_provider_override_from_type_metadata(monkeypatch, tmp_path: Path) -> None:
+    """ADO add should coerce mapped required provider fields to boolean when metadata says boolean."""
+    _write_ado_custom_mapping(tmp_path)
+    spec_dir = tmp_path / ".specfact"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "backlog-config.yaml").write_text(
+        f"""
+backlog_config:
+  providers:
+    ado:
+      adapter: ado
+      project_id: {ADO_PROJECT_ID}
+      settings:
+        field_mapping_file: .specfact/templates/backlog/field_mappings/ado_custom.yaml
+        selected_work_item_type: Product Backlog Item
+        required_fields_by_work_item_type:
+          Product Backlog Item:
+            - Custom.Toggle
+        required_field_types_by_work_item_type:
+          Product Backlog Item:
+            Custom.Toggle: boolean
+""".strip(),
+        encoding="utf-8",
+    )
+    custom_mapping_file = spec_dir / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
+    custom_mapping_file.parent.mkdir(parents=True, exist_ok=True)
+    custom_mapping_file.write_text(
+        """
+field_mappings:
+  Custom.Toggle: release_toggle
+work_item_type_mappings:
+  story: Product Backlog Item
+""".strip(),
+        encoding="utf-8",
+    )
+
+    created_payloads: list[dict] = []
+    result = _invoke_ado_add(
+        monkeypatch,
+        tmp_path,
+        created_payloads,
+        _standard_story_non_interactive_args(
+            "--provider-field",
+            "Custom.Toggle=true",
+            "--repo-path",
+            str(tmp_path),
+        ),
+    )
+
+    assert result.exit_code == 0
+    assert created_payloads[0].get("provider_fields") == {"fields": {"Custom.Toggle": True}}
+
+
+def test_backlog_add_ado_rejects_invalid_boolean_provider_override(monkeypatch, tmp_path: Path) -> None:
+    """ADO add should fail fast when typed metadata says boolean but override cannot be converted."""
+    _write_ado_custom_mapping(tmp_path)
+    spec_dir = tmp_path / ".specfact"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    (spec_dir / "backlog-config.yaml").write_text(
+        f"""
+backlog_config:
+  providers:
+    ado:
+      adapter: ado
+      project_id: {ADO_PROJECT_ID}
+      settings:
+        field_mapping_file: .specfact/templates/backlog/field_mappings/ado_custom.yaml
+        selected_work_item_type: Product Backlog Item
+        required_fields_by_work_item_type:
+          Product Backlog Item:
+            - Custom.Toggle
+        required_field_types_by_work_item_type:
+          Product Backlog Item:
+            Custom.Toggle: boolean
+""".strip(),
+        encoding="utf-8",
+    )
+    custom_mapping_file = spec_dir / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
+    custom_mapping_file.parent.mkdir(parents=True, exist_ok=True)
+    custom_mapping_file.write_text(
+        """
+field_mappings:
+  Custom.Toggle: release_toggle
+work_item_type_mappings:
+  story: Product Backlog Item
+""".strip(),
+        encoding="utf-8",
+    )
+
+    created_payloads: list[dict] = []
+    result = _invoke_ado_add(
+        monkeypatch,
+        tmp_path,
+        created_payloads,
+        _standard_story_non_interactive_args(
+            "--provider-field",
+            "Custom.Toggle=YesMaybe",
+            "--repo-path",
+            str(tmp_path),
+        ),
+    )
+
+    assert result.exit_code == 1
+    assert "Invalid value for provider field 'Custom.Toggle'" in result.stdout
+    assert not created_payloads
+
+
 def test_backlog_add_ado_exports_custom_mapping_for_adapter_create(monkeypatch, tmp_path: Path) -> None:
     """ADO add should export the resolved custom mapping file for the adapter create call."""
     _write_ado_custom_mapping(tmp_path)

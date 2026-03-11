@@ -335,3 +335,67 @@ def test_map_fields_non_interactive_fails_when_required_field_cannot_be_mapped(m
 
     assert result.exit_code != 0
     assert "run interactive `specfact backlog map-fields`" in result.output.lower()
+
+
+def test_map_fields_non_interactive_persists_required_field_types(monkeypatch, tmp_path: Path) -> None:
+    backlog_commands = importlib.import_module("specfact_backlog.backlog.commands")
+    backlog_app = backlog_commands.app
+    monkeypatch.chdir(tmp_path)
+
+    fields_payload = {
+        "value": [
+            {"referenceName": "Custom.Toggle", "name": "Toggle"},
+        ]
+    }
+    work_item_types_payload = {"value": [{"name": "User Story"}]}
+    work_item_type_fields_payload = {
+        "value": [
+            {
+                "referenceName": "Custom.Toggle",
+                "name": "Toggle",
+                "alwaysRequired": True,
+                "type": "boolean",
+                "allowedValues": [],
+            }
+        ]
+    }
+
+    def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
+        if "/_apis/wit/workitemtypes?" in url:
+            return _FakeResponse(work_item_types_payload)
+        if "/_apis/wit/workitemtypes/" in url and "/fields?" in url:
+            return _FakeResponse(work_item_type_fields_payload)
+        if "/_apis/wit/fields/Custom.Toggle?" in url:
+            return _FakeResponse({"allowedValues": [], "type": "boolean"})
+        if "/_apis/wit/fields?" in url:
+            return _FakeResponse(fields_payload)
+        msg = f"Unexpected URL: {url}"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    result = runner.invoke(
+        backlog_app,
+        [
+            "map-fields",
+            "--provider",
+            "ado",
+            "--ado-org",
+            "noldai",
+            "--ado-project",
+            "specfact-cli",
+            "--ado-token",
+            "token",
+            "--ado-framework",
+            "scrum",
+            "--non-interactive",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    config_path = tmp_path / ".specfact" / "backlog-config.yaml"
+    cfg = _load_yaml(config_path)
+    ado_settings = cfg.get("backlog_config", {}).get("providers", {}).get("ado", {}).get("settings", {})
+    type_by_type = ado_settings.get("required_field_types_by_work_item_type", {})
+    assert type_by_type.get("User Story", {}).get("Custom.Toggle") == "boolean"
