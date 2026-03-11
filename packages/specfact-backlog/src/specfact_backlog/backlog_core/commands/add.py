@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -423,41 +424,37 @@ def _parse_provider_field_overrides(raw_overrides: list[str]) -> dict[str, str]:
 
 
 @beartype
-def _coerce_provider_override_value(raw_value: str) -> Any:
-    """Coerce override values to int/float when obvious, otherwise keep as text."""
-    stripped = raw_value.strip()
-    if not stripped:
-        return ""
-    try:
-        if "." in stripped:
-            return float(stripped)
-        return int(stripped)
-    except ValueError:
-        return stripped
+def _normalize_provider_override_value(raw_value: str) -> str:
+    """Preserve provider override values as strings after trimming CLI whitespace."""
+    return raw_value.strip()
 
 
 @beartype
-def _resolve_ado_required_field_metadata(repo_path: Path) -> tuple[str | None, list[str], dict[str, list[str]]]:
-    """Return persisted ADO selected work item type, required refs, and allowed values."""
+def _resolve_ado_required_field_metadata(
+    repo_path: Path,
+    work_item_type: str | None,
+) -> tuple[str | None, list[str], dict[str, list[str]]]:
+    """Return required ADO refs and allowed values for the work item type being created."""
     settings = _load_provider_settings(repo_path, "ado")
     selected_work_item_type = str(settings.get("selected_work_item_type") or "").strip() or None
+    resolved_work_item_type = str(work_item_type or "").strip() or selected_work_item_type
     required_by_type = settings.get("required_fields_by_work_item_type")
     allowed_by_type = settings.get("allowed_values_by_work_item_type")
     required_refs: list[str] = []
     allowed_values: dict[str, list[str]] = {}
-    if selected_work_item_type and isinstance(required_by_type, dict):
-        raw_required = required_by_type.get(selected_work_item_type)
+    if resolved_work_item_type and isinstance(required_by_type, dict):
+        raw_required = required_by_type.get(resolved_work_item_type)
         if isinstance(raw_required, list):
             required_refs = [str(item).strip() for item in raw_required if str(item).strip()]
-    if selected_work_item_type and isinstance(allowed_by_type, dict):
-        raw_allowed = allowed_by_type.get(selected_work_item_type)
+    if resolved_work_item_type and isinstance(allowed_by_type, dict):
+        raw_allowed = allowed_by_type.get(resolved_work_item_type)
         if isinstance(raw_allowed, dict):
             for field_ref, values in raw_allowed.items():
                 if isinstance(values, list):
                     normalized = [str(item).strip() for item in values if str(item).strip()]
                     if normalized:
                         allowed_values[str(field_ref).strip()] = normalized
-    return selected_work_item_type, required_refs, allowed_values
+    return resolved_work_item_type, required_refs, allowed_values
 
 
 @beartype
@@ -470,19 +467,52 @@ def _prompt_required_provider_value(field_ref: str, canonical_field: str, allowe
             allowed_values,
             default=allowed_values[0],
         )
-        return _coerce_provider_override_value(selected)
+        return _normalize_provider_override_value(selected)
     entered = prompt_text(f"Value for required provider field {label}")
-    return _coerce_provider_override_value(entered)
+    return _normalize_provider_override_value(entered)
+
+
+@beartype
+def _resolve_ado_top_level_field_values(
+    *,
+    title: str,
+    description: str,
+    acceptance_criteria: str | None,
+    priority: str | None,
+    story_points: int | float | None,
+    custom_config_path: Path | None,
+) -> dict[str, Any]:
+    """Return ADO field refs that the core adapter already writes from top-level payload fields."""
+    managed_fields: dict[str, Any] = {"System.Title": title}
+
+    from specfact_backlog.backlog.mappers.ado_mapper import AdoFieldMapper
+
+    mapper = AdoFieldMapper(custom_mapping_file=custom_config_path)
+    canonical_values = {
+        "description": description,
+        "acceptance_criteria": acceptance_criteria,
+        "priority": priority,
+        "story_points": story_points,
+    }
+    for canonical_field, value in canonical_values.items():
+        if value in (None, ""):
+            continue
+        target_field = mapper.resolve_write_target_field(canonical_field)
+        if target_field:
+            managed_fields[target_field] = value
+    return managed_fields
 
 
 @beartype
 def _resolve_ado_provider_fields_for_create(
     *,
+    title: str,
     description: str,
     acceptance_criteria: str | None,
     priority: str | None,
     story_points: int | float | None,
     business_value: int | float | None = None,
+    work_item_type: str | None,
     custom_config_path: Path | None,
     repo_path: Path,
     interactive_mode: bool,
@@ -500,6 +530,14 @@ def _resolve_ado_provider_fields_for_create(
     if not isinstance(field_mappings, dict) or not field_mappings:
         return None
 
+    top_level_fields = _resolve_ado_top_level_field_values(
+        title=title,
+        description=description,
+        acceptance_criteria=acceptance_criteria,
+        priority=priority,
+        story_points=story_points,
+        custom_config_path=custom_config_path,
+    )
     supported_values: dict[str, Any] = {
         "description": description,
         "acceptance_criteria": acceptance_criteria,
@@ -509,7 +547,10 @@ def _resolve_ado_provider_fields_for_create(
     }
 
     override_values = provider_field_overrides or {}
-    selected_work_item_type, required_refs, allowed_values_by_ref = _resolve_ado_required_field_metadata(repo_path)
+    selected_work_item_type, required_refs, allowed_values_by_ref = _resolve_ado_required_field_metadata(
+        repo_path,
+        work_item_type,
+    )
 
     mapped_fields: dict[str, Any] = {}
     for ado_field, canonical_field in field_mappings.items():
@@ -518,10 +559,12 @@ def _resolve_ado_provider_fields_for_create(
         if not normalized_ref or not normalized_canonical:
             continue
         if normalized_ref in override_values:
-            mapped_fields[normalized_ref] = _coerce_provider_override_value(override_values[normalized_ref])
+            mapped_fields[normalized_ref] = _normalize_provider_override_value(override_values[normalized_ref])
             continue
         if normalized_canonical in override_values:
-            mapped_fields[normalized_ref] = _coerce_provider_override_value(override_values[normalized_canonical])
+            mapped_fields[normalized_ref] = _normalize_provider_override_value(override_values[normalized_canonical])
+            continue
+        if normalized_ref in top_level_fields:
             continue
         resolved_value = supported_values.get(normalized_canonical)
         if resolved_value not in (None, ""):
@@ -529,14 +572,16 @@ def _resolve_ado_provider_fields_for_create(
 
     missing_required: list[str] = []
     for required_ref in required_refs:
+        if required_ref in top_level_fields and top_level_fields[required_ref] not in (None, ""):
+            continue
         if required_ref in mapped_fields and mapped_fields[required_ref] not in (None, ""):
             continue
         canonical_field = str(field_mappings.get(required_ref) or required_ref).strip()
         if canonical_field in override_values:
-            mapped_fields[required_ref] = _coerce_provider_override_value(override_values[canonical_field])
+            mapped_fields[required_ref] = _normalize_provider_override_value(override_values[canonical_field])
             continue
         if required_ref in override_values:
-            mapped_fields[required_ref] = _coerce_provider_override_value(override_values[required_ref])
+            mapped_fields[required_ref] = _normalize_provider_override_value(override_values[required_ref])
             continue
         resolved_value = supported_values.get(canonical_field)
         if resolved_value not in (None, ""):
@@ -871,13 +916,17 @@ def add(
         repo_path,
         provider_field_overrides=provider_field_overrides,
     )
+    resolved_work_item_type: str | None = None
     if adapter.strip().lower() == "ado":
+        resolved_work_item_type = _resolve_ado_work_item_type_for_create(issue_type, resolved_custom_config)
         ado_provider_fields = _resolve_ado_provider_fields_for_create(
+            title=title,
             description=body,
             acceptance_criteria=acceptance_criteria,
             priority=priority,
             story_points=parsed_story_points,
             business_value=parsed_business_value,
+            work_item_type=resolved_work_item_type,
             custom_config_path=resolved_custom_config,
             repo_path=repo_path,
             interactive_mode=interactive_mode,
@@ -888,10 +937,8 @@ def add(
     if provider_fields:
         payload["provider_fields"] = provider_fields
 
-    if adapter.strip().lower() == "ado":
-        resolved_work_item_type = _resolve_ado_work_item_type_for_create(issue_type, resolved_custom_config)
-        if resolved_work_item_type:
-            payload["work_item_type"] = resolved_work_item_type
+    if adapter.strip().lower() == "ado" and resolved_work_item_type:
+        payload["work_item_type"] = resolved_work_item_type
 
     if adapter.strip().lower() == "github" and not _has_github_repo_issue_type_mapping(provider_fields, issue_type):
         print_warning(
@@ -931,12 +978,22 @@ def add(
         create_context += ", parent=selected"
     print_info(f"Creating backlog item now ({create_context})...")
 
+    restore_ado_mapping = os.environ.get("SPECFACT_ADO_CUSTOM_MAPPING")
+    if adapter.strip().lower() == "ado" and resolved_custom_config is not None:
+        os.environ["SPECFACT_ADO_CUSTOM_MAPPING"] = str(resolved_custom_config.resolve())
+
     try:
         created = graph_adapter.create_issue(project_id, payload)
     except (requests.Timeout, requests.ConnectionError) as error:
         print_warning("Create request failed after send; item may already exist remotely.")
         print_warning("Verify backlog for the title/key before retrying to avoid duplicates.")
         raise typer.Exit(code=1) from error
+    finally:
+        if adapter.strip().lower() == "ado" and resolved_custom_config is not None:
+            if restore_ado_mapping is None:
+                os.environ.pop("SPECFACT_ADO_CUSTOM_MAPPING", None)
+            else:
+                os.environ["SPECFACT_ADO_CUSTOM_MAPPING"] = restore_ado_mapping
     print_success("Issue created successfully")
     print_info(f"id: {created.get('id', '')}")
     print_info(f"key: {created.get('key', '')}")

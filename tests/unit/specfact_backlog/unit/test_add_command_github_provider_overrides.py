@@ -57,7 +57,7 @@ def _build_github_add_args(*extra: str) -> list[str]:
     ]
 
 
-def _invoke_github_add(monkeypatch, tmp_path: Path, args: list[str]) -> list[dict]:
+def _invoke_github_add(monkeypatch, args: list[str]) -> list[dict]:
     created_payloads: list[dict] = []
     adapter = _FakeAdapter(items=[], relationships=[], created=created_payloads)
     monkeypatch.setattr(AdapterRegistry, "get_adapter", lambda _adapter: adapter)
@@ -73,7 +73,6 @@ def test_backlog_add_github_provider_field_override_replaces_issue_type_mapping(
 
     created_payloads = _invoke_github_add(
         monkeypatch,
-        tmp_path,
         _build_github_add_args(
             "--provider-field",
             "github_issue_types.type_ids.task=IT_TASK_OVERRIDE",
@@ -95,7 +94,6 @@ def test_backlog_add_github_provider_field_override_replaces_project_type_option
 
     created_payloads = _invoke_github_add(
         monkeypatch,
-        tmp_path,
         _build_github_add_args(
             "--provider-field",
             "github_project_v2.type_option_ids.task=PVT_OPTION_TASK_OVERRIDE",
