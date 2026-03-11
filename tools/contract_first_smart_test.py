@@ -12,6 +12,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def _ensure_core_dependency(repo_root: Path) -> int:
+    sys.path.insert(0, str(repo_root / "src"))
+    from specfact_cli_modules.dev_bootstrap import ensure_core_dependency
+
+    return ensure_core_dependency(repo_root)
+
+
 def _run_pytest(extra_args: list[str], marker: str | None = None) -> int:
     cmd = [sys.executable, "-m", "pytest", "tests"]
     if marker:
@@ -21,6 +28,9 @@ def _run_pytest(extra_args: list[str], marker: str | None = None) -> int:
 
 
 def main() -> int:
+    bootstrap_result = _ensure_core_dependency(ROOT)
+    if bootstrap_result != 0:
+        return bootstrap_result
     parser = argparse.ArgumentParser(description="Run contract-first checks in modules repo")
     parser.add_argument("command", choices=["run", "contracts", "exploration", "scenarios", "status"])
     parser.add_argument("args", nargs=argparse.REMAINDER)

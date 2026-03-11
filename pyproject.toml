@@ -28,11 +28,11 @@ dependencies = [
 ]
 
 [tool.hatch.envs.default.scripts]
-dev-deps = "bash -lc 'if [ -n \"$SPECFACT_CLI_REPO\" ]; then pip install -e \"$SPECFACT_CLI_REPO\"; elif [ -d ../specfact-cli ]; then pip install -e ../specfact-cli; else echo \"Set SPECFACT_CLI_REPO to your specfact-cli checkout path\" >&2; exit 1; fi'"
+dev-deps = "python tools/ensure_core_dependency.py"
 format = "ruff check . --fix && ruff format ."
-type-check = "basedpyright --pythonpath $(python -c 'import sys; print(sys.executable)') src tests tools {args}"
-lint = "ruff format . --check && basedpyright --pythonpath $(python -c 'import sys; print(sys.executable)') src tests tools && ruff check . && PYLINTHOME=.pylint.d pylint src tests tools"
-test = "pytest tests {args}"
+type-check = "python tools/run_basedpyright.py {args}"
+lint = "python tools/ensure_core_dependency.py && ruff format . --check && python tools/run_basedpyright.py && ruff check . && PYLINTHOME=.pylint.d pylint src tests tools"
+test = "python tools/ensure_core_dependency.py && pytest tests {args}"
 
 # Modules-repo scoped parity commands
 yaml-lint = "python tools/validate_repo_manifests.py"
@@ -65,9 +65,11 @@ pythonVersion = "3.11"
 typeCheckingMode = "standard"
 useLibraryCodeForTypes = true
 extraPaths = [
+    "src",
     "packages/specfact-project/src",
     "packages/specfact-backlog/src",
     "packages/specfact-codebase/src",
+    "packages/specfact-code-review/src",
     "packages/specfact-spec/src",
     "packages/specfact-govern/src",
 ]
@@ -81,24 +83,17 @@ reportUnusedFunction = true
 reportUnusedVariable = true
 venvPath = "."
 venv = ".venv"
-
-[[tool.basedpyright.override]]
-module = [
-    "pytest.*",
-    "setuptools.*",
+executionEnvironments = [
+    { root = "src" },
+    { root = "tools" },
+    { root = "tests", reportMissingImports = false },
+    { root = "packages/specfact-project/src", reportMissingImports = false, reportAttributeAccessIssue = false },
+    { root = "packages/specfact-backlog/src", reportMissingImports = false, reportAttributeAccessIssue = false },
+    { root = "packages/specfact-codebase/src", reportMissingImports = false, reportAttributeAccessIssue = false },
+    { root = "packages/specfact-code-review/src", reportMissingImports = false, reportAttributeAccessIssue = false },
+    { root = "packages/specfact-spec/src", reportMissingImports = false, reportAttributeAccessIssue = false },
+    { root = "packages/specfact-govern/src", reportMissingImports = false, reportAttributeAccessIssue = false },
 ]
-reportMissingImports = false
-
-[[tool.basedpyright.override]]
-module = [
-    "specfact_project.*",
-    "specfact_backlog.*",
-    "specfact_codebase.*",
-    "specfact_spec.*",
-    "specfact_govern.*",
-]
-typeCheckingMode = "basic"
-reportMissingImports = false
 reportAttributeAccessIssue = false
 
 [tool.pytest.ini_options]
@@ -109,6 +104,7 @@ pythonpath = [
     "packages/specfact-project/src",
     "packages/specfact-backlog/src",
     "packages/specfact-codebase/src",
+    "packages/specfact-code-review/src",
     "packages/specfact-spec/src",
     "packages/specfact-govern/src",
 ]
@@ -254,6 +250,7 @@ known-first-party = [
     "specfact_project",
     "specfact_backlog",
     "specfact_codebase",
+    "specfact_code_review",
     "specfact_spec",
     "specfact_govern",
     "specfact_cli_modules",
