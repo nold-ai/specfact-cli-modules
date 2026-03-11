@@ -449,6 +449,11 @@ backlog_config:
         required_fields_by_work_item_type:
           Product Backlog Item:
             - Custom.Toggle
+        allowed_values_by_work_item_type:
+          Product Backlog Item:
+            Custom.Toggle:
+              - true
+              - false
         required_field_types_by_work_item_type:
           Product Backlog Item:
             Custom.Toggle: boolean

@@ -476,40 +476,63 @@ def _normalize_validate_ado_provider_field_value(
 ) -> Any:
     """Validate ADO picklist constraints and coerce provider field values when metadata is available."""
     raw_text = str(value).strip()
-    allowed_values = allowed_values_by_ref.get(field_ref, [])
-    if allowed_values and raw_text not in allowed_values:
-        allowed_text = ", ".join(allowed_values)
-        raise ValueError(
-            f"Invalid value for provider field '{field_ref}': expected one of [{allowed_text}] but got '{value}'."
-        )
-
     field_type = str(field_types_by_ref.get(field_ref) or "").strip().lower()
-    if not field_type:
-        return value
+    normalized_value: Any = value
 
     if field_type in {"boolean", "bool"}:
         lowered = raw_text.lower()
         if lowered in {"true", "1", "yes", "y", "on"}:
-            return True
-        if lowered in {"false", "0", "no", "n", "off"}:
-            return False
-        raise ValueError(f"Invalid value for provider field '{field_ref}': expected boolean but got '{value}'.")
-
-    if field_type in {"integer", "int"}:
+            normalized_value = True
+        elif lowered in {"false", "0", "no", "n", "off"}:
+            normalized_value = False
+        else:
+            raise ValueError(f"Invalid value for provider field '{field_ref}': expected boolean but got '{value}'.")
+    elif field_type in {"integer", "int"}:
         try:
-            return int(raw_text)
+            normalized_value = int(raw_text)
         except ValueError as exc:
             raise ValueError(
                 f"Invalid value for provider field '{field_ref}': expected integer but got '{value}'."
             ) from exc
-
-    if field_type in {"double", "float", "number", "decimal"}:
+    elif field_type in {"double", "float", "number", "decimal"}:
         try:
-            return float(raw_text)
+            normalized_value = float(raw_text)
         except ValueError as exc:
             raise ValueError(
                 f"Invalid value for provider field '{field_ref}': expected number but got '{value}'."
             ) from exc
+
+    allowed_values = allowed_values_by_ref.get(field_ref, [])
+    if allowed_values:
+        if field_type in {"boolean", "bool", "integer", "int", "double", "float", "number", "decimal"}:
+            normalized_allowed_values: list[Any] = []
+            for allowed_value in allowed_values:
+                normalized_allowed_values.append(
+                    _normalize_validate_ado_provider_field_value(
+                        field_ref,
+                        allowed_value,
+                        field_types_by_ref,
+                        {},
+                    )
+                )
+            if normalized_value not in normalized_allowed_values:
+                allowed_text = ", ".join(allowed_values)
+                raise ValueError(
+                    f"Invalid value for provider field '{field_ref}': expected one of [{allowed_text}] but got '{value}'."
+                )
+        elif raw_text not in allowed_values:
+            allowed_text = ", ".join(allowed_values)
+            raise ValueError(
+                f"Invalid value for provider field '{field_ref}': expected one of [{allowed_text}] but got '{value}'."
+            )
+
+    if not field_type:
+        return value
+
+    if field_type in {"boolean", "bool"}:
+        return normalized_value
+    if field_type in {"integer", "int", "double", "float", "number", "decimal"}:
+        return normalized_value
 
     return value
 

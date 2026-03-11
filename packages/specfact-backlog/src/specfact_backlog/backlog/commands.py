@@ -532,6 +532,13 @@ def _save_backlog_module_config_file(config: dict[str, Any], path: Path) -> None
     path.write_text(yaml.dump(config, sort_keys=False), encoding="utf-8")
 
 
+class _ReplaceSettingValue:
+    """Marker used to replace a config subtree atomically during provider setting updates."""
+
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+
 @beartype
 def _upsert_backlog_provider_settings(
     provider: str,
@@ -564,6 +571,9 @@ def _upsert_backlog_provider_settings(
 
     def _deep_merge(dst: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
         for key, value in src.items():
+            if isinstance(value, _ReplaceSettingValue):
+                dst[key] = value.value
+                continue
             if value is None:
                 dst.pop(key, None)
                 continue
@@ -5826,16 +5836,31 @@ def map_fields(
         "framework": selected_framework,
     }
     if selected_work_item_type:
+        existing_cfg, _existing_path = _load_backlog_module_config_file()
+        existing_providers = (existing_cfg.get("backlog_config") or {}).get("providers")
+        existing_ado_settings: dict[str, Any] = {}
+        if isinstance(existing_providers, dict):
+            existing_ado = existing_providers.get("ado")
+            if isinstance(existing_ado, dict):
+                existing_settings = existing_ado.get("settings")
+                if isinstance(existing_settings, dict):
+                    existing_ado_settings = existing_settings
+
+        allowed_values_by_type = dict(existing_ado_settings.get("allowed_values_by_work_item_type") or {})
+        allowed_values_by_type[selected_work_item_type] = allowed_values_for_selected_type
+
+        required_field_types_by_type = dict(existing_ado_settings.get("required_field_types_by_work_item_type") or {})
+        if required_field_types_for_selected_type:
+            required_field_types_by_type[selected_work_item_type] = required_field_types_for_selected_type
+        else:
+            required_field_types_by_type.pop(selected_work_item_type, None)
+
         settings_update["selected_work_item_type"] = selected_work_item_type
         settings_update["required_fields_by_work_item_type"] = {
             selected_work_item_type: required_fields_for_selected_type
         }
-        settings_update["allowed_values_by_work_item_type"] = {
-            selected_work_item_type: allowed_values_for_selected_type
-        }
-        settings_update["required_field_types_by_work_item_type"] = {
-            selected_work_item_type: required_field_types_for_selected_type or None
-        }
+        settings_update["allowed_values_by_work_item_type"] = _ReplaceSettingValue(allowed_values_by_type)
+        settings_update["required_field_types_by_work_item_type"] = _ReplaceSettingValue(required_field_types_by_type)
 
     provider_cfg_path = _upsert_backlog_provider_settings(
         "ado",
