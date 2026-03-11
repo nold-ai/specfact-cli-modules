@@ -532,6 +532,13 @@ def _save_backlog_module_config_file(config: dict[str, Any], path: Path) -> None
     path.write_text(yaml.dump(config, sort_keys=False), encoding="utf-8")
 
 
+class _ReplaceSettingValue:
+    """Marker used to replace a config subtree atomically during provider setting updates."""
+
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+
 @beartype
 def _upsert_backlog_provider_settings(
     provider: str,
@@ -564,6 +571,12 @@ def _upsert_backlog_provider_settings(
 
     def _deep_merge(dst: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
         for key, value in src.items():
+            if isinstance(value, _ReplaceSettingValue):
+                dst[key] = value.value
+                continue
+            if value is None:
+                dst.pop(key, None)
+                continue
             if isinstance(value, dict) and isinstance(dst.get(key), dict):
                 _deep_merge(dst[key], value)
             else:
@@ -5460,7 +5473,7 @@ def map_fields(
             return []
         return _extract_allowed_values(payload.get("items"))
 
-    def _fetch_allowed_values_for_field(field_ref: str) -> list[str]:
+    def _fetch_allowed_values_for_field(field_ref: str) -> tuple[list[str], str | None]:
         encoded_ref = quote(field_ref, safe="")
         url = f"{base_url}/{ado_org}/{ado_project}/_apis/wit/fields/{encoded_ref}?api-version=7.1"
         try:
@@ -5468,18 +5481,21 @@ def map_fields(
             response.raise_for_status()
             payload = response.json()
         except requests.exceptions.RequestException:
-            return []
+            return [], None
         if not isinstance(payload, dict):
-            return []
+            return [], None
         allowed_values = _extract_allowed_values(payload.get("allowedValues"))
+        field_type = str(payload.get("type") or "").strip() or None
         if allowed_values:
-            return allowed_values
+            return allowed_values, field_type
         picklist_id = str(payload.get("picklistId") or "").strip()
         if not picklist_id:
-            return []
-        return _fetch_allowed_values_for_picklist(picklist_id)
+            return [], field_type
+        return _fetch_allowed_values_for_picklist(picklist_id), field_type
 
-    def _fetch_work_item_type_field_metadata(work_item_type: str) -> tuple[list[str], dict[str, list[str]], list[str]]:
+    def _fetch_work_item_type_field_metadata(
+        work_item_type: str,
+    ) -> tuple[list[str], dict[str, list[str]], dict[str, str], list[str]]:
         encoded_type = quote(work_item_type, safe="")
         url = f"{base_url}/{ado_org}/{ado_project}/_apis/wit/workitemtypes/{encoded_type}/fields?api-version=7.1"
         response = requests.get(url, headers=headers, timeout=30)
@@ -5489,6 +5505,7 @@ def map_fields(
         required_refs: list[str] = []
         allowed_values_by_field: dict[str, list[str]] = {}
         unresolved_required: list[str] = []
+        field_types_by_ref: dict[str, str] = {}
         metadata_follow_up_refs = [
             str(node.get("referenceName") or "").strip()
             for node in nodes
@@ -5512,17 +5529,22 @@ def map_fields(
             if ref_name in system_only_fields:
                 continue
             allowed_values = _extract_allowed_values(node.get("allowedValues"))
+            node_type = str(node.get("type") or "").strip().lower()
+            if node_type:
+                field_types_by_ref[ref_name] = node_type
             if not allowed_values and ref_name:
                 follow_up_index += 1
                 console.print(
                     f"[cyan]Fetching field metadata details {follow_up_index}/{follow_up_total}: {display_name}[/cyan]"
                 )
-                allowed_values = _fetch_allowed_values_for_field(ref_name)
+                allowed_values, resolved_type = _fetch_allowed_values_for_field(ref_name)
+                if resolved_type and ref_name not in field_types_by_ref:
+                    field_types_by_ref[ref_name] = resolved_type.strip().lower()
             if allowed_values:
                 allowed_values_by_field[ref_name] = allowed_values
             if always_required:
                 required_refs.append(ref_name)
-        return required_refs, allowed_values_by_field, unresolved_required
+        return required_refs, allowed_values_by_field, field_types_by_ref, unresolved_required
 
     # Canonical fields to map
     canonical_fields = {
@@ -5538,6 +5560,7 @@ def map_fields(
     required_fields_for_selected_type: list[str] = []
     allowed_values_for_selected_type: dict[str, list[str]] = {}
     unresolved_required_fields: list[str] = []
+    required_field_types_for_selected_type: dict[str, str] = {}
     required_custom_canonical_by_ref: dict[str, str] = {}
 
     work_item_type_options: list[str] = []
@@ -5592,11 +5615,13 @@ def map_fields(
             (
                 required_fields_for_selected_type,
                 allowed_values_for_selected_type,
+                required_field_types_for_selected_type,
                 unresolved_required_fields,
             ) = _fetch_work_item_type_field_metadata(selected_work_item_type)
         except requests.exceptions.RequestException:
             required_fields_for_selected_type = []
             allowed_values_for_selected_type = {}
+            required_field_types_for_selected_type = {}
             unresolved_required_fields = []
 
     # Load default mappings from AdoFieldMapper
@@ -5811,13 +5836,31 @@ def map_fields(
         "framework": selected_framework,
     }
     if selected_work_item_type:
+        existing_cfg, _existing_path = _load_backlog_module_config_file()
+        existing_providers = (existing_cfg.get("backlog_config") or {}).get("providers")
+        existing_ado_settings: dict[str, Any] = {}
+        if isinstance(existing_providers, dict):
+            existing_ado = existing_providers.get("ado")
+            if isinstance(existing_ado, dict):
+                existing_settings = existing_ado.get("settings")
+                if isinstance(existing_settings, dict):
+                    existing_ado_settings = existing_settings
+
+        allowed_values_by_type = dict(existing_ado_settings.get("allowed_values_by_work_item_type") or {})
+        allowed_values_by_type[selected_work_item_type] = allowed_values_for_selected_type
+
+        required_field_types_by_type = dict(existing_ado_settings.get("required_field_types_by_work_item_type") or {})
+        if required_field_types_for_selected_type:
+            required_field_types_by_type[selected_work_item_type] = required_field_types_for_selected_type
+        else:
+            required_field_types_by_type.pop(selected_work_item_type, None)
+
         settings_update["selected_work_item_type"] = selected_work_item_type
         settings_update["required_fields_by_work_item_type"] = {
             selected_work_item_type: required_fields_for_selected_type
         }
-        settings_update["allowed_values_by_work_item_type"] = {
-            selected_work_item_type: allowed_values_for_selected_type
-        }
+        settings_update["allowed_values_by_work_item_type"] = _ReplaceSettingValue(allowed_values_by_type)
+        settings_update["required_field_types_by_work_item_type"] = _ReplaceSettingValue(required_field_types_by_type)
 
     provider_cfg_path = _upsert_backlog_provider_settings(
         "ado",

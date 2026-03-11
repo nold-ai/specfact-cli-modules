@@ -1,8 +1,5 @@
-# backlog-add Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change backlog-02-migrate-core-commands. Update Purpose after archive.
-## Requirements
 ### Requirement: Restore backlog add command functionality
 
 `specfact backlog add` SHALL build valid provider payloads for mapped required provider fields.
@@ -34,4 +31,3 @@ TBD - created by archiving change backlog-02-migrate-core-commands. Update Purpo
 - **AND** the user passes a provider override value outside that allowed set
 - **THEN** the CLI exits with a validation error that names the mapped field and allowed values
 - **AND** no provider create call is made.
-
