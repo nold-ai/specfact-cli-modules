@@ -68,6 +68,19 @@
         "nold-ai/specfact-project"
       ],
       "description": "Official SpecFact governance bundle package."
+    },
+    {
+      "id": "nold-ai/specfact-code-review",
+      "latest_version": "0.41.1",
+      "download_url": "modules/specfact-code-review-0.41.1.tar.gz",
+      "checksum_sha256": "214f1a268e42e7208cff14c30b98e697365350633ba14c071de7c45b8a9d387f",
+      "tier": "official",
+      "publisher": {
+        "name": "nold-ai",
+        "email": "hello@noldai.com"
+      },
+      "bundle_dependencies": [],
+      "description": "Official SpecFact code review bundle package."
     }
   ]
 }
