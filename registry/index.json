@@ -17,7 +17,7 @@
       "id": "nold-ai/specfact-backlog",
       "latest_version": "0.41.12",
       "download_url": "modules/specfact-backlog-0.41.12.tar.gz",
-      "checksum_sha256": "a88472ee7eeff42a93a5920993a5cddd3ef6dbeff0a379997101fc1331d4d359",
+      "checksum_sha256": "28f6a30868b42fdd1928a035aa30c78e6d1230c0c768bfa17dff6a6b269a8907",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -68,6 +68,19 @@
         "nold-ai/specfact-project"
       ],
       "description": "Official SpecFact governance bundle package."
+    },
+    {
+      "id": "nold-ai/specfact-code-review",
+      "latest_version": "0.41.1",
+      "download_url": "modules/specfact-code-review-0.41.1.tar.gz",
+      "checksum_sha256": "214f1a268e42e7208cff14c30b98e697365350633ba14c071de7c45b8a9d387f",
+      "tier": "official",
+      "publisher": {
+        "name": "nold-ai",
+        "email": "hello@noldai.com"
+      },
+      "bundle_dependencies": [],
+      "description": "Official SpecFact code review bundle package."
     }
   ]
 }

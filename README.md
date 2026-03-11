@@ -23,7 +23,7 @@ hatch env create
 2. Install `specfact-cli` editable dependency:
 
 ```bash
-# uses $SPECFACT_CLI_REPO if set, otherwise ../specfact-cli
+# prefers $SPECFACT_CLI_REPO, then a matching specfact-cli-worktrees branch, then ../specfact-cli
 hatch run dev-deps
 ```
 
@@ -56,3 +56,4 @@ Scope notes:
 - `ruff` runs on the full repo.
 - `basedpyright` and `pylint` are scoped to `src/`, `tests/`, and `tools/` for modules-repo infrastructure parity.
 - Bundle-package behavioral validation is covered through `test`, `contract-test`, and migration-specific suite additions under `tests/`.
+- `test`, `smart-test`, `contract-test`, `lint`, and `type-check` auto-install the matching local `specfact-cli` editable checkout when the active worktree venv is missing it.

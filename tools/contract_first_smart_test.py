@@ -6,10 +6,8 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parent.parent
+from dev_bootstrap_support import ROOT, ensure_core_dependency
 
 
 def _run_pytest(extra_args: list[str], marker: str | None = None) -> int:
@@ -21,6 +19,9 @@ def _run_pytest(extra_args: list[str], marker: str | None = None) -> int:
 
 
 def main() -> int:
+    bootstrap_result = ensure_core_dependency(ROOT)
+    if bootstrap_result != 0:
+        return bootstrap_result
     parser = argparse.ArgumentParser(description="Run contract-first checks in modules repo")
     parser.add_argument("command", choices=["run", "contracts", "exploration", "scenarios", "status"])
     parser.add_argument("args", nargs=argparse.REMAINDER)
