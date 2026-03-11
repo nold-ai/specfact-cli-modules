@@ -78,7 +78,7 @@ def test_ado_create_issue_maps_payload_and_parent_relation(monkeypatch) -> None:
 
     captured: dict = {}
 
-    def _fake_patch(url: str, json: list, headers: dict, timeout: int):
+    def _fake_post(url: str, json: list, headers: dict, timeout: int):
         captured["url"] = url
         captured["json"] = json
         captured["headers"] = headers
@@ -95,7 +95,8 @@ def test_ado_create_issue_maps_payload_and_parent_relation(monkeypatch) -> None:
 
     import specfact_cli.adapters.ado as ado_module
 
-    monkeypatch.setattr(ado_module.requests, "patch", _fake_patch)
+    monkeypatch.setattr(ado_module.requests, "post", _fake_post)
+    monkeypatch.setattr(ado_module.requests, "patch", _fake_post)
 
     retry_call: dict[str, object] = {}
 
