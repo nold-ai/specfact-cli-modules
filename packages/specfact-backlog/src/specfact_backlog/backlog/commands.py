@@ -5455,9 +5455,9 @@ def map_fields(
             response.raise_for_status()
             payload = response.json()
         except requests.exceptions.RequestException:
-            return [], None
+            return []
         if not isinstance(payload, dict):
-            return [], None
+            return []
         return _extract_allowed_values(payload.get("items"))
 
     def _fetch_allowed_values_for_field(field_ref: str) -> tuple[list[str], str | None]:

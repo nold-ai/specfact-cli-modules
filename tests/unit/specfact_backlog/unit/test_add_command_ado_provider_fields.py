@@ -9,7 +9,7 @@ from pathlib import Path
 from specfact_cli.adapters.registry import AdapterRegistry
 
 from specfact_backlog.backlog_core.main import backlog_app
-from tests.unit.specfact_backlog.unit.test_add_command import _FakeAdapter, runner
+from tests.unit.specfact_backlog.unit.test_add_command import _FakeAdapter, _strip_ansi, runner
 
 
 ADO_PROJECT_ID = "dominikusnold/Specfact CLI"
@@ -523,7 +523,7 @@ work_item_type_mappings:
     )
 
     assert result.exit_code == 1
-    assert "Invalid value for provider field 'Custom.Toggle'" in result.stdout
+    assert "Invalid value for provider field 'Custom.Toggle'" in _strip_ansi(result.stdout)
     assert not created_payloads
 
 

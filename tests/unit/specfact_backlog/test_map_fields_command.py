@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import requests
 import yaml
 from typer.testing import CliRunner
 
@@ -211,6 +212,77 @@ def test_map_fields_reports_progress_for_selected_work_item_type_metadata(monkey
     assert "Fetching required-field metadata for selected work item type: User Story" in result.output
     assert "Fetching field metadata details 1/2" in result.output
     assert "Fetching field metadata details 2/2" in result.output
+
+
+def test_map_fields_skips_allowed_values_when_picklist_metadata_fetch_fails(monkeypatch, tmp_path: Path) -> None:
+    backlog_commands = importlib.import_module("specfact_backlog.backlog.commands")
+    backlog_app = backlog_commands.app
+    monkeypatch.chdir(tmp_path)
+
+    fields_payload = {
+        "value": [
+            {"referenceName": "System.Description", "name": "Description"},
+            {"referenceName": "Custom.FinOpsCategory", "name": "FinOps Category"},
+        ]
+    }
+    work_item_types_payload = {"value": [{"name": "User Story"}]}
+    work_item_type_fields_payload = {
+        "value": [
+            {
+                "referenceName": "Custom.FinOpsCategory",
+                "name": "FinOps Category",
+                "alwaysRequired": True,
+                "allowedValues": [],
+            }
+        ]
+    }
+
+    def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
+        if "/_apis/wit/workitemtypes?" in url:
+            return _FakeResponse(work_item_types_payload)
+        if "/_apis/wit/workitemtypes/" in url and "/fields?" in url:
+            return _FakeResponse(work_item_type_fields_payload)
+        if "/_apis/wit/fields/Custom.FinOpsCategory?" in url:
+            return _FakeResponse(
+                {"allowedValues": [], "picklistId": "11111111-1111-1111-1111-111111111111", "isPicklist": True}
+            )
+        if "/_apis/work/processes/lists/11111111-1111-1111-1111-111111111111?api-version=7.1" in url:
+            raise requests.exceptions.RequestException("transient picklist failure")
+        if "/_apis/wit/fields?" in url:
+            return _FakeResponse(fields_payload)
+        msg = f"Unexpected URL: {url}"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    result = runner.invoke(
+        backlog_app,
+        [
+            "map-fields",
+            "--provider",
+            "ado",
+            "--ado-org",
+            "noldai",
+            "--ado-project",
+            "specfact-cli",
+            "--ado-token",
+            "token",
+            "--ado-framework",
+            "scrum",
+            "--non-interactive",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    cfg = _load_yaml(tmp_path / ".specfact" / "backlog-config.yaml")
+    providers = cfg.get("backlog_config", {}).get("providers", {})
+    ado_settings = providers.get("ado", {}).get("settings", {})
+    required_by_type = ado_settings.get("required_fields_by_work_item_type", {})
+    allowed_by_type = ado_settings.get("allowed_values_by_work_item_type", {})
+
+    assert required_by_type.get("User Story") == ["Custom.FinOpsCategory"]
+    assert allowed_by_type.get("User Story", {}) == {}
 
 
 def test_map_fields_interactive_ignores_builtin_required_hierarchy_ids(monkeypatch, tmp_path: Path) -> None:
