@@ -96,6 +96,7 @@ def test_ado_create_issue_maps_payload_and_parent_relation(monkeypatch) -> None:
     import specfact_cli.adapters.ado as ado_module
 
     monkeypatch.setattr(ado_module.requests, "post", _fake_post)
+    monkeypatch.setattr(ado_module.requests, "patch", _fake_post)
 
     retry_call: dict[str, object] = {}
 
