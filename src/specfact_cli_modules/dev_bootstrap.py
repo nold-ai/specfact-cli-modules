@@ -47,29 +47,18 @@ def resolve_core_repo(repo_root: Path) -> Path | None:
     return _configured_core_repo() or _paired_worktree_core_repo(repo_root) or _walk_parent_siblings(repo_root)
 
 
-def _installed_core_matches(expected_repo: Path) -> bool:
-    spec = importlib.util.find_spec("specfact_cli")
-    if spec is None:
-        return False
-    locations = list(spec.submodule_search_locations or [])
-    if not locations and spec.origin:
-        locations = [spec.origin]
-    expected_src = (expected_repo / "src").resolve()
-    for location in locations:
-        resolved = Path(location).resolve()
-        if expected_src == resolved or expected_src in resolved.parents:
-            return True
-    return False
+def _installed_core_exists() -> bool:
+    return importlib.util.find_spec("specfact_cli") is not None
 
 
 def ensure_core_dependency(repo_root: Path) -> int:
     """Install specfact-cli editable dependency if the active environment is not aligned."""
+    if _installed_core_exists():
+        return 0
     core_repo = resolve_core_repo(repo_root)
     if core_repo is None:
         print("Unable to resolve specfact-cli checkout. Set SPECFACT_CLI_REPO.", file=sys.stderr)
         return 1
-    if _installed_core_matches(core_repo):
-        return 0
     command = [sys.executable, "-m", "pip", "install", "-e", str(core_repo)]
     return subprocess.run(command, cwd=repo_root, check=False).returncode
 
