@@ -13,6 +13,8 @@ This repository hosts official nold-ai SpecFact bundle packages and registry met
 1. `hatch env create`
 2. `hatch run dev-deps`
 
+`dev-deps` resolves `specfact-cli` in this order: `$SPECFACT_CLI_REPO`, matching `specfact-cli-worktrees/<branch>`, then the canonical sibling checkout `../specfact-cli`.
+
 ## Quality Gates
 
 Run in this order:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -67,8 +68,9 @@ _patch_clirunner()
 # Import after path setup
 from specfact_cli.registry.bridge_registry import BRIDGE_PROTOCOL_REGISTRY
 
-# Trigger protocol registration by importing main module
-from specfact_backlog.backlog_core import main as _main_module  # noqa: F401
+
+# Trigger protocol registration by importing main module for its side effects.
+importlib.import_module("specfact_backlog.backlog_core.main")
 
 # Register backlog graph protocol with bridge registry for tests
 from specfact_backlog.backlog_core.adapters.backlog_protocol import BacklogGraphProtocol

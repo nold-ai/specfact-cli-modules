@@ -12,6 +12,7 @@ hatch run dev-deps
 ```
 
 `dev-deps` installs `specfact-cli` from `$SPECFACT_CLI_REPO` when set, otherwise `../specfact-cli`.
+In worktrees, the bootstrap should prefer the matching `specfact-cli-worktrees/<branch>` checkout before falling back to the canonical sibling repo.
 
 ## Quality gates
 
