@@ -661,7 +661,7 @@ def migrate_artifacts(
                 if bundle_dir.is_dir() and (bundle_dir / "bundle.manifest.yaml").exists():
                     bundles_to_migrate.append(bundle_dir.name)
         if not bundles_to_migrate:
-            print_error("No project bundles found. Create one with 'specfact plan init' or 'specfact import from-code'")
+            print_error("No project bundles found. Create one with 'specfact plan init' or 'specfact code import'")
             raise typer.Exit(1)
 
     if is_debug_mode():

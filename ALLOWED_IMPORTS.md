@@ -41,6 +41,7 @@ Direct lateral imports between unrelated bundle groups are disallowed.
 
 Allowed cross-bundle imports:
 
+- `specfact_codebase` -> `specfact_project` (temporary brownfield import delegation while ownership realigns)
 - `specfact_spec` -> `specfact_project`
 - `specfact_govern` -> `specfact_project`
 

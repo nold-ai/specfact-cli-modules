@@ -57,7 +57,7 @@ ALLOWED_SPECFACT_CLI_PREFIXES: tuple[str, ...] = (
 ALLOWED_CROSS_BUNDLE_IMPORTS: dict[str, set[str]] = {
     "specfact_project": set(),
     "specfact_backlog": set(),
-    "specfact_codebase": set(),
+    "specfact_codebase": {"specfact_project"},
     "specfact_spec": {"specfact_project"},
     "specfact_govern": {"specfact_project"},
 }
