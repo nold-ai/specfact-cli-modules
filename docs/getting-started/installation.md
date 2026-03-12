@@ -177,7 +177,7 @@ SpecFact CLI supports two operational modes:
 
 ```bash
 # CLI-only mode (uvx - no installation)
-uvx specfact-cli@latest import from-code my-project --repo .
+uvx specfact-cli@latest code import my-project --repo .
 
 # Interactive mode (pip + specfact init - recommended)
 # After: pip install specfact-cli && specfact init
@@ -339,7 +339,7 @@ specfact init
 
 ```bash
 # Analyze repository (CI/CD mode - fast)
-specfact import from-code my-project \
+specfact code import my-project \
   --repo ./my-project \
   --shadow-only \
   --report analysis.md

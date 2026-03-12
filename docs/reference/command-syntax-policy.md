@@ -19,7 +19,7 @@ Always document commands exactly as implemented by `specfact <command> --help` i
 ## Bundle Argument Conventions (v0.30.x baseline)
 
 - Positional bundle argument:
-  - `specfact import from-code [BUNDLE]`
+  - `specfact code import [BUNDLE]`
   - `specfact plan init BUNDLE`
   - `specfact plan review [BUNDLE]`
 - `--bundle` option:
@@ -43,7 +43,7 @@ Before merging command docs updates:
 ## Quick Verification Commands
 
 ```bash
-hatch run specfact import from-code --help
+hatch run specfact code import --help
 hatch run specfact plan init --help
 hatch run specfact plan review --help
 hatch run specfact plan add-feature --help
