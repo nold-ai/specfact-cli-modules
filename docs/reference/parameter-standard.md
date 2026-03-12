@@ -23,7 +23,7 @@ This document defines the standard parameter names, groupings, and conventions f
 | Output format | `--output-format` | `--format` | Use `--output-format` for format specification |
 | Interactive mode | `--interactive/--no-interactive` | `--non-interactive` | Use `--interactive/--no-interactive` for mode control |
 | Project bundle | `--bundle` | `--name`, `--plan` (when used for bundle name) | Use `--bundle` for project bundle name |
-| Plan bundle path | `--plan` | N/A | Use `--plan` for plan bundle file/directory path |
+| Project bundle path | `--plan` | N/A | Use `--plan` for project bundle file/directory path |
 | SDD manifest path | `--sdd` | N/A | Use `--sdd` for SDD manifest file path |
 
 ### Deprecation Policy
@@ -47,7 +47,7 @@ Parameters must be organized into logical groups in the following order:
 
 - `--bundle NAME` - Project bundle name (required for modular structure)
 - `--repo PATH` - Repository path (default: ".")
-- `--plan PATH` - Plan bundle path (default: active plan for bundle)
+- `--plan PATH` - Project bundle path (default: active plan for bundle)
 - `--sdd PATH` - SDD manifest path (default: bundle-specific .specfact/projects/<bundle-name>/sdd.yaml, Phase 8.5, with fallback to legacy .specfact/sdd/<bundle-name>.yaml)
 - `--constitution PATH` - Constitution path (default: .specify/memory/constitution.md)
 
@@ -57,7 +57,7 @@ Parameters must be organized into logical groups in the following order:
 # Target/Input
 --bundle NAME        # Project bundle name (required)
 --repo PATH          # Repository path (default: ".")
---plan PATH          # Plan bundle path (default: active plan for bundle)
+--plan PATH          # Project bundle path (default: active plan for bundle)
 ```
 
 ### Group 2: Output/Results

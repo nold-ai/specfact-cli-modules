@@ -60,7 +60,7 @@ specfact <command> [options] --no-interactive
 
 **Capture**:
 
-- CLI-generated artifacts (plan bundles, reports)
+- CLI-generated artifacts (project bundles, reports)
 - Metadata (timestamps, confidence scores)
 - Telemetry (execution time, file counts)
 
@@ -196,7 +196,7 @@ specfact code import [<bundle-name>] --repo <path> --enrichment <enrichment-repo
 - Missing features are added with their stories and acceptance criteria
 - Existing features are updated (confidence, outcomes, title if empty)
 - Stories are merged into existing features (new stories added, existing preserved)
-- Business context is applied to the plan bundle
+- Business context is applied to the project bundle
 - All changes are validated and saved via CLI
 
 ## Standard Validation Loop Pattern (For LLM-Generated Code)
@@ -324,9 +324,8 @@ specfact generate contracts-apply enhanced_login.py --original src/auth/login.py
 - `specfact plan init <bundle-name>` - Initialize project bundle
 - `specfact plan select <bundle-name>` - Set active plan (used as default for other commands)
 - `specfact code import [<bundle-name>] --repo <path>` - Import from codebase (uses active plan if bundle not specified)
-- `specfact plan review [<bundle-name>]` - Review plan (uses active plan if bundle not specified)
-- `specfact plan harden [<bundle-name>]` - Create SDD manifest (uses active plan if bundle not specified)
-- `specfact enforce sdd [<bundle-name>]` - Validate SDD (uses active plan if bundle not specified)
+- `specfact plan compare [--bundle <bundle-name>]` - Review plan (uses active plan if bundle not specified)
+- `specfact enforce sdd [--bundle <bundle-name>]` - Validate SDD compliance (uses active plan if bundle not specified)
 - `specfact generate contracts-prompt <file> --apply <contracts>` - Generate contract enhancement prompt
 - `specfact generate contracts-apply <enhanced-file> --original <original-file>` - Validate and apply enhanced code
 - `specfact sync bridge --adapter <adapter> --repo <path>` - Sync with external tools

@@ -7,7 +7,7 @@ Welcome to SpecFact CLI! This guide will help you get started in under 60 second
 Choose your preferred installation method:
 
 - **[Installation Guide](installation.md)** - All installation options (uvx, pip, Docker, GitHub Actions)
-- **[Enhanced Analysis Dependencies](../installation/enhanced-analysis-dependencies.md)** - Optional dependencies for graph-based analysis (pyan3, syft, bearer, graphviz)
+- **[Installation Guide](installation.md)** - Optional dependencies for graph-based analysis (pyan3, syft, bearer, graphviz)
 
 ## Quick Start
 
@@ -25,7 +25,7 @@ SpecFact runs on a lifecycle-managed module system.
 
 ```bash
 # CLI-only mode (works with uvx, no installation needed)
-uvx specfact-cli@latest project import from-code my-project --repo .
+uvx specfact-cli@latest code import my-project --repo .
 
 # Interactive AI Assistant mode (requires pip install + specfact init)
 # See First Steps guide for IDE integration setup
@@ -35,7 +35,7 @@ uvx specfact-cli@latest project import from-code my-project --repo .
 
 ```bash
 # CLI-only mode (bundle name as positional argument)
-uvx specfact-cli@latest project plan init my-project --interactive
+uvx specfact-cli@latest plan init my-project --interactive
 
 # Interactive AI Assistant mode (recommended for better results)
 # Requires: pip install specfact-cli && specfact init
@@ -47,8 +47,8 @@ uvx specfact-cli@latest project plan init my-project --interactive
 
 Flat root commands were removed. Use grouped command forms:
 
-- `specfact validate ...` -> `specfact code validate ...`
-- `specfact plan ...` -> `specfact project plan ...`
+- `specfact validate ...` -> `specfact validate sidecar ...`
+- `specfact plan ...` (old flat shim) -> `specfact plan ...` (project bundle commands)
 - `specfact policy ...` -> `specfact backlog policy ...`
 
 First-run bundle selection examples:

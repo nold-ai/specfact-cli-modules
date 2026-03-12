@@ -115,7 +115,7 @@ all_exts = get_extension_registry().list_all()  # dict: module_name -> list of S
        description: ISO timestamp of last sync
    ```
 
-2. **In your command code**, when you have a `ProjectBundle` or `Feature` (e.g. from `load_bundle_with_progress` or from a plan bundle):
+2. **In your command code**, when you have a `ProjectBundle` or `Feature` (e.g. from `load_bundle_with_progress` or from a project bundle):
 
    ```python
    from specfact_cli.models.plan import Feature

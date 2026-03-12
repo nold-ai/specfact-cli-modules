@@ -153,5 +153,5 @@ class DriftDetector:
                     # 2. Run Specmatic contract tests
                     # 3. Detect violations
                     # For now, we'll just note that contract validation should be run
-                    # This would be done via `specfact spec test` command
+                    # This would be done via `specfact contract test` command (from specfact-spec)
                     pass

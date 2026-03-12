@@ -41,7 +41,7 @@ source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
 pip install specfact-cli
 ```
 
-**Optional**: For enhanced graph-based dependency analysis, see [Enhanced Analysis Dependencies](../installation/enhanced-analysis-dependencies.md).
+**Optional**: For enhanced graph-based dependency analysis (pyan3, syft, bearer, graphviz), install these packages in your environment.
 
 **After installation (required)**: select workflow bundles on first run:
 
@@ -195,13 +195,22 @@ Fresh install exposes only core commands:
 - `specfact module`
 - `specfact upgrade`
 
-Category groups appear after bundle installation:
+Commands available after bundle installation:
 
 - `specfact project ...`
+- `specfact plan ...`
+- `specfact sync ...`
 - `specfact backlog ...`
 - `specfact code ...`
+- `specfact analyze ...`
+- `specfact drift ...`
+- `specfact validate ...`
+- `specfact repro ...`
 - `specfact spec ...`
-- `specfact govern ...`
+- `specfact contract ...`
+- `specfact sdd ...`
+- `specfact generate ...`
+- `specfact enforce ...`
 
 Profile outcomes:
 
@@ -278,10 +287,10 @@ Convert an existing GitHub Spec-Kit project:
 
 ```bash
 # Preview what will be migrated
-specfact import from-bridge --adapter speckit --repo ./my-speckit-project --dry-run
+specfact sync bridge --adapter speckit --repo ./my-speckit-project --dry-run
 
 # Execute migration (one-time import)
-specfact import from-bridge \
+specfact sync bridge \
   --adapter speckit \
   --repo ./my-speckit-project \
   --write

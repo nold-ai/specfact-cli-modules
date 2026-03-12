@@ -210,7 +210,7 @@ specfact enforce stage --preset strict
 #### 1. Preview Migration
 
 ```bash
-specfact import from-bridge --adapter speckit --repo ./spec-kit-project --dry-run
+specfact sync bridge --adapter speckit --repo ./spec-kit-project --dry-run
 ```
 
 **Expected Output:**
@@ -236,7 +236,7 @@ specfact import from-bridge --adapter speckit --repo ./spec-kit-project --dry-ru
 #### 2. Execute Migration
 
 ```bash
-specfact import from-bridge \
+specfact sync bridge \
   --adapter speckit \
   --repo ./spec-kit-project \
   --write \
@@ -247,7 +247,7 @@ specfact import from-bridge \
 
 ```bash
 # Review using CLI commands
-specfact plan review <bundle-name>
+specfact plan compare --bundle <bundle-name>
 ```
 
 Review:
@@ -595,11 +595,11 @@ The GitHub Action will:
 
 **Problem**: Multiple microservices need consistent contract enforcement.
 
-**Solution**: Share common plan bundle and enforcement config.
+**Solution**: Share common project bundle and enforcement config.
 
 ### Steps (Multi-Repository)
 
-#### 1. Create Shared Plan Bundle
+#### 1. Create Shared Project Bundle
 
 In a shared repository:
 
