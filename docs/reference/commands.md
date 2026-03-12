@@ -6,67 +6,44 @@ permalink: /reference/commands/
 
 # Command Reference
 
-SpecFact CLI now ships a lean core. Workflow commands are installed from marketplace bundles.
-Flat root-level compatibility shims were removed in `0.40.0`; use category-group commands only.
+SpecFact CLI ships a lean core. Workflow commands are installed from marketplace bundles.
 
 ## Top-Level Commands
 
-Root command surface includes core commands and installed category groups only:
+Root command surface includes core commands and installed command groups:
 
 - `specfact init`
 - `specfact auth`
 - `specfact module`
 - `specfact upgrade`
+- `specfact plan ...`
+- `specfact sync ...`
 - `specfact code ...`
 - `specfact backlog ...`
 - `specfact project ...`
 - `specfact spec ...`
-- `specfact govern ...`
+- `specfact enforce ...`
+- `specfact analyze ...`
+- `specfact drift ...`
+- `specfact validate ...`
+- `specfact repro ...`
+- `specfact generate ...`
+- `specfact sdd ...`
+- `specfact contract ...`
+- `specfact review`
 
 Use `specfact init --profile <name>` (or `--install <list>`) to install workflow bundles.
 
-## Workflow Command Groups
-
-After bundle install, command groups are mounted by category:
-
-- `specfact project ...`
-- `specfact backlog ...`
-- `specfact code ...`
-- `specfact spec ...`
-- `specfact govern ...`
-
 ## Bundle to Command Mapping
 
-| Bundle ID | Group | Main command families |
-|---|---|---|
-| `nold-ai/specfact-project` | `project` | `project`, `plan`, `import`, `sync`, `migrate` |
-| `nold-ai/specfact-backlog` | `backlog` | `backlog`, `policy` |
-| `nold-ai/specfact-codebase` | `code` | `import`, `analyze`, `drift`, `validate`, `repro` |
-| `nold-ai/specfact-spec` | `spec` | `contract`, `api`, `sdd`, `generate` |
-| `nold-ai/specfact-govern` | `govern` | `enforce`, `patch` |
-
-## Migration: Removed Flat Commands
-
-Flat compatibility shims were removed in this change. Use grouped commands.
-
-| Removed | Replacement |
+| Bundle ID | Main command families |
 |---|---|
-| `specfact plan ...` | `specfact project plan ...` |
-| `specfact import from-code ...` | `specfact code import ...` |
-| `specfact import from-bridge ...` | `specfact project import from-bridge ...` |
-| `specfact sync ...` | `specfact project sync ...` |
-| `specfact migrate ...` | `specfact project migrate ...` |
-| `specfact backlog ...` (flat module) | `specfact backlog ...` (bundle group) |
-| `specfact analyze ...` | `specfact code analyze ...` |
-| `specfact drift ...` | `specfact code drift ...` |
-| `specfact validate ...` | `specfact code validate ...` |
-| `specfact repro ...` | `specfact code repro ...` |
-| `specfact contract ...` | `specfact spec contract ...` |
-| `specfact spec ...` (flat module) | `specfact spec api ...` |
-| `specfact sdd ...` | `specfact spec sdd ...` |
-| `specfact generate ...` | `specfact spec generate ...` |
-| `specfact enforce ...` | `specfact govern enforce ...` |
-| `specfact patch ...` | `specfact govern patch ...` |
+| `nold-ai/specfact-project` | `plan`, `project`, `sync`, `migrate`, `code import` |
+| `nold-ai/specfact-backlog` | `backlog` |
+| `nold-ai/specfact-codebase` | `code import`, `analyze`, `drift`, `validate`, `repro` |
+| `nold-ai/specfact-spec` | `spec`, `contract`, `sdd`, `generate` |
+| `nold-ai/specfact-govern` | `enforce` |
+| `nold-ai/specfact-code-review` | `review` |
 
 ## Common Flows
 
@@ -79,15 +56,14 @@ specfact module install nold-ai/specfact-backlog
 
 # Project workflow examples
 specfact code import legacy-api --repo .
-specfact project plan review legacy-api
+specfact plan init my-project
 
 # Code workflow examples
-specfact code validate sidecar init legacy-api /path/to/repo
-specfact code repro --verbose
+specfact validate sidecar init legacy-api /path/to/repo
+specfact repro --verbose
 
 # Backlog workflow examples
-specfact backlog ceremony standup --help
-specfact backlog ceremony refinement --help
+specfact backlog refine --help
 ```
 
 ## See Also

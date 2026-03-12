@@ -105,7 +105,7 @@ When you run commands, SpecFact automatically detects:
 - **Project Type**: Python, JavaScript, etc.
 - **Framework**: FastAPI, Django, Flask, etc.
 - **Existing Specs**: OpenAPI/AsyncAPI specifications
-- **Plan Bundles**: Existing SpecFact project bundles
+- **Project Bundles**: Existing SpecFact project bundles
 - **Configuration**: Specmatic configuration files
 
 ### Smart Defaults
@@ -117,7 +117,7 @@ Based on detected context, SpecFact provides intelligent defaults:
 specfact spec validate --bundle <auto-detected>
 
 # If low contract coverage detected, suggests analysis
-specfact analyze --bundle <auto-detected>
+specfact analyze contracts --bundle <auto-detected>
 ```
 
 ### Explicit Context
@@ -143,7 +143,7 @@ $ specfact code import legacy-api
 ✓ Import complete
 
 💡 Suggested next steps:
-  • specfact analyze --bundle legacy-api  # Analyze contract coverage
+  • specfact analyze contracts --bundle legacy-api  # Analyze contract coverage
   • specfact enforce sdd --bundle legacy-api  # Enforce quality gates
   • specfact sync intelligent --bundle legacy-api  # Sync code and specs
 ```
@@ -153,11 +153,11 @@ $ specfact code import legacy-api
 When errors occur, SpecFact suggests specific fixes:
 
 ```bash
-$ specfact analyze --bundle missing-bundle
+$ specfact analyze contracts --bundle missing-bundle
 ✗ Error: Bundle 'missing-bundle' not found
 
 💡 Suggested fixes:
-  • specfact plan select  # Select an active plan bundle
+  • specfact plan select  # Select an active project bundle
   • specfact code import missing-bundle  # Create a new bundle
 ```
 
@@ -166,11 +166,11 @@ $ specfact analyze --bundle missing-bundle
 Based on analysis, SpecFact suggests improvements:
 
 ```bash
-$ specfact analyze --bundle legacy-api
+$ specfact analyze contracts --bundle legacy-api
 ⚠ Low contract coverage detected (30%)
 
 💡 Suggested improvements:
-  • specfact analyze --bundle legacy-api  # Identify missing contracts
+  • specfact analyze contracts --bundle legacy-api  # Identify missing contracts
   • specfact code import legacy-api  # Extract contracts from code
 ```
 

@@ -66,7 +66,7 @@ specfact init --profile solo-developer
 - Analyzes all Python files in your repository
 - Extracts features, user stories, and business logic from code
 - Generates dependency graphs
-- Creates plan bundle with extracted specs
+- Creates project bundle with extracted specs
 - **Suggests next steps**: Provides actionable commands based on your project state
 
 **💡 Tip**: Use `--help` or `-h` for standard help, or `--help-advanced` (alias: `-ha`) to see all options including advanced configuration.
@@ -95,10 +95,10 @@ specfact init --profile solo-developer
 
 ```bash
 # Review the extracted bundle using CLI commands
-specfact project plan review my-project
+specfact plan select
 
-# Or get structured findings for analysis
-specfact project plan review my-project --list-findings --findings-format json
+# Or get structured findings for analysis using the plan compare command
+specfact plan compare --bundle my-project
 ```
 
 Review the auto-generated plan to understand what SpecFact discovered about your codebase.
@@ -115,10 +115,10 @@ specfact sdd constitution bootstrap --repo .
 
 ```bash
 # First-time setup: Configure CrossHair for contract exploration
-specfact code repro setup
+specfact repro setup
 
 # Analyze and validate your codebase
-specfact code repro --verbose
+specfact repro --verbose
 ```
 
 **What happens**:
@@ -231,7 +231,7 @@ specfact repro
 
 **What happens**:
 
-- Validates the plan bundle structure
+- Validates the project bundle structure
 - Checks for required fields
 - Reports any issues
 
@@ -260,7 +260,7 @@ specfact repro
 ### Step 1: Preview Migration
 
 ```bash
-specfact import from-bridge \
+specfact sync bridge \
   --repo ./my-speckit-project \
   --adapter speckit \
   --dry-run
@@ -295,7 +295,7 @@ specfact import from-bridge \
 ### Step 2: Execute Migration
 
 ```bash
-specfact import from-bridge \
+specfact sync bridge \
   --repo ./my-speckit-project \
   --adapter speckit \
   --write
@@ -312,11 +312,11 @@ specfact import from-bridge \
 ### Step 3: Review Generated Bundle
 
 ```bash
-# Review the imported bundle
-specfact plan review <bundle-name>
-
-# Check bundle status
+# Check bundle status and select active bundle
 specfact plan select
+
+# Compare plan contents
+specfact plan compare --bundle <bundle-name>
 ```
 
 **What was created**:
@@ -325,7 +325,7 @@ specfact plan select
 - `.specfact/protocols/workflow.protocol.yaml` - FSM definition (if protocol detected)
 - `.specfact/gates/config.yaml` - Quality gates configuration
 
-**Note**: Use CLI commands (`plan review`, `plan add-feature`, etc.) to interact with bundles. Do not edit `.specfact` files directly.
+**Note**: Use CLI commands (`plan select`, `plan add-feature`, etc.) to interact with bundles. Do not edit `.specfact` files directly.
 
 ### Step 4: Set Up Bidirectional Sync (Optional)
 

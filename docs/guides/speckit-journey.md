@@ -155,13 +155,13 @@ Import your Spec-Kit project to see what SpecFact adds:
 
 ```bash
 # 1. Preview what will be imported
-specfact import from-bridge --adapter speckit --repo ./my-speckit-project --dry-run
+specfact sync bridge --adapter speckit --repo ./my-speckit-project --dry-run
 
 # 2. Execute import (one command) - bundle name will be auto-detected or you can specify with --bundle
-specfact import from-bridge --adapter speckit --repo ./my-speckit-project --write
+specfact sync bridge --adapter speckit --repo ./my-speckit-project --write
 
 # 3. Review generated bundle using CLI commands
-specfact plan review <bundle-name>
+specfact plan compare --bundle <bundle-name>
 ```
 
 **What was created**:
@@ -244,7 +244,7 @@ specfact enforce stage --preset balanced
 
 ```bash
 # Import existing Spec-Kit project
-specfact import from-bridge --adapter speckit --repo . --write
+specfact sync bridge --adapter speckit --repo . --write
 
 # Enable bidirectional sync (bridge-based, adapter-agnostic)
 specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
@@ -308,7 +308,7 @@ specfact repro --budget 120 --verbose
 
 ```bash
 # See what will be imported (safe - no changes)
-specfact import from-bridge --adapter speckit --repo ./my-speckit-project --dry-run
+specfact sync bridge --adapter speckit --repo ./my-speckit-project --dry-run
 ```
 
 **Expected Output**:
@@ -337,7 +337,7 @@ specfact import from-bridge --adapter speckit --repo ./my-speckit-project --dry-
 
 ```bash
 # Execute migration (creates SpecFact artifacts)
-specfact import from-bridge \
+specfact sync bridge \
   --adapter speckit \
   --repo ./my-speckit-project \
   --write \
@@ -364,11 +364,11 @@ specfact import from-bridge \
 ### **Step 3: Review Generated Artifacts**
 
 ```bash
-# Review plan bundle using CLI commands
-specfact plan review <bundle-name>
+# Review project bundle using CLI commands
+specfact plan compare --bundle <bundle-name>
 
 # Review enforcement config using CLI commands
-specfact enforce show-config
+specfact enforce stage --preset minimal
 
 # Review migration report
 cat migration-report.md
@@ -537,8 +537,8 @@ specfact enforce stage --preset strict
 
 **Next Steps**:
 
-1. **Try it**: `specfact import from-bridge --adapter speckit --repo . --dry-run`
-2. **Import**: `specfact import from-bridge --adapter speckit --repo . --write`
+1. **Try it**: `specfact sync bridge --adapter speckit --repo . --dry-run`
+2. **Import**: `specfact sync bridge --adapter speckit --repo . --write`
 3. **Sync**: `specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch`
 4. **Enforce**: `specfact enforce stage --preset minimal` (start shadow mode)
 

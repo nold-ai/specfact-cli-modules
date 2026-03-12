@@ -21,7 +21,7 @@ Always document commands exactly as implemented by `specfact <command> --help` i
 - Positional bundle argument:
   - `specfact code import [BUNDLE]`
   - `specfact plan init BUNDLE`
-  - `specfact plan review [BUNDLE]`
+  - `specfact plan compare [BUNDLE]`
 - `--bundle` option:
   - Supported by many plan mutation commands (for example `plan add-feature`, `plan add-story`, `plan update-feature`)
   - Not universally supported across all commands
@@ -45,7 +45,7 @@ Before merging command docs updates:
 ```bash
 hatch run specfact code import --help
 hatch run specfact plan init --help
-hatch run specfact plan review --help
+hatch run specfact plan compare --help
 hatch run specfact plan add-feature --help
 ```
 

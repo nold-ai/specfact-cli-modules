@@ -58,12 +58,12 @@ specfact plan add-story --bundle new-feature --feature <feature-id> --story "As 
 
 **Recommended**: [External Tool Integration Chain](command-chains.md#3-external-tool-integration-chain)
 
-**Command**: `import from-bridge` → `sync bridge`
+**Command**: `sync bridge`
 
 **Quick Example**:
 
 ```bash
-specfact import from-bridge --repo . --adapter speckit --write
+specfact sync bridge --repo . --adapter speckit --write
 specfact sync bridge --adapter speckit --bundle <bundle-name> --bidirectional --watch
 ```
 
@@ -89,12 +89,12 @@ specfact code import legacy-api --repo ./legacy-app
 
 ### I want to review and update extracted features
 
-**Recommended**: `plan review` → `plan update-feature`
+**Recommended**: `plan compare` → `plan update-feature`
 
 **Quick Example**:
 
 ```bash
-specfact plan review legacy-api
+specfact plan compare --bundle legacy-api
 specfact plan update-feature --bundle legacy-api --feature <feature-id>
 ```
 
@@ -273,14 +273,14 @@ specfact project version bump --bundle <bundle-name> --type minor
 
 **Recommended**: [Plan Promotion & Release Chain](command-chains.md#5-plan-promotion--release-chain)
 
-**Command**: `plan review` → `enforce sdd` → `plan promote`
+**Command**: `plan compare` → `enforce sdd` → `plan select`
 
 **Quick Example**:
 
 ```bash
-specfact plan review <bundle-name>
+specfact plan compare --bundle <bundle-name>
 specfact enforce sdd --bundle <bundle-name>
-specfact plan promote --bundle <bundle-name> --stage approved
+specfact plan select --bundle <bundle-name>
 ```
 
 **Detailed Guide**: [Agile/Scrum Workflows](agile-scrum-workflows.md)
@@ -613,7 +613,7 @@ specfact --version
 specfact repro --verbose
 
 # Check plan for issues
-specfact plan review <bundle-name>
+specfact plan compare --bundle <bundle-name>
 ```
 
 **Detailed Guide**: [Troubleshooting](troubleshooting.md)

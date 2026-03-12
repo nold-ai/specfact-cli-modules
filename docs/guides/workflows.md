@@ -39,14 +39,11 @@ specfact code import api-module --repo . --entry-point src/api
 ### Step 2: Review Extracted Specs
 
 ```bash
-# Review bundle to understand extracted specs
-specfact plan review legacy-api
-
-# Or get structured findings for analysis
-specfact plan review legacy-api --list-findings --findings-format json
+# Compare and review bundle contents
+specfact plan compare --bundle legacy-api
 ```
 
-**Note**: Use CLI commands to interact with bundles. The bundle structure (`.specfact/projects/<bundle-name>/`) is managed by SpecFact CLI - use commands like `plan review`, `plan add-feature`, `plan update-feature` to modify bundles, not direct file editing.
+**Note**: Use CLI commands to interact with bundles. The bundle structure (`.specfact/projects/<bundle-name>/`) is managed by SpecFact CLI - use commands like `plan compare`, `plan add-feature`, `plan update-feature` to modify bundles, not direct file editing.
 
 ### Step 3: Add Contracts Incrementally
 
@@ -464,7 +461,7 @@ Complete workflow for migrating from Spec-Kit or OpenSpec.
 #### Step 1: Preview
 
 ```bash
-specfact import from-bridge --adapter speckit --repo . --dry-run
+specfact sync bridge --adapter speckit --repo . --dry-run
 ```
 
 **What it does**:
@@ -476,7 +473,7 @@ specfact import from-bridge --adapter speckit --repo . --dry-run
 #### Step 2: Execute
 
 ```bash
-specfact import from-bridge --adapter speckit --repo . --write
+specfact sync bridge --adapter speckit --repo . --write
 ```
 
 **What it does**:

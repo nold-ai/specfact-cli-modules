@@ -204,8 +204,8 @@ Use all three together for comprehensive coverage.
 
 **Week 1 (2-4 hours):**
 
-- Run `import from-code` to extract specs (10 seconds)
-- Review extracted plan bundle
+- Run `specfact code import` to extract specs (10 seconds)
+- Review extracted project bundle
 - Add contracts to 3-5 critical functions
 
 **Week 2 (4-6 hours):**

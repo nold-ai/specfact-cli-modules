@@ -64,10 +64,10 @@ Once initialized, the following slash commands are available in your IDE:
 |---------------|---------|------------------------|
 | `/specfact.01-import` | Import from codebase | `specfact code import` |
 | `/specfact.02-plan` | Plan management | `specfact plan init/add-feature/add-story` |
-| `/specfact.03-review` | Review plan | `specfact plan review` |
-| `/specfact.04-sdd` | Create SDD manifest | `specfact govern enforce sdd` |
-| `/specfact.05-enforce` | SDD enforcement | `specfact govern enforce sdd` |
-| `/specfact.06-sync` | Sync operations | `specfact project sync bridge` |
+| `/specfact.03-review` | Review plan | `specfact plan compare` |
+| `/specfact.04-sdd` | Create SDD manifest | `specfact enforce sdd` |
+| `/specfact.05-enforce` | SDD enforcement | `specfact enforce sdd` |
+| `/specfact.06-sync` | Sync operations | `specfact sync bridge` |
 | `/specfact.07-contracts` | Contract management | `specfact generate contracts-prompt` |
 
 ### Advanced Commands
@@ -75,7 +75,7 @@ Once initialized, the following slash commands are available in your IDE:
 | Slash Command | Purpose | Equivalent CLI Command |
 |---------------|---------|------------------------|
 | `/specfact.compare` | Compare plans | `specfact plan compare` |
-| `/specfact.validate` | Validation suite | `specfact code repro` |
+| `/specfact.validate` | Validation suite | `specfact repro` |
 | `/specfact.backlog-refine` | Backlog refinement (AI IDE interactive loop) | `specfact backlog refine github \| ado` |
 
 For an end-to-end tutorial on backlog refine with your AI IDE (story quality, underspecification, DoR, custom templates), see **[Tutorial: Backlog Refine with AI IDE](../getting-started/tutorial-backlog-refine-ai-ide.md)**.
@@ -107,7 +107,7 @@ graph TD
 specfact code import my-project --repo .
 
 # Run validation to find gaps
-specfact code repro --verbose
+specfact repro --verbose
 ```
 
 #### 2. Generate AI-Ready Prompt
@@ -151,10 +151,10 @@ cat .specfact/prompts/fix-prompt-GAP-001.md
 specfact contract coverage --bundle my-project
 
 # Run validation
-specfact code repro --verbose
+specfact repro --verbose
 
 # Enforce SDD compliance
-specfact govern enforce sdd --bundle my-project
+specfact enforce sdd --bundle my-project
 ```
 
 #### 5. Iterate if Needed
@@ -196,7 +196,7 @@ The AI IDE workflow integrates with several command chains:
 specfact code import legacy-api --repo .
 
 # 2. Find gaps
-specfact code repro --verbose
+specfact repro --verbose
 
 # 3. Generate contract prompt
 specfact generate contracts-prompt --bundle legacy-api --feature FEATURE-001
@@ -208,8 +208,8 @@ specfact generate contracts-prompt --bundle legacy-api --feature FEATURE-001
 
 # 5. Validate
 specfact contract coverage --bundle legacy-api
-specfact code repro --verbose
-specfact govern enforce sdd --bundle legacy-api
+specfact repro --verbose
+specfact enforce sdd --bundle legacy-api
 ```
 
 ---

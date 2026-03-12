@@ -43,7 +43,7 @@ specfact code import legacy-api --repo ./legacy-app
 - SpecFact analyzes all Python files
 - Extracts features, user stories, and business logic
 - Generates dependency graphs
-- Creates plan bundle with extracted specs
+- Creates project bundle with extracted specs
 
 **Output:**
 
@@ -70,7 +70,7 @@ This is especially useful if you plan to sync with Spec-Kit later.
 
 ```bash
 # Review the extracted plan using CLI commands
-specfact plan review legacy-api
+specfact plan compare --bundle legacy-api
 ```
 
 **What to look for:**
@@ -112,7 +112,7 @@ specfact plan compare \
 
 ```bash
 # Review plan using CLI commands
-specfact plan review legacy-api
+specfact plan compare --bundle legacy-api
 ```
 
 ### Step 2.2: Add Contracts Incrementally
@@ -143,7 +143,7 @@ def process_payment(user_id, amount, currency):
 
 ```bash
 # Run in shadow mode (observe only)
-specfact enforce --mode shadow
+specfact enforce stage --preset minimal
 ```
 
 **Benefits:**
@@ -265,7 +265,7 @@ process_payment(user_id=-1, amount=-50, currency="XYZ")
 hatch run contract-test-full
 
 # Check for violations
-specfact enforce --mode block
+specfact enforce stage --preset strict
 ```
 
 **Success criteria:**

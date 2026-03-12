@@ -32,19 +32,19 @@ Common issues and solutions for SpecFact CLI.
 
 **Symptom**: `specfact plan select` takes a long time (5+ seconds) to list plans.
 
-**Cause**: Plan bundles may be missing summary metadata (older schema version 1.0).
+**Cause**: Project bundles may be missing summary metadata (older schema version 1.0).
 
 **Solution**:
 
 ```bash
-# Upgrade all plan bundles to latest schema (adds summary metadata)
+# Upgrade all project bundles to latest schema (adds summary metadata)
 specfact plan upgrade --all
 
 # Verify upgrade worked
 specfact plan select --last 5
 ```
 
-**Performance Improvement**: After upgrade, `plan select` is 44% faster (3.6s vs 6.5s) and scales better with large plan bundles.
+**Performance Improvement**: After upgrade, `plan select` is 44% faster (3.6s vs 6.5s) and scales better with large project bundles.
 
 1. **Use uvx** (no installation needed):
 
@@ -103,7 +103,7 @@ specfact plan select --last 5
 3. **Use explicit path**:
 
    ```bash
-   specfact import from-bridge --adapter speckit --repo /path/to/speckit-project
+   specfact sync bridge --adapter speckit --repo /path/to/speckit-project
    ```
 
 ### Code Analysis Fails (Brownfield) ⭐
@@ -218,7 +218,7 @@ specfact plan select --last 5
 1. **Check enforcement configuration** (use CLI commands):
 
    ```bash
-   specfact enforce show-config
+   specfact enforce stage --preset minimal
    ```
 
 2. **Verify enforcement mode**:
@@ -260,7 +260,7 @@ specfact plan select --last 5
 3. **Check enforcement rules** (use CLI commands):
 
    ```bash
-   specfact enforce show-config
+   specfact enforce stage --preset minimal
    ```
 
 4. **Use minimal mode** (observe only):
@@ -391,7 +391,7 @@ specfact plan select --last 5
 2. **Verify plan contents** (use CLI commands):
 
    ```bash
-   specfact plan review <bundle-name>
+   specfact plan compare --bundle <bundle-name>
    ```
 
 3. **Use verbose mode**:

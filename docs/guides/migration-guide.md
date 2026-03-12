@@ -70,7 +70,7 @@ Start: What do you need to migrate?
 
 1. Review [CLI Reorganization Migration Guide](migration-cli-reorganization.md)
 2. Update all command references
-3. Migrate plan bundles to new schema
+3. Migrate project bundles to new schema
 4. Update CI/CD configurations
 
 **Related**: [CLI Reorganization Migration](migration-cli-reorganization.md)
@@ -134,9 +134,9 @@ specfact project import --bundle new-bundle --persona <persona> --source exporte
 
 ## Plan Schema Migrations
 
-### Upgrading Plan Bundles
+### Upgrading Project Bundles
 
-**When to use**: When plan bundles are on an older schema version
+**When to use**: When project bundles are on an older schema version
 
 **Command**:
 
@@ -172,7 +172,7 @@ specfact --version
 # 3. Upgrade SpecFact CLI
 pip install --upgrade specfact-cli
 
-# 4. Upgrade plan bundles
+# 4. Upgrade project bundles
 specfact plan upgrade --all
 
 # 5. Test commands
@@ -185,10 +185,10 @@ specfact plan select --last 5
 
 ```bash
 # 1. Import from Spec-Kit
-specfact import from-bridge --repo . --adapter speckit --write
+specfact sync bridge --repo . --adapter speckit --write
 
 # 2. Review imported plan
-specfact plan review <bundle-name>
+specfact plan compare --bundle <bundle-name>
 
 # 3. Set up bidirectional sync (optional)
 specfact sync bridge --adapter speckit --bundle <bundle-name> --bidirectional --watch
@@ -205,7 +205,7 @@ specfact enforce sdd --bundle <bundle-name>
 
 ### Common Issues
 
-**Issue**: Plan bundles fail to upgrade
+**Issue**: Project bundles fail to upgrade
 
 **Solution**:
 

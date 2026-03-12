@@ -91,7 +91,7 @@ This enables:
 
 - **Faster analysis** - Focus on specific modules for quicker feedback
 - **Incremental modernization** - Modernize one module at a time
-- **Multi-plan support** - Create separate plan bundles for different projects/modules
+- **Multi-plan support** - Create separate project bundles for different projects/modules
 - **Better organization** - Keep plans organized by project boundaries
 
 **💡 Tip**: After importing, the CLI may suggest generating a bootstrap constitution for Spec-Kit integration. This auto-generates a constitution from your repository analysis:

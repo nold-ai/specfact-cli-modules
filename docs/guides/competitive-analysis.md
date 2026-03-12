@@ -93,7 +93,7 @@ specfact sync bridge --adapter github --mode export-only \
 Already using Spec-Kit? SpecFact CLI **imports your work** in one command:
 
 ```bash
-specfact import from-bridge --adapter speckit --repo ./my-speckit-project --write
+specfact sync bridge --adapter speckit --repo ./my-speckit-project --write
 ```
 
 **Result**: Your Spec-Kit artifacts (spec.md, plan.md, tasks.md) become production-ready contracts with zero manual work.
@@ -317,7 +317,7 @@ See [Use Cases: Brownfield Modernization](use-cases.md#use-case-1-brownfield-cod
 **One-command import**:
 
 ```bash
-specfact import from-bridge --adapter speckit --repo . --write
+specfact sync bridge --adapter speckit --repo . --write
 ```
 
 See [Use Cases: Spec-Kit Migration](use-cases.md#use-case-2-github-spec-kit-migration-secondary)

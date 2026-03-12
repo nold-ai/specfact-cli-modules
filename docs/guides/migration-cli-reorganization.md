@@ -82,7 +82,7 @@ specfact enforce sdd legacy-api --no-interactive
 The new numbered commands follow natural workflow progression:
 
 1. **Import** (`/specfact.01-import`) - Start by importing existing code
-2. **Plan** (`/specfact.02-plan`) - Manage your plan bundle
+2. **Plan** (`/specfact.02-plan`) - Manage your project bundle
 3. **Review** (`/specfact.03-review`) - Review and promote your plan
 4. **SDD** (`/specfact.04-sdd`) - Create SDD manifest
 5. **Enforce** (`/specfact.05-enforce`) - Validate SDD and contracts
@@ -123,14 +123,14 @@ The new numbered commands follow natural workflow progression:
 
 ```bash
 specfact plan init legacy-api
-specfact plan review legacy-api
+specfact plan compare --bundle legacy-api
 ```
 
 **After** (named parameter):
 
 ```bash
 specfact plan init legacy-api
-specfact plan review legacy-api
+specfact plan compare --bundle legacy-api
 ```
 
 ### Path Resolution Changes
