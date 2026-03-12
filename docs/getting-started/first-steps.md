@@ -32,7 +32,7 @@ This guide walks you through your first commands with SpecFact CLI, with step-by
 **Option A: CLI-only Mode** (Quick start, works with uvx):
 
 ```bash
-uvx specfact-cli@latest import from-code my-project --repo .
+uvx specfact-cli@latest code import my-project --repo .
 ```
 
 **Option B: Interactive AI Assistant Mode** (Recommended for better results):

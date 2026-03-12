@@ -30,13 +30,13 @@ Complete technical reference for SpecFact CLI.
 
 ### Commands
 
-- `specfact import from-bridge --adapter speckit` - Import from external tools via bridge adapter
-- `specfact import from-code <bundle-name>` - Reverse-engineer plans from code
+- `specfact project import from-bridge --adapter speckit` - Import from external tools via bridge adapter
+- `specfact code import <bundle-name>` - Reverse-engineer plans from code
 - `specfact plan init <bundle-name>` - Initialize new development plan
 - `specfact plan compare` - Compare manual vs auto plans
-- `specfact enforce stage` - Configure quality gates
-- `specfact repro` - Run full validation suite
-- `specfact sync bridge --adapter <adapter> --bundle <bundle-name>` - Sync with external tools via bridge adapter
+- `specfact govern enforce stage` - Configure quality gates
+- `specfact code repro` - Run full validation suite
+- `specfact project sync bridge --adapter <adapter> --bundle <bundle-name>` - Sync with external tools via bridge adapter
 - `specfact spec validate [--bundle <name>]` - Validate OpenAPI/AsyncAPI specifications
 - `specfact spec generate-tests [--bundle <name>]` - Generate contract tests from specifications
 - `specfact spec mock [--bundle <name>]` - Launch mock server for development
