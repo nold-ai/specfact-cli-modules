@@ -161,12 +161,12 @@ Detailed instructions for the AI assistant...
 
 | Command | Description | CLI Equivalent |
 |---------|-------------|----------------|
-| `/specfact.01-import` | Import codebase into plan bundle | `specfact import from-code <bundle-name>` |
+| `/specfact.01-import` | Import codebase into plan bundle | `specfact code import <bundle-name>` |
 | `/specfact.02-plan` | Plan management (init, add-feature, add-story, update-idea, update-feature, update-story) | `specfact plan <operation> <bundle-name>` |
 | `/specfact.03-review` | Review plan and promote through stages | `specfact plan review <bundle-name>`, `specfact plan promote <bundle-name>` |
 | `/specfact.04-sdd` | Create SDD manifest from plan | `specfact plan harden <bundle-name>` |
-| `/specfact.05-enforce` | Validate SDD and contracts | `specfact enforce sdd <bundle-name>` |
-| `/specfact.06-sync` | Sync with external tools or repository | `specfact sync bridge --adapter <adapter>` |
+| `/specfact.05-enforce` | Validate SDD and contracts | `specfact govern enforce sdd <bundle-name>` |
+| `/specfact.06-sync` | Sync with external tools or repository | `specfact project sync bridge --adapter <adapter>` |
 | `/specfact.07-contracts` | Contract enhancement workflow: analyze → generate prompts → apply sequentially | `specfact analyze contracts`, `specfact generate contracts-prompt`, `specfact generate contracts-apply` |
 
 **Advanced Commands** (no numbering):
@@ -174,7 +174,7 @@ Detailed instructions for the AI assistant...
 | Command | Description | CLI Equivalent |
 |---------|-------------|----------------|
 | `/specfact.compare` | Compare manual vs auto plans | `specfact plan compare` |
-| `/specfact.validate` | Run validation suite | `specfact repro` |
+| `/specfact.validate` | Run validation suite | `specfact code repro` |
 | `/specfact.generate-contracts-prompt` | Generate AI IDE prompt for adding contracts | `specfact generate contracts-prompt <file> --apply <contracts>` |
 
 ---

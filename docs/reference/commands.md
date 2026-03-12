@@ -41,7 +41,7 @@ After bundle install, command groups are mounted by category:
 |---|---|---|
 | `nold-ai/specfact-project` | `project` | `project`, `plan`, `import`, `sync`, `migrate` |
 | `nold-ai/specfact-backlog` | `backlog` | `backlog`, `policy` |
-| `nold-ai/specfact-codebase` | `code` | `analyze`, `drift`, `validate`, `repro` |
+| `nold-ai/specfact-codebase` | `code` | `import`, `analyze`, `drift`, `validate`, `repro` |
 | `nold-ai/specfact-spec` | `spec` | `contract`, `api`, `sdd`, `generate` |
 | `nold-ai/specfact-govern` | `govern` | `enforce`, `patch` |
 
@@ -52,7 +52,8 @@ Flat compatibility shims were removed in this change. Use grouped commands.
 | Removed | Replacement |
 |---|---|
 | `specfact plan ...` | `specfact project plan ...` |
-| `specfact import ...` | `specfact project import ...` |
+| `specfact import from-code ...` | `specfact code import ...` |
+| `specfact import from-bridge ...` | `specfact project import from-bridge ...` |
 | `specfact sync ...` | `specfact project sync ...` |
 | `specfact migrate ...` | `specfact project migrate ...` |
 | `specfact backlog ...` (flat module) | `specfact backlog ...` (bundle group) |
@@ -77,7 +78,7 @@ specfact init --profile solo-developer
 specfact module install nold-ai/specfact-backlog
 
 # Project workflow examples
-specfact project import from-code legacy-api --repo .
+specfact code import legacy-api --repo .
 specfact project plan review legacy-api
 
 # Code workflow examples
