@@ -27,6 +27,7 @@ Rule prefixes are mapped as follows:
 Additional behavior:
 
 - only the provided file list is considered
+- unsupported Ruff rule families are skipped instead of being mislabeled
 - a non-empty Ruff `fix` payload sets `fixable=True`
 - malformed output or a missing Ruff executable yields a single `tool_error` finding
 
@@ -48,5 +49,6 @@ Cyclomatic complexity thresholds:
 
 Additional behavior:
 
+- the default Hatch environment installs `radon`, so the runner is usable in standard repo workflows
 - only the provided file list is considered
 - malformed output or a missing Radon executable yields a single `tool_error` finding

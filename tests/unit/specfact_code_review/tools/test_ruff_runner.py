@@ -103,6 +103,42 @@ def test_run_ruff_filters_findings_to_requested_files(tmp_path: Path, monkeypatc
     assert findings[0].rule == "E501"
 
 
+def test_run_ruff_skips_unsupported_rule_families(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = [
+        {
+            "code": "UP035",
+            "filename": str(file_path),
+            "location": {"row": 3, "column": 1},
+            "message": "Import from collections.abc instead: Iterable",
+            "fix": {"applicability": "safe"},
+        },
+        {
+            "code": "B007",
+            "filename": str(file_path),
+            "location": {"row": 8, "column": 1},
+            "message": "Loop control variable not used within loop body",
+            "fix": None,
+        },
+        {
+            "code": "E501",
+            "filename": str(file_path),
+            "location": {"row": 12, "column": 1},
+            "message": "line too long",
+            "fix": None,
+        },
+    ]
+    monkeypatch.setattr(
+        subprocess, "run", Mock(return_value=completed_process("ruff", stdout=json.dumps(payload), returncode=1))
+    )
+
+    findings = run_ruff([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].rule == "E501"
+    assert findings[0].category == "style"
+
+
 def test_run_ruff_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     monkeypatch.setattr(

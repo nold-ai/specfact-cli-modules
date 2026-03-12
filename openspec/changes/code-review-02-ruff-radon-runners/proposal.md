@@ -19,10 +19,10 @@ implementation so the package can ship the same review primitives.
 - **NEW**: unit tests covering category/severity mapping, file scoping, fixable
   detection, and tool-error behavior
 - **NEW**: bundle documentation describing the runner behavior and thresholds
+- **UPDATED**: release metadata and registry artifact publishing for the bundle version
 
 ## Impact
 
 - No breaking public command changes
 - Keeps the bundle aligned with upstream `specfact-cli` OpenSpec scope
-- Module signing and publish-time artifact updates are intentionally deferred to a
-  follow-up step per user instruction
+- Ships a matching registry artifact so the bumped bundle version is installable

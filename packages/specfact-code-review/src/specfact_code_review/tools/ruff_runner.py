@@ -35,14 +35,14 @@ def _allowed_paths(files: list[Path]) -> set[str]:
     return allowed
 
 
-def _category_for_rule(rule: str) -> str:
+def _category_for_rule(rule: str) -> str | None:
     if rule.startswith("S"):
         return "security"
     if rule.startswith("C9"):
         return "clean_code"
     if rule.startswith(("E", "F", "I", "W")):
         return "style"
-    return "style"
+    return None
 
 
 def _tool_error(file_path: Path, message: str) -> list[ReviewFinding]:
@@ -104,6 +104,9 @@ def run_ruff(files: list[Path]) -> list[ReviewFinding]:
             rule = item.get("code") or item.get("rule")
             if not isinstance(rule, str):
                 raise ValueError("ruff rule must be a string")
+            category = _category_for_rule(rule)
+            if category is None:
+                continue
             line = location["row"]
             if not isinstance(line, int):
                 raise ValueError("ruff line must be an integer")
@@ -112,7 +115,7 @@ def run_ruff(files: list[Path]) -> list[ReviewFinding]:
                 raise ValueError("ruff message must be a string")
             findings.append(
                 ReviewFinding(
-                    category=_category_for_rule(rule),
+                    category=category,
                     severity="warning",
                     tool="ruff",
                     rule=rule,

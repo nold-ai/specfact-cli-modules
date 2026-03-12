@@ -21,6 +21,7 @@ dependencies = [
     "pytest-mock>=3.15.1",
     "pytest-asyncio>=1.2.0",
     "basedpyright>=1.32.1",
+    "radon>=6.0.1",
     "ruff>=0.14.2",
     "pylint>=4.0.2",
     "pre-commit>=3.7.0",

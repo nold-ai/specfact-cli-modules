@@ -44,6 +44,6 @@
 
 - [x] 5.1 Add `docs/modules/code-review.md` documenting Ruff mappings and Radon thresholds
 
-## 6. Deferred follow-up
+## 6. Release metadata sync
 
-- [x] 6.1 Handle module signing and release artifact metadata in a follow-up step
+- [x] 6.1 Publish matching registry artifact metadata for `specfact-code-review`

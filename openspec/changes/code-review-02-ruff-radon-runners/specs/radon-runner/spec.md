@@ -4,6 +4,10 @@
 The bundle SHALL invoke `radon cc -j` for only the provided files and convert function
 complexity above 12 into `ReviewFinding` records.
 
+### Requirement: Radon is available in the standard repo environment
+The bundle SHALL declare the Radon executable in the default development environment
+used by local and CI quality gates.
+
 #### Scenario: Complexity 13 produces a warning
 - **GIVEN** Radon reports a function with complexity 13
 - **WHEN** `run_radon(files=[...])` is called

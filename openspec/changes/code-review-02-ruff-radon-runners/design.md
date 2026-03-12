@@ -23,7 +23,8 @@ rule prefixes as follows:
 - `E*`, `F*`, `I*`, `W*` -> `style`
 
 The runner treats a non-empty `fix` payload as `fixable=True`. Findings are filtered to
-the provided file set even if mocked tool output contains extra files.
+the provided file set even if mocked tool output contains extra files. Unsupported rule
+families are skipped so the bundle only emits governed categories it explicitly maps.
 
 ## Radon mapping
 
@@ -34,7 +35,9 @@ the provided file set even if mocked tool output contains extra files.
 - complexity `>15` -> `severity="error"`
 
 Complexity `<=12` does not emit a finding. All radon findings map to
-`category="clean_code"`.
+`category="clean_code"`. The default Hatch environment also installs `radon` so the
+runner works in the repo's normal dev and CI paths instead of immediately degrading to
+`tool_error`.
 
 ## Error handling
 

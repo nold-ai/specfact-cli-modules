@@ -19,6 +19,11 @@ and translate supported Ruff rules into `ReviewFinding` records.
 - **WHEN** `run_ruff(files=[...])` is called
 - **THEN** the returned finding has `category="style"`
 
+#### Scenario: Unsupported rule families are skipped
+- **GIVEN** Ruff reports rules outside the supported `S*`, `C9*`, `E*`, `F*`, `I*`, and `W*` families
+- **WHEN** `run_ruff(files=[...])` is called
+- **THEN** those unsupported rules do not produce governed review findings
+
 #### Scenario: Findings are filtered to the provided file list
 - **GIVEN** a file list containing one Python file
 - **WHEN** mocked Ruff output includes findings for another file
