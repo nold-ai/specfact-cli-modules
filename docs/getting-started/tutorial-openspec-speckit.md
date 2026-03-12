@@ -351,7 +351,7 @@ ls specs/
 
 ```bash
 # Preview import
-specfact import from-bridge --adapter speckit --repo ./my-speckit-project --dry-run
+specfact sync bridge --adapter speckit --repo ./my-speckit-project --dry-run
 
 # Expected output:
 # 🔍 Analyzing Spec-Kit project via bridge adapter...
@@ -377,7 +377,7 @@ specfact import from-bridge --adapter speckit --repo ./my-speckit-project --dry-
 
 ```bash
 # Execute import
-specfact import from-bridge \
+specfact sync bridge \
   --adapter speckit \
   --repo ./my-speckit-project \
   --write
@@ -401,10 +401,10 @@ specfact import from-bridge \
 **Review what was created:**
 
 ```bash
-# Review plan bundle (bundle name is positional argument, not --bundle)
+# Compare and review project bundle contents
 # IMPORTANT: Must be in the project directory where .specfact/ exists
 cd /path/to/your-speckit-project
-specfact plan review <bundle-name>
+specfact plan compare --bundle <bundle-name>
 
 # Note: Bundle name is typically "main" for Spec-Kit imports
 # Check actual bundle name: ls .specfact/projects/
@@ -412,11 +412,11 @@ specfact plan review <bundle-name>
 # Expected output:
 # ✅ Features: 5
 # ✅ Stories: 23
-# ✅ Plan bundle reviewed successfully
+# ✅ Project bundle compared successfully
 ```
 
-**Note**: 
-- `plan review` takes the bundle name as a positional argument (not `--bundle`)
+**Note**:
+- `plan compare` shows the project bundle summary
 - It uses the current directory to find `.specfact/projects/` (no `--repo` option)
 - You must be in the project directory where the bundle was created
 

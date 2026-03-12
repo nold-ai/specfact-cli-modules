@@ -86,7 +86,7 @@ Start: What do you want to accomplish?
 specfact code import legacy-api --repo .
 
 # Step 2: Review the extracted plan
-specfact plan review legacy-api
+specfact plan compare --bundle legacy-api
 
 # Step 3: Update features based on review findings
 specfact plan update-feature --bundle legacy-api --feature <feature-id>
@@ -122,7 +122,7 @@ graph TD
 **Expected Outcomes**:
 
 - Complete specification extracted from legacy code
-- Plan bundle with features, stories, and acceptance criteria
+- Project bundle with features, stories, and acceptance criteria
 - SDD-compliant codebase
 - Validated contracts and tests
 
@@ -143,7 +143,7 @@ graph TD
 **Command Sequence**:
 
 ```bash
-# Step 1: Initialize a new plan bundle
+# Step 1: Initialize a new project bundle
 specfact plan init new-feature --interactive
 
 # Step 2: Add features to the plan
@@ -153,10 +153,10 @@ specfact plan add-feature --bundle new-feature --name "User Authentication"
 specfact plan add-story --bundle new-feature --feature <feature-id> --story "As a user, I want to log in"
 
 # Step 4: Review the plan for completeness
-specfact plan review new-feature
+specfact plan compare --bundle new-feature
 
 # Step 5: Harden the plan (finalize before implementation)
-specfact plan harden --bundle new-feature
+specfact enforce sdd --bundle new-feature
 
 # Step 6: Generate contracts from the plan
 specfact generate contracts --bundle new-feature
@@ -188,7 +188,7 @@ graph TD
 
 **Expected Outcomes**:
 
-- Complete plan bundle with features and stories
+- Complete project bundle with features and stories
 - Generated contracts ready for implementation
 - SDD-compliant plan ready for development
 
@@ -210,10 +210,10 @@ graph TD
 ```bash
 # For Code/Spec Adapters (Spec-Kit, OpenSpec, generic-markdown):
 # Step 1: Import from external tool via bridge adapter
-specfact import from-bridge --repo . --adapter speckit --write
+specfact sync bridge --repo . --adapter speckit --write
 
 # Step 2: Review the imported plan
-specfact plan review <bundle-name>
+specfact plan compare --bundle <bundle-name>
 
 # Step 3: Set up bidirectional sync (optional)
 specfact sync bridge --adapter speckit --bundle <bundle-name> --bidirectional --watch
@@ -393,16 +393,16 @@ graph TD
 
 ```bash
 # Step 1: Review the plan before promotion
-specfact plan review <bundle-name>
+specfact plan compare --bundle <bundle-name>
 
 # Step 2: Enforce SDD compliance
 specfact enforce sdd --bundle <bundle-name>
 
 # Step 3: Promote the plan to next stage
-specfact plan promote --bundle <bundle-name> --stage <next-stage>
+specfact plan select --bundle <bundle-name>
 
 # Step 4: Bump version when releasing
-specfact project version bump --bundle <bundle-name> --type <major|minor|patch>
+specfact plan upgrade --bundle <bundle-name>
 ```
 
 **Workflow Diagram**:
@@ -425,7 +425,7 @@ graph LR
 
 - Plan promoted through approval stages
 - Version bumped appropriately
-- Release-ready plan bundle
+- Release-ready project bundle
 
 **Related Guides**:
 

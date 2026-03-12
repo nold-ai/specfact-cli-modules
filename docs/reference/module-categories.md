@@ -19,10 +19,20 @@ Core commands remain top-level:
 Category command groups:
 
 - `specfact project ...`
+- `specfact plan ...`
+- `specfact sync ...`
 - `specfact backlog ...`
 - `specfact code ...`
+- `specfact analyze ...`
+- `specfact drift ...`
+- `specfact validate ...`
+- `specfact repro ...`
 - `specfact spec ...`
-- `specfact govern ...`
+- `specfact contract ...`
+- `specfact sdd ...`
+- `specfact generate ...`
+- `specfact enforce ...`
+- `specfact review`
 
 ## Canonical Category Assignments
 
@@ -75,7 +85,7 @@ Namespace mapping:
 
 Compatibility note:
 
-- Flat top-level command shims were removed. Use category groups (`project`, `backlog`, `code`, `spec`, `govern`).
+- Commands from each bundle are available at the top level (e.g., `specfact repro`, `specfact enforce`, `specfact plan`).
 
 ## First-Run Profiles
 
@@ -96,11 +106,7 @@ specfact init --install all
 
 ## Command Topology: Before and After
 
-Before:
+Command surface:
 
-- Flat top-level command surface with many feature commands.
-
-After:
-
-- Core top-level commands plus grouped workflow families (`project`, `backlog`, `code`, `spec`, `govern`).
-- No backward-compatibility flat shims.
+- Core top-level commands (`init`, `auth`, `module`, `upgrade`).
+- Workflow commands available at the top level (e.g., `specfact plan`, `specfact repro`, `specfact enforce`).

@@ -17,7 +17,7 @@ This document defines the canonical directory structure for SpecFact CLI artifac
 All SpecFact artifacts are stored under `.specfact/` in the repository root. This ensures:
 
 - **Consistency**: All artifacts in one predictable location
-- **Multiple plans**: Support for multiple plan bundles in a single repository
+- **Multiple plans**: Support for multiple project bundles in a single repository
 - **Gitignore-friendly**: Easy to exclude reports from version control
 - **Clear separation**: Plans (versioned) vs reports (ephemeral)
 - **CLI-first**: All artifacts are local, no cloud storage required
@@ -144,9 +144,9 @@ For how the CLI discovers and loads commands from module packages (registry, mod
 - Supports multiple bundles per repository for brownfield modernization, monorepos, or feature branches
 - Aspect files are YAML format (JSON support may be added in future)
 
-**Plan Bundle Structure:**
+**Project Bundle Structure:**
 
-Plan bundles are YAML (or JSON) files with the following structure:
+Project bundles are YAML (or JSON) files with the following structure:
 
 ```yaml
 version: "1.1"  # Schema version (current: 1.1)
@@ -197,15 +197,15 @@ change_archive: []     # Optional - list of archived changes (not stored in bund
 
 **Summary Metadata (v1.1+):**
 
-Plan bundles version 1.1 and later include summary metadata in the `metadata.summary` section. This provides:
+Project bundles version 1.1 and later include summary metadata in the `metadata.summary` section. This provides:
 
 - **Fast access**: Read plan counts without parsing entire file (44% faster performance)
 - **Integrity verification**: Content hash detects plan modifications
 - **Performance optimization**: Only reads first 50KB for large files (>10MB)
 
-**Upgrading Plan Bundles:**
+**Upgrading Project Bundles:**
 
-Use `specfact plan upgrade` to migrate older plan bundles to the latest schema:
+Use `specfact plan upgrade` to migrate older project bundles to the latest schema:
 
 ```bash
 # Upgrade active plan
@@ -671,7 +671,7 @@ mv reports/analysis.md .specfact/reports/brownfield/
 
 ## Multiple Plans in One Repository
 
-SpecFact supports multiple plan bundles for:
+SpecFact supports multiple project bundles for:
 
 - **Brownfield modernization** ⭐ **PRIMARY**: Separate plans for legacy components vs modernized code
 - **Monorepos**: One plan per service
