@@ -1717,7 +1717,7 @@ def compare(
                 if auto is None:
                     print_error(
                         "No code-derived bundles found in .specfact/projects/*/reports/brownfield/.\n"
-                        "Generate one with: specfact import from-code <bundle-name> --repo ."
+                        "Generate one with: specfact code import <bundle-name> --repo ."
                     )
                     raise typer.Exit(1)
                 print_info(f"Using latest code-derived bundle report: {auto}")
@@ -1744,7 +1744,7 @@ def compare(
             if auto is None:
                 print_error(
                     "No auto-derived bundles found in .specfact/projects/*/reports/brownfield/.\n"
-                    "Generate one with: specfact import from-code <bundle-name> --repo ."
+                    "Generate one with: specfact code import <bundle-name> --repo ."
                 )
                 raise typer.Exit(1)
             print_info(f"Using latest auto-derived bundle: {auto}")
@@ -2059,7 +2059,7 @@ def select(
             print_warning("No project bundles found in .specfact/projects/")
             print_info("Create a project bundle with:")
             print_info("  - specfact plan init <bundle-name>")
-            print_info("  - specfact import from-code <bundle-name>")
+            print_info("  - specfact code import <bundle-name>")
             raise typer.Exit(1)
 
         # Apply filters
