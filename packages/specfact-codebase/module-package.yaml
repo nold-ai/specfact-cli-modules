@@ -13,4 +13,4 @@ description: Official SpecFact codebase bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:84dc2e7896509c1340e5fb48c0d44c84ae31c96b3882263d3b00c942d405673f
+  checksum: sha256:1d68e2d17d4b8da8e0c0b17fba5131b60c9ab07d3fd0e3832b5c187586a82698
