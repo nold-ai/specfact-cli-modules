@@ -98,3 +98,65 @@ Additional behavior:
 - only the provided changed-file list is reported back, even when pylint emits findings for other files
 - severity is derived from the message id prefix (`E*`/`F*` -> `error`, `I*` -> `info`, otherwise `warning`)
 - malformed output or a missing pylint executable yields a single `tool_error` finding
+
+### Contract runner
+
+`specfact_code_review.tools.contract_runner.run_contract_check(files)` combines two
+contract-oriented checks:
+
+1. an AST scan for public functions missing `@require` / `@ensure`
+2. a CrossHair fast pass
+
+AST scan behavior:
+
+- only public module-level and class-level functions are checked
+- functions prefixed with `_` are treated as private and skipped
+- missing icontract decorators become `contracts` findings with rule
+  `MISSING_ICONTRACT`
+- unreadable or invalid Python files degrade to a single `tool_error` finding instead
+  of raising
+
+CrossHair behavior:
+
+```bash
+crosshair check --per_path_timeout 2 <files...>
+```
+
+- CrossHair counterexamples map to `contracts` warnings with tool `crosshair`
+- timeouts are skipped so the AST scan can still complete
+- missing CrossHair binaries degrade to a single `tool_error` finding
+
+Operational note:
+
+- the current development environment includes CrossHair, but installed-user
+  environments still need that executable available for the fast pass to run
+
+## Review orchestration
+
+`specfact_code_review.run.runner.run_review(files, no_tests=False)` orchestrates the
+bundle runners in this order:
+
+1. Ruff
+2. Radon
+3. basedpyright
+4. pylint
+5. contract runner
+6. TDD gate, unless `no_tests=True`
+
+The merged findings are then scored into a governed `ReviewReport`.
+
+### TDD gate
+
+`specfact_code_review.run.runner.run_tdd_gate(files)` enforces a bundle-local
+test-before-code rule for changed files under
+`packages/specfact-code-review/src/specfact_code_review/...`.
+
+For each changed source file, the runner expects a matching unit test under
+`tests/unit/specfact_code_review/...` using the `test_<module>.py` naming pattern.
+
+Current behavior:
+
+- missing expected test file -> `TEST_FILE_MISSING`, `testing`, `error`
+- targeted pytest failure -> `TEST_FAILURE`, `testing`, `error`
+- coverage below 80% -> `TEST_COVERAGE_LOW`, `testing`, `warning`
+- `no_tests=True` skips the TDD gate entirely
