@@ -73,6 +73,15 @@
 - [ ] 7.2 Commit implementation changes on the feature branch
 - [ ] 7.3 Push branch and open a PR to `dev`
 
+## 8. Post-review regression fixes
+
+- [x] 8.1 Add failing tests for Semgrep orchestration in `run_review`
+- [x] 8.2 Add failing tests covering absolute-path TDD gate inputs
+- [x] 8.3 Update contract-runner behavior so missing CrossHair degrades without a blocking finding
+- [x] 8.4 Wire `run_semgrep()` into `run_review()` in the documented tool order
+- [x] 8.5 Re-run targeted code-review tests and record bugfix evidence in `TDD_EVIDENCE.md`
+- [x] 8.6 Re-run required quality gates for the repository
+
 ## Post-merge cleanup
 
 - [ ] Remove the worktree, delete the local branch, and prune stale worktree metadata

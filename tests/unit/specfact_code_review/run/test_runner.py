@@ -41,6 +41,7 @@ def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
 
     monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: _record("ruff"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: _record("radon"))
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: _record("semgrep"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: _record("basedpyright"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: _record("pylint"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: _record("contracts"))
@@ -49,13 +50,17 @@ def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
     report = run_review([Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")])
 
     assert isinstance(report, ReviewReport)
-    assert calls == ["ruff", "radon", "basedpyright", "pylint", "contracts", "testing"]
+    assert calls == ["ruff", "radon", "semgrep", "basedpyright", "pylint", "contracts", "testing"]
 
 
 def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [_finding(tool="ruff", rule="E501")])
     monkeypatch.setattr(
         "specfact_code_review.run.runner.run_radon", lambda files: [_finding(tool="radon", rule="CC13")]
+    )
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_semgrep",
+        lambda files: [_finding(tool="semgrep", rule="cross-layer-call", category="architecture")],
     )
     monkeypatch.setattr(
         "specfact_code_review.run.runner.run_basedpyright",
@@ -79,6 +84,7 @@ def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -
     assert [finding.tool for finding in report.findings] == [
         "ruff",
         "radon",
+        "semgrep",
         "basedpyright",
         "pylint",
         "contract_runner",
@@ -98,6 +104,7 @@ def test_run_tdd_gate_reports_missing_test_file() -> None:
 def test_run_review_skips_tdd_gate_when_no_tests_is_true(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: [])
@@ -117,6 +124,7 @@ def test_run_review_skips_tdd_gate_when_no_tests_is_true(monkeypatch: MonkeyPatc
 def test_run_review_returns_review_report(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: [])
@@ -158,6 +166,19 @@ def test_run_tdd_gate_warns_when_coverage_is_below_threshold(monkeypatch: Monkey
     assert len(findings) == 1
     assert findings[0].rule == "TEST_COVERAGE_LOW"
     assert findings[0].severity == "warning"
+
+
+def test_run_tdd_gate_maps_absolute_source_paths(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    source_file = tmp_path / "packages/specfact-code-review/src/specfact_code_review/review/commands.py"
+    source_file.parent.mkdir(parents=True)
+    source_file.write_text("def command() -> None:\n    pass\n", encoding="utf-8")
+
+    findings = run_tdd_gate([source_file.resolve()])
+
+    assert len(findings) == 1
+    assert findings[0].rule == "TEST_FILE_MISSING"
+    assert findings[0].file == str(source_file.resolve())
 
 
 def test_run_tdd_gate_returns_no_finding_for_passing_tests_with_sufficient_coverage(

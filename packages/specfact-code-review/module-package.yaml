@@ -1,5 +1,5 @@
 name: nold-ai/specfact-code-review
-version: 0.41.6
+version: 0.41.7
 commands:
   - code
 tier: official
@@ -12,5 +12,5 @@ description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:0103c01b10bd6168eed7db1a6382c633c7c2c0e44253af1ebcb94e732291777c
-  signature: umW2zGcQYNGWbwGV5lG1PlgIcYd2hhwnacTPViheq8KqKLXFBO1970lRge4e+1Cy4KNRiFex45s3Xuoh0FW5BA==
+  checksum: sha256:f3384cd61ea1073d43b9e0b51b5bede967a199f0d93f8b94abe35dec3a80faaf
+  signature: 4f/CSwuvn/T20kHlema6JnBUH1vTcKDdC4UHfOJHZDg+TU1TzQfWi6ftFdjxzsnTb4EquR5ey5ARLOM0/6SHAw==

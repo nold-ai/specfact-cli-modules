@@ -40,3 +40,4 @@ for counterexample discovery.
 - **WHEN** `run_contract_check(files=[...])` is called
 - **THEN** the AST scan still runs
 - **AND** no exception propagates to the caller
+- **AND** CrossHair unavailability does not produce a blocking finding
