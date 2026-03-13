@@ -24,6 +24,12 @@ highest-value quality checks in this codebase:
 - **NEW**: test fixtures used by AST scan coverage
 - **UPDATED**: bundle docs for contract runner and TDD gate behavior
 - **UPDATED**: bundle release metadata for the next `specfact-code-review` version
+- **UPDATED**: regression fixes for the shipped runner wiring and graceful
+  degradation paths:
+  - include `run_semgrep()` in the main `run_review()` orchestration flow
+  - treat missing CrossHair as a non-blocking degradation signal instead of a
+    hard error
+  - accept both relative and absolute reviewed source paths in the TDD gate
 
 ## Impact
 

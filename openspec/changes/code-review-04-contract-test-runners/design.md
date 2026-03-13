@@ -34,8 +34,8 @@ cmd = ["crosshair", "check", "--per_path_timeout", "2", *paths]
 Map counterexample output to `ReviewFinding(category="contracts",
 severity="warning", tool="crosshair")`.
 
-If CrossHair times out or is unavailable, continue returning AST-scan results and add a
-`tool_error` finding only for unavailable/binary-execution failures.
+If CrossHair times out or is unavailable, continue returning AST-scan results without
+raising or forcing a blocking verdict.
 
 ## `runner.py`
 
@@ -43,10 +43,11 @@ The orchestrator composes already-available review runners in sequence:
 
 1. Ruff
 2. Radon
-3. BasedPyright
-4. Pylint
-5. Contract runner
-6. TDD gate, unless `no_tests=True`
+3. Semgrep
+4. BasedPyright
+5. Pylint
+6. Contract runner
+7. TDD gate, unless `no_tests=True`
 
 It should merge findings from all invoked runners and then call the existing scorer to
 build a `ReviewReport`.
@@ -72,6 +73,8 @@ Rules:
 
 The initial implementation should target changed bundle files only and may use the
 existing smart-test commands plus parseable output to determine pass/fail and coverage.
+Path normalization must accept both repo-relative inputs and absolute paths that resolve
+inside the bundle source tree so editor and git integrations cannot bypass the gate.
 
 ## Dependency note
 

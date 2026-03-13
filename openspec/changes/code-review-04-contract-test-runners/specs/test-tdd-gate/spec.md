@@ -45,3 +45,11 @@ test file, if the targeted tests fail, or if measured coverage is below 80%.
 - **WHEN** the runner executes
 - **THEN** no TDD gate check is performed
 - **AND** no testing findings are returned
+
+#### Scenario: Absolute reviewed source paths still map to the expected test file
+
+- **GIVEN** a changed bundle source file is provided as an absolute path
+- **WHEN** the TDD gate derives the expected unit test location
+- **THEN** it resolves the same `tests/unit/specfact_code_review/...` path as the
+  corresponding repo-relative source file
+- **AND** missing tests and coverage enforcement still apply

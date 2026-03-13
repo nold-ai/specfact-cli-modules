@@ -84,3 +84,5 @@ def test_run_contract_check_reports_unavailable_crosshair_but_keeps_ast_findings
     assert len(findings) == 2
     assert {finding.category for finding in findings} == {"contracts", "tool_error"}
     assert {finding.tool for finding in findings} == {"contract_runner", "crosshair"}
+    crosshair_finding = next(finding for finding in findings if finding.tool == "crosshair")
+    assert crosshair_finding.severity == "warning"

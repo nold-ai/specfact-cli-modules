@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 from uuid import uuid4
 
@@ -14,8 +15,12 @@ from icontract import ensure, require
 
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 from specfact_code_review.run.scorer import score_review
-from specfact_code_review.tools import run_basedpyright, run_pylint, run_radon, run_ruff
+from specfact_code_review.tools.basedpyright_runner import run_basedpyright
 from specfact_code_review.tools.contract_runner import run_contract_check
+from specfact_code_review.tools.pylint_runner import run_pylint
+from specfact_code_review.tools.radon_runner import run_radon
+from specfact_code_review.tools.ruff_runner import run_ruff
+from specfact_code_review.tools.semgrep_runner import run_semgrep
 
 
 _SOURCE_ROOT = Path("packages/specfact-code-review/src")
@@ -51,10 +56,27 @@ def _tool_error(file_path: Path, message: str) -> ReviewFinding:
     )
 
 
+def _source_relative_path(source_file: Path) -> Path | None:
+    source_root_candidates = [_SOURCE_ROOT]
+    with suppress(OSError):
+        source_root_candidates.append(_SOURCE_ROOT.resolve())
+
+    source_file_candidates = [source_file]
+    with suppress(OSError):
+        source_file_candidates.append(source_file.resolve())
+
+    for candidate in source_file_candidates:
+        for source_root in source_root_candidates:
+            try:
+                return candidate.relative_to(source_root)
+            except ValueError:
+                continue
+    return None
+
+
 def _expected_test_path(source_file: Path) -> Path | None:
-    try:
-        relative_path = source_file.relative_to(_SOURCE_ROOT)
-    except ValueError:
+    relative_path = _source_relative_path(source_file)
+    if relative_path is None:
         return None
     return Path("tests/unit") / relative_path.parent / f"test_{relative_path.name}"
 
@@ -203,6 +225,7 @@ def run_review(files: list[Path], *, no_tests: bool = False) -> ReviewReport:
     findings: list[ReviewFinding] = []
     findings.extend(run_ruff(files))
     findings.extend(run_radon(files))
+    findings.extend(run_semgrep(files))
     findings.extend(run_basedpyright(files))
     findings.extend(run_pylint(files))
     findings.extend(run_contract_check(files))

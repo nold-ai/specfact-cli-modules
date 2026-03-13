@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 from beartype import beartype
@@ -88,13 +89,30 @@ def run_semgrep(files: list[Path]) -> list[ReviewFinding]:
         return []
 
     try:
-        result = subprocess.run(
-            ["semgrep", "--config", str(_resolve_config_path()), "--json", *(str(file_path) for file_path in files)],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=30,
-        )
+        with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
+            semgrep_home = Path(temp_home)
+            semgrep_log_dir = semgrep_home / ".semgrep"
+            semgrep_log_dir.mkdir(parents=True, exist_ok=True)
+            env = os.environ.copy()
+            env["HOME"] = str(semgrep_home)
+            env["XDG_CONFIG_HOME"] = str(semgrep_home / ".config")
+            env["XDG_CACHE_HOME"] = str(semgrep_home / ".cache")
+            env["SEMGREP_SETTINGS_FILE"] = str(semgrep_log_dir / "settings.yml")
+            env.setdefault("SEMGREP_SEND_METRICS", "off")
+            result = subprocess.run(
+                [
+                    "semgrep",
+                    "--config",
+                    str(_resolve_config_path()),
+                    "--json",
+                    *(str(file_path) for file_path in files),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+                env=env,
+            )
         payload = json.loads(result.stdout)
         if not isinstance(payload, dict):
             raise ValueError("semgrep output must be an object")

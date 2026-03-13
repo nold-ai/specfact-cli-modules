@@ -39,10 +39,10 @@ def _allowed_paths(files: list[Path]) -> set[str]:
     return allowed
 
 
-def _tool_error(*, tool: str, file_path: Path, message: str) -> ReviewFinding:
+def _tool_error(*, tool: str, file_path: Path, message: str, severity: str = "error") -> ReviewFinding:
     return ReviewFinding(
         category="tool_error",
-        severity="error",
+        severity=severity,
         tool=tool,
         rule="tool_error",
         file=str(file_path),
@@ -120,7 +120,14 @@ def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
     except subprocess.TimeoutExpired:
         return []
     except (FileNotFoundError, OSError) as exc:
-        return [_tool_error(tool="crosshair", file_path=files[0], message=f"Unable to execute CrossHair: {exc}")]
+        return [
+            _tool_error(
+                tool="crosshair",
+                file_path=files[0],
+                message=f"Unable to execute CrossHair: {exc}",
+                severity="warning",
+            )
+        ]
 
     allowed_paths = _allowed_paths(files)
     findings: list[ReviewFinding] = []
