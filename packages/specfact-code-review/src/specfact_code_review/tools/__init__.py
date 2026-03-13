@@ -5,6 +5,7 @@ from specfact_code_review.tools.contract_runner import run_contract_check
 from specfact_code_review.tools.pylint_runner import run_pylint
 from specfact_code_review.tools.radon_runner import run_radon
 from specfact_code_review.tools.ruff_runner import run_ruff
+from specfact_code_review.tools.semgrep_runner import run_semgrep
 
 
-__all__ = ["run_basedpyright", "run_contract_check", "run_pylint", "run_radon", "run_ruff"]
+__all__ = ["run_basedpyright", "run_contract_check", "run_pylint", "run_radon", "run_ruff", "run_semgrep"]
