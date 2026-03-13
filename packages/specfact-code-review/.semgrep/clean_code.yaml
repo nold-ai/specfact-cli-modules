@@ -1,0 +1,55 @@
+rules:
+  - id: get-modify-same-method
+    message: Method reads object state and mutates it in the same method; separate query from command.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-inside: |
+          def $FUNC(...):
+              ...
+              $CURRENT = self.$ATTR
+              ...
+              self.$ATTR = ...
+              ...
+
+  - id: unguarded-nested-access
+    message: Nested attribute access can fail when an intermediate object is missing; guard or split the access.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: return $OBJ.config.$SECOND
+      - pattern: $VALUE = $OBJ.config.$SECOND
+
+  - id: cross-layer-call
+    message: Repository and HTTP client calls in the same function mix persistence and integration responsibilities.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-inside: |
+          def $FUNC(...):
+              ...
+              repository.$REPO_CALL(...)
+              ...
+              http_client.$HTTP_CALL(...)
+              ...
+
+  - id: module-level-network
+    message: Avoid creating network clients at module import time; instantiate them inside a function or factory.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $CLIENT = requests.Session(...)
+          - pattern: $CLIENT = httpx.Client(...)
+      - pattern-not-inside: |
+          def $FUNC(...):
+              ...
+      - pattern-not-inside: |
+          class $CLASS(...):
+              ...
+
+  - id: print-in-src
+    message: Avoid print() in source files; use structured logging or return values instead.
+    severity: WARNING
+    languages: [python]
+    pattern: print(...)

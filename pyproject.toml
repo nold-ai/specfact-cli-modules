@@ -23,6 +23,7 @@ dependencies = [
     "basedpyright>=1.32.1",
     "radon>=6.0.1",
     "ruff>=0.14.2",
+    "semgrep>=1.144.0",
     "pylint>=4.0.2",
     "pre-commit>=3.7.0",
     "typer>=0.20.0",
@@ -34,6 +35,8 @@ format = "ruff check . --fix && ruff format ."
 type-check = "python tools/run_basedpyright.py {args}"
 lint = "python tools/ensure_core_dependency.py && ruff format . --check && python tools/run_basedpyright.py && ruff check . && PYLINTHOME=.pylint.d pylint src tests tools"
 test = "python tools/ensure_core_dependency.py && pytest tests {args}"
+scan = "semgrep --config packages/specfact-code-review/.semgrep/clean_code.yaml {args}"
+scan-all = "semgrep --config packages/specfact-code-review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review"
 
 # Modules-repo scoped parity commands
 yaml-lint = "python tools/validate_repo_manifests.py"

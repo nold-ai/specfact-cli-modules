@@ -99,6 +99,38 @@ Additional behavior:
 - severity is derived from the message id prefix (`E*`/`F*` -> `error`, `I*` -> `info`, otherwise `warning`)
 - malformed output or a missing pylint executable yields a single `tool_error` finding
 
+### Semgrep runner
+
+`specfact_code_review.tools.semgrep_runner.run_semgrep(files)` executes:
+
+```bash
+semgrep --config packages/specfact-code-review/.semgrep/clean_code.yaml --json <files...>
+```
+
+Custom rule mapping:
+
+| Semgrep rule | ReviewFinding category |
+| --- | --- |
+| `get-modify-same-method` | `clean_code` |
+| `unguarded-nested-access` | `clean_code` |
+| `cross-layer-call` | `architecture` |
+| `module-level-network` | `architecture` |
+| `print-in-src` | `architecture` |
+
+Representative anti-patterns covered by the ruleset:
+
+- methods that both read state and mutate it
+- direct nested attribute access like `obj.config.value`
+- repository and HTTP client calls in the same function
+- module-level network client instantiation
+- `print(...)` in source code
+
+Additional behavior:
+
+- only the provided file list is considered
+- semgrep rule IDs emitted with path prefixes are normalized back to the governed rule IDs above
+- malformed output or a missing Semgrep executable yields a single `tool_error` finding
+
 ### Contract runner
 
 `specfact_code_review.tools.contract_runner.run_contract_check(files)` combines two
