@@ -4,12 +4,20 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import pytest
 from icontract.errors import ViolationError
 from typer.testing import CliRunner
 
 from specfact_code_review.ledger.client import LedgerRun
 from specfact_code_review.review.commands import app
-from specfact_code_review.rules.updater import MAX_SKILL_LINES, SKILL_PATH, default_skill_content, update_house_rules
+from specfact_code_review.rules.updater import (
+    IDE_SKILL_PATHS,
+    MAX_SKILL_LINES,
+    SKILL_PATH,
+    default_skill_content,
+    load_bundled_skill_content,
+    update_house_rules,
+)
 
 
 runner = CliRunner()
@@ -92,6 +100,19 @@ def _run(*rules: str, created_at: datetime | None = None) -> LedgerRun:
         findings_json=findings,
         created_at=when,
     )
+
+
+def test_load_bundled_skill_content_returns_valid_structure_when_available() -> None:
+    """Bundled SKILL is used when package is installed; content has required sections."""
+    content = load_bundled_skill_content()
+    if content is None:
+        pytest.skip("Bundled SKILL not found (e.g. package not installed)")
+    assert "name: specfact-code-review" in content
+    assert "## DO" in content
+    assert "## DON'T" in content
+    assert "## TOP VIOLATIONS" in content
+    assert "<!-- auto-managed: do not edit manually -->" in content
+    assert len(content.splitlines()) <= MAX_SKILL_LINES
 
 
 def test_default_skill_content_stays_within_line_budget() -> None:
@@ -227,12 +248,50 @@ def test_rules_init_creates_default_skill_without_modifying_claude(monkeypatch: 
     assert claude_path.read_text(encoding="utf-8") == "keep me\n"
 
 
+def test_rules_init_mirrors_to_cursor_rules(monkeypatch: Any, tmp_path: Path) -> None:
+    """Init must copy skill content to .cursor/rules/house_rules.mdc for AI IDE consumption."""
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["review", "rules", "init"])
+
+    assert result.exit_code == 0
+    skill_path = tmp_path / SKILL_PATH
+    mirror_path = tmp_path / ".cursor/rules/house_rules.mdc"
+    assert skill_path.exists()
+    assert mirror_path.exists()
+    assert mirror_path.read_text(encoding="utf-8") == skill_path.read_text(encoding="utf-8")
+
+
+def test_rules_init_creates_cursor_rules_dir_if_missing(monkeypatch: Any, tmp_path: Path) -> None:
+    """Init must create .cursor/rules/ when it does not exist."""
+    monkeypatch.chdir(tmp_path)
+    assert not (tmp_path / ".cursor").exists()
+
+    result = runner.invoke(app, ["review", "rules", "init"])
+
+    assert result.exit_code == 0
+    assert (tmp_path / ".cursor/rules/house_rules.mdc").exists()
+
+
+def test_rules_init_mirrors_to_skill_md_ide_locations(monkeypatch: Any, tmp_path: Path) -> None:
+    """Init must copy SKILL.md to Claude, Codex, Vibe, GitHub, and Cursor skills locations."""
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["review", "rules", "init"])
+
+    assert result.exit_code == 0
+    content = (tmp_path / SKILL_PATH).read_text(encoding="utf-8")
+    for rel_path in IDE_SKILL_PATHS:
+        full = tmp_path / rel_path
+        assert full.exists(), f"Expected {rel_path} to exist"
+        assert full.read_text(encoding="utf-8") == content
+
+
 def test_rules_update_rederives_top_violations_from_ledger(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
     skill_path = tmp_path / SKILL_PATH
     skill_path.parent.mkdir(parents=True)
     skill_path.write_text(_skill_text(version=3), encoding="utf-8")
-    (tmp_path / ".cursor/rules").mkdir(parents=True)
 
     class FakeLedgerClient:
         def get_recent_runs(self, limit: int = 20) -> list[LedgerRun]:
@@ -248,3 +307,5 @@ def test_rules_update_rederives_top_violations_from_ledger(monkeypatch: Any, tmp
     assert "# House Rules - AI Coding Context (v4)" in updated
     assert "C901" in updated
     assert (tmp_path / ".cursor/rules/house_rules.mdc").read_text(encoding="utf-8") == updated
+    for rel_path in IDE_SKILL_PATHS:
+        assert (tmp_path / rel_path).read_text(encoding="utf-8") == updated

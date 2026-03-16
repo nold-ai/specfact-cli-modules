@@ -6,6 +6,7 @@ import re
 from collections import Counter
 from collections.abc import Callable, Sequence
 from datetime import date
+from importlib.resources import files
 from pathlib import Path
 
 from beartype import beartype
@@ -14,9 +15,26 @@ from icontract import ensure, require
 from specfact_code_review.ledger.client import LedgerRun
 
 
+_BUNDLED_SKILL_PATH = ("resources", "skills", "specfact-code-review", "SKILL.md")
+
+
 MAX_SKILL_LINES = 35
 SKILL_PATH = Path("skills/specfact-code-review/SKILL.md")
-MIRROR_PATH = Path(".cursor/rules/house_rules.mdc")
+
+# Cursor special case: rules format (auto-attached)
+CURSOR_RULES_PATH = Path(".cursor/rules/house_rules.mdc")
+
+# SKILL.md compatible IDEs (Claude, Codex, Vibe, GitHub, Cursor skills)
+IDE_SKILL_PATHS: tuple[Path, ...] = (
+    Path(".claude/skills/specfact-code-review/SKILL.md"),
+    Path(".codex/skills/specfact-code-review/SKILL.md"),
+    Path(".vibe/skills/specfact-code-review/SKILL.md"),
+    Path(".github/skills/specfact-code-review/SKILL.md"),
+    Path(".cursor/skills/specfact-code-review/SKILL.md"),
+)
+
+# Legacy alias for backward compatibility
+MIRROR_PATH = CURSOR_RULES_PATH
 TITLE_PREFIX = "# House Rules - AI Coding Context"
 MODULE_LABEL = "nold-ai/specfact-code-review"
 TOP_VIOLATIONS_HEADER = "## TOP VIOLATIONS (auto-updated by specfact code review rules update)"
@@ -39,6 +57,28 @@ DEFAULT_DONT_RULES = (
     "- Don't hardcode secrets; use env vars via pydantic.BaseSettings",
     "- Don't create functions > 120 lines",
 )
+
+
+def load_bundled_skill_content() -> str | None:
+    """Load the bundled SKILL.md from package resources, or None if not found."""
+    try:
+        pkg = files("specfact_code_review")
+        for part in _BUNDLED_SKILL_PATH:
+            pkg = pkg / part
+        return pkg.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError, AttributeError):
+        return None
+
+
+def mirror_skill_to_ide_locations(content: str, cwd: Path) -> list[Path]:
+    """Mirror skill content to all IDE locations. Returns paths written."""
+    written: list[Path] = []
+    for path in (CURSOR_RULES_PATH, *IDE_SKILL_PATHS):
+        full = cwd / path
+        full.parent.mkdir(parents=True, exist_ok=True)
+        full.write_text(content, encoding="utf-8")
+        written.append(full)
+    return written
 
 
 @beartype
@@ -79,15 +119,16 @@ def update_house_rules(
     runs: Sequence[LedgerRun],
     *,
     updated_on: date | None = None,
-    mirror_path: Path | None = None,
+    mirror_paths: Sequence[Path] | None = None,
 ) -> str:
     """Update the skill file from recent ledger runs and return the new content."""
     content = skill_path.read_text(encoding="utf-8")
     updated = _render_updated_skill(content, runs=runs, updated_on=updated_on)
     skill_path.write_text(updated, encoding="utf-8")
-    if mirror_path is not None:
-        mirror_path.parent.mkdir(parents=True, exist_ok=True)
-        mirror_path.write_text(updated, encoding="utf-8")
+    if mirror_paths:
+        for path in mirror_paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(updated, encoding="utf-8")
     return updated
 
 
@@ -180,9 +221,13 @@ def _materialize_lines(prefix_lines: list[str], ranked_rules: Sequence[tuple[str
 
 
 __all__ = [
+    "CURSOR_RULES_PATH",
+    "IDE_SKILL_PATHS",
     "MAX_SKILL_LINES",
     "MIRROR_PATH",
     "SKILL_PATH",
     "default_skill_content",
+    "load_bundled_skill_content",
+    "mirror_skill_to_ide_locations",
     "update_house_rules",
 ]
