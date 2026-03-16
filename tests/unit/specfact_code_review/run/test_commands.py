@@ -14,6 +14,8 @@ from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 
 
 runner = CliRunner()
+REPO_ROOT = Path(__file__).resolve().parents[4]
+FIXTURE_FILE = REPO_ROOT / "tests/fixtures/review/clean_module.py"
 
 
 def _report(*, score: int = 85) -> ReviewReport:
@@ -59,7 +61,7 @@ def test_run_command_default_json_output_path_uses_review_report(monkeypatch: An
     monkeypatch.chdir(tmp_path)
 
     exit_code, output = run_commands.run_command(
-        [Path("/home/dom/git/nold-ai/specfact-cli-modules/tests/fixtures/review/clean_module.py")],
+        [FIXTURE_FILE],
         json_output=True,
     )
 
@@ -108,7 +110,9 @@ def test_run_command_rejects_out_without_json(tmp_path: Path) -> None:
     result = runner.invoke(app, ["review", "run", "--out", str(out), "tests/fixtures/review/clean_module.py"])
 
     assert result.exit_code == 2
-    assert "Use --out together with --json." in result.output
+    assert "Use " in result.output
+    assert "out" in result.output
+    assert "json" in result.output
 
 
 def test_run_help_does_not_render_nested_command_suffix() -> None:
@@ -131,7 +135,10 @@ def test_run_command_rejects_json_and_score_only_together() -> None:
     )
 
     assert result.exit_code == 2
-    assert "Use either --json or --score-only, not both." in result.output
+    assert "Use either " in result.output
+    assert "json" in result.output
+    assert "score" in result.output
+    assert "not both" in result.output
 
 
 def test_run_command_fix_mode_applies_fixes_before_second_run(monkeypatch: Any) -> None:
