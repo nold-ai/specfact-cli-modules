@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import builtins
-import importlib.util
 import json
 from pathlib import Path
 
 import yaml
 
 from scripts import publish_module
-from tests.unit._script_test_utils import run_python_script
+from tests.unit._script_test_utils import block_contract_imports, load_module_from_path, run_python_script
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -16,23 +14,11 @@ SCRIPT_PATH = REPO_ROOT / "scripts" / "publish_module.py"
 
 
 def _load_publish_script():
-    spec = importlib.util.spec_from_file_location("publish_module_script", SCRIPT_PATH)
-    if spec is None or spec.loader is None:
-        raise AssertionError("Unable to load publish_module.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path("publish_module_script", SCRIPT_PATH)
 
 
 def test_publish_script_loads_without_beartype_or_icontract(monkeypatch) -> None:
-    original_import = builtins.__import__
-
-    def raising_import(name, globalns=None, localns=None, fromlist=(), level=0):
-        if name in {"beartype", "icontract"}:
-            raise ImportError(f"blocked import for {name}")
-        return original_import(name, globalns, localns, fromlist, level)
-
-    monkeypatch.setattr(builtins, "__import__", raising_import)
+    block_contract_imports(monkeypatch)
 
     publish_script = _load_publish_script()
 
