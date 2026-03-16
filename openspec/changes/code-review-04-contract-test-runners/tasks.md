@@ -70,8 +70,8 @@
 ## 7. Finish delivery
 
 - [x] 7.1 Validate the OpenSpec change with `openspec validate code-review-04-contract-test-runners --strict`
-- [ ] 7.2 Commit implementation changes on the feature branch
-- [ ] 7.3 Push branch and open a PR to `dev`
+- [x] 7.2 Commit implementation changes on the feature branch
+- [x] 7.3 Push branch and open a PR to `dev`
 
 ## 8. Post-review regression fixes
 
@@ -84,4 +84,4 @@
 
 ## Post-merge cleanup
 
-- [ ] Remove the worktree, delete the local branch, and prune stale worktree metadata
+- [x] Remove the worktree, delete the local branch, and prune stale worktree metadata
