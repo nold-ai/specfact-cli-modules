@@ -5,12 +5,12 @@ from __future__ import annotations
 import typer
 
 from specfact_code_review.ledger.commands import app as ledger_app
+from specfact_code_review.rules.commands import app as rules_app
 from specfact_code_review.run.commands import app as run_app
 
 
 app = typer.Typer(help="Code command extensions for structured review workflows.", no_args_is_help=True)
 review_app = typer.Typer(help="Governed code review workflows.", no_args_is_help=True)
-rules_app = typer.Typer(help="Review house rules commands (stub).", no_args_is_help=False)
 
 review_app.add_typer(run_app, name="run")
 review_app.add_typer(ledger_app, name="ledger")

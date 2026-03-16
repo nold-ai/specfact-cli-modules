@@ -91,6 +91,15 @@ class LedgerClient:
         return self._status_payload(state)
 
     @beartype
+    @ensure(lambda result: isinstance(result, list), "get_recent_runs must return a list")
+    def get_recent_runs(self, *, limit: int = 20) -> list[LedgerRun]:
+        """Return the most recent persisted review runs."""
+        runs = self._read_supabase_runs(limit=limit) if self._supabase_enabled else None
+        if runs is None:
+            runs = self._read_local_state().runs[-limit:]
+        return list(runs)
+
+    @beartype
     @ensure(lambda result: isinstance(result, bool), "reset_local must return a boolean")
     def reset_local(self) -> bool:
         """Delete the local fallback ledger if it exists."""
@@ -160,6 +169,35 @@ class LedgerClient:
     def _write_local_state(self, state: LedgerState) -> None:
         self._local_path.parent.mkdir(parents=True, exist_ok=True)
         self._local_path.write_text(state.model_dump_json(indent=2), encoding="utf-8")
+
+    def _read_supabase_runs(self, *, limit: int) -> list[LedgerRun] | None:
+        try:
+            response = requests.get(
+                f"{self._supabase_url}/rest/v1/review_runs",
+                headers=self._supabase_headers(),
+                params={
+                    "agent": f"eq.{self._agent}",
+                    "order": "created_at.desc",
+                    "limit": str(limit),
+                },
+                timeout=10,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except (requests.RequestException, ValueError):
+            return None
+
+        if not isinstance(payload, list):
+            return None
+
+        runs: list[LedgerRun] = []
+        for entry in reversed(payload):
+            if isinstance(entry, dict):
+                try:
+                    runs.append(LedgerRun.model_validate(entry))
+                except Exception:
+                    return None
+        return runs
 
     def _read_supabase_state(self) -> LedgerState | None:
         if not self._supabase_enabled:
