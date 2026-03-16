@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import importlib.util
 from pathlib import Path
 
@@ -17,6 +18,23 @@ def _load_verify_script():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_verify_script_loads_without_beartype_or_icontract(monkeypatch) -> None:
+    original_import = builtins.__import__
+
+    def raising_import(name, globalns=None, localns=None, fromlist=(), level=0):
+        if name in {"beartype", "icontract"}:
+            raise ImportError(f"blocked import for {name}")
+        return original_import(name, globalns, localns, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", raising_import)
+
+    verify_script = _load_verify_script()
+
+    assert callable(verify_script.beartype)
+    assert callable(verify_script.require)
+    assert callable(verify_script.ensure)
 
 
 def test_verify_manifest_falls_back_to_filesystem_payload_when_checksum_matches(tmp_path: Path) -> None:
