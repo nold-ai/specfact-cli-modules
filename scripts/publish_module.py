@@ -6,12 +6,50 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
+from functools import wraps
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import yaml
-from beartype import beartype
-from icontract import ensure, require
 from packaging.version import InvalidVersion, Version
+
+
+_FuncT = TypeVar("_FuncT", bound=Callable[..., Any])
+
+if TYPE_CHECKING:
+    from beartype import beartype
+    from icontract import ensure, require
+else:
+    try:
+        from beartype import beartype
+    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+
+        def beartype(func: _FuncT) -> _FuncT:
+            return func
+
+    try:
+        from icontract import ensure, require
+    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+
+        def require(
+            _condition: Callable[..., bool],
+            _description: str | None = None,
+        ) -> Callable[[_FuncT], _FuncT]:
+            def decorator(func: _FuncT) -> _FuncT:
+                @wraps(func)
+                def wrapper(*args: Any, **kwargs: Any) -> Any:
+                    return func(*args, **kwargs)
+
+                return cast(_FuncT, wrapper)
+
+            return decorator
+
+        def ensure(
+            _condition: Callable[..., bool],
+            _description: str | None = None,
+        ) -> Callable[[_FuncT], _FuncT]:
+            return require(_condition, _description)
 
 
 def _emit_line(message: str, *, error: bool = False) -> None:
