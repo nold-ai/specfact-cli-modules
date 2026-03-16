@@ -26,7 +26,7 @@ def _report(*, score: int = 85) -> ReviewReport:
 def test_run_command_json_output_uses_review_report(monkeypatch: Any) -> None:
     monkeypatch.setattr(
         "specfact_code_review.run.commands.run_review",
-        lambda files, **kwargs: _report(),
+        lambda files, **_kwargs: _report(),
     )
 
     result = runner.invoke(app, ["review", "run", "--json", "tests/fixtures/review/clean_module.py"])
@@ -39,7 +39,7 @@ def test_run_command_json_output_uses_review_report(monkeypatch: Any) -> None:
 def test_run_command_score_only_prints_reward_delta(monkeypatch: Any) -> None:
     monkeypatch.setattr(
         "specfact_code_review.run.commands.run_review",
-        lambda files, **kwargs: _report(score=92),
+        lambda files, **_kwargs: _report(score=92),
     )
 
     result = runner.invoke(app, ["review", "run", "--score-only", "tests/fixtures/review/clean_module.py"])
@@ -56,7 +56,7 @@ def test_run_command_uses_git_diff_when_files_are_omitted(monkeypatch: Any) -> N
         lambda: [Path("tests/fixtures/review/clean_module.py")],
     )
 
-    def fake_run_review(files: list[Path], **kwargs: Any) -> ReviewReport:
+    def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
         return _report()
 
@@ -71,7 +71,7 @@ def test_run_command_uses_git_diff_when_files_are_omitted(monkeypatch: Any) -> N
 def test_run_command_fix_mode_applies_fixes_before_second_run(monkeypatch: Any) -> None:
     calls: list[str] = []
 
-    def fake_run_review(_files: list[Path], **kwargs: Any) -> ReviewReport:
+    def fake_run_review(_files: list[Path], **_kwargs: Any) -> ReviewReport:
         calls.append("run_review")
         return _report()
 
