@@ -5,6 +5,19 @@ All notable changes to this repository will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows SemVer for bundle versions.
 
+## [0.42.1] - 2026-03-16
+
+### Added
+
+- Add `specfact code review rules show|init|update` to manage a generated
+  `skills/specfact-code-review/SKILL.md` house-rules skill from recent ledger
+  history.
+
+### Changed
+
+- Document the house-rules workflow, including the 35-line skill budget and the
+  optional `.cursor/rules/house_rules.mdc` mirror updated from ledger data.
+
 ## [0.42.0] - 2026-03-16
 
 ### Added

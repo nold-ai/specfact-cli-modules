@@ -204,6 +204,34 @@ specfact module init --scope project
 
 Then rerun the ledger command from the same repository checkout.
 
+## House rules skill
+
+The `specfact-code-review` bundle can derive a compact house-rules skill from the
+reward ledger and keep it small enough for AI session context injection.
+
+### Command flow
+
+```bash
+specfact code review rules init
+specfact code review rules show
+specfact code review rules update
+```
+
+### Generated files
+
+- `rules init` creates `skills/specfact-code-review/SKILL.md` in the current
+  project without touching `CLAUDE.md`.
+- `rules show` prints the current `SKILL.md` content and suggests `rules init`
+  when the file is missing.
+- `rules update` reads the last 20 ledger runs, surfaces rule IDs with at least
+  three hits in the auto-managed `TOP VIOLATIONS` section, prunes stale entries
+  that have disappeared for 10 runs, and increments the skill version header.
+- The updater preserves the curated `DO` and `DON'T` sections, updates the
+  `Updated:` timestamp, and enforces a 35-line hard cap by removing the
+  lowest-frequency violation entries first.
+- When `.cursor/rules/` already exists in the current project, `rules update`
+  also mirrors the generated content to `.cursor/rules/house_rules.mdc`.
+
 ## Review orchestration
 
 `specfact_code_review.run.runner.run_review(files, no_tests=False)` orchestrates the
