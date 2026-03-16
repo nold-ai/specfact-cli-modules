@@ -56,9 +56,8 @@ def test_verify_manifest_falls_back_to_filesystem_payload_when_checksum_matches(
         ),
         encoding="utf-8",
     )
-    digest = verify_script.hashlib.sha256(
-        verify_script._module_payload(module_dir, payload_from_filesystem=True)
-    ).hexdigest()
+    module_payload = verify_script._module_payload
+    digest = verify_script.hashlib.sha256(module_payload(module_dir, payload_from_filesystem=True)).hexdigest()
     manifest_path.write_text(
         yaml.safe_dump(
             {

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import subprocess
-import sys
 from pathlib import Path
 
 import yaml
 
 from scripts import link_dev_module
+from tests.unit._script_test_utils import run_python_script
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -80,20 +79,14 @@ def test_link_dev_module_wrapper_runs_as_script(tmp_path: Path) -> None:
     shadow_root = tmp_path / "runtime" / ".specfact" / "modules"
     _write_module_source(source_dir)
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "scripts" / "link_dev_module.py"),
-            "specfact-example",
-            "--source-dir",
-            str(source_dir),
-            "--shadow-root",
-            str(shadow_root),
-        ],
+    result = run_python_script(
+        REPO_ROOT / "scripts" / "link_dev_module.py",
+        "specfact-example",
+        "--source-dir",
+        str(source_dir),
+        "--shadow-root",
+        str(shadow_root),
         cwd=REPO_ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
     )
 
     assert result.returncode == 0, result.stderr or result.stdout
