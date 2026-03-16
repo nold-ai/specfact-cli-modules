@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from specfact_code_review.ledger.client import LedgerClient
+from specfact_code_review.ledger.client import LedgerClient, _default_local_path
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 
 
@@ -175,3 +175,60 @@ def test_record_run_uses_reward_delta_divided_by_ten(tmp_path: Path) -> None:
     status = client.record_run(_report(run_id="run-007", score=87))
 
     assert status["coins"] == pytest.approx(0.7)
+
+
+def test_get_status_falls_back_when_local_payload_is_invalid(tmp_path: Path) -> None:
+    ledger_path = tmp_path / "ledger.json"
+    ledger_path.write_text('{"runs": "invalid"}', encoding="utf-8")
+    client = LedgerClient(local_path=ledger_path)
+
+    status = client.get_status()
+
+    assert status["coins"] == pytest.approx(0.0)
+    assert status["last_verdict"] == "UNKNOWN"
+
+
+def test_default_local_path_uses_explicit_env_var(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    explicit = tmp_path / "custom-ledger.json"
+    monkeypatch.setenv("SPECFACT_LEDGER_PATH", str(explicit))
+
+    assert _default_local_path() == explicit
+
+
+def test_get_status_falls_back_when_supabase_state_is_invalid(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def fake_get(*_args: Any, **_kwargs: Any) -> _Response:
+        return _Response([{"agent": "claude-code", "last_verdict": object()}])
+
+    monkeypatch.setattr("specfact_code_review.ledger.client.requests.get", fake_get)
+    client = LedgerClient(
+        supabase_url="https://example.supabase.co",
+        supabase_key="service-role",
+        local_path=tmp_path / "ledger.json",
+    )
+
+    status = client.get_status()
+
+    assert status["coins"] == pytest.approx(0.0)
+    assert status["last_verdict"] == "UNKNOWN"
+
+
+def test_get_recent_runs_returns_empty_when_supabase_runs_are_invalid(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def fake_get(*_args: Any, **_kwargs: Any) -> _Response:
+        return _Response([{"session_id": "run-1"}])
+
+    monkeypatch.setattr("specfact_code_review.ledger.client.requests.get", fake_get)
+    client = LedgerClient(
+        supabase_url="https://example.supabase.co",
+        supabase_key="service-role",
+        local_path=tmp_path / "ledger.json",
+    )
+
+    assert not client.get_recent_runs()
+
+
+def test_reset_local_returns_true_when_file_is_missing(tmp_path: Path) -> None:
+    client = LedgerClient(local_path=tmp_path / "missing.json")
+
+    assert client.reset_local() is True

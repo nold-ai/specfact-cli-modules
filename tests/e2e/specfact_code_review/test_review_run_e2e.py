@@ -22,23 +22,31 @@ def _skip_if_tools_missing() -> None:
 
 
 @pytest.mark.e2e
-def test_review_run_clean_fixture_passes() -> None:
+def test_review_run_clean_fixture_passes(tmp_path: Path) -> None:
     _skip_if_tools_missing()
+    out = tmp_path / "review-report.json"
 
-    result = runner.invoke(app, ["review", "run", "--json", str(FIXTURE_ROOT / "clean_module.py")])
+    result = runner.invoke(
+        app,
+        ["review", "run", "--json", "--out", str(out), str(FIXTURE_ROOT / "clean_module.py")],
+    )
 
     assert result.exit_code == 0
-    report = ReviewReport.model_validate_json(result.output)
+    report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
     assert report.overall_verdict == "PASS"
 
 
 @pytest.mark.e2e
-def test_review_run_dirty_fixture_fails() -> None:
+def test_review_run_dirty_fixture_fails(tmp_path: Path) -> None:
     _skip_if_tools_missing()
+    out = tmp_path / "review-report.json"
 
-    result = runner.invoke(app, ["review", "run", "--json", str(FIXTURE_ROOT / "dirty_module.py")])
+    result = runner.invoke(
+        app,
+        ["review", "run", "--json", "--out", str(out), str(FIXTURE_ROOT / "dirty_module.py")],
+    )
 
     assert result.exit_code == 1
-    report = ReviewReport.model_validate_json(result.output)
+    report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
     assert report.overall_verdict == "FAIL"
-    assert any(finding.rule in {"CC16", "MISSING_ICONTRACT", "tool_error"} for finding in report.findings)
+    assert any(finding.rule in {"CC17", "tool_error"} for finding in report.findings)

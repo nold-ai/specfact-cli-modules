@@ -34,7 +34,7 @@ def test_run_contract_check_skips_decorated_public_function(monkeypatch: MonkeyP
 
     findings = run_contract_check([file_path])
 
-    assert findings == []
+    assert not findings
 
 
 def test_run_contract_check_skips_private_function(monkeypatch: MonkeyPatch) -> None:
@@ -43,7 +43,7 @@ def test_run_contract_check_skips_private_function(monkeypatch: MonkeyPatch) -> 
 
     findings = run_contract_check([file_path])
 
-    assert findings == []
+    assert not findings
 
 
 def test_run_contract_check_maps_crosshair_counterexample(monkeypatch: MonkeyPatch) -> None:
@@ -62,6 +62,18 @@ def test_run_contract_check_maps_crosshair_counterexample(monkeypatch: MonkeyPat
     assert findings[0].line == 5
 
 
+def test_run_contract_check_ignores_crosshair_side_effect_warnings(monkeypatch: MonkeyPatch) -> None:
+    file_path = FIXTURES_DIR / "public_with_contracts.py"
+    stdout = f'{file_path}:5: error: SideEffectDetected: A "subprocess.Popen" operation was detected.\n'
+    monkeypatch.setattr(
+        subprocess, "run", Mock(return_value=completed_process("crosshair", stdout=stdout, returncode=1))
+    )
+
+    findings = run_contract_check([file_path])
+
+    assert not findings
+
+
 def test_run_contract_check_ignores_crosshair_timeout(monkeypatch: MonkeyPatch) -> None:
     file_path = FIXTURES_DIR / "public_with_contracts.py"
     monkeypatch.setattr(
@@ -72,7 +84,7 @@ def test_run_contract_check_ignores_crosshair_timeout(monkeypatch: MonkeyPatch) 
 
     findings = run_contract_check([file_path])
 
-    assert findings == []
+    assert not findings
 
 
 def test_run_contract_check_reports_unavailable_crosshair_but_keeps_ast_findings(monkeypatch: MonkeyPatch) -> None:
@@ -86,3 +98,15 @@ def test_run_contract_check_reports_unavailable_crosshair_but_keeps_ast_findings
     assert {finding.tool for finding in findings} == {"contract_runner", "crosshair"}
     crosshair_finding = next(finding for finding in findings if finding.tool == "crosshair")
     assert crosshair_finding.severity == "warning"
+
+
+def test_run_contract_check_ignores_crosshair_findings_for_other_files(monkeypatch: MonkeyPatch) -> None:
+    file_path = FIXTURES_DIR / "public_with_contracts.py"
+    stdout = "/tmp/other.py:5: error: false when calling something()\n"
+    monkeypatch.setattr(
+        subprocess, "run", Mock(return_value=completed_process("crosshair", stdout=stdout, returncode=1))
+    )
+
+    findings = run_contract_check([file_path])
+
+    assert not findings

@@ -29,6 +29,8 @@ TOP_VIOLATIONS_HEADER = "## TOP VIOLATIONS (auto-updated by specfact code review
 TOP_VIOLATIONS_MARKER = "<!-- auto-managed: do not edit manually -->"
 DEFAULT_DESCRIPTION = "House rules for AI coding sessions derived from review findings"
 DEFAULT_DO_RULES = (
+    "- Ask whether tests should be included before repo-wide review; "
+    "default to excluding tests unless test changes are the target",
     "- Keep functions under 120 LOC and cyclomatic complexity <= 12",
     "- Add @require/@ensure (icontract) + @beartype to all new public APIs",
     "- Run hatch run contract-test-contracts before any commit",
@@ -38,6 +40,7 @@ DEFAULT_DO_RULES = (
     "- Use get_logger(__name__) from common.logger_setup, never print()",
 )
 DEFAULT_DONT_RULES = (
+    "- Don't enable known noisy findings unless you explicitly want strict/full review output",
     "- Don't mix read + write in the same method; split responsibilities",
     "- Don't use bare except: or except Exception: pass",
     "- Don't add # noqa / # type: ignore without inline justification",
@@ -64,6 +67,8 @@ IDE_SKILL_PATHS: dict[SupportedIde, Path] = {
 }
 
 
+@beartype
+@ensure(lambda result: result is None or isinstance(result, str))
 def load_bundled_skill_content() -> str | None:
     """Load the bundled SKILL.md from package resources, or None if not found."""
     try:
@@ -75,6 +80,9 @@ def load_bundled_skill_content() -> str | None:
         return None
 
 
+@beartype
+@require(lambda cwd: cwd.exists(), "cwd must exist")
+@ensure(lambda result: isinstance(result, list))
 def sync_skill_to_ide(
     content: str,
     cwd: Path,
@@ -92,6 +100,9 @@ def sync_skill_to_ide(
     return written
 
 
+@beartype
+@require(lambda content: bool(content.strip()), "content must not be empty")
+@ensure(lambda result: bool(result.strip()))
 def render_cursor_rule(content: str) -> str:
     """Render SKILL.md content as a Cursor auto-attached rule."""
     body = content
@@ -147,6 +158,7 @@ def default_skill_content(*, updated_on: date | None = None) -> str:
 
 @beartype
 @require(lambda skill_path: skill_path.exists(), "skill_path must exist before update")
+@require(lambda skill_path: skill_path.is_file(), "skill_path must point to a file")
 def update_house_rules(
     skill_path: Path,
     runs: Sequence[LedgerRun],
@@ -179,7 +191,20 @@ def _target_path_for_ide(ide: SupportedIde) -> Path:
     return IDE_SKILL_PATHS[ide]
 
 
+def _ranked_rule_counts(runs: Sequence[LedgerRun], existing_rules: Sequence[str]) -> list[tuple[str, int]]:
+    recent_runs = sorted(runs, key=lambda run: run.created_at)[-20:]
+    recent_ten_counts = _count_rules(recent_runs[-10:])
+    rule_counts = _count_rules(recent_runs)
+    candidate_counts: dict[str, int] = {rule: count for rule, count in rule_counts.items() if count >= 3}
+    for rule in existing_rules:
+        if recent_ten_counts.get(rule, 0) > 0:
+            candidate_counts.setdefault(rule, rule_counts.get(rule, 0))
+    return sorted(candidate_counts.items(), key=lambda item: (-item[1], item[0]))
+
+
 @beartype
+@require(lambda content: TOP_VIOLATIONS_HEADER in content, "content must contain the TOP VIOLATIONS section")
+@require(lambda content: TOP_VIOLATIONS_MARKER in content, "content must contain the auto-managed marker")
 @ensure(
     lambda result: len(result.splitlines()) <= MAX_SKILL_LINES,
     f"house-rules skill must stay within {MAX_SKILL_LINES} lines",
@@ -200,19 +225,8 @@ def _render_updated_skill(content: str, *, runs: Sequence[LedgerRun], updated_on
     current_lines = list(lines)
     current_lines[title_index] = f"{TITLE_PREFIX} (v{next_version})"
     current_lines[updated_index] = f"Updated: {stamp} | Module: {MODULE_LABEL}"
-
-    recent_runs = sorted(runs, key=lambda run: run.created_at)[-20:]
-    recent_ten_runs = recent_runs[-10:]
-    rule_counts = _count_rules(recent_runs)
-    recent_ten_counts = _count_rules(recent_ten_runs)
-
     existing_rules = _parse_existing_rules(current_lines[marker_index + 1 :])
-    candidate_counts: dict[str, int] = {rule: count for rule, count in rule_counts.items() if count >= 3}
-    for rule in existing_rules:
-        if recent_ten_counts.get(rule, 0) > 0:
-            candidate_counts.setdefault(rule, rule_counts.get(rule, 0))
-
-    ranked_rules = sorted(candidate_counts.items(), key=lambda item: (-item[1], item[0]))
+    ranked_rules = _ranked_rule_counts(runs, existing_rules)
     preserved_lines = current_lines[: marker_index + 1]
     rendered_lines = _render_with_budget(preserved_lines, ranked_rules)
     return "\n".join(rendered_lines) + "\n"

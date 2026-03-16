@@ -9,15 +9,37 @@ import base64
 import hashlib
 import os
 import subprocess
+import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
+from beartype import beartype
+from icontract import ensure, require
+
+
+try:
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ed25519, padding, rsa
+except ImportError:  # pragma: no cover - exercised through runtime error path
+    InvalidSignature = None
+    hashes = None
+    serialization = None
+    ed25519 = None
+    padding = None
+    rsa = None
 
 
 _IGNORED_MODULE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
 _PAYLOAD_FROM_FS_IGNORED_DIRS = _IGNORED_MODULE_DIR_NAMES | {".git", "tests"}
 _IGNORED_MODULE_FILE_SUFFIXES = {".pyc", ".pyo"}
+_MANIFEST_NAMES = {"module-package.yaml", "metadata.yaml"}
+
+
+def _emit_line(message: str, *, error: bool = False) -> None:
+    stream = sys.stderr if error else sys.stdout
+    stream.write(f"{message}\n")
 
 
 def _canonical_manifest_payload(manifest_data: dict[str, Any]) -> bytes:
@@ -26,52 +48,75 @@ def _canonical_manifest_payload(manifest_data: dict[str, Any]) -> bytes:
     return yaml.safe_dump(payload, sort_keys=True, allow_unicode=False).encode("utf-8")
 
 
+def _ignored_dirs(*, payload_from_filesystem: bool) -> set[str]:
+    return _PAYLOAD_FROM_FS_IGNORED_DIRS if payload_from_filesystem else _IGNORED_MODULE_DIR_NAMES
+
+
+def _is_hashable(path: Path, *, module_dir_resolved: Path, ignored_dirs: set[str]) -> bool:
+    rel = path.resolve().relative_to(module_dir_resolved)
+    if any(part in ignored_dirs for part in rel.parts):
+        return False
+    return path.suffix.lower() not in _IGNORED_MODULE_FILE_SUFFIXES
+
+
+def _filesystem_files(module_dir: Path, *, module_dir_resolved: Path, ignored_dirs: set[str]) -> list[Path]:
+    return sorted(
+        (
+            p
+            for p in module_dir.rglob("*")
+            if p.is_file() and _is_hashable(p, module_dir_resolved=module_dir_resolved, ignored_dirs=ignored_dirs)
+        ),
+        key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
+    )
+
+
+def _git_tracked_files(module_dir: Path, *, module_dir_resolved: Path, ignored_dirs: set[str]) -> list[Path]:
+    listed = subprocess.run(
+        ["git", "ls-files", module_dir.as_posix()],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    git_files = [(Path.cwd() / line.strip()) for line in listed if line.strip()]
+    return sorted(
+        (
+            path
+            for path in git_files
+            if path.is_file() and _is_hashable(path, module_dir_resolved=module_dir_resolved, ignored_dirs=ignored_dirs)
+        ),
+        key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
+    )
+
+
+def _module_files(module_dir: Path, *, payload_from_filesystem: bool) -> list[Path]:
+    module_dir_resolved = module_dir.resolve()
+    ignored_dirs = _ignored_dirs(payload_from_filesystem=payload_from_filesystem)
+    if payload_from_filesystem:
+        return _filesystem_files(module_dir, module_dir_resolved=module_dir_resolved, ignored_dirs=ignored_dirs)
+    try:
+        return _git_tracked_files(module_dir, module_dir_resolved=module_dir_resolved, ignored_dirs=ignored_dirs)
+    except (subprocess.CalledProcessError, OSError, ValueError):
+        return _filesystem_files(module_dir, module_dir_resolved=module_dir_resolved, ignored_dirs=ignored_dirs)
+
+
+def _payload_entry(path: Path, *, module_dir_resolved: Path) -> str:
+    rel = path.resolve().relative_to(module_dir_resolved).as_posix()
+    if rel in _MANIFEST_NAMES:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError(f"Invalid manifest YAML: {path}")
+        data = _canonical_manifest_payload(raw)
+    else:
+        data = path.read_bytes()
+    return f"{rel}:{hashlib.sha256(data).hexdigest()}"
+
+
 def _module_payload(module_dir: Path, *, payload_from_filesystem: bool = False) -> bytes:
     module_dir_resolved = module_dir.resolve()
-    ignored_dirs = _PAYLOAD_FROM_FS_IGNORED_DIRS if payload_from_filesystem else _IGNORED_MODULE_DIR_NAMES
-
-    def _is_hashable(path: Path) -> bool:
-        rel = path.resolve().relative_to(module_dir_resolved)
-        if any(part in ignored_dirs for part in rel.parts):
-            return False
-        return path.suffix.lower() not in _IGNORED_MODULE_FILE_SUFFIXES
-
-    entries: list[str] = []
-    files: list[Path]
-    if payload_from_filesystem:
-        files = sorted(
-            (p for p in module_dir.rglob("*") if p.is_file() and _is_hashable(p)),
-            key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
-        )
-    else:
-        try:
-            listed = subprocess.run(
-                ["git", "ls-files", module_dir.as_posix()],
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.splitlines()
-            git_files = [(Path.cwd() / line.strip()) for line in listed if line.strip()]
-            files = sorted(
-                (path for path in git_files if path.is_file() and _is_hashable(path)),
-                key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
-            )
-        except Exception:
-            files = sorted(
-                (path for path in module_dir.rglob("*") if path.is_file() and _is_hashable(path)),
-                key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
-            )
-
-    for path in files:
-        rel = path.resolve().relative_to(module_dir_resolved).as_posix()
-        if rel in {"module-package.yaml", "metadata.yaml"}:
-            raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-            if not isinstance(raw, dict):
-                raise ValueError(f"Invalid manifest YAML: {path}")
-            data = _canonical_manifest_payload(raw)
-        else:
-            data = path.read_bytes()
-        entries.append(f"{rel}:{hashlib.sha256(data).hexdigest()}")
+    entries = [
+        _payload_entry(path, module_dir_resolved=module_dir_resolved)
+        for path in _module_files(module_dir, payload_from_filesystem=payload_from_filesystem)
+    ]
     return "\n".join(entries).encode("utf-8")
 
 
@@ -88,27 +133,47 @@ def _parse_checksum(checksum: str) -> tuple[str, str]:
     return algo, digest
 
 
-def _verify_signature(payload: bytes, signature_b64: str, public_key_pem: str) -> None:
-    try:
-        from cryptography.exceptions import InvalidSignature
-        from cryptography.hazmat.primitives import hashes, serialization
-        from cryptography.hazmat.primitives.asymmetric import ed25519, padding, rsa
-    except Exception as exc:
-        raise ValueError(
-            "cryptography backend missing; install with `python3 -m pip install cryptography cffi`"
-        ) from exc
+def _checksum_matches(module_dir: Path, *, algo: str, digest: str, payload_from_filesystem: bool) -> bool:
+    payload = _module_payload(module_dir, payload_from_filesystem=payload_from_filesystem)
+    actual = hashlib.new(algo, payload).hexdigest().lower()
+    return actual == digest
 
-    public_key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
+
+def _cryptography_backend_available() -> bool:
+    return all(
+        dependency is not None for dependency in (InvalidSignature, hashes, serialization, ed25519, padding, rsa)
+    )
+
+
+def _cryptography_backend() -> tuple[Any, Any, Any, Any, Any, Any]:
+    if not _cryptography_backend_available():
+        raise ValueError("cryptography backend missing; install with `python3 -m pip install cryptography cffi`")
+    return (
+        cast(Any, InvalidSignature),
+        cast(Any, hashes),
+        cast(Any, serialization),
+        cast(Any, ed25519),
+        cast(Any, padding),
+        cast(Any, rsa),
+    )
+
+
+def _verify_signature(payload: bytes, signature_b64: str, public_key_pem: str) -> None:
+    invalid_signature, crypto_hashes, crypto_serialization, crypto_ed25519, crypto_padding, crypto_rsa = (
+        _cryptography_backend()
+    )
+
+    public_key = crypto_serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
     signature = base64.b64decode(signature_b64, validate=True)
 
     try:
-        if isinstance(public_key, rsa.RSAPublicKey):
-            public_key.verify(signature, payload, padding.PKCS1v15(), hashes.SHA256())
+        if isinstance(public_key, crypto_rsa.RSAPublicKey):
+            public_key.verify(signature, payload, crypto_padding.PKCS1v15(), crypto_hashes.SHA256())
             return
-        if isinstance(public_key, ed25519.Ed25519PublicKey):
+        if isinstance(public_key, crypto_ed25519.Ed25519PublicKey):
             public_key.verify(signature, payload)
             return
-    except InvalidSignature as exc:
+    except invalid_signature as exc:
         raise ValueError("Signature validation failed") from exc
     raise ValueError("Unsupported public key type (RSA or Ed25519 required)")
 
@@ -169,11 +234,11 @@ def _read_manifest_version_from_git(ref: str, manifest_path: Path) -> str | None
             capture_output=True,
             text=True,
         )
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
         return None
     try:
         raw = yaml.safe_load(output.stdout)
-    except Exception:
+    except yaml.YAMLError:
         return None
     if not isinstance(raw, dict):
         return None
@@ -209,7 +274,7 @@ def _changed_manifests_from_git(base_ref: str) -> list[Path]:
             capture_output=True,
             text=True,
         )
-    except Exception as exc:
+    except (subprocess.CalledProcessError, OSError) as exc:
         raise ValueError(f"Unable to diff manifests against base ref '{base_ref}': {exc}") from exc
 
     manifests: list[Path] = []
@@ -242,13 +307,16 @@ def _verify_version_bumps(base_ref: str) -> list[str]:
     return failures
 
 
+@beartype
+@require(lambda manifest_path: manifest_path.exists(), "manifest_path must exist")
+@ensure(lambda result: result in {"git", "filesystem"}, "verification mode must be explicit")
 def verify_manifest(
     manifest_path: Path,
     *,
     require_signature: bool,
     public_key_pem: str,
     payload_from_filesystem: bool = False,
-) -> None:
+) -> str:
     raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise ValueError("manifest YAML must be object")
@@ -260,10 +328,20 @@ def verify_manifest(
     if not checksum:
         raise ValueError("missing integrity.checksum")
     algo, digest = _parse_checksum(checksum)
+    verification_mode = "filesystem" if payload_from_filesystem else "git"
     payload = _module_payload(manifest_path.parent, payload_from_filesystem=payload_from_filesystem)
     actual = hashlib.new(algo, payload).hexdigest().lower()
     if actual != digest:
-        raise ValueError("checksum mismatch")
+        if not payload_from_filesystem and _checksum_matches(
+            manifest_path.parent,
+            algo=algo,
+            digest=digest,
+            payload_from_filesystem=True,
+        ):
+            verification_mode = "filesystem"
+            payload = _module_payload(manifest_path.parent, payload_from_filesystem=True)
+        else:
+            raise ValueError("checksum mismatch")
 
     signature = str(integrity.get("signature", "")).strip()
     if require_signature and not signature:
@@ -272,8 +350,11 @@ def verify_manifest(
         if not public_key_pem:
             raise ValueError("public key required to verify signature")
         _verify_signature(payload, signature, public_key_pem)
+    return verification_mode
 
 
+@beartype
+@ensure(lambda result: result in {0, 1}, "main must return a process exit code")
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -298,27 +379,36 @@ def main() -> int:
     parser.add_argument(
         "--payload-from-filesystem",
         action="store_true",
-        help="Build payload from filesystem (rglob) with same excludes as sign-modules, so verification matches manifests signed with --payload-from-filesystem.",
+        help=(
+            "Build payload from filesystem (rglob) with the same excludes as "
+            "sign-modules, so verification matches manifests signed with "
+            "--payload-from-filesystem."
+        ),
     )
     args = parser.parse_args()
 
     public_key_pem = _resolve_public_key(args)
     manifests = _iter_manifests()
     if not manifests:
-        print("No module-package.yaml manifests found.")
+        _emit_line("No module-package.yaml manifests found.")
         return 0
 
     failures: list[str] = []
     for manifest in manifests:
         try:
-            verify_manifest(
+            verification_mode = verify_manifest(
                 manifest,
                 require_signature=args.require_signature,
                 public_key_pem=public_key_pem,
                 payload_from_filesystem=args.payload_from_filesystem,
             )
-            print(f"OK  {manifest}")
-        except Exception as exc:
+            suffix = (
+                " (filesystem payload)"
+                if verification_mode == "filesystem" and not args.payload_from_filesystem
+                else ""
+            )
+            _emit_line(f"OK  {manifest}{suffix}")
+        except ValueError as exc:
             failures.append(f"FAIL {manifest}: {exc}")
 
     version_failures: list[str] = []
@@ -331,12 +421,12 @@ def main() -> int:
 
     if failures or version_failures:
         if failures:
-            print("\n".join(failures))
+            _emit_line("\n".join(failures), error=True)
         if version_failures:
-            print("\n".join(version_failures))
+            _emit_line("\n".join(version_failures), error=True)
         return 1
 
-    print(f"Verified {len(manifests)} module manifest(s).")
+    _emit_line(f"Verified {len(manifests)} module manifest(s).")
     return 0
 
 

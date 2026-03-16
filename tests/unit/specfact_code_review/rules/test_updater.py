@@ -35,6 +35,10 @@ def _skill_text(
     extra_do_rules: list[str] | None = None,
 ) -> str:
     do_rules = [
+        (
+            "- Ask whether tests should be included before repo-wide review; "
+            "default to excluding tests unless test changes are the target"
+        ),
         "- Keep functions under 120 LOC and cyclomatic complexity <= 12",
         "- Add @require/@ensure (icontract) + @beartype to all new public APIs",
         "- Run hatch run contract-test-contracts before any commit",
@@ -47,6 +51,7 @@ def _skill_text(
         do_rules.extend(extra_do_rules)
 
     dont_rules = [
+        "- Don't enable known noisy findings unless you explicitly want strict/full review output",
         "- Don't mix read + write in the same method; split responsibilities",
         "- Don't use bare except: or except Exception: pass",
         "- Don't add # noqa / # type: ignore without inline justification",

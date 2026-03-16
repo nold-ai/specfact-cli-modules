@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import os
 import re
 import subprocess
 from pathlib import Path
@@ -11,25 +10,12 @@ from pathlib import Path
 from beartype import beartype
 from icontract import ensure, require
 
+from specfact_code_review._review_utils import _normalize_path_variants, _tool_error
 from specfact_code_review.run.findings import ReviewFinding
 
 
 _CROSSHAIR_LINE_RE = re.compile(r"^(?P<file>.+?):(?P<line>\d+):\s*(?:error|warning|info):\s*(?P<message>.+)$")
-
-
-def _normalize_path_variants(path_value: str | Path) -> set[str]:
-    path = Path(path_value)
-    variants = {
-        os.path.normpath(str(path)),
-        os.path.normpath(path.as_posix()),
-    }
-    try:
-        resolved = path.resolve()
-    except OSError:
-        return variants
-    variants.add(os.path.normpath(str(resolved)))
-    variants.add(os.path.normpath(resolved.as_posix()))
-    return variants
+_IGNORED_CROSSHAIR_PREFIXES = ("SideEffectDetected:",)
 
 
 def _allowed_paths(files: list[Path]) -> set[str]:
@@ -37,19 +23,6 @@ def _allowed_paths(files: list[Path]) -> set[str]:
     for file_path in files:
         allowed.update(_normalize_path_variants(file_path))
     return allowed
-
-
-def _tool_error(*, tool: str, file_path: Path, message: str, severity: str = "error") -> ReviewFinding:
-    return ReviewFinding(
-        category="tool_error",
-        severity=severity,
-        tool=tool,
-        rule="tool_error",
-        file=str(file_path),
-        line=1,
-        message=message,
-        fixable=False,
-    )
 
 
 def _decorator_name(decorator: ast.expr) -> str | None:
@@ -138,6 +111,9 @@ def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
         filename = match.group("file")
         if _normalize_path_variants(filename).isdisjoint(allowed_paths):
             continue
+        message = match.group("message")
+        if message.startswith(_IGNORED_CROSSHAIR_PREFIXES):
+            continue
         findings.append(
             ReviewFinding(
                 category="contracts",
@@ -146,7 +122,7 @@ def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
                 rule="CROSSHAIR_COUNTEREXAMPLE",
                 file=filename,
                 line=int(match.group("line")),
-                message=match.group("message"),
+                message=message,
                 fixable=False,
             )
         )

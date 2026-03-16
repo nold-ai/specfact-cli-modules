@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import json
+import os
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 import requests
 from beartype import beartype
 from icontract import ensure, require
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from specfact_code_review.run.findings import FAIL, ReviewFinding, ReviewReport
 
@@ -19,6 +20,16 @@ from specfact_code_review.run.findings import FAIL, ReviewFinding, ReviewReport
 LedgerVerdict = Literal["PASS", "PASS_WITH_ADVISORY", "FAIL"]
 DEFAULT_AGENT = "claude-code"
 DEFAULT_LOCAL_PATH = Path.home() / ".specfact" / "ledger.json"
+
+
+class LedgerStatus(TypedDict):
+    """Public ledger status payload returned to CLI commands."""
+
+    coins: float
+    streak_pass: int
+    streak_block: int
+    last_verdict: str
+    top_violations: list[tuple[str, int]]
 
 
 class LedgerRun(BaseModel):
@@ -62,13 +73,13 @@ class LedgerClient:
     ) -> None:
         self._supabase_url = (supabase_url or "").rstrip("/")
         self._supabase_key = supabase_key or ""
-        self._local_path = local_path or DEFAULT_LOCAL_PATH
+        self._local_path = local_path or _default_local_path()
         self._agent = agent
 
     @beartype
     @require(lambda report: isinstance(report, ReviewReport), "report must be a ReviewReport")
     @ensure(lambda result: isinstance(result, dict), "record_run must return a status dictionary")
-    def record_run(self, report: ReviewReport) -> dict[str, object]:
+    def record_run(self, report: ReviewReport) -> LedgerStatus:
         """Record a review run and return the updated ledger status."""
         current_state = self._read_supabase_state() if self._supabase_enabled else None
         if current_state is None:
@@ -83,7 +94,7 @@ class LedgerClient:
 
     @beartype
     @ensure(lambda result: isinstance(result, dict), "get_status must return a status dictionary")
-    def get_status(self) -> dict[str, object]:
+    def get_status(self) -> LedgerStatus:
         """Return the current ledger status from Supabase or the local fallback."""
         state = self._read_supabase_state()
         if state is None:
@@ -164,7 +175,10 @@ class LedgerClient:
             payload = json.loads(self._local_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return LedgerState(agent=self._agent)
-        return LedgerState.model_validate(payload)
+        try:
+            return LedgerState.model_validate(payload)
+        except ValidationError:
+            return LedgerState(agent=self._agent)
 
     def _write_local_state(self, state: LedgerState) -> None:
         self._local_path.parent.mkdir(parents=True, exist_ok=True)
@@ -195,7 +209,7 @@ class LedgerClient:
             if isinstance(entry, dict):
                 try:
                     runs.append(LedgerRun.model_validate(entry))
-                except Exception:
+                except ValidationError:
                     return None
         return runs
 
@@ -224,16 +238,19 @@ class LedgerClient:
         latest_row = payload[0]
         if not isinstance(latest_row, dict):
             return LedgerState(agent=self._agent)
-        return LedgerState(
-            agent=str(latest_row.get("agent", self._agent)),
-            cumulative_coins=float(latest_row.get("cumulative_coins", 0.0)),
-            streak_pass=int(latest_row.get("streak_pass", 0)),
-            streak_block=int(latest_row.get("streak_block", 0)),
-            last_delta=int(latest_row.get("last_delta", 0) or 0),
-            last_verdict=latest_row.get("last_verdict"),
-            violation_counts={},
-            runs=[],
-        )
+        try:
+            return LedgerState(
+                agent=str(latest_row.get("agent", self._agent)),
+                cumulative_coins=float(latest_row.get("cumulative_coins", 0.0)),
+                streak_pass=int(latest_row.get("streak_pass", 0)),
+                streak_block=int(latest_row.get("streak_block", 0)),
+                last_delta=int(latest_row.get("last_delta", 0) or 0),
+                last_verdict=latest_row.get("last_verdict"),
+                violation_counts={},
+                runs=[],
+            )
+        except (TypeError, ValueError, ValidationError):
+            return LedgerState(agent=self._agent)
 
     def _write_supabase(self, run_entry: LedgerRun, state: LedgerState) -> bool:
         try:
@@ -274,7 +291,7 @@ class LedgerClient:
             headers["Prefer"] = "return=representation"
         return headers
 
-    def _status_payload(self, state: LedgerState) -> dict[str, object]:
+    def _status_payload(self, state: LedgerState) -> LedgerStatus:
         top_violations = sorted(state.violation_counts.items(), key=lambda item: (-item[1], item[0]))[:3]
         return {
             "coins": round(state.cumulative_coins, 2),
@@ -283,3 +300,15 @@ class LedgerClient:
             "last_verdict": state.last_verdict or "UNKNOWN",
             "top_violations": top_violations,
         }
+
+
+def _default_local_path() -> Path:
+    explicit = os.environ.get("SPECFACT_LEDGER_PATH", "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+
+    start = Path.cwd().resolve()
+    for candidate in [start, *start.parents]:
+        if (candidate / ".git").exists():
+            return candidate / ".specfact" / "ledger.json"
+    return DEFAULT_LOCAL_PATH
