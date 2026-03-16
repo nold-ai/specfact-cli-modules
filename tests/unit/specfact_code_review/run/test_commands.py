@@ -200,7 +200,7 @@ def test_changed_files_from_git_diff_filters_python_files(monkeypatch: Any, tmp_
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
 
-    changed_files_from_git_diff = run_commands._changed_files_from_git_diff
+    changed_files_from_git_diff = vars(run_commands)["_changed_files_from_git_diff"]
 
     assert changed_files_from_git_diff(include_tests=False) == [python_file]
 
@@ -225,7 +225,7 @@ def test_changed_files_from_git_diff_excludes_test_files_by_default(monkeypatch:
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
 
-    changed_files_from_git_diff = run_commands._changed_files_from_git_diff
+    changed_files_from_git_diff = vars(run_commands)["_changed_files_from_git_diff"]
 
     assert changed_files_from_git_diff(include_tests=False) == [source_file]
     assert changed_files_from_git_diff(include_tests=True) == [source_file, test_file]
@@ -257,7 +257,7 @@ def test_changed_files_from_git_diff_includes_untracked_python_files(monkeypatch
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
 
-    changed_files_from_git_diff = run_commands._changed_files_from_git_diff
+    changed_files_from_git_diff = vars(run_commands)["_changed_files_from_git_diff"]
 
     assert changed_files_from_git_diff(include_tests=False) == [tracked_file, untracked_file]
 
@@ -272,7 +272,7 @@ def test_apply_fixes_raises_when_format_command_fails(monkeypatch: Any) -> None:
         return subprocess.CompletedProcess(args=args[0], returncode=2, stdout="", stderr="format failed")
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
-    apply_fixes = run_commands._apply_fixes
+    apply_fixes = vars(run_commands)["_apply_fixes"]
 
     with pytest.raises(RuntimeError, match="format failed"):
         apply_fixes([Path("tests/fixtures/review/clean_module.py")])
