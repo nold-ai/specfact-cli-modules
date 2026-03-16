@@ -5,6 +5,19 @@ All notable changes to this repository will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows SemVer for bundle versions.
 
+## [0.42.0] - 2026-03-16
+
+### Added
+
+- Add a `specfact-code-review` reward ledger with Supabase-first persistence,
+  local JSON fallback, and `ledger update|status|reset` commands under
+  `specfact code review`.
+
+### Changed
+
+- Document the new ledger workflow, including the review-report pipe and the
+  offline fallback path used when Supabase is not configured.
+
 ## [0.41.5] - 2026-03-13
 
 ### Added
