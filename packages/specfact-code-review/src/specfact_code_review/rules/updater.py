@@ -1,4 +1,4 @@
-"""House-rules skill template and update algorithm."""
+"""House-rules skill template, IDE sync, and update algorithm."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import re
 from collections import Counter
 from collections.abc import Callable, Sequence
 from datetime import date
+from enum import StrEnum
 from importlib.resources import files
 from pathlib import Path
 
@@ -21,24 +22,12 @@ _BUNDLED_SKILL_PATH = ("resources", "skills", "specfact-code-review", "SKILL.md"
 MAX_SKILL_LINES = 35
 SKILL_PATH = Path("skills/specfact-code-review/SKILL.md")
 
-# Cursor special case: rules format (auto-attached)
 CURSOR_RULES_PATH = Path(".cursor/rules/house_rules.mdc")
-
-# SKILL.md compatible IDEs (Claude, Codex, Vibe, GitHub, Cursor skills)
-IDE_SKILL_PATHS: tuple[Path, ...] = (
-    Path(".claude/skills/specfact-code-review/SKILL.md"),
-    Path(".codex/skills/specfact-code-review/SKILL.md"),
-    Path(".vibe/skills/specfact-code-review/SKILL.md"),
-    Path(".github/skills/specfact-code-review/SKILL.md"),
-    Path(".cursor/skills/specfact-code-review/SKILL.md"),
-)
-
-# Legacy alias for backward compatibility
-MIRROR_PATH = CURSOR_RULES_PATH
 TITLE_PREFIX = "# House Rules - AI Coding Context"
 MODULE_LABEL = "nold-ai/specfact-code-review"
 TOP_VIOLATIONS_HEADER = "## TOP VIOLATIONS (auto-updated by specfact code review rules update)"
 TOP_VIOLATIONS_MARKER = "<!-- auto-managed: do not edit manually -->"
+DEFAULT_DESCRIPTION = "House rules for AI coding sessions derived from review findings"
 DEFAULT_DO_RULES = (
     "- Keep functions under 120 LOC and cyclomatic complexity <= 12",
     "- Add @require/@ensure (icontract) + @beartype to all new public APIs",
@@ -59,6 +48,22 @@ DEFAULT_DONT_RULES = (
 )
 
 
+class SupportedIde(StrEnum):
+    """IDE targets with canonical install locations for this skill."""
+
+    CLAUDE = "claude"
+    CODEX = "codex"
+    CURSOR = "cursor"
+    VIBE = "vibe"
+
+
+IDE_SKILL_PATHS: dict[SupportedIde, Path] = {
+    SupportedIde.CLAUDE: Path(".claude/skills/specfact-code-review/SKILL.md"),
+    SupportedIde.CODEX: Path(".codex/skills/specfact-code-review/SKILL.md"),
+    SupportedIde.VIBE: Path(".vibe/skills/specfact-code-review/SKILL.md"),
+}
+
+
 def load_bundled_skill_content() -> str | None:
     """Load the bundled SKILL.md from package resources, or None if not found."""
     try:
@@ -70,15 +75,43 @@ def load_bundled_skill_content() -> str | None:
         return None
 
 
-def mirror_skill_to_ide_locations(content: str, cwd: Path) -> list[Path]:
-    """Mirror skill content to all IDE locations. Returns paths written."""
+def sync_skill_to_ide(
+    content: str,
+    cwd: Path,
+    *,
+    ide: SupportedIde | None = None,
+) -> list[Path]:
+    """Write the selected IDE target, or refresh already-installed canonical IDE targets."""
     written: list[Path] = []
-    for path in (CURSOR_RULES_PATH, *IDE_SKILL_PATHS):
+    for path in _resolve_sync_targets(cwd, ide=ide):
         full = cwd / path
         full.parent.mkdir(parents=True, exist_ok=True)
-        full.write_text(content, encoding="utf-8")
+        rendered = render_cursor_rule(content) if path == CURSOR_RULES_PATH else content
+        full.write_text(rendered, encoding="utf-8")
         written.append(full)
     return written
+
+
+def render_cursor_rule(content: str) -> str:
+    """Render SKILL.md content as a Cursor auto-attached rule."""
+    body = content
+    description = DEFAULT_DESCRIPTION
+    if content.startswith("---\n"):
+        _, _, remainder = content.partition("\n---\n")
+        if remainder:
+            body = remainder.lstrip("\n")
+            match = re.search(r"^description:\s*(?P<description>.+)$", content, flags=re.MULTILINE)
+            if match:
+                description = match.group("description").strip()
+    lines = [
+        "---",
+        f"description: {description}",
+        "alwaysApply: true",
+        "---",
+        "",
+        body.rstrip("\n"),
+    ]
+    return "\n".join(lines) + "\n"
 
 
 @beartype
@@ -92,7 +125,7 @@ def default_skill_content(*, updated_on: date | None = None) -> str:
     lines = [
         "---",
         "name: specfact-code-review",
-        "description: House rules for AI coding sessions derived from review findings",
+        f"description: {DEFAULT_DESCRIPTION}",
         "allowed-tools: []",
         "---",
         "",
@@ -119,17 +152,31 @@ def update_house_rules(
     runs: Sequence[LedgerRun],
     *,
     updated_on: date | None = None,
-    mirror_paths: Sequence[Path] | None = None,
 ) -> str:
     """Update the skill file from recent ledger runs and return the new content."""
     content = skill_path.read_text(encoding="utf-8")
     updated = _render_updated_skill(content, runs=runs, updated_on=updated_on)
     skill_path.write_text(updated, encoding="utf-8")
-    if mirror_paths:
-        for path in mirror_paths:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(updated, encoding="utf-8")
     return updated
+
+
+def _resolve_sync_targets(cwd: Path, *, ide: SupportedIde | None) -> list[Path]:
+    if ide is not None:
+        return [_target_path_for_ide(ide)]
+
+    targets: list[Path] = []
+    if (cwd / CURSOR_RULES_PATH).exists():
+        targets.append(CURSOR_RULES_PATH)
+    for path in IDE_SKILL_PATHS.values():
+        if (cwd / path).exists():
+            targets.append(path)
+    return targets
+
+
+def _target_path_for_ide(ide: SupportedIde) -> Path:
+    if ide is SupportedIde.CURSOR:
+        return CURSOR_RULES_PATH
+    return IDE_SKILL_PATHS[ide]
 
 
 @beartype
@@ -224,10 +271,11 @@ __all__ = [
     "CURSOR_RULES_PATH",
     "IDE_SKILL_PATHS",
     "MAX_SKILL_LINES",
-    "MIRROR_PATH",
     "SKILL_PATH",
+    "SupportedIde",
     "default_skill_content",
     "load_bundled_skill_content",
-    "mirror_skill_to_ide_locations",
+    "render_cursor_rule",
+    "sync_skill_to_ide",
     "update_house_rules",
 ]

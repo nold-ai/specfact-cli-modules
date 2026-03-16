@@ -8,12 +8,11 @@ import typer
 
 from specfact_code_review.ledger.client import LedgerClient
 from specfact_code_review.rules.updater import (
-    CURSOR_RULES_PATH,
-    IDE_SKILL_PATHS,
     SKILL_PATH,
+    SupportedIde,
     default_skill_content,
     load_bundled_skill_content,
-    mirror_skill_to_ide_locations,
+    sync_skill_to_ide,
     update_house_rules,
 )
 
@@ -35,8 +34,14 @@ def show() -> None:
 
 
 @app.command("init")
-def init() -> None:
-    """Create the default skill file for the current project and mirror to AI IDE locations."""
+def init(
+    ide: SupportedIde | None = typer.Option(
+        None,
+        "--ide",
+        help="Install to the canonical target path for one IDE. Omit to keep only skills/specfact-code-review/SKILL.md.",
+    ),
+) -> None:
+    """Create the default skill file and optionally install it to one canonical IDE target."""
     skill_path = _skill_path()
     if skill_path.exists():
         typer.echo(f"House-rules skill already exists at {skill_path}.", err=True)
@@ -44,15 +49,21 @@ def init() -> None:
     content = load_bundled_skill_content() or default_skill_content()
     skill_path.parent.mkdir(parents=True, exist_ok=True)
     skill_path.write_text(content, encoding="utf-8")
-    mirrored = mirror_skill_to_ide_locations(content, Path.cwd())
+    mirrored = sync_skill_to_ide(content, Path.cwd(), ide=ide)
     typer.echo(f"Created {skill_path}")
     for path in mirrored:
-        typer.echo(f"Mirrored to {path}")
+        typer.echo(f"Installed to {path}")
 
 
 @app.command("update")
-def update() -> None:
-    """Update the TOP VIOLATIONS section from recent ledger data and mirror to all IDE locations."""
+def update(
+    ide: SupportedIde | None = typer.Option(
+        None,
+        "--ide",
+        help="Refresh one canonical IDE target. Omit to refresh only IDE targets already installed in the project.",
+    ),
+) -> None:
+    """Update the TOP VIOLATIONS section and refresh canonical IDE targets."""
     skill_path = _skill_path()
     if not skill_path.exists():
         typer.echo(
@@ -62,9 +73,8 @@ def update() -> None:
         raise typer.Exit(code=1)
 
     runs = LedgerClient().get_recent_runs(limit=20)
-    cwd = Path.cwd()
-    mirror_paths = [cwd / CURSOR_RULES_PATH, *(cwd / p for p in IDE_SKILL_PATHS)]
-    update_house_rules(skill_path, runs, mirror_paths=mirror_paths)
+    updated = update_house_rules(skill_path, runs)
+    sync_skill_to_ide(updated, Path.cwd(), ide=ide)
     typer.echo(f"Updated {skill_path}")
 
 
