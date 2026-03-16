@@ -16,6 +16,7 @@ import yaml
 
 
 _IGNORED_MODULE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
+_PAYLOAD_FROM_FS_IGNORED_DIRS = _IGNORED_MODULE_DIR_NAMES | {".git", "tests"}
 _IGNORED_MODULE_FILE_SUFFIXES = {".pyc", ".pyo"}
 
 
@@ -25,34 +26,41 @@ def _canonical_manifest_payload(manifest_data: dict[str, Any]) -> bytes:
     return yaml.safe_dump(payload, sort_keys=True, allow_unicode=False).encode("utf-8")
 
 
-def _module_payload(module_dir: Path) -> bytes:
+def _module_payload(module_dir: Path, *, payload_from_filesystem: bool = False) -> bytes:
     module_dir_resolved = module_dir.resolve()
+    ignored_dirs = _PAYLOAD_FROM_FS_IGNORED_DIRS if payload_from_filesystem else _IGNORED_MODULE_DIR_NAMES
 
     def _is_hashable(path: Path) -> bool:
         rel = path.resolve().relative_to(module_dir_resolved)
-        if any(part in _IGNORED_MODULE_DIR_NAMES for part in rel.parts):
+        if any(part in ignored_dirs for part in rel.parts):
             return False
         return path.suffix.lower() not in _IGNORED_MODULE_FILE_SUFFIXES
 
     entries: list[str] = []
     files: list[Path]
-    try:
-        listed = subprocess.run(
-            ["git", "ls-files", module_dir.as_posix()],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.splitlines()
-        git_files = [(Path.cwd() / line.strip()) for line in listed if line.strip()]
+    if payload_from_filesystem:
         files = sorted(
-            (path for path in git_files if path.is_file() and _is_hashable(path)),
+            (p for p in module_dir.rglob("*") if p.is_file() and _is_hashable(p)),
             key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
         )
-    except Exception:
-        files = sorted(
-            (path for path in module_dir.rglob("*") if path.is_file() and _is_hashable(path)),
-            key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
-        )
+    else:
+        try:
+            listed = subprocess.run(
+                ["git", "ls-files", module_dir.as_posix()],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.splitlines()
+            git_files = [(Path.cwd() / line.strip()) for line in listed if line.strip()]
+            files = sorted(
+                (path for path in git_files if path.is_file() and _is_hashable(path)),
+                key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
+            )
+        except Exception:
+            files = sorted(
+                (path for path in module_dir.rglob("*") if path.is_file() and _is_hashable(path)),
+                key=lambda p: p.resolve().relative_to(module_dir_resolved).as_posix(),
+            )
 
     for path in files:
         rel = path.resolve().relative_to(module_dir_resolved).as_posix()
@@ -234,7 +242,13 @@ def _verify_version_bumps(base_ref: str) -> list[str]:
     return failures
 
 
-def verify_manifest(manifest_path: Path, *, require_signature: bool, public_key_pem: str) -> None:
+def verify_manifest(
+    manifest_path: Path,
+    *,
+    require_signature: bool,
+    public_key_pem: str,
+    payload_from_filesystem: bool = False,
+) -> None:
     raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise ValueError("manifest YAML must be object")
@@ -246,7 +260,7 @@ def verify_manifest(manifest_path: Path, *, require_signature: bool, public_key_
     if not checksum:
         raise ValueError("missing integrity.checksum")
     algo, digest = _parse_checksum(checksum)
-    payload = _module_payload(manifest_path.parent)
+    payload = _module_payload(manifest_path.parent, payload_from_filesystem=payload_from_filesystem)
     actual = hashlib.new(algo, payload).hexdigest().lower()
     if actual != digest:
         raise ValueError("checksum mismatch")
@@ -281,6 +295,11 @@ def main() -> int:
         default="",
         help="Git base ref for version-bump checks (default: origin/$GITHUB_BASE_REF or HEAD~1)",
     )
+    parser.add_argument(
+        "--payload-from-filesystem",
+        action="store_true",
+        help="Build payload from filesystem (rglob) with same excludes as sign-modules, so verification matches manifests signed with --payload-from-filesystem.",
+    )
     args = parser.parse_args()
 
     public_key_pem = _resolve_public_key(args)
@@ -292,7 +311,12 @@ def main() -> int:
     failures: list[str] = []
     for manifest in manifests:
         try:
-            verify_manifest(manifest, require_signature=args.require_signature, public_key_pem=public_key_pem)
+            verify_manifest(
+                manifest,
+                require_signature=args.require_signature,
+                public_key_pem=public_key_pem,
+                payload_from_filesystem=args.payload_from_filesystem,
+            )
             print(f"OK  {manifest}")
         except Exception as exc:
             failures.append(f"FAIL {manifest}: {exc}")

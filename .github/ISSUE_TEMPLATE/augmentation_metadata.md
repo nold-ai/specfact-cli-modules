@@ -32,7 +32,7 @@ Example validation commands:
 
 ```bash
 hatch run check-bundle-imports
-hatch run verify-modules-signature --require-signature --enforce-version-bump
+hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
 ```
 
 ## Alternative Solutions

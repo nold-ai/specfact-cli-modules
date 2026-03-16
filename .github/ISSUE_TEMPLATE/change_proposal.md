@@ -20,7 +20,7 @@ High-level implementation summary. Include affected bundles and workflow/config 
 - [ ] Bundle changes are scoped and intentional (`packages/*`)
 - [ ] `module-package.yaml` versions are bumped where contents changed
 - [ ] Manifests are re-signed
-- [ ] `hatch run verify-modules-signature --require-signature --enforce-version-bump` passes
+- [ ] `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump` passes
 - [ ] Import boundaries respected (`hatch run check-bundle-imports`)
 - [ ] Required quality gates pass in PR orchestrator
 

@@ -43,7 +43,7 @@ Module packages carry **publisher** and **integrity** metadata so installation, 
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY`
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
 - **Verification command**:
-  - `scripts/verify-modules-signature.py --require-signature --enforce-version-bump`
+  - `scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump`
   - `--version-check-base <git-ref>` can be used in CI PR comparisons.
 
 ## Public key and key rotation
