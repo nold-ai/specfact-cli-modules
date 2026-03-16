@@ -23,6 +23,7 @@ dependencies = [
     "basedpyright>=1.32.1",
     "radon>=6.0.1",
     "ruff>=0.14.2",
+    "semgrep>=1.144.0",
     "pylint>=4.0.2",
     "pre-commit>=3.7.0",
     "typer>=0.20.0",
@@ -34,12 +35,16 @@ format = "ruff check . --fix && ruff format ."
 type-check = "python tools/run_basedpyright.py {args}"
 lint = "python tools/ensure_core_dependency.py && ruff format . --check && python tools/run_basedpyright.py && ruff check . && PYLINTHOME=.pylint.d pylint src tests tools"
 test = "python tools/ensure_core_dependency.py && pytest tests {args}"
+scan = "semgrep --config packages/specfact-code-review/.semgrep/clean_code.yaml {args}"
+scan-all = "semgrep --config packages/specfact-code-review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review"
 
 # Modules-repo scoped parity commands
 yaml-lint = "python tools/validate_repo_manifests.py"
+validate-cli-contracts = "python tools/validate_cli_contracts.py"
 check-bundle-imports = "python scripts/check-bundle-imports.py"
 sign-modules = "python scripts/sign-modules.py {args}"
 verify-modules-signature = "python scripts/verify-modules-signature.py {args}"
+link-dev-module = "python scripts/link_dev_module.py {args}"
 smart-test = "python tools/smart_test_coverage.py run {args}"
 smart-test-status = "python tools/smart_test_coverage.py status"
 smart-test-check = "python tools/smart_test_coverage.py check"
@@ -172,6 +177,7 @@ max-line-length = 120
 
 [tool.pylint.design]
 max-args = 8
+max-positional-arguments = 9
 max-locals = 20
 max-returns = 8
 max-branches = 15

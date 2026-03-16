@@ -5,22 +5,68 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
+from collections.abc import Callable
+from functools import wraps
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import yaml
 from packaging.version import InvalidVersion, Version
 
 
+_FuncT = TypeVar("_FuncT", bound=Callable[..., Any])
+
+if TYPE_CHECKING:
+    from beartype import beartype
+    from icontract import ensure, require
+else:
+    try:
+        from beartype import beartype
+    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+
+        def beartype(func: _FuncT) -> _FuncT:
+            return func
+
+    try:
+        from icontract import ensure, require
+    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+
+        def require(
+            _condition: Callable[..., bool],
+            _description: str | None = None,
+        ) -> Callable[[_FuncT], _FuncT]:
+            def decorator(func: _FuncT) -> _FuncT:
+                @wraps(func)
+                def wrapper(*args: Any, **kwargs: Any) -> Any:
+                    return func(*args, **kwargs)
+
+                return cast(_FuncT, wrapper)
+
+            return decorator
+
+        def ensure(
+            _condition: Callable[..., bool],
+            _description: str | None = None,
+        ) -> Callable[[_FuncT], _FuncT]:
+            return require(_condition, _description)
+
+
+def _emit_line(message: str, *, error: bool = False) -> None:
+    stream = sys.stderr if error else sys.stdout
+    stream.write(f"{message}\n")
+
+
 def _fail(message: str) -> int:
-    print(f"ERROR: {message}")
+    _emit_line(f"ERROR: {message}", error=True)
     return 1
 
 
 def _warn(message: str) -> None:
-    print(f"WARNING: {message}")
+    _emit_line(f"WARNING: {message}", error=True)
 
 
-def _load_yaml(path: Path) -> dict:
+def _load_yaml(path: Path) -> dict[str, object]:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError(f"YAML root must be object: {path}")
@@ -37,7 +83,7 @@ def _bundle_dir(repo_root: Path, bundle: str) -> Path:
     return path
 
 
-def _find_registry_entry(registry: dict, module_name: str) -> dict | None:
+def _find_registry_entry(registry: dict[str, object], module_name: str) -> dict[str, object] | None:
     modules = registry.get("modules")
     if not isinstance(modules, list):
         return None
@@ -48,6 +94,9 @@ def _find_registry_entry(registry: dict, module_name: str) -> dict | None:
     return None
 
 
+@beartype
+@require(lambda argv: argv is None or all(isinstance(arg, str) for arg in argv), "argv must contain strings")
+@ensure(lambda result: result in {0, 1}, "main must return a process exit code")
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate module publish preconditions")
     parser.add_argument("--bundle", required=True, help="Bundle name, e.g. specfact-backlog or backlog")
@@ -66,10 +115,9 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.registry_index_path).resolve() if args.registry_index_path else repo_root / "registry" / "index.json"
     )
 
-    if not manifest_path.exists():
-        return _fail(f"Missing manifest: {manifest_path}")
-    if not registry_path.exists():
-        return _fail(f"Missing registry index: {registry_path}")
+    missing_paths = [path for path in (manifest_path, registry_path) if not path.exists()]
+    if missing_paths:
+        return _fail(f"Missing required publish input: {missing_paths[0]}")
 
     manifest = _load_yaml(manifest_path)
     module_name = bundle_dir.name
@@ -88,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
     entry = _find_registry_entry(registry, module_name)
     if entry is None:
         _warn(f"No registry entry found for nold-ai/{module_name}; skipping monotonic comparison")
-        print("OK: publish validation passed")
+        _emit_line("OK: publish validation passed")
         return 0
 
     latest_raw = entry.get("latest_version")
@@ -114,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
             f"(current: '{core_compatibility}')"
         )
 
-    print("OK: publish validation passed")
+    _emit_line("OK: publish validation passed")
     return 0
 
 

@@ -94,6 +94,22 @@ Bundled integrity:
 - `specfact module init` and bundled installs verify bundled module integrity metadata before copying.
 - For developer workflows, unsigned bundles can be temporarily allowed with `SPECFACT_ALLOW_UNSIGNED=1`.
 
+## Developer Shadow Modules
+
+When working in the full `specfact-cli-modules` repository, use the local helper
+to prepare a live module source tree for runtime validation through
+workspace-local `.specfact/modules`:
+
+```bash
+hatch run link-dev-module specfact-code-review
+SPECFACT_ALLOW_UNSIGNED=1 hatch run specfact code review run --help
+```
+
+The helper creates `<repo>/.specfact/modules/<module>` with symlinks to the
+live package content and a copied manifest without `integrity` metadata, so the
+source package manifest stays untouched during development. Use `--shadow-root`
+to target a temporary validation workspace instead of the current repository.
+
 ## List Modules
 
 ```bash

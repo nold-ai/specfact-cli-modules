@@ -1,0 +1,26 @@
+command: specfact code review rules
+scenarios:
+  - name: init-skill
+    type: pattern
+    argv:
+      - init
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - Created
+  - name: show-before-init-fails
+    type: anti-pattern
+    argv:
+      - show
+    expect:
+      exit_code: 1
+      stderr_contains:
+        - Run `specfact code review rules init` first
+  - name: update-after-init
+    type: pattern
+    argv:
+      - update
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - Updated

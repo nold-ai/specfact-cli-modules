@@ -40,7 +40,7 @@ Paste command output snippets or link workflow runs.
 
 ### Signature + version integrity (required)
 
-- [ ] `hatch run verify-modules-signature --require-signature --enforce-version-bump`
+- [ ] `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`
 - [ ] Changed bundle versions were bumped before signing
 - [ ] Manifests re-signed after bundle content changes
 

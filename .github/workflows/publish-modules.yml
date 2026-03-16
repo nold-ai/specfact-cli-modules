@@ -194,7 +194,7 @@ jobs:
           if not isinstance(modules, list):
             raise ValueError("registry/index.json must contain a 'modules' list")
 
-          ignored_dir_names = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
+          ignored_dir_names = {".git", "tests", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
           ignored_suffixes = {".pyc", ".pyo"}
 
           skipped_bundles: list[str] = []
