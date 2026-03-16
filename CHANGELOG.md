@@ -5,6 +5,23 @@ All notable changes to this repository will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows SemVer for bundle versions.
 
+## [0.43.0] - 2026-03-16
+
+### Added
+
+- Add the fully wired `specfact code review run` command with JSON, score-only,
+  fix, and git-diff default file discovery behavior.
+- Add clean and dirty review fixtures, end-to-end command tests, and
+  cli-contract scenario YAML files for the review `run`, `ledger`, and `rules`
+  command groups.
+
+### Changed
+
+- Extend the code-review module docs with review-run usage, output, exit-code,
+  and piping examples.
+- Add a repo-local CLI contract schema validator and bump the signed
+  `specfact-code-review` bundle metadata for the new command integration.
+
 ## [0.42.1] - 2026-03-16
 
 ### Added

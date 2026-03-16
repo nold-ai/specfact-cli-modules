@@ -1,5 +1,62 @@
 # specfact-code-review module notes
 
+## Review run command
+
+`specfact code review run` now executes the governed review pipeline end to end.
+
+### Command shape
+
+```bash
+specfact code review run [OPTIONS] [FILES...]
+```
+
+Options:
+
+- `--json`: emit the governed `ReviewReport` JSON payload to stdout
+- `--score-only`: print only the integer `reward_delta`
+- `--fix`: apply Ruff autofixes and re-run the review before printing results
+- `--no-tests`: skip the targeted TDD gate
+- `--rules PATH`: validate that a house-rules skill path exists before the run
+
+When `FILES` is omitted, the command falls back to:
+
+```bash
+git diff HEAD --name-only
+```
+
+Only existing Python files from that diff are reviewed.
+
+### Exit codes
+
+- `0`: `PASS` or `PASS_WITH_ADVISORY`
+- `1`: `FAIL`
+- `2`: invalid CLI usage, such as a missing file path or incompatible options
+
+### Output modes
+
+Default output renders findings grouped by category, then prints verdict, CI
+exit code, score, reward delta, and the review summary.
+
+`--json` outputs the `ReviewReport` envelope directly, which makes it suitable
+for piping into downstream commands:
+
+```bash
+specfact code review run --json tests/fixtures/review/clean_module.py
+specfact code review run --json packages/specfact-code-review/src/specfact_code_review/run/commands.py | specfact code review ledger update
+```
+
+`--score-only` is intended for lightweight CI integration:
+
+```bash
+specfact code review run --score-only packages/specfact-code-review/src/specfact_code_review/run/commands.py
+```
+
+`--fix` applies Ruff-backed autofixes before running the final review report:
+
+```bash
+specfact code review run --fix packages/specfact-code-review/src/specfact_code_review/run/commands.py
+```
+
 ## Tool runners
 
 The `specfact-code-review` bundle now includes internal runners that translate tool
