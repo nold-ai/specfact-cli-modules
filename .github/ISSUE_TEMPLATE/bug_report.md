@@ -22,7 +22,7 @@ hatch run <command>
 Example:
 
 ```bash
-hatch run verify-modules-signature --require-signature --enforce-version-bump
+hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
 ```
 
 ## Expected Behavior
@@ -55,7 +55,7 @@ Typical commands:
 - `hatch run lint`
 - `hatch run yaml-lint`
 - `hatch run check-bundle-imports`
-- `hatch run verify-modules-signature --require-signature --enforce-version-bump`
+- `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`
 
 ## Additional Context
 

@@ -4,12 +4,24 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import pytest
 from icontract.errors import ViolationError
 from typer.testing import CliRunner
 
 from specfact_code_review.ledger.client import LedgerRun
 from specfact_code_review.review.commands import app
-from specfact_code_review.rules.updater import MAX_SKILL_LINES, SKILL_PATH, default_skill_content, update_house_rules
+from specfact_code_review.rules.updater import (
+    CURSOR_RULES_PATH,
+    IDE_SKILL_PATHS,
+    MAX_SKILL_LINES,
+    SKILL_PATH,
+    SupportedIde,
+    default_skill_content,
+    load_bundled_skill_content,
+    render_cursor_rule,
+    sync_skill_to_ide,
+    update_house_rules,
+)
 
 
 runner = CliRunner()
@@ -94,12 +106,37 @@ def _run(*rules: str, created_at: datetime | None = None) -> LedgerRun:
     )
 
 
+def test_load_bundled_skill_content_returns_valid_structure_when_available() -> None:
+    """Bundled SKILL is used when package is installed; content has required sections."""
+    content = load_bundled_skill_content()
+    if content is None:
+        pytest.skip("Bundled SKILL not found (e.g. package not installed)")
+    assert "name: specfact-code-review" in content
+    assert "## DO" in content
+    assert "## DON'T" in content
+    assert "## TOP VIOLATIONS" in content
+    assert "<!-- auto-managed: do not edit manually -->" in content
+    assert len(content.splitlines()) <= MAX_SKILL_LINES
+
+
 def test_default_skill_content_stays_within_line_budget() -> None:
     skill = default_skill_content(updated_on=date(2026, 3, 10))
 
     assert len(skill.splitlines()) <= MAX_SKILL_LINES
     assert "name: specfact-code-review" in skill
     assert "allowed-tools: []" in skill
+
+
+def test_render_cursor_rule_uses_cursor_metadata_and_skill_body() -> None:
+    skill = _skill_text()
+
+    rendered = render_cursor_rule(skill)
+
+    assert rendered.startswith("---\ndescription: House rules for AI coding sessions derived from review findings\n")
+    assert "alwaysApply: true" in rendered
+    assert "name: specfact-code-review" not in rendered
+    assert "allowed-tools: []" not in rendered
+    assert "# House Rules - AI Coding Context (v1)" in rendered
 
 
 def test_update_house_rules_surfaces_rule_with_three_hits(tmp_path: Path) -> None:
@@ -227,12 +264,73 @@ def test_rules_init_creates_default_skill_without_modifying_claude(monkeypatch: 
     assert claude_path.read_text(encoding="utf-8") == "keep me\n"
 
 
+def test_rules_init_mirrors_to_cursor_rules(monkeypatch: Any, tmp_path: Path) -> None:
+    """Init must render Cursor metadata when the user chooses Cursor."""
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["review", "rules", "init", "--ide", "cursor"])
+
+    assert result.exit_code == 0
+    skill_path = tmp_path / SKILL_PATH
+    mirror_path = tmp_path / CURSOR_RULES_PATH
+    assert skill_path.exists()
+    assert mirror_path.exists()
+    assert mirror_path.read_text(encoding="utf-8") == render_cursor_rule(skill_path.read_text(encoding="utf-8"))
+
+
+def test_rules_init_creates_cursor_rules_dir_if_missing(monkeypatch: Any, tmp_path: Path) -> None:
+    """Init must create .cursor/rules/ when it does not exist."""
+    monkeypatch.chdir(tmp_path)
+    assert not (tmp_path / ".cursor").exists()
+
+    result = runner.invoke(app, ["review", "rules", "init", "--ide", "cursor"])
+
+    assert result.exit_code == 0
+    assert (tmp_path / CURSOR_RULES_PATH).exists()
+
+
+def test_rules_init_installs_to_selected_skill_md_ide_location(monkeypatch: Any, tmp_path: Path) -> None:
+    """Init must only install to the canonical SKILL.md location for the chosen IDE."""
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["review", "rules", "init", "--ide", "codex"])
+
+    assert result.exit_code == 0
+    content = (tmp_path / SKILL_PATH).read_text(encoding="utf-8")
+    expected_path = tmp_path / IDE_SKILL_PATHS[SupportedIde.CODEX]
+    assert expected_path.read_text(encoding="utf-8") == content
+    assert not (tmp_path / IDE_SKILL_PATHS[SupportedIde.CLAUDE]).exists()
+    assert not (tmp_path / IDE_SKILL_PATHS[SupportedIde.VIBE]).exists()
+    assert not (tmp_path / CURSOR_RULES_PATH).exists()
+
+
+def test_sync_skill_to_ide_without_explicit_ide_refreshes_existing_targets_only(tmp_path: Path) -> None:
+    content = _skill_text()
+    codex_path = tmp_path / IDE_SKILL_PATHS[SupportedIde.CODEX]
+    cursor_path = tmp_path / CURSOR_RULES_PATH
+    codex_path.parent.mkdir(parents=True)
+    cursor_path.parent.mkdir(parents=True)
+    codex_path.write_text("old\n", encoding="utf-8")
+    cursor_path.write_text("old\n", encoding="utf-8")
+
+    written = sync_skill_to_ide(content, tmp_path)
+
+    assert written == [cursor_path, codex_path]
+    assert codex_path.read_text(encoding="utf-8") == content
+    assert cursor_path.read_text(encoding="utf-8") == render_cursor_rule(content)
+
+
 def test_rules_update_rederives_top_violations_from_ledger(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
     skill_path = tmp_path / SKILL_PATH
     skill_path.parent.mkdir(parents=True)
     skill_path.write_text(_skill_text(version=3), encoding="utf-8")
-    (tmp_path / ".cursor/rules").mkdir(parents=True)
+    installed_codex_path = tmp_path / IDE_SKILL_PATHS[SupportedIde.CODEX]
+    installed_codex_path.parent.mkdir(parents=True)
+    installed_codex_path.write_text("old\n", encoding="utf-8")
+    installed_cursor_path = tmp_path / CURSOR_RULES_PATH
+    installed_cursor_path.parent.mkdir(parents=True)
+    installed_cursor_path.write_text("old\n", encoding="utf-8")
 
     class FakeLedgerClient:
         def get_recent_runs(self, limit: int = 20) -> list[LedgerRun]:
@@ -247,4 +345,5 @@ def test_rules_update_rederives_top_violations_from_ledger(monkeypatch: Any, tmp
     updated = skill_path.read_text(encoding="utf-8")
     assert "# House Rules - AI Coding Context (v4)" in updated
     assert "C901" in updated
-    assert (tmp_path / ".cursor/rules/house_rules.mdc").read_text(encoding="utf-8") == updated
+    assert installed_codex_path.read_text(encoding="utf-8") == updated
+    assert installed_cursor_path.read_text(encoding="utf-8") == render_cursor_rule(updated)

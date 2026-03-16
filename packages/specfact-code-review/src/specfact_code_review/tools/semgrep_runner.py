@@ -21,6 +21,7 @@ SEMGREP_RULE_CATEGORY = {
     "module-level-network": "architecture",
     "print-in-src": "architecture",
 }
+SEMGREP_TIMEOUT_SECONDS = 90
 
 
 def _normalize_path_variants(path_value: str | Path) -> set[str]:
@@ -102,6 +103,7 @@ def run_semgrep(files: list[Path]) -> list[ReviewFinding]:
             result = subprocess.run(
                 [
                     "semgrep",
+                    "--disable-version-check",
                     "--config",
                     str(_resolve_config_path()),
                     "--json",
@@ -110,7 +112,7 @@ def run_semgrep(files: list[Path]) -> list[ReviewFinding]:
                 capture_output=True,
                 text=True,
                 check=False,
-                timeout=30,
+                timeout=SEMGREP_TIMEOUT_SECONDS,
                 env=env,
             )
         payload = json.loads(result.stdout)

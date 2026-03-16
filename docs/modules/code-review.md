@@ -220,7 +220,14 @@ specfact code review rules update
 ### Generated files
 
 - `rules init` creates `skills/specfact-code-review/SKILL.md` in the current
-  project without touching `CLAUDE.md`.
+  project from the bundled package template (or default content if bundled is unavailable),
+  does not touch `CLAUDE.md`, and can optionally install one canonical IDE target
+  via `--ide <claude|codex|cursor|vibe>`.
+- **Cursor (special case)**: `.cursor/rules/house_rules.mdc` — rules format for
+  auto-attachment when `--ide cursor` is chosen.
+- **SKILL.md compatible IDEs**: `.claude/skills/specfact-code-review/SKILL.md`,
+  `.codex/skills/specfact-code-review/SKILL.md`, `.vibe/skills/specfact-code-review/SKILL.md`
+  when their matching `--ide` value is chosen.
 - `rules show` prints the current `SKILL.md` content and suggests `rules init`
   when the file is missing.
 - `rules update` reads the last 20 ledger runs, surfaces rule IDs with at least
@@ -229,8 +236,8 @@ specfact code review rules update
 - The updater preserves the curated `DO` and `DON'T` sections, updates the
   `Updated:` timestamp, and enforces a 35-line hard cap by removing the
   lowest-frequency violation entries first.
-- When `.cursor/rules/` already exists in the current project, `rules update`
-  also mirrors the generated content to `.cursor/rules/house_rules.mdc`.
+- `rules update` refreshes only canonical IDE targets already installed in the
+  project, or a single explicit target when `--ide` is supplied.
 
 ## Review orchestration
 

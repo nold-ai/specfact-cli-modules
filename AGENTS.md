@@ -23,7 +23,7 @@ hatch run format
 hatch run type-check
 hatch run lint
 hatch run yaml-lint
-hatch run verify-modules-signature --require-signature --enforce-version-bump
+hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
 hatch run contract-test
 hatch run smart-test
 hatch run test
