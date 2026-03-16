@@ -1,0 +1,19 @@
+command: specfact code review run
+scenarios:
+  - name: clean-json-pass
+    type: pattern
+    argv:
+      - --json
+      - tests/fixtures/review/clean_module.py
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - '"overall_verdict":"PASS"'
+  - name: missing-file-errors
+    type: anti-pattern
+    argv:
+      - tests/fixtures/review/missing.py
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - not found

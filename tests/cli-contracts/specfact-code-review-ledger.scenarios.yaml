@@ -1,0 +1,19 @@
+command: specfact code review ledger
+scenarios:
+  - name: update-from-stdin
+    type: pattern
+    argv:
+      - update
+    stdin: '{"run_id":"review-run-001","timestamp":"2026-03-16T00:00:00Z","score":85,"findings":[],"summary":"ok"}'
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - Updated ledger
+  - name: reset-without-confirm
+    type: anti-pattern
+    argv:
+      - reset
+    expect:
+      exit_code: 1
+      stderr_contains:
+        - --confirm
