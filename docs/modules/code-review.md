@@ -163,6 +163,47 @@ Operational note:
 - the current development environment includes CrossHair, but installed-user
   environments still need that executable available for the fast pass to run
 
+## Ledger commands
+
+The `specfact-code-review` bundle now includes a reward ledger that persists
+review outcomes and exposes a small CLI surface under `specfact code review
+ledger`.
+
+### Command flow
+
+Use the governed review report as the canonical input for ledger updates:
+
+```bash
+specfact code review run --json | specfact code review ledger update
+specfact code review ledger status
+specfact code review ledger reset --confirm
+```
+
+### Storage behavior
+
+- When `SUPABASE_URL` and `SUPABASE_KEY` are present, the ledger writes review
+  runs to `ai_sync.review_runs` and appends ledger snapshots to
+  `ai_sync.reward_ledger`.
+- The reviewed DDL lives with the bundle at
+  `packages/specfact-code-review/src/specfact_code_review/resources/supabase/review_ledger_ddl.sql`
+  instead of a repo-root infrastructure folder.
+- When Supabase is unavailable or not configured, the bundle falls back to the
+  local JSON ledger at `~/.specfact/ledger.json`.
+- `ledger status` prints coins, pass/block streaks, the last verdict, and the
+  top three violation rules seen so far.
+- `ledger reset` only clears the local JSON fallback and requires `--confirm`.
+
+### Local module development
+
+If the CLI warns that bundled modules are missing or outdated while you are
+testing local bundle changes, refresh the project-scope modules first:
+
+```bash
+specfact module init --scope project
+```
+
+Then rerun the ledger command from the same repository checkout.
+
 ## Review orchestration
 
 `specfact_code_review.run.runner.run_review(files, no_tests=False)` orchestrates the
