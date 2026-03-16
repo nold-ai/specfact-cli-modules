@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Literal
 
 from pytest import MonkeyPatch
 
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
-from specfact_code_review.run.runner import run_review, run_tdd_gate
+from specfact_code_review.run.runner import _pytest_targets, _run_pytest_with_coverage, run_review, run_tdd_gate
 
 
 def _finding(
@@ -45,7 +47,13 @@ def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: _record("basedpyright"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: _record("pylint"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: _record("contracts"))
-    monkeypatch.setattr("specfact_code_review.run.runner.run_tdd_gate", lambda files: _record("testing"))
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner._evaluate_tdd_gate",
+        lambda files: (
+            _record("testing"),
+            {"packages/specfact-code-review/src/specfact_code_review/run/scorer.py": 95.0},
+        ),
+    )
 
     report = run_review([Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")])
 
@@ -75,8 +83,11 @@ def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -
         lambda files: [_finding(tool="contract_runner", rule="MISSING_ICONTRACT", category="contracts")],
     )
     monkeypatch.setattr(
-        "specfact_code_review.run.runner.run_tdd_gate",
-        lambda files: [_finding(tool="pytest", rule="TEST_COVERAGE_LOW", category="testing")],
+        "specfact_code_review.run.runner._evaluate_tdd_gate",
+        lambda files: (
+            [_finding(tool="pytest", rule="TEST_COVERAGE_LOW", category="testing")],
+            {"packages/specfact-code-review/src/specfact_code_review/run/scorer.py": 65.0},
+        ),
     )
 
     report = run_review([Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")])
@@ -93,7 +104,7 @@ def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -
 
 
 def test_run_tdd_gate_reports_missing_test_file() -> None:
-    findings = run_tdd_gate([Path("packages/specfact-code-review/src/specfact_code_review/review/commands.py")])
+    findings = run_tdd_gate([Path("packages/specfact-code-review/src/specfact_code_review/rules/commands.py")])
 
     assert len(findings) == 1
     assert findings[0].category == "testing"
@@ -109,8 +120,8 @@ def test_run_review_skips_tdd_gate_when_no_tests_is_true(monkeypatch: MonkeyPatc
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: [])
     monkeypatch.setattr(
-        "specfact_code_review.run.runner.run_tdd_gate",
-        lambda files: (_ for _ in ()).throw(AssertionError("run_tdd_gate should not be called")),
+        "specfact_code_review.run.runner._evaluate_tdd_gate",
+        lambda files: (_ for _ in ()).throw(AssertionError("_evaluate_tdd_gate should not be called")),
     )
 
     report = run_review(
@@ -128,12 +139,149 @@ def test_run_review_returns_review_report(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: [])
-    monkeypatch.setattr("specfact_code_review.run.runner.run_tdd_gate", lambda files: [])
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner._evaluate_tdd_gate",
+        lambda files: ([], {"packages/specfact-code-review/src/specfact_code_review/run/scorer.py": 95.0}),
+    )
 
     report = run_review([Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")])
 
     assert isinstance(report, ReviewReport)
     assert report.summary
+
+
+def test_run_review_suppresses_known_test_noise_by_default(monkeypatch: MonkeyPatch) -> None:
+    noisy_findings = [
+        ReviewFinding(
+            category="contracts",
+            severity="warning",
+            tool="contract_runner",
+            rule="MISSING_ICONTRACT",
+            file="tests/unit/specfact_code_review/run/test_commands.py",
+            line=10,
+            message="test noise",
+            fixable=False,
+        ),
+        ReviewFinding(
+            category="style",
+            severity="warning",
+            tool="pylint",
+            rule="W0212",
+            file="tests/unit/specfact_code_review/run/test_commands.py",
+            line=11,
+            message="protected helper access",
+            fixable=False,
+        ),
+        ReviewFinding(
+            category="style",
+            severity="warning",
+            tool="ruff",
+            rule="F821",
+            file="tests/unit/specfact_code_review/run/test_commands.py",
+            line=12,
+            message="real test issue",
+            fixable=False,
+        ),
+    ]
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: noisy_findings[2:])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: noisy_findings[1:2])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: noisy_findings[:1])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review([Path("tests/unit/specfact_code_review/run/test_commands.py")], no_tests=True)
+
+    assert [finding.rule for finding in report.findings] == ["F821"]
+
+
+def test_run_review_can_include_known_test_noise(monkeypatch: MonkeyPatch) -> None:
+    noisy_findings = [
+        ReviewFinding(
+            category="contracts",
+            severity="warning",
+            tool="contract_runner",
+            rule="MISSING_ICONTRACT",
+            file="tests/unit/specfact_code_review/run/test_commands.py",
+            line=10,
+            message="test noise",
+            fixable=False,
+        ),
+        ReviewFinding(
+            category="style",
+            severity="warning",
+            tool="pylint",
+            rule="W0212",
+            file="tests/unit/specfact_code_review/run/test_commands.py",
+            line=11,
+            message="protected helper access",
+            fixable=False,
+        ),
+    ]
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: noisy_findings[1:])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: noisy_findings[:1])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("tests/unit/specfact_code_review/run/test_commands.py")],
+        no_tests=True,
+        include_noise=True,
+    )
+
+    assert [finding.rule for finding in report.findings] == ["W0212", "MISSING_ICONTRACT"]
+
+
+def test_run_review_suppresses_global_duplicate_code_noise_by_default(monkeypatch: MonkeyPatch) -> None:
+    duplicate_code_finding = ReviewFinding(
+        category="style",
+        severity="warning",
+        tool="pylint",
+        rule="R0801",
+        file="scripts/link_dev_module.py",
+        line=1,
+        message="Similar lines in 2 files",
+        fixable=False,
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [duplicate_code_finding])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review([Path("scripts/link_dev_module.py")], no_tests=True)
+
+    assert report.findings == []
+
+
+def test_run_review_can_include_global_duplicate_code_noise(monkeypatch: MonkeyPatch) -> None:
+    duplicate_code_finding = ReviewFinding(
+        category="style",
+        severity="warning",
+        tool="pylint",
+        rule="R0801",
+        file="scripts/link_dev_module.py",
+        line=1,
+        message="Similar lines in 2 files",
+        fixable=False,
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [duplicate_code_finding])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review([Path("scripts/link_dev_module.py")], no_tests=True, include_noise=True)
+
+    assert [finding.rule for finding in report.findings] == ["R0801"]
 
 
 def test_run_tdd_gate_warns_when_coverage_is_below_threshold(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
@@ -211,3 +359,61 @@ def test_run_tdd_gate_returns_no_finding_for_passing_tests_with_sufficient_cover
     findings = run_tdd_gate([source_file])
 
     assert findings == []
+
+
+def test_run_pytest_with_coverage_disables_global_fail_under(monkeypatch: MonkeyPatch) -> None:
+    recorded: dict[str, object] = {}
+
+    def _fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        recorded["command"] = command
+        recorded["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    _run_pytest_with_coverage([Path("tests/unit/specfact_code_review/run/test_commands.py")])
+
+    command = recorded["command"]
+    assert isinstance(command, list)
+    assert command[:3] == [sys.executable, "-m", "pytest"]
+    assert "--cov-fail-under=0" in command
+
+
+def test_pytest_targets_collapse_multi_file_batch_to_common_test_directory() -> None:
+    test_files = [
+        Path("tests/unit/specfact_code_review/run/test_commands.py"),
+        Path("tests/unit/specfact_code_review/run/test_runner.py"),
+    ]
+
+    assert _pytest_targets(test_files) == [Path("tests/unit/specfact_code_review/run")]
+
+
+def test_run_pytest_with_coverage_propagates_pythonpath(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    recorded: dict[str, object] = {}
+    bundle_root = tmp_path / "bundle-src"
+    bundle_root.mkdir()
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    monkeypatch.chdir(workspace_root)
+    monkeypatch.setenv("PYTHONPATH", str(tmp_path / "existing"))
+    monkeypatch.setattr(sys, "path", [str(bundle_root), "", str(tmp_path / "missing")])
+
+    def _fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        recorded["command"] = command
+        recorded["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    _run_pytest_with_coverage([Path("tests/unit/specfact_code_review/run/test_commands.py")])
+
+    kwargs = recorded["kwargs"]
+    assert isinstance(kwargs, dict)
+    env = kwargs["env"]
+    assert isinstance(env, dict)
+    assert env["PYTHONPATH"].split(os.pathsep) == [
+        str(workspace_root.resolve()),
+        str(Path("packages/specfact-code-review/src").resolve()),
+        str(tmp_path / "existing"),
+        str(bundle_root.resolve()),
+    ]

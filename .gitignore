@@ -40,6 +40,7 @@ logs/
 !.claude/skills/openspec-workflows/
 
 .codex/skills/openspec-*/
+.codex/skills/specfact-*/
 !.codex/skills/openspec-workflows/
 
 .vibe/skills/openspec-*/

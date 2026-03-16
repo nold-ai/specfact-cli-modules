@@ -12,19 +12,37 @@ specfact code review run [OPTIONS] [FILES...]
 
 Options:
 
-- `--json`: emit the governed `ReviewReport` JSON payload to stdout
+- `--json`: write the governed `ReviewReport` JSON payload to a file
+- `--out PATH`: override the JSON output file path used with `--json`
 - `--score-only`: print only the integer `reward_delta`
 - `--fix`: apply Ruff autofixes and re-run the review before printing results
 - `--no-tests`: skip the targeted TDD gate
-- `--rules PATH`: validate that a house-rules skill path exists before the run
+- `--include-tests/--exclude-tests`: include or exclude changed test files when
+  review scope is auto-detected from `git diff`
+- `--include-noise/--suppress-noise`: include or suppress known low-signal
+  findings such as test-scope contract noise
+- `--interactive`: ask whether changed test files should be included before
+  auto-detected review runs
 
 When `FILES` is omitted, the command falls back to:
 
 ```bash
 git diff HEAD --name-only
+git ls-files --others --exclude-standard
 ```
 
-Only existing Python files from that diff are reviewed.
+Only existing Python files from tracked or untracked workspace changes are
+reviewed. Test files under `tests/` are excluded by default for auto-detected
+review scope unless you pass `--include-tests` or answer yes in
+`--interactive` mode.
+
+With default noise suppression, the review also hides known low-signal test
+findings such as:
+
+- `contract_runner MISSING_ICONTRACT` on test functions
+- selected `basedpyright` import/attribute findings in tests
+- `pylint W0212` when tests intentionally exercise internal helpers
+- `pylint R0801` duplicate-code reports that are better treated as advisory
 
 ### Exit codes
 
@@ -37,12 +55,17 @@ Only existing Python files from that diff are reviewed.
 Default output renders findings grouped by category, then prints verdict, CI
 exit code, score, reward delta, and the review summary.
 
-`--json` outputs the `ReviewReport` envelope directly, which makes it suitable
-for piping into downstream commands:
+During long-running reviews, the CLI now emits step progress to stderr so users
+can see the current phase without breaking stdout-oriented contracts like the
+final `--json` output path.
+
+`--json` writes the `ReviewReport` envelope to `review-report.json` by default.
+Use `--out` to override the file path:
 
 ```bash
 specfact code review run --json tests/fixtures/review/clean_module.py
-specfact code review run --json packages/specfact-code-review/src/specfact_code_review/run/commands.py | specfact code review ledger update
+specfact code review run --json --out /tmp/review-report.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review ledger update --from /tmp/review-report.json
 ```
 
 `--score-only` is intended for lightweight CI integration:
@@ -231,7 +254,8 @@ ledger`.
 Use the governed review report as the canonical input for ledger updates:
 
 ```bash
-specfact code review run --json | specfact code review ledger update
+specfact code review run --json --out /tmp/review-report.json
+specfact code review ledger update --from /tmp/review-report.json
 specfact code review ledger status
 specfact code review ledger reset --confirm
 ```
@@ -244,8 +268,9 @@ specfact code review ledger reset --confirm
 - The reviewed DDL lives with the bundle at
   `packages/specfact-code-review/src/specfact_code_review/resources/supabase/review_ledger_ddl.sql`
   instead of a repo-root infrastructure folder.
-- When Supabase is unavailable or not configured, the bundle falls back to the
-  local JSON ledger at `~/.specfact/ledger.json`.
+- When Supabase is unavailable or not configured, the bundle falls back to a
+  local JSON ledger. In a repository checkout it prefers
+  `.specfact/ledger.json`; otherwise it falls back to `~/.specfact/ledger.json`.
 - `ledger status` prints coins, pass/block streaks, the last verdict, and the
   top three violation rules seen so far.
 - `ledger reset` only clears the local JSON fallback and requires `--confirm`.

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import sys
+from importlib import import_module
 from pathlib import Path
 
 
@@ -13,12 +14,8 @@ repo_root_str = str(REPO_ROOT)
 if repo_root_str not in sys.path:
     sys.path.insert(0, repo_root_str)
 
-
-def _main() -> int:
-    from scripts.publish_module import main
-
-    return main()
+main = import_module("scripts.publish_module").main
 
 
 if __name__ == "__main__":
-    raise SystemExit(_main())
+    raise SystemExit(main())

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from typer.testing import CliRunner
@@ -34,6 +35,24 @@ def test_ledger_update_reads_valid_json_stdin_and_calls_record_run(monkeypatch: 
     monkeypatch.setattr("specfact_code_review.ledger.commands.LedgerClient", FakeLedgerClient)
 
     result = runner.invoke(app, ["review", "ledger", "update"], input=_report_json())
+
+    assert result.exit_code == 0
+    assert recorded["report"].run_id == "run-commands-001"
+
+
+def test_ledger_update_reads_valid_json_from_file(monkeypatch: Any, tmp_path: Path) -> None:
+    recorded: dict[str, ReviewReport] = {}
+    report_file = tmp_path / "review-report.json"
+    report_file.write_text(_report_json(), encoding="utf-8")
+
+    class FakeLedgerClient:
+        def record_run(self, report: ReviewReport) -> dict[str, object]:
+            recorded["report"] = report
+            return {"coins": 0.5, "streak_pass": 1, "streak_block": 0, "last_verdict": "PASS", "top_violations": []}
+
+    monkeypatch.setattr("specfact_code_review.ledger.commands.LedgerClient", FakeLedgerClient)
+
+    result = runner.invoke(app, ["review", "ledger", "update", "--from", str(report_file)])
 
     assert result.exit_code == 0
     assert recorded["report"].run_id == "run-commands-001"
@@ -73,6 +92,51 @@ def test_ledger_status_prints_current_state(monkeypatch: Any) -> None:
     assert "PASS" in result.output
 
 
+def test_ledger_status_renders_top_violations_from_dict_entries(monkeypatch: Any) -> None:
+    class FakeLedgerClient:
+        def get_status(self) -> dict[str, object]:
+            return {
+                "coins": 7.3,
+                "streak_pass": 2,
+                "streak_block": 0,
+                "last_verdict": "PASS",
+                "top_violations": [{"rule": "E501", "count": 3}],
+            }
+
+    monkeypatch.setattr("specfact_code_review.ledger.commands.LedgerClient", FakeLedgerClient)
+
+    result = runner.invoke(app, ["review", "ledger", "status"])
+
+    assert result.exit_code == 0
+    assert "E501 (3)" in result.output
+
+
+def test_ledger_update_surfaces_write_errors(monkeypatch: Any) -> None:
+    class FakeLedgerClient:
+        def record_run(self, report: ReviewReport) -> dict[str, object]:
+            raise OSError("disk full")
+
+    monkeypatch.setattr("specfact_code_review.ledger.commands.LedgerClient", FakeLedgerClient)
+
+    result = runner.invoke(app, ["review", "ledger", "update"], input=_report_json())
+
+    assert result.exit_code == 1
+    assert "Unable to write ledger state" in result.output
+
+
+def test_ledger_status_surfaces_read_errors(monkeypatch: Any) -> None:
+    class FakeLedgerClient:
+        def get_status(self) -> dict[str, object]:
+            raise OSError("permission denied")
+
+    monkeypatch.setattr("specfact_code_review.ledger.commands.LedgerClient", FakeLedgerClient)
+
+    result = runner.invoke(app, ["review", "ledger", "status"])
+
+    assert result.exit_code == 1
+    assert "Unable to read ledger state" in result.output
+
+
 def test_ledger_reset_without_confirm_refuses_deletion(monkeypatch: Any) -> None:
     called = {"reset": False}
 
@@ -104,3 +168,16 @@ def test_ledger_reset_with_confirm_clears_local_ledger(monkeypatch: Any) -> None
 
     assert result.exit_code == 0
     assert called["reset"] is True
+
+
+def test_ledger_reset_surfaces_delete_errors(monkeypatch: Any) -> None:
+    class FakeLedgerClient:
+        def reset_local(self) -> bool:
+            raise OSError("readonly")
+
+    monkeypatch.setattr("specfact_code_review.ledger.commands.LedgerClient", FakeLedgerClient)
+
+    result = runner.invoke(app, ["review", "ledger", "reset", "--confirm"])
+
+    assert result.exit_code == 1
+    assert "Unable to reset ledger state" in result.output
