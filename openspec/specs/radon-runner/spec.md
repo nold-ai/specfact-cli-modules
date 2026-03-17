@@ -1,12 +1,11 @@
-## ADDED Requirements
+# radon-runner Specification
 
+## Purpose
+TBD - created by archiving change code-review-02-ruff-radon-runners. Update Purpose after archive.
+## Requirements
 ### Requirement: Radon complexity maps to review findings
 The bundle SHALL invoke `radon cc -j` for only the provided files and convert function
 complexity above 12 into `ReviewFinding` records.
-
-### Requirement: Radon is available in the standard repo environment
-The bundle SHALL declare the Radon executable in the default development environment
-used by local and CI quality gates.
 
 #### Scenario: Complexity 13 produces a warning
 - **GIVEN** Radon reports a function with complexity 13
@@ -34,3 +33,13 @@ used by local and CI quality gates.
 - **GIVEN** Radon is unavailable or returns invalid JSON
 - **WHEN** `run_radon(files=[...])` is called
 - **THEN** exactly one `ReviewFinding` with `category="tool_error"` is returned
+
+### Requirement: Radon is available in the standard repo environment
+The bundle SHALL declare the Radon executable in the default development environment
+used by local and CI quality gates.
+
+#### Scenario: Repo quality environment can execute Radon
+- **GIVEN** the standard repository development environment is created
+- **WHEN** Radon-backed review tooling or tests run in that environment
+- **THEN** the `radon` executable is available on `PATH`
+

@@ -1,5 +1,8 @@
-## MODIFIED Requirements
+# review-run-command Specification
 
+## Purpose
+TBD - created by archiving change code-review-08-review-run-integration. Update Purpose after archive.
+## Requirements
 ### Requirement: End-to-End `specfact code review run` in modules repo
 
 The `specfact-code-review` bundle SHALL provide a fully wired
@@ -63,3 +66,4 @@ without mutating the source package manifest.
 - **WHEN** the helper prepares a workspace shadow root
 - **THEN** the shadow module directory contains symlinks to the live module content
 - **AND** the shadow manifest omits integrity metadata so runtime validation can opt into unsigned local loading
+
