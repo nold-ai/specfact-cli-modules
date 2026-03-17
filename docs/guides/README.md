@@ -1,6 +1,6 @@
 # Guides
 
-Practical guides for using SpecFact CLI effectively.
+Practical module-owned guides for official bundles, adapters, publishing, and deep workflow documentation.
 
 ## Available Guides
 
