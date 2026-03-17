@@ -30,18 +30,17 @@ Complete technical reference for the official modules site and bundle-owned work
 
 ### Commands
 
-- `specfact sync bridge --adapter speckit --bundle <bundle-name>` - Import from external tools via bridge adapter
+- `specfact project sync bridge --adapter speckit --bundle <bundle-name>` - Import from external tools via bridge adapter
 - `specfact code import <bundle-name>` - Reverse-engineer plans from code
-- `specfact plan init <bundle-name>` - Initialize new development plan
-- `specfact plan compare` - Compare manual vs auto plans
-- `specfact enforce stage` - Configure quality gates
-- `specfact repro` - Run full validation suite
-- `specfact sync bridge --adapter <adapter> --bundle <bundle-name>` - Sync with external tools via bridge adapter
+- `specfact code analyze contracts` - Analyze contract coverage for a codebase bundle
+- `specfact govern enforce stage` - Configure quality gates
+- `specfact code repro` - Run the reproducibility validation suite
+- `specfact project sync bridge --adapter <adapter> --bundle <bundle-name>` - Sync with external tools via bridge adapter
 - `specfact spec validate [--bundle <name>]` - Validate OpenAPI/AsyncAPI specifications
 - `specfact spec generate-tests [--bundle <name>]` - Generate contract tests from specifications
 - `specfact spec mock [--bundle <name>]` - Launch mock server for development
 - `specfact init ide --ide <cursor|vscode|copilot|...>` - Initialize IDE integration explicitly
-- `specfact module install <name|namespace/name> [--scope user|project] [--source auto|bundled|marketplace] [--repo PATH]` - Install modules with scope and source control (bare names normalize to `specfact/<name>`)
+- `specfact module install <name|namespace/name> [--scope user|project] [--source auto|bundled|marketplace] [--repo PATH]` - Install modules with scope and source control
 - `specfact module list [--source ...] [--show-origin] [--show-bundled-available]` - List modules with trust/publisher, optional origin details, and optional bundled-not-installed section
 - `specfact module show <name>` - Show detailed module metadata and full command tree with short descriptions
 - `specfact module search <query>` - Search marketplace and installed modules

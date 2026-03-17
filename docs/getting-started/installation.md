@@ -142,10 +142,10 @@ jobs:
         run: pip install specfact-cli
 
       - name: Set up CrossHair Configuration
-        run: specfact repro setup
+        run: specfact code repro setup
 
       - name: Run Contract Validation
-        run: specfact repro --verbose --budget 90
+        run: specfact code repro --verbose
 
       - name: Generate PR Comment
         if: github.event_name == 'pull_request'
@@ -177,7 +177,7 @@ SpecFact CLI supports two operational modes:
 
 ```bash
 # CLI-only mode (uvx - no installation)
-uvx specfact-cli@latest code import my-project --repo .
+uvx specfact-cli@latest code import --repo . my-project
 
 # Interactive mode (pip + specfact init - recommended)
 # After: pip install specfact-cli && specfact init
@@ -198,26 +198,23 @@ Fresh install exposes only core commands:
 Commands available after bundle installation:
 
 - `specfact project ...`
-- `specfact plan ...`
-- `specfact sync ...`
+- `specfact project sync ...`
 - `specfact backlog ...`
 - `specfact code ...`
-- `specfact analyze ...`
-- `specfact drift ...`
-- `specfact validate ...`
-- `specfact repro ...`
+- `specfact code analyze ...`
+- `specfact code drift ...`
+- `specfact code validate ...`
+- `specfact code repro ...`
 - `specfact spec ...`
-- `specfact contract ...`
-- `specfact sdd ...`
-- `specfact generate ...`
-- `specfact enforce ...`
+- `specfact govern ...`
+- `specfact govern enforce ...`
 
 Profile outcomes:
 
 | Profile | Installed bundles | Available groups |
 |---|---|---|
 | `solo-developer` | `specfact-codebase` | `code` |
-| `backlog-team` | `specfact-project`, `specfact-backlog`, `specfact-codebase` | `project`, `backlog`, `code` |
+| `backlog-team` | `specfact-project`, `specfact-backlog`, `specfact-codebase` | `project`, `project sync`, `backlog`, `code` |
 | `api-first-team` | `specfact-spec`, `specfact-codebase` (+`specfact-project` dependency) | `project`, `code`, `spec` |
 | `enterprise-full-stack` | all five bundles | `project`, `backlog`, `code`, `spec`, `govern` |
 
@@ -240,18 +237,15 @@ specfact init --install all
 
 ### For Greenfield Projects
 
-Start a new contract-driven project:
+Install the project bundle and inspect the currently mounted project workflow surface:
 
 ```bash
-specfact plan init --interactive
+specfact module install nold-ai/specfact-project
+specfact project --help
+specfact project sync --help
 ```
 
-This will guide you through creating:
-
-- Initial project idea and narrative
-- Product themes and releases
-- First features and stories
-- Protocol state machine
+The mounted `project` group contains the currently supported project-bundle workflows in this release.
 
 **With IDE Integration (Interactive AI Assistant Mode):**
 
@@ -266,18 +260,17 @@ cd /path/to/your/project
 specfact init
 # Or specify IDE: specfact init ide --ide cursor
 
-# Step 4: Use slash command in IDE chat
-/specfact.02-plan init legacy-api
-# Or use other plan operations: /specfact.02-plan add-feature --bundle legacy-api --key FEATURE-001 --title "User Auth"
+# Step 4: Use the current mounted commands or repo-local slash workflows
+specfact project --help
+specfact project sync --help
 ```
 
 **Important**:
 
 - Interactive mode automatically uses your IDE workspace
-- Slash commands use numbered format: `/specfact.01-import`, `/specfact.02-plan`, etc.
-- Commands are numbered for natural workflow progression (01-import → 02-plan → 03-review → 04-sdd → 05-enforce → 06-sync)
+- Verify repo-local slash workflows against the generated IDE templates in your checkout
 - No `--repo .` parameter needed in interactive mode (uses workspace automatically)
-- The AI assistant will prompt you for bundle names and other inputs if not provided
+- Use `specfact project --help`, `specfact code --help`, and `specfact backlog --help` as the source of truth for mounted commands
 
 See [IDE Integration Guide](../guides/ide-integration.md) for detailed setup instructions.
 
@@ -286,17 +279,13 @@ See [IDE Integration Guide](../guides/ide-integration.md) for detailed setup ins
 Convert an existing GitHub Spec-Kit project:
 
 ```bash
-# Preview what will be migrated
-specfact sync bridge --adapter speckit --repo ./my-speckit-project --dry-run
-
-# Execute migration (one-time import)
-specfact sync bridge \
+# Start a one-time import
+specfact project sync bridge \
   --adapter speckit \
-  --repo ./my-speckit-project \
-  --write
+  --repo ./my-speckit-project
 
 # Ongoing bidirectional sync (after migration)
-specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
+specfact project sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
 ```
 
 **Bidirectional Sync:**
@@ -305,13 +294,13 @@ Keep Spec-Kit and SpecFact artifacts synchronized:
 
 ```bash
 # One-time sync
-specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional
+specfact project sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional
 
 # Continuous watch mode
-specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
+specfact project sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
 ```
 
-**Note**: SpecFact CLI uses a plugin-based adapter registry pattern. All adapters (Spec-Kit, OpenSpec, GitHub, etc.) are registered in `AdapterRegistry` and accessed via `specfact sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
+**Note**: SpecFact CLI uses a plugin-based adapter registry pattern. All adapters (Spec-Kit, OpenSpec, GitHub, etc.) are registered in `AdapterRegistry` and accessed via `specfact project sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
 
 ### For Brownfield Projects
 
@@ -338,8 +327,7 @@ specfact init
 **Important for IDE Integration**:
 
 - Interactive mode automatically uses your IDE workspace (no `--repo .` needed in interactive mode)
-- Slash commands use numbered format: `/specfact.01-import`, `/specfact.02-plan`, etc. (numbered for workflow ordering)
-- Commands follow natural progression: 01-import → 02-plan → 03-review → 04-sdd → 05-enforce → 06-sync
+- Verify repo-local slash workflows against the generated IDE templates in your checkout
 - The AI assistant will prompt you for bundle names and confidence thresholds if not provided
 - Better feature detection than CLI-only mode (semantic understanding vs AST-only)
 - **Do NOT use `--mode copilot` with IDE slash commands** - IDE integration automatically provides enhanced prompts
@@ -354,9 +342,8 @@ specfact code import my-project \
   --report analysis.md
 
 # Analyze with CoPilot mode (enhanced prompts - CLI only, not for IDE)
-specfact --mode copilot import from-code my-project \
+specfact --mode copilot code import my-project \
   --repo ./my-project \
-  --confidence 0.7 \
   --report analysis.md
 
 # Review generated plan
@@ -373,10 +360,10 @@ Keep plan artifacts updated as code changes:
 
 ```bash
 # One-time sync
-specfact sync repository --repo . --target .specfact
+specfact project sync repository --repo . --target .specfact
 
 # Continuous watch mode
-specfact sync repository --repo . --watch
+specfact project sync repository --repo . --watch
 ```
 
 ## Next Steps
@@ -390,16 +377,15 @@ specfact sync repository --repo . --watch
 
 - **Python 3.11+ required**: SpecFact CLI requires Python 3.11 or higher
 - **Start in shadow mode**: Use `--shadow-only` to observe without blocking
-- **Use dry-run**: Always preview with `--dry-run` before writing changes
 - **Check reports**: Generate reports with `--report <filename>` for review
 - **Progressive enforcement**: Start with `minimal`, move to `balanced`, then `strict`
 - **CLI-only vs Interactive**: Use `uvx` for quick testing, `pip install + specfact init` for better results
 - **IDE integration**: Use `specfact init` to set up slash commands in IDE (requires pip install)
-- **Slash commands**: Use numbered format `/specfact.01-import`, `/specfact.02-plan`, etc. (numbered for workflow ordering)
+- **Slash commands**: Use the IDE templates generated for your checkout and keep them aligned with the mounted CLI surface
 - **Global flags**: Place `--no-banner` before the command: `specfact --no-banner <command>`
-- **Bridge adapter sync**: Use `sync bridge --adapter <adapter-name>` for external tool integration (Spec-Kit, OpenSpec, GitHub, etc.)
-- **Repository sync**: Use `sync repository` for code change tracking
-- **Semgrep (optional)**: Install `pip install semgrep` for async pattern detection in `specfact repro`
+- **Bridge adapter sync**: Use `project sync bridge --adapter <adapter-name>` for external tool integration (Spec-Kit, OpenSpec, GitHub, etc.)
+- **Repository sync**: Use `project sync repository` for code change tracking
+- **Semgrep (optional)**: Install `pip install semgrep` for async pattern detection in `specfact code repro`
 
 ---
 
@@ -467,19 +453,19 @@ SpecFact CLI automatically detects source directories:
 ```bash
 # Hatch project
 cd /path/to/hatch-project
-specfact repro --repo .  # Automatically uses "hatch run" for tools
+specfact code repro --repo .  # Automatically uses "hatch run" for tools
 
 # Poetry project
 cd /path/to/poetry-project
-specfact repro --repo .  # Automatically uses "poetry run" for tools
+specfact code repro --repo .  # Automatically uses "poetry run" for tools
 
 # UV project
 cd /path/to/uv-project
-specfact repro --repo .  # Automatically uses "uv run" for tools
+specfact code repro --repo .  # Automatically uses "uv run" for tools
 
 # Pip project
 cd /path/to/pip-project
-specfact repro --repo .  # Uses direct tool invocation
+specfact code repro --repo .  # Uses direct tool invocation
 ```
 
 ### External Repository Support
@@ -509,17 +495,15 @@ specfact --version
 specfact --help
 specfact <command> --help
 
-# Initialize plan (bundle name as positional argument)
-specfact plan init my-project --interactive
-
-# Add feature
-specfact plan add-feature --key FEATURE-001 --title "My Feature"
+# Inspect currently mounted project workflows
+specfact project --help
+specfact project sync --help
 
 # Validate everything
-specfact repro
+specfact code repro
 
 # Set enforcement level
-specfact enforce stage --preset balanced
+specfact govern enforce stage --help
 ```
 
 ## Getting Help

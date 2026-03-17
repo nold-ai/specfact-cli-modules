@@ -14,21 +14,21 @@ Use plain `specfact ...` commands in this guide (not `hatch run specfact ...`) s
 
 ```bash
 # Marketplace id format
-specfact module install specfact/backlog
+specfact module install nold-ai/specfact-backlog
 
-# Bare names are accepted and normalized to specfact/<name>
-specfact module install backlog
+# Short names are accepted when they resolve unambiguously
+specfact module install specfact-backlog
 
 # Install into project scope instead of user scope
-specfact module install backlog --scope project --repo /path/to/repo
+specfact module install nold-ai/specfact-backlog --scope project --repo /path/to/repo
 
 # Force bundled-only or marketplace-only source resolution
-specfact module install backlog --source bundled
-specfact module install backlog --source marketplace
-specfact module install backlog --source marketplace --trust-non-official
+specfact module install nold-ai/specfact-backlog --source bundled
+specfact module install nold-ai/specfact-backlog --source marketplace
+specfact module install nold-ai/specfact-backlog --source marketplace --trust-non-official
 
 # Install a specific version
-specfact module install specfact/backlog --version 0.35.0
+specfact module install nold-ai/specfact-backlog --version 0.41.12
 ```
 
 Notes:
@@ -46,13 +46,13 @@ Before installing a marketplace module, SpecFact resolves its dependencies (othe
 
 ```bash
 # Install with dependency resolution (default)
-specfact module install specfact/backlog
+specfact module install nold-ai/specfact-backlog
 
 # Skip dependency resolution (install only the requested module)
-specfact module install specfact/backlog --skip-deps
+specfact module install nold-ai/specfact-backlog --skip-deps
 
 # Force install despite dependency conflicts (use with care)
-specfact module install specfact/backlog --force
+specfact module install nold-ai/specfact-backlog --force
 ```
 
 - Use `--skip-deps` when you want to install a single module without pulling its dependencies or when you manage dependencies yourself.
@@ -170,9 +170,9 @@ Use `--force` to allow dependency-aware cascades when required.
 ## Uninstall Behavior
 
 ```bash
-specfact module uninstall backlog
-specfact module uninstall specfact/backlog
-specfact module uninstall backlog --scope project --repo /path/to/repo
+specfact module uninstall specfact-backlog
+specfact module uninstall nold-ai/specfact-backlog
+specfact module uninstall nold-ai/specfact-backlog --scope project --repo /path/to/repo
 ```
 
 Uninstall supports user and project scope roots.

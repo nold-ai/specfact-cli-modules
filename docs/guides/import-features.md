@@ -6,11 +6,11 @@ permalink: /guides/import-features/
 
 # Import Command Features
 
-This guide covers advanced features and optimizations in the `import from-code` command.
+This guide covers advanced features and optimizations in the `code import` command.
 
 ## Overview
 
-The `import from-code` command has been optimized for large codebases and includes several features to improve reliability, performance, and user experience:
+The `code import` command has been optimized for large codebases and includes several features to improve reliability, performance, and user experience:
 
 - **Progress Reporting**: Real-time progress bars for long-running operations
 - **Feature Validation**: Automatic validation of existing features when resuming imports

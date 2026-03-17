@@ -10,27 +10,27 @@ SpecFact CLI ships a lean core. Workflow commands are installed from marketplace
 
 ## Top-Level Commands
 
-Root command surface includes core commands and installed command groups:
+Root command surface includes core commands and the mounted bundle command groups visible in `specfact --help`:
 
 - `specfact init`
-- `specfact auth`
 - `specfact module`
 - `specfact upgrade`
-- `specfact plan ...`
-- `specfact sync ...`
 - `specfact code ...`
 - `specfact backlog ...`
 - `specfact project ...`
 - `specfact spec ...`
-- `specfact enforce ...`
-- `specfact analyze ...`
-- `specfact drift ...`
-- `specfact validate ...`
-- `specfact repro ...`
-- `specfact generate ...`
-- `specfact sdd ...`
-- `specfact contract ...`
-- `specfact review`
+- `specfact govern ...`
+
+Nested mounted groups in the current release include:
+
+- `specfact code review ...`
+- `specfact code analyze ...`
+- `specfact code drift ...`
+- `specfact code validate ...`
+- `specfact code repro ...`
+- `specfact project sync ...`
+- `specfact govern enforce ...`
+- `specfact govern patch ...`
 
 Use `specfact init --profile <name>` (or `--install <list>`) to install workflow bundles.
 
@@ -38,12 +38,12 @@ Use `specfact init --profile <name>` (or `--install <list>`) to install workflow
 
 | Bundle ID | Main command families |
 |---|---|
-| `nold-ai/specfact-project` | `plan`, `project`, `sync`, `migrate`, `code import` |
+| `nold-ai/specfact-project` | `project`, `project sync` |
 | `nold-ai/specfact-backlog` | `backlog` |
-| `nold-ai/specfact-codebase` | `code import`, `analyze`, `drift`, `validate`, `repro` |
-| `nold-ai/specfact-spec` | `spec`, `contract`, `sdd`, `generate` |
-| `nold-ai/specfact-govern` | `enforce` |
-| `nold-ai/specfact-code-review` | `review` |
+| `nold-ai/specfact-codebase` | `code import`, `code analyze`, `code drift`, `code validate`, `code repro` |
+| `nold-ai/specfact-spec` | `spec` |
+| `nold-ai/specfact-govern` | `govern`, `govern enforce`, `govern patch` |
+| `nold-ai/specfact-code-review` | `code review` |
 
 ## Common Flows
 
@@ -55,12 +55,12 @@ specfact init --profile solo-developer
 specfact module install nold-ai/specfact-backlog
 
 # Project workflow examples
-specfact code import legacy-api --repo .
-specfact plan init my-project
+specfact code import --repo . legacy-api
+specfact project sync bridge --adapter github --mode export-only --repo .
 
 # Code workflow examples
-specfact validate sidecar init legacy-api /path/to/repo
-specfact repro --verbose
+specfact code validate sidecar init legacy-api /path/to/repo
+specfact code repro --verbose
 
 # Backlog workflow examples
 specfact backlog refine --help
