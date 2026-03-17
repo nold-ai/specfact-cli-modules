@@ -19,7 +19,7 @@ Preferred command path is `specfact backlog ceremony standup ...`. The legacy `s
 ## What You'll Learn
 
 - Run **`specfact backlog ceremony standup`** and see your standup table (assigned + unassigned items) with **auto-detected** GitHub org/repo or Azure DevOps org/project from the git remote
-- Use **`.specfact/backlog.yaml`** or environment variables when you're not in the repo (e.g. CI) or to override
+- Use **`.nold-ai/specfact-backlog.yaml`** or environment variables when you're not in the repo (e.g. CI) or to override
 - **Post a standup comment** to the first (or selected) item with `--yesterday`, `--today`, `--blockers` and `--post`
 - Use **`--interactive`** for step-by-step story review (arrow-key selection, full detail, latest comment + hidden-count hint, and optional in-flow posting on the selected story)
 - Use **`--copilot-export <path>`** to write a Markdown summary for Copilot slash-command during standup;
@@ -65,7 +65,7 @@ specfact backlog ceremony standup ado
 
 If you're **not** in a clone (e.g. different directory), use one of:
 
-- **`.specfact/backlog.yaml`** in the project (see [Project backlog context](../guides/devops-adapter-integration.md#project-backlog-context-specfactbacklogyaml))
+- **`.nold-ai/specfact-backlog.yaml`** in the project (see [Project backlog context](../guides/devops-adapter-integration.md#project-backlog-context-specfactbacklogyaml))
 - **Environment variables**: `SPECFACT_GITHUB_REPO_OWNER`, `SPECFACT_GITHUB_REPO_NAME` or `SPECFACT_ADO_ORG`, `SPECFACT_ADO_PROJECT`
 - **CLI options**: `--repo-owner` / `--repo-name` or `--ado-org` / `--ado-project`
 
@@ -202,7 +202,7 @@ supported. Use it with the **`specfact.backlog-daily`** slash prompt for interac
 | Goal | How |
 |------|-----|
 | View standup without typing org/repo | Run `specfact backlog ceremony standup github` or `ado` from **repo root**; org/repo or org/project are **auto-detected** from git remote. |
-| Override or use outside repo | Use `.specfact/backlog.yaml`, env vars (`SPECFACT_GITHUB_REPO_OWNER`, etc.), or CLI `--repo-owner`/`--repo-name` or `--ado-org`/`--ado-project`. |
+| Override or use outside repo | Use `.nold-ai/specfact-backlog.yaml`, env vars (`SPECFACT_GITHUB_REPO_OWNER`, etc.), or CLI `--repo-owner`/`--repo-name` or `--ado-org`/`--ado-project`. |
 | Post standup to first item | Use `--yesterday "..."` `--today "..."` `--blockers "..."` and `--post` (values required). |
 | Post standup while reviewing selected story | Use `--interactive` and choose **Post standup update** from navigation. |
 | Step through stories with readable comment context | Use `--interactive`; it shows latest comment + hidden-count hint. Use `--first-comments`/`--last-comments` to tune comment density. |
@@ -214,5 +214,5 @@ supported. Use it with the **`specfact.backlog-daily`** slash prompt for interac
 ## Related Documentation
 
 - **[Agile/Scrum Workflows](../guides/agile-scrum-workflows.md)** — Daily standup, iteration/sprint, unassigned items, blockers-first
-- **[DevOps Adapter Integration](../guides/devops-adapter-integration.md)** — Project backlog context (`.specfact/backlog.yaml`), env vars, **Git fallback (auto-detect from clone)** for GitHub and Azure DevOps
+- **[DevOps Adapter Integration](../guides/devops-adapter-integration.md)** — Project backlog context (`.nold-ai/specfact-backlog.yaml`), env vars, **Git fallback (auto-detect from clone)** for GitHub and Azure DevOps
 - **[Backlog Refinement Guide](../guides/backlog-refinement.md)** — Template-driven refinement (complementary to daily standup)

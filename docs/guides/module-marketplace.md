@@ -15,7 +15,7 @@ For the curated official bundle list and trust/dependency quick reference, see
 ## Registry Overview
 
 - **Official registry**: <https://github.com/nold-ai/specfact-cli-modules> (index: `registry/index.json`)
-- **Marketplace module id format**: `namespace/name` (e.g. `specfact/backlog`). Marketplace modules must use this format; flat names are allowed only for custom/local modules with a warning.
+- **Marketplace module id format**: `namespace/name` (e.g. `nold-ai/specfact-backlog`). Marketplace modules must use this format; flat names are allowed only for custom/local modules with a warning.
 - **Custom registries**: You can add private or third-party registries. See [Custom registries](custom-registries.md) for adding, listing, removing, trust levels, and priority.
 
 ## Custom registries and search
@@ -65,7 +65,7 @@ Checksum mismatch blocks installation.
 
 **Namespace enforcement**:
 
-- Modules installed from the marketplace must use the `namespace/name` format (e.g. `specfact/backlog`). Invalid format is rejected.
+- Modules installed from the marketplace must use the `namespace/name` format (e.g. `nold-ai/specfact-backlog`). Invalid format is rejected.
 - If a module with the same logical name is already installed from a different source or namespace, install reports a collision and suggests using an alias or uninstalling the existing module.
 
 Additional local hardening:

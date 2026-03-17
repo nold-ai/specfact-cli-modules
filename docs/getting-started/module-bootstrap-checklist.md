@@ -55,27 +55,27 @@ This prints a separate bundled table plus install guidance.
 Install from bundled sources only:
 
 ```bash
-specfact module install backlog-core --source bundled
+specfact module install nold-ai/specfact-backlog --source bundled
 ```
 
 Install from marketplace only:
 
 ```bash
-specfact module install specfact/backlog --source marketplace
+specfact module install nold-ai/specfact-backlog --source marketplace
 ```
 
 Install with automatic source resolution (`bundled` first, then marketplace):
 
 ```bash
-specfact module install backlog
+specfact module install nold-ai/specfact-backlog
 ```
 
 ## 5. Scope-Safe Uninstall
 
 ```bash
-specfact module uninstall backlog-core --scope user
+specfact module uninstall nold-ai/specfact-backlog --scope user
 # or
-specfact module uninstall backlog-core --scope project --repo .
+specfact module uninstall nold-ai/specfact-backlog --scope project --repo .
 ```
 
 If the same module exists in both user and project scope, SpecFact requires explicit `--scope` to prevent accidental removal.

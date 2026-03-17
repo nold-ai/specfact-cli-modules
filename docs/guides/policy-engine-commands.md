@@ -51,7 +51,7 @@ specfact policy validate --repo . --format both
 
 Artifact resolution order when `--snapshot` is omitted:
 
-1. `.specfact/backlog-baseline.json`
+1. `.nold-ai/specfact-backlog-baseline.json`
 2. Latest `.specfact/plans/backlog-*.yaml|yml|json`
 
 You can still override with an explicit path:

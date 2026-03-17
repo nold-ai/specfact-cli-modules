@@ -136,7 +136,7 @@ Use **`specfact backlog ceremony standup <adapter>`** to list your standup items
 - **GitHub**: When run from a **GitHub** clone (e.g. `https://github.com/owner/repo` or `git@github.com:owner/repo.git`), SpecFact infers `repo_owner` and `repo_name` from `git remote get-url origin`.
 - **Azure DevOps**: When run from an **ADO** clone (e.g. `https://dev.azure.com/org/project/_git/repo`; SSH keys: `git@ssh.dev.azure.com:v3/org/project/repo`; other SSH: `user@dev.azure.com:v3/org/project/repo`), SpecFact infers `org` and `project` from the remote URL.
 
-Override with `.specfact/backlog.yaml`, environment variables (`SPECFACT_GITHUB_REPO_OWNER`, `SPECFACT_ADO_ORG`, etc.), or CLI options when not in the repo or to override. See [Project backlog context](../guides/devops-adapter-integration.md#project-backlog-context-specfactbacklogyaml).
+Override with `.nold-ai/specfact-backlog.yaml`, environment variables (`SPECFACT_GITHUB_REPO_OWNER`, `SPECFACT_ADO_ORG`, etc.), or CLI options when not in the repo or to override. See [Project backlog context](../guides/devops-adapter-integration.md#project-backlog-context-specfactbacklogyaml).
 
 ### End-to-End Example: One Standup Session
 

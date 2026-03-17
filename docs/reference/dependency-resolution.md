@@ -38,8 +38,8 @@ Resolution is used only for **marketplace** installs. Bundled and custom modules
 
 ## Bypass options
 
-- **Skip resolution**: `specfact module install specfact/backlog --skip-deps` installs only `specfact/backlog` and does not pull or check its `pip_dependencies` / `module_dependencies`.
-- **Override conflicts**: `specfact module install specfact/backlog --force` proceeds even when the resolver reports conflicts. Enable/disable and dependency-aware cascades may still use `--force` where applicable.
+- **Skip resolution**: `specfact module install nold-ai/specfact-backlog --skip-deps` installs only `nold-ai/specfact-backlog` and does not pull or check its `pip_dependencies` / `module_dependencies`.
+- **Override conflicts**: `specfact module install nold-ai/specfact-backlog --force` proceeds even when the resolver reports conflicts. Enable/disable and dependency-aware cascades may still use `--force` where applicable.
 
 ## See also
 
