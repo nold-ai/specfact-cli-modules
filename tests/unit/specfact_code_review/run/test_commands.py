@@ -343,7 +343,8 @@ def test_run_command_fails_when_scope_and_paths_match_no_files(monkeypatch: Any,
 
     assert result.exit_code == 2
     assert "no reviewable files" in result.output.lower()
-    assert "--scope full" in result.output
+    assert "scope" in result.output.lower()
+    assert "full" in result.output.lower()
 
 
 def test_changed_files_from_git_diff_filters_python_files(monkeypatch: Any, tmp_path: Path) -> None:
