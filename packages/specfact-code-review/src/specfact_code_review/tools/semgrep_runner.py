@@ -7,6 +7,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Literal, cast
 
 from beartype import beartype
 from icontract import ensure, require
@@ -22,6 +23,8 @@ SEMGREP_RULE_CATEGORY = {
     "print-in-src": "architecture",
 }
 SEMGREP_TIMEOUT_SECONDS = 90
+SEMGREP_RETRY_ATTEMPTS = 2
+SemgrepCategory = Literal["clean_code", "architecture"]
 
 
 def _normalize_path_variants(path_value: str | Path) -> set[str]:
@@ -76,6 +79,101 @@ def _resolve_config_path() -> Path:
     raise FileNotFoundError(f"Semgrep config not found at {config_path}")
 
 
+def _run_semgrep_command(files: list[Path]) -> subprocess.CompletedProcess[str]:
+    with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
+        semgrep_home = Path(temp_home)
+        semgrep_log_dir = semgrep_home / ".semgrep"
+        semgrep_log_dir.mkdir(parents=True, exist_ok=True)
+        env = os.environ.copy()
+        env["HOME"] = str(semgrep_home)
+        env["XDG_CONFIG_HOME"] = str(semgrep_home / ".config")
+        env["XDG_CACHE_HOME"] = str(semgrep_home / ".cache")
+        env["SEMGREP_SETTINGS_FILE"] = str(semgrep_log_dir / "settings.yml")
+        env.setdefault("SEMGREP_SEND_METRICS", "off")
+        return subprocess.run(
+            [
+                "semgrep",
+                "--disable-version-check",
+                "--config",
+                str(_resolve_config_path()),
+                "--json",
+                *(str(file_path) for file_path in files),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=SEMGREP_TIMEOUT_SECONDS,
+            env=env,
+        )
+
+
+def _load_semgrep_results(files: list[Path]) -> list[object]:
+    last_error: Exception | None = None
+    for _attempt in range(SEMGREP_RETRY_ATTEMPTS):
+        try:
+            result = _run_semgrep_command(files)
+            payload = json.loads(result.stdout)
+            if not isinstance(payload, dict):
+                raise ValueError("semgrep output must be an object")
+            raw_results = payload.get("results", [])
+            if not isinstance(raw_results, list):
+                raise ValueError("semgrep results must be a list")
+            return raw_results
+        except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
+            last_error = exc
+    if last_error is None:
+        raise ValueError("semgrep returned no usable results")
+    raise last_error
+
+
+def _category_for_rule(rule: str) -> SemgrepCategory | None:
+    category = SEMGREP_RULE_CATEGORY.get(rule)
+    if category in {"clean_code", "architecture"}:
+        return cast(SemgrepCategory, category)
+    return None
+
+
+def _finding_from_result(item: dict[str, object], *, allowed_paths: set[str]) -> ReviewFinding | None:
+    filename = item["path"]
+    if not isinstance(filename, str):
+        raise ValueError("semgrep filename must be a string")
+    if _normalize_path_variants(filename).isdisjoint(allowed_paths):
+        return None
+
+    raw_rule = item["check_id"]
+    if not isinstance(raw_rule, str):
+        raise ValueError("semgrep rule must be a string")
+    rule = _normalize_rule_id(raw_rule)
+    category = _category_for_rule(rule)
+    if category is None:
+        return None
+
+    start = item["start"]
+    if not isinstance(start, dict):
+        raise ValueError("semgrep start location must be an object")
+    line = start["line"]
+    if not isinstance(line, int):
+        raise ValueError("semgrep line must be an integer")
+
+    extra = item["extra"]
+    if not isinstance(extra, dict):
+        raise ValueError("semgrep extra payload must be an object")
+    message = extra["message"]
+    if not isinstance(message, str):
+        raise ValueError("semgrep message must be a string")
+
+    return ReviewFinding(
+        category=category,
+        severity="warning",
+        tool="semgrep",
+        rule=rule,
+        file=filename,
+        line=line,
+        message=message,
+        fixable=False,
+    )
+
+
 @beartype
 @require(lambda files: isinstance(files, list), "files must be a list")
 @require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
@@ -90,37 +188,7 @@ def run_semgrep(files: list[Path]) -> list[ReviewFinding]:
         return []
 
     try:
-        with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
-            semgrep_home = Path(temp_home)
-            semgrep_log_dir = semgrep_home / ".semgrep"
-            semgrep_log_dir.mkdir(parents=True, exist_ok=True)
-            env = os.environ.copy()
-            env["HOME"] = str(semgrep_home)
-            env["XDG_CONFIG_HOME"] = str(semgrep_home / ".config")
-            env["XDG_CACHE_HOME"] = str(semgrep_home / ".cache")
-            env["SEMGREP_SETTINGS_FILE"] = str(semgrep_log_dir / "settings.yml")
-            env.setdefault("SEMGREP_SEND_METRICS", "off")
-            result = subprocess.run(
-                [
-                    "semgrep",
-                    "--disable-version-check",
-                    "--config",
-                    str(_resolve_config_path()),
-                    "--json",
-                    *(str(file_path) for file_path in files),
-                ],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=SEMGREP_TIMEOUT_SECONDS,
-                env=env,
-            )
-        payload = json.loads(result.stdout)
-        if not isinstance(payload, dict):
-            raise ValueError("semgrep output must be an object")
-        raw_results = payload.get("results", [])
-        if not isinstance(raw_results, list):
-            raise ValueError("semgrep results must be a list")
+        raw_results = _load_semgrep_results(files)
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep output: {exc}")
 
@@ -130,46 +198,9 @@ def run_semgrep(files: list[Path]) -> list[ReviewFinding]:
         for item in raw_results:
             if not isinstance(item, dict):
                 raise ValueError("semgrep finding must be an object")
-            filename = item["path"]
-            if not isinstance(filename, str):
-                raise ValueError("semgrep filename must be a string")
-            if _normalize_path_variants(filename).isdisjoint(allowed_paths):
-                continue
-
-            raw_rule = item["check_id"]
-            if not isinstance(raw_rule, str):
-                raise ValueError("semgrep rule must be a string")
-            rule = _normalize_rule_id(raw_rule)
-            category = SEMGREP_RULE_CATEGORY.get(rule)
-            if category is None:
-                continue
-
-            start = item["start"]
-            if not isinstance(start, dict):
-                raise ValueError("semgrep start location must be an object")
-            line = start["line"]
-            if not isinstance(line, int):
-                raise ValueError("semgrep line must be an integer")
-
-            extra = item["extra"]
-            if not isinstance(extra, dict):
-                raise ValueError("semgrep extra payload must be an object")
-            message = extra["message"]
-            if not isinstance(message, str):
-                raise ValueError("semgrep message must be a string")
-
-            findings.append(
-                ReviewFinding(
-                    category=category,
-                    severity="warning",
-                    tool="semgrep",
-                    rule=rule,
-                    file=filename,
-                    line=line,
-                    message=message,
-                    fixable=False,
-                )
-            )
+            finding = _finding_from_result(item, allowed_paths=allowed_paths)
+            if finding is not None:
+                findings.append(finding)
     except (KeyError, TypeError, ValueError) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep finding payload: {exc}")
 

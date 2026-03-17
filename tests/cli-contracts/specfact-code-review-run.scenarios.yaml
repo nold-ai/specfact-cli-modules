@@ -9,6 +9,32 @@ scenarios:
       exit_code: 0
       stdout_contains:
         - '"overall_verdict":"PASS"'
+  - name: full-scope-package-subtree
+    type: pattern
+    argv:
+      - --scope
+      - full
+      - --path
+      - packages/specfact-code-review
+      - --json
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - '"run_id":'
+  - name: changed-scope-subtree
+    type: pattern
+    argv:
+      - --scope
+      - changed
+      - --path
+      - packages/specfact-code-review
+      - --path
+      - tests/unit/specfact_code_review
+      - --json
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - '"run_id":'
   - name: missing-file-errors
     type: anti-pattern
     argv:
@@ -17,3 +43,15 @@ scenarios:
       exit_code: 2
       stderr_contains:
         - not found
+  - name: positional-files-cannot-mix-with-scope
+    type: anti-pattern
+    argv:
+      - tests/fixtures/review/clean_module.py
+      - --scope
+      - full
+      - --path
+      - tests/fixtures/review
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - choose positional files or auto-scope controls

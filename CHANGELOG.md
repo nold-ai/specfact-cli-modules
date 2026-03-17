@@ -5,6 +5,20 @@ All notable changes to this repository will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows SemVer for bundle versions.
 
+## [0.44.0] - 2026-03-17
+
+### Added
+
+- Add `--scope changed|full` and repeatable repo-relative `--path` filters to
+  `specfact code review run` for deterministic changed-only, full-repository,
+  and subtree-limited review selection.
+
+### Changed
+
+- Keep changed-only auto-discovery as the default, allow explicit test subtrees
+  to opt matching tests back into scope, and extend the review-run docs plus
+  cli-contract scenarios to cover the new targeting controls.
+
 ## [0.43.0] - 2026-03-16
 
 ### Added

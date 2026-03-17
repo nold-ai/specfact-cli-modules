@@ -122,7 +122,7 @@ def _pytest_targets(test_files: list[Path]) -> list[Path]:
     if len(test_files) <= 1:
         return test_files
     common_root = Path(os.path.commonpath([str(test_file) for test_file in test_files]))
-    if common_root.is_dir() and common_root.parts[:2] == ("tests", "unit"):
+    if common_root.is_dir() and common_root.parts[:2] == ("tests", "unit") and len(common_root.parts) > 3:
         return [common_root]
     return test_files
 
@@ -147,7 +147,7 @@ def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.Comple
         capture_output=True,
         text=True,
         check=False,
-        timeout=30,
+        timeout=120,
         env=_pytest_env(),
     )
     return result, coverage_path
