@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 import typer
 from icontract.errors import ViolationError
@@ -21,6 +22,7 @@ def _friendly_run_command_error(exc: ValueError | ViolationError) -> str:
     for expected in (
         "Use either --json or --score-only, not both.",
         "Use --out together with --json.",
+        "Choose positional files or auto-scope controls, not both.",
     ):
         if expected in message:
             return expected
@@ -40,6 +42,17 @@ def _resolve_include_tests(*, files: list[Path], include_tests: bool | None, int
 @review_app.command("run")
 def _run(
     files: list[Path] = typer.Argument(None, metavar="FILES..."),
+    *,
+    scope: Literal["changed", "full"] | None = typer.Option(
+        None,
+        "--scope",
+        help="Auto-discovery scope when positional files are omitted: changed or full.",
+    ),
+    path_filters: list[Path] | None = typer.Option(
+        None,
+        "--path",
+        help="Repeatable repo-relative path prefix used to limit auto-discovered review files.",
+    ),
     include_tests: bool | None = typer.Option(
         None,
         "--include-tests/--exclude-tests",
@@ -75,6 +88,8 @@ def _run(
         exit_code, output = run_command(
             files,
             include_tests=resolved_include_tests,
+            scope=scope,
+            path_filters=path_filters,
             include_noise=include_noise,
             json_output=json_output,
             out=out,

@@ -28,6 +28,13 @@ def _report(*, score: int = 85) -> ReviewReport:
     )
 
 
+def _write_repo_file(repo_root: Path, relative_path: str, *, content: str = "VALUE = 1\n") -> Path:
+    file_path = repo_root / relative_path
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(content, encoding="utf-8")
+    return Path(relative_path)
+
+
 def test_run_command_json_output_uses_review_report(monkeypatch: Any, tmp_path: Path) -> None:
     monkeypatch.setattr(
         "specfact_code_review.run.commands.run_review",
@@ -105,6 +112,96 @@ def test_run_command_uses_git_diff_when_files_are_omitted(monkeypatch: Any, tmp_
     assert out.exists()
 
 
+def test_run_command_supports_full_scope_and_path_filters(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    _write_repo_file(tmp_path, "packages/specfact-backlog/src/specfact_backlog/commands.py")
+    monkeypatch.chdir(tmp_path)
+
+    recorded: dict[str, list[Path]] = {}
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands._all_python_files_from_git",
+        lambda: [package_file, Path("packages/specfact-backlog/src/specfact_backlog/commands.py")],
+        raising=False,
+    )
+
+    def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--scope",
+            "full",
+            "--path",
+            "packages/specfact-code-review",
+            "--json",
+            "--out",
+            "review-report.json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert recorded["files"] == [package_file]
+
+
+def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    test_file = _write_repo_file(
+        tmp_path,
+        "tests/unit/specfact_code_review/run/test_commands.py",
+        content="def test_scope_paths() -> None:\n    assert True\n",
+    )
+    _write_repo_file(tmp_path, "packages/specfact-backlog/src/specfact_backlog/commands.py")
+    monkeypatch.chdir(tmp_path)
+
+    recorded: dict[str, list[Path]] = {}
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands._changed_files_from_git_diff",
+        lambda *, include_tests: [
+            package_file,
+            test_file,
+            Path("packages/specfact-backlog/src/specfact_backlog/commands.py"),
+        ],
+    )
+
+    def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--scope",
+            "changed",
+            "--path",
+            "packages/specfact-code-review",
+            "--path",
+            "tests/unit/specfact_code_review",
+            "--json",
+            "--out",
+            "review-report.json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert recorded["files"] == [package_file, test_file]
+
+
 def test_run_command_rejects_out_without_json(tmp_path: Path) -> None:
     out = tmp_path / "review-report.json"
     result = runner.invoke(app, ["review", "run", "--out", str(out), "tests/fixtures/review/clean_module.py"])
@@ -139,6 +236,38 @@ def test_run_command_rejects_json_and_score_only_together() -> None:
     assert "json" in result.output
     assert "score" in result.output
     assert "not both" in result.output
+
+
+def test_run_command_rejects_scope_mixed_with_positional_files() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "tests/fixtures/review/clean_module.py",
+            "--scope",
+            "full",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "choose positional files or auto-scope controls" in result.output.lower()
+
+
+def test_run_command_rejects_path_mixed_with_positional_files() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "tests/fixtures/review/clean_module.py",
+            "--path",
+            "tests/fixtures/review",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "choose positional files or auto-scope controls" in result.output.lower()
 
 
 def test_run_command_fix_mode_applies_fixes_before_second_run(monkeypatch: Any) -> None:
@@ -186,6 +315,36 @@ def test_run_command_default_output_renders_findings(monkeypatch: Any) -> None:
     assert result.exit_code == 0
     assert "Code Review: style" in result.output
     assert "Rendered output report." in result.output
+
+
+def test_run_command_fails_when_scope_and_paths_match_no_files(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands._all_python_files_from_git",
+        lambda: [package_file],
+        raising=False,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--scope",
+            "full",
+            "--path",
+            "packages/specfact-backlog",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "no reviewable files" in result.output.lower()
+    assert "scope" in result.output.lower()
+    assert "full" in result.output.lower()
 
 
 def test_changed_files_from_git_diff_filters_python_files(monkeypatch: Any, tmp_path: Path) -> None:

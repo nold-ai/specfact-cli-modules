@@ -5,7 +5,9 @@ from __future__ import annotations
 import subprocess
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
+from typing import Literal
 
 from beartype import beartype
 from icontract import ensure, require
@@ -18,6 +20,7 @@ from specfact_code_review.run.runner import run_review
 
 console = Console()
 progress_console = Console(stderr=True)
+AutoScope = Literal["changed", "full"]
 
 
 def _is_test_file(file_path: Path) -> bool:
@@ -58,10 +61,114 @@ def _changed_files_from_git_diff(*, include_tests: bool) -> list[Path]:
     return [file_path for file_path in deduped_python_files if not _is_test_file(file_path)]
 
 
-def _resolve_files(files: list[Path], *, include_tests: bool) -> list[Path]:
-    resolved = files or _changed_files_from_git_diff(include_tests=include_tests)
+def _all_python_files_from_git() -> list[Path]:
+    tracked_files = _git_file_list(
+        ["git", "ls-files", "--cached"],
+        error_message="Unable to determine tracked repository files from `git ls-files --cached`.",
+    )
+    untracked_files = _git_file_list(
+        ["git", "ls-files", "--others", "--exclude-standard"],
+        error_message="Unable to determine untracked files from `git ls-files --others --exclude-standard`.",
+    )
+    python_files = [
+        file_path
+        for file_path in [*tracked_files, *untracked_files]
+        if file_path.suffix == ".py" and file_path.is_file()
+    ]
+    return list(dict.fromkeys(python_files))
+
+
+def _path_filter_matches(file_path: Path, path_filter: Path) -> bool:
+    return file_path == path_filter or path_filter in file_path.parents
+
+
+def _filtered_files(files: Iterable[Path], *, path_filters: list[Path]) -> list[Path]:
+    if not path_filters:
+        return list(files)
+    normalized_filters = [path_filter for path_filter in path_filters if str(path_filter).strip()]
+    for path_filter in normalized_filters:
+        if path_filter.is_absolute():
+            raise ValueError(f"Path filters must be repo-relative: {path_filter}")
+    return [
+        file_path
+        for file_path in files
+        if any(_path_filter_matches(file_path, path_filter) for path_filter in normalized_filters)
+    ]
+
+
+def _auto_scope_message(*, scope: AutoScope, path_filters: list[Path]) -> str:
+    parts = [f"--scope {scope}", *(f"--path {path_filter}" for path_filter in path_filters)]
+    return " ".join(parts)
+
+
+def _raise_if_targeting_styles_conflict(
+    files: list[Path],
+    *,
+    scope: AutoScope | None,
+    path_filters: list[Path],
+) -> None:
+    if files and (scope is not None or path_filters):
+        raise ValueError("Choose positional files or auto-scope controls, not both.")
+
+
+def _resolve_positional_files(files: list[Path]) -> list[Path]:
+    if files:
+        return files
+    raise ValueError("No Python files to review were provided or detected from tracked or untracked changes.")
+
+
+def _resolve_auto_discovered_files(
+    *,
+    include_tests: bool,
+    scope: AutoScope,
+    path_filters: list[Path],
+) -> list[Path]:
+    if scope == "full":
+        return _resolve_full_scope_files(include_tests=include_tests, path_filters=path_filters)
+    return _resolve_changed_scope_files(include_tests=include_tests, path_filters=path_filters)
+
+
+def _resolve_full_scope_files(*, include_tests: bool, path_filters: list[Path]) -> list[Path]:
+    resolved = _all_python_files_from_git()
+    if not include_tests and not path_filters:
+        return [file_path for file_path in resolved if not _is_test_file(file_path)]
+    return resolved
+
+
+def _resolve_changed_scope_files(*, include_tests: bool, path_filters: list[Path]) -> list[Path]:
+    changed_include_tests = include_tests or bool(path_filters)
+    return _changed_files_from_git_diff(include_tests=changed_include_tests)
+
+
+def _raise_for_empty_auto_scope(*, scope: AutoScope, path_filters: list[Path]) -> None:
+    auto_scope_message = _auto_scope_message(scope=scope, path_filters=path_filters)
+    raise ValueError(
+        f"No reviewable files matched the selected auto-scope controls ({auto_scope_message}). "
+        "Adjust --scope/--path or pass positional files."
+    )
+
+
+def _resolve_files(
+    files: list[Path],
+    *,
+    include_tests: bool,
+    scope: AutoScope | None,
+    path_filters: list[Path],
+) -> list[Path]:
+    _raise_if_targeting_styles_conflict(files, scope=scope, path_filters=path_filters)
+    if files:
+        resolved = _resolve_positional_files(files)
+    else:
+        selected_scope: AutoScope = scope or "changed"
+        resolved = _resolve_auto_discovered_files(
+            include_tests=include_tests,
+            scope=selected_scope,
+            path_filters=path_filters,
+        )
+        resolved = _filtered_files(resolved, path_filters=path_filters)
+
     if not resolved:
-        raise ValueError("No Python files to review were provided or detected from tracked or untracked changes.")
+        _raise_for_empty_auto_scope(scope=scope or "changed", path_filters=path_filters)
 
     missing = [file_path for file_path in resolved if not file_path.is_file()]
     if missing:
@@ -195,6 +302,8 @@ def run_command(
     files: list[Path] | None = None,
     *,
     include_tests: bool = False,
+    scope: AutoScope | None = None,
+    path_filters: list[Path] | None = None,
     include_noise: bool = False,
     json_output: bool = False,
     out: Path | None = None,
@@ -203,7 +312,12 @@ def run_command(
     fix: bool = False,
 ) -> tuple[int, str | None]:
     """Execute a governed review run over the provided files."""
-    resolved_files = _resolve_files(files or [], include_tests=include_tests)
+    resolved_files = _resolve_files(
+        files or [],
+        include_tests=include_tests,
+        scope=scope,
+        path_filters=path_filters or [],
+    )
     report = _run_review_with_progress(
         resolved_files,
         no_tests=no_tests,

@@ -260,6 +260,35 @@ def test_run_review_suppresses_global_duplicate_code_noise_by_default(monkeypatc
     assert report.findings == []
 
 
+def test_pytest_targets_collapses_only_specific_subdirectories(tmp_path: Path) -> None:
+    run_tests = tmp_path / "tests/unit/specfact_code_review/run"
+    run_tests.mkdir(parents=True)
+    first = run_tests / "test_commands.py"
+    second = run_tests / "test_runner.py"
+    first.write_text("def test_one():\n    assert True\n", encoding="utf-8")
+    second.write_text("def test_two():\n    assert True\n", encoding="utf-8")
+
+    assert _pytest_targets([first.relative_to(tmp_path), second.relative_to(tmp_path)]) == [
+        Path("tests/unit/specfact_code_review/run")
+    ]
+
+
+def test_pytest_targets_keeps_files_when_common_root_is_too_broad(tmp_path: Path) -> None:
+    run_tests = tmp_path / "tests/unit/specfact_code_review/run"
+    review_tests = tmp_path / "tests/unit/specfact_code_review/review"
+    run_tests.mkdir(parents=True)
+    review_tests.mkdir(parents=True)
+    first = run_tests / "test_commands.py"
+    second = review_tests / "test_commands.py"
+    first.write_text("def test_one():\n    assert True\n", encoding="utf-8")
+    second.write_text("def test_two():\n    assert True\n", encoding="utf-8")
+
+    assert _pytest_targets([first.relative_to(tmp_path), second.relative_to(tmp_path)]) == [
+        Path("tests/unit/specfact_code_review/run/test_commands.py"),
+        Path("tests/unit/specfact_code_review/review/test_commands.py"),
+    ]
+
+
 def test_run_review_can_include_global_duplicate_code_noise(monkeypatch: MonkeyPatch) -> None:
     duplicate_code_finding = ReviewFinding(
         category="style",
