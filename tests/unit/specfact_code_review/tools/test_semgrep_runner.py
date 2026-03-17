@@ -111,7 +111,57 @@ def test_run_semgrep_returns_empty_list_for_clean_file(tmp_path: Path, monkeypat
 
     findings = run_semgrep([file_path])
 
-    assert findings == []
+    assert not findings
+
+
+def test_run_semgrep_ignores_unsupported_rules(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = {
+        "results": [
+            {
+                "check_id": "unsupported-rule",
+                "path": str(file_path),
+                "start": {"line": 3},
+                "extra": {"message": "Ignored rule."},
+            }
+        ]
+    }
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=1)),
+    )
+
+    findings = run_semgrep([file_path])
+
+    assert not findings
+
+
+def test_run_semgrep_retries_after_transient_parse_failure(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = {
+        "results": [
+            {
+                "check_id": "unguarded-nested-access",
+                "path": str(file_path),
+                "start": {"line": 2},
+                "extra": {"message": "Nested attribute access can fail."},
+            }
+        ]
+    }
+    run_mock = Mock(
+        side_effect=[
+            completed_process("semgrep", stdout="", returncode=2),
+            completed_process("semgrep", stdout=json.dumps(payload), returncode=1),
+        ]
+    )
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    findings = run_semgrep([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].rule == "unguarded-nested-access"
+    assert run_mock.call_count == 2
 
 
 @pytest.mark.parametrize(("fixture_name", "expected_rule"), list(BAD_FIXTURE_RULES.items()))
@@ -132,4 +182,4 @@ def test_each_good_fixture_triggers_no_findings(fixture_name: str) -> None:
 
     findings = run_semgrep([FIXTURE_ROOT / fixture_name])
 
-    assert findings == []
+    assert not findings

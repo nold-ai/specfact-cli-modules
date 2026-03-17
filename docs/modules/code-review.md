@@ -17,6 +17,10 @@ Options:
 - `--score-only`: print only the integer `reward_delta`
 - `--fix`: apply Ruff autofixes and re-run the review before printing results
 - `--no-tests`: skip the targeted TDD gate
+- `--scope changed|full`: choose changed-only or full-repository auto-discovery
+  when positional files are omitted
+- `--path PATH`: repeatable repo-relative subtree filter for auto-discovered
+  review targets
 - `--include-tests/--exclude-tests`: include or exclude changed test files when
   review scope is auto-detected from `git diff`
 - `--include-noise/--suppress-noise`: include or suppress known low-signal
@@ -34,7 +38,27 @@ git ls-files --others --exclude-standard
 Only existing Python files from tracked or untracked workspace changes are
 reviewed. Test files under `tests/` are excluded by default for auto-detected
 review scope unless you pass `--include-tests` or answer yes in
-`--interactive` mode.
+`--interactive` mode. Explicit `--path tests/...` filters count as intentional
+targeting and keep matching tests in scope even with the default test
+exclusion.
+
+Use `--scope full` to review the governed repository file set instead of just
+current changes:
+
+```bash
+specfact code review run --scope full
+```
+
+Use repeatable `--path` filters to limit either scope to one package or a
+focused source-plus-test slice:
+
+```bash
+specfact code review run --scope full --path packages/specfact-code-review
+specfact code review run --scope changed --path packages/specfact-code-review --path tests/unit/specfact_code_review
+```
+
+Positional `FILES...` cannot be mixed with `--scope` or `--path`. Choose one
+targeting style per invocation.
 
 With default noise suppression, the review also hides known low-signal test
 findings such as:
