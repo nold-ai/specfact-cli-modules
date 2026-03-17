@@ -19,20 +19,17 @@ Core commands remain top-level:
 Category command groups:
 
 - `specfact project ...`
-- `specfact plan ...`
-- `specfact sync ...`
 - `specfact backlog ...`
 - `specfact code ...`
-- `specfact analyze ...`
-- `specfact drift ...`
-- `specfact validate ...`
-- `specfact repro ...`
+- `specfact project sync ...`
+- `specfact code analyze ...`
+- `specfact code drift ...`
+- `specfact code validate ...`
+- `specfact code repro ...`
 - `specfact spec ...`
-- `specfact contract ...`
-- `specfact sdd ...`
-- `specfact generate ...`
-- `specfact enforce ...`
-- `specfact review`
+- `specfact govern ...`
+- `specfact govern enforce ...`
+- `specfact code review ...`
 
 ## Canonical Category Assignments
 
@@ -43,30 +40,27 @@ Category command groups:
 | `module_registry` | `core` | — | — | `module` |
 | `upgrade` | `core` | — | — | `upgrade` |
 | `project` | `project` | `specfact-project` | `project` | `project` |
-| `plan` | `project` | `specfact-project` | `project` | `plan` |
 | `import_cmd` | `project` | `specfact-project` | `project` | `import` |
 | `sync` | `project` | `specfact-project` | `project` | `sync` |
-| `migrate` | `project` | `specfact-project` | `project` | `migrate` |
 | `backlog` | `backlog` | `specfact-backlog` | `backlog` | `backlog` |
 | `policy_engine` | `backlog` | `specfact-backlog` | `backlog` | `policy` |
 | `analyze` | `codebase` | `specfact-codebase` | `code` | `analyze` |
 | `drift` | `codebase` | `specfact-codebase` | `code` | `drift` |
 | `validate` | `codebase` | `specfact-codebase` | `code` | `validate` |
 | `repro` | `codebase` | `specfact-codebase` | `code` | `repro` |
-| `contract` | `spec` | `specfact-spec` | `spec` | `contract` |
-| `spec` | `spec` | `specfact-spec` | `spec` | `api` |
-| `sdd` | `spec` | `specfact-spec` | `spec` | `sdd` |
-| `generate` | `spec` | `specfact-spec` | `spec` | `generate` |
+| `spec` | `spec` | `specfact-spec` | `spec` | `spec` |
 | `enforce` | `govern` | `specfact-govern` | `govern` | `enforce` |
 | `patch_mode` | `govern` | `specfact-govern` | `govern` | `patch` |
+| `review` | `code-review` | `specfact-code-review` | `code` | `review` |
 
 ## Bundle Contents by Category
 
-- `specfact-project`: `project`, `plan`, `import`, `sync`, `migrate`
+- `specfact-project`: `project`, `sync`
 - `specfact-backlog`: `backlog`, `policy`
-- `specfact-codebase`: `analyze`, `drift`, `validate`, `repro`
-- `specfact-spec`: `contract`, `api`, `sdd`, `generate`
+- `specfact-codebase`: `code import`, `code analyze`, `code drift`, `code validate`, `code repro`
+- `specfact-spec`: `spec`
 - `specfact-govern`: `enforce`, `patch`
+- `specfact-code-review`: `code review`
 
 ## Bundle Package Layout and Namespaces
 
@@ -85,7 +79,7 @@ Namespace mapping:
 
 Compatibility note:
 
-- Commands from each bundle are available at the top level (e.g., `specfact repro`, `specfact enforce`, `specfact plan`).
+- In the current CLI release, bundle commands are mounted under the root groups shown by `specfact --help` (for example `specfact code repro` and `specfact govern enforce`).
 
 ## First-Run Profiles
 
@@ -109,4 +103,4 @@ specfact init --install all
 Command surface:
 
 - Core top-level commands (`init`, `auth`, `module`, `upgrade`).
-- Workflow commands available at the top level (e.g., `specfact plan`, `specfact repro`, `specfact enforce`).
+- Workflow commands available through mounted groups (for example `specfact project sync`, `specfact code repro`, `specfact govern enforce`).

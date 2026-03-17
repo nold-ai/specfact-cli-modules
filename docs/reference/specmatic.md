@@ -269,7 +269,7 @@ if mock_server.is_running():
 
 ### Import Command Integration
 
-The `import from-code` command automatically validates bundle contracts with Specmatic after import.
+The `code import` command automatically validates bundle contracts with Specmatic after import.
 
 **Location**: `specfact_cli.commands.import_cmd._validate_bundle_contracts()`
 

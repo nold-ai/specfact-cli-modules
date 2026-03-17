@@ -243,7 +243,7 @@ Use this decision tree to determine which integrations to use:
 Start: What do you need?
 
 ├─ Need to work with existing code?
-│  └─ ✅ Use SpecFact CLI `import from-code` (brownfield analysis)
+│  └─ ✅ Use SpecFact CLI `code import` (brownfield analysis)
 │
 ├─ Need to create new features interactively?
 │  └─ ✅ Use Spec-Kit integration (greenfield development)
@@ -270,7 +270,7 @@ Start: What do you need?
 
 #### 1. Brownfield Modernization with OpenSpec and DevOps Integration
 
-- Use SpecFact CLI `import from-code` to analyze existing code
+- Use SpecFact CLI `code import` to analyze existing code
 - Export to OpenSpec for specification anchoring
 - Use OpenSpec change proposals for tracking improvements
 - **Sync proposals to GitHub Issues via DevOps adapter** - Integrate into agile DevOps workflows

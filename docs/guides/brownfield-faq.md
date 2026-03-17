@@ -254,7 +254,7 @@ See [Spec-Kit Comparison Guide](speckit-comparison.md) for details.
 - **GitHub Actions:** PR annotations, contract validation
 - **GitLab CI:** Pipeline integration
 - **Jenkins:** Plugin support (planned)
-- **Local CI:** Run `specfact enforce` in your pipeline
+- **Local CI:** Run `specfact govern enforce` in your pipeline
 
 Contracts can block merges if violations are detected (configurable).
 
@@ -272,7 +272,7 @@ Contracts can block merges if violations are detected (configurable).
 ```bash
 # .git/hooks/pre-commit
 #!/bin/sh
-uvx specfact-cli@latest enforce stage --preset balanced
+uvx specfact-cli@latest govern enforce stage --preset balanced
 ```
 
 **Example Cursor integration:**

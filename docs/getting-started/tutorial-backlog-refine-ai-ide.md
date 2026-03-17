@@ -48,7 +48,7 @@ specfact backlog ceremony refinement github --search "is:open label:feature" --l
 specfact backlog ceremony refinement github --export-to-tmp --search "is:open label:feature" --limit 5
 ```
 
-**Auto-detect from clone**: When you run from a **GitHub** clone (e.g. `https://github.com/owner/repo` or `git@github.com:owner/repo.git`), SpecFact infers `repo_owner` and `repo_name` from `git remote get-url origin`—no `--repo-owner`/`--repo-name` needed. When you run from an **Azure DevOps** clone (e.g. `https://dev.azure.com/org/project/_git/repo`; SSH keys: `git@ssh.dev.azure.com:v3/org/project/repo`; other SSH: `user@dev.azure.com:v3/org/project/repo`), org and project are inferred. Override with `.specfact/backlog.yaml`, env vars (`SPECFACT_GITHUB_REPO_OWNER`, `SPECFACT_ADO_ORG`, etc.), or CLI options when not in the repo or to override.
+**Auto-detect from clone**: When you run from a **GitHub** clone (e.g. `https://github.com/owner/repo` or `git@github.com:owner/repo.git`), SpecFact infers `repo_owner` and `repo_name` from `git remote get-url origin`—no `--repo-owner`/`--repo-name` needed. When you run from an **Azure DevOps** clone (e.g. `https://dev.azure.com/org/project/_git/repo`; SSH keys: `git@ssh.dev.azure.com:v3/org/project/repo`; other SSH: `user@dev.azure.com:v3/org/project/repo`), org and project are inferred. Override with `.nold-ai/specfact-backlog.yaml`, env vars (`SPECFACT_GITHUB_REPO_OWNER`, `SPECFACT_ADO_ORG`, etc.), or CLI options when not in the repo or to override.
 
 If you're **not** in a clone, pass adapter context explicitly:
 

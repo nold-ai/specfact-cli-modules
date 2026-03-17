@@ -64,7 +64,7 @@ The adapter automatically derives work item type from your project's process tem
 You can override with `--ado-work-item-type`:
 
 ```bash
-specfact sync bridge --adapter ado --mode export-only \
+specfact project sync bridge --adapter ado --mode export-only \
   --ado-org your-org \
   --ado-project your-project \
   --ado-work-item-type "Bug" \
@@ -434,7 +434,7 @@ This handles cases where:
 
 ```bash
 # Export OpenSpec change proposals to Azure DevOps work items
-specfact sync bridge --adapter ado --mode export-only \
+specfact project sync bridge --adapter ado --mode export-only \
   --ado-org your-org \
   --ado-project your-project \
   --repo /path/to/openspec-repo
@@ -444,7 +444,7 @@ specfact sync bridge --adapter ado --mode export-only \
 
 ```bash
 # Import work items AND export proposals
-specfact sync bridge --adapter ado --bidirectional \
+specfact project sync bridge --adapter ado --bidirectional \
   --ado-org your-org \
   --ado-project your-project \
   --repo /path/to/openspec-repo
@@ -454,7 +454,7 @@ specfact sync bridge --adapter ado --bidirectional \
 
 ```bash
 # Import specific work items into bundle
-specfact sync bridge --adapter ado --mode bidirectional \
+specfact project sync bridge --adapter ado --mode bidirectional \
   --ado-org your-org \
   --ado-project your-project \
   --bundle main \
@@ -466,7 +466,7 @@ specfact sync bridge --adapter ado --mode bidirectional \
 
 ```bash
 # Update existing work item with latest proposal content
-specfact sync bridge --adapter ado --mode export-only \
+specfact project sync bridge --adapter ado --mode export-only \
   --ado-org your-org \
   --ado-project your-project \
   --change-ids add-feature-x \
@@ -478,7 +478,7 @@ specfact sync bridge --adapter ado --mode export-only \
 
 ```bash
 # Detect code changes and add progress comments
-specfact sync bridge --adapter ado --mode export-only \
+specfact project sync bridge --adapter ado --mode export-only \
   --ado-org your-org \
   --ado-project your-project \
   --track-code-changes \
@@ -490,7 +490,7 @@ specfact sync bridge --adapter ado --mode export-only \
 
 ```bash
 # Export from bundle to ADO (uses stored lossless content)
-specfact sync bridge --adapter ado --mode export-only \
+specfact project sync bridge --adapter ado --mode export-only \
   --ado-org your-org \
   --ado-project your-project \
   --bundle main \

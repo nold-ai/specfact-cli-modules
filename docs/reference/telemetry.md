@@ -477,7 +477,7 @@ No. We buffer metrics in-memory and write to disk at the end of each command. Wh
 Yes. Point `SPECFACT_TELEMETRY_ENDPOINT` to an internal collector. Nothing leaves your network unless you decide to forward it. All data is stored locally in `~/.specfact/telemetry.log` by default.
 
 **Can I prove contracts are preventing bugs?**  
-Absolutely. We surface `violations_detected` from commands like `specfact repro` so you can compare "bugs caught by contracts" vs. "bugs caught by legacy tests" over time, and we aggregate the ratios (anonymously) to showcase SpecFact's brownfield impact publicly.
+Absolutely. We surface `violations_detected` from commands like `specfact code repro` so you can compare "bugs caught by contracts" vs. "bugs caught by legacy tests" over time, and we aggregate the ratios (anonymously) to showcase SpecFact's brownfield impact publicly.
 
 **What happens if the collector is unavailable?**  
 Telemetry gracefully degrades - events are still written to local storage (`~/.specfact/telemetry.log`), and export failures are logged but don't affect your CLI commands. You can retry exports later by processing the local log file.
