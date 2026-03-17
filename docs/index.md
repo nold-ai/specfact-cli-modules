@@ -1,33 +1,49 @@
 ---
 layout: default
-title: SpecFact CLI Modules Docs
+title: Official SpecFact Modules Docs
 nav_order: 1
 permalink: /
 ---
 
-# SpecFact CLI Modules Documentation
+# Official SpecFact Modules Docs
 
-This site is the canonical documentation home for official nold-ai module bundles hosted in `specfact-cli-modules`.
+This site is the canonical published home for official bundle and module-specific deep documentation.
 
-## Bundle guides
+specfact-cli-modules owns the official bundle and module-specific deep guidance, while the core CLI platform docs remain separately owned by the core docs site.
 
-- [Marketplace](guides/marketplace.md)
-- [Import Features](guides/import-features.md)
-- [Backlog Refinement](guides/backlog-refinement.md)
-- [Backlog Dependency Analysis](guides/backlog-dependency-analysis.md)
-- [Backlog Delta Commands](guides/backlog-delta-commands.md)
-- [Project DevOps Flow](guides/project-devops-flow.md)
-- [Policy Engine Commands](guides/policy-engine-commands.md)
-- [Sidecar Validation](guides/sidecar-validation.md)
+The intended public docs topology is:
 
-## Reference
+- `Docs Home` at `https://docs.specfact.io`
+- `Core CLI` at `https://docs.specfact.io`
+- `Modules` at `https://modules.specfact.io`
 
-- [Command Reference](reference/commands.md)
-- [Module Categories](reference/module-categories.md)
-- [Module Contracts](reference/module-contracts.md)
+Until Cloudflare routing is enabled for the modules domain, GitHub Pages should be treated as a preview origin rather than the long-term canonical public address.
 
-## Docs ownership
+## Official module guides
 
-- Bundle/module docs are maintained in this repository.
-- Core CLI platform docs remain in `nold-ai/specfact-cli`.
-- Published URL target: `https://nold-ai.github.io/specfact-cli-modules/`.
+- [Marketplace bundles](guides/marketplace.md)
+- [Installing modules](guides/installing-modules.md)
+- [Module marketplace](guides/module-marketplace.md)
+- [Module development](guides/module-development.md)
+- [Publishing modules](guides/publishing-modules.md)
+- [Module signing and key rotation](guides/module-signing-and-key-rotation.md)
+- [Adapter development](guides/adapter-development.md)
+- [Custom registries](guides/custom-registries.md)
+
+## Bundle workflows
+
+- [Import features](guides/import-features.md)
+- [Backlog refinement](guides/backlog-refinement.md)
+- [Backlog dependency analysis](guides/backlog-dependency-analysis.md)
+- [Backlog delta commands](guides/backlog-delta-commands.md)
+- [Project DevOps flow](guides/project-devops-flow.md)
+- [Policy engine commands](guides/policy-engine-commands.md)
+- [Sidecar validation](guides/sidecar-validation.md)
+
+## Module reference
+
+- [Command reference](reference/commands.md)
+- [Module categories](reference/module-categories.md)
+- [Module contracts](reference/module-contracts.md)
+- [Module security](reference/module-security.md)
+- [Bridge registry](reference/bridge-registry.md)

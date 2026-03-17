@@ -1,7 +1,11 @@
-title: SpecFact CLI Modules Documentation
-description: Official nold-ai bundle documentation for specfact-cli-modules.
-baseurl: "/specfact-cli-modules"
-url: "https://nold-ai.github.io"
+title: Official SpecFact Modules Docs
+description: Canonical documentation for official nold-ai bundles and module-specific deep workflows.
+baseurl: ""
+url: "https://modules.specfact.io"
+docs_home_url: "https://docs.specfact.io"
+core_cli_docs_url: "https://docs.specfact.io"
+modules_docs_url: "https://modules.specfact.io"
+github_pages_preview_label: "GitHub Pages preview origin"
 
 # Build settings
 markdown: kramdown
@@ -77,4 +81,4 @@ sass:
 footer:
   copyright: "© 2026 NOLD AI"
   trademark: >
-    Official bundle documentation lives in this repository.
+    Official bundle and module-specific deep guidance is canonically owned by specfact-cli-modules.

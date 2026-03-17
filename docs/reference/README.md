@@ -6,7 +6,7 @@ permalink: /reference/
 
 # Reference Documentation
 
-Complete technical reference for SpecFact CLI.
+Complete technical reference for the official modules site and bundle-owned workflow surface area.
 
 ## Available References
 
