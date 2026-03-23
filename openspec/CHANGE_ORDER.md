@@ -35,3 +35,22 @@
 | Module | Order | Change folder | GitHub # | Blocked by |
 |--------|-------|---------------|----------|------------|
 | clean-code | 02 | clean-code-02-expanded-review-module | [#94](https://github.com/nold-ai/specfact-cli-modules/issues/94) | specfact-cli/code-review-zero-findings (#423); code-review-02 ✅; code-review-04 ✅; code-review-07 ✅; code-review-08 ✅; code-review-10 ✅ |
+
+## Plan-derived addendum (2026-03-23 docs refactoring beginner-to-enterprise plan)
+
+The 2026-03-23 docs refactoring plan adds 6 changes to the modules repo to restructure the docs site into a progressive beginner-to-enterprise hierarchy with per-bundle organization, workflow consolidation, and team/enterprise tiers.
+
+All changes sync to GitHub as issues with labels: `documentation`, `change-proposal`, `openspec`. No parent Feature required (modules repo does not use the Feature/Epic hierarchy).
+
+Cross-repo dependency: `docs-06-modules-site-ia-restructure` is a prerequisite for specfact-cli/`docs-07-core-handoff-conversion` (core handoff pages redirect to modules targets).
+
+### Documentation restructure
+
+| Module | Order | Change folder | GitHub # | Blocked by |
+|--------|-------|---------------|----------|------------|
+| docs | 06 | docs-06-modules-site-ia-restructure | [#95](https://github.com/nold-ai/specfact-cli-modules/issues/95) | docs-01 ✅; docs-cli-command-alignment ✅ |
+| docs | 08 | docs-08-bundle-overview-pages | [#96](https://github.com/nold-ai/specfact-cli-modules/issues/96) | docs-06-modules-site-ia-restructure |
+| docs | 09 | docs-09-missing-command-docs | [#97](https://github.com/nold-ai/specfact-cli-modules/issues/97) | docs-06-modules-site-ia-restructure |
+| docs | 10 | docs-10-workflow-consolidation | [#98](https://github.com/nold-ai/specfact-cli-modules/issues/98) | docs-06-modules-site-ia-restructure |
+| docs | 11 | docs-11-team-enterprise-tier | [#99](https://github.com/nold-ai/specfact-cli-modules/issues/99) | docs-06-modules-site-ia-restructure |
+| docs | 12 | docs-12-docs-validation-ci | [#100](https://github.com/nold-ai/specfact-cli-modules/issues/100) | docs-06 through docs-10; specfact-cli/docs-12-docs-validation-ci |
