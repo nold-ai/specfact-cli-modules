@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Publishing Modules
-permalink: /guides/publishing-modules/
+permalink: /authoring/publishing-modules/
+redirect_from:
+  - /guides/publishing-modules/
 description: Package and publish SpecFact modules to a registry (tarball, checksum, optional signing).
 ---
 

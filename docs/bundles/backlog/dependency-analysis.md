@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Backlog Dependency Analysis
-permalink: /guides/backlog-dependency-analysis/
+permalink: /bundles/backlog/dependency-analysis/
+redirect_from:
+  - /guides/backlog-dependency-analysis/
 ---
 
 # Backlog Dependency Analysis

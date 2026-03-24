@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Creating Custom Bridges
-permalink: /guides/creating-custom-bridges/
+permalink: /authoring/creating-custom-bridges/
+redirect_from:
+  - /guides/creating-custom-bridges/
 ---
 
 # Creating Custom Bridges

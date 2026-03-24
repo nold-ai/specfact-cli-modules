@@ -7,43 +7,44 @@ permalink: /
 
 # Official SpecFact Modules Docs
 
-This site is the canonical published home for official bundle and module-specific deep documentation.
+Canonical documentation for official nold-ai bundles and module-specific workflows.
 
-specfact-cli-modules owns the official bundle and module-specific deep guidance, while the core CLI platform docs remain separately owned by the core docs site.
+The modules site owns all bundle-specific deep guidance. Core CLI platform docs remain at [docs.specfact.io](https://docs.specfact.io).
 
-The intended public docs topology is:
+## Official Bundles
 
-- `Docs Home` at `https://docs.specfact.io`
-- `Core CLI` at `https://docs.specfact.io`
-- `Modules` at `https://modules.specfact.io`
+| Bundle | Description |
+|--------|-------------|
+| [Backlog](bundles/backlog/refinement/) | AI-assisted refinement, delta commands, dependency analysis, policy engine |
+| [Project](bundles/project/devops-flow/) | DevOps flow, import/migration, project setup |
+| [Codebase](bundles/codebase/sidecar-validation/) | Sidecar validation, codebase analysis |
+| [Spec](reference/commands/) | Specification management |
+| [Govern](reference/commands/) | Governance and compliance |
+| [Code Review](reference/commands/) | Automated code review with ruff, radon, semgrep |
 
-Until Cloudflare routing is enabled for the modules domain, GitHub Pages should be treated as a preview origin rather than the long-term canonical public address.
+## Getting Started
 
-## Official module guides
+- [Installation](getting-started/installation/)
+- [First Steps](getting-started/first-steps/)
+- [Module Bootstrap Checklist](getting-started/module-bootstrap-checklist/)
+- [Tutorial: Backlog Quickstart Demo](getting-started/tutorial-backlog-quickstart-demo/)
 
-- [Marketplace bundles](guides/marketplace.md)
-- [Installing modules](guides/installing-modules.md)
-- [Module marketplace](guides/module-marketplace.md)
-- [Module development](guides/module-development.md)
-- [Publishing modules](guides/publishing-modules.md)
-- [Module signing and key rotation](guides/module-signing-and-key-rotation.md)
-- [Adapter development](guides/adapter-development.md)
-- [Custom registries](guides/custom-registries.md)
+## Workflows
 
-## Bundle workflows
+- [Backlog Refinement](bundles/backlog/refinement/)
+- [Project DevOps Flow](bundles/project/devops-flow/)
+- [DevOps Adapter Integration](integrations/devops-adapter-overview/)
 
-- [Import features](guides/import-features.md)
-- [Backlog refinement](guides/backlog-refinement.md)
-- [Backlog dependency analysis](guides/backlog-dependency-analysis.md)
-- [Backlog delta commands](guides/backlog-delta-commands.md)
-- [Project DevOps flow](guides/project-devops-flow.md)
-- [Policy engine commands](guides/policy-engine-commands.md)
-- [Sidecar validation](guides/sidecar-validation.md)
+## Authoring
 
-## Module reference
+- [Module Development](authoring/module-development/)
+- [Publishing Modules](authoring/publishing-modules/)
+- [Module Signing](authoring/module-signing/)
+- [Custom Registries](authoring/custom-registries/)
 
-- [Command reference](reference/commands.md)
-- [Module categories](reference/module-categories.md)
-- [Module contracts](reference/module-contracts.md)
-- [Module security](reference/module-security.md)
-- [Bridge registry](reference/bridge-registry.md)
+## Reference
+
+- [Command Reference](reference/commands/)
+- [Module Contracts](reference/module-contracts/)
+- [Module Security](reference/module-security/)
+- [Architecture](reference/architecture/)

@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Import Command Features
-permalink: /guides/import-features/
+permalink: /bundles/project/import-migration/
+redirect_from:
+  - /guides/import-features/
 ---
 
 # Import Command Features

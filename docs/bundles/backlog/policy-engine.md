@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Policy Engine Commands
-permalink: /guides/policy-engine-commands/
+permalink: /bundles/backlog/policy-engine/
+redirect_from:
+  - /guides/policy-engine-commands/
 ---
 
 # Policy Engine Commands

@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Project DevOps Flow
-permalink: /guides/project-devops-flow/
+permalink: /bundles/project/devops-flow/
+redirect_from:
+  - /guides/project-devops-flow/
 ---
 
 # Project DevOps Flow

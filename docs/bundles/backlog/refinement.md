@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Backlog Refinement Guide
-permalink: /guides/backlog-refinement/
+permalink: /bundles/backlog/refinement/
+redirect_from:
+  - /guides/backlog-refinement/
 ---
 
 # Backlog Refinement Guide

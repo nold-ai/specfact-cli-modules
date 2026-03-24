@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Extending ProjectBundle
-permalink: /guides/extending-projectbundle/
+permalink: /authoring/extending-projectbundle/
+redirect_from:
+  - /guides/extending-projectbundle/
 description: Add namespaced custom fields to Feature and ProjectBundle without modifying core models.
 ---
 

@@ -12,6 +12,7 @@ markdown: kramdown
 highlighter: rouge
 plugins:
   - jekyll-feed
+  - jekyll-redirect-from
   - jekyll-relative-links
   - jekyll-sitemap
 
@@ -28,8 +29,6 @@ exclude:
   - tests
   - tools
   - packages
-  - tests
-  - tools
   - scripts
   - registry
 
@@ -60,6 +59,26 @@ defaults:
       layout: default
   - scope:
       path: "reference"
+    values:
+      layout: default
+  - scope:
+      path: "bundles"
+    values:
+      layout: default
+  - scope:
+      path: "workflows"
+    values:
+      layout: default
+  - scope:
+      path: "integrations"
+    values:
+      layout: default
+  - scope:
+      path: "team-and-enterprise"
+    values:
+      layout: default
+  - scope:
+      path: "authoring"
     values:
       layout: default
 theme: minima

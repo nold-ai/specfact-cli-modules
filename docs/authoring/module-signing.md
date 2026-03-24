@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Module Signing and Key Rotation
-permalink: /guides/module-signing-and-key-rotation/
+permalink: /authoring/module-signing/
+redirect_from:
+  - /guides/module-signing-and-key-rotation/
 description: Runbook for signing bundled modules, placing public keys, rotating keys, and revoking compromised keys.
 ---
 

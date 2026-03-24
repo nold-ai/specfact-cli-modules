@@ -1,7 +1,9 @@
 ---
 layout: default
 title: DevOps Adapter Integration Guide
-permalink: /guides/devops-adapter-integration/
+permalink: /integrations/devops-adapter-overview/
+redirect_from:
+  - /guides/devops-adapter-integration/
 ---
 
 # DevOps Adapter Integration Guide

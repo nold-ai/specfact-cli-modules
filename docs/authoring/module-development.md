@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Module Development Guide
-permalink: /guides/module-development/
+permalink: /authoring/module-development/
+redirect_from:
+  - /guides/module-development/
 description: How to build and package SpecFact CLI modules.
 ---
 

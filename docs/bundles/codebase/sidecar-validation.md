@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Sidecar Validation Guide
-permalink: /guides/sidecar-validation/
+permalink: /bundles/codebase/sidecar-validation/
+redirect_from:
+  - /guides/sidecar-validation/
 ---
 
 # Sidecar Validation Guide
