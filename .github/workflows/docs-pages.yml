@@ -19,26 +19,49 @@ concurrency:
 
 jobs:
   build:
+    name: Build GitHub Pages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Ruby (for Jekyll)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: false
+          working-directory: ./docs
+
+      - name: Install Jekyll dependencies
+        run: |
+          cd docs
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 1 --retry 3
+
+      - name: Build with Jekyll
+        run: |
+          cd docs
+          bundle exec jekyll build --destination ../_site
+          # Fix CSS path: Jekyll outputs main.css at main/index.css due to permalink pattern
+          # Copy it to assets/main.css where the HTML expects it
+          if [ -f ../_site/main/index.css ]; then
+            cp ../_site/main/index.css ../_site/assets/main.css
+          fi
+        env:
+          JEKYLL_ENV: production
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./docs
-          destination: ./docs/_site
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/_site
+          path: _site
 
   deploy:
+    name: Deploy to GitHub Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
