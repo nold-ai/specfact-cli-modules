@@ -7,6 +7,7 @@ validate the modules docs site (modules.specfact.io).
 from __future__ import annotations
 
 import re
+import warnings
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -130,7 +131,7 @@ def _is_published_docs_route_candidate(route: str) -> bool:
     return route not in {"/assets/main.css/", "/feed.xml/"}
 
 
-def _resolve_internal_docs_target(
+def _resolve_internal_docs_target(  # pylint: disable=too-many-return-statements
     source: Path,
     raw_link: str,
     route_to_path: dict[str, Path],
@@ -273,8 +274,6 @@ def test_all_publishable_docs_pages_have_jekyll_front_matter() -> None:
     restructured_missing = [m for m in missing if any(f"docs/{p}" in m for p in restructured_prefixes)]
     preexisting_missing = [m for m in missing if m not in restructured_missing]
     if preexisting_missing:
-        import warnings
-
         warnings.warn(
             f"Pre-existing docs files missing front matter ({len(preexisting_missing)}):\n"
             + "\n".join(preexisting_missing),
@@ -306,8 +305,6 @@ def test_authored_internal_docs_links_resolve_to_published_docs_targets() -> Non
         f for f in failures if any(f"docs/{p}" in f.split(" -> ")[0] for p in restructured_prefixes)
     ]
     if failures and not restructured_failures:
-        import warnings
-
         warnings.warn(
             f"Pre-existing broken authored docs links ({len(failures)} total):\n"
             + "\n".join(sorted(failures)[:10])
@@ -339,8 +336,6 @@ def test_navigation_link_targets_have_required_front_matter_keys() -> None:
     restructured_missing = [m for m in missing if any(p in m for p in restructured_prefixes)]
     preexisting_missing = [m for m in missing if m not in restructured_missing]
     if preexisting_missing:
-        import warnings
-
         warnings.warn(
             f"Pre-existing nav targets missing front matter ({len(preexisting_missing)}):\n"
             + "\n".join(preexisting_missing),
