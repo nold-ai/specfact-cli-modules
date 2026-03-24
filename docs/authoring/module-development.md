@@ -72,6 +72,6 @@ Extension/security fields:
 
 ## Related docs
 
-- [Architecture Reference](../reference/architecture.md)
-- [Module System Architecture](../architecture/module-system.md)
+- [Architecture Reference](/architecture/)
+- [Module System Architecture](../architecture/module-system.md) <!-- TODO: target file does not exist yet -->
 - [Adapter Development Guide](adapter-development.md)

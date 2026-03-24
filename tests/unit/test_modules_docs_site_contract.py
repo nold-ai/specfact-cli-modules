@@ -30,8 +30,8 @@ def test_modules_docs_config_targets_public_modules_domain() -> None:
 def test_modules_landing_page_marks_modules_repo_as_canonical_owner() -> None:
     index = _read(DOCS_INDEX)
 
-    assert "canonical published home for official bundle and module-specific deep documentation" in index
-    assert "specfact-cli-modules owns the official bundle and module-specific deep guidance" in index
+    assert "Canonical documentation for official nold-ai bundles" in index
+    assert "bundle-specific deep guidance" in index or "module-specific workflows" in index
     assert "nold-ai.github.io/specfact-cli-modules" not in index
 
 
@@ -50,7 +50,8 @@ def test_modules_layout_keeps_sidebar_module_focused() -> None:
     layout = _read(DOCS_LAYOUT)
 
     assert "Official Modules Docs" in layout
-    assert "Publishing &amp; Signing" in layout
+    assert "Authoring" in layout
+    assert "Bundles" in layout
     assert ">Examples<" not in layout
 
 

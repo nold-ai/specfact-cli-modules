@@ -561,11 +561,11 @@ Sidecar CrossHair: 8 confirmed, 3 not confirmed, 1 violations
 
 ## Related Documentation
 
-- **[Command Reference](../reference/commands.md)** - Complete command documentation
-- **[Contract Testing Workflow](contract-testing-workflow.md)** - Contract testing guide
-- **[Specmatic Integration](specmatic-integration.md)** - Specmatic integration details
+- **[Command Reference](/reference/commands/)** - Complete command documentation
+- **[Contract Testing Workflow](/contract-testing-workflow/)** - Contract testing guide
+- **[Specmatic Integration](/specmatic-integration/)** - Specmatic integration details
 
 ## See Also
 
-- **[Brownfield Engineer Guide](brownfield-engineer.md)** - Modernizing legacy code
-- **[Use Cases](use-cases.md)** - Real-world scenarios
+- **[Brownfield Engineer Guide](/brownfield-engineer/)** - Modernizing legacy code
+- **[Use Cases](/use-cases/)** - Real-world scenarios

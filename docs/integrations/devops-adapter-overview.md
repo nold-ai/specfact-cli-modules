@@ -75,9 +75,9 @@ Currently supported DevOps adapters:
 
 This guide focuses on GitHub Issues integration. Azure DevOps integration follows similar patterns with ADO-specific configuration.
 
-**Azure DevOps Field Mapping**: Use `specfact backlog map-fields` to interactively discover and map ADO fields for your specific process template. See [Custom Field Mapping Guide](./custom-field-mapping.md) for complete documentation.
+**Azure DevOps Field Mapping**: Use `specfact backlog map-fields` to interactively discover and map ADO fields for your specific process template. See [Custom Field Mapping Guide](/guides/custom-field-mapping/) for complete documentation.
 
-**Related**: See [Backlog Refinement Guide](../guides/backlog-refinement.md) 🆕 **NEW FEATURE** for AI-assisted template-driven refinement of backlog items with persona/framework filtering, sprint/iteration support, DoR validation, and preview/write safety.
+**Related**: See [Backlog Refinement Guide](/bundles/backlog/refinement/) 🆕 **NEW FEATURE** for AI-assisted template-driven refinement of backlog items with persona/framework filtering, sprint/iteration support, DoR validation, and preview/write safety.
 
 ---
 
@@ -160,7 +160,7 @@ specfact project sync bridge --adapter github --mode export-only \
 
 SpecFact CLI supports multiple authentication methods:
 
-> **Auth Reference**: See [Authentication](../reference/authentication.md) for device code flows, token storage, and adapter token precedence.
+> **Auth Reference**: See [Authentication](/reference/authentication/) for device code flows, token storage, and adapter token precedence.
 
 **Option 1: Device Code (SSO-friendly)**
 
@@ -1398,26 +1398,26 @@ Verify `openspec/changes/<change-id>/proposal.md` was updated:
 
 ### Related Guides
 
-- [Integrations Overview](integrations-overview.md) - Overview of all SpecFact CLI integrations
+- [Integrations Overview](/integrations-overview/) - Overview of all SpecFact CLI integrations
 
-- [Command Chains Reference](command-chains.md) - Complete workflows including [External Tool Integration Chain](command-chains.md#3-external-tool-integration-chain)
-- [Common Tasks Index](common-tasks.md) - Quick reference for DevOps integration tasks
-- [OpenSpec Journey](openspec-journey.md) - OpenSpec integration with DevOps export
-- [Agile/Scrum Workflows](agile-scrum-workflows.md) - Persona-based backlog management
+- [Command Chains Reference](/guides/command-chains/) - Complete workflows including [External Tool Integration Chain](/guides/command-chains/#3-external-tool-integration-chain)
+- [Common Tasks Index](/common-tasks/) - Quick reference for DevOps integration tasks
+- [OpenSpec Journey](/guides/openspec-journey/) - OpenSpec integration with DevOps export
+- [Agile/Scrum Workflows](/guides/agile-scrum-workflows/) - Persona-based backlog management
 
 ### Related Commands
 
-- [Command Reference - Sync Bridge](../reference/commands.md#sync-bridge) - Complete `sync bridge` command documentation
-- [Command Reference - DevOps Adapters](../reference/commands.md#sync-bridge) - Adapter configuration
+- [Command Reference - Sync Bridge](/reference/commands/#sync-bridge) - Complete `sync bridge` command documentation
+- [Command Reference - DevOps Adapters](/reference/commands/#sync-bridge) - Adapter configuration
 
 ### Related Examples
 
-- [DevOps Integration Examples](../examples/) - Real-world integration examples
+- [DevOps Integration Examples](../examples/) <!-- TODO: examples directory does not exist yet -->
 
 ### Architecture & Troubleshooting
 
-- [Architecture](../reference/architecture.md) - System architecture and design
-- [Troubleshooting](troubleshooting.md) - Common issues and solutions
+- [Architecture](/architecture/) - System architecture and design
+- [Troubleshooting](/troubleshooting/) - Common issues and solutions
 
 ---
 
@@ -1537,7 +1537,7 @@ Additional DevOps adapters are planned:
 - **Linear** (`--adapter linear`) - Issues and progress updates
 - **Jira** (`--adapter jira`) - Issues, epics, and sprint tracking
 
-These will follow similar patterns to GitHub Issues and Azure DevOps integration. Check the [Commands Reference](../reference/commands.md) for the latest adapter support.
+These will follow similar patterns to GitHub Issues and Azure DevOps integration. Check the [Commands Reference](/reference/commands/) for the latest adapter support.
 
 ---
 
