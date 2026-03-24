@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Adapter Development Guide
-permalink: /guides/adapter-development/
+permalink: /authoring/adapter-development/
+redirect_from:
+  - /guides/adapter-development/
 description: Implement BridgeAdapter integrations for external tools.
 ---
 

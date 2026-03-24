@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Custom registries
-permalink: /guides/custom-registries/
+permalink: /authoring/custom-registries/
+redirect_from:
+  - /guides/custom-registries/
 description: Add, list, and manage custom module registries with trust levels and priority.
 ---
 
@@ -73,6 +75,6 @@ When multiple registries are configured, they are queried in order: official fir
 
 ## See also
 
-- [Module marketplace](module-marketplace.md) – Discovery and security model.
-- [Installing modules](installing-modules.md) – Install, list, search, and upgrade.
+- [Module marketplace](/guides/module-marketplace/) – Discovery and security model.
+- [Installing modules](/guides/installing-modules/) – Install, list, search, and upgrade.
 - [Publishing modules](publishing-modules.md) – Package and publish modules to a registry.

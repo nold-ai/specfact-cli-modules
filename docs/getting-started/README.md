@@ -1,6 +1,6 @@
-# Getting Started with SpecFact CLI
+# Getting Started with SpecFact Modules
 
-Welcome to SpecFact CLI! This guide will help you get started in under 60 seconds.
+Welcome to the **modules** getting-started guide. This section covers installing and using official bundles. For core CLI platform setup, see [docs.specfact.io](https://docs.specfact.io).
 
 ## Installation
 
@@ -78,20 +78,20 @@ Some bundles install dependencies automatically:
 
 ## Next Steps
 
-- 📖 **[Installation Guide](installation.md)** - Install SpecFact CLI
-- 📖 **[First Steps](first-steps.md)** - Step-by-step first commands
-- 📖 **[Module Bootstrap Checklist](module-bootstrap-checklist.md)** - Verify bundled modules are installed in user/project scope
-- 📖 **[Tutorial: Using SpecFact with OpenSpec or Spec-Kit](tutorial-openspec-speckit.md)** ⭐ **NEW** - Complete beginner-friendly tutorial
-- 📖 **[DevOps Backlog Integration](../guides/devops-adapter-integration.md)** 🆕 **NEW FEATURE** - Integrate SpecFact into agile DevOps workflows
-- 📖 **[Backlog Refinement](../guides/backlog-refinement.md)** 🆕 **NEW FEATURE** - AI-assisted template-driven refinement for standardizing work items
-- 📖 **[Tutorial: Backlog Quickstart Demo (GitHub + ADO)](tutorial-backlog-quickstart-demo.md)** 🆕 - Short end-to-end demo: `init-config`, `map-fields`, `daily`, `refine`, plus create/check loop
-- 📖 **[Tutorial: Backlog Refine with AI IDE](tutorial-backlog-refine-ai-ide.md)** 🆕 - End-to-end for agile DevOps teams: slash prompt, story quality, underspecification, splitting, DoR, custom templates
-- 📖 **[Tutorial: Daily Standup and Sprint Review](tutorial-daily-standup-sprint-review.md)** 🆕 - End-to-end daily standup: auto-detect repo (GitHub/ADO), view standup table, post comment, interactive, Copilot export
-- 📖 **[Use Cases](../guides/use-cases.md)** - See real-world examples
-- 📖 **[Command Reference](../reference/commands.md)** - Learn all available commands
+- [Installation Guide](installation.md) - Install SpecFact CLI
+- [First Steps](first-steps.md) - Step-by-step first commands
+- [Module Bootstrap Checklist](module-bootstrap-checklist.md) - Verify bundled modules are installed in user/project scope
+- [Tutorial: Using SpecFact with OpenSpec or Spec-Kit](tutorial-openspec-speckit.md) - Complete beginner-friendly tutorial
+- [DevOps Adapter Integration](../integrations/devops-adapter-overview.md) - Integrate SpecFact into agile DevOps workflows
+- [Backlog Refinement](../bundles/backlog/refinement.md) - AI-assisted template-driven refinement for standardizing work items
+- [Tutorial: Backlog Quickstart Demo (GitHub + ADO)](tutorial-backlog-quickstart-demo.md) - Short end-to-end demo
+- [Tutorial: Backlog Refine with AI IDE](tutorial-backlog-refine-ai-ide.md) - End-to-end for agile DevOps teams
+- [Tutorial: Daily Standup and Sprint Review](tutorial-daily-standup-sprint-review.md) - End-to-end daily standup
+- [Use Cases](../guides/use-cases.md) - See real-world examples
+- [Command Reference](../reference/commands.md) - Learn all available commands
 
 ## Need Help?
 
-- 💬 [GitHub Discussions](https://github.com/nold-ai/specfact-cli/discussions)
-- 🐛 [GitHub Issues](https://github.com/nold-ai/specfact-cli/issues)
-- 📧 [hello@noldai.com](mailto:hello@noldai.com)
+- [GitHub Discussions](https://github.com/nold-ai/specfact-cli/discussions)
+- [GitHub Issues](https://github.com/nold-ai/specfact-cli/issues)
+- [hello@noldai.com](mailto:hello@noldai.com)

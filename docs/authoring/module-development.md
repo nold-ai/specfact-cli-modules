@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Module Development Guide
-permalink: /guides/module-development/
+permalink: /authoring/module-development/
+redirect_from:
+  - /guides/module-development/
 description: How to build and package SpecFact CLI modules.
 ---
 
@@ -70,6 +72,6 @@ Extension/security fields:
 
 ## Related docs
 
-- [Architecture Reference](../reference/architecture.md)
-- [Module System Architecture](../architecture/module-system.md)
+- [Architecture Reference](/architecture/)
+- [Module System Architecture](../architecture/module-system.md) <!-- TODO: target file does not exist yet -->
 - [Adapter Development Guide](adapter-development.md)

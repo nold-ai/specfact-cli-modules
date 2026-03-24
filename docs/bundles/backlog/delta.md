@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Backlog Delta Commands
-permalink: /guides/backlog-delta-commands/
+permalink: /bundles/backlog/delta/
+redirect_from:
+  - /guides/backlog-delta-commands/
 ---
 
 # Backlog Delta Commands

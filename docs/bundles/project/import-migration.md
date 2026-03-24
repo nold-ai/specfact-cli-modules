@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Import Command Features
-permalink: /guides/import-features/
+permalink: /bundles/project/import-migration/
+redirect_from:
+  - /guides/import-features/
 ---
 
 # Import Command Features
@@ -236,10 +238,10 @@ If import is interrupted:
 
 ## Related Documentation
 
-- [Command Reference](../reference/commands.md#import-from-code) - Complete command documentation
-- [Quick Examples](../examples/quick-examples.md) - Quick command examples
-- [Brownfield Engineer Guide](brownfield-engineer.md) - Complete brownfield workflow
-- [Common Tasks](common-tasks.md) - Common import scenarios
+- [Command Reference](/reference/commands/#import-from-code) - Complete command documentation
+- [Quick Examples](../examples/quick-examples.md) - Quick command examples <!-- TODO: target file does not exist yet -->
+- [Brownfield Engineer Guide](/brownfield-engineer/) - Complete brownfield workflow
+- [Common Tasks](/common-tasks/) - Common import scenarios
 
 ---
 

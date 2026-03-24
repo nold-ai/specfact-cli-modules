@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Publishing Modules
-permalink: /guides/publishing-modules/
+permalink: /authoring/publishing-modules/
+redirect_from:
+  - /guides/publishing-modules/
 description: Package and publish SpecFact modules to a registry (tarball, checksum, optional signing).
 ---
 
@@ -49,7 +51,7 @@ The script validates:
 For runtime verification, sign the manifest so the tarball includes integrity metadata:
 
 - **Environment**: Set `SPECFACT_MODULE_PRIVATE_SIGN_KEY` (inline PEM) and `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE` if the key is encrypted. Or use `--key-file` and optionally `--passphrase` / `--passphrase-stdin`.
-- **Re-sign after changes**: Run `scripts/sign-modules.py` on the manifest (and bump version if content changed). See [Module signing and key rotation](module-signing-and-key-rotation.md).
+- **Re-sign after changes**: Run `scripts/sign-modules.py` on the manifest (and bump version if content changed). See [Module signing and key rotation](/authoring/module-signing/).
 
 ## GitHub Actions workflow
 
@@ -75,6 +77,6 @@ Repository workflow `.github/workflows/publish-modules.yml`:
 
 ## See also
 
-- [Module marketplace](module-marketplace.md) – Discovery, trust, and security.
-- [Module signing and key rotation](module-signing-and-key-rotation.md) – Keys, signing, and verification.
-- [Custom registries](custom-registries.md) – Adding and configuring registries for install/search.
+- [Module marketplace](/guides/module-marketplace/) – Discovery, trust, and security.
+- [Module signing and key rotation](/authoring/module-signing/) – Keys, signing, and verification.
+- [Custom registries](/authoring/custom-registries/) – Adding and configuring registries for install/search.

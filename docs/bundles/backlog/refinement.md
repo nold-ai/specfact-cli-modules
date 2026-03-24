@@ -1,7 +1,9 @@
 ---
 layout: default
 title: Backlog Refinement Guide
-permalink: /guides/backlog-refinement/
+permalink: /bundles/backlog/refinement/
+redirect_from:
+  - /guides/backlog-refinement/
 ---
 
 # Backlog Refinement Guide
@@ -13,7 +15,7 @@ This guide explains how to use SpecFact CLI's backlog refinement feature to stan
 
 Preferred command path is `specfact backlog ceremony refinement ...`. The legacy `specfact backlog refine ...` path remains supported for compatibility.
 
-**Tutorial**: For an end-to-end walkthrough with your AI IDE (Cursor, VS Code, etc.)—including interactive slash prompt, story quality, underspecification, splitting, and DoR—see **[Tutorial: Backlog Refine with AI IDE](../getting-started/tutorial-backlog-refine-ai-ide.md)**.
+**Tutorial**: For an end-to-end walkthrough with your AI IDE (Cursor, VS Code, etc.)—including interactive slash prompt, story quality, underspecification, splitting, and DoR—see **[Tutorial: Backlog Refine with AI IDE](/getting-started/tutorial-backlog-refine-ai-ide/)**.
 
 ## Overview
 
@@ -642,7 +644,7 @@ specfact project sync bridge --adapter ado --mode export-only \
 
 ### With DevOps Adapter Integration
 
-Backlog refinement works seamlessly with the [DevOps Adapter Integration](../guides/devops-adapter-integration.md):
+Backlog refinement works seamlessly with the [DevOps Adapter Integration](/integrations/devops-adapter-overview/):
 
 1. **Import Backlog Items**: Use `specfact project sync bridge` to import backlog items as OpenSpec proposals
 2. **Refine Items**: Use `specfact backlog ceremony refinement` to standardize imported items
@@ -731,7 +733,7 @@ work_item_type_mappings:
   Requirement: User Story
 ```
 
-**See Also**: [Custom Field Mapping Guide](./custom-field-mapping.md) for complete documentation on field mapping templates, framework-specific examples, and best practices.
+**See Also**: [Custom Field Mapping Guide](/guides/custom-field-mapping/) for complete documentation on field mapping templates, framework-specific examples, and best practices.
 
 ## Template Customization
 
@@ -1062,10 +1064,10 @@ specfact backlog ceremony refinement ado --ado-org "my-org" --ado-project "my-pr
 
 ## Related Documentation
 
-- **[DevOps Adapter Integration](../guides/devops-adapter-integration.md)** - Complete guide for GitHub Issues and Azure DevOps integration
-- **[Command Reference](../reference/commands.md)** - Complete command documentation
-- **[Agile/Scrum Workflows](../guides/agile-scrum-workflows.md)** - Persona-based collaboration for teams
-- **[IDE Integration](../guides/ide-integration.md)** - Set up slash commands in your IDE
+- **[DevOps Adapter Integration](/integrations/devops-adapter-overview/)** - Complete guide for GitHub Issues and Azure DevOps integration
+- **[Command Reference](/reference/commands/)** - Complete command documentation
+- **[Agile/Scrum Workflows](/guides/agile-scrum-workflows/)** - Persona-based collaboration for teams
+- **[IDE Integration](/guides/ide-integration/)** - Set up slash commands in your IDE
 
 ---
 
