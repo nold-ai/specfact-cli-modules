@@ -77,79 +77,92 @@ def _tokens_for_specfact_line(line: str) -> list[str] | None:
     return tokens
 
 
+def _route_backlog(t: list[str]) -> tuple[Any, list[str]] | None:
+    if not t or t[0] != "backlog":
+        return None
+    if len(t) > 1 and t[1] == "policy":
+        mod = importlib.import_module("specfact_backlog.policy_engine.commands")
+        return mod.app, t[2:]
+    mod = importlib.import_module("specfact_backlog.backlog.commands")
+    return mod.app, t[1:]
+
+
+_TOP_LEVEL_MODULE_BY_PREFIX: dict[str, str] = {
+    "govern": "specfact_govern.govern.commands",
+    "project": "specfact_project.project.commands",
+    "plan": "specfact_project.plan.commands",
+    "sync": "specfact_project.sync.commands",
+    "migrate": "specfact_project.migrate.commands",
+}
+
+
+def _route_top_level(t: list[str]) -> tuple[Any, list[str]] | None:
+    if not t:
+        return None
+    mod_path = _TOP_LEVEL_MODULE_BY_PREFIX.get(t[0])
+    if mod_path is None:
+        return None
+    mod = importlib.import_module(mod_path)
+    return mod.app, t[1:]
+
+
+# Subcommand under `specfact code …` → Typer module. `review` keeps `review` in argv (nested subgroup).
+_CODE_SUB_TO_MODULE: dict[str, tuple[str, bool]] = {
+    "review": ("specfact_code_review.review.commands", True),
+    "import": ("specfact_codebase.import_cmd.commands", False),
+    "analyze": ("specfact_codebase.analyze.commands", False),
+    "drift": ("specfact_codebase.drift.commands", False),
+    "validate": ("specfact_codebase.validate.commands", False),
+    "repro": ("specfact_codebase.repro.commands", False),
+}
+
+
+def _route_code(t: list[str]) -> tuple[Any, list[str]] | None:
+    if len(t) < 2 or t[0] != "code":
+        return None
+    entry = _CODE_SUB_TO_MODULE.get(t[1])
+    if entry is None:
+        return None
+    mod_path, keep_review_prefix = entry
+    mod = importlib.import_module(mod_path)
+    argv = t[1:] if keep_review_prefix else t[2:]
+    return mod.app, argv
+
+
+_SPEC_SUB_TO_MODULE = {
+    "contract": "specfact_spec.contract.commands",
+    "api": "specfact_spec.spec.commands",
+    "sdd": "specfact_spec.sdd.commands",
+    "generate": "specfact_spec.generate.commands",
+}
+
+
+def _route_spec(t: list[str]) -> tuple[Any, list[str]] | None:
+    if not t or t[0] != "spec":
+        return None
+    if len(t) == 2 and t[1] == "--help":
+        mod = importlib.import_module("specfact_cli.groups.spec_group")
+        return mod.build_app(), ["--help"]
+    if len(t) < 2:
+        return None
+    mod_path = _SPEC_SUB_TO_MODULE.get(t[1])
+    if mod_path is None:
+        return None
+    mod = importlib.import_module(mod_path)
+    return mod.app, t[2:]
+
+
 def _route_to_bundle_app_and_argv(tokens: list[str]) -> tuple[Any, list[str]] | None:
     """Map `specfact …` tokens to (Typer app, argv for CliRunner)."""
     if len(tokens) < 2 or tokens[0] != "specfact":
         return None
     t = tokens[1:]
-
-    if t[0] == "backlog" and len(t) > 1 and t[1] == "policy":
-        mod = importlib.import_module("specfact_backlog.policy_engine.commands")
-        return mod.app, t[2:]
-
-    if t[0] == "backlog":
-        mod = importlib.import_module("specfact_backlog.backlog.commands")
-        return mod.app, t[1:]
-
-    if t[0] == "govern":
-        mod = importlib.import_module("specfact_govern.govern.commands")
-        return mod.app, t[1:]
-
-    if t[0] == "project":
-        mod = importlib.import_module("specfact_project.project.commands")
-        return mod.app, t[1:]
-
-    if t[0] == "plan":
-        mod = importlib.import_module("specfact_project.plan.commands")
-        return mod.app, t[1:]
-
-    if t[0] == "sync":
-        mod = importlib.import_module("specfact_project.sync.commands")
-        return mod.app, t[1:]
-
-    if t[0] == "migrate":
-        mod = importlib.import_module("specfact_project.migrate.commands")
-        return mod.app, t[1:]
-
-    if t[0] == "code" and len(t) > 1:
-        if t[1] == "review":
-            mod = importlib.import_module("specfact_code_review.review.commands")
-            # `review.commands.app` mounts the nested `review` subgroup at name `review`.
-            return mod.app, t[1:]
-        if t[1] == "import":
-            mod = importlib.import_module("specfact_codebase.import_cmd.commands")
-            return mod.app, t[2:]
-        if t[1] == "analyze":
-            mod = importlib.import_module("specfact_codebase.analyze.commands")
-            return mod.app, t[2:]
-        if t[1] == "drift":
-            mod = importlib.import_module("specfact_codebase.drift.commands")
-            return mod.app, t[2:]
-        if t[1] == "validate":
-            mod = importlib.import_module("specfact_codebase.validate.commands")
-            return mod.app, t[2:]
-        if t[1] == "repro":
-            mod = importlib.import_module("specfact_codebase.repro.commands")
-            return mod.app, t[2:]
-
-    if t[0] == "spec" and len(t) == 2 and t[1] == "--help":
-        mod = importlib.import_module("specfact_cli.groups.spec_group")
-        return mod.build_app(), ["--help"]
-
-    if t[0] == "spec" and len(t) > 1:
-        sub = t[1]
-        if sub == "contract":
-            mod = importlib.import_module("specfact_spec.contract.commands")
-        elif sub == "api":
-            mod = importlib.import_module("specfact_spec.spec.commands")
-        elif sub == "sdd":
-            mod = importlib.import_module("specfact_spec.sdd.commands")
-        elif sub == "generate":
-            mod = importlib.import_module("specfact_spec.generate.commands")
-        else:
-            return None
-        return mod.app, t[2:]
-
+    if not t:
+        return None
+    for router in (_route_backlog, _route_top_level, _route_code, _route_spec):
+        routed = router(t)
+        if routed is not None:
+            return routed
     return None
 
 
