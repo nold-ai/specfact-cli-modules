@@ -28,6 +28,13 @@ Recommended layout:
     commands.py   # or app.py, etc.
 ```
 
+Official bundles may also ship **bundle-owned resources** next to the manifest (included in the signed module payload), for example:
+
+- `resources/prompts/` — workflow prompt templates and `resources/prompts/shared/` companion files referenced by relative paths from those prompts
+- `resources/templates/backlog/field_mappings/` — backlog field-mapping seed YAML copied by init/install flows (mirrored under `src/<python_package>/resources/...` when the runtime must resolve them via `find_package_resources_path`)
+
+Any change under `resources/` is part of the module payload: bump `version` in `module-package.yaml` and re-sign integrity metadata the same way as for code changes.
+
 Exclude from the package: `.git`, `__pycache__`, `tests`, `.pytest_cache`, `*.pyc`, `*.pyo`.
 
 ## Script: publish-module.py

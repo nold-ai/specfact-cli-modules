@@ -1,0 +1,4 @@
+# Starter template for team-specific ADO field mappings (edited via map-fields / backlog flows)
+framework: custom
+field_mappings: {}
+work_item_type_mappings: {}
