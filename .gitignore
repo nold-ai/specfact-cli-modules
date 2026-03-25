@@ -45,3 +45,11 @@ logs/
 
 .vibe/skills/openspec-*/
 !.vibe/skills/openspec-workflows/
+
+# Jekyll docs — local Bundler state and build output
+docs/.bundle/
+docs/_site/
+
+# local bundle installs (bundle config path vendor/bundle)
+docs/vendor/
+
