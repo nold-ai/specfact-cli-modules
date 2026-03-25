@@ -29,5 +29,6 @@
 ## 6. Verification
 
 - [ ] 6.1 Validate all command examples against `--help` output
-- [ ] 6.2 Verify all internal links resolve
-- [ ] 6.3 Run `bundle exec jekyll build` with zero warnings
+- [ ] 6.2 Verify command docs that mention prompts/templates use bundle-owned resource language consistent with `packaging-01-bundle-resource-payloads`
+- [ ] 6.3 Verify all internal links resolve
+- [ ] 6.4 Run `bundle exec jekyll build` with zero warnings

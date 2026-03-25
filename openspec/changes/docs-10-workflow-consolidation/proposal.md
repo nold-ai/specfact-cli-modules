@@ -13,6 +13,7 @@ Multiple brownfield guides overlap (brownfield-engineer, brownfield-journey, bro
 - Write new `workflows/daily-devops-routine.md`: morning standup -> refine -> commit -> review cycle
 - Write new `workflows/ci-cd-pipeline.md`: CI integration patterns with SpecFact commands
 - Validate and update existing `command-chains.md` against current command surface
+- Fold bundle-owned prompt/template setup into the workflow docs where IDE export or workspace-template bootstrap is a prerequisite, so resource migration does not require a separate follow-up docs change
 
 ## Capabilities
 
@@ -30,6 +31,7 @@ Multiple brownfield guides overlap (brownfield-engineer, brownfield-journey, bro
 - New files: `workflows/cross-module-chains.md`, `workflows/daily-devops-routine.md`, `workflows/ci-cd-pipeline.md`
 - Merged files: brownfield-engineer + brownfield-journey -> brownfield-modernization, brownfield-faq + brownfield-roi -> brownfield-faq-and-roi, 3 examples -> brownfield-examples
 - Updated: `workflows/command-chains.md` (validated against current commands)
+- Aligns with: `packaging-01-bundle-resource-payloads` for module-owned prompt/template setup steps
 - Depends on: `docs-06-modules-site-ia-restructure`
 
 ## Source Tracking

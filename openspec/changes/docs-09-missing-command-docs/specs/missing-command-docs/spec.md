@@ -1,30 +1,31 @@
-# Capability: missing-command-docs
+## ADDED Requirements
 
-Reference documentation for all previously undocumented commands across spec, govern, code-review, and codebase bundles.
+### Requirement: Missing command reference pages SHALL document the implemented command surface
+Previously undocumented command pages SHALL describe the current option surface, examples, and relevant bundle-owned resource guidance for their commands.
 
-## Scenarios
+#### Scenario: Each command page documents full option reference
+- **GIVEN** a command reference page such as `bundles/govern/enforce.md`
+- **WHEN** a user reads the page
+- **THEN** every option and argument from the command's `--help` output is documented
+- **AND** practical examples demonstrate common usage patterns
 
-### Scenario: Each command page documents full option reference
+#### Scenario: Command pages explain bundle-owned resources where they affect usage
+- **GIVEN** a command reference page for a command that depends on migrated bundle-owned prompts or templates
+- **WHEN** a user reads the page
+- **THEN** the page explains the relevant setup or bootstrap path
+- **AND** it does not direct users to legacy core-owned resource locations
 
-Given a command reference page (e.g., bundles/govern/enforce.md)
-When a user reads the page
-Then every option and argument from the command's --help output is documented
-And practical examples demonstrate common usage patterns
+#### Scenario: Spec bundle has complete documentation
+- **GIVEN** the spec bundle overview links to deep-dive pages
+- **WHEN** a user follows links to validate, generate-tests, and mock
+- **THEN** each page exists and contains command reference, examples, and related commands
 
-### Scenario: Spec bundle has complete documentation
+#### Scenario: Govern bundle has complete documentation
+- **GIVEN** the govern bundle overview links to deep-dive pages
+- **WHEN** a user follows links to enforce and patch
+- **THEN** each page exists and contains command reference, examples, and related commands
 
-Given the spec bundle overview links to deep-dive pages
-When a user follows links to validate, generate-tests, and mock
-Then each page exists and contains command reference, examples, and related commands
-
-### Scenario: Govern bundle has complete documentation
-
-Given the govern bundle overview links to deep-dive pages
-When a user follows links to enforce and patch
-Then each page exists and contains command reference, examples, and related commands
-
-### Scenario: Code review bundle has complete documentation
-
-Given the code-review bundle overview links to deep-dive pages
-When a user follows links to run, ledger, and rules
-Then each page exists and contains command reference, examples, and related commands
+#### Scenario: Code review bundle has complete documentation
+- **GIVEN** the code-review bundle overview links to deep-dive pages
+- **WHEN** a user follows links to run, ledger, and rules
+- **THEN** each page exists and contains command reference, examples, and related commands

@@ -10,6 +10,7 @@ All existing docs assume individual developer usage. There is no guidance for te
 - Expand agile-scrum-workflows.md into a team onboarding playbook for Scrum and Kanban teams
 - Write new multi-repo setup guide for teams working across multiple repositories
 - Write new enterprise configuration guide covering custom profiles, domain overlays, and central config management
+- Document how teams manage bundle-owned prompts/templates through installed module versions and shared bootstrap flows after `packaging-01-bundle-resource-payloads`
 
 ## Capabilities
 
@@ -22,6 +23,7 @@ All existing docs assume individual developer usage. There is no guidance for te
 
 - Expanded files: `team-and-enterprise/team-collaboration.md`, `team-and-enterprise/agile-scrum-setup.md`
 - New files: `team-and-enterprise/multi-repo.md`, `team-and-enterprise/enterprise-config.md`
+- Aligns with: `packaging-01-bundle-resource-payloads` for team-facing prompt/template ownership and rollout guidance
 - Depends on: `docs-06-modules-site-ia-restructure`
 
 ## Source Tracking

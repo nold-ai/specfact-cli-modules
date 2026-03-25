@@ -7,7 +7,7 @@ The spec, govern, code-review, and codebase bundles have minimal or no documenta
 ## What Changes
 
 - Write 11 new command reference pages covering all undocumented commands across 4 bundles
-- Each page contains: command purpose, prerequisites, full option reference, practical examples, common patterns, and links to related commands
+- Each page contains: command purpose, prerequisites, bundle-owned resource/setup notes where relevant, full option reference, practical examples, common patterns, and links to related commands
 - All examples validated against actual implementations
 
 ## Capabilities
@@ -23,6 +23,7 @@ The spec, govern, code-review, and codebase bundles have minimal or no documenta
 
 - New files (11): `bundles/spec/validate.md`, `bundles/spec/generate-tests.md`, `bundles/spec/mock.md`, `bundles/govern/enforce.md`, `bundles/govern/patch.md`, `bundles/code-review/run.md`, `bundles/code-review/ledger.md`, `bundles/code-review/rules.md`, `bundles/codebase/analyze.md`, `bundles/codebase/drift.md`, `bundles/codebase/repro.md`
 - Depends on: `docs-06-modules-site-ia-restructure` (bundles/ directory structure must exist)
+- Aligns with: `packaging-01-bundle-resource-payloads` so docs describe migrated bundle-owned prompts/templates consistently
 
 ## Source Tracking
 
