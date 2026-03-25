@@ -63,7 +63,7 @@ Deterministic policy validation against backlog snapshots (bundled with this pac
 | `validate` | Run policy checks (JSON/Markdown/both) |
 | `suggest` | Patch-ready suggestions (no automatic writes) |
 
-See [Policy engine](policy-engine.md) for details.
+See [Policy engine](policy-engine/) for details.
 
 ### Auth (`specfact backlog auth`)
 
