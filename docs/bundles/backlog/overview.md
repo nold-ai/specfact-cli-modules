@@ -65,11 +65,16 @@ Deterministic policy validation against backlog snapshots (bundled with this pac
 
 See [Policy engine](policy-engine.md) for details.
 
-### Other
+### Auth (`specfact backlog auth`)
 
-| Command | Purpose |
-|--------|---------|
-| `auth` | Authenticate backlog providers |
+Backlog provider authentication for **GitHub** and **Azure DevOps**: store tokens, run OAuth / device-code flows, inspect status, and clear credentials for setup and troubleshooting.
+
+| Subcommand | Purpose |
+|------------|---------|
+| `azure-devops` | Authenticate to Azure DevOps via PAT (`--pat`) or OAuth (interactive browser or `--use-device-code`) |
+| `github` | Authenticate to GitHub (or GitHub Enterprise) via RFC 8628 device code flow; optional `--client-id`, `--base-url`, `--scopes` |
+| `status` | Show stored auth state for supported providers (valid vs expired tokens) |
+| `clear` | Remove stored tokens; optional `--provider` (`azure-devops` or `github`) or omit to clear all |
 
 ## Bundle-owned prompts and templates
 
@@ -84,6 +89,9 @@ specfact backlog daily --help
 specfact backlog refine --help
 specfact backlog delta status --help
 specfact backlog policy validate --help
+specfact backlog auth --help
+specfact backlog auth status --help
+specfact backlog auth github --help
 ```
 
 GitHub refinement preview (typical entry point):

@@ -20,7 +20,7 @@ The modules site owns all bundle-specific deep guidance. Core CLI platform docs 
 | Codebase | [Overview](bundles/codebase/overview/) | [Sidecar validation](bundles/codebase/sidecar-validation/) |
 | Spec | [Overview](bundles/spec/overview/) | [Command reference](reference/commands/) |
 | Govern | [Overview](bundles/govern/overview/) | [Command reference](reference/commands/) |
-| Code Review | [Overview](bundles/code-review/overview/) | [Module guide](modules/code-review.md) |
+| Code Review | [Overview](bundles/code-review/overview/) | [Module guide](modules/code-review/) |
 
 ## Getting Started
 

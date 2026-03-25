@@ -29,7 +29,7 @@ The **Govern** bundle (`nold-ai/specfact-govern`) adds **enforcement** and **pat
 
 ## Bundle-owned policy packs
 
-Enforcement may ship **bundle-local policy packs or presets** with the package. Treat them as **bundle payload** referenced by the govern module, not as core CLI-owned configuration. Refresh IDE-facing resources with `specfact init ide` when your team updates bundles.
+Enforcement may ship **bundle-local policy packs or presets** with the package. Treat them as **bundle payload** referenced by the govern module, not as core CLI-owned configuration. Refresh IDE-facing resources with `specfact init ide` (core IDE prompts from installed modules). When updating the Code Review **house-rules** skill, use `specfact code review rules init --ide` or `specfact code review rules update --ide` (e.g. `--ide cursor`, `--ide claude`, `--ide codex`, or `--ide vibe`; see `--help`).
 
 ## Quick examples
 

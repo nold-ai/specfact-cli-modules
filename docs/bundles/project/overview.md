@@ -88,7 +88,7 @@ specfact sync bridge --help
 specfact migrate artifacts --repo .
 ```
 
-## Deep dives
+## See also
 
 - [DevOps flow](devops-flow/)
 - [Import command features](import-migration/)

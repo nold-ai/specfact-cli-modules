@@ -41,9 +41,14 @@ Install the bundle, then confirm the mounted tree with `specfact spec --help`.
 | Command | Purpose |
 |--------|---------|
 | `list` | List SDD manifests in the repo |
-| `constitution bootstrap` | Bootstrap constitution markdown for Spec-Kit compatibility |
-| `constitution enrich` | Enrich constitution content |
-| `constitution validate` | Validate constitution structure |
+
+### `constitution` subcommands
+
+| Subcommand | Purpose |
+|------------|---------|
+| `bootstrap` | Bootstrap constitution markdown for Spec-Kit compatibility |
+| `enrich` | Enrich constitution content |
+| `validate` | Validate constitution structure |
 
 ## `specfact spec generate` — generation and prompts
 
@@ -66,6 +71,7 @@ specfact spec --help
 specfact spec contract validate --help
 specfact spec api validate --help
 specfact spec sdd list --repo .
+specfact spec sdd constitution validate --help
 specfact spec generate contracts --help
 ```
 
