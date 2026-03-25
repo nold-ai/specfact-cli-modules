@@ -10,6 +10,9 @@ creation_hierarchy:
   feature: [epic]
   story: [feature, epic]
   task: [story, feature]
+  bug: [story, feature, epic]
+  spike: [feature, epic]
+  custom: [epic, feature, story]
 dependency_rules:
   blocks: blocks
   blocked_by: blocks

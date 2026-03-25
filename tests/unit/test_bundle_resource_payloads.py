@@ -76,6 +76,19 @@ def test_backlog_bundle_packages_field_mapping_seed_set() -> None:
             assert path.is_file(), f"missing field mapping seed {path}"
 
 
+def test_github_custom_seed_includes_bug_parent_hierarchy() -> None:
+    """Aligns packaged seed with map-fields defaults so bugs keep valid parent constraints after init copy."""
+    module_root = REPO_ROOT / "packages" / "specfact-backlog"
+    expected_bug = ["story", "feature", "epic"]
+    for rel in (
+        "resources/templates/backlog/field_mappings/github_custom.yaml",
+        "src/specfact_backlog/resources/templates/backlog/field_mappings/github_custom.yaml",
+    ):
+        data = yaml.safe_load((module_root / rel).read_text(encoding="utf-8"))
+        ch = data.get("creation_hierarchy") or {}
+        assert ch.get("bug") == expected_bug
+
+
 def test_module_package_layout_matches_init_ide_resource_contract() -> None:
     """Core discovers resources/prompts and resources/templates/... under the module package root."""
     backlog = REPO_ROOT / "packages" / "specfact-backlog"
