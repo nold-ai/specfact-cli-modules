@@ -46,15 +46,20 @@ _OVERVIEW_LINE_TO_TOKENS_AFTER_SPECFACT: dict[str, list[str]] = {
     "specfact spec sdd list --repo .": ["spec", "sdd", "list", "--help"],
 }
 
-_BASH_FENCE_RE = re.compile(r"^```(?:bash)?\s*$")
+_OPEN_BASH_FENCE_RE = re.compile(r"^```bash\s*$")
+_CLOSE_FENCE_RE = re.compile(r"^```\s*$")
 
 
 def _iter_bash_block_lines(markdown: str) -> list[str]:
     lines_out: list[str] = []
     in_bash = False
     for raw in markdown.splitlines():
-        if _BASH_FENCE_RE.match(raw.strip()):
-            in_bash = not in_bash
+        stripped = raw.strip()
+        if _OPEN_BASH_FENCE_RE.match(stripped):
+            in_bash = True
+            continue
+        if _CLOSE_FENCE_RE.match(stripped):
+            in_bash = False
             continue
         if in_bash:
             lines_out.append(raw.rstrip("\n"))
@@ -173,9 +178,10 @@ def _route_to_bundle_app_and_argv(tokens: list[str]) -> tuple[Any, list[str]] | 
 def test_validate_bundle_overview_cli_help_examples() -> None:
     """Invoke bundle Typer apps with argv derived from each overview quick-example line."""
     runner = CliRunner()
-    seen: set[str] = set()
+    seen: set[tuple[str, ...]] = set()
     failures: list[str] = []
 
+    assert _BUNDLE_OVERVIEWS, "no bundle overviews discovered"
     for overview in _BUNDLE_OVERVIEWS:
         text = overview.read_text(encoding="utf-8")
         for raw_line in _iter_bash_block_lines(text):
@@ -189,14 +195,15 @@ def test_validate_bundle_overview_cli_help_examples() -> None:
                 )
                 continue
 
-            key = " ".join(tokens)
-            if key in seen:
+            dedupe_key = tuple(tokens)
+            display_key = " ".join(tokens)
+            if dedupe_key in seen:
                 continue
-            seen.add(key)
+            seen.add(dedupe_key)
 
             routed = _route_to_bundle_app_and_argv(tokens)
             if routed is None:
-                failures.append(f"{overview.relative_to(_REPO_ROOT)}: no route for {key!r}")
+                failures.append(f"{overview.relative_to(_REPO_ROOT)}: no route for {display_key!r}")
                 continue
             app, argv = routed
             # We only assert Typer accepted argv and exited 0; we do not diff full --help text or
