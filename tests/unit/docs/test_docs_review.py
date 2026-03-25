@@ -401,6 +401,10 @@ def test_moved_files_have_redirect_from_entries() -> None:
         rel = path.relative_to(_docs_root())
         if not any(str(rel).startswith(d) for d in moved_dirs):
             continue
+        # New per-bundle landing pages (not migrated from guides/) have no legacy URL.
+        parts = rel.parts
+        if len(parts) >= 3 and parts[0] == "bundles" and path.name == "overview.md":
+            continue
         metadata, _ = _split_front_matter(_read_text(path))
         if not metadata:
             continue

@@ -56,8 +56,11 @@ def test_modules_layout_keeps_sidebar_module_focused() -> None:
 
 
 def test_docs_tree_does_not_reference_retired_public_hosts() -> None:
+    skip_parts = frozenset({"vendor", "_site", ".bundle", ".jekyll-cache"})
     for path in REPO_ROOT.joinpath("docs").rglob("*"):
         if not path.is_file():
+            continue
+        if skip_parts.intersection(path.parts):
             continue
         text = _read(path)
         for host in OUTDATED_DOCS_HOSTS:
