@@ -1,0 +1,22 @@
+# Starter GitHub hierarchy / type mapping seed (extended by map-fields and backlog flows)
+type_mapping:
+  epic: epic
+  feature: feature
+  story: story
+  task: task
+  bug: bug
+creation_hierarchy:
+  epic: []
+  feature: [epic]
+  story: [feature, epic]
+  task: [story, feature]
+dependency_rules:
+  blocks: blocks
+  blocked_by: blocks
+  relates: relates_to
+status_mapping:
+  open: todo
+  closed: done
+  todo: todo
+  in progress: in_progress
+  done: done

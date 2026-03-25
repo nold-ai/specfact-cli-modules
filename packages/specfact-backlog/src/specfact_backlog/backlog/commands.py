@@ -48,6 +48,7 @@ from typer.core import TyperGroup
 from specfact_backlog.backlog.adapters.interface import BacklogAdapter
 from specfact_backlog.backlog.ai_refiner import BacklogAIRefiner
 from specfact_backlog.backlog.auth_commands import auth_app
+from specfact_backlog.backlog.field_mapping_resources import load_ado_framework_template_config
 from specfact_backlog.backlog.filters import BacklogFilters
 from specfact_backlog.backlog.template_detector import TemplateDetector, get_effective_required_sections
 
@@ -2108,47 +2109,6 @@ def _build_adapter_kwargs(
         if ado_token:
             kwargs["api_token"] = ado_token
     return kwargs
-
-
-@beartype
-def _load_ado_framework_template_config(framework: str) -> dict[str, Any]:
-    """
-    Load built-in ADO field mapping template config for a framework.
-
-    Returns a dict with keys: framework, field_mappings, work_item_type_mappings.
-    Falls back to ado_default.yaml when framework-specific file is unavailable.
-    """
-    normalized = (framework or "default").strip().lower() or "default"
-    candidates = [f"ado_{normalized}.yaml", "ado_default.yaml"]
-
-    candidate_roots: list[Path] = []
-    with contextlib.suppress(Exception):
-        from specfact_cli.utils.ide_setup import find_package_resources_path
-
-        packaged = find_package_resources_path("specfact_cli", "resources/templates/backlog/field_mappings")
-        if packaged and packaged.exists():
-            candidate_roots.append(packaged)
-
-    repo_root = Path(__file__).parent.parent.parent.parent.parent.parent
-    candidate_roots.append(repo_root / "resources" / "templates" / "backlog" / "field_mappings")
-
-    for root in candidate_roots:
-        if not root.exists():
-            continue
-        for filename in candidates:
-            file_path = root / filename
-            if file_path.exists():
-                with contextlib.suppress(Exception):
-                    from specfact_backlog.backlog.mappers.template_config import FieldMappingConfig
-
-                    cfg = FieldMappingConfig.from_file(file_path)
-                    return cfg.model_dump()
-
-    return {
-        "framework": "default",
-        "field_mappings": {},
-        "work_item_type_mappings": {},
-    }
 
 
 def _extract_body_from_block(block: str) -> str:
@@ -5418,7 +5378,7 @@ def map_fields(
 
     console.print(f"[dim]Using ADO framework:[/dim] {selected_framework}")
 
-    framework_template = _load_ado_framework_template_config(selected_framework)
+    framework_template = load_ado_framework_template_config(selected_framework)
     framework_field_mappings = framework_template.get("field_mappings", {})
     framework_work_item_type_mappings = framework_template.get("work_item_type_mappings", {})
 
