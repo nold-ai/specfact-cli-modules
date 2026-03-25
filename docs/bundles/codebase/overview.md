@@ -50,7 +50,7 @@ Advanced import topics: [Project import command features](../project/import-migr
 
 | Command | Purpose |
 |--------|---------|
-| Default when no subcommand | Run the full validation suite |
+| `repro` (default) | Run the full validation suite |
 | `setup` | Prepare repro validation setup |
 
 Use `specfact code repro --help` for the default invocation flags (`--repo`, `--verbose`, `--sidecar`, …).

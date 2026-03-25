@@ -49,6 +49,7 @@ logs/
 # Jekyll docs — local Bundler state and build output
 docs/.bundle/
 docs/_site/
+docs/.jekyll-cache/
 
 # local bundle installs (bundle config path vendor/bundle)
 docs/vendor/

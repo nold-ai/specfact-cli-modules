@@ -1,3 +1,10 @@
+---
+layout: default
+title: Code review module
+nav_order: 10
+permalink: /modules/code-review/
+---
+
 # specfact-code-review module notes
 
 ## Review run command

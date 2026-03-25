@@ -33,8 +33,11 @@ def _docs_root() -> Path:
     return _repo_root() / "docs"
 
 
+_SKIP_DOCS_TREE_PARTS = frozenset({"_site", "vendor", ".bundle", ".jekyll-cache"})
+
+
 def _is_docs_markdown(path: Path) -> bool:
-    return path.suffix == ".md" and "_site" not in path.parts and "vendor" not in path.parts
+    return path.suffix == ".md" and not _SKIP_DOCS_TREE_PARTS.intersection(path.parts)
 
 
 def _is_publishable_page(path: Path) -> bool:

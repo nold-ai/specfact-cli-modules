@@ -35,3 +35,4 @@ Each official bundle SHALL have a single overview page that lists its commands, 
 - **GIVEN** a command example in an overview page
 - **WHEN** compared against the actual `specfact <command> --help` output
 - **THEN** the command name, arguments, and key options match
+- **AND** `tests/unit/docs/test_bundle_overview_cli_examples.py::test_validate_bundle_overview_cli_help_examples` exercises each quick-example line by invoking the corresponding bundle Typer app with `--help` (or an explicit `--help` normalization for lines that include runnable flags), failing when help output cannot be produced
