@@ -7,6 +7,7 @@
 
 - [ ] 2.1 Write `scripts/check-docs-commands.py` to extract command registrations from `packages/*/src/**/commands.py`
 - [ ] 2.2 Compare extracted commands against code blocks in `docs/bundles/` and `docs/reference/commands.md`
+- [ ] 2.3 Flag stale references to legacy core-owned prompt/template locations that were migrated by `packaging-01-bundle-resource-payloads`
 
 ## 3. Cross-Site Link Validation
 
@@ -19,4 +20,5 @@
 ## 5. Verification
 
 - [ ] 5.1 Run validation locally and verify it catches broken examples
-- [ ] 5.2 Run CI workflow end-to-end
+- [ ] 5.2 Run validation locally and verify it catches stale core-owned resource path references
+- [ ] 5.3 Run CI workflow end-to-end

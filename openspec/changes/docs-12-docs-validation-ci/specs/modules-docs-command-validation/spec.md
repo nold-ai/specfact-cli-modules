@@ -1,19 +1,22 @@
-# Capability: modules-docs-command-validation
+## ADDED Requirements
 
-CI validation that module docs command examples match actual bundle implementations.
+### Requirement: Docs validation SHALL reject stale command and resource references
+The modules-side docs validation workflow SHALL reject command examples that do not match implemented bundle commands and SHALL also reject stale references to migrated core-owned resource paths.
 
-## Scenarios
+#### Scenario: Valid command example passes
+- **GIVEN** a docs page references `specfact backlog ceremony standup`
+- **WHEN** the validation runs
+- **THEN** it finds a matching registration in the backlog package source
+- **AND** the check passes
 
-### Scenario: Valid command example passes
+#### Scenario: Invalid command example fails
+- **GIVEN** a docs page references `specfact backlog nonexistent`
+- **WHEN** the validation runs
+- **THEN** it reports the mismatch
+- **AND** the check fails
 
-Given a docs page references `specfact backlog ceremony standup`
-When the validation runs
-Then it finds a matching registration in the backlog package source
-And the check passes
-
-### Scenario: Invalid command example fails
-
-Given a docs page references `specfact backlog nonexistent`
-When the validation runs
-Then it reports the mismatch
-And the check fails
+#### Scenario: Legacy core-owned resource path reference fails
+- **GIVEN** a docs page instructs users to fetch a migrated prompt or template from a legacy core-owned path
+- **WHEN** the validation runs
+- **THEN** it reports the stale resource reference
+- **AND** the check fails

@@ -3,13 +3,20 @@
 ### Requirement: Official bundles SHALL ship module-owned resource payloads
 Each official bundle package SHALL include the prompt templates and other non-code resources that are owned by that bundle's workflows or commands. Bundle-owned resources SHALL not depend on fallback storage under the core CLI repository.
 
-#### Scenario: Backlog bundle ships its prompt resources
-- **WHEN** the backlog bundle package is inspected from source or from an installed artifact
-- **THEN** the package contains the prompt templates owned by backlog workflows under the agreed bundle resource path
+#### Scenario: Official bundles ship the audited prompt inventory
+- **WHEN** the audited prompt inventory from `RESOURCE_OWNERSHIP_AUDIT.md` is inspected
+- **THEN** each prompt template's canonical packaged source exists under the owning official bundle package
+- **AND** the ownership mapping covers at least the codebase, project, spec, and govern bundles for the currently exported core prompt set
 
-#### Scenario: Backlog bundle ships field mapping templates
+#### Scenario: Prompt companion resources ship with prompt payloads
+- **WHEN** an exported prompt template references a companion file by relative path, such as `./shared/cli-enforcement.md`
+- **THEN** the owning bundle package contains that companion resource in a stable relative location
+- **AND** prompt export/copy flows can preserve a resolvable relative layout in the target IDE workspace
+
+#### Scenario: Backlog bundle ships workspace-template seed resources
 - **WHEN** the backlog bundle package is inspected from source or from an installed artifact
 - **THEN** the package contains the backlog field mapping templates that `specfact init` or related flows need to copy into workspace state
+- **AND** the packaged set includes both ADO and non-ADO seed templates required by supported backlog flows
 
 #### Scenario: Core no longer remains the source of truth for bundle prompts
 - **WHEN** a workflow prompt belongs to an extracted bundle rather than to core lifecycle commands

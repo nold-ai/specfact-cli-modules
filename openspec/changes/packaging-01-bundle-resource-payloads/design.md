@@ -6,6 +6,7 @@ That split is no longer coherent after bundle extraction:
 
 - prompts belong to the workflow bundles, not to core lifecycle commands
 - backlog field mapping templates belong to the backlog bundle, not to core
+- prompt companion assets such as `shared/cli-enforcement.md` travel with those prompts and must remain resolvable after export
 - installed bundle packages need a stable on-disk resource layout so core CLI can discover resources from installed bundles rather than from fallback core directories
 
 The audit result is explicit: the official bundle package directories in `specfact-cli-modules` do not currently contain `resources/prompts` trees, so a modules-repo change is required.
@@ -15,7 +16,8 @@ The audit result is explicit: the official bundle package directories in `specfa
 **Goals:**
 
 - package prompt templates inside the owning official bundles
-- package other module-owned resources that still live in core, beginning with backlog field mapping templates
+- package prompt companion assets required by those prompts, starting with `resources/prompts/shared/cli-enforcement.md`
+- package other module-owned resources that still live in core, beginning with the full backlog field mapping template seed set
 - standardize a resource layout that can be discovered from installed bundle roots
 - prove that signing and verification remain resource-aware and fail when bundled resources change without a version/signature update
 
@@ -32,7 +34,8 @@ The audit result is explicit: the official bundle package directories in `specfa
 Each official bundle should carry a `resources/` subtree inside its package directory for assets that travel with that bundle. At minimum this change covers:
 
 - prompt templates for bundle-owned workflows
-- backlog field mapping templates under the backlog bundle
+- prompt companion resources referenced by those prompt templates
+- backlog field mapping templates under the backlog bundle, including non-ADO templates copied into workspace state
 
 This keeps installation, packaging, signature, and ownership boundaries aligned.
 
@@ -42,22 +45,23 @@ The modules repo already computes integrity hashes from full module payloads. Th
 
 ### 3. Keep the contract with core CLI path-based and package-rooted
 
-The bundle packages should expose resources through a stable package-root layout rather than through bespoke manifest-only indirection. Core CLI can then discover `resources/prompts` or other agreed subpaths from installed bundle roots.
+The bundle packages should expose resources through a stable package-root layout rather than through bespoke manifest-only indirection. Core CLI can then discover `resources/prompts`, prompt companion files under the same prompt root, or other agreed subpaths from installed bundle roots.
 
 ## Risks / Trade-offs
 
-- `[Resource ownership audit misses a leftover core-owned file]` -> start with prompts plus backlog field mappings and document any residual core-owned resources explicitly.
+- `[Resource ownership audit misses a leftover core-owned file]` -> record the audited inventory and explicit keep-in-core list in a change-local audit artifact.
+- `[Prompts copy successfully but relative includes break]` -> treat prompt companion files as part of the prompt payload contract, not optional extras.
 - `[Bundle packages gain more non-code files]` -> accept slightly larger artifacts in exchange for correct ownership and install behavior.
 - `[Core and modules repos drift on expected resource paths]` -> keep the path contract explicit and cross-reference the specfact-cli packaging change.
 
 ## Migration Plan
 
 1. Audit which current core resources are bundle-owned.
-2. Move prompt templates and backlog field mapping templates into the owning bundle packages.
+2. Move prompt templates, prompt companion assets, and backlog field mapping templates into the owning bundle packages.
 3. Add tests for package-resource presence and integrity/version-bump enforcement.
 4. Update docs/manifests as needed and sync dependency notes back to the core packaging change.
 
 ## Open Questions
 
-- Whether any non-backlog template directories under core resources also belong to extracted bundles.
+- Whether any non-backlog template directories under core resources also belong to extracted bundles after the audit in `RESOURCE_OWNERSHIP_AUDIT.md`.
 - Whether bundle manifests should later gain explicit resource catalog metadata, or whether stable subpaths are sufficient for the first iteration.

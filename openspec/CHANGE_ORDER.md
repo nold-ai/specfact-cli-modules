@@ -34,7 +34,7 @@
 
 | Module | Order | Change folder | GitHub # | Blocked by |
 |--------|-------|---------------|----------|------------|
-| packaging | 01 | packaging-01-bundle-resource-payloads | [#101](https://github.com/nold-ai/specfact-cli-modules/issues/101) | specfact-cli/packaging-02-cross-platform-runtime-and-module-resources (#441) defines the consuming core-side discovery/export contract |
+| packaging | 01 | packaging-01-bundle-resource-payloads | [#101](https://github.com/nold-ai/specfact-cli-modules/issues/101) | specfact-cli/packaging-02-cross-platform-runtime-and-module-resources defines the consuming installed-resource contract; specfact-cli/init-ide-prompt-source-selection ([#382](https://github.com/nold-ai/specfact-cli/issues/382)) owns runtime selection/export orchestration |
 
 ### Code review bundle expansion
 

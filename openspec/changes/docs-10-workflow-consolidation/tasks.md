@@ -14,6 +14,7 @@
 - [ ] 3.1 Write `workflows/cross-module-chains.md`: backlog -> code -> spec -> govern end-to-end flow
 - [ ] 3.2 Write `workflows/daily-devops-routine.md`: morning standup -> refine -> commit -> review cycle
 - [ ] 3.3 Write `workflows/ci-cd-pipeline.md`: CI integration with pre-commit hooks, GitHub Actions
+- [ ] 3.4 Add bundle-owned prompt/template bootstrap steps where workflows depend on migrated resources
 
 ## 4. Update Existing
 
@@ -23,5 +24,6 @@
 ## 5. Verification
 
 - [ ] 5.1 Verify all command examples in workflow docs match actual `--help` output
-- [ ] 5.2 Verify all internal links resolve
-- [ ] 5.3 Run `bundle exec jekyll build` with zero warnings
+- [ ] 5.2 Verify workflow docs do not reference legacy core-owned prompt/template paths
+- [ ] 5.3 Verify all internal links resolve
+- [ ] 5.4 Run `bundle exec jekyll build` with zero warnings

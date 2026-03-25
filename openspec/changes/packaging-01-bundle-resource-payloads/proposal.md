@@ -7,8 +7,11 @@ Bundle-owned prompt templates and other workflow resources still live in the cor
 - Add bundle-packaged resource payloads for official bundles so prompts and other module-owned assets ship from the bundle that owns them.
 - Move workflow prompt templates out of `specfact-cli/resources/prompts` into the corresponding bundle packages in `specfact-cli-modules`.
 - Move any other module-owned assets that still live in core, starting with backlog field mapping templates, into the owning bundle package.
+- Preserve prompt companion assets such as `resources/prompts/shared/cli-enforcement.md` so exported prompts do not ship broken relative references.
+- Audit and migrate the complete backlog workspace-template seed set required by init/install flows, not just `ado_*.yaml`.
 - Define and test a consistent package layout for bundle resources so the core CLI can discover them from installed bundle locations.
 - Lock resource payloads into signing, verification, and publish/version-bump workflows so bundle updates are resource-aware.
+- Keep `specfact-cli` runtime discovery, source selection, and `specfact init ide` export orchestration out of scope here; that work is tracked in `specfact-cli` change `init-ide-prompt-source-selection` (`nold-ai/specfact-cli#382`).
 
 ## Capabilities
 
@@ -24,7 +27,8 @@ None.
 
 - Affected code: `packages/specfact-*/`, module manifests, packaging/publish/signature scripts, and modules-repo tests.
 - Affected systems: bundle packaging, registry publish validation, signature verification, and core CLI installed-resource discovery.
-- Cross-repo dependency: this change provides the resource payloads consumed by specfact-cli change `packaging-02-cross-platform-runtime-and-module-resources`.
+- Audit artifact: `openspec/changes/packaging-01-bundle-resource-payloads/RESOURCE_OWNERSHIP_AUDIT.md`
+- Cross-repo dependency: this change provides the resource payloads consumed by specfact-cli change `packaging-02-cross-platform-runtime-and-module-resources` and the narrowed core-side orchestration/selectability change `init-ide-prompt-source-selection` (`nold-ai/specfact-cli#382`).
 
 ---
 

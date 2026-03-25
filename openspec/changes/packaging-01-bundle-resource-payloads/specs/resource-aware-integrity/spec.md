@@ -18,6 +18,12 @@ Bundled resources SHALL live at stable paths inside the bundle package so that t
 - **WHEN** the core CLI inspects an installed official bundle package
 - **THEN** the bundle contains a stable prompt resource path that can be discovered without scanning the core CLI repository
 
-#### Scenario: Core resolves backlog templates from installed bundle root
+#### Scenario: Core resolves prompt companion resources with exported prompts
+- **WHEN** the core CLI exports a prompt that depends on a companion file such as `shared/cli-enforcement.md`
+- **THEN** the companion resource is discoverable from the same installed bundle root
+- **AND** the exported prompt does not contain a broken relative reference after copy
+
+#### Scenario: Core resolves backlog workspace-template seeds from installed bundle root
 - **WHEN** the core CLI inspects an installed backlog bundle package
 - **THEN** the bundle contains a stable template resource path for backlog field mapping templates
+- **AND** that path exposes every seed template the init/install flows are expected to copy
