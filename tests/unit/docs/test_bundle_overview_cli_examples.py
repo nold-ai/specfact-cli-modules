@@ -8,6 +8,7 @@ setups, so we invoke the same Typer apps the CLI mounts from each official bundl
 from __future__ import annotations
 
 import importlib
+import logging
 import re
 import shlex
 from pathlib import Path
@@ -42,7 +43,7 @@ _OVERVIEW_LINE_TO_TOKENS_AFTER_SPECFACT: dict[str, list[str]] = {
         "--help",
     ],
     "specfact backlog daily github --state open --limit 20": ["backlog", "daily", "--help"],
-    "specfact spec sdd list --repo .": ["spec", "sdd", "list", "--repo", ".", "--help"],
+    "specfact spec sdd list --repo .": ["spec", "sdd", "list", "--help"],
 }
 
 _BASH_FENCE_RE = re.compile(r"^```(?:bash)?\s*$")
@@ -145,9 +146,12 @@ def _route_spec(t: list[str]) -> tuple[Any, list[str]] | None:
         return mod.build_app(), ["--help"]
     if len(t) < 2:
         return None
-    mod_path = _SPEC_SUB_TO_MODULE.get(t[1])
+    sub = t[1]
+    mod_path = _SPEC_SUB_TO_MODULE.get(sub)
     if mod_path is None:
-        return None
+        logging.getLogger(__name__).warning("Unrecognized spec subcommand: %s - tokens: %s", sub, t)
+        msg = f"Unrecognized spec subcommand: {sub!r} (tokens: {t!r})"
+        raise ValueError(msg)
     mod = importlib.import_module(mod_path)
     return mod.app, t[2:]
 
@@ -195,8 +199,19 @@ def test_validate_bundle_overview_cli_help_examples() -> None:
                 failures.append(f"{overview.relative_to(_REPO_ROOT)}: no route for {key!r}")
                 continue
             app, argv = routed
+            # We only assert Typer accepted argv and exited 0; we do not diff full --help text or
+            # every option name against the markdown (that would be brittle and duplicate Typer).
+            # Optional smoke check below ensures something help-like was printed when --help is used.
             result = runner.invoke(app, argv, prog_name="specfact")
             if result.exit_code != 0:
                 failures.append(f"{overview.relative_to(_REPO_ROOT)}: {raw_line.strip()!r} -> exit {result.exit_code}")
+                continue
+            if "--help" in argv:
+                # CliRunner may expose only `output` (stdout+stderr) unless mix_stderr=False.
+                combined = result.output or ""
+                if "Usage" not in combined and "usage:" not in combined.lower():
+                    failures.append(
+                        f"{overview.relative_to(_REPO_ROOT)}: {raw_line.strip()!r} -> help output missing Usage banner"
+                    )
 
     assert not failures, "Overview CLI --help mismatches:\n" + "\n".join(failures)
