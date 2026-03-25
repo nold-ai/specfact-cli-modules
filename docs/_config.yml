@@ -81,6 +81,10 @@ defaults:
       path: "authoring"
     values:
       layout: default
+  - scope:
+      path: "modules"
+    values:
+      layout: default
 theme: minima
 minima:
   social:

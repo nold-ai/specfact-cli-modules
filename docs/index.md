@@ -13,14 +13,14 @@ The modules site owns all bundle-specific deep guidance. Core CLI platform docs 
 
 ## Official Bundles
 
-| Bundle | Description |
-|--------|-------------|
-| [Backlog](bundles/backlog/refinement/) | AI-assisted refinement, delta commands, dependency analysis, policy engine |
-| [Project](bundles/project/devops-flow/) | DevOps flow, import/migration, project setup |
-| [Codebase](bundles/codebase/sidecar-validation/) | Sidecar validation, codebase analysis |
-| [Spec](reference/commands/) | Specification management |
-| [Govern](reference/commands/) | Governance and compliance |
-| [Code Review](reference/commands/) | Automated code review with ruff, radon, semgrep |
+| Bundle | Overview | Deep dives |
+|--------|----------|------------|
+| Backlog | [Overview](bundles/backlog/overview/) | [Refinement](bundles/backlog/refinement/), [delta](bundles/backlog/delta/), [policy](bundles/backlog/policy-engine/) |
+| Project | [Overview](bundles/project/overview/) | [DevOps flow](bundles/project/devops-flow/), [import features](bundles/project/import-migration/) |
+| Codebase | [Overview](bundles/codebase/overview/) | [Sidecar validation](bundles/codebase/sidecar-validation/) |
+| Spec | [Overview](bundles/spec/overview/) | [Command reference](reference/commands/) |
+| Govern | [Overview](bundles/govern/overview/) | [Command reference](reference/commands/) |
+| Code Review | [Overview](bundles/code-review/overview/) | [Module guide](modules/code-review/) |
 
 ## Getting Started
 

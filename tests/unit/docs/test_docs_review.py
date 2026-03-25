@@ -33,8 +33,11 @@ def _docs_root() -> Path:
     return _repo_root() / "docs"
 
 
+_SKIP_DOCS_TREE_PARTS = frozenset({"_site", "vendor", ".bundle", ".jekyll-cache"})
+
+
 def _is_docs_markdown(path: Path) -> bool:
-    return path.suffix == ".md" and "_site" not in path.parts and "vendor" not in path.parts
+    return path.suffix == ".md" and not _SKIP_DOCS_TREE_PARTS.intersection(path.parts)
 
 
 def _is_publishable_page(path: Path) -> bool:
@@ -400,6 +403,10 @@ def test_moved_files_have_redirect_from_entries() -> None:
     for path in _iter_docs_markdown_paths():
         rel = path.relative_to(_docs_root())
         if not any(str(rel).startswith(d) for d in moved_dirs):
+            continue
+        # New per-bundle landing pages (not migrated from guides/) have no legacy URL.
+        parts = rel.parts
+        if len(parts) >= 3 and parts[0] == "bundles" and path.name == "overview.md":
             continue
         metadata, _ = _split_front_matter(_read_text(path))
         if not metadata:
