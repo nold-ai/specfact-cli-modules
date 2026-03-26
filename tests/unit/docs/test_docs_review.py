@@ -401,31 +401,6 @@ def test_config_links_to_core_docs_site() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _list_redirect_from_routes(text: str) -> list[str]:
-    """Return normalized routes declared under ``redirect_from:`` in front matter."""
-    routes: list[str] = []
-    lines = text.splitlines()
-    i = 0
-    while i < len(lines):
-        if lines[i].strip() == "redirect_from:":
-            i += 1
-            while i < len(lines):
-                stripped = lines[i].strip()
-                if stripped.startswith("- "):
-                    val = stripped[2:].strip().strip('"').strip("'")
-                    routes.append(_normalize_route(val))
-                    i += 1
-                elif not stripped or stripped.startswith("#"):
-                    i += 1
-                elif stripped == "---":
-                    break
-                else:
-                    break
-            break
-        i += 1
-    return routes
-
-
 def _guides_legacy_redirect_violation(path: Path, text: str) -> str | None:
     """If ``docs/guides/<stem>.md`` publishes outside ``/guides/``, require ``redirect_from`` for ``/guides/<stem>/``.
 
