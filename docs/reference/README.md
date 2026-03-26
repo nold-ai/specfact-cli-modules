@@ -10,6 +10,7 @@ Complete technical reference for the official modules site and bundle-owned work
 
 ## Available References
 
+- **[Core and modules docs URL contract](documentation-url-contract.md)** - Ownership and permalink rules vs `docs.specfact.io`
 - **[Commands](commands.md)** - Complete command reference with all options
 - **[Thorough Codebase Validation](thorough-codebase-validation.md)** - Quick check, contract-decorated, sidecar, and dogfooding
 - **[Command Syntax Policy](command-syntax-policy.md)** - Source-of-truth argument syntax conventions for docs

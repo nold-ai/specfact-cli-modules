@@ -2,6 +2,8 @@
 layout: default
 title: UX Features Guide
 permalink: /ux-features/
+redirect_from:
+  - /guides/ux-features/
 ---
 
 # Legacy Workflow Note
