@@ -6,7 +6,12 @@ Each official bundle package SHALL include the prompt templates and other non-co
 #### Scenario: Official bundles ship the audited prompt inventory
 - **WHEN** the audited prompt inventory from `RESOURCE_OWNERSHIP_AUDIT.md` is inspected
 - **THEN** each prompt template's canonical packaged source exists under the owning official bundle package
-- **AND** the ownership mapping covers at least the codebase, project, spec, and govern bundles for the currently exported core prompt set
+- **AND** the ownership mapping covers the codebase, project, spec, govern, and backlog bundles for the currently supported prompt set
+
+#### Scenario: Backlog bundle ships the restored slash-prompt inventory
+- **WHEN** the backlog bundle package is inspected from source or from an installed artifact
+- **THEN** `resources/prompts/` contains `specfact.backlog-add.md`, `specfact.backlog-daily.md`, `specfact.backlog-refine.md`, and `specfact.sync-backlog.md`
+- **AND** those prompt files are treated as canonical bundle-owned sources rather than historical leftovers
 
 #### Scenario: Prompt companion resources ship with prompt payloads
 - **WHEN** an exported prompt template references a companion file by relative path, such as `./shared/cli-enforcement.md`

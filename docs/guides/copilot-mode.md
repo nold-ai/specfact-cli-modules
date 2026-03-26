@@ -2,6 +2,8 @@
 layout: default
 title: Using CoPilot Mode
 permalink: /copilot-mode/
+redirect_from:
+  - /guides/copilot-mode/
 ---
 
 # Legacy Workflow Note

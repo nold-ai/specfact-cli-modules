@@ -38,4 +38,5 @@ def test_modules_pre_commit_script_enforces_required_quality_commands() -> None:
     assert "hatch run format" in script_text
     assert "hatch run yaml-lint" in script_text
     assert "hatch run check-bundle-imports" in script_text
+    assert "hatch run lint" in script_text
     assert "hatch run contract-test" in script_text

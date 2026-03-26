@@ -2,6 +2,8 @@
 layout: default
 title: AI IDE Workflow Guide
 permalink: /ai-ide-workflow/
+redirect_from:
+  - /guides/ai-ide-workflow/
 ---
 
 # Legacy Workflow Note

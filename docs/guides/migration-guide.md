@@ -2,6 +2,8 @@
 layout: default
 title: Migration Guide
 permalink: /migration-guide/
+redirect_from:
+  - /guides/migration-guide/
 ---
 
 # Legacy Workflow Note

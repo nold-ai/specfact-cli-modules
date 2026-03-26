@@ -89,6 +89,36 @@ def _normalize_route(route: str) -> str:
     return cleaned
 
 
+def _list_front_matter_redirect_from_routes(text: str) -> list[str]:
+    """Return normalized redirect_from routes declared in YAML front matter only."""
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return []
+
+    end_index = None
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            end_index = index
+            break
+    if end_index is None:
+        return []
+
+    routes: list[str] = []
+    in_redirect_block = False
+    for line in lines[1:end_index]:
+        if line.strip() == "redirect_from:":
+            in_redirect_block = True
+            continue
+        if in_redirect_block:
+            stripped = line.strip()
+            if stripped.startswith("- "):
+                route = stripped[2:].split("#", 1)[0].strip().strip('"').strip("'")
+                routes.append(_normalize_route(route))
+            elif stripped and not stripped.startswith("-") and not stripped.startswith("#"):
+                in_redirect_block = False
+    return routes
+
+
 def _published_route_for_path(path: Path, metadata: dict[str, str]) -> str:
     permalink = metadata.get("permalink")
     if permalink:
@@ -371,6 +401,50 @@ def test_config_links_to_core_docs_site() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _guides_legacy_redirect_violation(path: Path, text: str) -> str | None:
+    """If ``docs/guides/<stem>.md`` publishes outside ``/guides/``, require ``redirect_from`` for ``/guides/<stem>/``.
+
+    Returns a human-readable violation message, or ``None`` when the rule is satisfied.
+    """
+    try:
+        rel = path.relative_to(_docs_root())
+    except ValueError:
+        return None
+    if len(rel.parts) < 2 or rel.parts[0] != "guides" or rel.suffix != ".md":
+        return None
+    if rel.name == "README.md":
+        return None
+
+    metadata, _ = _split_front_matter(text)
+    canonical = _published_route_for_path(path, metadata)
+    if canonical.startswith("/guides/"):
+        return None
+
+    expected = _normalize_route(f"/guides/{path.stem}/")
+    redirects = _list_front_matter_redirect_from_routes(text)
+    if expected in redirects:
+        return None
+    return (
+        f"{path}: canonical {canonical} is outside /guides/ but redirect_from "
+        f"does not include legacy alias {expected} (got {redirects})"
+    )
+
+
+def _iter_guides_legacy_redirect_violations() -> list[str]:
+    guides = _docs_root() / "guides"
+    if not guides.is_dir():
+        return []
+    violations: list[str] = []
+    for path in sorted(guides.glob("*.md")):
+        if path.name == "README.md":
+            continue
+        text = _read_text(path)
+        msg = _guides_legacy_redirect_violation(path.resolve(), text)
+        if msg:
+            violations.append(msg)
+    return violations
+
+
 def _extract_redirect_from_entries() -> dict[str, Path]:
     """Build map of redirect_from routes to the file that declares them."""
     redirects: dict[str, Path] = {}
@@ -378,19 +452,43 @@ def _extract_redirect_from_entries() -> dict[str, Path]:
         text = _read_text(path)
         if "redirect_from:" not in text:
             continue
-        in_redirect_block = False
-        for line in text.splitlines():
-            if line.strip() == "redirect_from:":
-                in_redirect_block = True
-                continue
-            if in_redirect_block:
-                stripped = line.strip()
-                if stripped.startswith("- "):
-                    route = stripped[2:].strip().strip('"').strip("'")
-                    redirects[_normalize_route(route)] = path
-                elif stripped == "---" or (stripped and not stripped.startswith("-")):
-                    in_redirect_block = False
+        for route in _list_front_matter_redirect_from_routes(text):
+            redirects[route] = path
     return redirects
+
+
+def test_list_front_matter_redirect_from_routes_ignores_body_redirect_marker() -> None:
+    text = """---
+layout: default
+title: Example
+redirect_from:
+  - /legacy-path/
+---
+
+Body content.
+
+redirect_from:
+  - /not-front-matter/
+"""
+
+    assert _list_front_matter_redirect_from_routes(text) == ["/legacy-path/"]
+
+
+def test_list_front_matter_redirect_from_routes_keeps_entries_after_comments() -> None:
+    text = """---
+layout: default
+title: Example
+redirect_from:
+  # legacy aliases
+  - /legacy-one/ # keep
+
+  - \"/legacy-two/\"
+permalink: /current/
+---
+Body
+"""
+
+    assert _list_front_matter_redirect_from_routes(text) == ["/legacy-one/", "/legacy-two/"]
 
 
 def test_moved_files_have_redirect_from_entries() -> None:
@@ -417,6 +515,41 @@ def test_moved_files_have_redirect_from_entries() -> None:
             missing.append(str(rel))
 
     assert not missing, "Moved files missing redirect_from entries:\n" + "\n".join(missing)
+
+
+def test_guides_canonical_outside_guides_prefix_includes_legacy_redirect_alias() -> None:
+    """docs-06 §7.4: require ``/guides/<basename>/`` in ``redirect_from`` for guides with non-/guides/ canonical URLs.
+
+    Applies to ``docs/guides/*.md`` whose canonical permalink is not under ``/guides/``.
+    """
+    violations = _iter_guides_legacy_redirect_violations()
+    assert not violations, "Guides legacy redirect alias missing:\n" + "\n".join(violations)
+
+
+def test_guides_legacy_redirect_rule_passing_example() -> None:
+    path = _docs_root() / "guides" / "example-pass.md"
+    text = """---
+layout: default
+title: Example
+permalink: /example-pass/
+redirect_from:
+  - /guides/example-pass/
+---
+"""
+    assert _guides_legacy_redirect_violation(path.resolve(), text) is None
+
+
+def test_guides_legacy_redirect_rule_failing_example() -> None:
+    path = _docs_root() / "guides" / "example-fail.md"
+    text = """---
+layout: default
+title: Example
+permalink: /example-fail/
+---
+"""
+    msg = _guides_legacy_redirect_violation(path.resolve(), text)
+    assert msg is not None
+    assert "/guides/example-fail/" in msg
 
 
 # ---------------------------------------------------------------------------

@@ -25,6 +25,10 @@ has_staged_yaml() {
   staged_files | grep -E '\.ya?ml$' >/dev/null 2>&1
 }
 
+has_staged_python() {
+  staged_files | grep -E '\.py$' >/dev/null 2>&1
+}
+
 check_safe_change() {
   local files
   files=$(staged_files)
@@ -96,6 +100,23 @@ run_bundle_import_checks() {
   fi
 }
 
+# Parity with CI quality job (.github/workflows/pr-orchestrator.yml: hatch run lint).
+# Ruff does not enforce pylint rules (e.g. C0301 max line length on docstrings); pre-commit must run lint too.
+run_lint_if_staged_python() {
+  if ! has_staged_python; then
+    info "ℹ️  No staged Python files — skipping hatch run lint (pylint-inclusive)"
+    return 0
+  fi
+  info "🔎 Staged Python detected — running hatch run lint (ruff + basedpyright + pylint)"
+  if hatch run lint; then
+    success "✅ Lint passed"
+  else
+    error "❌ Lint failed (matches CI quality gate)"
+    warn "💡 Run: hatch run lint"
+    exit 1
+  fi
+}
+
 run_contract_test_fast_path() {
   info "🧪 Running contract-test fast path"
   if hatch run contract-test; then
@@ -112,6 +133,7 @@ warn "🔍 Running modules pre-commit quality checks"
 run_format_safety
 run_yaml_lint_if_needed
 run_bundle_import_checks
+run_lint_if_staged_python
 
 if check_safe_change; then
   success "✅ Safe change detected - skipping contract tests"

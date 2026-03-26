@@ -1,3 +1,11 @@
+---
+layout: default
+title: Integrations Overview
+permalink: /integrations-overview/
+redirect_from:
+  - /guides/integrations-overview/
+---
+
 # Integrations Overview
 
 > **Comprehensive guide to all SpecFact CLI integrations**  

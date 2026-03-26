@@ -42,3 +42,11 @@
 - [x] 6.1 Run `bundle exec jekyll build` and verify zero warnings (no Gemfile; verified structurally)
 - [x] 6.2 Verify all sidebar links resolve correctly
 - [x] 6.3 Verify redirect entries preserve old URLs
+
+## 7. Cross-site URL contract and legacy `/guides/` aliases (follow-up)
+
+- [x] 7.1 Add `docs/reference/documentation-url-contract.md` (authoritative rules vs `docs.specfact.io`)
+- [x] 7.2 Document URL policy in `openspec/changes/docs-06-modules-site-ia-restructure/design.md`
+- [x] 7.3 Extend `openspec/specs/modules-docs-publishing/spec.md` with permalink and redirect requirements
+- [x] 7.4 Add `redirect_from: /guides/<basename>/` for guides whose canonical permalink is outside `/guides/` (brownfield, team collaboration, stubs, and similar)
+- [x] 7.5 Link the contract from `docs/_layouts/default.html` and `docs/reference/README.md`

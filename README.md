@@ -8,6 +8,7 @@ This repository hosts official nold-ai bundles only.
 - Official bundles are maintained under `packages/`.
 - Third-party bundles are published from third-party repositories and are not hosted here.
 - Bundle and module documentation changes are made in this repository under `docs/`.
+- Cross-site linking rules and canonical paths for core→modules handoffs: `docs/reference/documentation-url-contract.md` (published: `https://modules.specfact.io/reference/documentation-url-contract/`).
 - GitHub Pages documentation target: `https://nold-ai.github.io/specfact-cli-modules/`.
 
 ## Local development (IDE / Cursor)
@@ -53,6 +54,7 @@ pre-commit run --all-files
 ```
 
 Scope notes:
+- Pre-commit runs `hatch run lint` when any staged file is `*.py`, matching the CI quality job (Ruff alone does not run pylint).
 - `ruff` runs on the full repo.
 - `basedpyright` and `pylint` are scoped to `src/`, `tests/`, and `tools/` for modules-repo infrastructure parity.
 - Bundle-package behavioral validation is covered through `test`, `contract-test`, and migration-specific suite additions under `tests/`.

@@ -2,6 +2,8 @@
 layout: default
 title: Team Collaboration Workflow
 permalink: /team-collaboration-workflow/
+redirect_from:
+  - /guides/team-collaboration-workflow/
 ---
 
 # Team Collaboration Workflow
