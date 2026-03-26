@@ -89,7 +89,7 @@ def _normalize_route(route: str) -> str:
     return cleaned
 
 
-def _list_redirect_from_routes(text: str) -> list[str]:
+def _list_front_matter_redirect_from_routes(text: str) -> list[str]:
     """Return normalized redirect_from routes declared in YAML front matter only."""
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
@@ -421,7 +421,7 @@ def _guides_legacy_redirect_violation(path: Path, text: str) -> str | None:
         return None
 
     expected = _normalize_route(f"/guides/{path.stem}/")
-    redirects = _list_redirect_from_routes(text)
+    redirects = _list_front_matter_redirect_from_routes(text)
     if expected in redirects:
         return None
     return (
@@ -452,12 +452,12 @@ def _extract_redirect_from_entries() -> dict[str, Path]:
         text = _read_text(path)
         if "redirect_from:" not in text:
             continue
-        for route in _list_redirect_from_routes(text):
+        for route in _list_front_matter_redirect_from_routes(text):
             redirects[route] = path
     return redirects
 
 
-def test_list_redirect_from_routes_ignores_body_redirect_marker() -> None:
+def test_list_front_matter_redirect_from_routes_ignores_body_redirect_marker() -> None:
     text = """---
 layout: default
 title: Example
@@ -471,7 +471,7 @@ redirect_from:
   - /not-front-matter/
 """
 
-    assert _list_redirect_from_routes(text) == ["/legacy-path/"]
+    assert _list_front_matter_redirect_from_routes(text) == ["/legacy-path/"]
 
 
 def test_moved_files_have_redirect_from_entries() -> None:

@@ -114,6 +114,6 @@ When generating or enhancing code via LLM, **ALWAYS** follow this pattern:
 - `specfact plan harden [<bundle-name>]` - Create SDD manifest (uses active plan if bundle not specified)
 - `specfact enforce sdd [<bundle-name>]` - Validate SDD (uses active plan if bundle not specified)
 - `specfact sync bridge --adapter <adapter> --repo <path>` - Sync with external tools
-- See [Command Reference](../../docs/reference/commands.md) for full list
+- See [Command Reference](https://docs.specfact.io/reference/commands/) for full list
 
 **Note**: Most commands now support active plan fallback. If `--bundle` is not specified, commands automatically use the active plan set via `plan select`. This improves workflow efficiency in AI IDE environments.

@@ -19,6 +19,7 @@ Bundled resources SHALL live at stable paths inside the bundle package so that t
 - **THEN** the bundle contains a stable prompt resource path that can be discovered without scanning the core CLI repository
 
 #### Scenario: Installed backlog bundle contributes prompt source catalog entries
+
 - **WHEN** `nold-ai/specfact-backlog` is installed under an effective module root with the packaged backlog prompt files
 - **THEN** core prompt-source discovery includes `nold-ai/specfact-backlog` as a prompt source
 - **AND** `specfact init ide` can export the backlog prompt filenames from that installed module root

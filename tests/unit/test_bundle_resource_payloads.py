@@ -71,12 +71,14 @@ def _build_bundle_artifact(bundle: str, tmp_path: Path) -> Path:
     return artifact
 
 
+def _top_level_prompt_names(prompt_root: Path) -> set[str]:
+    return {path.name for path in prompt_root.glob("specfact*.md") if path.is_file()}
+
+
 @pytest.mark.parametrize("bundle,prompts", list(_EXPECTED_PROMPTS.items()))
 def test_official_bundles_package_expected_prompt_files(bundle: str, prompts: tuple[str, ...]) -> None:
     root = REPO_ROOT / "packages" / bundle / "resources" / "prompts"
-    for name in prompts:
-        path = root / name
-        assert path.is_file(), f"missing prompt {path}"
+    assert _top_level_prompt_names(root) == set(prompts)
     companion = root / _COMPANION
     assert companion.is_file(), f"missing companion {companion}"
 
@@ -128,10 +130,14 @@ def test_module_package_layout_matches_init_ide_resource_contract() -> None:
 def test_backlog_artifact_contains_prompt_payload(tmp_path: Path) -> None:
     artifact = _build_bundle_artifact("specfact-backlog", tmp_path)
     with tarfile.open(artifact, "r:gz") as archive:
-        names = set(archive.getnames())
+        names = {
+            name
+            for name in archive.getnames()
+            if name.startswith("specfact-backlog/resources/prompts/") and name.count("/") == 3 and name.endswith(".md")
+        }
 
-    for prompt in _EXPECTED_PROMPTS["specfact-backlog"]:
-        assert f"specfact-backlog/resources/prompts/{prompt}" in names
+    expected = {f"specfact-backlog/resources/prompts/{prompt}" for prompt in _EXPECTED_PROMPTS["specfact-backlog"]}
+    assert names == expected
 
 
 def test_core_prompt_discovery_finds_installed_backlog_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -148,7 +154,7 @@ def test_core_prompt_discovery_finds_installed_backlog_bundle(tmp_path: Path, mo
 
     assert "nold-ai/specfact-backlog" in catalog
     names = {path.name for path in catalog["nold-ai/specfact-backlog"]}
-    assert set(_EXPECTED_PROMPTS["specfact-backlog"]) <= names
+    assert names == set(_EXPECTED_PROMPTS["specfact-backlog"])
 
     source_id = "nold-ai/specfact-backlog"
     segment = ide_setup.source_id_to_path_segment(source_id)
@@ -162,7 +168,7 @@ def test_core_prompt_discovery_finds_installed_backlog_bundle(tmp_path: Path, mo
     assert copied
     copied_names = {path.name for path in copied}
     expected_names = {f"{Path(name).stem}.prompt.md" for name in _EXPECTED_PROMPTS["specfact-backlog"]}
-    assert expected_names <= copied_names
+    assert copied_names == expected_names
     assert all(path.parent.name == segment for path in copied)
 
 
