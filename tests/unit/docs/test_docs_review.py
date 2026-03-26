@@ -112,9 +112,9 @@ def _list_front_matter_redirect_from_routes(text: str) -> list[str]:
         if in_redirect_block:
             stripped = line.strip()
             if stripped.startswith("- "):
-                route = stripped[2:].strip().strip('"').strip("'")
+                route = stripped[2:].split("#", 1)[0].strip().strip('"').strip("'")
                 routes.append(_normalize_route(route))
-            elif stripped and not stripped.startswith("-"):
+            elif stripped and not stripped.startswith("-") and not stripped.startswith("#"):
                 in_redirect_block = False
     return routes
 
@@ -472,6 +472,23 @@ redirect_from:
 """
 
     assert _list_front_matter_redirect_from_routes(text) == ["/legacy-path/"]
+
+
+def test_list_front_matter_redirect_from_routes_keeps_entries_after_comments() -> None:
+    text = """---
+layout: default
+title: Example
+redirect_from:
+  # legacy aliases
+  - /legacy-one/ # keep
+
+  - \"/legacy-two/\"
+permalink: /current/
+---
+Body
+"""
+
+    assert _list_front_matter_redirect_from_routes(text) == ["/legacy-one/", "/legacy-two/"]
 
 
 def test_moved_files_have_redirect_from_entries() -> None:
