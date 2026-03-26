@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import shutil
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -16,6 +18,12 @@ SIGN_SCRIPT = REPO_ROOT / "scripts" / "sign-modules.py"
 
 
 _EXPECTED_PROMPTS: dict[str, tuple[str, ...]] = {
+    "specfact-backlog": (
+        "specfact.backlog-add.md",
+        "specfact.backlog-daily.md",
+        "specfact.backlog-refine.md",
+        "specfact.sync-backlog.md",
+    ),
     "specfact-codebase": (
         "specfact.01-import.md",
         "specfact.validate.md",
@@ -42,6 +50,25 @@ _FIELD_MAPPING_SEEDS = (
     "ado_scrum.yaml",
     "github_custom.yaml",
 )
+
+_IGNORED_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
+_IGNORED_SUFFIXES = {".pyc", ".pyo"}
+
+
+def _build_bundle_artifact(bundle: str, tmp_path: Path) -> Path:
+    bundle_dir = REPO_ROOT / "packages" / bundle
+    artifact = tmp_path / f"{bundle}.tar.gz"
+    with tarfile.open(artifact, "w:gz") as archive:
+        for path in sorted(bundle_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(bundle_dir)
+            if any(part in _IGNORED_DIR_NAMES for part in rel.parts):
+                continue
+            if path.suffix.lower() in _IGNORED_SUFFIXES:
+                continue
+            archive.add(path, arcname=f"{bundle}/{rel.as_posix()}")
+    return artifact
 
 
 @pytest.mark.parametrize("bundle,prompts", list(_EXPECTED_PROMPTS.items()))
@@ -92,9 +119,51 @@ def test_github_custom_seed_includes_bug_parent_hierarchy() -> None:
 def test_module_package_layout_matches_init_ide_resource_contract() -> None:
     """Core discovers resources/prompts and resources/templates/... under the module package root."""
     backlog = REPO_ROOT / "packages" / "specfact-backlog"
+    assert (backlog / "resources" / "prompts" / "specfact.backlog-refine.md").is_file()
     assert (backlog / "resources" / "templates" / "backlog" / "field_mappings" / "ado_default.yaml").is_file()
     codebase = REPO_ROOT / "packages" / "specfact-codebase"
     assert (codebase / "resources" / "prompts" / "specfact.01-import.md").is_file()
+
+
+def test_backlog_artifact_contains_prompt_payload(tmp_path: Path) -> None:
+    artifact = _build_bundle_artifact("specfact-backlog", tmp_path)
+    with tarfile.open(artifact, "r:gz") as archive:
+        names = set(archive.getnames())
+
+    for prompt in _EXPECTED_PROMPTS["specfact-backlog"]:
+        assert f"specfact-backlog/resources/prompts/{prompt}" in names
+
+
+def test_core_prompt_discovery_finds_installed_backlog_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from specfact_cli.utils import ide_setup
+
+    modules_root = tmp_path / "modules"
+    installed_bundle = modules_root / "specfact-backlog"
+    shutil.copytree(REPO_ROOT / "packages" / "specfact-backlog", installed_bundle)
+    repo_path = tmp_path / "repo"
+    repo_path.mkdir()
+
+    monkeypatch.setattr(ide_setup, "_module_discovery_roots", lambda _repo: [(modules_root, "custom")])
+    catalog = ide_setup.discover_prompt_sources_catalog(repo_path, include_package_fallback=False)
+
+    assert "nold-ai/specfact-backlog" in catalog
+    names = {path.name for path in catalog["nold-ai/specfact-backlog"]}
+    assert set(_EXPECTED_PROMPTS["specfact-backlog"]) <= names
+
+    source_id = "nold-ai/specfact-backlog"
+    segment = ide_setup.source_id_to_path_segment(source_id)
+    copied, _ = ide_setup._copy_template_files_to_ide(
+        repo_path,
+        "vscode",
+        list(catalog[source_id]),
+        source_segment=segment,
+        write_settings=False,
+    )
+    assert copied
+    copied_names = {path.name for path in copied}
+    expected_names = {f"{Path(name).stem}.prompt.md" for name in _EXPECTED_PROMPTS["specfact-backlog"]}
+    assert expected_names <= copied_names
+    assert all(path.parent.name == segment for path in copied)
 
 
 def test_resource_change_changes_signed_payload_checksum(tmp_path: Path) -> None:
