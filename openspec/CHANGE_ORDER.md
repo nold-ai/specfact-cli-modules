@@ -54,7 +54,7 @@ Cross-repo dependency: `docs-06-modules-site-ia-restructure` is a prerequisite f
 
 | Module | Order | Change folder | GitHub # | Blocked by |
 |--------|-------|---------------|----------|------------|
-| docs | 06 | docs-06-modules-site-ia-restructure | [#95](https://github.com/nold-ai/specfact-cli-modules/issues/95) | docs-01 ✅; docs-cli-command-alignment ✅ | **in-progress** |
+| docs | 06 | docs-06-modules-site-ia-restructure | [#95](https://github.com/nold-ai/specfact-cli-modules/issues/95) | docs-01 ✅; docs-cli-command-alignment ✅ — implemented, pending archive (§7 URL contract) |
 | docs | 08 | docs-08-bundle-overview-pages | [#96](https://github.com/nold-ai/specfact-cli-modules/issues/96) | docs-06-modules-site-ia-restructure |
 | docs | 09 | docs-09-missing-command-docs | [#97](https://github.com/nold-ai/specfact-cli-modules/issues/97) | docs-06-modules-site-ia-restructure |
 | docs | 10 | docs-10-workflow-consolidation | [#98](https://github.com/nold-ai/specfact-cli-modules/issues/98) | docs-06-modules-site-ia-restructure |

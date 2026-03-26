@@ -2,6 +2,8 @@
 layout: default
 title: Competitive Analysis
 permalink: /competitive-analysis/
+redirect_from:
+  - /guides/competitive-analysis/
 ---
 
 # Legacy Workflow Note

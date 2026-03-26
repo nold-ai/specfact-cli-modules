@@ -8,6 +8,7 @@ This repository hosts official nold-ai bundles only.
 - Official bundles are maintained under `packages/`.
 - Third-party bundles are published from third-party repositories and are not hosted here.
 - Bundle and module documentation changes are made in this repository under `docs/`.
+- Cross-site linking rules and canonical paths for core→modules handoffs: `docs/reference/documentation-url-contract.md` (published: `https://modules.specfact.io/reference/documentation-url-contract/`).
 - GitHub Pages documentation target: `https://nold-ai.github.io/specfact-cli-modules/`.
 
 ## Local development (IDE / Cursor)

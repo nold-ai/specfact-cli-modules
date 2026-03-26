@@ -2,6 +2,8 @@
 layout: default
 title: Testing Terminal Output Modes
 permalink: /testing-terminal-output/
+redirect_from:
+  - /guides/testing-terminal-output/
 ---
 
 # Testing Terminal Output Modes

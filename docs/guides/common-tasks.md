@@ -2,6 +2,8 @@
 layout: default
 title: Common Tasks Quick Reference
 permalink: /common-tasks/
+redirect_from:
+  - /guides/common-tasks/
 ---
 
 # Legacy Workflow Note
