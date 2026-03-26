@@ -26,7 +26,7 @@ Do not assume the **same path** on both sites points to the same page. Path shap
 ## Modules permalink rules (this site)
 
 1. **Default** (`docs/_config.yml`): pages default to `permalink: /:basename/` (filename stem at site root), unless overridden.
-2. **Explicit `permalink`** in front matter always wins. Many guides use `permalink: /guides/<name>/` so the published URL stays under `/guides/`.
+2. **Explicit `permalink`** in front matter always wins. Guides are **mixed**: some use `permalink: /guides/<name>/`, many use **site-root** paths such as `/<basename>/` (from the default or an explicit override), and bundle or integration content uses `/bundles/.../`, `/integrations/.../`, `/authoring/.../`, and so on. **Never infer** the live URL from the on-disk path alone—read `permalink` (or the default rule) for each file.
 3. **Bundle and integration moves** (OpenSpec change `docs-06-modules-site-ia-restructure`): canonical URLs live under `/bundles/.../`, `/integrations/.../`, `/authoring/.../`, etc. Each moved page **must** include `redirect_from` for the **previous** modules URL (typically `/guides/<old-filename>/`).
 4. **Legacy `/guides/<slug>/` aliases**: If a page’s canonical URL is **not** under `/guides/` (for example `/brownfield-engineer/` or `/contract-testing-workflow/`), the page **must** include:
 
@@ -38,6 +38,26 @@ Do not assume the **same path** on both sites points to the same page. Path shap
    so bookmarks and older links keep working.
 
 5. **Core handoff links**: When `specfact-cli` links to this site, authors **must** use the **actual** `permalink` (or the default-derived path) for the target page—**not** mirror core’s `/guides/...` path unless this site’s target also uses `/guides/...`.
+
+### Canonical handoff targets (core → modules)
+
+Use these **published** paths when authoring thin handoff pages on core (`docs-07-core-handoff-conversion`). Replace `https://modules.specfact.io` with `relative_url` or repo-relative links as appropriate.
+
+| Topic | Canonical URL | `redirect_from` (bookmarks; optional) |
+| --- | --- | --- |
+| This URL contract | `https://modules.specfact.io/reference/documentation-url-contract/` | — |
+| Backlog bundle overview | `https://modules.specfact.io/bundles/backlog/overview/` | — |
+| Project bundle overview | `https://modules.specfact.io/bundles/project/overview/` | — |
+| Codebase bundle overview | `https://modules.specfact.io/bundles/codebase/overview/` | — |
+| Spec bundle overview | `https://modules.specfact.io/bundles/spec/overview/` | — |
+| Govern bundle overview | `https://modules.specfact.io/bundles/govern/overview/` | — |
+| Code Review bundle overview | `https://modules.specfact.io/bundles/code-review/overview/` | — |
+| DevOps adapter (integrations) | `https://modules.specfact.io/integrations/devops-adapter-overview/` | `/guides/devops-adapter-integration/` |
+| Brownfield engineer | `https://modules.specfact.io/brownfield-engineer/` | `/guides/brownfield-engineer/` |
+| Contract testing workflow | `https://modules.specfact.io/contract-testing-workflow/` | `/guides/contract-testing-workflow/` |
+| Brownfield journey | `https://modules.specfact.io/brownfield-journey/` | `/guides/brownfield-journey/` |
+
+**Reference pages** are not all under `/reference/`: for example [Architecture](https://modules.specfact.io/architecture/) and [Operational modes](https://modules.specfact.io/modes/) live at the site root. Always copy the target file’s `permalink` when building `https://modules.specfact.io/...` links.
 
 ## Core site obligations (`specfact-cli`)
 
