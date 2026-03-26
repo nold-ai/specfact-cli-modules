@@ -34,3 +34,18 @@ The modules documentation site SHALL support independent publishing and deployme
 - **THEN** the modules docs build and publication workflow can ship the change without rebuilding the core docs site
 - **AND** the site metadata and navigation remain valid for the public docs topology.
 
+### Requirement: Published URL contract is documented and redirects preserve legacy paths
+
+The modules documentation site SHALL maintain a published reference page that explains ownership boundaries and permalink rules relative to `docs.specfact.io`, and SHALL use `redirect_from` so that prior public URLs under `/guides/<basename>/` continue to resolve when the canonical permalink moves to a non-`/guides/` path or to bundle/integration paths.
+
+#### Scenario: Contributor looks up cross-site linking rules
+
+- **WHEN** a contributor needs to link from core docs to modules docs or change a `permalink`
+- **THEN** the reference page at `/reference/documentation-url-contract/` on `modules.specfact.io` describes repository ownership, default permalink behavior, and redirect expectations
+- **AND** pages that publish outside `/guides/<basename>/` include `redirect_from` for `/guides/<basename>/` when that path could have been used historically
+
+#### Scenario: IA-moved guide keeps old URL working
+
+- **WHEN** a guide is moved under `bundles/`, `integrations/`, or `authoring/` with a new canonical `permalink`
+- **THEN** the page includes `jekyll-redirect-from` entries for the previous modules URL (as required by the IA restructure change)
+

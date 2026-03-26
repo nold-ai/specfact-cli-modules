@@ -5,6 +5,12 @@ All notable changes to this repository will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows SemVer for bundle versions.
 
+## [Unreleased]
+
+### Added
+
+- Documentation: authoritative `docs/reference/documentation-url-contract.md` for core vs modules URL ownership; `redirect_from` aliases for legacy `/guides/<basename>/` on pages whose canonical path is outside `/guides/`; sidebar link to the contract page.
+
 ## [0.44.0] - 2026-03-17
 
 ### Added

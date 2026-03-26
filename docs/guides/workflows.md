@@ -1,3 +1,11 @@
+---
+layout: default
+title: Workflows (legacy note)
+permalink: /workflows/
+redirect_from:
+  - /guides/workflows/
+---
+
 # Legacy Workflow Note
 
 This page described older `specfact plan`, `specfact generate`, `specfact contract`, or `specfact sdd constitution` workflows that are not part of the current public mounted CLI in this repository. The detailed command examples previously documented here were removed because they no longer match the command surface exposed by `specfact --help`.

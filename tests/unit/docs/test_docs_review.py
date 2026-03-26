@@ -371,6 +371,75 @@ def test_config_links_to_core_docs_site() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _list_redirect_from_routes(text: str) -> list[str]:
+    """Return normalized routes declared under ``redirect_from:`` in front matter."""
+    routes: list[str] = []
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        if lines[i].strip() == "redirect_from:":
+            i += 1
+            while i < len(lines):
+                stripped = lines[i].strip()
+                if stripped.startswith("- "):
+                    val = stripped[2:].strip().strip('"').strip("'")
+                    routes.append(_normalize_route(val))
+                    i += 1
+                elif not stripped or stripped.startswith("#"):
+                    i += 1
+                elif stripped == "---":
+                    break
+                else:
+                    break
+            break
+        i += 1
+    return routes
+
+
+def _guides_legacy_redirect_violation(path: Path, text: str) -> str | None:
+    """If ``docs/guides/<stem>.md`` publishes outside ``/guides/``, require ``redirect_from`` for ``/guides/<stem>/``.
+
+    Returns a human-readable violation message, or ``None`` when the rule is satisfied.
+    """
+    try:
+        rel = path.relative_to(_docs_root())
+    except ValueError:
+        return None
+    if len(rel.parts) < 2 or rel.parts[0] != "guides" or rel.suffix != ".md":
+        return None
+    if rel.name == "README.md":
+        return None
+
+    metadata, _ = _split_front_matter(text)
+    canonical = _published_route_for_path(path, metadata)
+    if canonical.startswith("/guides/"):
+        return None
+
+    expected = _normalize_route(f"/guides/{path.stem}/")
+    redirects = _list_redirect_from_routes(text)
+    if expected in redirects:
+        return None
+    return (
+        f"{path}: canonical {canonical} is outside /guides/ but redirect_from "
+        f"does not include legacy alias {expected} (got {redirects})"
+    )
+
+
+def _iter_guides_legacy_redirect_violations() -> list[str]:
+    guides = _docs_root() / "guides"
+    if not guides.is_dir():
+        return []
+    violations: list[str] = []
+    for path in sorted(guides.glob("*.md")):
+        if path.name == "README.md":
+            continue
+        text = _read_text(path)
+        msg = _guides_legacy_redirect_violation(path.resolve(), text)
+        if msg:
+            violations.append(msg)
+    return violations
+
+
 def _extract_redirect_from_entries() -> dict[str, Path]:
     """Build map of redirect_from routes to the file that declares them."""
     redirects: dict[str, Path] = {}
@@ -417,6 +486,41 @@ def test_moved_files_have_redirect_from_entries() -> None:
             missing.append(str(rel))
 
     assert not missing, "Moved files missing redirect_from entries:\n" + "\n".join(missing)
+
+
+def test_guides_canonical_outside_guides_prefix_includes_legacy_redirect_alias() -> None:
+    """docs-06 §7.4: require ``/guides/<basename>/`` in ``redirect_from`` for guides with non-/guides/ canonical URLs.
+
+    Applies to ``docs/guides/*.md`` whose canonical permalink is not under ``/guides/``.
+    """
+    violations = _iter_guides_legacy_redirect_violations()
+    assert not violations, "Guides legacy redirect alias missing:\n" + "\n".join(violations)
+
+
+def test_guides_legacy_redirect_rule_passing_example() -> None:
+    path = _docs_root() / "guides" / "example-pass.md"
+    text = """---
+layout: default
+title: Example
+permalink: /example-pass/
+redirect_from:
+  - /guides/example-pass/
+---
+"""
+    assert _guides_legacy_redirect_violation(path.resolve(), text) is None
+
+
+def test_guides_legacy_redirect_rule_failing_example() -> None:
+    path = _docs_root() / "guides" / "example-fail.md"
+    text = """---
+layout: default
+title: Example
+permalink: /example-fail/
+---
+"""
+    msg = _guides_legacy_redirect_violation(path.resolve(), text)
+    assert msg is not None
+    assert "/guides/example-fail/" in msg
 
 
 # ---------------------------------------------------------------------------

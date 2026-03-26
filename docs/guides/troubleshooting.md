@@ -2,6 +2,8 @@
 layout: default
 title: Troubleshooting
 permalink: /troubleshooting/
+redirect_from:
+  - /guides/troubleshooting/
 ---
 
 # Legacy Workflow Note

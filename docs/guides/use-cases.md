@@ -2,6 +2,8 @@
 layout: default
 title: Use Cases
 permalink: /use-cases/
+redirect_from:
+  - /guides/use-cases/
 ---
 
 # Legacy Workflow Note

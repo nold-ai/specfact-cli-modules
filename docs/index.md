@@ -47,4 +47,4 @@ The modules site owns all bundle-specific deep guidance. Core CLI platform docs 
 - [Command Reference](reference/commands/)
 - [Module Contracts](reference/module-contracts/)
 - [Module Security](reference/module-security/)
-- [Architecture](reference/architecture/)
+- [Architecture](architecture/)
