@@ -42,6 +42,8 @@ pre-commit install
 pre-commit run --all-files
 ```
 
+Staged `*.py` files trigger `hatch run lint` (includes pylint) via `scripts/pre-commit-quality-checks.sh`, matching `.github/workflows/pr-orchestrator.yml`.
+
 ## Development workflow
 
 ### Branch protection

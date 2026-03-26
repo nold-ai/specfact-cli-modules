@@ -53,6 +53,7 @@ pre-commit run --all-files
 ```
 
 Scope notes:
+- Pre-commit runs `hatch run lint` when any staged file is `*.py`, matching the CI quality job (Ruff alone does not run pylint).
 - `ruff` runs on the full repo.
 - `basedpyright` and `pylint` are scoped to `src/`, `tests/`, and `tools/` for modules-repo infrastructure parity.
 - Bundle-package behavioral validation is covered through `test`, `contract-test`, and migration-specific suite additions under `tests/`.
