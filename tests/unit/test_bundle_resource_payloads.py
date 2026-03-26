@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from specfact_cli.utils import ide_setup
 
 from tests.unit._script_test_utils import load_module_from_path
 
@@ -141,8 +142,6 @@ def test_backlog_artifact_contains_prompt_payload(tmp_path: Path) -> None:
 
 
 def test_core_prompt_discovery_finds_installed_backlog_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from specfact_cli.utils import ide_setup
-
     modules_root = tmp_path / "modules"
     installed_bundle = modules_root / "specfact-backlog"
     shutil.copytree(REPO_ROOT / "packages" / "specfact-backlog", installed_bundle)
@@ -158,7 +157,7 @@ def test_core_prompt_discovery_finds_installed_backlog_bundle(tmp_path: Path, mo
 
     source_id = "nold-ai/specfact-backlog"
     segment = ide_setup.source_id_to_path_segment(source_id)
-    copied, _ = ide_setup._copy_template_files_to_ide(
+    copied, _ = ide_setup._copy_template_files_to_ide(  # pylint: disable=protected-access
         repo_path,
         "vscode",
         list(catalog[source_id]),
