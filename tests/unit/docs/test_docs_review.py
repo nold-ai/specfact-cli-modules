@@ -489,7 +489,10 @@ def test_moved_files_have_redirect_from_entries() -> None:
 
 
 def test_guides_canonical_outside_guides_prefix_includes_legacy_redirect_alias() -> None:
-    """docs-06 §7.4: ``docs/guides/*.md`` whose canonical permalink is not under ``/guides/`` must list ``/guides/<basename>/`` in ``redirect_from``."""
+    """docs-06 §7.4: require ``/guides/<basename>/`` in ``redirect_from`` for guides with non-/guides/ canonical URLs.
+
+    Applies to ``docs/guides/*.md`` whose canonical permalink is not under ``/guides/``.
+    """
     violations = _iter_guides_legacy_redirect_violations()
     assert not violations, "Guides legacy redirect alias missing:\n" + "\n".join(violations)
 
