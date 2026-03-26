@@ -89,6 +89,36 @@ def _normalize_route(route: str) -> str:
     return cleaned
 
 
+def _list_front_matter_redirect_from_routes(text: str) -> list[str]:
+    """Return normalized redirect_from routes declared in YAML front matter only."""
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return []
+
+    end_index = None
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            end_index = index
+            break
+    if end_index is None:
+        return []
+
+    routes: list[str] = []
+    in_redirect_block = False
+    for line in lines[1:end_index]:
+        if line.strip() == "redirect_from:":
+            in_redirect_block = True
+            continue
+        if in_redirect_block:
+            stripped = line.strip()
+            if stripped.startswith("- "):
+                route = stripped[2:].split("#", 1)[0].strip().strip('"').strip("'")
+                routes.append(_normalize_route(route))
+            elif stripped and not stripped.startswith("-") and not stripped.startswith("#"):
+                in_redirect_block = False
+    return routes
+
+
 def _published_route_for_path(path: Path, metadata: dict[str, str]) -> str:
     permalink = metadata.get("permalink")
     if permalink:
@@ -371,31 +401,6 @@ def test_config_links_to_core_docs_site() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _list_redirect_from_routes(text: str) -> list[str]:
-    """Return normalized routes declared under ``redirect_from:`` in front matter."""
-    routes: list[str] = []
-    lines = text.splitlines()
-    i = 0
-    while i < len(lines):
-        if lines[i].strip() == "redirect_from:":
-            i += 1
-            while i < len(lines):
-                stripped = lines[i].strip()
-                if stripped.startswith("- "):
-                    val = stripped[2:].strip().strip('"').strip("'")
-                    routes.append(_normalize_route(val))
-                    i += 1
-                elif not stripped or stripped.startswith("#"):
-                    i += 1
-                elif stripped == "---":
-                    break
-                else:
-                    break
-            break
-        i += 1
-    return routes
-
-
 def _guides_legacy_redirect_violation(path: Path, text: str) -> str | None:
     """If ``docs/guides/<stem>.md`` publishes outside ``/guides/``, require ``redirect_from`` for ``/guides/<stem>/``.
 
@@ -416,7 +421,7 @@ def _guides_legacy_redirect_violation(path: Path, text: str) -> str | None:
         return None
 
     expected = _normalize_route(f"/guides/{path.stem}/")
-    redirects = _list_redirect_from_routes(text)
+    redirects = _list_front_matter_redirect_from_routes(text)
     if expected in redirects:
         return None
     return (
@@ -447,19 +452,43 @@ def _extract_redirect_from_entries() -> dict[str, Path]:
         text = _read_text(path)
         if "redirect_from:" not in text:
             continue
-        in_redirect_block = False
-        for line in text.splitlines():
-            if line.strip() == "redirect_from:":
-                in_redirect_block = True
-                continue
-            if in_redirect_block:
-                stripped = line.strip()
-                if stripped.startswith("- "):
-                    route = stripped[2:].strip().strip('"').strip("'")
-                    redirects[_normalize_route(route)] = path
-                elif stripped == "---" or (stripped and not stripped.startswith("-")):
-                    in_redirect_block = False
+        for route in _list_front_matter_redirect_from_routes(text):
+            redirects[route] = path
     return redirects
+
+
+def test_list_front_matter_redirect_from_routes_ignores_body_redirect_marker() -> None:
+    text = """---
+layout: default
+title: Example
+redirect_from:
+  - /legacy-path/
+---
+
+Body content.
+
+redirect_from:
+  - /not-front-matter/
+"""
+
+    assert _list_front_matter_redirect_from_routes(text) == ["/legacy-path/"]
+
+
+def test_list_front_matter_redirect_from_routes_keeps_entries_after_comments() -> None:
+    text = """---
+layout: default
+title: Example
+redirect_from:
+  # legacy aliases
+  - /legacy-one/ # keep
+
+  - \"/legacy-two/\"
+permalink: /current/
+---
+Body
+"""
+
+    assert _list_front_matter_redirect_from_routes(text) == ["/legacy-one/", "/legacy-two/"]
 
 
 def test_moved_files_have_redirect_from_entries() -> None:

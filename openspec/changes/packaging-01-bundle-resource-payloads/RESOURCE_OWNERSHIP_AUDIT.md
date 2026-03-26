@@ -19,10 +19,20 @@ Date: 2026-03-25
 | `resources/prompts/specfact.validate.md` | `specfact-codebase` | Covers `specfact repro`. |
 | `resources/prompts/shared/cli-enforcement.md` | Shared companion resource | Referenced by prompt templates via relative path; export is broken if this file is not shipped/copied with prompts. |
 
-### Historical prompt leftovers observed outside the current source tree
+### Backlog prompt inventory requiring restoration into the backlog bundle
 
-- Installed prompt caches in the sibling `specfact-cli` environment still include backlog prompts such as `specfact.backlog-add.md`, `specfact.backlog-daily.md`, `specfact.backlog-refine.md`, and `specfact.sync-backlog.md`.
-- Those files are not present in the current canonical source tree under `specfact-cli/resources/prompts`, so they are treated as historical residue rather than the current migration source of truth for this change.
+Observed from archived ownership and prompt-migration work in the sibling `specfact-cli` repository:
+
+- `specfact.backlog-add.md`
+- `specfact.backlog-daily.md`
+- `specfact.backlog-refine.md`
+- `specfact.sync-backlog.md`
+
+Audit result:
+
+- These prompts are backlog-bundle-owned slash-command resources and must be restored into `packages/specfact-backlog/resources/prompts/`.
+- Their absence from the current live `specfact-cli/resources/prompts` tree does not remove the ownership requirement; it only means the canonical text must be recovered from history/change artifacts before packaging.
+- Packaging coverage for backlog is incomplete until both the prompt inventory and the workspace-template seed set are present in published `specfact-backlog` artifacts.
 
 ### Backlog workspace-template seeds still living in `specfact-cli`
 
@@ -71,4 +81,5 @@ These are already package-owned and are not migration inputs from the core resou
 1. `packaging-01` must explicitly cover the prompt inventory above, not just “move prompts to corresponding bundles.”
 2. Prompt companion files are part of the prompt payload contract because exported prompts reference them by relative path.
 3. Backlog template migration must include the entire workspace seed set used by init/install flows, including `github_custom.yaml`.
-4. Docs changes `docs-08` through `docs-12` need to describe bundle-owned prompts/templates and reject stale core-owned path references so no separate docs change is required.
+4. Backlog prompt migration must restore the full slash-prompt inventory into the backlog bundle root so installed-module prompt discovery can surface `nold-ai/specfact-backlog`.
+5. Docs changes `docs-08` through `docs-12` need to describe bundle-owned prompts/templates and reject stale core-owned path references so no separate docs change is required.
