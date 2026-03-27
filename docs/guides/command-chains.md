@@ -4,29 +4,78 @@ title: Command Chains Reference
 permalink: /guides/command-chains/
 ---
 
-# Legacy Workflow Note
+# Command Chains Reference
 
-This page described older `specfact plan`, `specfact generate`, `specfact contract`, or `specfact sdd constitution` workflows that are not part of the current public mounted CLI in this repository. The detailed command examples previously documented here were removed because they no longer match the command surface exposed by `specfact --help`.
+Use this page when you need a short, validated command chain for a common task. Each chain uses current mounted commands and links to the deeper workflow guide that explains the decision points.
 
-Use the current mounted entrypoints instead:
-
-- `specfact project --help`
-- `specfact project sync --help`
-- `specfact code --help`
-- `specfact code review --help`
-- `specfact spec --help`
-- `specfact govern --help`
-- `specfact backlog --help`
-- `specfact module --help`
-
-When you need exact syntax, verify against live help in the current release, for example:
+## 1. Bootstrap a workflow-ready repository
 
 ```bash
-specfact project sync bridge --help
-specfact code repro --help
-specfact code validate sidecar --help
-specfact spec validate --help
-specfact govern enforce --help
+specfact init --profile solo-developer
+specfact init ide --repo . --ide cursor
+specfact module install nold-ai/specfact-backlog
 ```
 
-This page needs a full rewrite around the mounted command groups before task-level workflow examples can be published again.
+Use this before any workflow that depends on bundle-owned prompts or templates.
+
+Related: [AI IDE workflow](/guides/ai-ide-workflow/)
+
+## 2. Brownfield intake and contract discovery
+
+```bash
+specfact code import legacy-api --repo .
+specfact code analyze contracts --repo . --bundle legacy-api
+specfact spec validate --bundle legacy-api --force
+```
+
+Use this when you need a project bundle, contract-coverage visibility, and a first validation pass for a legacy codebase.
+
+Related: [Brownfield modernization](/guides/brownfield-modernization/)
+
+## 3. Refine backlog work before sync/export
+
+```bash
+specfact backlog ceremony refinement github --preview --labels feature
+specfact backlog verify-readiness --adapter github --project-id owner/repo --target-items 123
+specfact project sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+```
+
+Use this chain when backlog items must be standardized and readiness-checked before you export or sync them into project artifacts.
+
+Related: [Cross-module chains](/guides/cross-module-chains/)
+
+## 4. Specmatic validation and compatibility
+
+```bash
+specfact spec validate api/openapi.yaml
+specfact spec backward-compat api/openapi.yaml --previous api/openapi.v1.yaml
+specfact spec generate-tests api/openapi.yaml
+```
+
+Use this chain when you are validating a contract update and need generated test coverage before release review.
+
+Related: [Contract testing workflow](/guides/contract-testing-workflow/)
+
+## 5. Daily review and cleanup
+
+```bash
+specfact backlog ceremony standup github
+specfact code review run docs/guides/cross-module-chains.md --no-tests
+specfact govern enforce sdd legacy-api --no-interactive
+```
+
+Use this chain to review backlog state, run a scoped quality review, and validate release readiness on a bundle before you stop for the day.
+
+Related: [Daily DevOps routine](/guides/daily-devops-routine/)
+
+## 6. CI-ready local gate run
+
+```bash
+hatch run format
+hatch run lint
+hatch run smart-test
+```
+
+Use this chain as the fast local version of the full repository quality gates before pushing a branch.
+
+Related: [CI/CD pipeline](/guides/ci-cd-pipeline/)
