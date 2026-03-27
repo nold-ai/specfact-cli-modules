@@ -35,6 +35,13 @@ The modules site owns all bundle-specific deep guidance. Core CLI platform docs 
 - [Project DevOps Flow](bundles/project/devops-flow/)
 - [DevOps Adapter Integration](integrations/devops-adapter-overview/)
 
+## Team And Enterprise
+
+- [Team Collaboration Setup](team-and-enterprise/team-collaboration/)
+- [Agile And Scrum Team Setup](team-and-enterprise/agile-scrum-setup/)
+- [Multi-Repo Setup](team-and-enterprise/multi-repo/)
+- [Enterprise Configuration](team-and-enterprise/enterprise-config/)
+
 ## Authoring
 
 - [Module Development](authoring/module-development/)
