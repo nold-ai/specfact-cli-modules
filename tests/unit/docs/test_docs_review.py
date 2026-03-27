@@ -89,17 +89,27 @@ def _normalize_route(route: str) -> str:
     return cleaned
 
 
+def _front_matter_end_index(lines: list[str]) -> int | None:
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            return index
+    return None
+
+
+def _extract_redirect_route(stripped_line: str) -> str | None:
+    if not stripped_line.startswith("- "):
+        return None
+    route = stripped_line[2:].split("#", 1)[0].strip().strip('"').strip("'")
+    return _normalize_route(route)
+
+
 def _list_front_matter_redirect_from_routes(text: str) -> list[str]:
     """Return normalized redirect_from routes declared in YAML front matter only."""
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return []
 
-    end_index = None
-    for index in range(1, len(lines)):
-        if lines[index].strip() == "---":
-            end_index = index
-            break
+    end_index = _front_matter_end_index(lines)
     if end_index is None:
         return []
 
@@ -111,10 +121,10 @@ def _list_front_matter_redirect_from_routes(text: str) -> list[str]:
             continue
         if in_redirect_block:
             stripped = line.strip()
-            if stripped.startswith("- "):
-                route = stripped[2:].split("#", 1)[0].strip().strip('"').strip("'")
-                routes.append(_normalize_route(route))
-            elif stripped and not stripped.startswith("-") and not stripped.startswith("#"):
+            route = _extract_redirect_route(stripped)
+            if route is not None:
+                routes.append(route)
+            elif stripped and not stripped.startswith("#"):
                 in_redirect_block = False
     return routes
 
@@ -164,33 +174,109 @@ def _is_published_docs_route_candidate(route: str) -> bool:
     return route not in {"/assets/main.css/", "/feed.xml/"}
 
 
-def _resolve_internal_docs_target(  # pylint: disable=too-many-return-statements
+def _resolve_route_target(
+    source: Path,
+    route: str,
+    route_to_path: dict[str, Path],
+) -> tuple[str | None, Path | None, str | None]:
+    if not _is_published_docs_route_candidate(route):
+        return None, None, None
+    target = route_to_path.get(route)
+    if target is None:
+        return route, None, f"{source.relative_to(_repo_root())} -> {route}"
+    return route, target, None
+
+
+def _path_lookup_result(
+    source: Path,
+    target_value: str,
+    candidate: Path,
+    path_to_route: dict[Path, str],
+) -> tuple[str | None, Path | None, str | None]:
+    route = path_to_route.get(candidate)
+    if route is None:
+        return None, None, f"{source.relative_to(_repo_root())} -> {target_value}"
+    return route, candidate, None
+
+
+def _resolve_candidate_markdown_target(
+    source: Path,
+    candidate: Path,
+    target_value: str,
+    path_to_route: dict[Path, str],
+) -> tuple[str | None, Path | None, str | None]:
+    result: tuple[str | None, Path | None, str | None] = (None, None, None)
+
+    if candidate.is_dir():
+        readme_candidate = (candidate / "README.md").resolve()
+        if readme_candidate.is_file() and _is_docs_markdown(readme_candidate):
+            result = _path_lookup_result(source, target_value, readme_candidate, path_to_route)
+    elif candidate.is_file() and _is_docs_markdown(candidate):
+        result = _path_lookup_result(source, target_value, candidate, path_to_route)
+    elif not candidate.suffix:
+        markdown_candidate = candidate.with_suffix(".md")
+        if markdown_candidate.is_file() and _is_docs_markdown(markdown_candidate):
+            result = _path_lookup_result(source, target_value, markdown_candidate.resolve(), path_to_route)
+
+    return result
+
+
+def _ignored_internal_link(stripped: str, parsed_scheme: str) -> bool:
+    if not stripped or stripped.startswith("#") or JEKYLL_SITE_VAR_RE.search(stripped):
+        return True
+    return parsed_scheme in {"mailto", "javascript", "tel"}
+
+
+def _resolve_http_docs_target(
+    source: Path,
+    parsed_path: str,
+    netloc: str,
+    route_to_path: dict[str, Path],
+) -> tuple[str | None, Path | None, str | None]:
+    if netloc != MODULES_DOCS_HOST:
+        return None, None, None
+    route = _normalize_route(parsed_path or "/")
+    return _resolve_route_target(source, route, route_to_path)
+
+
+def _resolve_relative_docs_target(
+    source: Path,
+    target_value: str,
+    route_to_path: dict[str, Path],
+    path_to_route: dict[Path, str],
+) -> tuple[str | None, Path | None, str | None]:
+    if target_value.startswith("/"):
+        route = _normalize_route(target_value)
+        return _resolve_route_target(source, route, route_to_path)
+
+    candidate = (source.parent / target_value).resolve()
+    result = _resolve_candidate_markdown_target(source, candidate, target_value, path_to_route)
+    if result[1] is not None or result[2] is not None:
+        return result
+
+    normalized_route = _normalize_route(target_value)
+    route, target, failure = _resolve_route_target(source, normalized_route, route_to_path)
+    if failure is None:
+        return route, target, None
+    failure = f"{source.relative_to(_repo_root())} -> {target_value} (normalized: {normalized_route})"
+    return route, None, failure
+
+
+def _resolve_internal_docs_target(
     source: Path,
     raw_link: str,
     route_to_path: dict[str, Path],
     path_to_route: dict[Path, str],
 ) -> tuple[str | None, Path | None, str | None]:
     stripped = _normalize_jekyll_relative_url(raw_link.strip())
-    if not stripped or stripped.startswith("#"):
-        return None, None, None
-
-    # Skip unresolved Jekyll template variables (e.g. {{ site.docs_home_url }})
-    if JEKYLL_SITE_VAR_RE.search(stripped):
-        return None, None, None
 
     parsed = urlparse(stripped)
-    if parsed.scheme in {"mailto", "javascript", "tel"}:
+    if _ignored_internal_link(stripped, parsed.scheme):
         return None, None, None
+
     if parsed.scheme in {"http", "https"}:
-        if parsed.netloc != MODULES_DOCS_HOST:
-            return None, None, None
-        route = _normalize_route(parsed.path or "/")
-        if not _is_published_docs_route_candidate(route):
-            return None, None, None
-        target = route_to_path.get(route)
-        if target is None:
-            return route, None, f"{source.relative_to(_repo_root())} -> {route}"
-        return route, target, None
+        return _resolve_http_docs_target(source, parsed.path, parsed.netloc, route_to_path)
+
     if parsed.scheme:
         return None, None, None
 
@@ -198,47 +284,7 @@ def _resolve_internal_docs_target(  # pylint: disable=too-many-return-statements
     if not target_value:
         return None, None, None
 
-    if target_value.startswith("/"):
-        route = _normalize_route(target_value)
-        if not _is_published_docs_route_candidate(route):
-            return None, None, None
-        target = route_to_path.get(route)
-        if target is None:
-            return route, None, f"{source.relative_to(_repo_root())} -> {route}"
-        return route, target, None
-
-    candidate = (source.parent / target_value).resolve()
-    if candidate.is_dir():
-        readme_candidate = (candidate / "README.md").resolve()
-        if readme_candidate.is_file() and _is_docs_markdown(readme_candidate):
-            route = path_to_route.get(readme_candidate)
-            if route is None:
-                return None, None, f"{source.relative_to(_repo_root())} -> {target_value}"
-            return route, readme_candidate, None
-        return None, None, None
-
-    if candidate.is_file() and _is_docs_markdown(candidate):
-        route = path_to_route.get(candidate)
-        if route is None:
-            return None, None, f"{source.relative_to(_repo_root())} -> {target_value}"
-        return route, candidate, None
-
-    if not candidate.suffix:
-        markdown_candidate = candidate.with_suffix(".md")
-        if markdown_candidate.is_file() and _is_docs_markdown(markdown_candidate):
-            resolved_candidate = markdown_candidate.resolve()
-            route = path_to_route.get(resolved_candidate)
-            if route is None:
-                return None, None, f"{source.relative_to(_repo_root())} -> {target_value}"
-            return route, resolved_candidate, None
-
-    route = _normalize_route(target_value)
-    if not _is_published_docs_route_candidate(route):
-        return None, None, None
-    target = route_to_path.get(route)
-    if target is None:
-        return route, None, f"{source.relative_to(_repo_root())} -> {target_value} (normalized: {route})"
-    return route, target, None
+    return _resolve_relative_docs_target(source, target_value, route_to_path, path_to_route)
 
 
 def _navigation_sources() -> list[Path]:
@@ -568,6 +614,41 @@ permalink: /example-fail/
     msg = _guides_legacy_redirect_violation(path.resolve(), text)
     assert msg is not None
     assert "/guides/example-fail/" in msg
+
+
+def test_team_and_enterprise_pages_exist() -> None:
+    expected = [
+        _repo_file("docs/team-and-enterprise/team-collaboration.md"),
+        _repo_file("docs/team-and-enterprise/agile-scrum-setup.md"),
+        _repo_file("docs/team-and-enterprise/multi-repo.md"),
+        _repo_file("docs/team-and-enterprise/enterprise-config.md"),
+    ]
+    missing = [str(path.relative_to(_repo_root())) for path in expected if not path.is_file()]
+    assert not missing, "Missing team-and-enterprise docs pages:\n" + "\n".join(missing)
+
+
+def test_team_and_enterprise_pages_use_bundle_owned_resource_language() -> None:
+    files = [
+        _repo_file("docs/team-and-enterprise/team-collaboration.md"),
+        _repo_file("docs/team-and-enterprise/agile-scrum-setup.md"),
+        _repo_file("docs/team-and-enterprise/multi-repo.md"),
+        _repo_file("docs/team-and-enterprise/enterprise-config.md"),
+    ]
+    combined = "\n".join(_read_text(path) for path in files)
+    assert "bundle-owned" in combined
+    assert "specfact init ide" in combined
+
+
+def test_team_and_enterprise_index_links_exist() -> None:
+    text = _read_text(_repo_file("docs/index.md"))
+    expected_links = [
+        "team-and-enterprise/team-collaboration/",
+        "team-and-enterprise/agile-scrum-setup/",
+        "team-and-enterprise/multi-repo/",
+        "team-and-enterprise/enterprise-config/",
+    ]
+    for link in expected_links:
+        assert link in text
 
 
 # ---------------------------------------------------------------------------
