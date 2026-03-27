@@ -136,11 +136,16 @@ def _route_code(t: list[str]) -> tuple[Any, list[str]] | None:
     return mod.app, argv
 
 
-_SPEC_SUB_TO_MODULE = {
-    "contract": "specfact_spec.contract.commands",
-    "api": "specfact_spec.spec.commands",
-    "sdd": "specfact_spec.sdd.commands",
-    "generate": "specfact_spec.generate.commands",
+# Subcommand under `specfact spec …` → Typer module. Direct Specmatic commands
+# stay in argv because they are registered directly on `specfact_spec.spec.commands`.
+_SPEC_SUB_TO_MODULE: dict[str, tuple[str, bool]] = {
+    "contract": ("specfact_spec.contract.commands", False),
+    "validate": ("specfact_spec.spec.commands", True),
+    "backward-compat": ("specfact_spec.spec.commands", True),
+    "generate-tests": ("specfact_spec.spec.commands", True),
+    "mock": ("specfact_spec.spec.commands", True),
+    "sdd": ("specfact_spec.sdd.commands", False),
+    "generate": ("specfact_spec.generate.commands", False),
 }
 
 
@@ -169,13 +174,15 @@ def _route_spec(t: list[str]) -> tuple[Any, list[str]] | None:
     if len(t) < 2:
         return None
     sub = t[1]
-    mod_path = _SPEC_SUB_TO_MODULE.get(sub)
-    if mod_path is None:
+    entry = _SPEC_SUB_TO_MODULE.get(sub)
+    if entry is None:
         logging.getLogger(__name__).warning("Unrecognized spec subcommand: %s - tokens: %s", sub, t)
         msg = f"Unrecognized spec subcommand: {sub!r} (tokens: {t!r})"
         raise ValueError(msg)
+    mod_path, keep_subcommand_prefix = entry
     mod = importlib.import_module(mod_path)
-    return mod.app, t[2:]
+    argv = t[1:] if keep_subcommand_prefix else t[2:]
+    return mod.app, argv
 
 
 def _route_to_bundle_app_and_argv(tokens: list[str]) -> tuple[Any, list[str]] | None:
@@ -192,6 +199,50 @@ def _route_to_bundle_app_and_argv(tokens: list[str]) -> tuple[Any, list[str]] | 
     return None
 
 
+def _validate_overview_examples(
+    overview: Path,
+    runner: CliRunner,
+    seen: set[tuple[str, ...]],
+) -> list[str]:
+    failures: list[str] = []
+    text = overview.read_text(encoding="utf-8")
+
+    for raw_line in _iter_bash_block_lines(text):
+        tokens = _tokens_for_specfact_line(raw_line)
+        if tokens is None:
+            continue
+        if "--help" not in tokens:
+            failures.append(
+                f"{overview.relative_to(_REPO_ROOT)}: {raw_line.strip()!r} "
+                "(add --help to the example or an entry in _OVERVIEW_LINE_TO_TOKENS_AFTER_SPECFACT)"
+            )
+            continue
+
+        dedupe_key = tuple(tokens)
+        display_key = " ".join(tokens)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+
+        routed = _route_to_bundle_app_and_argv(tokens)
+        if routed is None:
+            failures.append(f"{overview.relative_to(_REPO_ROOT)}: no route for {display_key!r}")
+            continue
+        app, argv = routed
+        result = runner.invoke(app, argv, prog_name="specfact")
+        if result.exit_code != 0:
+            failures.append(f"{overview.relative_to(_REPO_ROOT)}: {raw_line.strip()!r} -> exit {result.exit_code}")
+            continue
+        if "--help" in argv:
+            combined = result.output or ""
+            if "Usage" not in combined and "usage:" not in combined.lower():
+                failures.append(
+                    f"{overview.relative_to(_REPO_ROOT)}: {raw_line.strip()!r} -> help output missing Usage banner"
+                )
+
+    return failures
+
+
 def test_validate_bundle_overview_cli_help_examples() -> None:
     """Invoke bundle Typer apps with argv derived from each overview quick-example line."""
     runner = CliRunner()
@@ -200,42 +251,6 @@ def test_validate_bundle_overview_cli_help_examples() -> None:
 
     assert _BUNDLE_OVERVIEWS, "no bundle overviews discovered"
     for overview in _BUNDLE_OVERVIEWS:
-        text = overview.read_text(encoding="utf-8")
-        for raw_line in _iter_bash_block_lines(text):
-            tokens = _tokens_for_specfact_line(raw_line)
-            if tokens is None:
-                continue
-            if "--help" not in tokens:
-                failures.append(
-                    f"{overview.relative_to(_REPO_ROOT)}: {raw_line.strip()!r} "
-                    "(add --help to the example or an entry in _OVERVIEW_LINE_TO_TOKENS_AFTER_SPECFACT)"
-                )
-                continue
-
-            dedupe_key = tuple(tokens)
-            display_key = " ".join(tokens)
-            if dedupe_key in seen:
-                continue
-            seen.add(dedupe_key)
-
-            routed = _route_to_bundle_app_and_argv(tokens)
-            if routed is None:
-                failures.append(f"{overview.relative_to(_REPO_ROOT)}: no route for {display_key!r}")
-                continue
-            app, argv = routed
-            # We only assert Typer accepted argv and exited 0; we do not diff full --help text or
-            # every option name against the markdown (that would be brittle and duplicate Typer).
-            # Optional smoke check below ensures something help-like was printed when --help is used.
-            result = runner.invoke(app, argv, prog_name="specfact")
-            if result.exit_code != 0:
-                failures.append(f"{overview.relative_to(_REPO_ROOT)}: {raw_line.strip()!r} -> exit {result.exit_code}")
-                continue
-            if "--help" in argv:
-                # CliRunner may expose only `output` (stdout+stderr) unless mix_stderr=False.
-                combined = result.output or ""
-                if "Usage" not in combined and "usage:" not in combined.lower():
-                    failures.append(
-                        f"{overview.relative_to(_REPO_ROOT)}: {raw_line.strip()!r} -> help output missing Usage banner"
-                    )
+        failures.extend(_validate_overview_examples(overview, runner, seen))
 
     assert not failures, "Overview CLI --help mismatches:\n" + "\n".join(failures)
