@@ -90,7 +90,7 @@ def test_validate_core_docs_links_rejects_unknown_route(tmp_path: Path) -> None:
 def test_docs_review_workflow_runs_docs_command_validation() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8")
 
-    assert "python -m pip install pytest typer PyYAML" in workflow
+    assert "python -m pip install pytest typer PyYAML beartype icontract rich pydantic specfact-cli" in workflow
     assert "python scripts/check-docs-commands.py" in workflow
     assert "scripts/check-docs-commands.py" in workflow
     assert "tests/unit/test_check_docs_commands_script.py" in workflow

@@ -48,7 +48,7 @@ jobs:
       - name: Install docs review dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest typer PyYAML
+          python -m pip install pytest typer PyYAML beartype icontract rich pydantic specfact-cli
 
       - name: Run docs review suite
         run: |
