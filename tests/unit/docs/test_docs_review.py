@@ -491,6 +491,24 @@ def _iter_guides_legacy_redirect_violations() -> list[str]:
     return violations
 
 
+def test_daily_devops_routine_exists() -> None:
+    assert _repo_file("docs/guides/daily-devops-routine.md").is_file()
+
+
+def test_daily_devops_routine_bundle_links() -> None:
+    text = _read_text(_repo_file("docs/guides/daily-devops-routine.md"))
+    expected_links = {
+        "Morning standup": "[Backlog bundle overview](/bundles/backlog/overview/)",
+        "Refinement": "[Cross-module chains](/guides/cross-module-chains/)",
+        "Development": "[AI IDE workflow](/guides/ai-ide-workflow/)",
+        "Review": "[Contract testing workflow](/guides/contract-testing-workflow/)",
+        "End-of-day": "[Govern enforce](/bundles/govern/enforce/)",
+    }
+
+    for label, link in expected_links.items():
+        assert link in text, f"{label} step is missing bundle command reference link {link}"
+
+
 def _extract_redirect_from_entries() -> dict[str, Path]:
     """Build map of redirect_from routes to the file that declares them."""
     redirects: dict[str, Path] = {}
