@@ -246,6 +246,7 @@ ignore = [
 "tests/**/*" = ["S101", "PLR2004", "T20", "SLF001"]
 "tools/**/*" = ["T20", "S101", "INP001", "PLR2004"]
 "packages/**/commands.py" = ["B008"]
+"scripts/check-docs-commands.py" = ["N999"]
 
 [tool.ruff.lint.isort]
 force-single-line = false

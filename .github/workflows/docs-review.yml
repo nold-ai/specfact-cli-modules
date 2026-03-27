@@ -9,6 +9,8 @@ on:
       - "**/*.md"
       - "**/*.mdc"
       - "docs/**"
+      - "scripts/check-docs-commands.py"
+      - "tests/unit/test_check_docs_commands_script.py"
       - "tests/unit/docs/test_docs_review.py"
       - ".github/workflows/docs-review.yml"
   push:
@@ -17,6 +19,8 @@ on:
       - "**/*.md"
       - "**/*.mdc"
       - "docs/**"
+      - "scripts/check-docs-commands.py"
+      - "tests/unit/test_check_docs_commands_script.py"
       - "tests/unit/docs/test_docs_review.py"
       - ".github/workflows/docs-review.yml"
   workflow_dispatch:
@@ -51,6 +55,13 @@ jobs:
           mkdir -p logs/docs-review
           DOCS_REVIEW_LOG="logs/docs-review/docs-review_$(date -u +%Y%m%d_%H%M%S).log"
           python -m pytest tests/unit/docs/test_docs_review.py -q 2>&1 | tee "$DOCS_REVIEW_LOG"
+          exit "${PIPESTATUS[0]:-$?}"
+
+      - name: Validate docs commands and cross-site links
+        run: |
+          mkdir -p logs/docs-review
+          DOCS_COMMAND_LOG="logs/docs-review/docs-command-validation_$(date -u +%Y%m%d_%H%M%S).log"
+          python scripts/check-docs-commands.py 2>&1 | tee "$DOCS_COMMAND_LOG"
           exit "${PIPESTATUS[0]:-$?}"
 
       - name: Upload docs review logs

@@ -59,4 +59,4 @@ Cross-repo dependency: `docs-06-modules-site-ia-restructure` is a prerequisite f
 | docs | 09 | docs-09-missing-command-docs | [#97](https://github.com/nold-ai/specfact-cli-modules/issues/97) | docs-06-modules-site-ia-restructure |
 | docs | 10 | docs-10-workflow-consolidation | [#98](https://github.com/nold-ai/specfact-cli-modules/issues/98) | docs-06-modules-site-ia-restructure |
 | docs | 11 | docs-11-team-enterprise-tier | [#99](https://github.com/nold-ai/specfact-cli-modules/issues/99) | docs-06-modules-site-ia-restructure |
-| docs | 12 | docs-12-docs-validation-ci | [#100](https://github.com/nold-ai/specfact-cli-modules/issues/100) | docs-06 through docs-10; specfact-cli/docs-12-docs-validation-ci |
+| docs | 12 | docs-12-docs-validation-ci | [#100](https://github.com/nold-ai/specfact-cli-modules/issues/100) | docs-06 through docs-10; specfact-cli/docs-12-docs-validation-ci — implemented, pending archive |
