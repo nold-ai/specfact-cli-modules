@@ -25,5 +25,5 @@
 
 - [x] 5.1 Verify all command examples in workflow docs match actual `--help` output
 - [x] 5.2 Verify workflow docs do not reference legacy core-owned prompt/template paths
-- [x] 5.3 Verify all internal links resolve
+- [x] 5.3 Verify all internal links resolve (see `TDD_EVIDENCE.md` §2.1)
 - [x] 5.4 Run `bundle exec jekyll build` with zero warnings

@@ -72,10 +72,15 @@ Related: [Daily DevOps routine](/guides/daily-devops-routine/)
 
 ```bash
 hatch run format
+hatch run type-check
 hatch run lint
+hatch run yaml-lint
+hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
+hatch run contract-test
 hatch run smart-test
+hatch run test
 ```
 
-Use this chain as the fast local version of the full repository quality gates before pushing a branch.
+Use this chain as the full required pre-push gate order so the local run matches the repository CI quality gates.
 
 Related: [CI/CD pipeline](/guides/ci-cd-pipeline/)

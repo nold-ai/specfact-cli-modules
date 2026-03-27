@@ -16,6 +16,13 @@ When workflow prompts or templates are bundle-owned, refresh the IDE export afte
 specfact init ide --repo . --ide cursor --force
 ```
 
+Install the repository hooks locally so the same guardrails run before you push:
+
+```bash
+pre-commit install
+pre-commit run --all-files
+```
+
 ## 2. Run the repository quality gates locally
 
 The repository gate order is:
@@ -32,6 +39,15 @@ hatch run test
 ```
 
 Use the same order locally before pushing changes that affect docs, bundles, or registry metadata.
+
+## 2.1 CI/CD stage mapping
+
+Map the local commands to the pipeline stages this repository enforces:
+
+- Pre-commit stage: `pre-commit run --all-files`
+- Quality gates stage: `hatch run format` -> `hatch run type-check` -> `hatch run lint` -> `hatch run yaml-lint`
+- Release-readiness stage: `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`
+- Validation stage: `hatch run contract-test` -> `hatch run smart-test` -> `hatch run test`
 
 ## 3. Add scoped workflow checks while developing
 

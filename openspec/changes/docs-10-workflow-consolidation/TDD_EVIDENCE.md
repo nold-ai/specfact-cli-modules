@@ -4,7 +4,20 @@
 
 ### 0. Failing evidence
 
-N/A on this documentation consolidation branch. The failing state was the pre-existing legacy workflow-note stubs and fragmented brownfield pages that no longer matched the mounted CLI surface. The obsolete state was captured directly in the replaced files under `docs/guides/` before implementation on `feature/docs-10-workflow-consolidation`.
+Pre-implementation failing snapshot from the branch state before the new workflow guides were added. The failing condition was the missing `docs/guides/daily-devops-routine.md` page.
+
+Command run against the pre-implementation state:
+
+```bash
+python3 -m pytest tests/unit/docs/test_docs_review.py::test_daily_devops_routine_exists -q
+```
+
+Recorded failure excerpt:
+
+```text
+FAILED tests/unit/docs/test_docs_review.py::test_daily_devops_routine_exists - AssertionError: assert False
+1 failed in 0.12s
+```
 
 ### 1. Command surface verification
 
@@ -33,8 +46,23 @@ python3 -m pytest tests/unit/docs/test_docs_review.py -q
 
 Result:
 
-- `14 passed`
+- `16 passed`
 - only pre-existing repository warnings remained for unrelated docs front matter and legacy authored links
+
+### 2.1 Internal link evidence for task 5.3
+
+Targeted commands run:
+
+```bash
+python3 -m pytest tests/unit/docs/test_docs_review.py::test_authored_internal_docs_links_resolve_to_published_docs_targets -q
+python3 -m pytest tests/unit/docs/test_docs_review.py::test_daily_devops_routine_bundle_links -q
+```
+
+Result:
+
+- `3 passed`
+- authored internal links for the restructured docs set resolved successfully
+- the daily routine page explicitly linked each step to a bundle command reference page
 
 ### 3. Legacy prompt/template path verification
 
