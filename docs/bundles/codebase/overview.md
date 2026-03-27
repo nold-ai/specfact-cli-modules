@@ -71,4 +71,7 @@ specfact code repro --verbose --repo .
 
 ## Deep dives
 
+- [Code analyze contracts](analyze/)
+- [Code drift detect](drift/)
+- [Code repro](repro/)
 - [Sidecar validation](sidecar-validation/)
