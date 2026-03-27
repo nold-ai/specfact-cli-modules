@@ -57,5 +57,5 @@ Govern presets and any bundled policy packs travel with the installed Govern mod
 
 ## Related
 
-- [Govern patch](patch/)
-- [Govern bundle overview](overview/)
+- [Govern patch](/bundles/govern/patch/)
+- [Govern bundle overview](/bundles/govern/overview/)

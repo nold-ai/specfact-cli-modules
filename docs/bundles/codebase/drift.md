@@ -39,5 +39,5 @@ specfact code drift detect my-bundle --repo . --format json --out drift-report.j
 
 ## Related
 
-- [Code analyze contracts](analyze/)
-- [Code repro](repro/)
+- [Code analyze contracts](/bundles/codebase/analyze/)
+- [Code repro](/bundles/codebase/repro/)

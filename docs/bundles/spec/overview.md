@@ -69,7 +69,7 @@ specfact spec generate contracts --help
 ## See also
 
 - [Command reference](../../reference/commands/) — bundle-to-command mapping
-- [Spec validate and backward compatibility](validate/)
-- [Generate Specmatic tests](generate-tests/)
-- [Run a mock server](mock/)
+- [Spec validate and backward compatibility](/bundles/spec/validate/)
+- [Generate Specmatic tests](/bundles/spec/generate-tests/)
+- [Run a mock server](/bundles/spec/mock/)
 - [Contract testing workflow](../../guides/contract-testing-workflow/)
