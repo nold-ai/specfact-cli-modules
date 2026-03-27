@@ -1,3 +1,9 @@
+---
+layout: default
+title: Privacy-First Telemetry
+permalink: /reference/telemetry/
+---
+
 # Privacy-First Telemetry (Optional)
 
 > **Opt-in analytics that highlight how SpecFact prevents brownfield regressions.**
@@ -507,6 +513,5 @@ Only if you explicitly opt in. We recommend enabling telemetry in CI/CD to track
 
 **Related docs:**  
 
-- [`docs/guides/brownfield-faq.md`](../guides/brownfield-faq.md) – Brownfield workflows  
-- [`docs/guides/brownfield-roi.md`](../guides/brownfield-roi.md) – Quantifying the savings  
-- [`docs/examples/brownfield-django-modernization.md`](../examples/brownfield-django-modernization.md) – Example pipeline
+- [Brownfield FAQ and ROI](/guides/brownfield-faq-and-roi/) - Brownfield workflows and quantifying the savings
+- [Brownfield examples](/guides/brownfield-examples/) - Example modernization pipelines

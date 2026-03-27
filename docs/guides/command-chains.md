@@ -18,7 +18,7 @@ specfact module install nold-ai/specfact-backlog
 
 Use this before any workflow that depends on bundle-owned prompts or templates.
 
-Related: [AI IDE workflow](/guides/ai-ide-workflow/)
+Related: [AI IDE workflow](/ai-ide-workflow/)
 
 ## 2. Brownfield intake and contract discovery
 
@@ -54,7 +54,7 @@ specfact spec generate-tests api/openapi.yaml
 
 Use this chain when you are validating a contract update and need generated test coverage before release review.
 
-Related: [Contract testing workflow](/guides/contract-testing-workflow/)
+Related: [Contract testing workflow](/contract-testing-workflow/)
 
 ## 5. Daily review and cleanup
 

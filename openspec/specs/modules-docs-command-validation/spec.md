@@ -33,3 +33,15 @@ The modules-side docs validation workflow SHALL reject command examples across p
 - **WHEN** the validation runs
 - **THEN** it reports the stale resource reference
 - **AND** the check fails
+
+### Requirement: Published module docs SHALL stay warning-free in docs review
+
+Published module docs SHALL include Jekyll front matter and valid internal links so the modules docs review run does not rely on warning allowlists for stale pages.
+
+#### Scenario: Previously tolerated stale docs warnings are removed
+
+- **GIVEN** a published modules docs page was previously missing front matter or linked to a removed former docs target
+- **WHEN** the docs review suite runs
+- **THEN** the page is published with required front matter
+- **AND** its internal links resolve to current canonical modules docs routes
+- **AND** the docs review run completes without warnings

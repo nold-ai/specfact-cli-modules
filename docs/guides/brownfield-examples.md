@@ -48,4 +48,4 @@ Outcome: compatibility, generated test artifacts, and bundle enforcement are che
 
 - [Brownfield modernization](/guides/brownfield-modernization/)
 - [Cross-module chains](/guides/cross-module-chains/)
-- [Contract testing workflow](/guides/contract-testing-workflow/)
+- [Contract testing workflow](/contract-testing-workflow/)

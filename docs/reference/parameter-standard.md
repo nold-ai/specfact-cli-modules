@@ -1,3 +1,9 @@
+---
+layout: default
+title: Parameter Standard Legacy Workflow Note
+permalink: /reference/parameter-standard/
+---
+
 # Legacy Workflow Note
 
 This page described older plan-generation, contract, and constitution workflows that are not part of the current public mounted CLI in this repository. The detailed command examples previously documented here were removed because they no longer match the command surface exposed by `specfact --help`.

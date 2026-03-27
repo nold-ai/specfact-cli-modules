@@ -24,3 +24,4 @@
 - [x] 5.2 Run validation locally and verify it catches stale core-owned resource path references
 - [x] 5.3 Run CI workflow end-to-end via the local docs-review-equivalent validator and test path documented in `TDD_EVIDENCE.md`
 - [x] 5.4 Audit repo-wide published docs and remove stale former command references so validation passes with zero findings
+- [x] 5.5 Remove the remaining docs-review warnings by adding missing front matter and fixing stale internal links in published docs

@@ -58,6 +58,32 @@ TOTAL_FINDINGS=39
 
 This exposed the remaining stale former command references outside the original bundle-only validation scope.
 
+### 0.2 Docs review warning snapshot before cleanup
+
+Pre-cleanup docs review run from `2026-03-28T00:19:32+01:00`:
+
+```bash
+python3 -m pytest tests/unit/docs/test_docs_review.py -q
+```
+
+Failing excerpt:
+
+```text
+UserWarning: Pre-existing docs files missing front matter (6):
+docs/getting-started/tutorial-openspec-speckit.md
+docs/module-publishing-guide.md
+docs/reference/feature-keys.md
+docs/reference/parameter-standard.md
+docs/reference/specmatic.md
+docs/reference/telemetry.md
+UserWarning: Pre-existing broken authored docs links (56 total):
+docs/adapters/azuredevops.md -> ../guides/devops-adapter-integration.md
+...
+======================== 19 passed, 2 warnings in 0.41s ========================
+```
+
+This captured the remaining published-doc warnings before the final stale-link and front-matter cleanup.
+
 ### 1. Validator passes after docs fixes
 
 Passing run from `2026-03-27T23:19:08+01:00`:
@@ -106,7 +132,7 @@ Passing excerpt:
 21 passed, 2 warnings in 0.21s
 ```
 
-The warnings are pre-existing docs-review warnings unrelated to this change. The run confirms the new validator and the existing authored-docs checks pass together.
+This earlier run confirmed the new validator and the existing authored-docs checks pass together before the warning cleanup was completed.
 
 ### 4. Review gate stays clean
 
@@ -166,6 +192,40 @@ TOTAL_FINDINGS=0
 ```
 
 This verifies the widened validator catches and clears stale former command references across published module docs, not only bundle reference pages.
+
+### 5.2 Docs review warnings eliminated
+
+Passing run from `2026-03-28T00:19:32+01:00`:
+
+```bash
+python3 -m pytest tests/unit/docs/test_docs_review.py -q
+```
+
+Passing excerpt:
+
+```text
+tests/unit/docs/test_docs_review.py ...................                  [100%]
+============================== 19 passed in 0.43s ==============================
+```
+
+This verifies the previously tolerated warnings are gone: published docs now have the missing front matter added and the stale internal links updated to current canonical modules-docs routes.
+
+### 5.3 Combined docs validation suite
+
+Passing run from `2026-03-28T00:19:32+01:00`:
+
+```bash
+python3 -m pytest tests/unit/docs/test_docs_review.py tests/unit/docs/test_missing_command_docs.py tests/unit/docs/test_bundle_overview_cli_examples.py tests/unit/test_check_docs_commands_script.py -q
+```
+
+Passing excerpt:
+
+```text
+..............................                                           [100%]
+============================== 30 passed in 4.16s ==============================
+```
+
+This verifies the docs review gate, bundle command docs checks, overview smoke routing, and the command validator tests all pass together after the warning cleanup.
 
 ### 6. Full repository quality gates
 

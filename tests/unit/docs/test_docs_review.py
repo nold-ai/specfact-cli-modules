@@ -500,8 +500,8 @@ def test_daily_devops_routine_bundle_links() -> None:
     expected_links = {
         "Morning standup": "[Backlog bundle overview](/bundles/backlog/overview/)",
         "Refinement": "[Cross-module chains](/guides/cross-module-chains/)",
-        "Development": "[AI IDE workflow](/guides/ai-ide-workflow/)",
-        "Review": "[Contract testing workflow](/guides/contract-testing-workflow/)",
+        "Development": "[AI IDE workflow](/ai-ide-workflow/)",
+        "Review": "[Contract testing workflow](/contract-testing-workflow/)",
         "End-of-day": "[Govern enforce](/bundles/govern/enforce/)",
     }
 

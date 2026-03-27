@@ -2,13 +2,14 @@
 
 ## Why
 
-Documentation command examples can drift from actual module implementations. Cross-site links to docs.specfact.io can break when core pages are moved. This is the modules-side counterpart to the core-side docs-12 change.
+Documentation command examples can drift from actual module implementations. Cross-site links to docs.specfact.io can break when core pages are moved. Older published pages can also keep missing front matter or broken internal links after the IA restructure unless they are explicitly cleaned up. This is the modules-side counterpart to the core-side docs-12 change.
 
 ## What Changes
 
 - Add a script that extracts command registrations from all `packages/*/src/**/commands.py` and compares against command examples across published module docs under `docs/`
 - Add cross-site link validation for links from modules docs to core docs
 - Add checks that docs do not point users at legacy core-owned prompt/template paths when those resources are bundle-owned
+- Clean up remaining stale published-doc warnings so the docs review run is warning-free
 - Integrate into CI workflow
 
 ## Capabilities

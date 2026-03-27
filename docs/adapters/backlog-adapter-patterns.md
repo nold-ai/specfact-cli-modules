@@ -491,6 +491,6 @@ When implementing new backlog adapters:
 
 - **[GitHub Adapter Documentation](./github.md)** - GitHub adapter reference
 - **[Azure DevOps Adapter Documentation](./azuredevops.md)** - Azure DevOps adapter reference
-- **[DevOps Adapter Integration Guide](../guides/devops-adapter-integration.md)** - Complete integration guide for GitHub and ADO
-- **[Validation Integration](../validation-integration.md)** - Validation with change proposals
-- **[Bridge Adapter Interface](../bridge-adapter-interface.md)** - Base adapter interface
+- **[DevOps Adapter Integration Guide](/integrations/devops-adapter-overview/)** - Complete integration guide for GitHub and ADO
+- **[Thorough codebase validation](/reference/thorough-codebase-validation/)** - Validation and release-readiness guidance
+- **[Adapter development guide](/authoring/adapter-development/)** - Base adapter interface and implementation patterns
