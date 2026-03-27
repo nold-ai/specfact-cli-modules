@@ -1,6 +1,6 @@
 # ADDED Requirements
 
-### Requirement: Team setup docs SHALL cover operational onboarding and resource ownership
+## Requirement: Team setup docs SHALL cover operational onboarding and resource ownership
 
 Team setup guidance SHALL explain onboarding, shared configuration, role-based workflows, and how bundle-owned prompts/templates are rolled out and kept in sync.
 

@@ -20,13 +20,13 @@ your backlog system:
 
 ```bash
 # Deterministic policy validation with JSON + Markdown output
-specfact policy validate --repo . --format both
+specfact backlog policy validate --repo . --format both
 
 # AI-assisted suggestions with confidence scores and patch-ready output
-specfact policy suggest --repo .
+specfact backlog policy suggest --repo .
 ```
 
-Both commands read `.specfact/policy.yaml`. `policy suggest` never writes changes automatically; it emits
+Both commands read `.specfact/policy.yaml`. `specfact backlog policy suggest` never writes changes automatically; it emits
 recommendations you can review and apply explicitly in your normal workflow.
 
 ## Overview

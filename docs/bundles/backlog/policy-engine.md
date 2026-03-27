@@ -14,9 +14,9 @@ Use SpecFact policy commands to scaffold, validate, and improve policy configura
 
 The policy engine currently supports:
 
-- `specfact policy init` to scaffold `.specfact/policy.yaml` from a built-in template.
-- `specfact policy validate` to evaluate configured rules deterministically against policy input artifacts.
-- `specfact policy suggest` to generate confidence-scored, patch-ready recommendations (no automatic writes).
+- `specfact backlog policy init` to scaffold `.specfact/policy.yaml` from a built-in template.
+- `specfact backlog policy validate` to evaluate configured rules deterministically against policy input artifacts.
+- `specfact backlog policy suggest` to generate confidence-scored, patch-ready recommendations (no automatic writes).
 
 ## Commands
 
@@ -25,7 +25,7 @@ The policy engine currently supports:
 Create a starter policy configuration file:
 
 ```bash
-specfact policy init --repo . --template scrum
+specfact backlog policy init --repo . --template scrum
 ```
 
 Supported templates:
@@ -38,7 +38,7 @@ Supported templates:
 Interactive mode (template prompt):
 
 ```bash
-specfact policy init --repo .
+specfact backlog policy init --repo .
 ```
 
 The command writes `.specfact/policy.yaml`. Use `--force` to overwrite an existing file.
@@ -48,7 +48,7 @@ The command writes `.specfact/policy.yaml`. Use `--force` to overwrite an existi
 Run policy checks with deterministic output:
 
 ```bash
-specfact policy validate --repo . --format both
+specfact backlog policy validate --repo . --format both
 ```
 
 Artifact resolution order when `--snapshot` is omitted:
@@ -59,20 +59,20 @@ Artifact resolution order when `--snapshot` is omitted:
 You can still override with an explicit path:
 
 ```bash
-specfact policy validate --repo . --snapshot ./snapshot.json --format both
+specfact backlog policy validate --repo . --snapshot ./snapshot.json --format both
 ```
 
 Filter and scope output:
 
 ```bash
 # only one rule family, max 20 findings
-specfact policy validate --repo . --rule scrum.dor --limit 20 --format json
+specfact backlog policy validate --repo . --rule scrum.dor --limit 20 --format json
 
 # item-centric grouped output
-specfact policy validate --repo . --group-by-item --format both
+specfact backlog policy validate --repo . --group-by-item --format both
 
 # in grouped mode, --limit applies to item groups
-specfact policy validate --repo . --group-by-item --limit 4 --format json
+specfact backlog policy validate --repo . --group-by-item --limit 4 --format json
 ```
 
 Output formats:
@@ -88,20 +88,20 @@ When config is missing or invalid, the command prints a docs hint pointing back 
 Generate suggestions from validation findings:
 
 ```bash
-specfact policy suggest --repo .
+specfact backlog policy suggest --repo .
 ```
 
 Suggestion shaping options:
 
 ```bash
 # suggestions for one rule family, limited output
-specfact policy suggest --repo . --rule scrum.dod --limit 10
+specfact backlog policy suggest --repo . --rule scrum.dod --limit 10
 
 # grouped suggestions by backlog item index
-specfact policy suggest --repo . --group-by-item
+specfact backlog policy suggest --repo . --group-by-item
 
 # grouped mode limits item groups, not per-item fields
-specfact policy suggest --repo . --group-by-item --limit 4
+specfact backlog policy suggest --repo . --group-by-item --limit 4
 ```
 
 Suggestions include confidence scores and patch-ready structure, but no file is modified automatically.

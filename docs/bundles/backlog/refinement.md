@@ -785,7 +785,6 @@ Templates are automatically loaded in priority order (custom templates override 
 
 1. **Project templates** (`.specfact/templates/backlog/`) - Highest priority, overrides built-in
 2. **Built-in templates** (`resources/templates/backlog/`) - Included with package
-3. **Legacy location** (`src/specfact_cli/templates/`) - Fallback for backward compatibility
 
 Within each location, templates are loaded from:
 

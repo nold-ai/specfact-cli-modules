@@ -29,14 +29,14 @@ Practical module-owned guides for official bundles, adapters, publishing, and wo
 
 - **[IDE Integration](ide-integration.md)** - Set up slash commands in your IDE
 - **[CoPilot Mode](copilot-mode.md)** - Using `--mode copilot` on CLI commands
-- **[DevOps Adapter Integration](devops-adapter-integration.md)** - Integrate with GitHub Issues, Azure DevOps, Linear, Jira for backlog tracking
-- **[Backlog Refinement](backlog-refinement.md)** - AI-assisted template-driven refinement with filtering and DoR checks
+- **[DevOps Adapter Integration](/integrations/devops-adapter-overview/)** - Integrate with GitHub Issues, Azure DevOps, Linear, Jira for backlog tracking
+- **[Backlog Refinement](/bundles/backlog/refinement/)** - AI-assisted template-driven refinement with filtering and DoR checks
 - **[Specmatic Integration](specmatic-integration.md)** - API contract testing with Specmatic
 - **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
 - **[Installing Modules](installing-modules.md)** - Install, list, show, search, enable/disable, uninstall, and upgrade modules
 - **[Module Marketplace](module-marketplace.md)** - Discovery priority, trust vs origin semantics, and security model
-- **[Custom registries](custom-registries.md)** - Add, list, remove registries; trust levels and priority
-- **[Publishing modules](publishing-modules.md)** - Package, sign, and publish modules to a registry
+- **[Custom registries](/authoring/custom-registries/)** - Add, list, remove registries; trust levels and priority
+- **[Publishing modules](/authoring/publishing-modules/)** - Package, sign, and publish modules to a registry
 - **[Module Signing and Key Rotation](module-signing-and-key-rotation.md)** - Public key placement, signing workflow, CI verification, rotation, and revocation runbook
 - **[Competitive Analysis](competitive-analysis.md)** - How SpecFact compares to other tools
 - **[Operational Modes](../reference/modes.md)** - CI/CD vs CoPilot modes

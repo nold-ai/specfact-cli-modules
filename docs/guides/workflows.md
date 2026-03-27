@@ -36,10 +36,10 @@ Use `specfact init ide` again after module upgrades so bundle-owned prompts and 
 
 ## Focused deep dives
 
-- [AI IDE workflow](/guides/ai-ide-workflow/) for prompt/bootstrap-aware IDE usage
-- [Contract testing workflow](/guides/contract-testing-workflow/) for Specmatic validation, compatibility, test generation, and mocks
+- [AI IDE workflow](/ai-ide-workflow/) for prompt/bootstrap-aware IDE usage
+- [Contract testing workflow](/contract-testing-workflow/) for Specmatic validation, compatibility, test generation, and mocks
 - [Agile/Scrum workflows](/guides/agile-scrum-workflows/) for backlog ceremonies and persona flows
-- [Team collaboration workflow](/guides/team-collaboration-workflow/) for persona export/import and lock-based editing
+- [Team collaboration workflow](/team-collaboration-workflow/) for persona export/import and lock-based editing
 
 ## Bundle references used by these workflows
 

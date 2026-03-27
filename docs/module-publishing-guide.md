@@ -1,6 +1,15 @@
+---
+layout: default
+title: Module Publishing Guide
+permalink: /module-publishing-guide/
+---
+
 # Module Publishing Guide
 
-This guide describes how to publish modules to the SpecFact CLI marketplace registry.
+This legacy note predates the current authoring IA. For the maintained publishing workflow, use
+[Publishing modules](/authoring/publishing-modules/).
+
+The checklist below remains a useful quick reference for the registry data you need to prepare.
 
 ## Prerequisites
 

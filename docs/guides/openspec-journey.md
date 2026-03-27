@@ -458,7 +458,7 @@ This separation enables:
 
 - [Command Chains Reference](command-chains.md) - Complete workflows including [External Tool Integration Chain](command-chains.md#3-external-tool-integration-chain)
 - [Common Tasks Index](common-tasks.md) - Quick reference for OpenSpec integration tasks
-- [DevOps Adapter Integration](devops-adapter-integration.md) - GitHub Issues and backlog tracking
+- [DevOps Adapter Integration](/integrations/devops-adapter-overview/) - GitHub Issues and backlog tracking
 - [Team Collaboration Workflow](team-collaboration-workflow.md) - Team collaboration patterns
 
 ### Related Commands
@@ -469,7 +469,7 @@ This separation enables:
 
 ### Related Examples
 
-- [OpenSpec Integration Examples](../examples/) - Real-world integration examples
+- [Brownfield examples](/guides/brownfield-examples/) - Real-world integration examples
 
 ### Getting Started
 
@@ -482,7 +482,7 @@ This separation enables:
 
 ### **Try It Now** ✅
 
-1. **[DevOps Adapter Integration Guide](devops-adapter-integration.md)** - Export OpenSpec proposals to GitHub Issues
+1. **[DevOps Adapter Integration Guide](/integrations/devops-adapter-overview/)** - Export OpenSpec proposals to GitHub Issues
 2. **[Commands Reference](../reference/commands.md#sync-bridge)** - Complete `sync bridge` documentation
 3. **[OpenSpec Documentation](https://github.com/nold-ai/openspec)** - Learn OpenSpec basics
 
@@ -500,7 +500,7 @@ This separation enables:
 
 ## 🔗 Related Documentation
 
-- **[DevOps Adapter Integration](devops-adapter-integration.md)** - GitHub Issues and backlog tracking
+- **[DevOps Adapter Integration](/integrations/devops-adapter-overview/)** - GitHub Issues and backlog tracking
 - **[Spec-Kit Journey](speckit-journey.md)** - Similar guide for Spec-Kit integration
 - **[Brownfield Engineer Guide](brownfield-engineer.md)** - Complete brownfield modernization workflow
 - **[Commands Reference](../reference/commands.md)** - Complete command documentation

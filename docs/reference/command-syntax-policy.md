@@ -11,7 +11,7 @@ This policy defines how command examples must be documented so docs stay consist
 
 ## Core Rule
 
-Always document commands exactly as implemented by `specfact <command> --help` in the current release.
+Always document commands exactly as implemented by the relevant current help entrypoint in the current release, such as `specfact project --help` or `specfact backlog --help`.
 
 - Do not assume all commands use the same bundle argument style.
 - Do not convert positional bundle arguments to `--bundle` unless the command explicitly supports it.

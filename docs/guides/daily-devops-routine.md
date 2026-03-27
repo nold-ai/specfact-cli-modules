@@ -38,7 +38,7 @@ specfact code import legacy-api --repo .
 
 Refresh IDE resources when the workflow depends on installed prompts, then import or refresh the project bundle before deeper validation.
 
-Reference: [AI IDE workflow](/guides/ai-ide-workflow/)
+Reference: [AI IDE workflow](/ai-ide-workflow/)
 
 ## 4. Midday quality review
 
@@ -49,7 +49,7 @@ specfact spec validate --bundle legacy-api
 
 Run the review bundle on your changed files and validate the affected contracts while the context is still fresh.
 
-Reference: [Contract testing workflow](/guides/contract-testing-workflow/)
+Reference: [Contract testing workflow](/contract-testing-workflow/)
 
 ## 5. End-of-day release readiness
 

@@ -1,3 +1,5 @@
+# Missing Command Documentation Specification
+
 ## ADDED Requirements
 
 ### Requirement: Missing command reference pages SHALL document the implemented command surface

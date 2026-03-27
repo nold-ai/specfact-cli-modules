@@ -639,6 +639,6 @@ If work item types are not being normalized:
 
 ## Related Documentation
 
-- [Backlog Refinement Guide](./backlog-refinement.md) - Complete guide to backlog refinement
+- [Backlog Refinement Guide](/bundles/backlog/refinement/) - Complete guide to backlog refinement
 - [ADO Adapter Documentation](../adapters/backlog-adapter-patterns.md) - ADO adapter patterns
 - [Field Mapper API Reference](../reference/architecture.md) - Technical architecture details

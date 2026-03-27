@@ -83,7 +83,7 @@ SpecFact CLI integrations fall into four main categories:
 
 ## Testing & Validation
 
-> **New in v0.24.0**: [Sidecar Validation](./sidecar-validation.md) - Validate external codebases without modifying source code
+> **New in v0.24.0**: [Sidecar Validation](/bundles/codebase/sidecar-validation/) - Validate external codebases without modifying source code
 
 ### Specmatic Integration
 
@@ -133,7 +133,7 @@ SpecFact CLI integrations fall into four main categories:
 
 **Key difference**: Sidecar validation provides **external codebase validation** without source modification, while standard SpecFact workflows analyze and modify your own codebase.
 
-**See also**: [Sidecar Validation Guide](./sidecar-validation.md) | [Command Chains - Sidecar Validation](./command-chains.md#5-sidecar-validation-chain)
+**See also**: [Sidecar Validation Guide](/bundles/codebase/sidecar-validation/) | [Command Chains - Sidecar Validation](/guides/command-chains/#5-sidecar-validation-chain)
 
 ---
 
@@ -173,7 +173,7 @@ SpecFact CLI integrations fall into four main categories:
 
 **Why this matters**: This feature allows you to use SpecFact's specification-driven development approach while working within your existing agile DevOps workflows. Change proposals become backlog items, and backlog items become change proposals—keeping everything in sync automatically.
 
-**See also**: [DevOps Adapter Integration Guide](./devops-adapter-integration.md) | [GitHub Adapter Reference](../adapters/github.md) | [Azure DevOps Adapter Reference](../adapters/azuredevops.md) | [Backlog Adapter Patterns](../adapters/backlog-adapter-patterns.md)
+**See also**: [DevOps Adapter Integration Guide](/integrations/devops-adapter-overview/) | [GitHub Adapter Reference](/adapters/github/) | [Azure DevOps Adapter Reference](/adapters/azuredevops/) | [Backlog Adapter Patterns](/adapters/backlog-adapter-patterns/)
 
 ---
 
@@ -212,7 +212,7 @@ SpecFact CLI integrations fall into four main categories:
 
 **Why this matters**: DevOps teams often create backlog items with informal, unstructured descriptions. Backlog refinement helps enforce corporate standards while maintaining lossless synchronization with your backlog tools, enabling seamless integration into agile workflows.
 
-**See also**: [Backlog Refinement Guide](./backlog-refinement.md) | [DevOps Adapter Integration Guide](./devops-adapter-integration.md)
+**See also**: [Backlog Refinement Guide](/bundles/backlog/refinement/) | [DevOps Adapter Integration Guide](/integrations/devops-adapter-overview/)
 
 ---
 
@@ -309,9 +309,9 @@ Start: What do you need?
 | **Spec-Kit** | Interactive spec authoring for new features | `/speckit.specify` | [Spec-Kit Journey](./speckit-journey.md) |
 | **OpenSpec** | Specification anchoring and change tracking | `openspec validate` | [OpenSpec Journey](./openspec-journey.md) |
 | **Specmatic** | API contract testing and validation | `spec validate` | [Specmatic Integration](./specmatic-integration.md) |
-| **Sidecar Validation** 🆕 | Validate external codebases without modifying source | `validate sidecar init/run` | [Sidecar Validation](./sidecar-validation.md) |
-| **DevOps Adapter** | Sync proposals to backlog tools | `sync bridge --adapter github` | [DevOps Integration](./devops-adapter-integration.md) |
-| **Backlog Refinement** 🆕 | Standardize backlog items with templates | `backlog refine github --sprint "Sprint 1"` | [Backlog Refinement](./backlog-refinement.md) |
+| **Sidecar Validation** 🆕 | Validate external codebases without modifying source | `validate sidecar init/run` | [Sidecar Validation](/bundles/codebase/sidecar-validation/) |
+| **DevOps Adapter** | Sync proposals to backlog tools | `sync bridge --adapter github` | [DevOps Integration](/integrations/devops-adapter-overview/) |
+| **Backlog Refinement** 🆕 | Standardize backlog items with templates | `backlog refine github --sprint "Sprint 1"` | [Backlog Refinement](/bundles/backlog/refinement/) |
 | **AI IDE** | AI-assisted development workflows | `init --ide cursor` | [AI IDE Workflow](./ai-ide-workflow.md) |
 
 ---

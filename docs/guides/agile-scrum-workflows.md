@@ -114,16 +114,16 @@ Use the `policy` command group to run deterministic readiness checks before spri
 
 ```bash
 # Validate configured policy rules against a snapshot
-specfact policy validate --repo . --format both
+specfact backlog policy validate --repo . --format both
 
 # Generate confidence-scored, patch-ready suggestions (no automatic writes)
-specfact policy suggest --repo .
+specfact backlog policy suggest --repo .
 ```
 
 Policy configuration is loaded from `.specfact/policy.yaml` and supports Scrum (`dor_required_fields`,
 `dod_required_fields`), Kanban column entry/exit requirements, and SAFe PI readiness fields.
 
-**🆕 NEW: Backlog Refinement Integration** - Use `specfact backlog ceremony refinement` to standardize backlog items from GitHub Issues, Azure DevOps, and other tools into template-compliant format before importing into project bundles. See [Backlog Refinement Guide](backlog-refinement.md) for complete documentation.
+**🆕 NEW: Backlog Refinement Integration** - Use `specfact backlog ceremony refinement` to standardize backlog items from GitHub Issues, Azure DevOps, and other tools into template-compliant format before importing into project bundles. See [Backlog Refinement Guide](/bundles/backlog/refinement/) for complete documentation.
 
 **Tutorial**: For an end-to-end daily standup and sprint review walkthrough (auto-detect repo, view standup, post comment, interactive, Copilot export), see **[Tutorial: Daily Standup and Sprint Review](../getting-started/tutorial-daily-standup-sprint-review.md)**.
 
@@ -136,7 +136,7 @@ Use **`specfact backlog ceremony standup <adapter>`** to list your standup items
 - **GitHub**: When run from a **GitHub** clone (e.g. `https://github.com/owner/repo` or `git@github.com:owner/repo.git`), SpecFact infers `repo_owner` and `repo_name` from `git remote get-url origin`.
 - **Azure DevOps**: When run from an **ADO** clone (e.g. `https://dev.azure.com/org/project/_git/repo`; SSH keys: `git@ssh.dev.azure.com:v3/org/project/repo`; other SSH: `user@dev.azure.com:v3/org/project/repo`), SpecFact infers `org` and `project` from the remote URL.
 
-Override with `.nold-ai/specfact-backlog.yaml`, environment variables (`SPECFACT_GITHUB_REPO_OWNER`, `SPECFACT_ADO_ORG`, etc.), or CLI options when not in the repo or to override. See [Project backlog context](../guides/devops-adapter-integration.md#project-backlog-context-specfactbacklogyaml).
+Override with `.nold-ai/specfact-backlog.yaml`, environment variables (`SPECFACT_GITHUB_REPO_OWNER`, `SPECFACT_ADO_ORG`, etc.), or CLI options when not in the repo or to override. See [Project backlog context](/integrations/devops-adapter-overview/#project-backlog-context-specfactbacklogyaml).
 
 ### End-to-End Example: One Standup Session
 
@@ -643,7 +643,7 @@ rules:
   dependencies: false  # Optional
 ```
 
-**See**: [Backlog Refinement Guide](backlog-refinement.md#definition-of-ready-dor) for DoR validation in backlog refinement workflow.
+**See**: [Backlog Refinement Guide](/bundles/backlog/refinement/#definition-of-ready-dor) for DoR validation in backlog refinement workflow.
 
 ### DoR Checklist
 
@@ -829,7 +829,7 @@ specfact backlog ceremony refinement github --persona product-owner --framework 
 - Filters by sprint, release, iteration for agile workflows
 - Preserves original backlog data for round-trip synchronization
 
-**See**: [Backlog Refinement Guide](backlog-refinement.md) for complete documentation.
+**See**: [Backlog Refinement Guide](/bundles/backlog/refinement/) for complete documentation.
 
 ### Target Sprint Assignment
 

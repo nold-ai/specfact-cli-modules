@@ -11,7 +11,7 @@ SpecFact CLI is a contract-first Python CLI with a production-ready module regis
 ## Current Architecture Status
 
 - Module system is **production-ready** (introduced in `v0.27`) and is the default command-loading path.
-- Architecture commands such as `specfact architecture derive|validate|trace` are **planned** and tracked in OpenSpec change `architecture-01-solution-layer`.
+- An architecture command group is **planned** and tracked in OpenSpec change `architecture-01-solution-layer`; it is not part of the current mounted CLI.
 - Protocol FSM modeling exists in data models; a full runtime FSM engine is still planned.
 
 ## Layer Model
@@ -60,7 +60,7 @@ Common manifest fields:
 - Extension/security optional: `schema_extensions`, `service_bridges`, `publisher`, `integrity`
 
 See also:
-- [Module Development Guide](../guides/module-development.md)
+- [Module Development Guide](/authoring/module-development/)
 - [Module Contracts](module-contracts.md)
 - [Module Security](module-security.md)
 
@@ -78,7 +78,7 @@ Current implementation note:
 
 - Mode **detection is implemented**.
 - Some advanced mode-specific behavior remains roadmap/planned and is tracked in OpenSpec.
-- See [Implementation Status](../architecture/implementation-status.md) for implemented vs planned details.
+- Implemented-vs-planned details are tracked in OpenSpec change `architecture-01-solution-layer`.
 
 ## Adapter Architecture
 
@@ -109,7 +109,7 @@ All adapters implement:
 `BridgeProbe`/sync flows use detection and capabilities to select adapters and choose sync behavior safely.
 
 See also:
-- [Adapter Development Guide](../guides/adapter-development.md)
+- [Adapter Development Guide](/authoring/adapter-development/)
 - [Bridge Registry](bridge-registry.md)
 
 ## Change Tracking and Protocol Scope
@@ -120,7 +120,6 @@ See also:
 
 Status and roadmap references:
 
-- [Implementation Status](../architecture/implementation-status.md)
 - OpenSpec change `architecture-01-solution-layer`
 
 ## Error Handling Conventions
@@ -155,11 +154,10 @@ Use `ProjectBundle` for current architecture descriptions unless explicitly disc
 
 ## Architecture Decisions
 
-- ADR index: [Architecture ADRs](../architecture/adr/README.md)
-- Initial ADR: [ADR-0001 Module-First Architecture](../architecture/adr/0001-module-first-architecture.md)
+Formal ADR pages are not yet published on the modules docs site. The current architecture baseline and planned follow-up work are tracked in OpenSpec change `architecture-01-solution-layer`.
 
 ## Related Docs
 
-- [Architecture Docs Index](../architecture/README.md)
-- [Implementation Status](../architecture/implementation-status.md)
 - [Directory Structure](directory-structure.md)
+- [Module Development Guide](/authoring/module-development/)
+- [Adapter Development Guide](/authoring/adapter-development/)

@@ -493,7 +493,7 @@ specfact --version
 
 # Get help
 specfact --help
-specfact <command> --help
+specfact project --help
 
 # Inspect currently mounted project workflows
 specfact project --help
@@ -535,4 +535,4 @@ hatch run format
 hatch run lint
 ```
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for detailed contribution guidelines.
+See the [repository contributing guide](https://github.com/nold-ai/specfact-cli-modules/blob/dev/CONTRIBUTING.md) for detailed contribution guidelines.

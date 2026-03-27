@@ -352,7 +352,7 @@ OpenSpec focuses on specification anchoring and change tracking, while SpecFact 
 
 1. **[Brownfield Engineer Guide](brownfield-engineer.md)** - Complete modernization workflow
 2. **[Spec-Kit Journey](speckit-journey.md)** - Migration from Spec-Kit
-3. **[Examples](../examples/)** - Real-world examples
+3. **[Brownfield examples](/guides/brownfield-examples/)** - Real-world examples
 
 ---
 

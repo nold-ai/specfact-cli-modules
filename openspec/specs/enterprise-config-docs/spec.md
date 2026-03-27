@@ -1,6 +1,6 @@
 # ADDED Requirements
 
-### Requirement: Enterprise configuration docs SHALL cover profiles, overlays, and multi-repo policy
+## Requirement: Enterprise configuration docs SHALL cover profiles, overlays, and multi-repo policy
 
 Enterprise guidance SHALL explain custom profiles, domain overlays, central configuration, and multi-repo operations using supported commands.
 
