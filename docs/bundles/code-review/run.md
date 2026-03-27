@@ -19,7 +19,7 @@ redirect_from:
 
 | Option | Purpose |
 |--------|---------|
-| `--scope changed|full` | Review changed files or the full repository when no positional files are provided |
+| `--scope changed\|full` | Review changed files or the full repository when no positional files are provided |
 | `--path <prefix>` | Narrow auto-discovered review files to one or more repo-relative prefixes |
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
 | `--include-noise`, `--suppress-noise` | Keep or suppress known low-signal findings |

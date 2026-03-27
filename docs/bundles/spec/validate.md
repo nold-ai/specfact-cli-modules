@@ -54,6 +54,6 @@ Validation itself does not depend on exported IDE prompts, but the contract work
 
 ## Related
 
-- [Spec bundle overview](overview/)
-- [Generate Specmatic tests](generate-tests/)
-- [Run a mock server](mock/)
+- [Spec bundle overview](/bundles/spec/overview/)
+- [Generate Specmatic tests](/bundles/spec/generate-tests/)
+- [Run a mock server](/bundles/spec/mock/)

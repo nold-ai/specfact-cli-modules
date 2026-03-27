@@ -22,7 +22,7 @@ Use the stage command to set the default enforcement preset for the current work
 
 | Option | Purpose |
 |--------|---------|
-| `--preset <minimal|balanced|strict>` | Select the saved enforcement mode |
+| `--preset <minimal\|balanced\|strict>` | Select the saved enforcement mode |
 
 Examples:
 
@@ -39,7 +39,7 @@ Use the SDD command to validate bundle state, SDD thresholds, and frozen section
 | Option | Purpose |
 |--------|---------|
 | `--sdd <path>` | Point to a non-default SDD manifest |
-| `--output-format <yaml|json|markdown>` | Choose the report format |
+| `--output-format <yaml\|json\|markdown>` | Choose the report format |
 | `--out <path>` | Write the validation report to a specific location |
 | `--no-interactive` | Disable interactive prompts for CI/CD |
 

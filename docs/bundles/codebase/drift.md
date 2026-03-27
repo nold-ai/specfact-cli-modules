@@ -20,7 +20,7 @@ redirect_from:
 | Option | Purpose |
 |--------|---------|
 | `--repo <path>` | Select the repository to scan |
-| `--format <table|json|yaml>` | Choose the report format |
+| `--format <table\|json\|yaml>` | Choose the report format |
 | `--out <path>` | Write JSON or YAML output to a file |
 
 ## What it checks

@@ -7,7 +7,7 @@ permalink: /bundles/spec/overview/
 
 # Spec bundle overview
 
-The **Spec** bundle (`nold-ai/specfact-spec`) mounts under the **`specfact spec`** command group. That group aggregates **OpenAPI contract lifecycle** commands, **Specmatic** integration (mounted as the `api` subgroup), **SDD** manifest utilities, and **generate** workflows for contracts and prompts.
+The **Spec** bundle (`nold-ai/specfact-spec`) mounts under the **`specfact spec`** command group. That group exposes **Specmatic-backed contract validation** commands, **SDD** manifest utilities, and **generate** workflows for contracts and prompts.
 
 Install the bundle, then confirm the mounted tree with `specfact spec --help`.
 
@@ -16,22 +16,11 @@ Install the bundle, then confirm the mounted tree with `specfact spec --help`.
 - `specfact module install nold-ai/specfact-spec`
 - Optional tooling per workflow (Specmatic, OpenAPI files, etc.)
 
-## `specfact spec contract` — OpenAPI contracts
+## `specfact spec` — Specmatic commands
 
 | Command | Purpose |
 |--------|---------|
-| `init` | Initialize contract artifacts for a bundle |
-| `validate` | Validate OpenAPI/AsyncAPI specs |
-| `coverage` | Report contract coverage signals |
-| `serve` | Serve specs for local testing |
-| `verify` | Verify contract consistency |
-| `test` | Run contract-oriented tests |
-
-## `specfact spec api` — Specmatic (API spec testing)
-
-| Command | Purpose |
-|--------|---------|
-| `validate` | Validate specs via Specmatic |
+| `validate` | Validate OpenAPI/AsyncAPI specs via Specmatic |
 | `backward-compat` | Compare two spec versions for compatibility |
 | `generate-tests` | Generate Specmatic test suites |
 | `mock` | Run a Specmatic mock server |
@@ -68,8 +57,10 @@ Generate and contract flows emit **prompts** shipped with the bundle. They are *
 
 ```bash
 specfact spec --help
-specfact spec contract validate --help
-specfact spec api validate --help
+specfact spec validate --help
+specfact spec backward-compat --help
+specfact spec generate-tests --help
+specfact spec mock --help
 specfact spec sdd list --repo .
 specfact spec sdd constitution validate --help
 specfact spec generate contracts --help
