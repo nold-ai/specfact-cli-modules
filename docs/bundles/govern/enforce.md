@@ -32,7 +32,7 @@ specfact govern enforce stage --preset strict
 specfact govern enforce stage --preset minimal
 ```
 
-## `specfact govern enforce sdd`
+## `specfact govern enforce sdd [BUNDLE]`
 
 Use the SDD command to validate bundle state, SDD thresholds, and frozen sections before promotion or release.
 
