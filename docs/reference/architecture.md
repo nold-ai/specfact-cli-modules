@@ -11,7 +11,7 @@ SpecFact CLI is a contract-first Python CLI with a production-ready module regis
 ## Current Architecture Status
 
 - Module system is **production-ready** (introduced in `v0.27`) and is the default command-loading path.
-- Architecture commands such as `specfact architecture derive|validate|trace` are **planned** and tracked in OpenSpec change `architecture-01-solution-layer`.
+- An architecture command group is **planned** and tracked in OpenSpec change `architecture-01-solution-layer`; it is not part of the current mounted CLI.
 - Protocol FSM modeling exists in data models; a full runtime FSM engine is still planned.
 
 ## Layer Model

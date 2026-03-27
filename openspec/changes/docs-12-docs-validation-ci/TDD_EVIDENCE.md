@@ -23,6 +23,41 @@ docs/bundles/backlog/refinement.md:788: [legacy-resource] Legacy core-owned reso
 
 This captured the initial failing state before the validator and docs fixes were completed.
 
+### 0.1 Repo-wide failing command audit after matcher fix
+
+Pre-cleanup audit run from `2026-03-28T00:03:00+01:00`:
+
+```bash
+python3 - <<'PY'
+from pathlib import Path
+import importlib.util
+repo = Path('.').resolve()
+path = repo / 'scripts' / 'check-docs-commands.py'
+spec = importlib.util.spec_from_file_location('check_docs_commands', path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+paths = sorted(p.resolve() for p in (repo / 'docs').rglob('*.md'))
+valid = mod._build_valid_command_paths()
+findings = mod._validate_command_examples(paths, valid)
+for finding in findings[:300]:
+    rel = finding.source.relative_to(repo)
+    print(f"{rel}:{finding.line_number}: {finding.message}")
+print(f"TOTAL_FINDINGS={len(findings)}")
+PY
+```
+
+Failing excerpt:
+
+```text
+docs/getting-started/README.md:48: Unknown command example: specfact validate ...
+docs/guides/agile-scrum-workflows.md:117: Unknown command example: specfact policy validate --repo . --format both
+docs/integrations/devops-adapter-overview.md:23: Unknown command example: specfact policy validate --repo . --format both
+docs/reference/architecture.md:14: Unknown command example: specfact architecture derive|validate|trace
+TOTAL_FINDINGS=39
+```
+
+This exposed the remaining stale former command references outside the original bundle-only validation scope.
+
 ### 1. Validator passes after docs fixes
 
 Passing run from `2026-03-27T23:19:08+01:00`:
@@ -37,7 +72,7 @@ Passing excerpt:
 Docs command validation passed with no findings.
 ```
 
-This verifies the scripted checks for implemented command examples, stale core-owned resource paths, and allowed `docs.specfact.io` cross-site URLs all pass after the docs fixes.
+This verifies the scripted checks for implemented command examples, stale core-owned resource paths, and allowed `docs.specfact.io` cross-site URLs all pass after the initial docs fixes.
 
 ### 2. Script unit coverage
 
@@ -51,10 +86,10 @@ Passing excerpt:
 
 ```text
 .....                                                                    [100%]
-5 passed in 0.08s
+6 passed in 0.31s
 ```
 
-This covers command extraction, command matching, stale legacy resource detection, cross-site link validation, and docs workflow integration.
+This covers command extraction, command matching, repo-wide docs target discovery, stale legacy resource detection, cross-site link validation, and docs workflow integration.
 
 ### 3. Docs review plus validator regression coverage
 
@@ -100,6 +135,37 @@ The docs review workflow now includes the validator script and its tests:
 ```
 
 This, together with the passing local validator and docs test runs above, provides the end-to-end evidence for the workflow path required by task 5.3.
+
+### 5.1 Repo-wide published docs command audit passes
+
+Passing audit run from `2026-03-28T00:07:33+01:00`:
+
+```bash
+python3 - <<'PY'
+from pathlib import Path
+import importlib.util
+repo = Path('.').resolve()
+path = repo / 'scripts' / 'check-docs-commands.py'
+spec = importlib.util.spec_from_file_location('check_docs_commands', path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+paths = mod._iter_validation_docs_paths()
+valid = mod._build_valid_command_paths()
+findings = mod._validate_command_examples(paths, valid)
+for finding in findings[:300]:
+    rel = finding.source.relative_to(repo)
+    print(f"{rel}:{finding.line_number}: {finding.message}")
+print(f"TOTAL_FINDINGS={len(findings)}")
+PY
+```
+
+Passing excerpt:
+
+```text
+TOTAL_FINDINGS=0
+```
+
+This verifies the widened validator catches and clears stale former command references across published module docs, not only bundle reference pages.
 
 ### 6. Full repository quality gates
 

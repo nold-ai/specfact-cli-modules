@@ -6,7 +6,7 @@ Documentation command examples can drift from actual module implementations. Cro
 
 ## What Changes
 
-- Add a script that extracts command registrations from all `packages/*/src/**/commands.py` and compares against command examples in `docs/bundles/`
+- Add a script that extracts command registrations from all `packages/*/src/**/commands.py` and compares against command examples across published module docs under `docs/`
 - Add cross-site link validation for links from modules docs to core docs
 - Add checks that docs do not point users at legacy core-owned prompt/template paths when those resources are bundle-owned
 - Integrate into CI workflow

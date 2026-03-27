@@ -37,10 +37,6 @@ LEGACY_RESOURCE_PATH_SNIPPETS = (
     "src/specfact_cli/prompts",
     "src/specfact_cli/templates",
 )
-DOCS_VALIDATION_TARGETS = (
-    DOCS_ROOT / "reference" / "commands.md",
-    DOCS_ROOT / "bundles",
-)
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "docs-review.yml"
 MARKDOWN_CODE_RE = re.compile(r"`([^`\n]*specfact [^`\n]*)`")
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
@@ -92,13 +88,7 @@ def _ensure_package_paths() -> None:
 
 
 def _iter_validation_docs_paths() -> list[Path]:
-    paths: list[Path] = []
-    for target in DOCS_VALIDATION_TARGETS:
-        if target.is_file():
-            paths.append(target)
-            continue
-        paths.extend(sorted(target.rglob("*.md")))
-    return sorted(path.resolve() for path in paths)
+    return sorted(path.resolve() for path in DOCS_ROOT.rglob("*.md"))
 
 
 def _iter_bash_examples(text: str, source: Path) -> list[CommandExample]:
@@ -106,10 +96,10 @@ def _iter_bash_examples(text: str, source: Path) -> list[CommandExample]:
     in_bash_block = False
     for line_number, raw_line in enumerate(text.splitlines(), start=1):
         stripped = raw_line.strip()
-        if stripped == "```bash":
+        if stripped.startswith("```bash"):
             in_bash_block = True
             continue
-        if stripped == "```":
+        if in_bash_block and stripped.startswith("```"):
             in_bash_block = False
             continue
         if in_bash_block and stripped.startswith("specfact "):
@@ -136,6 +126,10 @@ def _extract_command_examples(path: Path) -> list[CommandExample]:
         seen.add(key)
         examples.append(example)
     return examples
+
+
+def _load_docs_texts(paths: list[Path]) -> dict[Path, str]:
+    return {path: path.read_text(encoding="utf-8") for path in paths}
 
 
 def _normalize_command_text(command_text: str) -> list[str]:
@@ -171,14 +165,23 @@ def _command_example_is_valid(command_text: str, valid_paths: set[CommandPath]) 
     tokens = _normalize_command_text(command_text)
     if not tokens or tokens[0] != "specfact":
         return True
+    if len(tokens) == 1:
+        return ("specfact",) in valid_paths
+    if tokens[1].startswith("-"):
+        return ("specfact",) in valid_paths
     prefixes = (tuple(tokens[:length]) for length in range(len(tokens), 0, -1))
-    return any(prefix in valid_paths for prefix in prefixes)
+    return any(prefix in valid_paths for prefix in prefixes if len(prefix) > 1)
 
 
-def _validate_command_examples(paths: list[Path], valid_paths: set[CommandPath]) -> list[ValidationFinding]:
+def _validate_command_examples(text_by_path: dict[Path, str], valid_paths: set[CommandPath]) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
-    for path in paths:
-        for example in _extract_command_examples(path):
+    for path, text in text_by_path.items():
+        seen: set[tuple[int, str]] = set()
+        for example in [*_iter_bash_examples(text, path), *_iter_inline_examples(text, path)]:
+            key = (example.line_number, example.text)
+            if key in seen:
+                continue
+            seen.add(key)
             if _command_example_is_valid(example.text, valid_paths):
                 continue
             findings.append(
@@ -192,10 +195,9 @@ def _validate_command_examples(paths: list[Path], valid_paths: set[CommandPath])
     return findings
 
 
-def _validate_legacy_resource_paths(paths: list[Path]) -> list[ValidationFinding]:
+def _validate_legacy_resource_paths(text_by_path: dict[Path, str]) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
-    for path in paths:
-        text = path.read_text(encoding="utf-8")
+    for path, text in text_by_path.items():
         for line_number, raw_line in enumerate(text.splitlines(), start=1):
             for snippet in LEGACY_RESOURCE_PATH_SNIPPETS:
                 if snippet not in raw_line:
@@ -230,10 +232,9 @@ def _iter_core_docs_urls_from_text(text: str) -> list[str]:
     return urls
 
 
-def _validate_core_docs_links(paths: list[Path]) -> list[ValidationFinding]:
+def _validate_core_docs_links(text_by_path: dict[Path, str]) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
-    for path in paths:
-        text = path.read_text(encoding="utf-8")
+    for path, text in text_by_path.items():
         for line_number, raw_line in enumerate(text.splitlines(), start=1):
             for url in _iter_core_docs_urls_from_text(raw_line):
                 route = _normalize_core_docs_route(url)
@@ -278,11 +279,12 @@ def _format_findings(findings: list[ValidationFinding]) -> str:
 
 def _main() -> int:
     docs_paths = _iter_validation_docs_paths()
+    text_by_path = _load_docs_texts(docs_paths)
     valid_paths = _build_valid_command_paths()
     findings = [
-        *_validate_command_examples(docs_paths, valid_paths),
-        *_validate_legacy_resource_paths(docs_paths),
-        *_validate_core_docs_links(docs_paths),
+        *_validate_command_examples(text_by_path, valid_paths),
+        *_validate_legacy_resource_paths(text_by_path),
+        *_validate_core_docs_links(text_by_path),
         *_validate_core_docs_config(DOCS_ROOT / "_config.yml"),
     ]
     if findings:

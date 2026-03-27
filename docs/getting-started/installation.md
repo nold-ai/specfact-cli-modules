@@ -493,7 +493,7 @@ specfact --version
 
 # Get help
 specfact --help
-specfact <command> --help
+specfact project --help
 
 # Inspect currently mounted project workflows
 specfact project --help

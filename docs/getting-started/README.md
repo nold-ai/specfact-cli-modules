@@ -45,11 +45,10 @@ specfact project --help
 
 Flat root commands were removed. Use the mounted grouped command forms:
 
-- `specfact validate ...` -> `specfact code validate ...`
-- `specfact code repro ...` -> `specfact code repro ...`
-- `specfact sync ...` -> `specfact project sync ...`
-- `specfact govern enforce ...` -> `specfact govern enforce ...`
-- `specfact policy ...` -> `specfact backlog policy ...`
+- root-level `validate` moved under `specfact code validate ...`
+- root-level `sync` moved under `specfact project sync ...`
+- root-level policy actions moved under `specfact backlog policy ...`
+- grouped command surfaces such as `specfact code repro ...` and `specfact govern enforce ...` remain current
 
 First-run bundle selection examples:
 
