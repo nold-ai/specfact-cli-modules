@@ -3,6 +3,9 @@ layout: default
 title: Tutorial - Daily Standup and Sprint Review with SpecFact CLI
 description: End-to-end daily standup and sprint review using specfact backlog ceremony standup. Auto-detect repo from git (GitHub or Azure DevOps), view standup table, post standup comments, use interactive mode and Copilot export.
 permalink: /getting-started/tutorial-daily-standup-sprint-review/
+keywords: [tutorial, standup, sprint-review, daily, ceremony]
+audience: [solo, team, enterprise]
+expertise_level: [beginner]
 ---
 
 # Tutorial: Daily Standup and Sprint Review with SpecFact CLI

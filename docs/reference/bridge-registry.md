@@ -2,6 +2,9 @@
 layout: default
 title: Bridge Registry
 permalink: /reference/bridge-registry/
+keywords: [bridge, registry, adapters, lookup, resolution]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Bridge Registry

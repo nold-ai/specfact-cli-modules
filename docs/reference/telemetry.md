@@ -2,6 +2,9 @@
 layout: default
 title: Privacy-First Telemetry
 permalink: /reference/telemetry/
+keywords: [telemetry, privacy, analytics, opt-out, data]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Privacy-First Telemetry (Optional)

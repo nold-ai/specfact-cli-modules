@@ -3,6 +3,9 @@ layout: default
 title: Module Marketplace
 permalink: /guides/module-marketplace/
 description: Registry model, discovery priority, trust semantics, and security checks for SpecFact modules.
+keywords: [module, marketplace, registry, discovery, trust]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Module Marketplace

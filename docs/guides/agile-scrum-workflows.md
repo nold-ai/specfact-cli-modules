@@ -2,6 +2,9 @@
 layout: default
 title: Agile/Scrum Workflows with SpecFact CLI
 permalink: /guides/agile-scrum-workflows/
+keywords: [agile, scrum, workflow, ceremony, sprint]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Agile/Scrum Workflows with SpecFact CLI

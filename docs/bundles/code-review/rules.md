@@ -5,6 +5,9 @@ nav_order: 5
 permalink: /bundles/code-review/rules/
 redirect_from:
   - /guides/code-review-rules/
+keywords: [code-review, rules, configuration, linting, quality]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Code review rules

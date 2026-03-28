@@ -4,6 +4,9 @@ title: Backlog Refinement Guide
 permalink: /bundles/backlog/refinement/
 redirect_from:
   - /guides/backlog-refinement/
+keywords: [backlog, refinement, ceremony, sprint, agile]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Backlog Refinement Guide

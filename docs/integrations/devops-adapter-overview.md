@@ -4,6 +4,9 @@ title: DevOps Adapter Integration Guide
 permalink: /integrations/devops-adapter-overview/
 redirect_from:
   - /guides/devops-adapter-integration/
+keywords: [devops, adapter, integration, overview, pipeline]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # DevOps Adapter Integration Guide
@@ -1412,7 +1415,7 @@ Verify `openspec/changes/<change-id>/proposal.md` was updated:
 
 ### Related Examples
 
-- [DevOps Integration Examples](../examples/) <!-- TODO: examples directory does not exist yet -->
+- [Daily DevOps Routine](/guides/daily-devops-routine/) - DevOps workflow examples
 
 ### Architecture & Troubleshooting
 

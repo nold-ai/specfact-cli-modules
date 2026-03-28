@@ -3,6 +3,9 @@ layout: default
 title: Project bundle overview
 nav_order: 2
 permalink: /bundles/project/overview/
+keywords: [project, bundle, overview, management, configuration]
+audience: [solo, team, enterprise]
+expertise_level: [beginner, intermediate]
 ---
 
 # Project bundle overview

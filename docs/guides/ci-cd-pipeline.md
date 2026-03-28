@@ -2,6 +2,9 @@
 layout: default
 title: CI/CD Pipeline
 permalink: /guides/ci-cd-pipeline/
+keywords: [ci-cd, pipeline, automation, gates, quality]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # CI/CD Pipeline

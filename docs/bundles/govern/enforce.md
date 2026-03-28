@@ -5,6 +5,9 @@ nav_order: 3
 permalink: /bundles/govern/enforce/
 redirect_from:
   - /guides/govern-enforce/
+keywords: [govern, enforce, policy, compliance, rules]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Govern enforce

@@ -2,6 +2,9 @@
 layout: default
 title: Command Reference
 permalink: /reference/commands/
+keywords: [commands, reference, cli, syntax, usage]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Command Reference

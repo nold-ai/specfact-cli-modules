@@ -5,6 +5,9 @@ permalink: /authoring/module-signing/
 redirect_from:
   - /guides/module-signing-and-key-rotation/
 description: Runbook for signing bundled modules, placing public keys, rotating keys, and revoking compromised keys.
+keywords: [signing, security, verification, trust, modules]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Module Signing and Key Rotation

@@ -4,6 +4,9 @@ title: Import Command Features
 permalink: /bundles/project/import-migration/
 redirect_from:
   - /guides/import-features/
+keywords: [import, migration, project, onboarding, legacy]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Import Command Features
@@ -239,9 +242,8 @@ If import is interrupted:
 ## Related Documentation
 
 - [Command Reference](/reference/commands/#import-from-code) - Complete command documentation
-- [Quick Examples](../examples/quick-examples.md) - Quick command examples <!-- TODO: target file does not exist yet -->
-- [Brownfield Engineer Guide](/brownfield-engineer/) - Complete brownfield workflow
-- [Common Tasks](/common-tasks/) - Common import scenarios
+- [Brownfield Modernization](/guides/brownfield-modernization/) - Complete brownfield workflow
+- [First Steps](/getting-started/first-steps/) - Common command examples
 
 ---
 

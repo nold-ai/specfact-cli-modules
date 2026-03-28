@@ -2,6 +2,9 @@
 layout: default
 title: Azure DevOps Adapter
 permalink: /adapters/azuredevops/
+keywords: [azure-devops, adapter, integration, devops, work-items]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # Azure DevOps Adapter

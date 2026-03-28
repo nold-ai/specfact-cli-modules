@@ -4,6 +4,9 @@ title: Backlog Delta Commands
 permalink: /bundles/backlog/delta/
 redirect_from:
   - /guides/backlog-delta-commands/
+keywords: [backlog, delta, commands, diff, changes]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Backlog Delta Commands

@@ -3,6 +3,9 @@ layout: default
 title: Dependency resolution
 permalink: /reference/dependency-resolution/
 description: How SpecFact resolves module and pip dependencies before install and how to bypass or override.
+keywords: [dependency, resolution, modules, pip, install]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Dependency resolution

@@ -3,6 +3,9 @@ layout: default
 title: Command Syntax Policy
 permalink: /reference/command-syntax-policy/
 description: Source-of-truth policy for documenting SpecFact CLI command argument syntax.
+keywords: [command-syntax, policy, documentation, arguments, conventions]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Command Syntax Policy

@@ -2,6 +2,9 @@
 layout: default
 title: Specmatic API Reference
 permalink: /reference/specmatic/
+keywords: [specmatic, api, reference, contract-testing, validation]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Specmatic API Reference

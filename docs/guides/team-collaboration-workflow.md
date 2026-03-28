@@ -4,6 +4,9 @@ title: Team Collaboration Workflow
 permalink: /team-collaboration-workflow/
 redirect_from:
   - /guides/team-collaboration-workflow/
+keywords: [team, collaboration, workflow, personas, sharing]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Team Collaboration Workflow

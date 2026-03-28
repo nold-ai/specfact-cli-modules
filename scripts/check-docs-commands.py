@@ -41,6 +41,7 @@ WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "docs-review.yml"
 MARKDOWN_CODE_RE = re.compile(r"`([^`\n]*specfact [^`\n]*)`")
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 HTML_HREF_RE = re.compile(r'href="([^"]+)"')
+YAML_FRONT_MATTER_DELIMITER = "---"
 
 
 CommandPath = tuple[str, ...]
@@ -88,7 +89,14 @@ def _ensure_package_paths() -> None:
 
 
 def _iter_validation_docs_paths() -> list[Path]:
-    return sorted(path.resolve() for path in DOCS_ROOT.rglob("*.md"))
+    paths: list[Path] = []
+    excluded_parts = {"_site", "vendor"}
+    for path in sorted(DOCS_ROOT.rglob("*.md")):
+        relative_parts = path.relative_to(DOCS_ROOT).parts
+        if any(part in excluded_parts for part in relative_parts):
+            continue
+        paths.append(path.resolve())
+    return paths
 
 
 def _iter_bash_examples(text: str, source: Path) -> list[CommandExample]:
@@ -130,6 +138,19 @@ def _extract_command_examples(path: Path) -> list[CommandExample]:
 
 def _load_docs_texts(paths: list[Path]) -> dict[Path, str]:
     return {path: path.read_text(encoding="utf-8") for path in paths}
+
+
+def _extract_front_matter(text: str) -> dict[str, object]:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != YAML_FRONT_MATTER_DELIMITER:
+        return {}
+
+    for index in range(1, len(lines)):
+        if lines[index].strip() != YAML_FRONT_MATTER_DELIMITER:
+            continue
+        data = yaml.safe_load("\n".join(lines[1:index])) or {}
+        return data if isinstance(data, dict) else {}
+    return {}
 
 
 def _normalize_command_text(command_text: str) -> list[str]:
@@ -270,6 +291,91 @@ def _validate_core_docs_config(config_path: Path) -> list[ValidationFinding]:
     return findings
 
 
+def _normalize_docs_route(route: str) -> str | None:
+    normalized = route.strip()
+    if not normalized or normalized.startswith(("http://", "https://", "#")):
+        return None
+    if not normalized.startswith("/"):
+        normalized = f"/{normalized}"
+    if normalized != "/" and not normalized.endswith("/"):
+        normalized += "/"
+    return normalized
+
+
+def _route_for_doc(path: Path, text: str) -> str:
+    front_matter = _extract_front_matter(text)
+    permalink = front_matter.get("permalink")
+    if isinstance(permalink, str):
+        normalized = _normalize_docs_route(permalink)
+        if normalized is not None:
+            return normalized
+
+    relative_path = path.relative_to(DOCS_ROOT)
+    if relative_path.name == "index.md":
+        parent = relative_path.parent
+        return "/" if str(parent) == "." else f"/{'/'.join(parent.parts)}/"
+    if relative_path.name.lower() == "readme.md":
+        parent = relative_path.parent
+        return "/" if str(parent) == "." else f"/{'/'.join(parent.parts)}/"
+    path_no_ext = relative_path.with_suffix("")
+    if str(path_no_ext.parent) == ".":
+        return f"/{path_no_ext.name}/" if path_no_ext.name else "/"
+    return f"/{'/'.join(path_no_ext.parts)}/"
+
+
+def _build_valid_docs_routes(text_by_path: dict[Path, str]) -> set[str]:
+    return {_route_for_doc(path, text) for path, text in text_by_path.items()}
+
+
+def _iter_yaml_url_nodes(node: yaml.Node | None) -> list[tuple[str, int]]:
+    if node is None:
+        return []
+
+    found: list[tuple[str, int]] = []
+    if isinstance(node, yaml.MappingNode):
+        for key_node, value_node in node.value:
+            if getattr(key_node, "value", None) == "url" and isinstance(value_node, yaml.ScalarNode):
+                found.append((value_node.value, value_node.start_mark.line + 1))
+            found.extend(_iter_yaml_url_nodes(value_node))
+    elif isinstance(node, yaml.SequenceNode):
+        for child in node.value:
+            found.extend(_iter_yaml_url_nodes(child))
+    return found
+
+
+def _validate_nav_data_links(nav_path: Path, valid_routes: set[str]) -> list[ValidationFinding]:
+    findings: list[ValidationFinding] = []
+    raw_text = nav_path.read_text(encoding="utf-8")
+    try:
+        nav_node = yaml.compose(raw_text)
+    except yaml.YAMLError as exc:
+        line_number = 1
+        if hasattr(exc, "problem_mark") and exc.problem_mark is not None:
+            line_number = exc.problem_mark.line + 1
+        findings.append(
+            ValidationFinding(
+                category="nav-parse",
+                source=nav_path,
+                line_number=line_number,
+                message=f"Failed to parse navigation data: {exc}",
+            )
+        )
+        return findings
+    for raw_url, line_number in _iter_yaml_url_nodes(nav_node):
+        normalized = _normalize_docs_route(raw_url)
+        if normalized is None or normalized in valid_routes:
+            continue
+        findings.append(
+            ValidationFinding(
+                category="nav-link",
+                source=nav_path,
+                line_number=line_number,
+                message=f"Navigation URL does not resolve to an existing page: {raw_url}",
+            )
+        )
+    return findings
+
+
 def _format_findings(findings: list[ValidationFinding]) -> str:
     return "\n".join(
         f"{_script_name(finding.source)}:{finding.line_number}: [{finding.category}] {finding.message}"
@@ -281,11 +387,13 @@ def _main() -> int:
     docs_paths = _iter_validation_docs_paths()
     text_by_path = _load_docs_texts(docs_paths)
     valid_paths = _build_valid_command_paths()
+    valid_routes = _build_valid_docs_routes(text_by_path)
     findings = [
         *_validate_command_examples(text_by_path, valid_paths),
         *_validate_legacy_resource_paths(text_by_path),
         *_validate_core_docs_links(text_by_path),
         *_validate_core_docs_config(DOCS_ROOT / "_config.yml"),
+        *_validate_nav_data_links(DOCS_ROOT / "_data" / "nav.yml", valid_routes),
     ]
     if findings:
         sys.stdout.write(_format_findings(findings) + "\n")

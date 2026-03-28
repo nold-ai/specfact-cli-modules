@@ -5,6 +5,9 @@ nav_order: 4
 permalink: /bundles/spec/generate-tests/
 redirect_from:
   - /guides/spec-generate-tests/
+keywords: [spec, generate-tests, testing, contract, automation]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Spec generate-tests

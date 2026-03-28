@@ -4,6 +4,9 @@ title: Team Collaboration Setup
 permalink: /team-and-enterprise/team-collaboration/
 redirect_from:
   - /guides/team-collaboration-workflow/
+keywords: [team, collaboration, sharing, personas, workflow]
+audience: [team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # Team Collaboration Setup

@@ -60,6 +60,7 @@ Cross-repo dependency: `docs-06-modules-site-ia-restructure` is a prerequisite f
 | docs | 10 | docs-10-workflow-consolidation | [#98](https://github.com/nold-ai/specfact-cli-modules/issues/98) | docs-06-modules-site-ia-restructure |
 | docs | 11 | docs-11-team-enterprise-tier | [#99](https://github.com/nold-ai/specfact-cli-modules/issues/99) | docs-06-modules-site-ia-restructure |
 | docs | 12 | docs-12-docs-validation-ci | [#100](https://github.com/nold-ai/specfact-cli-modules/issues/100) | docs-06 through docs-10; specfact-cli/docs-12-docs-validation-ci |
+| docs | 13 | docs-13-nav-search-theme-roles | [#123](https://github.com/nold-ai/specfact-cli-modules/issues/123) | docs-06 through docs-12 (fixes navigation gaps left by prior changes; adds search, theme toggle, and role-based navigation) |
 
 ### Spec-Kit v0.4.x change proposal bridge (spec-kit integration review, 2026-03-27)
 

@@ -2,6 +2,9 @@
 layout: default
 title: Daily DevOps Routine
 permalink: /guides/daily-devops-routine/
+keywords: [daily, devops, routine, standup, workflow]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Daily DevOps Routine

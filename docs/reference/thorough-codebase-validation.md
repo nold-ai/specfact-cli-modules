@@ -3,6 +3,9 @@ layout: default
 title: Thorough Codebase Validation
 permalink: /reference/thorough-codebase-validation/
 description: How to run in-depth validation (quick check, contract-decorated, sidecar, dogfooding).
+keywords: [validation, codebase, thorough, contract, dogfooding]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Thorough Codebase Validation

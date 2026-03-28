@@ -2,6 +2,9 @@
 layout: default
 title: Architecture
 permalink: /architecture/
+keywords: [architecture, design, modules, runtime, structure]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Architecture

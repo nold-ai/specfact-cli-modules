@@ -2,6 +2,9 @@
 layout: default
 title: Brownfield Modernization
 permalink: /guides/brownfield-modernization/
+keywords: [brownfield, modernization, legacy, migration, code]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Brownfield Modernization

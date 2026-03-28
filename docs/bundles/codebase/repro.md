@@ -5,6 +5,9 @@ nav_order: 5
 permalink: /bundles/codebase/repro/
 redirect_from:
   - /guides/code-repro/
+keywords: [repro, codebase, reproduction, debugging, validation]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Code repro

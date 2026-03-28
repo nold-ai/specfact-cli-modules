@@ -4,6 +4,9 @@ title: Testing Terminal Output Modes
 permalink: /testing-terminal-output/
 redirect_from:
   - /guides/testing-terminal-output/
+keywords: [testing, terminal, output, modes, formatting]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Testing Terminal Output Modes
