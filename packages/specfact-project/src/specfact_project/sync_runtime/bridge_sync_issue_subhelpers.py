@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import logging
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -102,8 +103,13 @@ def uicn_fetch_title_state_flags(
         ):
             _t, _s, nt, ns = uicn_ado_title_state(adapter_instance, issue_num, ado_org, ado_project, proposal)
             return nt, ns
-    except Exception:
-        pass
+    except Exception as e:
+        logging.getLogger(__name__).warning(
+            "uicn_fetch_title_state_flags failed for adapter_type=%s, issue_num=%s: %s",
+            adapter_type,
+            issue_num,
+            e,
+        )
     return False, False
 
 

@@ -39,9 +39,11 @@ def _maybe_enrich_entry_source_repo(entry: dict[str, Any]) -> None:
     try:
         parsed = urlparse(source_url)
         if parsed.hostname and parsed.hostname.lower() == "dev.azure.com":
-            pass
-    except Exception:
-        pass
+            # Placeholder for potential future Azure DevOps URL handling.
+            return
+    except Exception as exc:
+        logger = logging.getLogger(__name__)
+        logger.debug("Failed to parse source_url '%s' for source_repo enrichment: %s", source_url, exc)
 
 
 def parse_source_tracking_entries(

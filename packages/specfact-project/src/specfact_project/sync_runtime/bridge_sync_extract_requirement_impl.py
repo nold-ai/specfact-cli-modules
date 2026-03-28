@@ -485,11 +485,11 @@ def run_extract_requirement_from_proposal(bridge: Any, proposal: Any, spec_id: s
     requirement_index = 0
     formatted_sections = erfp_parse_formatted_sections(description)
     if formatted_sections:
-        requirement_index = _erfp_fill_from_formatted_sections(
+        _erfp_fill_from_formatted_sections(
             bridge, proposal, spec_id, formatted_sections, seen_sections, requirement_lines, requirement_index
         )
     else:
-        requirement_index = _erfp_fill_from_change_patterns(
+        _erfp_fill_from_change_patterns(
             bridge, proposal, spec_id, description, seen_sections, requirement_lines, requirement_index
         )
     if not requirement_lines and description:
