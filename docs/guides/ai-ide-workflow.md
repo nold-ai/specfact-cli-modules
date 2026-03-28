@@ -4,6 +4,9 @@ title: AI IDE Workflow Guide
 permalink: /ai-ide-workflow/
 redirect_from:
   - /guides/ai-ide-workflow/
+keywords: [ai-ide, workflow, copilot, integration, prompt]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # AI IDE Workflow Guide

@@ -3,6 +3,9 @@ layout: default
 title: Tutorial - Backlog Quickstart Demo (GitHub + ADO)
 description: Short end-to-end demo for backlog init-config, map-fields, daily, and refine on GitHub and Azure DevOps.
 permalink: /getting-started/tutorial-backlog-quickstart-demo/
+keywords: [tutorial, backlog, quickstart, demo, github, azure-devops]
+audience: [solo, team, enterprise]
+expertise_level: [beginner]
 ---
 
 # Tutorial: Backlog Quickstart Demo (GitHub + ADO)

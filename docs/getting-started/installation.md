@@ -2,6 +2,9 @@
 layout: default
 title: Getting Started with SpecFact CLI
 permalink: /getting-started/installation/
+keywords: [install, setup, getting-started, pip, module]
+audience: [solo, team, enterprise]
+expertise_level: [beginner]
 ---
 
 # Getting Started with SpecFact CLI

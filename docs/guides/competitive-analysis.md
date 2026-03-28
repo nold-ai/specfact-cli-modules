@@ -4,20 +4,9 @@ title: Competitive Analysis
 permalink: /competitive-analysis/
 redirect_from:
   - /guides/competitive-analysis/
+keywords: [competitive, analysis, comparison, tools, evaluation]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
-# Legacy Workflow Note
-
-This page referenced command groups or workflow steps that are no longer part of the current public mounted CLI in this repository. The old examples were removed to avoid directing readers to unavailable commands.
-
-Use the current mounted entrypoints instead:
-
-- `specfact project --help`
-- `specfact project sync --help`
-- `specfact code --help`
-- `specfact code review --help`
-- `specfact spec --help`
-- `specfact govern --help`
-- `specfact backlog --help`
-
-For exact syntax, verify against live help in the current release before copying examples.
+This page has been replaced. For a comparison of SpecFact modules and their use cases, see [Choose Your Modules]({{ '/getting-started/choose-your-modules/' | relative_url }}).

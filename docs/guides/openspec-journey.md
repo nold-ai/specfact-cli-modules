@@ -2,6 +2,9 @@
 layout: default
 title: "The Journey: OpenSpec + SpecFact Integration"
 permalink: /guides/openspec-journey/
+keywords: [openspec, journey, integration, workflow, specfact]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # The Journey: OpenSpec + SpecFact Integration

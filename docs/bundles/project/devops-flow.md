@@ -4,6 +4,9 @@ title: Project DevOps Flow
 permalink: /bundles/project/devops-flow/
 redirect_from:
   - /guides/project-devops-flow/
+keywords: [project, devops, flow, pipeline, automation]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Project DevOps Flow

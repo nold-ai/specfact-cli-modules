@@ -4,6 +4,9 @@ title: Policy Engine Commands
 permalink: /bundles/backlog/policy-engine/
 redirect_from:
   - /guides/policy-engine-commands/
+keywords: [policy, engine, backlog, rules, enforcement]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Policy Engine Commands

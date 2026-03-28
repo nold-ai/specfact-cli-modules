@@ -4,6 +4,9 @@ title: Integrations Overview
 permalink: /integrations-overview/
 redirect_from:
   - /guides/integrations-overview/
+keywords: [integrations, overview, adapters, devops, tools]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # Integrations Overview

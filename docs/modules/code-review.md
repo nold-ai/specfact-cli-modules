@@ -3,6 +3,9 @@ layout: default
 title: Code review module
 nav_order: 10
 permalink: /modules/code-review/
+keywords: [code-review, module, review, quality, analysis]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # specfact-code-review module notes

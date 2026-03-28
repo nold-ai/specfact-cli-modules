@@ -3,6 +3,9 @@ layout: default
 title: Codebase bundle overview
 nav_order: 2
 permalink: /bundles/codebase/overview/
+keywords: [codebase, bundle, overview, analysis, validation]
+audience: [solo, team, enterprise]
+expertise_level: [beginner, intermediate]
 ---
 
 # Codebase bundle overview

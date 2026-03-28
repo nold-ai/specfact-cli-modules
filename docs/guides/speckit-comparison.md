@@ -2,6 +2,9 @@
 layout: default
 title: "SpecFact vs. Spec-Kit"
 permalink: /guides/speckit-comparison/
+keywords: [speckit, comparison, specfact, migration, differences]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # How SpecFact Compares to GitHub Spec-Kit

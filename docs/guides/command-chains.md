@@ -2,6 +2,9 @@
 layout: default
 title: Command Chains Reference
 permalink: /guides/command-chains/
+keywords: [command-chains, workflow, automation, sequences, cli]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Command Chains Reference

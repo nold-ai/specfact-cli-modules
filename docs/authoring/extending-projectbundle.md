@@ -5,6 +5,9 @@ permalink: /authoring/extending-projectbundle/
 redirect_from:
   - /guides/extending-projectbundle/
 description: Add namespaced custom fields to Feature and ProjectBundle without modifying core models.
+keywords: [projectbundle, extension, custom-fields, namespace, schema]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Extending ProjectBundle

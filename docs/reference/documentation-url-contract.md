@@ -3,6 +3,9 @@ layout: default
 title: Core and modules docs URL contract
 permalink: /reference/documentation-url-contract/
 description: Ownership boundaries and published URL rules between docs.specfact.io and modules.specfact.io.
+keywords: [documentation, url, contract, ownership, routing]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Core and modules documentation URL contract

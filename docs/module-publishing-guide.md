@@ -2,6 +2,9 @@
 layout: default
 title: Module Publishing Guide
 permalink: /module-publishing-guide/
+keywords: [publishing, modules, guide, registry, packaging]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Module Publishing Guide

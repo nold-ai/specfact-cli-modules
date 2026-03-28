@@ -2,6 +2,9 @@
 layout: default
 title: Brownfield FAQ and ROI
 permalink: /guides/brownfield-faq-and-roi/
+keywords: [brownfield, faq, roi, planning, investment]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Brownfield FAQ and ROI

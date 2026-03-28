@@ -5,6 +5,9 @@ permalink: /authoring/publishing-modules/
 redirect_from:
   - /guides/publishing-modules/
 description: Package and publish SpecFact modules to a registry (tarball, checksum, optional signing).
+keywords: [publishing, registry, tarball, checksum, modules]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Publishing modules

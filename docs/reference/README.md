@@ -2,6 +2,9 @@
 layout: default
 title: Reference Documentation
 permalink: /reference/
+keywords: [reference, documentation, index, overview, api]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Reference Documentation

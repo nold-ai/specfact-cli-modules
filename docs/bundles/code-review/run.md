@@ -5,6 +5,9 @@ nav_order: 3
 permalink: /bundles/code-review/run/
 redirect_from:
   - /guides/code-review-run/
+keywords: [code-review, run, execution, analysis, review]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Code review run

@@ -2,6 +2,9 @@
 layout: default
 title: "The Journey: From Spec-Kit to SpecFact"
 permalink: /guides/speckit-journey/
+keywords: [speckit, journey, specfact, migration, evolution]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # The Journey: From Spec-Kit to SpecFact

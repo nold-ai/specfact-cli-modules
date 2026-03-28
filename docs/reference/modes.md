@@ -2,6 +2,9 @@
 layout: default
 title: Operational Modes
 permalink: /modes/
+keywords: [modes, operational, cli, copilot, configuration]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Operational Modes

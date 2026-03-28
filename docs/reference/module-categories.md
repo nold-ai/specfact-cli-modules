@@ -3,6 +3,9 @@ layout: default
 title: Module Categories
 nav_order: 35
 permalink: /reference/module-categories/
+keywords: [module, categories, classification, types, organization]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Module Categories

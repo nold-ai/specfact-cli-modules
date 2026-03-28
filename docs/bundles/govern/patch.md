@@ -5,6 +5,9 @@ nav_order: 4
 permalink: /bundles/govern/patch/
 redirect_from:
   - /guides/govern-patch/
+keywords: [govern, patch, apply, remediation, fix]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Govern patch apply

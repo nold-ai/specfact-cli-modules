@@ -3,6 +3,9 @@ layout: default
 title: Spec bundle overview
 nav_order: 2
 permalink: /bundles/spec/overview/
+keywords: [spec, bundle, overview, validation, openapi]
+audience: [solo, team, enterprise]
+expertise_level: [beginner, intermediate]
 ---
 
 # Spec bundle overview
