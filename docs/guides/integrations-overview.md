@@ -38,10 +38,11 @@ SpecFact CLI integrations fall into four main categories:
 
 **What it provides**:
 
-- ✅ Interactive slash commands (`/speckit.specify`, `/speckit.plan`) with AI assistance
-- ✅ Rapid prototyping workflow: spec → plan → tasks → code
+- ✅ Interactive slash commands (`/constitution`, `/specify`, `/clarify`, `/plan`, `/tasks`, `/analyze`, `/implement`)
+- ✅ Rapid prototyping workflow: constitution → specify → clarify → plan → tasks → analyze → implement
 - ✅ Constitution and planning for new features
-- ✅ IDE integration with CoPilot chat
+- ✅ IDE integration with GitHub Copilot chat and other supported agents
+- ✅ Bridge export from Spec-Kit feature folders into OpenSpec change proposals with `specfact sync bridge --adapter speckit --mode change-proposal`
 
 **When to use**:
 
@@ -51,6 +52,16 @@ SpecFact CLI integrations fall into four main categories:
 - Single-developer projects and rapid prototyping
 
 **Key difference**: Spec-Kit focuses on **new feature authoring**, while SpecFact CLI focuses on **brownfield code modernization**.
+
+**Bridge workflow examples**:
+
+```bash
+# Convert one Spec-Kit feature into an OpenSpec change proposal
+specfact sync bridge --adapter speckit --repo . --mode change-proposal --feature 001-auth-sync
+
+# Convert every untracked Spec-Kit feature into OpenSpec changes
+specfact sync bridge --adapter speckit --repo . --mode change-proposal --all
+```
 
 **See also**: [Spec-Kit Journey Guide](./speckit-journey.md)
 
@@ -306,7 +317,7 @@ Start: What do you need?
 
 | Integration | Primary Use Case | Key Command | Documentation |
 |------------|------------------|-------------|---------------|
-| **Spec-Kit** | Interactive spec authoring for new features | `/speckit.specify` | [Spec-Kit Journey](./speckit-journey.md) |
+| **Spec-Kit** | Interactive spec authoring for new features | `/specify` | [Spec-Kit Journey](./speckit-journey.md) |
 | **OpenSpec** | Specification anchoring and change tracking | `openspec validate` | [OpenSpec Journey](./openspec-journey.md) |
 | **Specmatic** | API contract testing and validation | `spec validate` | [Specmatic Integration](./specmatic-integration.md) |
 | **Sidecar Validation** 🆕 | Validate external codebases without modifying source | `validate sidecar init/run` | [Sidecar Validation](/bundles/codebase/sidecar-validation/) |

@@ -27,6 +27,11 @@ def _is_test_file(file_path: Path) -> bool:
     return "tests" in file_path.parts
 
 
+def _is_ignored_review_path(file_path: Path) -> bool:
+    parent_parts = file_path.parts[:-1]
+    return any(part.startswith(".") and len(part) > 1 for part in parent_parts)
+
+
 def _git_file_list(command: list[str], *, error_message: str) -> list[Path]:
     result = subprocess.run(
         command,
@@ -53,7 +58,7 @@ def _changed_files_from_git_diff(*, include_tests: bool) -> list[Path]:
     python_files = [
         file_path
         for file_path in [*tracked_files, *untracked_files]
-        if file_path.suffix == ".py" and file_path.is_file()
+        if file_path.suffix == ".py" and file_path.is_file() and not _is_ignored_review_path(file_path)
     ]
     deduped_python_files = list(dict.fromkeys(python_files))
     if include_tests:
@@ -73,7 +78,7 @@ def _all_python_files_from_git() -> list[Path]:
     python_files = [
         file_path
         for file_path in [*tracked_files, *untracked_files]
-        if file_path.suffix == ".py" and file_path.is_file()
+        if file_path.suffix == ".py" and file_path.is_file() and not _is_ignored_review_path(file_path)
     ]
     return list(dict.fromkeys(python_files))
 
@@ -112,8 +117,9 @@ def _raise_if_targeting_styles_conflict(
 
 
 def _resolve_positional_files(files: list[Path]) -> list[Path]:
-    if files:
-        return files
+    resolved = [file_path for file_path in files if not _is_ignored_review_path(file_path)]
+    if resolved:
+        return resolved
     raise ValueError("No Python files to review were provided or detected from tracked or untracked changes.")
 
 
@@ -166,6 +172,7 @@ def _resolve_files(
             path_filters=path_filters,
         )
         resolved = _filtered_files(resolved, path_filters=path_filters)
+    resolved = [file_path for file_path in resolved if not _is_ignored_review_path(file_path)]
 
     if not resolved:
         _raise_for_empty_auto_scope(scope=scope or "changed", path_filters=path_filters)

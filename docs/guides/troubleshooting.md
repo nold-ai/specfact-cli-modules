@@ -24,7 +24,7 @@ Use the current mounted entrypoints instead:
 When you need exact syntax, verify against live help in the current release, for example:
 
 ```bash
-specfact project sync bridge --help
+specfact sync bridge --help
 specfact code repro --help
 specfact code validate sidecar --help
 specfact spec validate --help

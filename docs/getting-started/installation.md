@@ -280,12 +280,12 @@ Convert an existing GitHub Spec-Kit project:
 
 ```bash
 # Start a one-time import
-specfact project sync bridge \
+specfact sync bridge \
   --adapter speckit \
   --repo ./my-speckit-project
 
 # Ongoing bidirectional sync (after migration)
-specfact project sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
+specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
 ```
 
 **Bidirectional Sync:**
@@ -294,13 +294,13 @@ Keep Spec-Kit and SpecFact artifacts synchronized:
 
 ```bash
 # One-time sync
-specfact project sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional
+specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional
 
 # Continuous watch mode
-specfact project sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
+specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional --watch
 ```
 
-**Note**: SpecFact CLI uses a plugin-based adapter registry pattern. All adapters (Spec-Kit, OpenSpec, GitHub, etc.) are registered in `AdapterRegistry` and accessed via `specfact project sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
+**Note**: SpecFact CLI uses a plugin-based adapter registry pattern. All adapters (Spec-Kit, OpenSpec, GitHub, etc.) are registered in `AdapterRegistry` and accessed via `specfact sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
 
 ### For Brownfield Projects
 

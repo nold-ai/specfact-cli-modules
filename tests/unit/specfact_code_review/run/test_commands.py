@@ -202,6 +202,164 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
     assert recorded["files"] == [package_file, test_file]
 
 
+def test_run_command_ignores_dot_specfact_in_changed_scope(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    ignored_file = _write_repo_file(
+        tmp_path,
+        ".specfact/modules/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    recorded: dict[str, list[Path]] = {}
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands._changed_files_from_git_diff",
+        lambda *, include_tests: [ignored_file, package_file],
+    )
+
+    def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(app, ["review", "run", "--json", "--out", "review-report.json"])
+
+    assert result.exit_code == 0
+    assert recorded["files"] == [package_file]
+
+
+def test_run_command_ignores_hidden_directory_in_changed_scope(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    ignored_file = _write_repo_file(
+        tmp_path,
+        ".cache/review-work/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    recorded: dict[str, list[Path]] = {}
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands._changed_files_from_git_diff",
+        lambda *, include_tests: [ignored_file, package_file],
+    )
+
+    def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(app, ["review", "run", "--json", "--out", "review-report.json"])
+
+    assert result.exit_code == 0
+    assert recorded["files"] == [package_file]
+
+
+def test_run_command_ignores_dot_specfact_in_full_scope(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    ignored_file = _write_repo_file(
+        tmp_path,
+        ".specfact/modules/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    recorded: dict[str, list[Path]] = {}
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands._all_python_files_from_git",
+        lambda: [ignored_file, package_file],
+        raising=False,
+    )
+
+    def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(
+        app,
+        ["review", "run", "--scope", "full", "--json", "--out", "review-report.json"],
+    )
+
+    assert result.exit_code == 0
+    assert recorded["files"] == [package_file]
+
+
+def test_run_command_ignores_hidden_directory_in_full_scope(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    ignored_file = _write_repo_file(
+        tmp_path,
+        ".cache/review-work/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    recorded: dict[str, list[Path]] = {}
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands._all_python_files_from_git",
+        lambda: [ignored_file, package_file],
+        raising=False,
+    )
+
+    def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(
+        app,
+        ["review", "run", "--scope", "full", "--json", "--out", "review-report.json"],
+    )
+
+    assert result.exit_code == 0
+    assert recorded["files"] == [package_file]
+
+
+def test_run_command_ignores_dot_specfact_positional_file(monkeypatch: Any, tmp_path: Path) -> None:
+    project_file = _write_repo_file(
+        tmp_path,
+        ".specfact/modules/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review",
+        lambda files, **_kwargs: _report(),
+    )
+
+    result = runner.invoke(app, ["review", "run", str(project_file)])
+
+    assert result.exit_code == 2
+    assert "no python files to review" in result.output.lower()
+
+
+def test_run_command_ignores_hidden_directory_positional_file(monkeypatch: Any, tmp_path: Path) -> None:
+    project_file = _write_repo_file(
+        tmp_path,
+        ".cache/review-work/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review",
+        lambda files, **_kwargs: _report(),
+    )
+
+    result = runner.invoke(app, ["review", "run", str(project_file)])
+
+    assert result.exit_code == 2
+    assert "no python files to review" in result.output.lower()
+
+
 def test_run_command_rejects_out_without_json(tmp_path: Path) -> None:
     out = tmp_path / "review-report.json"
     result = runner.invoke(app, ["review", "run", "--out", str(out), "tests/fixtures/review/clean_module.py"])

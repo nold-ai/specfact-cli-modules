@@ -27,7 +27,7 @@ Commands that support `--repo` should point to the active repository when automa
 ```bash
 specfact project export --repo /workspace/service-a --bundle service-a --persona architect --stdout
 specfact project import --repo /workspace/service-b --bundle service-b --persona developer --input docs/project-plans/developer.md --dry-run
-specfact project sync bridge --adapter github --mode export-only --repo /workspace/service-a --bundle service-a
+specfact sync bridge --adapter github --mode export-only --repo /workspace/service-a --bundle service-a
 ```
 
 ## 3. Keep shared module rollout predictable
