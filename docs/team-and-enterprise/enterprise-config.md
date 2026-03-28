@@ -2,6 +2,9 @@
 layout: default
 title: Enterprise Configuration
 permalink: /team-and-enterprise/enterprise-config/
+keywords: [enterprise, configuration, admin, policy, organization]
+audience: [team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # Enterprise Configuration

@@ -4,6 +4,9 @@ title: Agile And Scrum Team Setup
 permalink: /team-and-enterprise/agile-scrum-setup/
 redirect_from:
   - /guides/agile-scrum-workflows/
+keywords: [agile, scrum, team, setup, ceremonies]
+audience: [team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # Agile And Scrum Team Setup

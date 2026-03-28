@@ -5,6 +5,9 @@ nav_order: 4
 permalink: /bundles/codebase/drift/
 redirect_from:
   - /guides/code-drift-detect/
+keywords: [drift, detect, codebase, spec-sync, validation]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Code drift detect

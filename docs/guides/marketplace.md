@@ -4,6 +4,9 @@ title: Marketplace Bundles
 nav_order: 23
 permalink: /guides/marketplace/
 description: Official SpecFact bundle IDs, trust tiers, and bundle dependency behavior.
+keywords: [marketplace, bundles, trust, discovery, registry]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Marketplace Bundles

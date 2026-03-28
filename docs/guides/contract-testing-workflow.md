@@ -4,6 +4,9 @@ title: Contract Testing Workflow
 permalink: /contract-testing-workflow/
 redirect_from:
   - /guides/contract-testing-workflow/
+keywords: [contract-testing, specmatic, validation, backward-compatibility, workflow]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Contract Testing Workflow

@@ -2,6 +2,9 @@
 layout: default
 title: Custom Field Mapping Guide
 permalink: /guides/custom-field-mapping/
+keywords: [custom-fields, mapping, adapter, configuration, devops]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Custom Field Mapping Guide

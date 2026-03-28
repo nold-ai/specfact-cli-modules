@@ -1,6 +1,5 @@
 ---
 layout: default
-title: Brownfield Modernization FAQ
 permalink: /brownfield-faq/
 redirect_from:
   - /guides/brownfield-faq/

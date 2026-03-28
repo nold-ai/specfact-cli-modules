@@ -3,6 +3,9 @@ layout: default
 title: Module Bootstrap Checklist
 permalink: /getting-started/module-bootstrap-checklist/
 description: Quick checklist to verify bundled modules are installed and discoverable in user/project scope.
+keywords: [bootstrap, checklist, modules, setup, verification]
+audience: [solo, team, enterprise]
+expertise_level: [beginner]
 ---
 
 # Module Bootstrap Checklist

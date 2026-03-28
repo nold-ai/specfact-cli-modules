@@ -3,6 +3,9 @@ layout: default
 title: Installation
 nav_order: 5
 permalink: /guides/installation/
+keywords: [install, setup, pip, uvx, docker]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Installation

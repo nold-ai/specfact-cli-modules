@@ -4,6 +4,9 @@ title: Creating Custom Bridges
 permalink: /authoring/creating-custom-bridges/
 redirect_from:
   - /guides/creating-custom-bridges/
+keywords: [bridge, custom, authoring, integration, extensibility]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Creating Custom Bridges

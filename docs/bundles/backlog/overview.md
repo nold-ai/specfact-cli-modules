@@ -3,6 +3,9 @@ layout: default
 title: Backlog bundle overview
 nav_order: 2
 permalink: /bundles/backlog/overview/
+keywords: [backlog, bundle, overview, refinement, stories]
+audience: [solo, team, enterprise]
+expertise_level: [beginner, intermediate]
 ---
 
 # Backlog bundle overview

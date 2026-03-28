@@ -2,6 +2,9 @@
 layout: default
 title: Schema Versioning
 permalink: /schema-versioning/
+keywords: [schema, versioning, compatibility, migration, format]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Schema Versioning

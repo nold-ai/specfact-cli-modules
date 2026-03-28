@@ -3,6 +3,9 @@ layout: default
 title: Installing Modules
 permalink: /guides/installing-modules/
 description: Install, list, show, enable, disable, uninstall, and upgrade SpecFact modules.
+keywords: [install, modules, enable, disable, upgrade]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Installing Modules

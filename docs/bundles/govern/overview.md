@@ -3,6 +3,9 @@ layout: default
 title: Govern bundle overview
 nav_order: 2
 permalink: /bundles/govern/overview/
+keywords: [govern, bundle, overview, policy, compliance]
+audience: [solo, team, enterprise]
+expertise_level: [beginner, intermediate]
 ---
 
 # Govern bundle overview

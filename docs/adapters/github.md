@@ -2,6 +2,9 @@
 layout: default
 title: GitHub Adapter
 permalink: /adapters/github/
+keywords: [github, adapter, integration, issues, pull-requests]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # GitHub Adapter

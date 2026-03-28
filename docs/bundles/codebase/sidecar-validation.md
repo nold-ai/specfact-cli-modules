@@ -4,6 +4,9 @@ title: Sidecar Validation Guide
 permalink: /bundles/codebase/sidecar-validation/
 redirect_from:
   - /guides/sidecar-validation/
+keywords: [sidecar, validation, codebase, contract, schema]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Sidecar Validation Guide

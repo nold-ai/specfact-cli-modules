@@ -2,6 +2,9 @@
 layout: default
 title: Multi-Repo Setup
 permalink: /team-and-enterprise/multi-repo/
+keywords: [multi-repo, monorepo, setup, enterprise, organization]
+audience: [team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # Multi-Repo Setup
