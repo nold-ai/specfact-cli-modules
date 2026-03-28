@@ -17,7 +17,7 @@ import typer
 from beartype import beartype
 from icontract import ensure, require
 from specfact_cli.adapters.registry import (
-    AdapterRegistry,  # noqa: F401 — re-export for tests/monkeypatch  # pyright: ignore[reportUnusedImport]
+    AdapterRegistry,
 )
 from specfact_cli.models.bridge import AdapterType
 from specfact_cli.models.plan import PlanBundle, Product
@@ -30,6 +30,8 @@ from specfact_project.sync_runtime.speckit_change_proposal_sync import detect_sy
 from specfact_project.sync_runtime.sync_perform_operation_impl import run_perform_sync_operation
 from specfact_project.sync_runtime.sync_tool_to_specfact_impl import run_sync_tool_to_specfact
 
+
+__all__ = ["AdapterRegistry", "app"]
 
 app = typer.Typer(
     help="Synchronize external tool artifacts and repository changes (Spec-Kit, OpenSpec, GitHub, Linear, Jira, etc.). See 'specfact backlog refine' for template-driven backlog refinement."

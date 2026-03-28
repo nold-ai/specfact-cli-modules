@@ -73,6 +73,7 @@ def _pst_apply_progress_comments(entry: dict[str, Any], entry_content: str) -> N
         progress_comments = json.loads(progress_comments_match.group(1))
         _pst_meta(entry)["progress_comments"] = progress_comments
     except (json.JSONDecodeError, ValueError):
+        # Malformed progress_comments are ignored; they are optional metadata.
         pass
 
 
