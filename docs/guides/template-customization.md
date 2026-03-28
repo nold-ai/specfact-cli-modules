@@ -174,5 +174,5 @@ body_patterns:
 
 ## Related Documentation
 
-- [Backlog Refinement Guide](./backlog-refinement.md) - Using templates for refinement
+- [Backlog Refinement Guide](/bundles/backlog/refinement/) - Using templates for refinement
 - [Command Reference](../reference/commands.md) - CLI command options

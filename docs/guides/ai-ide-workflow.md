@@ -6,29 +6,56 @@ redirect_from:
   - /guides/ai-ide-workflow/
 ---
 
-# Legacy Workflow Note
+# AI IDE Workflow Guide
 
-This page described older `specfact plan`, `specfact generate`, `specfact contract`, or `specfact sdd constitution` workflows that are not part of the current public mounted CLI in this repository. The detailed command examples previously documented here were removed because they no longer match the command surface exposed by `specfact --help`.
+This guide covers the current IDE-assisted workflow for bundle-owned prompts and templates. The key rule is simple: bootstrap resources through the CLI, not by copying files from legacy core-owned paths.
 
-Use the current mounted entrypoints instead:
-
-- `specfact project --help`
-- `specfact project sync --help`
-- `specfact code --help`
-- `specfact code review --help`
-- `specfact spec --help`
-- `specfact govern --help`
-- `specfact backlog --help`
-- `specfact module --help`
-
-When you need exact syntax, verify against live help in the current release, for example:
+## 1. Bootstrap the repository and IDE resources
 
 ```bash
-specfact project sync bridge --help
-specfact code repro --help
-specfact code validate sidecar --help
-specfact spec validate --help
-specfact govern enforce --help
+specfact init --profile solo-developer
+specfact init ide --repo . --ide cursor
 ```
 
-This page needs a full rewrite around the mounted command groups before task-level workflow examples can be published again.
+`specfact init ide` exports prompts from core plus installed modules. Re-run it after bundle upgrades or when you install an additional workflow bundle.
+
+## 2. Confirm the modules that own the prompts you need
+
+```bash
+specfact module install nold-ai/specfact-backlog
+specfact module install nold-ai/specfact-govern
+specfact module install nold-ai/specfact-code-review
+```
+
+Typical ownership:
+
+- Backlog refinement and ceremony prompts come from the Backlog bundle
+- Govern presets and policy-oriented prompt flows come from the Govern bundle
+- Review house-rules flows come from the Code Review bundle
+
+## 3. Run the CLI step that emits or consumes the prompt
+
+Examples:
+
+```bash
+specfact backlog ceremony refinement github --preview --labels feature
+specfact code review run src --scope changed --no-tests
+specfact sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+```
+
+These commands are the source of truth. The IDE should support them, not replace them.
+
+## 4. Refresh resources after upgrades
+
+```bash
+specfact module upgrade --all
+specfact init ide --repo . --ide cursor --force
+```
+
+Use `--force` when you intentionally want regenerated editor files to replace the previous export.
+
+## Related
+
+- [Workflows index](/workflows/)
+- [Cross-module chains](/guides/cross-module-chains/)
+- [Backlog bundle overview](/bundles/backlog/overview/)

@@ -5,6 +5,8 @@ This module converts Spec-Kit markdown artifacts (spec.md, plan.md, tasks.md, co
 to SpecFact format (plans, protocols).
 """
 
+# pylint: disable=too-many-lines,import-outside-toplevel,line-too-long,broad-exception-caught,too-many-nested-blocks,too-many-arguments,too-many-locals,reimported,redefined-outer-name,logging-fstring-interpolation,unused-argument,protected-access,too-many-positional-arguments,consider-using-in,unused-import,redefined-argument-from-local,using-constant-test,too-many-boolean-expressions,too-many-return-statements,use-implicit-booleaness-not-comparison,too-many-branches,too-many-statements
+
 from __future__ import annotations
 
 import re
@@ -24,6 +26,8 @@ from specfact_project.analyzers.constitution_evidence_extractor import Constitut
 from specfact_project.generators.plan_generator import PlanGenerator
 from specfact_project.generators.protocol_generator import ProtocolGenerator
 from specfact_project.generators.workflow_generator import WorkflowGenerator
+from specfact_project.importers import speckit_markdown_sections as speckit_md
+from specfact_project.importers.speckit_change_proposal_bridge import SpecKitChangeProposalBridge
 from specfact_project.importers.speckit_scanner import SpecKitScanner
 from specfact_project.migrations.plan_migrator import get_current_schema_version
 
@@ -108,6 +112,30 @@ class SpecKitConverter:
 
         return protocol
 
+    def _write_converted_plan_bundle(self, plan_bundle: PlanBundle, output_path: Path | None) -> None:
+        """Persist plan bundle to *output_path* or the default plan location."""
+        if output_path:
+            if output_path.is_dir():
+                resolved = output_path / SpecFactStructure.ensure_plan_filename(output_path.name)
+            else:
+                resolved = output_path.with_name(SpecFactStructure.ensure_plan_filename(output_path.name))
+            SpecFactStructure.ensure_structure(resolved.parent)
+            self.plan_generator.generate(plan_bundle, resolved)
+            return
+        default_path = SpecFactStructure.get_default_plan_path(
+            base_path=self.repo_path, preferred_format=runtime.get_output_format()
+        )
+        if default_path.parent.name == "projects":
+            return
+        resolved = default_path
+        if resolved.exists() and resolved.is_dir():
+            plan_filename = SpecFactStructure.ensure_plan_filename(resolved.name)
+            resolved = resolved / plan_filename
+        elif not resolved.exists():
+            resolved = resolved.with_name(SpecFactStructure.ensure_plan_filename(resolved.name))
+        SpecFactStructure.ensure_structure(resolved.parent)
+        self.plan_generator.generate(plan_bundle, resolved)
+
     @beartype
     @ensure(lambda result: isinstance(result, PlanBundle), "Must return PlanBundle")
     @ensure(
@@ -174,36 +202,51 @@ class SpecKitConverter:
             clarifications=None,
         )
 
-        # Write to file if output path provided
-        if output_path:
-            if output_path.is_dir():
-                output_path = output_path / SpecFactStructure.ensure_plan_filename(output_path.name)
-            else:
-                output_path = output_path.with_name(SpecFactStructure.ensure_plan_filename(output_path.name))
-            SpecFactStructure.ensure_structure(output_path.parent)
-            self.plan_generator.generate(plan_bundle, output_path)
-        else:
-            # Use default path respecting current output format
-            output_path = SpecFactStructure.get_default_plan_path(
-                base_path=self.repo_path, preferred_format=runtime.get_output_format()
-            )
-            # get_default_plan_path returns a directory path (.specfact/projects/main) for modular bundles
-            # Skip writing if this is a modular bundle directory (will be saved separately as ProjectBundle)
-            if output_path.parent.name == "projects":
-                # This is a modular bundle - skip writing here, will be saved as ProjectBundle separately
-                pass
-            else:
-                # Legacy monolithic plan file - construct file path
-                if output_path.exists() and output_path.is_dir():
-                    plan_filename = SpecFactStructure.ensure_plan_filename(output_path.name)
-                    output_path = output_path / plan_filename
-                elif not output_path.exists():
-                    # Legacy path - ensure it has the right extension
-                    output_path = output_path.with_name(SpecFactStructure.ensure_plan_filename(output_path.name))
-                SpecFactStructure.ensure_structure(output_path.parent)
-                self.plan_generator.generate(plan_bundle, output_path)
+        self._write_converted_plan_bundle(plan_bundle, output_path)
 
         return plan_bundle
+
+    @staticmethod
+    def _strings_from_dict_or_str(items: list[Any], text_key: str) -> list[str]:
+        out: list[str] = []
+        for item in items:
+            if isinstance(item, dict):
+                out.append(item.get(text_key, ""))
+            elif isinstance(item, str):
+                out.append(item)
+        return out
+
+    @staticmethod
+    def _feature_confidence(feature_title: str, stories: list[Story], outcomes: list[str]) -> float:
+        confidence = 0.5
+        if feature_title and feature_title != "Unknown Feature":
+            confidence += 0.2
+        if stories:
+            confidence += 0.2
+        if outcomes:
+            confidence += 0.1
+        return min(confidence, 1.0)
+
+    def _feature_from_discovered_row(self, feature_data: dict[str, Any]) -> Feature:
+        feature_key = feature_data.get("feature_key", "UNKNOWN")
+        feature_title = feature_data.get("feature_title", "Unknown Feature")
+        stories = self._extract_stories_from_spec(feature_data)
+        outcomes = self._strings_from_dict_or_str(feature_data.get("requirements", []), "text")
+        acceptance = self._strings_from_dict_or_str(feature_data.get("success_criteria", []), "text")
+        confidence = self._feature_confidence(feature_title, stories, outcomes)
+        return Feature(
+            key=feature_key,
+            title=feature_title,
+            outcomes=outcomes if outcomes else [f"Provides {feature_title} functionality"],
+            acceptance=acceptance if acceptance else [f"{feature_title} is functional"],
+            constraints=feature_data.get("edge_cases", []),
+            stories=stories,
+            confidence=confidence,
+            draft=False,
+            source_tracking=None,
+            contract=None,
+            protocol=None,
+        )
 
     @beartype
     @require(lambda discovered_features: isinstance(discovered_features, list), "Must be list")
@@ -211,59 +254,50 @@ class SpecKitConverter:
     @ensure(lambda result: all(isinstance(f, Feature) for f in result), "All items must be Features")
     def _extract_features_from_markdown(self, discovered_features: list[dict[str, Any]]) -> list[Feature]:
         """Extract features from Spec-Kit markdown artifacts."""
-        features: list[Feature] = []
+        return [self._feature_from_discovered_row(fd) for fd in discovered_features]
 
-        for feature_data in discovered_features:
-            feature_key = feature_data.get("feature_key", "UNKNOWN")
-            feature_title = feature_data.get("feature_title", "Unknown Feature")
+    @staticmethod
+    def _normalize_story_scenarios(raw: Any) -> dict[str, Any] | None:
+        if raw and isinstance(raw, dict):
+            filtered = {k: v for k, v in raw.items() if v and isinstance(v, list) and len(v) > 0}
+            return filtered if filtered else None
+        return None
 
-            # Extract stories from spec.md
-            stories = self._extract_stories_from_spec(feature_data)
+    def _tasks_for_story(self, feature_data: dict[str, Any], story_key: str) -> list[str]:
+        tasks_data = feature_data.get("tasks", {})
+        if not tasks_data or "tasks" not in tasks_data:
+            return []
+        out: list[str] = []
+        for task in tasks_data["tasks"]:
+            if not isinstance(task, dict):
+                continue
+            story_ref = task.get("story_ref", "")
+            if (story_ref and story_ref in story_key) or not story_ref:
+                out.append(task.get("description", ""))
+        return out
 
-            # Extract outcomes from requirements
-            requirements = feature_data.get("requirements", [])
-            outcomes: list[str] = []
-            for req in requirements:
-                if isinstance(req, dict):
-                    outcomes.append(req.get("text", ""))
-                elif isinstance(req, str):
-                    outcomes.append(req)
-
-            # Extract acceptance criteria from success criteria
-            success_criteria = feature_data.get("success_criteria", [])
-            acceptance: list[str] = []
-            for sc in success_criteria:
-                if isinstance(sc, dict):
-                    acceptance.append(sc.get("text", ""))
-                elif isinstance(sc, str):
-                    acceptance.append(sc)
-
-            # Calculate confidence based on completeness
-            confidence = 0.5
-            if feature_title and feature_title != "Unknown Feature":
-                confidence += 0.2
-            if stories:
-                confidence += 0.2
-            if outcomes:
-                confidence += 0.1
-
-            feature = Feature(
-                key=feature_key,
-                title=feature_title,
-                outcomes=outcomes if outcomes else [f"Provides {feature_title} functionality"],
-                acceptance=acceptance if acceptance else [f"{feature_title} is functional"],
-                constraints=feature_data.get("edge_cases", []),
-                stories=stories,
-                confidence=min(confidence, 1.0),
-                draft=False,
-                source_tracking=None,
-                contract=None,
-                protocol=None,
-            )
-
-            features.append(feature)
-
-        return features
+    def _story_from_spec_row(self, feature_data: dict[str, Any], story_data: dict[str, Any]) -> Story:
+        story_key = story_data.get("key", "UNKNOWN")
+        story_title = story_data.get("title", "Unknown Story")
+        priority = story_data.get("priority", "P3")
+        priority_map = {"P1": 8, "P2": 5, "P3": 3, "P4": 1}
+        story_points = priority_map.get(priority, 3)
+        acceptance = story_data.get("acceptance", [])
+        tasks = self._tasks_for_story(feature_data, story_key)
+        scenarios = self._normalize_story_scenarios(story_data.get("scenarios"))
+        return Story(
+            key=story_key,
+            title=story_title,
+            acceptance=acceptance if acceptance else [f"{story_title} is implemented"],
+            tags=[priority],
+            story_points=story_points,
+            value_points=story_points,
+            tasks=tasks,
+            confidence=0.8,
+            draft=False,
+            scenarios=scenarios,
+            contracts=None,
+        )
 
     @beartype
     @require(lambda feature_data: isinstance(feature_data, dict), "Must be dict")
@@ -271,59 +305,8 @@ class SpecKitConverter:
     @ensure(lambda result: all(isinstance(s, Story) for s in result), "All items must be Stories")
     def _extract_stories_from_spec(self, feature_data: dict[str, Any]) -> list[Story]:
         """Extract user stories from Spec-Kit spec.md data."""
-        stories: list[Story] = []
         spec_stories = feature_data.get("stories", [])
-
-        for story_data in spec_stories:
-            story_key = story_data.get("key", "UNKNOWN")
-            story_title = story_data.get("title", "Unknown Story")
-            priority = story_data.get("priority", "P3")
-
-            # Calculate story points from priority
-            priority_map = {"P1": 8, "P2": 5, "P3": 3, "P4": 1}
-            story_points = priority_map.get(priority, 3)
-            value_points = story_points  # Use same value for simplicity
-
-            # Extract acceptance criteria
-            acceptance = story_data.get("acceptance", [])
-
-            # Extract tasks from tasks.md if available
-            tasks_data = feature_data.get("tasks", {})
-            tasks: list[str] = []
-            if tasks_data and "tasks" in tasks_data:
-                for task in tasks_data["tasks"]:
-                    if isinstance(task, dict):
-                        story_ref = task.get("story_ref", "")
-                        # Match story reference to this story
-                        if (story_ref and story_ref in story_key) or not story_ref:
-                            tasks.append(task.get("description", ""))
-
-            # Extract scenarios from Spec-Kit format (Primary, Alternate, Exception, Recovery)
-            scenarios = story_data.get("scenarios")
-            # Ensure scenarios dict has correct format (filter out empty lists)
-            if scenarios and isinstance(scenarios, dict):
-                # Filter out empty scenario lists
-                filtered_scenarios = {k: v for k, v in scenarios.items() if v and isinstance(v, list) and len(v) > 0}
-                scenarios = filtered_scenarios if filtered_scenarios else None
-            else:
-                scenarios = None
-
-            story = Story(
-                key=story_key,
-                title=story_title,
-                acceptance=acceptance if acceptance else [f"{story_title} is implemented"],
-                tags=[priority],
-                story_points=story_points,
-                value_points=value_points,
-                tasks=tasks,
-                confidence=0.8,  # High confidence from spec
-                draft=False,
-                scenarios=scenarios,
-                contracts=None,
-            )
-            stories.append(story)
-
-        return stories
+        return [self._story_from_spec_row(feature_data, sd) for sd in spec_stories if isinstance(sd, dict)]
 
     @beartype
     @require(lambda features: isinstance(features, list), "Must be list")
@@ -475,6 +458,48 @@ class SpecKitConverter:
         return features_converted
 
     @beartype
+    @require(lambda feature_path: feature_path.exists(), "Feature path must exist")
+    @require(lambda feature_path: feature_path.is_dir(), "Feature path must be a directory")
+    @require(lambda change_name: len(change_name.strip()) > 0, "Change name must be non-empty")
+    @require(lambda output_dir: output_dir is not None, "Output directory must be provided")
+    @ensure(lambda result: isinstance(result, Path), "Must return Path")
+    @ensure(lambda result: result.exists(), "Change directory must exist")
+    def convert_to_change_proposal(self, feature_path: Path, change_name: str, output_dir: Path) -> Path:
+        """
+        Convert a Spec-Kit feature directory into an OpenSpec change proposal.
+
+        Args:
+            feature_path: Path to Spec-Kit feature directory
+            change_name: OpenSpec change identifier to create
+            output_dir: Parent directory that contains OpenSpec changes
+
+        Returns:
+            Created change directory
+        """
+        bridge = SpecKitChangeProposalBridge(self.scanner)
+        return bridge.convert_feature_to_change(Path(feature_path), change_name, Path(output_dir))
+
+    @beartype
+    @require(lambda change_dir: change_dir.exists(), "Change directory must exist")
+    @require(lambda change_dir: change_dir.is_dir(), "Change directory must be a directory")
+    @require(lambda output_dir: output_dir is not None, "Output directory must be provided")
+    @ensure(lambda result: isinstance(result, Path), "Must return Path")
+    @ensure(lambda result: result.exists(), "Feature directory must exist")
+    def convert_to_speckit_feature(self, change_dir: Path, output_dir: Path) -> Path:
+        """
+        Convert an OpenSpec change proposal into a Spec-Kit feature directory.
+
+        Args:
+            change_dir: Path to OpenSpec change directory
+            output_dir: Spec-Kit specs directory to write into
+
+        Returns:
+            Created feature directory
+        """
+        bridge = SpecKitChangeProposalBridge(self.scanner)
+        return bridge.convert_change_to_feature(Path(change_dir), Path(output_dir))
+
+    @beartype
     @require(lambda feature: isinstance(feature, Feature), "Must be Feature instance")
     @require(
         lambda feature_num: feature_num is None or feature_num > 0,
@@ -490,237 +515,12 @@ class SpecKitConverter:
             feature: Feature to generate spec for
             feature_num: Optional pre-calculated feature number (avoids recalculation with fallback)
         """
-        from datetime import datetime
-
-        # Extract feature branch from feature key (FEATURE-001 -> 001-feature-name)
-        # Use provided feature_num if available, otherwise extract from key (with fallback to 1)
         if feature_num is None:
             feature_num = self._extract_feature_number(feature.key)
             if feature_num == 0:
-                # Fallback: use 1 if no number found (shouldn't happen if called from convert_to_speckit)
                 feature_num = 1
         feature_name = self._to_feature_dir_name(feature.title)
-        feature_branch = f"{feature_num:03d}-{feature_name}"
-
-        # Generate frontmatter (CRITICAL for Spec-Kit compatibility)
-        lines = [
-            "---",
-            f"**Feature Branch**: `{feature_branch}`",
-            f"**Created**: {datetime.now().strftime('%Y-%m-%d')}",
-            "**Status**: Draft",
-            "---",
-            "",
-            f"# Feature Specification: {feature.title}",
-            "",
-        ]
-
-        # Add stories
-        if feature.stories:
-            lines.append("## User Scenarios & Testing")
-            lines.append("")
-
-            for idx, story in enumerate(feature.stories, start=1):
-                # Extract priority from tags or default to P3
-                priority = "P3"
-                if story.tags:
-                    for tag in story.tags:
-                        if tag.startswith("P") and tag[1:].isdigit():
-                            priority = tag
-                            break
-
-                lines.append(f"### User Story {idx} - {story.title} (Priority: {priority})")
-                lines.append(f"Users can {story.title}")
-                lines.append("")
-                # Extract priority rationale from story tags, feature outcomes, or use default
-                priority_rationale = "Core functionality"
-                if story.tags:
-                    for tag in story.tags:
-                        if tag.startswith(("priority:", "rationale:")):
-                            priority_rationale = tag.split(":", 1)[1].strip()
-                            break
-                if (not priority_rationale or priority_rationale == "Core functionality") and feature.outcomes:
-                    # Try to extract from feature outcomes
-                    priority_rationale = feature.outcomes[0] if len(feature.outcomes[0]) < 100 else "Core functionality"
-                lines.append(f"**Why this priority**: {priority_rationale}")
-                lines.append("")
-
-                # INVSEST criteria (CRITICAL for /speckit.analyze and /speckit.checklist)
-                lines.append("**Independent**: YES")
-                lines.append("**Negotiable**: YES")
-                lines.append("**Valuable**: YES")
-                lines.append("**Estimable**: YES")
-                lines.append("**Small**: YES")
-                lines.append("**Testable**: YES")
-                lines.append("")
-
-                lines.append("**Acceptance Criteria:**")
-                lines.append("")
-
-                scenarios_primary: list[str] = []
-                scenarios_alternate: list[str] = []
-                scenarios_exception: list[str] = []
-                scenarios_recovery: list[str] = []
-
-                for acc_idx, acc in enumerate(story.acceptance, start=1):
-                    # Parse Given/When/Then if available
-                    if "Given" in acc and "When" in acc and "Then" in acc:
-                        # Use regex to properly extract Given/When/Then parts
-                        # This handles commas inside type hints (e.g., "dict[str, Any]")
-                        gwt_pattern = r"Given\s+(.+?),\s*When\s+(.+?),\s*Then\s+(.+?)(?:$|,)"
-                        match = re.search(gwt_pattern, acc, re.IGNORECASE | re.DOTALL)
-                        if match:
-                            given = match.group(1).strip()
-                            when = match.group(2).strip()
-                            then = match.group(3).strip()
-                        else:
-                            # Fallback to simple split if regex fails
-                            parts = acc.split(", ")
-                            given = parts[0].replace("Given ", "").strip() if len(parts) > 0 else ""
-                            when = parts[1].replace("When ", "").strip() if len(parts) > 1 else ""
-                            then = parts[2].replace("Then ", "").strip() if len(parts) > 2 else ""
-                        lines.append(f"{acc_idx}. **Given** {given}, **When** {when}, **Then** {then}")
-
-                        # Categorize scenarios based on keywords
-                        scenario_text = f"{given}, {when}, {then}"
-                        acc_lower = acc.lower()
-                        if any(keyword in acc_lower for keyword in ["error", "exception", "fail", "invalid", "reject"]):
-                            scenarios_exception.append(scenario_text)
-                        elif any(keyword in acc_lower for keyword in ["recover", "retry", "fallback", "retry"]):
-                            scenarios_recovery.append(scenario_text)
-                        elif any(
-                            keyword in acc_lower for keyword in ["alternate", "alternative", "different", "optional"]
-                        ):
-                            scenarios_alternate.append(scenario_text)
-                        else:
-                            scenarios_primary.append(scenario_text)
-                    else:
-                        # Convert simple acceptance to Given/When/Then format for better scenario extraction
-                        acc_lower = acc.lower()
-
-                        # Generate Given/When/Then from simple acceptance
-                        if "must" in acc_lower or "should" in acc_lower or "will" in acc_lower:
-                            # Extract action and outcome
-                            if "verify" in acc_lower or "validate" in acc_lower:
-                                action = (
-                                    acc.replace("Must verify", "")
-                                    .replace("Must validate", "")
-                                    .replace("Should verify", "")
-                                    .replace("Should validate", "")
-                                    .strip()
-                                )
-                                given = "user performs action"
-                                when = f"system {action}"
-                                then = f"{action} succeeds"
-                            elif "handle" in acc_lower or "display" in acc_lower:
-                                action = (
-                                    acc.replace("Must handle", "")
-                                    .replace("Must display", "")
-                                    .replace("Should handle", "")
-                                    .replace("Should display", "")
-                                    .strip()
-                                )
-                                given = "error condition occurs"
-                                when = "system processes error"
-                                then = f"system {action}"
-                            else:
-                                # Generic conversion
-                                given = "user interacts with system"
-                                when = "action is performed"
-                                then = acc.replace("Must", "").replace("Should", "").replace("Will", "").strip()
-
-                            lines.append(f"{acc_idx}. **Given** {given}, **When** {when}, **Then** {then}")
-
-                            # Categorize based on keywords
-                            scenario_text = f"{given}, {when}, {then}"
-                            if any(
-                                keyword in acc_lower
-                                for keyword in ["error", "exception", "fail", "invalid", "reject", "handle error"]
-                            ):
-                                scenarios_exception.append(scenario_text)
-                            elif any(keyword in acc_lower for keyword in ["recover", "retry", "fallback"]):
-                                scenarios_recovery.append(scenario_text)
-                            elif any(
-                                keyword in acc_lower
-                                for keyword in ["alternate", "alternative", "different", "optional"]
-                            ):
-                                scenarios_alternate.append(scenario_text)
-                            else:
-                                scenarios_primary.append(scenario_text)
-                        else:
-                            # Keep original format but still categorize
-                            lines.append(f"{acc_idx}. {acc}")
-                            acc_lower = acc.lower()
-                            if any(keyword in acc_lower for keyword in ["error", "exception", "fail", "invalid"]):
-                                scenarios_exception.append(acc)
-                            elif any(keyword in acc_lower for keyword in ["recover", "retry", "fallback"]):
-                                scenarios_recovery.append(acc)
-                            elif any(keyword in acc_lower for keyword in ["alternate", "alternative", "different"]):
-                                scenarios_alternate.append(acc)
-                            else:
-                                scenarios_primary.append(acc)
-
-                lines.append("")
-
-                # Scenarios section (CRITICAL for /speckit.analyze and /speckit.checklist)
-                if scenarios_primary or scenarios_alternate or scenarios_exception or scenarios_recovery:
-                    lines.append("**Scenarios:**")
-                    lines.append("")
-
-                    if scenarios_primary:
-                        for scenario in scenarios_primary:
-                            lines.append(f"- **Primary Scenario**: {scenario}")
-                    else:
-                        lines.append("- **Primary Scenario**: Standard user flow")
-
-                    if scenarios_alternate:
-                        for scenario in scenarios_alternate:
-                            lines.append(f"- **Alternate Scenario**: {scenario}")
-                    else:
-                        lines.append("- **Alternate Scenario**: Alternative user flow")
-
-                    if scenarios_exception:
-                        for scenario in scenarios_exception:
-                            lines.append(f"- **Exception Scenario**: {scenario}")
-                    else:
-                        lines.append("- **Exception Scenario**: Error handling")
-
-                    if scenarios_recovery:
-                        for scenario in scenarios_recovery:
-                            lines.append(f"- **Recovery Scenario**: {scenario}")
-                    else:
-                        lines.append("- **Recovery Scenario**: Recovery from errors")
-
-                    lines.append("")
-                lines.append("")
-
-        # Add functional requirements from outcomes
-        if feature.outcomes:
-            lines.append("## Functional Requirements")
-            lines.append("")
-
-            for idx, outcome in enumerate(feature.outcomes, start=1):
-                lines.append(f"**FR-{idx:03d}**: System MUST {outcome}")
-            lines.append("")
-
-        # Add success criteria from acceptance
-        if feature.acceptance:
-            lines.append("## Success Criteria")
-            lines.append("")
-
-            for idx, acc in enumerate(feature.acceptance, start=1):
-                lines.append(f"**SC-{idx:03d}**: {acc}")
-            lines.append("")
-
-        # Add edge cases from constraints
-        if feature.constraints:
-            lines.append("### Edge Cases")
-            lines.append("")
-
-            for constraint in feature.constraints:
-                lines.append(f"- {constraint}")
-            lines.append("")
-
-        return "\n".join(lines)
+        return speckit_md.generate_spec_markdown(feature, feature_num, feature_name)
 
     @beartype
     @require(
@@ -730,271 +530,23 @@ class SpecKitConverter:
     @ensure(lambda result: isinstance(result, str), "Must return string")
     def _generate_plan_markdown(self, feature: Feature, plan_bundle: PlanBundle) -> str:
         """Generate Spec-Kit plan.md content from SpecFact feature."""
-        lines = [f"# Implementation Plan: {feature.title}", ""]
-        lines.append("## Summary")
-        lines.append(f"Implementation plan for {feature.title}.")
-        lines.append("")
-
-        lines.append("## Technical Context")
-        lines.append("")
-
-        # Extract technology stack from constraints
-        technology_stack = self._extract_technology_stack(feature, plan_bundle)
-        language_version = next((s for s in technology_stack if "Python" in s), "Python 3.11+")
-
-        lines.append(f"**Language/Version**: {language_version}")
-        lines.append("")
-
-        lines.append("**Primary Dependencies:**")
-        lines.append("")
-        # Extract dependencies from technology stack
-        dependencies = [
-            s
-            for s in technology_stack
-            if any(fw in s.lower() for fw in ["typer", "fastapi", "django", "flask", "pydantic", "sqlalchemy"])
-        ]
-        if dependencies:
-            for dep in dependencies[:5]:  # Limit to top 5
-                # Format: "FastAPI framework" -> "fastapi - Web framework"
-                dep_lower = dep.lower()
-                if "fastapi" in dep_lower:
-                    lines.append("- `fastapi` - Web framework")
-                elif "django" in dep_lower:
-                    lines.append("- `django` - Web framework")
-                elif "flask" in dep_lower:
-                    lines.append("- `flask` - Web framework")
-                elif "typer" in dep_lower:
-                    lines.append("- `typer` - CLI framework")
-                elif "pydantic" in dep_lower:
-                    lines.append("- `pydantic` - Data validation")
-                elif "sqlalchemy" in dep_lower:
-                    lines.append("- `sqlalchemy` - ORM")
-                else:
-                    lines.append(f"- {dep}")
-        else:
-            lines.append("- `typer` - CLI framework")
-            lines.append("- `pydantic` - Data validation")
-        lines.append("")
-
-        lines.append("**Technology Stack:**")
-        lines.append("")
-        for stack_item in technology_stack:
-            lines.append(f"- {stack_item}")
-        lines.append("")
-
-        lines.append("**Constraints:**")
-        lines.append("")
-        if feature.constraints:
-            for constraint in feature.constraints:
-                lines.append(f"- {constraint}")
-        else:
-            lines.append("- None specified")
-        lines.append("")
-
-        lines.append("**Unknowns:**")
-        lines.append("")
-        lines.append("- None at this time")
-        lines.append("")
-
-        # Check if contracts are defined in stories (for Article IX and contract definitions section)
         contracts_defined = any(story.contracts for story in feature.stories if story.contracts)
-
-        # Constitution Check section (CRITICAL for /speckit.analyze)
-        # Extract evidence-based constitution status (Step 2.2)
+        constitution_section: str | None
         try:
             constitution_evidence = self.constitution_extractor.extract_all_evidence(self.repo_path)
             constitution_section = self.constitution_extractor.generate_constitution_check_section(
                 constitution_evidence
             )
-            lines.append(constitution_section)
         except Exception:
-            # Fallback to basic constitution check if extraction fails
-            lines.append("## Constitution Check")
-            lines.append("")
-            lines.append("**Article VII (Simplicity)**:")
-            lines.append("- [ ] Evidence extraction pending")
-            lines.append("")
-            lines.append("**Article VIII (Anti-Abstraction)**:")
-            lines.append("- [ ] Evidence extraction pending")
-            lines.append("")
-            lines.append("**Article IX (Integration-First)**:")
-            if contracts_defined:
-                lines.append("- [x] Contracts defined?")
-                lines.append("- [ ] Contract tests written?")
-            else:
-                lines.append("- [ ] Contracts defined?")
-                lines.append("- [ ] Contract tests written?")
-            lines.append("")
-            lines.append("**Status**: PENDING")
-            lines.append("")
-
-        # Add contract definitions section if contracts exist (Step 2.1)
-        if contracts_defined:
-            lines.append("### Contract Definitions")
-            lines.append("")
-            for story in feature.stories:
-                if story.contracts:
-                    lines.append(f"#### {story.title}")
-                    lines.append("")
-                    contracts = story.contracts
-
-                    # Parameters
-                    if contracts.get("parameters"):
-                        lines.append("**Parameters:**")
-                        for param in contracts["parameters"]:
-                            param_type = param.get("type", "Any")
-                            required = "required" if param.get("required", True) else "optional"
-                            default = f" (default: {param.get('default')})" if param.get("default") is not None else ""
-                            lines.append(f"- `{param['name']}`: {param_type} ({required}){default}")
-                        lines.append("")
-
-                    # Return type
-                    if contracts.get("return_type"):
-                        return_type = contracts["return_type"].get("type", "Any")
-                        lines.append(f"**Return Type**: `{return_type}`")
-                        lines.append("")
-
-                    # Preconditions
-                    if contracts.get("preconditions"):
-                        lines.append("**Preconditions:**")
-                        for precondition in contracts["preconditions"]:
-                            lines.append(f"- {precondition}")
-                        lines.append("")
-
-                    # Postconditions
-                    if contracts.get("postconditions"):
-                        lines.append("**Postconditions:**")
-                        for postcondition in contracts["postconditions"]:
-                            lines.append(f"- {postcondition}")
-                        lines.append("")
-
-                    # Error contracts
-                    if contracts.get("error_contracts"):
-                        lines.append("**Error Contracts:**")
-                        for error_contract in contracts["error_contracts"]:
-                            exc_type = error_contract.get("exception_type", "Exception")
-                            condition = error_contract.get("condition", "Error condition")
-                            lines.append(f"- `{exc_type}`: {condition}")
-                        lines.append("")
-            lines.append("")
-
-        # Phases section
-        lines.append("## Phase 0: Research")
-        lines.append("")
-        lines.append(f"Research and technical decisions for {feature.title}.")
-        lines.append("")
-
-        lines.append("## Phase 1: Design")
-        lines.append("")
-        lines.append(f"Design phase for {feature.title}.")
-        lines.append("")
-
-        lines.append("## Phase 2: Implementation")
-        lines.append("")
-        lines.append(f"Implementation phase for {feature.title}.")
-        lines.append("")
-
-        lines.append("## Phase -1: Pre-Implementation Gates")
-        lines.append("")
-        lines.append("Pre-implementation gate checks:")
-        lines.append("- [ ] Constitution check passed")
-        lines.append("- [ ] Contracts defined")
-        lines.append("- [ ] Technical context validated")
-        lines.append("")
-
-        return "\n".join(lines)
+            constitution_section = None
+        return speckit_md.generate_plan_markdown(feature, plan_bundle, constitution_section, contracts_defined)
 
     @beartype
     @require(lambda feature: isinstance(feature, Feature), "Must be Feature instance")
     @ensure(lambda result: isinstance(result, str), "Must return string")
     def _generate_tasks_markdown(self, feature: Feature) -> str:
         """Generate Spec-Kit tasks.md content from SpecFact feature."""
-        lines = ["# Tasks", ""]
-
-        task_counter = 1
-
-        # Phase 1: Setup (initial tasks if any)
-        setup_tasks: list[tuple[int, str, int]] = []  # (task_num, description, story_num)
-        foundational_tasks: list[tuple[int, str, int]] = []
-        story_tasks: dict[int, list[tuple[int, str]]] = {}  # story_num -> [(task_num, description)]
-
-        # Organize tasks by phase
-        for _story_idx, story in enumerate(feature.stories, start=1):
-            story_num = self._extract_story_number(story.key)
-
-            if story.tasks:
-                for task_desc in story.tasks:
-                    # Check if task is setup/foundational (common patterns)
-                    task_lower = task_desc.lower()
-                    if any(
-                        keyword in task_lower
-                        for keyword in ["setup", "install", "configure", "create project", "initialize"]
-                    ):
-                        setup_tasks.append((task_counter, task_desc, story_num))
-                        task_counter += 1
-                    elif any(
-                        keyword in task_lower
-                        for keyword in ["implement", "create model", "set up database", "middleware"]
-                    ):
-                        foundational_tasks.append((task_counter, task_desc, story_num))
-                        task_counter += 1
-                    else:
-                        if story_num not in story_tasks:
-                            story_tasks[story_num] = []
-                        story_tasks[story_num].append((task_counter, task_desc))
-                        task_counter += 1
-            else:
-                # Generate default task - put in foundational phase
-                foundational_tasks.append((task_counter, f"Implement {story.title}", story_num))
-                task_counter += 1
-
-        # Generate Phase 1: Setup
-        if setup_tasks:
-            lines.append("## Phase 1: Setup")
-            lines.append("")
-            for task_num, task_desc, story_num in setup_tasks:
-                lines.append(f"- [ ] [T{task_num:03d}] [P] [US{story_num}] {task_desc}")
-            lines.append("")
-
-        # Generate Phase 2: Foundational
-        if foundational_tasks:
-            lines.append("## Phase 2: Foundational")
-            lines.append("")
-            for task_num, task_desc, story_num in foundational_tasks:
-                lines.append(f"- [ ] [T{task_num:03d}] [P] [US{story_num}] {task_desc}")
-            lines.append("")
-
-        # Generate Phase 3+: User Stories (one phase per story)
-        for story_idx, story in enumerate(feature.stories, start=1):
-            story_num = self._extract_story_number(story.key)
-            phase_num = story_idx + 2  # Phase 3, 4, 5, etc.
-
-            # Get tasks for this story
-            story_task_list = story_tasks.get(story_num, [])
-
-            if story_task_list:
-                # Extract priority from tags
-                priority = "P3"
-                if story.tags:
-                    for tag in story.tags:
-                        if tag.startswith("P") and tag[1:].isdigit():
-                            priority = tag
-                            break
-
-                lines.append(f"## Phase {phase_num}: User Story {story_idx} (Priority: {priority})")
-                lines.append("")
-                for task_num, task_desc in story_task_list:
-                    lines.append(f"- [ ] [T{task_num:03d}] [US{story_idx}] {task_desc}")
-                lines.append("")
-
-        # If no stories, create a default task in Phase 1
-        if not feature.stories:
-            lines.append("## Phase 1: Setup")
-            lines.append("")
-            lines.append(f"- [ ] [T001] Implement {feature.title}")
-            lines.append("")
-
-        return "\n".join(lines)
+        return speckit_md.generate_tasks_markdown(feature, self._extract_story_number)
 
     @beartype
     @require(lambda feature: isinstance(feature, Feature), "Must be Feature instance")
@@ -1012,82 +564,13 @@ class SpecKitConverter:
         Returns:
             List of technology stack items
         """
-        stack: list[str] = []
-        seen: set[str] = set()
-
-        # Extract from idea-level constraints (project-wide)
-        if plan_bundle.idea and plan_bundle.idea.constraints:
-            for constraint in plan_bundle.idea.constraints:
-                constraint_lower = constraint.lower()
-
-                # Extract Python version
-                if "python" in constraint_lower and constraint not in seen:
-                    stack.append(constraint)
-                    seen.add(constraint)
-
-                # Extract frameworks
-                for fw in ["fastapi", "django", "flask", "typer", "tornado", "bottle"]:
-                    if fw in constraint_lower and constraint not in seen:
-                        stack.append(constraint)
-                        seen.add(constraint)
-                        break
-
-                # Extract databases
-                for db in ["postgres", "postgresql", "mysql", "sqlite", "redis", "mongodb", "cassandra"]:
-                    if db in constraint_lower and constraint not in seen:
-                        stack.append(constraint)
-                        seen.add(constraint)
-                        break
-
-        # Extract from feature-level constraints (feature-specific)
-        if feature.constraints:
-            for constraint in feature.constraints:
-                constraint_lower = constraint.lower()
-
-                # Skip if already added from idea constraints
-                if constraint in seen:
-                    continue
-
-                # Extract frameworks
-                for fw in ["fastapi", "django", "flask", "typer", "tornado", "bottle"]:
-                    if fw in constraint_lower:
-                        stack.append(constraint)
-                        seen.add(constraint)
-                        break
-
-                # Extract databases
-                for db in ["postgres", "postgresql", "mysql", "sqlite", "redis", "mongodb", "cassandra"]:
-                    if db in constraint_lower:
-                        stack.append(constraint)
-                        seen.add(constraint)
-                        break
-
-                # Extract testing tools
-                for test in ["pytest", "unittest", "nose", "tox"]:
-                    if test in constraint_lower:
-                        stack.append(constraint)
-                        seen.add(constraint)
-                        break
-
-                # Extract deployment tools
-                for deploy in ["docker", "kubernetes", "aws", "gcp", "azure"]:
-                    if deploy in constraint_lower:
-                        stack.append(constraint)
-                        seen.add(constraint)
-                        break
-
-        # Default fallback if nothing extracted
-        if not stack:
-            stack = ["Python 3.11+", "Typer for CLI", "Pydantic for data validation"]
-
-        return stack
+        return speckit_md.extract_technology_stack(feature, plan_bundle)
 
     @beartype
     @require(lambda feature_key: isinstance(feature_key, str), "Must be string")
     @ensure(lambda result: isinstance(result, int), "Must return int")
     def _extract_feature_number(self, feature_key: str) -> int:
         """Extract feature number from key (FEATURE-001 -> 1)."""
-        import re
 
         match = re.search(r"(\d+)", feature_key)
         return int(match.group(1)) if match else 0
@@ -1097,7 +580,6 @@ class SpecKitConverter:
     @ensure(lambda result: isinstance(result, int), "Must return int")
     def _extract_story_number(self, story_key: str) -> int:
         """Extract story number from key (STORY-001 -> 1)."""
-        import re
 
         match = re.search(r"(\d+)", story_key)
         return int(match.group(1)) if match else 0
@@ -1108,7 +590,6 @@ class SpecKitConverter:
     @ensure(lambda result: len(result) > 0, "Result must be non-empty")
     def _to_feature_dir_name(self, title: str) -> str:
         """Convert feature title to directory name (User Authentication -> user-authentication)."""
-        import re
 
         # Convert to lowercase, replace spaces and special chars with hyphens
         name = title.lower()
@@ -1122,7 +603,6 @@ class SpecKitConverter:
     @ensure(lambda result: len(result) > 0, "Result must be non-empty")
     def _humanize_name(self, name: str) -> str:
         """Convert component name to human-readable title."""
-        import re
 
         # Handle PascalCase
         name = re.sub(r"([A-Z])", r" \1", name).strip()

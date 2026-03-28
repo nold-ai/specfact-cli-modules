@@ -144,7 +144,7 @@ Add new feature X to improve user experience.
 EOF
 
 # Step 2: Export to GitHub Issues
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo-owner your-org \
   --repo-name your-repo \
   --repo /path/to/openspec-repo
@@ -167,7 +167,7 @@ sequenceDiagram
     participant GH as GitHub Issues
     
     Dev->>OS: Create change proposal<br/>openspec/changes/add-feature-x/
-    Dev->>SF: specfact project sync bridge --adapter github
+    Dev->>SF: specfact sync bridge --adapter github
     SF->>OS: Read proposal.md
     SF->>GH: Create issue from proposal
     GH-->>SF: Issue #123 created
@@ -176,7 +176,7 @@ sequenceDiagram
     Note over Dev,GH: Implementation Phase
     
     Dev->>Dev: Make commits with change ID
-    Dev->>SF: specfact project sync bridge --track-code-changes
+    Dev->>SF: specfact sync bridge --track-code-changes
     SF->>SF: Detect commits mentioning<br/>change ID
     SF->>GH: Add progress comment<br/>to issue #123
     GH-->>Dev: Progress visible in issue
@@ -208,7 +208,7 @@ Read-only sync from OpenSpec to SpecFact for change proposal tracking:
 
 ```bash
 # Sync OpenSpec change proposals to SpecFact
-specfact project sync bridge --adapter openspec --mode read-only \
+specfact sync bridge --adapter openspec --mode read-only \
   --bundle my-project \
   --repo /path/to/openspec-repo
 
@@ -264,7 +264,7 @@ Full bidirectional sync between OpenSpec and SpecFact:
 
 ```bash
 # Bidirectional sync (future)
-specfact project sync bridge --adapter openspec --bidirectional \
+specfact sync bridge --adapter openspec --bidirectional \
   --bundle my-project \
   --repo /path/to/openspec-repo \
   --watch
@@ -335,7 +335,7 @@ Legacy API needs modernization for better performance and maintainability.
 EOF
 
 # Step 3: Export proposal to GitHub Issues ✅ IMPLEMENTED
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo-owner your-org \
   --repo-name your-repo \
   --repo /path/to/openspec-repo
@@ -344,7 +344,7 @@ specfact project sync bridge --adapter github --mode export-only \
 git commit -m "feat: modernize-api - refactor endpoints"
 
 # Step 5: Track progress ✅ IMPLEMENTED
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo-owner your-org \
   --repo-name your-repo \
   --track-code-changes \
@@ -352,7 +352,7 @@ specfact project sync bridge --adapter github --mode export-only \
   --code-repo /path/to/source-code-repo
 
 # Step 6: Sync OpenSpec change proposals ✅ AVAILABLE
-specfact project sync bridge --adapter openspec --mode read-only \
+specfact sync bridge --adapter openspec --mode read-only \
   --bundle legacy-api \
   --repo /path/to/openspec-repo
 # → Generates alignment report
@@ -458,7 +458,7 @@ This separation enables:
 
 - [Command Chains Reference](command-chains.md) - Complete workflows including [External Tool Integration Chain](command-chains.md#3-external-tool-integration-chain)
 - [Common Tasks Index](common-tasks.md) - Quick reference for OpenSpec integration tasks
-- [DevOps Adapter Integration](devops-adapter-integration.md) - GitHub Issues and backlog tracking
+- [DevOps Adapter Integration](/integrations/devops-adapter-overview/) - GitHub Issues and backlog tracking
 - [Team Collaboration Workflow](team-collaboration-workflow.md) - Team collaboration patterns
 
 ### Related Commands
@@ -469,7 +469,7 @@ This separation enables:
 
 ### Related Examples
 
-- [OpenSpec Integration Examples](../examples/) - Real-world integration examples
+- [Brownfield examples](/guides/brownfield-examples/) - Real-world integration examples
 
 ### Getting Started
 
@@ -482,7 +482,7 @@ This separation enables:
 
 ### **Try It Now** ✅
 
-1. **[DevOps Adapter Integration Guide](devops-adapter-integration.md)** - Export OpenSpec proposals to GitHub Issues
+1. **[DevOps Adapter Integration Guide](/integrations/devops-adapter-overview/)** - Export OpenSpec proposals to GitHub Issues
 2. **[Commands Reference](../reference/commands.md#sync-bridge)** - Complete `sync bridge` documentation
 3. **[OpenSpec Documentation](https://github.com/nold-ai/openspec)** - Learn OpenSpec basics
 
@@ -500,7 +500,7 @@ This separation enables:
 
 ## 🔗 Related Documentation
 
-- **[DevOps Adapter Integration](devops-adapter-integration.md)** - GitHub Issues and backlog tracking
+- **[DevOps Adapter Integration](/integrations/devops-adapter-overview/)** - GitHub Issues and backlog tracking
 - **[Spec-Kit Journey](speckit-journey.md)** - Similar guide for Spec-Kit integration
 - **[Brownfield Engineer Guide](brownfield-engineer.md)** - Complete brownfield modernization workflow
 - **[Commands Reference](../reference/commands.md)** - Complete command documentation

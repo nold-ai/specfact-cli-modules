@@ -60,3 +60,13 @@ Cross-repo dependency: `docs-06-modules-site-ia-restructure` is a prerequisite f
 | docs | 10 | docs-10-workflow-consolidation | [#98](https://github.com/nold-ai/specfact-cli-modules/issues/98) | docs-06-modules-site-ia-restructure |
 | docs | 11 | docs-11-team-enterprise-tier | [#99](https://github.com/nold-ai/specfact-cli-modules/issues/99) | docs-06-modules-site-ia-restructure |
 | docs | 12 | docs-12-docs-validation-ci | [#100](https://github.com/nold-ai/specfact-cli-modules/issues/100) | docs-06 through docs-10; specfact-cli/docs-12-docs-validation-ci |
+
+### Spec-Kit v0.4.x change proposal bridge (spec-kit integration review, 2026-03-27)
+
+Adds bidirectional conversion between spec-kit feature folders and OpenSpec change proposals, plus backlog extension issue mapping detection to prevent duplicate issue creation.
+
+| Module | Order | Change folder | GitHub # | Blocked by |
+|--------|-------|---------------|----------|------------|
+| speckit | 03 | speckit-03-change-proposal-bridge | [#116](https://github.com/nold-ai/specfact-cli-modules/issues/116) | specfact-cli/speckit-02-v04-adapter-alignment ([specfact-cli#453](https://github.com/nold-ai/specfact-cli/issues/453)) |
+
+**Cross-repo dependency**: Requires `speckit-02-v04-adapter-alignment` in `nold-ai/specfact-cli` to be implemented first (provides `ToolCapabilities.extension_commands` consumed by `SpecKitBacklogSync`).

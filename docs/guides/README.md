@@ -1,72 +1,68 @@
 # Guides
 
-Practical module-owned guides for official bundles, adapters, publishing, and deep workflow documentation.
+Practical module-owned guides for official bundles, adapters, publishing, and workflow documentation.
 
 ## Available Guides
 
-### Primary Use Case: Brownfield Modernization ⭐
+### Primary Use Case: Brownfield Modernization
 
-- **[Brownfield Engineer Guide](brownfield-engineer.md)** ⭐ **PRIMARY** - Complete guide for modernizing legacy code
-- **[The Brownfield Journey](brownfield-journey.md)** ⭐ **PRIMARY** - Step-by-step modernization workflow
-- **[Brownfield ROI](brownfield-roi.md)** ⭐ - Calculate time and cost savings
-- **[Brownfield FAQ](brownfield-faq.md)** ⭐ - Common questions about brownfield modernization
+- **[Brownfield modernization](brownfield-modernization.md)** - End-to-end legacy modernization flow using current mounted commands
+- **[Brownfield FAQ and ROI](brownfield-faq-and-roi.md)** - Planning, rollout, and investment guidance
+- **[Brownfield examples](brownfield-examples.md)** - Three concrete modernization patterns
 
-### Secondary Use Case: Spec-Kit & OpenSpec Integration
+### Cross-bundle workflows
 
-- **[Spec-Kit Journey](speckit-journey.md)** - Adding enforcement to Spec-Kit projects
-- **[Spec-Kit Comparison](speckit-comparison.md)** - Understand when to use each tool
-- **[OpenSpec Journey](openspec-journey.md)** 🆕 ⭐ **START HERE** - Complete integration guide with visual workflows: DevOps export (✅), bridge adapter (⏳), brownfield modernization
-- **[Use Cases](use-cases.md)** - Real-world scenarios (brownfield primary, Spec-Kit secondary)
+- **[Workflows](workflows.md)** - Consolidated workflow index
+- **[Cross-module chains](cross-module-chains.md)** - Backlog -> code -> spec -> govern flows
+- **[Daily DevOps routine](daily-devops-routine.md)** - Morning standup to end-of-day release checks
+- **[CI/CD pipeline](ci-cd-pipeline.md)** - Local and CI gate order
+- **[Command chains reference](command-chains.md)** - Short validated command sequences
 
-### General Guides
+### Focused workflow guides
 
-- **[Workflows](workflows.md)** - Common daily workflows
+- **[AI IDE workflow](ai-ide-workflow.md)** - Bundle-owned prompt/template bootstrap with `specfact init ide`
+- **[Contract testing workflow](contract-testing-workflow.md)** - Specmatic validate, backward compatibility, tests, and mocks
+- **[Agile/Scrum workflows](agile-scrum-workflows.md)** - Backlog ceremonies and persona flows
+- **[Team collaboration workflow](team-collaboration-workflow.md)** - Persona export/import and lock management
+
+### General guides
+
 - **[IDE Integration](ide-integration.md)** - Set up slash commands in your IDE
 - **[CoPilot Mode](copilot-mode.md)** - Using `--mode copilot` on CLI commands
-- **[DevOps Adapter Integration](devops-adapter-integration.md)** 🆕 - Integrate with GitHub Issues, Azure DevOps, Linear, Jira for backlog tracking
-- **[Backlog Refinement](backlog-refinement.md)** 🆕 **NEW FEATURE** - AI-assisted template-driven refinement for standardizing work items with persona/framework filtering, sprint/iteration support, and DoR validation
-- **[Specmatic Integration](specmatic-integration.md)** - API contract testing with Specmatic (validate specs, generate tests, mock servers)
+- **[DevOps Adapter Integration](integrations/devops-adapter-overview/)** - Integrate with GitHub Issues, Azure DevOps, Linear, Jira for backlog tracking
+- **[Backlog Refinement](bundles/backlog/refinement/)** - AI-assisted template-driven refinement with filtering and DoR checks
+- **[Specmatic Integration](specmatic-integration.md)** - API contract testing with Specmatic
 - **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
 - **[Installing Modules](installing-modules.md)** - Install, list, show, search, enable/disable, uninstall, and upgrade modules
 - **[Module Marketplace](module-marketplace.md)** - Discovery priority, trust vs origin semantics, and security model
-- **[Custom registries](custom-registries.md)** - Add, list, remove registries; trust levels and priority
-- **[Publishing modules](publishing-modules.md)** - Package, sign, and publish modules to a registry
+- **[Custom registries](authoring/custom-registries/)** - Add, list, remove registries; trust levels and priority
+- **[Publishing modules](authoring/publishing-modules/)** - Package, sign, and publish modules to a registry
 - **[Module Signing and Key Rotation](module-signing-and-key-rotation.md)** - Public key placement, signing workflow, CI verification, rotation, and revocation runbook
 - **[Competitive Analysis](competitive-analysis.md)** - How SpecFact compares to other tools
-- **[Operational Modes](../reference/modes.md)** - CI/CD vs CoPilot modes (reference)
+- **[Operational Modes](../reference/modes.md)** - CI/CD vs CoPilot modes
 
 ## Quick Start
 
-### Modernizing Legacy Code? ⭐ PRIMARY
+### Modernizing legacy code
 
-1. **[Integration Showcases](../examples/integration-showcases/)** ⭐ **START HERE** - Real bugs fixed via VS Code, Cursor, GitHub Actions integrations
-2. **[Brownfield Engineer Guide](brownfield-engineer.md)** ⭐ - Complete modernization guide
-3. **[The Brownfield Journey](brownfield-journey.md)** ⭐ - Step-by-step workflow
-4. **[Use Cases - Brownfield](use-cases.md#use-case-1-brownfield-code-modernization-primary)** ⭐ - Real-world examples
+1. **[Brownfield modernization](brownfield-modernization.md)**
+2. **[Brownfield examples](brownfield-examples.md)**
+3. **[Cross-module chains](cross-module-chains.md)**
 
-### For IDE Users
+### Running daily delivery workflows
 
-1. **[IDE Integration](ide-integration.md)** - Set up slash commands in your IDE
-2. **[Use Cases](use-cases.md)** - See real-world examples
+1. **[Daily DevOps routine](daily-devops-routine.md)**
+2. **[Command chains reference](command-chains.md)**
+3. **[CI/CD pipeline](ci-cd-pipeline.md)**
 
-### For CLI Users
+### Working from an IDE
 
-1. **[CoPilot Mode](copilot-mode.md)** - Using `--mode copilot` for enhanced prompts
-2. **[Operational Modes](../reference/modes.md)** - Understanding CI/CD vs CoPilot modes
-3. **[DevOps Adapter Integration](devops-adapter-integration.md)** 🆕 - GitHub Issues and backlog tracking
-4. **[Backlog Refinement](backlog-refinement.md)** 🆕 **NEW** - AI-assisted template-driven refinement with filtering, DoR validation, and preview/write safety
-5. **[Specmatic Integration](specmatic-integration.md)** - API contract testing workflow
+1. **[AI IDE workflow](ai-ide-workflow.md)**
+2. **[IDE Integration](ide-integration.md)**
+3. **[Workflows](workflows.md)**
 
-### For Spec-Kit & OpenSpec Users (Secondary)
+### Contract-focused work
 
-1. **[Tutorial: Using SpecFact with OpenSpec or Spec-Kit](../getting-started/tutorial-openspec-speckit.md)** ⭐ **START HERE** - Complete beginner-friendly step-by-step tutorial
-2. **[Spec-Kit Journey](speckit-journey.md)** - Add enforcement to Spec-Kit projects
-3. **[OpenSpec Journey](openspec-journey.md)** 🆕 ⭐ - Complete OpenSpec integration guide with DevOps export and visual workflows
-4. **[DevOps Adapter Integration](devops-adapter-integration.md)** 🆕 - Export change proposals to GitHub Issues
-5. **[Use Cases - Spec-Kit Migration](use-cases.md#use-case-2-github-spec-kit-migration-secondary)** - Step-by-step migration
-
-## Need Help?
-
-- 💬 [GitHub Discussions](https://github.com/nold-ai/specfact-cli/discussions)
-- 🐛 [GitHub Issues](https://github.com/nold-ai/specfact-cli/issues)
-- 📧 [hello@noldai.com](mailto:hello@noldai.com)
+1. **[Contract testing workflow](contract-testing-workflow.md)**
+2. **[Specmatic Integration](specmatic-integration.md)**
+3. **[Spec bundle overview](/bundles/spec/overview/)**

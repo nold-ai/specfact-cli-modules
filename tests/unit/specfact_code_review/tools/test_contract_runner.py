@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 from pytest import MonkeyPatch
 
-from specfact_code_review.tools.contract_runner import run_contract_check
+from specfact_code_review.tools.contract_runner import _skip_icontract_ast_scan, run_contract_check
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process
 
 
@@ -110,3 +110,24 @@ def test_run_contract_check_ignores_crosshair_findings_for_other_files(monkeypat
     findings = run_contract_check([file_path])
 
     assert not findings
+
+
+def test_skip_icontract_ast_scan_skips_helper_modules() -> None:
+    assert _skip_icontract_ast_scan(
+        Path("packages/specfact-project/src/specfact_project/importers/speckit_markdown_sections.py")
+    )
+    assert _skip_icontract_ast_scan(
+        Path("packages/specfact-project/src/specfact_project/sync_runtime/bridge_sync_extract_requirement_impl.py")
+    )
+    assert _skip_icontract_ast_scan(
+        Path("packages/specfact-project/src/specfact_project/sync_runtime/sync_bridge_command_setup.py")
+    )
+
+
+def test_skip_icontract_ast_scan_keeps_public_sync_entrypoints() -> None:
+    assert not _skip_icontract_ast_scan(
+        Path("packages/specfact-project/src/specfact_project/sync_runtime/bridge_sync.py")
+    )
+    assert not _skip_icontract_ast_scan(
+        Path("packages/specfact-project/src/specfact_project/sync_runtime/speckit_backlog_sync.py")
+    )

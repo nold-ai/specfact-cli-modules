@@ -70,7 +70,7 @@ specfact code repro --repo <path> --sidecar --sidecar-bundle <bundle-name>
 - Then sidecar validation runs: unannotated detection, harness generation, CrossHair/Specmatic on generated harnesses. No files in the target repo are modified.
 - If CrossHair is not installed or the bundle is invalid, sidecar is skipped or partial with clear messaging; non-zero exit only for main check failures (sidecar can be advisory).
 
-See [Sidecar Validation Guide](/guides/sidecar-validation/) for setup and bundle configuration.
+See [Sidecar Validation Guide](/bundles/codebase/sidecar-validation/) for setup and bundle configuration.
 
 ## 4. Dogfooding (SpecFact CLI on itself)
 

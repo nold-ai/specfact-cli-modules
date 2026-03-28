@@ -127,13 +127,22 @@ def _pytest_targets(test_files: list[Path]) -> list[Path]:
     return test_files
 
 
+def _pytest_python_executable() -> str:
+    local_candidates = [Path(".venv/bin/python"), Path(".venv/Scripts/python.exe")]
+    for candidate in local_candidates:
+        resolved = candidate.resolve()
+        if resolved.is_file():
+            return str(resolved)
+    return sys.executable
+
+
 def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.CompletedProcess[str], Path]:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as coverage_file:
         coverage_path = Path(coverage_file.name)
 
     test_targets = _pytest_targets(test_files)
     command = [
-        sys.executable,
+        _pytest_python_executable(),
         "-m",
         "pytest",
         "--cov",

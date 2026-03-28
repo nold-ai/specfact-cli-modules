@@ -16,7 +16,7 @@ For the curated official bundle list and trust/dependency quick reference, see
 
 - **Official registry**: <https://github.com/nold-ai/specfact-cli-modules> (index: `registry/index.json`)
 - **Marketplace module id format**: `namespace/name` (e.g. `nold-ai/specfact-backlog`). Marketplace modules must use this format; flat names are allowed only for custom/local modules with a warning.
-- **Custom registries**: You can add private or third-party registries. See [Custom registries](custom-registries.md) for adding, listing, removing, trust levels, and priority.
+- **Custom registries**: You can add private or third-party registries. See [Custom registries](/authoring/custom-registries/) for adding, listing, removing, trust levels, and priority.
 
 ## Custom registries and search
 
@@ -96,7 +96,7 @@ Public key for runtime verification:
 Scope boundary:
 
 - This change set hardens local and bundled module safety.
-- For publishing your own modules to a registry, see [Publishing modules](publishing-modules.md).
+- For publishing your own modules to a registry, see [Publishing modules](/authoring/publishing-modules/).
 
 ## Marketplace vs Local Modules
 

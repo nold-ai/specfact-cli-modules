@@ -1,3 +1,9 @@
+---
+layout: default
+title: Specmatic API Reference
+permalink: /reference/specmatic/
+---
+
 # Specmatic API Reference
 
 > **API Reference for Specmatic Integration**  
@@ -362,8 +368,8 @@ The module caches the detection result to avoid repeated checks.
 
 ## Related Documentation
 
-- **[Specmatic Integration Guide](../guides/specmatic-integration.md)** - User guide with examples
-- **[Spec Commands Reference](./commands.md#spec-commands)** - CLI command reference
+- **[Specmatic Integration Guide](/specmatic-integration/)** - User guide with examples
+- **[Spec command reference](/reference/commands/)** - CLI command reference
 - **[Specmatic Documentation](https://docs.specmatic.io/)** - Official Specmatic documentation
 
 ---

@@ -56,7 +56,7 @@ specfact module install nold-ai/specfact-backlog
 
 # Project workflow examples
 specfact code import --repo . legacy-api
-specfact project sync bridge --adapter github --mode export-only --repo .
+specfact sync bridge --adapter github --mode export-only --repo .
 
 # Code workflow examples
 specfact code validate sidecar init legacy-api /path/to/repo

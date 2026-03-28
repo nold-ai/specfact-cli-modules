@@ -334,14 +334,14 @@ To create a GitHub issue from an OpenSpec change and have the issue number/URL w
 
 ```bash
 # Export one or more changes; creates issues and updates proposal.md Source Tracking
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo . \
   --repo-owner nold-ai \
   --repo-name specfact-cli \
   --change-ids <change-id>
 
 # Example: export backlog-scrum-05-summarize-markdown-output
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo . \
   --repo-owner nold-ai \
   --repo-name specfact-cli \
@@ -354,7 +354,7 @@ specfact project sync bridge --adapter github --mode export-only \
 
 After a successful run, each change’s `openspec/changes/<change-id>/proposal.md` will contain a **Source Tracking** block with the new issue number and URL. Use that section to link the PR and keep backlog in sync.
 
-For public repos, add `--sanitize` when exporting so content is sanitized before creating issues. See [DevOps Adapter Integration](../guides/devops-adapter-integration.md) and the [sync bridge command reference](../reference/commands.md#sync-bridge).
+For public repos, add `--sanitize` when exporting so content is sanitized before creating issues. See [DevOps Adapter Integration](/integrations/devops-adapter-overview/) and the [sync bridge command reference](/reference/commands/#project-sync-bridge).
 
 ### Updating Archived Change Proposals
 
@@ -362,7 +362,7 @@ When you improve comment logic or branch detection, use `--include-archived` to 
 
 ```bash
 # Update all archived proposals with new comment logic
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo-owner your-org \
   --repo-name your-repo \
   --include-archived \
@@ -370,7 +370,7 @@ specfact project sync bridge --adapter github --mode export-only \
   --repo /path/to/openspec-repo
 
 # Update specific archived proposal
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo-owner your-org \
   --repo-name your-repo \
   --change-ids add-code-change-tracking \
@@ -385,7 +385,7 @@ This ensures archived issues get updated with:
 - Enhanced comment formatting
 - Latest status information
 
-See [DevOps Adapter Integration Guide](../guides/devops-adapter-integration.md#updating-archived-change-proposals) for complete documentation.
+See [DevOps Adapter Integration Guide](/integrations/devops-adapter-overview/#updating-archived-change-proposals) for complete documentation.
 
 ## Lossless Content Preservation
 
@@ -403,11 +403,11 @@ raw_format = proposal.source_tracking.source_metadata.get("raw_format")  # "mark
 
 When exporting from stored bundles, the adapter uses raw content if available to preserve 100% fidelity, even when syncing to a different adapter (e.g., GitHub → ADO).
 
-**See**: [Cross-Adapter Sync Guide](../guides/devops-adapter-integration.md#cross-adapter-sync-lossless-round-trip-migration) for complete documentation.
+**See**: [Cross-Adapter Sync Guide](/integrations/devops-adapter-overview/#cross-adapter-sync-lossless-round-trip-migration) for complete documentation.
 
 ## Related Documentation
 
 - **[Backlog Adapter Patterns](./backlog-adapter-patterns.md)** - Patterns for backlog adapters
 - **[Azure DevOps Adapter](./azuredevops.md)** - Azure DevOps adapter documentation
-- **[Validation Integration](../validation-integration.md)** - Validation with change proposals
-- **[DevOps Adapter Integration](../guides/devops-adapter-integration.md)** - DevOps workflow integration
+- **[Thorough codebase validation](/reference/thorough-codebase-validation/)** - Validation and release-readiness guidance
+- **[DevOps Adapter Integration](/integrations/devops-adapter-overview/)** - DevOps workflow integration

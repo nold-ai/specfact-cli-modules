@@ -1,4 +1,4 @@
-## ADDED Requirements
+# ADDED Requirements
 
 ### Requirement: Workflow docs SHALL cover current cross-module flows and setup prerequisites
 Workflow documentation SHALL show valid multi-bundle command chains and include resource-bootstrap steps when migrated bundle-owned prompts or templates are prerequisites.

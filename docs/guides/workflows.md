@@ -1,34 +1,50 @@
 ---
 layout: default
-title: Workflows (legacy note)
+title: Workflows
 permalink: /workflows/
 redirect_from:
   - /guides/workflows/
 ---
 
-# Legacy Workflow Note
+# Workflows
 
-This page described older `specfact plan`, `specfact generate`, `specfact contract`, or `specfact sdd constitution` workflows that are not part of the current public mounted CLI in this repository. The detailed command examples previously documented here were removed because they no longer match the command surface exposed by `specfact --help`.
+This index collects the current workflow guides that are aligned to the mounted command surface shipped by the installed modules in this repository.
 
-Use the current mounted entrypoints instead:
+## Start here
 
-- `specfact project --help`
-- `specfact project sync --help`
-- `specfact code --help`
-- `specfact code review --help`
-- `specfact spec --help`
-- `specfact govern --help`
-- `specfact backlog --help`
-- `specfact module --help`
-
-When you need exact syntax, verify against live help in the current release, for example:
+Run the bundle bootstrap steps before following any IDE-assisted or prompt-driven workflow:
 
 ```bash
-specfact project sync bridge --help
-specfact code repro --help
-specfact code validate sidecar --help
-specfact spec validate --help
-specfact govern enforce --help
+specfact init --profile solo-developer
+specfact init ide --repo . --ide cursor
 ```
 
-This page needs a full rewrite around the mounted command groups before task-level workflow examples can be published again.
+Use `specfact init ide` again after module upgrades so bundle-owned prompts and templates stay in sync with the CLI.
+
+## Brownfield modernization
+
+- [Brownfield modernization](/guides/brownfield-modernization/) for the end-to-end legacy-code modernization path
+- [Brownfield FAQ and ROI](/guides/brownfield-faq-and-roi/) for planning, rollout, and investment questions
+- [Brownfield examples](/guides/brownfield-examples/) for concrete example flows you can adapt
+
+## Cross-bundle delivery workflows
+
+- [Cross-module chains](/guides/cross-module-chains/) for backlog -> code -> spec -> govern handoffs
+- [Daily DevOps routine](/guides/daily-devops-routine/) for morning standup through end-of-day review
+- [CI/CD pipeline](/guides/ci-cd-pipeline/) for pre-commit, GitHub Actions, and release-stage quality gates
+- [Command chains reference](/guides/command-chains/) for short command sequences grouped by goal
+
+## Focused deep dives
+
+- [AI IDE workflow](/ai-ide-workflow/) for prompt/bootstrap-aware IDE usage
+- [Contract testing workflow](/contract-testing-workflow/) for Specmatic validation, compatibility, test generation, and mocks
+- [Agile/Scrum workflows](/guides/agile-scrum-workflows/) for backlog ceremonies and persona flows
+- [Team collaboration workflow](/team-collaboration-workflow/) for persona export/import and lock-based editing
+
+## Bundle references used by these workflows
+
+- [Backlog bundle overview](/bundles/backlog/overview/)
+- [Project bundle overview](/bundles/project/overview/)
+- [Codebase bundle overview](/bundles/codebase/overview/)
+- [Spec bundle overview](/bundles/spec/overview/)
+- [Govern bundle overview](/bundles/govern/overview/)

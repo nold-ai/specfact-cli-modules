@@ -170,9 +170,9 @@ If your team uses **custom fields** (e.g. Azure DevOps custom process templates)
 
 ## Related Documentation
 
-- **[Backlog Refinement Guide](../guides/backlog-refinement.md)** — Full reference: templates, options, export/import, DoR
-- **[Story scope and specification level](../guides/backlog-refinement.md#story-scope-and-specification-level)** — Underspecification, over-specification, fit-for-scope
-- **[Definition of Ready (DoR)](../guides/backlog-refinement.md#step-45-definition-of-ready-dor-validation-optional)** — DoR configuration and validation
+- **[Backlog Refinement Guide](/bundles/backlog/refinement/)** — Full reference: templates, options, export/import, DoR
+- **[Story scope and specification level](/bundles/backlog/refinement/#story-scope-and-specification-level)** — Underspecification, over-specification, fit-for-scope
+- **[Definition of Ready (DoR)](/bundles/backlog/refinement/#step-45-definition-of-ready-dor-validation-optional)** — DoR configuration and validation
 - **[Template Customization](../guides/template-customization.md)** — Custom templates for advanced teams
 - **[Custom Field Mapping](../guides/custom-field-mapping.md)** — ADO custom field mapping
 - **[IDE Integration](../guides/ide-integration.md)** — Set up slash commands in Cursor, VS Code, etc.

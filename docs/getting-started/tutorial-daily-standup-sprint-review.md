@@ -65,7 +65,7 @@ specfact backlog ceremony standup ado
 
 If you're **not** in a clone (e.g. different directory), use one of:
 
-- **`.nold-ai/specfact-backlog.yaml`** in the project (see [Project backlog context](../guides/devops-adapter-integration.md#project-backlog-context-specfactbacklogyaml))
+- **`.nold-ai/specfact-backlog.yaml`** in the project (see [Project backlog context](/integrations/devops-adapter-overview/#project-backlog-context-specfactbacklogyaml))
 - **Environment variables**: `SPECFACT_GITHUB_REPO_OWNER`, `SPECFACT_GITHUB_REPO_NAME` or `SPECFACT_ADO_ORG`, `SPECFACT_ADO_PROJECT`
 - **CLI options**: `--repo-owner` / `--repo-name` or `--ado-org` / `--ado-project`
 
@@ -213,6 +213,6 @@ supported. Use it with the **`specfact.backlog-daily`** slash prompt for interac
 
 ## Related Documentation
 
-- **[Agile/Scrum Workflows](../guides/agile-scrum-workflows.md)** — Daily standup, iteration/sprint, unassigned items, blockers-first
-- **[DevOps Adapter Integration](../guides/devops-adapter-integration.md)** — Project backlog context (`.nold-ai/specfact-backlog.yaml`), env vars, **Git fallback (auto-detect from clone)** for GitHub and Azure DevOps
-- **[Backlog Refinement Guide](../guides/backlog-refinement.md)** — Template-driven refinement (complementary to daily standup)
+- **[Agile/Scrum Workflows](/guides/agile-scrum-workflows/)** — Daily standup, iteration/sprint, unassigned items, blockers-first
+- **[DevOps Adapter Integration](/integrations/devops-adapter-overview/)** — Project backlog context (`.nold-ai/specfact-backlog.yaml`), env vars, **Git fallback (auto-detect from clone)** for GitHub and Azure DevOps
+- **[Backlog Refinement Guide](/bundles/backlog/refinement/)** — Template-driven refinement (complementary to daily standup)
