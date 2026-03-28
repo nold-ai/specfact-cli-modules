@@ -19,7 +19,7 @@ def is_test_mode() -> bool:
     """Check if running in test mode."""
     if os.environ.get("TEST_MODE") == "true":
         return True
-    return any("pytest" in arg or "test" in arg.lower() for arg in sys.argv) or "pytest" in sys.modules
+    return any(re.search(r"\bpytest\b|\btests?\b", arg.lower()) for arg in sys.argv) or "pytest" in sys.modules
 
 
 @beartype

@@ -62,11 +62,11 @@ def _pso_maybe_bootstrap_constitution(repo: Path, adapter_type: AdapterType, con
         return
     constitution_path = repo / ".specify" / "memory" / "constitution.md"
     if not constitution_path.exists():
-        console.print("[bold green]✓[/bold green] Constitution found and validated")
         return
     from specfact_cli.utils.bundle_converters import is_constitution_minimal
 
     if not is_constitution_minimal(constitution_path):
+        console.print("[bold green]✓[/bold green] Constitution found and validated")
         return
     is_test_env = os.environ.get("TEST_MODE") == "true" or os.environ.get("PYTEST_CURRENT_TEST") is not None
     if is_test_env:

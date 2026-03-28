@@ -28,8 +28,11 @@ def detect_speckit_backlog_mappings(repo_path: Path, proposal_name: str, adapter
 
     detector = SpecKitBacklogSync()
     mappings = detector.detect_issue_mappings(feature_path, capabilities)
+    repo_identifier = infer_backlog_repo_identifier(repo_path, adapter_type)
     return [
-        _to_backlog_entry(mapping, feature_path.name, repo_path) for mapping in mappings if mapping.tool == adapter_type
+        _to_backlog_entry(mapping, feature_path.name, repo_identifier)
+        for mapping in mappings
+        if mapping.tool == adapter_type
     ]
 
 
@@ -52,8 +55,8 @@ def find_speckit_feature_path(repo_path: Path, proposal_name: str) -> Path | Non
 @beartype
 @ensure(lambda result: result is None or isinstance(result, str), "Must return None or str")
 def infer_backlog_repo_identifier(repo_path: Path, adapter_type: str) -> str | None:
-    """Infer the current repo identifier for GitHub-based backlog dedupe."""
-    if adapter_type != "github":
+    """Infer the current repo identifier for GitHub and ADO backlog dedupe."""
+    if adapter_type not in {"github", "ado"}:
         return None
     try:
         result = subprocess.run(
@@ -68,19 +71,28 @@ def infer_backlog_repo_identifier(repo_path: Path, adapter_type: str) -> str | N
         return None
     if result.returncode != 0:
         return None
-    match = re.search(r"github\.com[:/](.+?)(?:\.git)?$", result.stdout.strip())
-    return match.group(1) if match else None
+    remote_url = result.stdout.strip()
+    if adapter_type == "github":
+        match = re.search(r"github\.com[:/](.+?)(?:\.git)?$", remote_url)
+        return match.group(1) if match else None
+    https_match = re.search(r"dev\.azure\.com/([^/]+)/([^/]+)(?:/|$)", remote_url)
+    if https_match:
+        return f"{https_match.group(1)}/{https_match.group(2)}"
+    ssh_match = re.search(r"ssh\.dev\.azure\.com:v3/([^/]+)/([^/]+)(?:/|$)", remote_url)
+    if ssh_match:
+        return f"{ssh_match.group(1)}/{ssh_match.group(2)}"
+    return None
 
 
 @beartype
 @ensure(lambda result: isinstance(result, dict), "Must return dict")
-def _to_backlog_entry(mapping: Any, feature_name: str, repo_path: Path) -> dict[str, Any]:
+def _to_backlog_entry(mapping: Any, feature_name: str, repo_identifier: str | None) -> dict[str, Any]:
     """Convert a detected Spec-Kit mapping into bridge source-tracking format."""
     return {
         "source_type": mapping.tool,
         "source_id": mapping.issue_ref.lstrip("#"),
         "source_ref": mapping.issue_ref,
-        "source_repo": infer_backlog_repo_identifier(repo_path, mapping.tool),
+        "source_repo": repo_identifier,
         "source_metadata": {
             "imported_from": mapping.source,
             "speckit_feature": feature_name,

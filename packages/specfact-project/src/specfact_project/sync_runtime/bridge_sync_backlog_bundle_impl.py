@@ -131,8 +131,10 @@ def run_import_backlog_items_to_bundle(
                     bundle_name=bundle_name,
                 )
             )
-        except Exception as e:
+        except (ValueError, KeyError, TypeError, OSError, RuntimeError) as e:
             errors.append(f"Failed to import backlog item '{item_ref}': {e}")
+        except (KeyboardInterrupt, MemoryError, SystemExit):
+            raise
     if operations:
         save_project_bundle(project_bundle, bundle_dir, atomic=True)
     return SyncResult(

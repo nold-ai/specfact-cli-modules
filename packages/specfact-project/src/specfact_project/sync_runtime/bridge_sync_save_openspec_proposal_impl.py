@@ -24,18 +24,30 @@ logger = logging.getLogger(__name__)
 def run_save_openspec_change_proposal(bridge: Any, proposal: dict[str, Any]) -> None:
     change_id = proposal.get("change_id")
     if not change_id:
+        logger.debug("Skipping OpenSpec proposal save because change_id is missing: %s", proposal)
         return
     openspec_changes_dir = soscp_find_openspec_changes_dir(bridge)
     if not openspec_changes_dir:
+        logger.debug("Skipping OpenSpec proposal save for %s because changes dir could not be resolved", change_id)
         return
     proposal_file = soscp_resolve_proposal_file(openspec_changes_dir, change_id)
     if not proposal_file or not proposal_file.exists():
+        logger.debug(
+            "Skipping OpenSpec proposal save for %s because proposal file is missing: %s",
+            change_id,
+            proposal_file,
+        )
         return
     try:
         content = proposal_file.read_text(encoding="utf-8")
         source_tracking_raw = proposal.get("source_tracking", {})
         source_tracking_list = bridge._normalize_source_tracking(source_tracking_raw)
         if not source_tracking_list:
+            logger.debug(
+                "Skipping OpenSpec proposal save for %s because source tracking normalized empty: raw=%s",
+                change_id,
+                source_tracking_raw,
+            )
             return
         metadata_section = soscp_build_metadata_section(source_tracking_list)
         content = soscp_apply_title(content, proposal.get("title"))

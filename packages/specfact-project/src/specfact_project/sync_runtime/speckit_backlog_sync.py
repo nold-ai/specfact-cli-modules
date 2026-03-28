@@ -40,7 +40,6 @@ class SpecKitBacklogSync:
         "linear": "linear",
         "github": "github",
         "github-projects": "github",
-        "trello": "trello",
     }
 
     @beartype

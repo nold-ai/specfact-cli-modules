@@ -24,19 +24,19 @@ def ecd_resolve_adapter_instance(
 ) -> Any | None:
     from specfact_cli.adapters.registry import AdapterRegistry
 
-    adapter_class = AdapterRegistry._adapters.get(adapter_type.lower())
-    if not adapter_class:
+    adapter_name = adapter_type.lower()
+    if not AdapterRegistry.is_registered(adapter_name):
         errors.append(f"Adapter '{adapter_type}' not found in registry")
         return None
     adapter_kwargs: dict[str, Any] = {}
-    if adapter_type.lower() == "github":
+    if adapter_name == "github":
         adapter_kwargs = {
             "repo_owner": repo_owner,
             "repo_name": repo_name,
             "api_token": api_token,
             "use_gh_cli": use_gh_cli,
         }
-    elif adapter_type.lower() == "ado":
+    elif adapter_name == "ado":
         adapter_kwargs = {
             "org": ado_org,
             "project": ado_project,
@@ -44,7 +44,7 @@ def ecd_resolve_adapter_instance(
             "api_token": api_token,
             "work_item_type": ado_work_item_type,
         }
-    return AdapterRegistry.get_adapter(adapter_type, **adapter_kwargs)
+    return AdapterRegistry.get_adapter(adapter_name, **adapter_kwargs)
 
 
 def ecd_read_change_proposals(

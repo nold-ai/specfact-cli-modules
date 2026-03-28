@@ -89,7 +89,11 @@ def _pst_apply_source_repo_comment(entry: dict[str, Any], entry_content: str) ->
         return
     if entry.get("source_repo"):
         return
-    source_repo_in_content = re.search(r"source_repo[:\s]+([^\n]+)", entry_content, re.IGNORECASE)
+    source_repo_in_content = re.search(
+        r"^\s*source_repo\s*:\s*([^\n]+)",
+        entry_content,
+        re.IGNORECASE | re.MULTILINE,
+    )
     if source_repo_in_content:
         entry["source_repo"] = source_repo_in_content.group(1).strip()
 

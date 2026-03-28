@@ -57,7 +57,7 @@ def priority_rationale_from_story(story: Story, feature: Feature) -> str:
     return priority_rationale
 
 
-def invsest_lines() -> list[str]:
+def invest_lines() -> list[str]:
     return [
         "**Independent**: YES",
         "**Negotiable**: YES",
@@ -254,7 +254,7 @@ def _user_stories_section(feature: Feature) -> list[str]:
         rationale = priority_rationale_from_story(story, feature)
         lines.append(f"**Why this priority**: {rationale}")
         lines.append("")
-        lines.extend(invsest_lines())
+        lines.extend(invest_lines())
         lines.append("**Acceptance Criteria:**")
         lines.append("")
 

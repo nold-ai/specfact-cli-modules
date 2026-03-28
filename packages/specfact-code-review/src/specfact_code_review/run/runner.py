@@ -131,7 +131,7 @@ def _pytest_python_executable() -> str:
     local_candidates = [Path(".venv/bin/python"), Path(".venv/Scripts/python.exe")]
     for candidate in local_candidates:
         resolved = candidate.resolve()
-        if resolved.is_file() and os.access(resolved, os.X_OK):
+        if resolved.is_file():
             return str(resolved)
     return sys.executable
 

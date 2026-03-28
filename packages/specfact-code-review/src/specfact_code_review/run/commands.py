@@ -172,7 +172,7 @@ def _resolve_files(
             path_filters=path_filters,
         )
         resolved = _filtered_files(resolved, path_filters=path_filters)
-    resolved = [file_path for file_path in resolved if not _is_ignored_review_path(file_path)]
+        resolved = [file_path for file_path in resolved if not _is_ignored_review_path(file_path)]
 
     if not resolved:
         _raise_for_empty_auto_scope(scope=scope or "changed", path_filters=path_filters)

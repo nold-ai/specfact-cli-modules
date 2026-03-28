@@ -64,7 +64,7 @@ def _export_only_backlog_bundle(
     update_existing: bool,
     change_ids_list: list[str] | None,
 ) -> bool:
-    if adapter_value not in ("github", "ado") or not bundle:
+    if adapter_value not in ("github", "ado"):
         return False
     resolved_bundle = bundle or infer_bundle_name(repo)
     if not resolved_bundle:
