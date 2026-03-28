@@ -126,12 +126,13 @@
       // Re-render mermaid on theme change
       function rerenderMermaid(theme) {
         var isDark = theme === 'dark';
-        document.querySelectorAll('.mermaid[data-processed],.mermaid svg').forEach(function(el) {
-          el.removeAttribute('data-processed');
-          // Restore original source if stored
-          if (el.getAttribute('data-source')) {
-            el.innerHTML = '';
-            el.textContent = el.getAttribute('data-source');
+        document.querySelectorAll('.mermaid[data-processed]').forEach(function(container) {
+          container.removeAttribute('data-processed');
+          container.querySelectorAll('svg').forEach(function(svg) {
+            svg.remove();
+          });
+          if (container.getAttribute('data-source')) {
+            container.textContent = container.getAttribute('data-source');
           }
         });
         mermaid.initialize({
@@ -146,14 +147,13 @@
 
       document.addEventListener('DOMContentLoaded', function() {
         var currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        initMermaid(currentTheme);
-
-        // Store original mermaid source for re-rendering
         document.querySelectorAll('.mermaid').forEach(function(el) {
           if (!el.getAttribute('data-source')) {
             el.setAttribute('data-source', el.textContent.trim());
           }
         });
+
+        initMermaid(currentTheme);
       });
     </script>
   </head>
@@ -211,7 +211,6 @@
           <div class="footer-col">
             <p class="p-name">{{ site.title | escape }}</p>
             <p>{{ site.description | escape }}</p>
-          </div>
           </div>
         </div>
         <div class="footer-links">

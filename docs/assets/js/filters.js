@@ -3,7 +3,12 @@
   var countEl = document.querySelector('.expertise-count');
   if (!pills.length) return;
 
-  var stored = localStorage.getItem('specfact-expertise') || 'all';
+  var stored = 'all';
+  try {
+    stored = localStorage.getItem('specfact-expertise') || 'all';
+  } catch (error) {
+    console.warn('SpecFact expertise filter persistence unavailable.', error);
+  }
 
   function applyFilter(level) {
     // Update pills
@@ -49,7 +54,11 @@
       }
     }
 
-    localStorage.setItem('specfact-expertise', level);
+    try {
+      localStorage.setItem('specfact-expertise', level);
+    } catch (error) {
+      console.warn('SpecFact expertise filter persistence unavailable.', error);
+    }
   }
 
   pills.forEach(function(pill) {

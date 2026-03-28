@@ -14,7 +14,7 @@ Canonical documentation for official nold-ai bundles and module-specific workflo
 
 The modules site owns all bundle-specific deep guidance. Core CLI platform docs remain at [docs.specfact.io](https://docs.specfact.io).
 
-**New here?** Start with [Choose Your Modules](getting-started/choose-your-modules/) — a quick guide to what each module does, which ones you need, and how they work together.
+**New here?** Start with [Choose Your Modules]({{ '/getting-started/choose-your-modules/' | relative_url }}) — a quick guide to what each module does, which ones you need, and how they work together.
 
 ## Find Your Path
 
@@ -23,40 +23,40 @@ The modules site owns all bundle-specific deep guidance. Core CLI platform docs 
 <h3>Solo Developer</h3>
 <p>Get started quickly with SpecFact modules on your own projects.</p>
 <ul>
-<li><a href="getting-started/choose-your-modules/">Choose Your Modules</a></li>
-<li><a href="getting-started/installation/">Installation</a></li>
-<li><a href="getting-started/first-steps/">First Steps</a></li>
-<li><a href="getting-started/tutorial-backlog-quickstart-demo/">Backlog Quickstart Demo</a></li>
+<li><a href="{{ '/getting-started/choose-your-modules/' | relative_url }}">Choose Your Modules</a></li>
+<li><a href="{{ '/getting-started/installation/' | relative_url }}">Installation</a></li>
+<li><a href="{{ '/getting-started/first-steps/' | relative_url }}">First Steps</a></li>
+<li><a href="{{ '/getting-started/tutorial-backlog-quickstart-demo/' | relative_url }}">Backlog Quickstart Demo</a></li>
 </ul>
 </div>
 <div class="path-card">
 <h3>Small Team / Startup</h3>
 <p>Set up SpecFact for your team with shared configuration and agile workflows.</p>
 <ul>
-<li><a href="team-and-enterprise/team-collaboration/">Team Collaboration Setup</a></li>
-<li><a href="team-and-enterprise/agile-scrum-setup/">Agile &amp; Scrum Setup</a></li>
-<li><a href="guides/cross-module-chains/">Cross-Module Workflows</a></li>
-<li><a href="guides/daily-devops-routine/">Daily DevOps Routine</a></li>
+<li><a href="{{ '/team-and-enterprise/team-collaboration/' | relative_url }}">Team Collaboration Setup</a></li>
+<li><a href="{{ '/team-and-enterprise/agile-scrum-setup/' | relative_url }}">Agile &amp; Scrum Setup</a></li>
+<li><a href="{{ '/guides/cross-module-chains/' | relative_url }}">Cross-Module Workflows</a></li>
+<li><a href="{{ '/guides/daily-devops-routine/' | relative_url }}">Daily DevOps Routine</a></li>
 </ul>
 </div>
 <div class="path-card">
 <h3>Corporate Team</h3>
 <p>Scale SpecFact across multiple repos with CI/CD integration and governance.</p>
 <ul>
-<li><a href="team-and-enterprise/multi-repo/">Multi-Repo Setup</a></li>
-<li><a href="guides/ci-cd-pipeline/">CI/CD Pipeline Integration</a></li>
-<li><a href="bundles/govern/overview/">Govern Bundle Overview</a></li>
-<li><a href="bundles/code-review/overview/">Code Review Bundle Overview</a></li>
+<li><a href="{{ '/team-and-enterprise/multi-repo/' | relative_url }}">Multi-Repo Setup</a></li>
+<li><a href="{{ '/guides/ci-cd-pipeline/' | relative_url }}">CI/CD Pipeline Integration</a></li>
+<li><a href="{{ '/bundles/govern/overview/' | relative_url }}">Govern Bundle Overview</a></li>
+<li><a href="{{ '/bundles/code-review/overview/' | relative_url }}">Code Review Bundle Overview</a></li>
 </ul>
 </div>
 <div class="path-card">
 <h3>Enterprise</h3>
 <p>Enterprise-grade configuration, security, custom registries and module authoring.</p>
 <ul>
-<li><a href="team-and-enterprise/enterprise-config/">Enterprise Configuration</a></li>
-<li><a href="authoring/module-signing/">Module Signing</a></li>
-<li><a href="authoring/custom-registries/">Custom Registries</a></li>
-<li><a href="reference/module-security/">Module Security</a></li>
+<li><a href="{{ '/team-and-enterprise/enterprise-config/' | relative_url }}">Enterprise Configuration</a></li>
+<li><a href="{{ '/authoring/module-signing/' | relative_url }}">Module Signing</a></li>
+<li><a href="{{ '/authoring/custom-registries/' | relative_url }}">Custom Registries</a></li>
+<li><a href="{{ '/reference/module-security/' | relative_url }}">Module Security</a></li>
 </ul>
 </div>
 </div>

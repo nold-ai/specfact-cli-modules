@@ -4,7 +4,7 @@ title: Common Tasks Quick Reference
 permalink: /common-tasks/
 redirect_from:
   - /guides/common-tasks/
-keywords: [common-tasks, reference, quickstart, cheatsheet, cli]
+keywords: [common-tasks, redirect, getting-started]
 audience: [solo, team]
 expertise_level: [beginner, intermediate]
 ---

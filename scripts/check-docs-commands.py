@@ -315,8 +315,12 @@ def _route_for_doc(path: Path, text: str) -> str:
         parent = relative_path.parent
         return "/" if str(parent) == "." else f"/{'/'.join(parent.parts)}/"
     if relative_path.name.lower() == "readme.md":
-        return f"/{'/'.join(relative_path.parent.parts)}/"
-    return f"/{'/'.join(relative_path.with_suffix('').parts)}/"
+        parent = relative_path.parent
+        return "/" if str(parent) == "." else f"/{'/'.join(parent.parts)}/"
+    path_no_ext = relative_path.with_suffix("")
+    if str(path_no_ext.parent) == ".":
+        return f"/{path_no_ext.name}/" if path_no_ext.name else "/"
+    return f"/{'/'.join(path_no_ext.parts)}/"
 
 
 def _build_valid_docs_routes(text_by_path: dict[Path, str]) -> set[str]:
@@ -342,7 +346,22 @@ def _iter_yaml_url_nodes(node: yaml.Node | None) -> list[tuple[str, int]]:
 def _validate_nav_data_links(nav_path: Path, valid_routes: set[str]) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
     raw_text = nav_path.read_text(encoding="utf-8")
-    for raw_url, line_number in _iter_yaml_url_nodes(yaml.compose(raw_text)):
+    try:
+        nav_node = yaml.compose(raw_text)
+    except yaml.YAMLError as exc:
+        line_number = 1
+        if hasattr(exc, "problem_mark") and exc.problem_mark is not None:
+            line_number = exc.problem_mark.line + 1
+        findings.append(
+            ValidationFinding(
+                category="nav-parse",
+                source=nav_path,
+                line_number=line_number,
+                message=f"Failed to parse navigation data: {exc}",
+            )
+        )
+        return findings
+    for raw_url, line_number in _iter_yaml_url_nodes(nav_node):
         normalized = _normalize_docs_route(raw_url)
         if normalized is None or normalized in valid_routes:
             continue
