@@ -38,5 +38,5 @@ specfact govern patch apply changes.patch --write --yes
 
 ## Related
 
-- [Govern enforce](enforce/)
-- [Govern bundle overview](overview/)
+- [Govern enforce](/bundles/govern/enforce/)
+- [Govern bundle overview](/bundles/govern/overview/)

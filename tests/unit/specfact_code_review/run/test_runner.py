@@ -10,7 +10,13 @@ from typing import Literal
 from pytest import MonkeyPatch
 
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
-from specfact_code_review.run.runner import _pytest_targets, _run_pytest_with_coverage, run_review, run_tdd_gate
+from specfact_code_review.run.runner import (
+    _pytest_python_executable,
+    _pytest_targets,
+    _run_pytest_with_coverage,
+    run_review,
+    run_tdd_gate,
+)
 
 
 def _finding(
@@ -404,8 +410,18 @@ def test_run_pytest_with_coverage_disables_global_fail_under(monkeypatch: Monkey
 
     command = recorded["command"]
     assert isinstance(command, list)
-    assert command[:3] == [sys.executable, "-m", "pytest"]
+    assert command[:3] == [_pytest_python_executable(), "-m", "pytest"]
     assert "--cov-fail-under=0" in command
+
+
+def test_pytest_python_executable_prefers_local_venv(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    venv_python = tmp_path / ".venv/bin/python"
+    venv_python.parent.mkdir(parents=True)
+    venv_python.write_text("#!/bin/sh\n", encoding="utf-8")
+    venv_python.chmod(0o755)
+
+    assert _pytest_python_executable() == str(venv_python.resolve())
 
 
 def test_pytest_targets_collapse_multi_file_batch_to_common_test_directory() -> None:

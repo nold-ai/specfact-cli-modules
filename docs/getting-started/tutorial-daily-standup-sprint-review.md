@@ -213,6 +213,6 @@ supported. Use it with the **`specfact.backlog-daily`** slash prompt for interac
 
 ## Related Documentation
 
-- **[Agile/Scrum Workflows](../guides/agile-scrum-workflows.md)** — Daily standup, iteration/sprint, unassigned items, blockers-first
+- **[Agile/Scrum Workflows](/guides/agile-scrum-workflows/)** — Daily standup, iteration/sprint, unassigned items, blockers-first
 - **[DevOps Adapter Integration](/integrations/devops-adapter-overview/)** — Project backlog context (`.nold-ai/specfact-backlog.yaml`), env vars, **Git fallback (auto-detect from clone)** for GitHub and Azure DevOps
 - **[Backlog Refinement Guide](/bundles/backlog/refinement/)** — Template-driven refinement (complementary to daily standup)

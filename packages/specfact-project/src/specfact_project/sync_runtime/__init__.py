@@ -11,6 +11,7 @@ from specfact_project.sync_runtime.bridge_probe import BridgeProbe
 from specfact_project.sync_runtime.bridge_sync import BridgeSync, SyncOperation, SyncResult
 from specfact_project.sync_runtime.bridge_watch import BridgeWatch, BridgeWatchEventHandler
 from specfact_project.sync_runtime.repository_sync import RepositorySync, RepositorySyncResult
+from specfact_project.sync_runtime.speckit_backlog_sync import SpecKitBacklogSync, SpecKitIssueMapping
 from specfact_project.sync_runtime.watcher import FileChange, SyncEventHandler, SyncWatcher
 
 
@@ -22,6 +23,8 @@ __all__ = [
     "FileChange",
     "RepositorySync",
     "RepositorySyncResult",
+    "SpecKitBacklogSync",
+    "SpecKitIssueMapping",
     "SyncEventHandler",
     "SyncOperation",
     "SyncResult",

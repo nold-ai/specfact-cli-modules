@@ -37,7 +37,7 @@ Related: [Brownfield modernization](/guides/brownfield-modernization/)
 ```bash
 specfact backlog ceremony refinement github --preview --labels feature
 specfact backlog verify-readiness --adapter github --project-id owner/repo --target-items 123
-specfact project sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+specfact sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
 ```
 
 Use this chain when backlog items must be standardized and readiness-checked before you export or sync them into project artifacts.

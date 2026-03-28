@@ -334,14 +334,14 @@ To create a GitHub issue from an OpenSpec change and have the issue number/URL w
 
 ```bash
 # Export one or more changes; creates issues and updates proposal.md Source Tracking
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo . \
   --repo-owner nold-ai \
   --repo-name specfact-cli \
   --change-ids <change-id>
 
 # Example: export backlog-scrum-05-summarize-markdown-output
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo . \
   --repo-owner nold-ai \
   --repo-name specfact-cli \
@@ -362,7 +362,7 @@ When you improve comment logic or branch detection, use `--include-archived` to 
 
 ```bash
 # Update all archived proposals with new comment logic
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo-owner your-org \
   --repo-name your-repo \
   --include-archived \
@@ -370,7 +370,7 @@ specfact project sync bridge --adapter github --mode export-only \
   --repo /path/to/openspec-repo
 
 # Update specific archived proposal
-specfact project sync bridge --adapter github --mode export-only \
+specfact sync bridge --adapter github --mode export-only \
   --repo-owner your-org \
   --repo-name your-repo \
   --change-ids add-code-change-tracking \

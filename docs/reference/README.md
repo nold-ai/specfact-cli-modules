@@ -31,12 +31,12 @@ Complete technical reference for the official modules site and bundle-owned work
 
 ### Commands
 
-- `specfact project sync bridge --adapter speckit --bundle <bundle-name>` - Import from external tools via bridge adapter
+- `specfact sync bridge --adapter speckit --bundle <bundle-name>` - Import from external tools via bridge adapter
 - `specfact code import <bundle-name>` - Reverse-engineer plans from code
 - `specfact code analyze contracts` - Analyze contract coverage for a codebase bundle
 - `specfact govern enforce stage` - Configure quality gates
 - `specfact code repro` - Run the reproducibility validation suite
-- `specfact project sync bridge --adapter <adapter> --bundle <bundle-name>` - Sync with external tools via bridge adapter
+- `specfact sync bridge --adapter <adapter> --bundle <bundle-name>` - Sync with external tools via bridge adapter
 - `specfact spec validate [--bundle <name>]` - Validate OpenAPI/AsyncAPI specifications
 - `specfact spec generate-tests [--bundle <name>]` - Generate contract tests from specifications
 - `specfact spec mock [--bundle <name>]` - Launch mock server for development

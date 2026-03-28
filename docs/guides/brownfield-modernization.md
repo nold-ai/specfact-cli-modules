@@ -36,7 +36,7 @@ Use this to identify where the codebase already has contract signals and where m
 ## 4. Sync or export project state when outside tools are involved
 
 ```bash
-specfact project sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+specfact sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
 ```
 
 Use the bridge layer when you need to exchange bundle state with GitHub, Azure DevOps, OpenSpec, or another supported adapter.

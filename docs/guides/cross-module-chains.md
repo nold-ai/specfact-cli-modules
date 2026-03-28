@@ -24,7 +24,7 @@ specfact init ide --repo . --ide cursor
 ```bash
 specfact backlog ceremony refinement github --preview --labels feature
 specfact backlog verify-readiness --adapter github --project-id owner/repo --target-items 123
-specfact project sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+specfact sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
 ```
 
 Use this chain when work starts in an external backlog tool and must be cleaned up before it becomes a SpecFact project artifact.

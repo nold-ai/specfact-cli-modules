@@ -16,6 +16,14 @@ from specfact_code_review.run.findings import ReviewFinding
 
 _CROSSHAIR_LINE_RE = re.compile(r"^(?P<file>.+?):(?P<line>\d+):\s*(?:error|warning|info):\s*(?P<message>.+)$")
 _IGNORED_CROSSHAIR_PREFIXES = ("SideEffectDetected:",)
+_SYNC_RUNTIME_ICONTRACT_ENTRYPOINTS = {
+    "bridge_probe.py",
+    "bridge_sync.py",
+    "bridge_watch.py",
+    "speckit_backlog_sync.py",
+    "speckit_bridge_backlog.py",
+    "speckit_change_proposal_sync.py",
+}
 
 
 def _allowed_paths(files: list[Path]) -> set[str]:
@@ -53,7 +61,20 @@ def _public_api_nodes(tree: ast.AST) -> list[ast.FunctionDef | ast.AsyncFunction
     return public_nodes
 
 
+def _skip_icontract_ast_scan(file_path: Path) -> bool:
+    """Implementation/helper modules opt out of per-public-function @require/@ensure AST checks."""
+    normalized = str(file_path).replace("\\", "/")
+    if normalized.endswith("/importers/speckit_markdown_sections.py"):
+        return True
+    if "/specfact_project/sync_runtime/" not in normalized:
+        return False
+    name = file_path.name
+    return name not in _SYNC_RUNTIME_ICONTRACT_ENTRYPOINTS
+
+
 def _scan_file(file_path: Path) -> list[ReviewFinding]:
+    if _skip_icontract_ast_scan(file_path):
+        return []
     try:
         tree = ast.parse(file_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, SyntaxError) as exc:

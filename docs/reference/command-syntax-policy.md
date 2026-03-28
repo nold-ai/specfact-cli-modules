@@ -21,7 +21,7 @@ Always document commands exactly as implemented by the relevant current help ent
 - Positional bundle argument:
   - `specfact code import [BUNDLE]`
 - `--bundle` option:
-  - Supported by commands such as `specfact project sync bridge --bundle <bundle>`
+  - Supported by commands such as `specfact sync bridge --bundle <bundle>`
   - Not universally supported across all commands, so always verify with `--help`
 
 For callback-style commands such as `specfact code import`, keep options before the positional bundle argument in examples, for example `specfact code import --repo . legacy-api`.
@@ -44,7 +44,7 @@ Before merging command docs updates:
 
 ```bash
 hatch run specfact code import --help
-hatch run specfact project sync bridge --help
+hatch run specfact sync bridge --help
 hatch run specfact code validate sidecar --help
 hatch run specfact govern enforce --help
 ```
