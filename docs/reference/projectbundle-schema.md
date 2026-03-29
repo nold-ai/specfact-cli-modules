@@ -3,6 +3,9 @@ layout: default
 title: ProjectBundle Schema
 permalink: /reference/projectbundle-schema/
 description: ProjectBundle fields, schema_version semantics, and compatibility guidance.
+keywords: [projectbundle, schema, fields, versioning, configuration]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # ProjectBundle Schema

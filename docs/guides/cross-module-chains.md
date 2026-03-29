@@ -2,6 +2,9 @@
 layout: default
 title: Cross-Module Chains
 permalink: /guides/cross-module-chains/
+keywords: [cross-module, chains, workflow, integration, pipeline]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Cross-Module Chains

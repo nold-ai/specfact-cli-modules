@@ -5,6 +5,9 @@ permalink: /authoring/module-development/
 redirect_from:
   - /guides/module-development/
 description: How to build and package SpecFact CLI modules.
+keywords: [module, development, authoring, packaging, bundle]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Module Development Guide
@@ -73,5 +76,5 @@ Extension/security fields:
 ## Related docs
 
 - [Architecture Reference](/architecture/)
-- [Module System Architecture](../architecture/module-system.md) <!-- TODO: target file does not exist yet -->
+- [Module Categories](/reference/module-categories/) - Module types and categories
 - [Adapter Development Guide](adapter-development.md)

@@ -3,6 +3,9 @@ layout: default
 title: Module Security
 permalink: /reference/module-security/
 description: Trust model, checksum and signature verification, and integrity lifecycle for module packages.
+keywords: [module, security, trust, checksum, signature]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Module Security

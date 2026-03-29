@@ -5,6 +5,9 @@ nav_order: 3
 permalink: /bundles/codebase/analyze/
 redirect_from:
   - /guides/code-analyze-contracts/
+keywords: [codebase, analyze, contracts, validation, code]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Code analyze contracts

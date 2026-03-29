@@ -3,6 +3,9 @@ layout: default
 title: Tutorial - Backlog Refine with Your AI IDE
 description: Integrate SpecFact CLI backlog refinement with your AI IDE. Improve story quality, underspec/overspec, split stories, fix ambiguities, respect DoR, and use custom template mapping.
 permalink: /getting-started/tutorial-backlog-refine-ai-ide/
+keywords: [tutorial, backlog, refinement, ai-ide, story-quality]
+audience: [solo, team, enterprise]
+expertise_level: [beginner]
 ---
 
 # Tutorial: Backlog Refine with Your AI IDE (Agile DevOps Teams)

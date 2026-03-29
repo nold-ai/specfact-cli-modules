@@ -5,6 +5,9 @@ nav_order: 4
 permalink: /bundles/code-review/ledger/
 redirect_from:
   - /guides/code-review-ledger/
+keywords: [code-review, ledger, history, tracking, audit]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Code review ledger

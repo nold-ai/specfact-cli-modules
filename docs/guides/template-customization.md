@@ -2,6 +2,9 @@
 layout: default
 title: Template Customization Guide
 permalink: /guides/template-customization/
+keywords: [template, customization, configuration, output, formatting]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Template Customization Guide

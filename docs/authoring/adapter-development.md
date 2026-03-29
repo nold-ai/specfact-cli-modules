@@ -5,6 +5,9 @@ permalink: /authoring/adapter-development/
 redirect_from:
   - /guides/adapter-development/
 description: Implement BridgeAdapter integrations for external tools.
+keywords: [adapter, development, bridge, integration, authoring]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Adapter Development Guide

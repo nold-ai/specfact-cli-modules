@@ -3,6 +3,9 @@ layout: default
 title: Module Contracts
 permalink: /reference/module-contracts/
 description: ModuleIOContract protocol, validation output model, and isolation rules for module developers.
+keywords: [module, contracts, protocol, validation, isolation]
+audience: [solo, team, enterprise]
+expertise_level: [advanced]
 ---
 
 # Module Contracts

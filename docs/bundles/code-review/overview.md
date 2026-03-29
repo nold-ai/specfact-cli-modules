@@ -3,6 +3,9 @@ layout: default
 title: Code Review bundle overview
 nav_order: 2
 permalink: /bundles/code-review/overview/
+keywords: [code-review, bundle, overview, review, quality]
+audience: [solo, team, enterprise]
+expertise_level: [beginner, intermediate]
 ---
 
 # Code Review bundle overview

@@ -4,6 +4,9 @@ title: Backlog Dependency Analysis
 permalink: /bundles/backlog/dependency-analysis/
 redirect_from:
   - /guides/backlog-dependency-analysis/
+keywords: [backlog, dependency, analysis, graph, prioritization]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Backlog Dependency Analysis

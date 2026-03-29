@@ -1,0 +1,233 @@
+- section: Getting Started
+  items:
+    - title: Installation
+      url: /getting-started/installation/
+      expertise: [beginner]
+    - title: Choose Your Modules
+      url: /getting-started/choose-your-modules/
+      expertise: [beginner, intermediate]
+    - title: First Steps
+      url: /getting-started/first-steps/
+      expertise: [beginner]
+    - title: Module Bootstrap Checklist
+      url: /getting-started/module-bootstrap-checklist/
+      expertise: [beginner, intermediate]
+    - title: "Tutorial: Backlog Quickstart Demo"
+      url: /getting-started/tutorial-backlog-quickstart-demo/
+      expertise: [beginner]
+    - title: "Tutorial: Backlog Refine with AI IDE"
+      url: /getting-started/tutorial-backlog-refine-ai-ide/
+      expertise: [beginner, intermediate]
+    - title: "Tutorial: Daily Standup and Sprint Review"
+      url: /getting-started/tutorial-daily-standup-sprint-review/
+      expertise: [beginner, intermediate]
+
+- section: Bundles
+  bundles:
+    - name: Backlog
+      items:
+        - title: Overview
+          url: /bundles/backlog/overview/
+          expertise: [beginner, intermediate]
+        - title: Refinement
+          url: /bundles/backlog/refinement/
+          expertise: [intermediate, advanced]
+        - title: Delta Commands
+          url: /bundles/backlog/delta/
+          expertise: [intermediate, advanced]
+        - title: Dependency Analysis
+          url: /bundles/backlog/dependency-analysis/
+          expertise: [intermediate, advanced]
+        - title: Policy Engine
+          url: /bundles/backlog/policy-engine/
+          expertise: [advanced]
+        - title: Adapter Patterns
+          url: /adapters/backlog-adapter-patterns/
+          expertise: [advanced]
+    - name: Project
+      items:
+        - title: Overview
+          url: /bundles/project/overview/
+          expertise: [beginner, intermediate]
+        - title: DevOps Flow
+          url: /bundles/project/devops-flow/
+          expertise: [intermediate, advanced]
+        - title: Import & Migration
+          url: /bundles/project/import-migration/
+          expertise: [intermediate, advanced]
+    - name: Codebase
+      items:
+        - title: Overview
+          url: /bundles/codebase/overview/
+          expertise: [beginner, intermediate]
+        - title: Sidecar Validation
+          url: /bundles/codebase/sidecar-validation/
+          expertise: [intermediate, advanced]
+        - title: Analyze Contracts
+          url: /bundles/codebase/analyze/
+          expertise: [intermediate, advanced]
+        - title: Drift Detect
+          url: /bundles/codebase/drift/
+          expertise: [intermediate, advanced]
+        - title: Repro
+          url: /bundles/codebase/repro/
+          expertise: [advanced]
+    - name: Code Review
+      items:
+        - title: Overview
+          url: /bundles/code-review/overview/
+          expertise: [beginner, intermediate]
+        - title: Run
+          url: /bundles/code-review/run/
+          expertise: [intermediate, advanced]
+        - title: Ledger
+          url: /bundles/code-review/ledger/
+          expertise: [intermediate, advanced]
+        - title: Rules
+          url: /bundles/code-review/rules/
+          expertise: [advanced]
+    - name: Spec
+      items:
+        - title: Overview
+          url: /bundles/spec/overview/
+          expertise: [beginner, intermediate]
+        - title: Validate
+          url: /bundles/spec/validate/
+          expertise: [intermediate, advanced]
+        - title: Generate Tests
+          url: /bundles/spec/generate-tests/
+          expertise: [intermediate, advanced]
+        - title: Mock
+          url: /bundles/spec/mock/
+          expertise: [advanced]
+    - name: Govern
+      items:
+        - title: Overview
+          url: /bundles/govern/overview/
+          expertise: [beginner, intermediate]
+        - title: Enforce
+          url: /bundles/govern/enforce/
+          expertise: [intermediate, advanced]
+        - title: Patch
+          url: /bundles/govern/patch/
+          expertise: [intermediate, advanced]
+
+- section: Workflows
+  items:
+    - title: Cross-Module Chains
+      url: /guides/cross-module-chains/
+      expertise: [intermediate, advanced]
+    - title: Daily DevOps Routine
+      url: /guides/daily-devops-routine/
+      expertise: [intermediate]
+    - title: CI/CD Pipeline
+      url: /guides/ci-cd-pipeline/
+      expertise: [intermediate, advanced]
+    - title: Brownfield Modernization
+      url: /guides/brownfield-modernization/
+      expertise: [intermediate]
+    - title: Agile & Scrum Workflows
+      url: /guides/agile-scrum-workflows/
+      expertise: [intermediate]
+    - title: Command Chains
+      url: /guides/command-chains/
+      expertise: [intermediate, advanced]
+    - title: Contract Testing
+      url: /contract-testing-workflow/
+      expertise: [advanced]
+
+- section: Integrations
+  items:
+    - title: DevOps Adapter Overview
+      url: /integrations/devops-adapter-overview/
+      expertise: [intermediate]
+    - title: GitHub Adapter
+      url: /adapters/github/
+      expertise: [intermediate]
+    - title: Azure DevOps Adapter
+      url: /adapters/azuredevops/
+      expertise: [intermediate]
+    - title: Integrations Overview
+      url: /integrations-overview/
+      expertise: [intermediate]
+
+- section: Team & Enterprise
+  items:
+    - title: Team Collaboration
+      url: /team-and-enterprise/team-collaboration/
+      expertise: [intermediate]
+    - title: Agile & Scrum Setup
+      url: /team-and-enterprise/agile-scrum-setup/
+      expertise: [intermediate]
+    - title: Multi-Repo Setup
+      url: /team-and-enterprise/multi-repo/
+      expertise: [intermediate, advanced]
+    - title: Enterprise Configuration
+      url: /team-and-enterprise/enterprise-config/
+      expertise: [advanced]
+
+- section: Authoring
+  items:
+    - title: Module Development
+      url: /authoring/module-development/
+      expertise: [advanced]
+    - title: Adapter Development
+      url: /authoring/adapter-development/
+      expertise: [advanced]
+    - title: Publishing Modules
+      url: /authoring/publishing-modules/
+      expertise: [advanced]
+    - title: Module Signing
+      url: /authoring/module-signing/
+      expertise: [advanced]
+    - title: Custom Registries
+      url: /authoring/custom-registries/
+      expertise: [advanced]
+    - title: Creating Custom Bridges
+      url: /authoring/creating-custom-bridges/
+      expertise: [advanced]
+    - title: Extending ProjectBundle
+      url: /authoring/extending-projectbundle/
+      expertise: [advanced]
+
+- section: Reference
+  items:
+    - title: Core vs Modules URL Contract
+      url: /reference/documentation-url-contract/
+      expertise: [advanced]
+    - title: Reference Documentation
+      url: /reference/
+      expertise: [intermediate, advanced]
+    - title: Command Reference
+      url: /reference/commands/
+      expertise: [intermediate, advanced]
+    - title: Thorough Codebase Validation
+      url: /reference/thorough-codebase-validation/
+      expertise: [advanced]
+    - title: Authentication
+      url: /reference/authentication/
+      expertise: [intermediate, advanced]
+    - title: Architecture
+      url: /architecture/
+      expertise: [advanced]
+    - title: Operational Modes
+      url: /modes/
+      expertise: [intermediate]
+    - title: ProjectBundle Schema
+      url: /reference/projectbundle-schema/
+      expertise: [advanced]
+    - title: Module Contracts
+      url: /reference/module-contracts/
+      expertise: [advanced]
+    - title: Module Categories
+      url: /reference/module-categories/
+      expertise: [intermediate]
+    - title: Dependency Resolution
+      url: /reference/dependency-resolution/
+      expertise: [advanced]
+    - title: Module Security
+      url: /reference/module-security/
+      expertise: [advanced]
+    - title: Bridge Registry
+      url: /reference/bridge-registry/
+      expertise: [advanced]

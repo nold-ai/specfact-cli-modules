@@ -5,6 +5,9 @@ nav_order: 5
 permalink: /bundles/spec/mock/
 redirect_from:
   - /guides/spec-mock/
+keywords: [spec, mock, testing, stub, simulation]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Spec mock

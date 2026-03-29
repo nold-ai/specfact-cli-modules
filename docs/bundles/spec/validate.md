@@ -6,6 +6,9 @@ permalink: /bundles/spec/validate/
 redirect_from:
   - /guides/spec-validate/
   - /guides/spec-backward-compat/
+keywords: [spec, validate, backward-compatibility, breaking-changes, openapi]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate, advanced]
 ---
 
 # Spec validate and backward compatibility

@@ -4,6 +4,9 @@ title: Workflows
 permalink: /workflows/
 redirect_from:
   - /guides/workflows/
+keywords: [workflows, automation, pipeline, chains, process]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Workflows

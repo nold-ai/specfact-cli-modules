@@ -2,6 +2,9 @@
 layout: default
 title: Brownfield Examples
 permalink: /guides/brownfield-examples/
+keywords: [brownfield, examples, modernization, patterns, legacy]
+audience: [solo, team]
+expertise_level: [intermediate]
 ---
 
 # Brownfield Examples

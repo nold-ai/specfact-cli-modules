@@ -2,6 +2,9 @@
 layout: default
 title: Backlog Adapter Patterns
 permalink: /adapters/backlog-adapter-patterns/
+keywords: [adapter, backlog, patterns, integration, devops]
+audience: [solo, team, enterprise]
+expertise_level: [intermediate]
 ---
 
 # Backlog Adapter Patterns
