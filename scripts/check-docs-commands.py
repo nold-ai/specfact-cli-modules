@@ -196,13 +196,8 @@ def _command_example_is_valid(command_text: str, valid_paths: set[CommandPath]) 
 
 def _validate_command_examples(text_by_path: dict[Path, str], valid_paths: set[CommandPath]) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
-    for path, text in text_by_path.items():
-        seen: set[tuple[int, str]] = set()
-        for example in [*_iter_bash_examples(text, path), *_iter_inline_examples(text, path)]:
-            key = (example.line_number, example.text)
-            if key in seen:
-                continue
-            seen.add(key)
+    for path in text_by_path:
+        for example in _extract_command_examples(path):
             if _command_example_is_valid(example.text, valid_paths):
                 continue
             findings.append(

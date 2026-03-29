@@ -26,6 +26,7 @@ def test_pre_commit_config_has_signature_and_modules_quality_hooks() -> None:
         if isinstance(hook, dict)
     }
 
+    assert "specfact-code-review-gate" in hook_ids
     assert "verify-module-signatures" in hook_ids
     assert "modules-quality-checks" in hook_ids
 
