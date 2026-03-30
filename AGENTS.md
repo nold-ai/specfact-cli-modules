@@ -150,3 +150,22 @@ Do not manually move folders under `openspec/changes/` into `openspec/changes/ar
 4. Publish with project tooling (`scripts/publish-module.py --bundle <name>` wrapper + packaging flow).
 5. Update `registry/index.json` with new `latest_version`, artifact URL, and checksum.
 6. Tag release and merge via PR after quality gates pass.
+
+## Cursor Cloud specific instructions
+
+### Environment
+
+- Python 3.12 is available at `/usr/bin/python3`. Hatch is at `$HOME/.local/bin/hatch`; ensure `$HOME/.local/bin` is on `PATH`.
+- The update script runs `hatch env create` and `hatch run pip install specfact-cli` on every VM startup.
+- There is **no sibling `specfact-cli` repo** in the Cloud VM. `hatch run dev-deps` will fail. Instead, `specfact-cli` is installed from PyPI into the hatch venv. This is sufficient for all quality gates and tests.
+
+### Running quality gates
+
+All standard quality gates are documented in the "Quality gates" section above. Key notes for Cloud:
+
+- `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump` **will fail** without the module-signing public key (env var `SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM` or a key file). This is expected — signature verification is a CI-only gate.
+- All other gates (`format`, `type-check`, `lint`, `yaml-lint`, `contract-test`, `smart-test`, `test`) work out of the box.
+
+### No long-running services
+
+This is a pure Python library/tooling repo with no servers, databases, or Docker. "Running the application" means executing the hatch quality-gate scripts and test suite.
