@@ -10,6 +10,14 @@ and this project follows SemVer for bundle versions.
 ### Added
 
 - Documentation: authoritative `docs/reference/documentation-url-contract.md` for core vs modules URL ownership; `redirect_from` aliases for legacy `/guides/<basename>/` on pages whose canonical path is outside `/guides/`; sidebar link to the contract page.
+- Add expanded clean-code review coverage to `specfact-code-review`, including
+  naming, KISS, YAGNI, DRY, SOLID, and PR-checklist findings plus the bundled
+  `specfact/clean-code-principles` policy-pack payload.
+
+### Changed
+
+- Refresh the canonical `specfact-code-review` house-rules skill to a compact
+  clean-code charter and bump the bundle metadata for the signed 0.45.0 release.
 
 ## [0.44.0] - 2026-03-17
 

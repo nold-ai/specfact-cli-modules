@@ -19,6 +19,11 @@ VALID_CATEGORIES = (
     "style",
     "architecture",
     "tool_error",
+    "naming",
+    "kiss",
+    "yagni",
+    "dry",
+    "solid",
 )
 VALID_SEVERITIES = ("error", "warning", "info")
 PASS = "PASS"
@@ -38,6 +43,11 @@ class ReviewFinding(BaseModel):
         "style",
         "architecture",
         "tool_error",
+        "naming",
+        "kiss",
+        "yagni",
+        "dry",
+        "solid",
     ] = Field(..., description="Governed code-review category.")
     severity: Literal["error", "warning", "info"] = Field(..., description="Finding severity.")
     tool: str = Field(..., description="Originating tool name.")

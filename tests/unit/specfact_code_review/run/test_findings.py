@@ -19,6 +19,11 @@ class ReviewFindingPayload(TypedDict, total=False):
         "style",
         "architecture",
         "tool_error",
+        "naming",
+        "kiss",
+        "yagni",
+        "dry",
+        "solid",
     ]
     severity: Literal["error", "warning", "info"]
     tool: str
@@ -62,7 +67,21 @@ def test_review_finding_accepts_supported_severity_values(
 
 @pytest.mark.parametrize(
     "category",
-    ["clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error"],
+    [
+        "clean_code",
+        "security",
+        "type_safety",
+        "contracts",
+        "testing",
+        "style",
+        "architecture",
+        "tool_error",
+        "naming",
+        "kiss",
+        "yagni",
+        "dry",
+        "solid",
+    ],
 )
 def test_review_finding_accepts_supported_category_values(category: str) -> None:
     typed_category = cast(
@@ -75,6 +94,11 @@ def test_review_finding_accepts_supported_category_values(category: str) -> None
             "style",
             "architecture",
             "tool_error",
+            "naming",
+            "kiss",
+            "yagni",
+            "dry",
+            "solid",
         ],
         category,
     )

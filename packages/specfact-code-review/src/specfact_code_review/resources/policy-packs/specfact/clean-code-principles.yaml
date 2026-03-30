@@ -1,0 +1,41 @@
+pack_ref: specfact/clean-code-principles
+version: 1
+description: Built-in clean-code review rules mapped to the governed code-review bundle outputs.
+default_mode: advisory
+rules:
+  - id: banned-generic-public-names
+    category: naming
+    principle: naming
+  - id: swallowed-exception-pattern
+    category: clean_code
+    principle: clean_code
+  - id: kiss.loc.warning
+    category: kiss
+    principle: kiss
+  - id: kiss.loc.error
+    category: kiss
+    principle: kiss
+  - id: kiss.nesting.warning
+    category: kiss
+    principle: kiss
+  - id: kiss.nesting.error
+    category: kiss
+    principle: kiss
+  - id: kiss.parameter-count.warning
+    category: kiss
+    principle: kiss
+  - id: kiss.parameter-count.error
+    category: kiss
+    principle: kiss
+  - id: yagni.unused-private-helper
+    category: yagni
+    principle: yagni
+  - id: dry.duplicate-function-shape
+    category: dry
+    principle: dry
+  - id: solid.mixed-dependency-role
+    category: solid
+    principle: solid
+  - id: clean-code.pr-checklist-missing-rationale
+    category: clean_code
+    principle: checklist
