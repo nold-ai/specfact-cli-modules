@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -218,7 +219,7 @@ def _checklist_findings() -> list[ReviewFinding]:
     context = "\n".join(
         os.environ.get(name, "").strip() for name in _PR_CONTEXT_ENVS if os.environ.get(name, "").strip()
     )
-    if any(hint in context.lower() for hint in _CLEAN_CODE_CONTEXT_HINTS):
+    if any(re.search(rf"\b{re.escape(hint)}\b", context, flags=re.IGNORECASE) for hint in _CLEAN_CODE_CONTEXT_HINTS):
         return []
 
     return [

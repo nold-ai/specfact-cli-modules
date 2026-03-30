@@ -70,6 +70,43 @@ def sync_customer(customer_id: str) -> None:
     assert any(finding.category == "solid" and finding.rule == "solid.mixed-dependency-role" for finding in findings)
 
 
+def test_run_ast_clean_code_reports_mixed_dependency_roles_for_injected_dependencies(tmp_path: Path) -> None:
+    file_path = tmp_path / "target.py"
+    file_path.write_text(
+        """
+class SyncClient:
+    def sync(self) -> None:
+        self.repository.load()
+        self.http_client.post()
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    findings = run_ast_clean_code([file_path])
+
+    assert any(finding.category == "solid" and finding.rule == "solid.mixed-dependency-role" for finding in findings)
+
+
+def test_run_ast_clean_code_continues_after_parse_error(tmp_path: Path) -> None:
+    broken_path = tmp_path / "broken.py"
+    broken_path.write_text("def broken(:\n    pass\n", encoding="utf-8")
+    healthy_path = tmp_path / "healthy.py"
+    healthy_path.write_text(
+        """
+def _unused_helper(value: int) -> int:
+    return value + 1
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    findings = run_ast_clean_code([broken_path, healthy_path])
+
+    assert any(finding.category == "tool_error" and finding.file == str(broken_path) for finding in findings)
+    assert any(finding.rule == "yagni.unused-private-helper" for finding in findings)
+
+
 def test_run_ast_clean_code_returns_tool_error_for_syntax_error(tmp_path: Path) -> None:
     file_path = tmp_path / "broken.py"
     file_path.write_text("def broken(:\n    pass\n", encoding="utf-8")

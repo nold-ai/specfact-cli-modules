@@ -75,9 +75,13 @@ def _loaded_names(tree: ast.AST) -> set[str]:
 
 def _leftmost_name(node: ast.AST) -> str | None:
     current = node
+    first_attribute: str | None = None
     while isinstance(current, ast.Attribute):
+        first_attribute = current.attr
         current = current.value
     if isinstance(current, ast.Name):
+        if current.id in {"self", "cls"} and first_attribute is not None:
+            return first_attribute
         return current.id
     return None
 
@@ -188,7 +192,10 @@ def run_ast_clean_code(files: list[Path]) -> list[ReviewFinding]:
         try:
             tree = ast.parse(file_path.read_text(encoding="utf-8"), filename=str(file_path))
         except (OSError, SyntaxError) as exc:
-            return [_tool_error(tool="ast", file_path=file_path, message=f"Unable to parse Python source: {exc}")]
+            findings.append(
+                _tool_error(tool="ast", file_path=file_path, message=f"Unable to parse Python source: {exc}")
+            )
+            continue
 
         findings.extend(_solid_findings(file_path, tree))
         findings.extend(_yagni_findings(file_path, tree))

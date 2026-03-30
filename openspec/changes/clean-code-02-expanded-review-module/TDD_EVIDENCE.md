@@ -1,30 +1,38 @@
 # TDD Evidence
 
-## 2026-03-30
+## 2026-03-31
 
-- `2026-03-30T22:57:17+02:00` Red phase:
-  `hatch run pytest tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/tools/test_semgrep_runner.py tests/unit/specfact_code_review/tools/test_radon_runner.py tests/unit/specfact_code_review/tools/test_ast_clean_code_runner.py -q`
-  failed during collection before local `dev-deps` bootstrap because `specfact-cli`
-  runtime dependencies such as `beartype` were not yet available in the Hatch env.
-- `2026-03-30T23:00:00+02:00` Bootstrap:
+- `2026-03-31T00:56:00+02:00` Bootstrap:
   `hatch run dev-deps`
-  installed the local `specfact-cli` dependency set required by the bundle review tests.
-- `2026-03-30T23:10:00+02:00` Green targeted runner slice:
-  `hatch run pytest tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/tools/test_semgrep_runner.py tests/unit/specfact_code_review/tools/test_radon_runner.py tests/unit/specfact_code_review/tools/test_ast_clean_code_runner.py -q`
-  passed after the runner, AST, and test-fixture fixes.
-- `2026-03-30T23:57:11+02:00` Green review run:
-  `SPECFACT_ALLOW_UNSIGNED=1 hatch run specfact code review run --json --out .specfact/code-review.json`
-  passed with `findings: []` after linking the live dev module and flattening the KISS-sensitive helpers.
-- `2026-03-30T23:56:00+02:00` Green full targeted slice:
-  `hatch run pytest --cov=packages/specfact-code-review/src/specfact_code_review --cov-fail-under=0 --cov-report=json:/tmp/specfact-report.json tests/unit/specfact_code_review/rules/test_updater.py tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/tools/test___init__.py tests/unit/specfact_code_review/tools/test_radon_runner.py tests/unit/specfact_code_review/tools/test_semgrep_runner.py tests/unit/specfact_code_review/tools/test_ast_clean_code_runner.py`
-  passed in `89 passed in 20.75s`.
-- `2026-03-30T23:58:00+02:00` Green quality gates:
-  `hatch run format`, `hatch run type-check`, `hatch run lint`, `hatch run yaml-lint`,
-  `hatch run contract-test`, `hatch run smart-test`, and `hatch run test`
-  all passed in this worktree after the final helper flattening.
-- `2026-03-30T23:58:00+02:00` Validation:
-  `openspec validate clean-code-02-expanded-review-module --strict`
-  passed with `Change 'clean-code-02-expanded-review-module' is valid`.
-- `2026-03-30T23:58:00+02:00` Remaining release blocker:
+  linked the local `specfact-cli` checkout into this worktree so the bundle tests and review runner could execute against the live code.
+- `2026-03-31T01:02:00+02:00` Red phase:
+  `SPECFACT_ALLOW_UNSIGNED=1 hatch run pytest tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/tools/test_ast_clean_code_runner.py tests/unit/specfact_code_review/tools/test_radon_runner.py tests/unit/specfact_code_review/tools/test_semgrep_runner.py -q`
+  failed with 5 targeted regressions that matched the new spec change:
+  - `test_run_review_requires_explicit_pr_mode_token_for_clean_code_reasoning`
+    expected `clean-code.pr-checklist-missing-rationale` but `_checklist_findings()` returned `[]`.
+  - `test_run_ast_clean_code_reports_mixed_dependency_roles_for_injected_dependencies`
+    expected `solid.mixed-dependency-role` for `self.repo.save()` / `self.client.get()` but the leftmost dependency was still treated as `self`.
+  - `test_run_ast_clean_code_continues_after_parse_error`
+    expected a per-file `tool_error` plus later-file findings, but the parser branch returned early.
+  - `test_run_radon_uses_dedicated_tool_identifier_for_kiss_findings`
+    expected `tool="radon-kiss"` but the emitted finding still used `tool="radon"`.
+  - `test_run_semgrep_returns_tool_error_when_results_key_is_missing`
+    expected a `tool_error` for malformed Semgrep JSON, but the runner treated a missing `results` key as a clean run.
+- `2026-03-31T01:04:30+02:00` Implementation:
+  updated `packages/specfact-code-review/src/specfact_code_review/run/runner.py`,
+  `packages/specfact-code-review/src/specfact_code_review/tools/ast_clean_code_runner.py`,
+  `packages/specfact-code-review/src/specfact_code_review/tools/radon_runner.py`,
+  `packages/specfact-code-review/src/specfact_code_review/tools/semgrep_runner.py`,
+  `packages/specfact-code-review/src/specfact_code_review/resources/skills/specfact-code-review/SKILL.md`,
+  `packages/specfact-code-review/src/specfact_code_review/resources/policy-packs/specfact/clean-code-principles.yaml`,
+  `docs/modules/code-review.md`,
+  and the targeted unit tests so the new clean-code checks, strict PR-mode gating, dependency-root detection, KISS tool labeling, and Semgrep parsing behavior matched the review comments.
+- `2026-03-31T01:06:30+02:00` Green phase:
+  `SPECFACT_ALLOW_UNSIGNED=1 hatch run pytest tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/tools/test_ast_clean_code_runner.py tests/unit/specfact_code_review/tools/test_radon_runner.py tests/unit/specfact_code_review/tools/test_semgrep_runner.py -q`
+  passed with `50 passed in 20.26s`.
+- `2026-03-31T01:08:11+02:00` Release validation:
   `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`
-  failed with `packages/specfact-code-review/module-package.yaml: checksum mismatch`.
+  passed after the module was signed again.
+- `2026-03-31T01:10:42+02:00` Review validation:
+  `SPECFACT_ALLOW_UNSIGNED=1 hatch run specfact code review run --json --out .specfact/code-review.json`
+  passed with `findings: []`.

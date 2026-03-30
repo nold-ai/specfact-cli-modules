@@ -125,11 +125,11 @@ def _kiss_loc_findings(function_node: ast.FunctionDef | ast.AsyncFunctionDef, fi
         ReviewFinding(
             category="kiss",
             severity=severity,
-            tool="radon",
+            tool="radon-kiss",
             rule=f"kiss.loc.{suffix}",
             file=str(file_path),
             line=function_node.lineno,
-            message=(f"Function `{function_node.name}` spans {loc} lines; keep it under {{_KISS_LOC_WARNING}}."),
+            message=f"Function `{function_node.name}` spans {loc} lines; keep it under {_KISS_LOC_WARNING}.",
             fixable=False,
         )
     )
@@ -149,7 +149,7 @@ def _kiss_nesting_findings(
         ReviewFinding(
             category="kiss",
             severity=severity,
-            tool="radon",
+            tool="radon-kiss",
             rule=f"kiss.nesting.{suffix}",
             file=str(file_path),
             line=function_node.lineno,
@@ -182,7 +182,7 @@ def _kiss_parameter_findings(
         ReviewFinding(
             category="kiss",
             severity=severity,
-            tool="radon",
+            tool="radon-kiss",
             rule=f"kiss.parameter-count.{suffix}",
             file=str(file_path),
             line=function_node.lineno,
@@ -274,14 +274,15 @@ def run_radon(files: list[Path]) -> list[ReviewFinding]:
         return []
 
     payload = _run_radon_command(files)
+    findings: list[ReviewFinding] = []
     if payload is None:
-        return _tool_error(files[0], "Unable to execute Radon")
-
-    allowed_paths = _allowed_paths(files)
-    try:
-        findings = _map_radon_complexity_findings(payload, allowed_paths)
-    except ValueError as exc:
-        return _tool_error(files[0], str(exc))
+        findings.extend(_tool_error(files[0], "Unable to execute Radon"))
+    else:
+        allowed_paths = _allowed_paths(files)
+        try:
+            findings.extend(_map_radon_complexity_findings(payload, allowed_paths))
+        except ValueError as exc:
+            findings.extend(_tool_error(files[0], str(exc)))
 
     for file_path in files:
         findings.extend(_kiss_metric_findings(file_path))

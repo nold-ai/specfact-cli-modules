@@ -287,6 +287,25 @@ def test_run_review_emits_advisory_checklist_finding_in_pr_mode(monkeypatch: Mon
     assert report.overall_verdict == "PASS"
 
 
+def test_run_review_requires_explicit_pr_mode_token_for_clean_code_reasoning(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_PR_MODE", "true")
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_PR_TITLE", "Expand code review coverage")
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_PR_BODY", "We are renaming helper functions for clarity.")
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_PR_PROPOSAL", "")
+
+    report = run_review([Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")], no_tests=True)
+
+    assert [finding.rule for finding in report.findings] == ["clean-code.pr-checklist-missing-rationale"]
+
+
 def test_run_review_suppresses_global_duplicate_code_noise_by_default(monkeypatch: MonkeyPatch) -> None:
     duplicate_code_finding = ReviewFinding(
         category="style",

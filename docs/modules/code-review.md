@@ -225,6 +225,8 @@ Custom rule mapping:
 
 | Semgrep rule | ReviewFinding category |
 | --- | --- |
+| `banned-generic-public-names` | `naming` |
+| `swallowed-exception-pattern` | `clean_code` |
 | `get-modify-same-method` | `clean_code` |
 | `unguarded-nested-access` | `clean_code` |
 | `cross-layer-call` | `architecture` |
@@ -234,6 +236,8 @@ Custom rule mapping:
 Representative anti-patterns covered by the ruleset:
 
 - methods that both read state and mutate it
+- public symbols that use banned generic names like `data` or `process`
+- swallowed exceptions that hide an underlying failure path
 - direct nested attribute access like `obj.config.value`
 - repository and HTTP client calls in the same function
 - module-level network client instantiation
@@ -243,7 +247,7 @@ Additional behavior:
 
 - only the provided file list is considered
 - semgrep rule IDs emitted with path prefixes are normalized back to the governed rule IDs above
-- malformed output or a missing Semgrep executable yields a single `tool_error` finding
+- malformed output, a missing `results` list, or a missing Semgrep executable yields a single `tool_error` finding
 
 ### Contract runner
 

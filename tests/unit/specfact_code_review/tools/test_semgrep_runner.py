@@ -139,6 +139,21 @@ def test_run_semgrep_returns_empty_list_for_clean_file(tmp_path: Path, monkeypat
     assert not findings
 
 
+def test_run_semgrep_returns_tool_error_when_results_key_is_missing(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps({"version": "1.0"}))),
+    )
+
+    findings = run_semgrep([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert findings[0].tool == "semgrep"
+
+
 def test_run_semgrep_ignores_unsupported_rules(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     payload = {

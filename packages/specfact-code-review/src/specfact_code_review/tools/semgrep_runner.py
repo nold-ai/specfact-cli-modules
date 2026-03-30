@@ -125,7 +125,9 @@ def _load_semgrep_results(files: list[Path]) -> list[object]:
 def _parse_semgrep_results(payload: dict[str, object]) -> list[object]:
     if not isinstance(payload, dict):
         raise ValueError("semgrep output must be an object")
-    raw_results = payload.get("results", [])
+    if "results" not in payload:
+        raise ValueError("semgrep output missing results key")
+    raw_results = payload["results"]
     if not isinstance(raw_results, list):
         raise ValueError("semgrep results must be a list")
     return raw_results
