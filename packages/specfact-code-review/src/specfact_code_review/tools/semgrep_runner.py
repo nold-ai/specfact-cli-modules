@@ -21,10 +21,12 @@ SEMGREP_RULE_CATEGORY = {
     "cross-layer-call": "architecture",
     "module-level-network": "architecture",
     "print-in-src": "architecture",
+    "banned-generic-public-names": "naming",
+    "swallowed-exception-pattern": "clean_code",
 }
 SEMGREP_TIMEOUT_SECONDS = 90
 SEMGREP_RETRY_ATTEMPTS = 2
-SemgrepCategory = Literal["clean_code", "architecture"]
+SemgrepCategory = Literal["clean_code", "architecture", "naming"]
 
 
 def _normalize_path_variants(path_value: str | Path) -> set[str]:
@@ -112,13 +114,7 @@ def _load_semgrep_results(files: list[Path]) -> list[object]:
     for _attempt in range(SEMGREP_RETRY_ATTEMPTS):
         try:
             result = _run_semgrep_command(files)
-            payload = json.loads(result.stdout)
-            if not isinstance(payload, dict):
-                raise ValueError("semgrep output must be an object")
-            raw_results = payload.get("results", [])
-            if not isinstance(raw_results, list):
-                raise ValueError("semgrep results must be a list")
-            return raw_results
+            return _parse_semgrep_results(json.loads(result.stdout))
         except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
             last_error = exc
     if last_error is None:
@@ -126,9 +122,18 @@ def _load_semgrep_results(files: list[Path]) -> list[object]:
     raise last_error
 
 
+def _parse_semgrep_results(payload: dict[str, object]) -> list[object]:
+    if not isinstance(payload, dict):
+        raise ValueError("semgrep output must be an object")
+    raw_results = payload.get("results", [])
+    if not isinstance(raw_results, list):
+        raise ValueError("semgrep results must be a list")
+    return raw_results
+
+
 def _category_for_rule(rule: str) -> SemgrepCategory | None:
     category = SEMGREP_RULE_CATEGORY.get(rule)
-    if category in {"clean_code", "architecture"}:
+    if category in {"clean_code", "architecture", "naming"}:
         return cast(SemgrepCategory, category)
     return None
 
@@ -196,12 +201,21 @@ def run_semgrep(files: list[Path]) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
     try:
         for item in raw_results:
-            if not isinstance(item, dict):
-                raise ValueError("semgrep finding must be an object")
-            finding = _finding_from_result(item, allowed_paths=allowed_paths)
-            if finding is not None:
-                findings.append(finding)
+            _append_semgrep_finding(findings, item, allowed_paths=allowed_paths)
     except (KeyError, TypeError, ValueError) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep finding payload: {exc}")
 
     return findings
+
+
+def _append_semgrep_finding(
+    findings: list[ReviewFinding],
+    item: object,
+    *,
+    allowed_paths: set[str],
+) -> None:
+    if not isinstance(item, dict):
+        raise ValueError("semgrep finding must be an object")
+    finding = _finding_from_result(item, allowed_paths=allowed_paths)
+    if finding is not None:
+        findings.append(finding)

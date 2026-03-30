@@ -63,3 +63,34 @@ def test_run_radon_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatch
     assert len(findings) == 1
     assert findings[0].category == "tool_error"
     assert findings[0].tool == "radon"
+
+
+def test_run_radon_emits_kiss_metrics_from_source_shape(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    body = "\n".join(f"                total += {index}" for index in range(81))
+    file_path.write_text(
+        (
+            "def noisy(a, b, c, d, e, f):\n"
+            "    total = 0\n"
+            "    if a:\n"
+            "        if b:\n"
+            "            if c:\n"
+            f"{body}\n"
+            "    return total\n"
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+    )
+
+    findings = run_radon([file_path])
+
+    assert {finding.rule for finding in findings} >= {
+        "kiss.loc.warning",
+        "kiss.nesting.warning",
+        "kiss.parameter-count.warning",
+    }
+    assert {finding.category for finding in findings} == {"kiss"}

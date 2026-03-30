@@ -323,7 +323,15 @@ Then rerun the ledger command from the same repository checkout.
 ## House rules skill
 
 The `specfact-code-review` bundle can derive a compact house-rules skill from the
-reward ledger and keep it small enough for AI session context injection.
+reward ledger and keep it small enough for AI session context injection. The
+default charter now encodes the clean-code principles directly:
+
+- Naming: use intention-revealing names instead of placeholders.
+- KISS: keep functions small, shallow, and narrow in parameters.
+- YAGNI: remove unused private helpers and speculative layers.
+- DRY: extract repeated function shapes once duplication appears.
+- SOLID: keep transport and persistence responsibilities separate.
+- TDD + contracts: keep test-first and icontract discipline in the baseline skill.
 
 ### Command flow
 
@@ -362,12 +370,30 @@ bundle runners in this order:
 
 1. Ruff
 2. Radon
-3. basedpyright
-4. pylint
-5. contract runner
-6. TDD gate, unless `no_tests=True`
+3. Semgrep
+4. AST clean-code checks
+5. basedpyright
+6. pylint
+7. contract runner
+8. TDD gate, unless `no_tests=True`
+
+When `SPECFACT_CODE_REVIEW_PR_MODE=1` is present, the runner also evaluates a
+bundle-local advisory PR checklist from `SPECFACT_CODE_REVIEW_PR_TITLE`,
+`SPECFACT_CODE_REVIEW_PR_BODY`, and `SPECFACT_CODE_REVIEW_PR_PROPOSAL` without
+adding a new CLI flag.
 
 The merged findings are then scored into a governed `ReviewReport`.
+
+## Bundled policy pack
+
+The bundle now ships `specfact/clean-code-principles` as a resource payload at:
+
+- `packages/specfact-code-review/resources/policy-packs/specfact/clean-code-principles.yaml`
+- `packages/specfact-code-review/src/specfact_code_review/resources/policy-packs/specfact/clean-code-principles.yaml`
+
+The manifest exposes the clean-code rule IDs directly so downstream policy code
+can apply advisory, mixed, or hard modes without a second review-specific
+severity schema.
 
 ### TDD gate
 

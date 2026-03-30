@@ -56,6 +56,31 @@ def test_run_semgrep_maps_findings_to_review_finding(tmp_path: Path, monkeypatch
     run_mock.assert_called_once()
 
 
+def test_run_semgrep_maps_naming_rule_to_naming_category(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = {
+        "results": [
+            {
+                "check_id": "banned-generic-public-names",
+                "path": str(file_path),
+                "start": {"line": 2},
+                "extra": {"message": "Public API name is too generic."},
+            }
+        ]
+    }
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=1)),
+    )
+
+    findings = run_semgrep([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].category == "naming"
+    assert findings[0].rule == "banned-generic-public-names"
+
+
 def test_run_semgrep_filters_findings_to_requested_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     other_path = tmp_path / "other.py"

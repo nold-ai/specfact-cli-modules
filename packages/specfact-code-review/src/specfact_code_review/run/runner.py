@@ -7,7 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from contextlib import suppress
 from pathlib import Path
 from uuid import uuid4
@@ -18,6 +18,7 @@ from icontract import ensure, require
 from specfact_code_review._review_utils import _normalize_path_variants, _tool_error
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 from specfact_code_review.run.scorer import score_review
+from specfact_code_review.tools.ast_clean_code_runner import run_ast_clean_code
 from specfact_code_review.tools.basedpyright_runner import run_basedpyright
 from specfact_code_review.tools.contract_runner import run_contract_check
 from specfact_code_review.tools.pylint_runner import run_pylint
@@ -40,23 +41,39 @@ _GLOBAL_NOISE_RULES = {
     ("pylint", "R0801"),
 }
 _NOISE_MESSAGE_PREFIXES = ("ValidationError: 1 validation error for LedgerState",)
+_PR_MODE_ENV = "SPECFACT_CODE_REVIEW_PR_MODE"
+_PR_CONTEXT_ENVS = (
+    "SPECFACT_CODE_REVIEW_PR_TITLE",
+    "SPECFACT_CODE_REVIEW_PR_BODY",
+    "SPECFACT_CODE_REVIEW_PR_PROPOSAL",
+)
+_CLEAN_CODE_CONTEXT_HINTS = ("clean code", "naming", "kiss", "yagni", "dry", "solid", "complexity")
 
 
 def _source_relative_path(source_file: Path) -> Path | None:
-    source_root_candidates = [_SOURCE_ROOT]
-    with suppress(OSError):
-        source_root_candidates.append(_SOURCE_ROOT.resolve())
+    source_root_candidates = [_SOURCE_ROOT, *_resolved_path_variants(_SOURCE_ROOT)]
+    source_file_candidates = [source_file, *_resolved_path_variants(source_file)]
+    return next(
+        (
+            relative_path
+            for candidate in source_file_candidates
+            for source_root in source_root_candidates
+            if (relative_path := _relative_to(candidate, source_root)) is not None
+        ),
+        None,
+    )
 
-    source_file_candidates = [source_file]
-    with suppress(OSError):
-        source_file_candidates.append(source_file.resolve())
 
-    for candidate in source_file_candidates:
-        for source_root in source_root_candidates:
-            try:
-                return candidate.relative_to(source_root)
-            except ValueError:
-                continue
+def _resolved_path_variants(path: Path) -> list[Path]:
+    try:
+        return [path.resolve()]
+    except OSError:
+        return []
+
+
+def _relative_to(candidate: Path, source_root: Path) -> Path | None:
+    with suppress(ValueError):
+        return candidate.relative_to(source_root)
     return None
 
 
@@ -90,32 +107,36 @@ def _coverage_for_source(source_file: Path, payload: dict[str, object]) -> float
 
 def _pytest_env() -> dict[str, str]:
     env = os.environ.copy()
-    pythonpath_entries: list[str] = []
-
-    workspace_root = str(Path.cwd().resolve())
-    pythonpath_entries.append(workspace_root)
-    source_root = str(_SOURCE_ROOT.resolve())
-    if source_root not in pythonpath_entries:
-        pythonpath_entries.append(source_root)
-
-    existing_pythonpath = env.get("PYTHONPATH", "")
-    if existing_pythonpath:
-        for entry in existing_pythonpath.split(os.pathsep):
-            if entry and entry not in pythonpath_entries:
-                pythonpath_entries.append(entry)
-
-    for entry in sys.path:
-        if not entry:
-            continue
-        entry_path = Path(entry)
-        if not entry_path.exists():
-            continue
-        resolved = str(entry_path.resolve())
-        if resolved not in pythonpath_entries:
-            pythonpath_entries.append(resolved)
-
+    pythonpath_entries: list[str] = [str(Path.cwd().resolve()), str(_SOURCE_ROOT.resolve())]
+    _extend_unique_entries(pythonpath_entries, env.get("PYTHONPATH", ""), split_by=os.pathsep)
+    _extend_unique_entries(
+        pythonpath_entries,
+        (str(Path(entry).resolve()) for entry in sys.path if entry and Path(entry).exists()),
+    )
     env["PYTHONPATH"] = os.pathsep.join(pythonpath_entries)
     return env
+
+
+def _extend_unique_entries(
+    entries: list[str],
+    values: Iterable[str] | str,
+    *,
+    split_by: str | None = None,
+) -> None:
+    for entry in _iter_unique_entries(values, split_by=split_by):
+        if entry and entry not in entries:
+            entries.append(entry)
+
+
+def _iter_unique_entries(
+    values: Iterable[str] | str,
+    *,
+    split_by: str | None = None,
+) -> Iterable[str]:
+    if isinstance(values, str):
+        yield from values.split(split_by) if split_by is not None else [values]
+        return
+    yield from values
 
 
 def _pytest_targets(test_files: list[Path]) -> list[Path]:
@@ -186,11 +207,43 @@ def _suppress_known_noise(findings: list[ReviewFinding]) -> list[ReviewFinding]:
     return filtered
 
 
+def _is_truthy_env(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _checklist_findings() -> list[ReviewFinding]:
+    if not _is_truthy_env(_PR_MODE_ENV):
+        return []
+
+    context = "\n".join(
+        os.environ.get(name, "").strip() for name in _PR_CONTEXT_ENVS if os.environ.get(name, "").strip()
+    )
+    if any(hint in context.lower() for hint in _CLEAN_CODE_CONTEXT_HINTS):
+        return []
+
+    return [
+        ReviewFinding(
+            category="clean_code",
+            severity="info",
+            tool="checklist",
+            rule="clean-code.pr-checklist-missing-rationale",
+            file="PR_CONTEXT",
+            line=1,
+            message=(
+                "PR context is missing explicit clean-code reasoning. "
+                "Call out the naming, KISS, YAGNI, DRY, or SOLID impact in the proposal or PR body."
+            ),
+            fixable=False,
+        )
+    ]
+
+
 def _tool_steps() -> list[tuple[str, Callable[[list[Path]], list[ReviewFinding]]]]:
     return [
         ("Running Ruff checks...", run_ruff),
         ("Running Radon complexity checks...", run_radon),
         ("Running Semgrep rules...", run_semgrep),
+        ("Running AST clean-code checks...", run_ast_clean_code),
         ("Running basedpyright type checks...", run_basedpyright),
         ("Running pylint checks...", run_pylint),
         ("Running contract checks...", run_contract_check),
@@ -231,7 +284,7 @@ def _coverage_findings(
     coverage_by_source: dict[str, float] = {}
     for source_file in source_files:
         percent_covered = _coverage_for_source(source_file, coverage_payload)
-        if percent_covered is None:
+        if percent_covered is None and source_file.name != "__init__.py":
             return [
                 _tool_error(
                     tool="pytest",
@@ -239,6 +292,8 @@ def _coverage_findings(
                     message=f"Coverage data missing for {source_file}",
                 )
             ], None
+        if percent_covered is None:
+            continue
         coverage_by_source[str(source_file)] = percent_covered
         if percent_covered >= _COVERAGE_THRESHOLD:
             continue
@@ -358,6 +413,8 @@ def run_review(
         tdd_findings, coverage_by_source = _evaluate_tdd_gate(files)
         findings.extend(tdd_findings)
         coverage_90_plus = bool(coverage_by_source) and all(percent >= 90.0 for percent in coverage_by_source.values())
+
+    findings.extend(_checklist_findings())
 
     if not include_noise:
         findings = _suppress_known_noise(findings)
