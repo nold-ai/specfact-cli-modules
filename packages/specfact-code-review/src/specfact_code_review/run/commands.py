@@ -5,9 +5,10 @@ from __future__ import annotations
 import subprocess
 import sys
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from beartype import beartype
 from icontract import ensure, require
@@ -21,6 +22,22 @@ from specfact_code_review.run.runner import run_review
 console = Console()
 progress_console = Console(stderr=True)
 AutoScope = Literal["changed", "full"]
+
+
+@dataclass(frozen=True)
+class ReviewRunRequest:
+    """Inputs needed to execute a governed review run."""
+
+    files: list[Path]
+    include_tests: bool = False
+    scope: AutoScope | None = None
+    path_filters: list[Path] | None = None
+    include_noise: bool = False
+    json_output: bool = False
+    out: Path | None = None
+    score_only: bool = False
+    no_tests: bool = False
+    fix: bool = False
 
 
 def _is_test_file(file_path: Path) -> bool:
@@ -205,36 +222,42 @@ def _render_report(report: ReviewReport) -> None:
         grouped[finding.category].append(finding)
 
     if not grouped:
-        console.print("Code Review")
-        console.print(report.summary)
-    else:
-        for category in sorted(grouped):
-            table = Table(title=f"Code Review: {category}", show_header=True, header_style="bold cyan")
-            table.add_column("File", style="cyan")
-            table.add_column("Line", justify="right")
-            table.add_column("Tool")
-            table.add_column("Rule")
-            table.add_column("Severity")
-            table.add_column("Message", overflow="fold")
-            for finding in grouped[category]:
-                row = [
-                    finding.file,
-                    str(finding.line),
-                    finding.tool,
-                    finding.rule,
-                    finding.severity,
-                    finding.message,
-                ]
-                table.add_row(
-                    *row,
-                )
-            console.print(table)
+        _render_empty_report(report)
+        return
+
+    for category in sorted(grouped):
+        _render_category_report(category, grouped[category])
 
     console.print(
         f"Verdict: {report.overall_verdict} | CI exit: {report.ci_exit_code} | "
         f"Score: {report.score} | Reward delta: {report.reward_delta}"
     )
     console.print(report.summary)
+
+
+def _render_empty_report(report: ReviewReport) -> None:
+    console.print("Code Review")
+    console.print(report.summary)
+
+
+def _render_category_report(category: str, findings: list[ReviewFinding]) -> None:
+    table = Table(title=f"Code Review: {category}", show_header=True, header_style="bold cyan")
+    table.add_column("File", style="cyan")
+    table.add_column("Line", justify="right")
+    table.add_column("Tool")
+    table.add_column("Rule")
+    table.add_column("Severity")
+    table.add_column("Message", overflow="fold")
+    for finding in findings:
+        table.add_row(
+            finding.file,
+            str(finding.line),
+            finding.tool,
+            finding.rule,
+            finding.severity,
+            finding.message,
+        )
+    console.print(table)
 
 
 def _json_output_path(out: Path | None) -> Path:
@@ -256,92 +279,183 @@ def _run_review_with_progress(
     fix: bool,
 ) -> ReviewReport:
     if _is_interactive_terminal():
-        with progress_console.status("Preparing code review...") as status:
-            report = run_review(
-                files,
-                no_tests=no_tests,
-                include_noise=include_noise,
-                progress_callback=status.update,
-            )
-            if fix:
-                status.update("Applying Ruff autofixes...")
-                _apply_fixes(files)
-                status.update("Re-running review after autofixes...")
-                report = run_review(
-                    files,
-                    no_tests=no_tests,
-                    include_noise=include_noise,
-                    progress_callback=status.update,
-                )
-            return report
+        return _run_review_with_status(files, no_tests=no_tests, include_noise=include_noise, fix=fix)
 
     def _emit_progress(description: str) -> None:
         progress_console.print(f"[dim]{description}[/dim]")
 
+    return _run_review_once(
+        files,
+        no_tests=no_tests,
+        include_noise=include_noise,
+        fix=fix,
+        progress_callback=_emit_progress,
+    )
+
+
+def _run_review_with_status(
+    files: list[Path],
+    *,
+    no_tests: bool,
+    include_noise: bool,
+    fix: bool,
+) -> ReviewReport:
+    with progress_console.status("Preparing code review...") as status:
+        report = _run_review_once(
+            files,
+            no_tests=no_tests,
+            include_noise=include_noise,
+            fix=False,
+            progress_callback=status.update,
+        )
+        if fix:
+            status.update("Applying Ruff autofixes...")
+            _apply_fixes(files)
+            status.update("Re-running review after autofixes...")
+            report = _run_review_once(
+                files,
+                no_tests=no_tests,
+                include_noise=include_noise,
+                fix=False,
+                progress_callback=status.update,
+            )
+        return report
+
+
+def _run_review_once(
+    files: list[Path],
+    *,
+    no_tests: bool,
+    include_noise: bool,
+    fix: bool,
+    progress_callback: Callable[[str], None] | None,
+) -> ReviewReport:
     report = run_review(
         files,
         no_tests=no_tests,
         include_noise=include_noise,
-        progress_callback=_emit_progress,
+        progress_callback=progress_callback,
     )
     if fix:
-        _emit_progress("Applying Ruff autofixes...")
+        if progress_callback is not None:
+            progress_callback("Applying Ruff autofixes...")
+        else:
+            progress_console.print("[dim]Applying Ruff autofixes...[/dim]")
         _apply_fixes(files)
-        _emit_progress("Re-running review after autofixes...")
+        if progress_callback is not None:
+            progress_callback("Re-running review after autofixes...")
+        else:
+            progress_console.print("[dim]Re-running review after autofixes...[/dim]")
         report = run_review(
             files,
             no_tests=no_tests,
             include_noise=include_noise,
-            progress_callback=_emit_progress,
+            progress_callback=progress_callback,
         )
     return report
 
 
-@beartype
-@require(lambda files: files is None or all(isinstance(file_path, Path) for file_path in files))
-@require(
-    lambda json_output, score_only: not (json_output and score_only),
-    "Use either --json or --score-only, not both.",
-)
-@require(lambda json_output, out: json_output or out is None, "Use --out together with --json.")
-@ensure(lambda result: isinstance(result, tuple))
-def run_command(
-    files: list[Path] | None = None,
-    *,
-    include_tests: bool = False,
-    scope: AutoScope | None = None,
-    path_filters: list[Path] | None = None,
-    include_noise: bool = False,
-    json_output: bool = False,
-    out: Path | None = None,
-    score_only: bool = False,
-    no_tests: bool = False,
-    fix: bool = False,
-) -> tuple[int, str | None]:
-    """Execute a governed review run over the provided files."""
-    resolved_files = _resolve_files(
-        files or [],
-        include_tests=include_tests,
-        scope=scope,
-        path_filters=path_filters or [],
-    )
-    report = _run_review_with_progress(
-        resolved_files,
-        no_tests=no_tests,
-        include_noise=include_noise,
-        fix=fix,
-    )
+def _as_auto_scope(value: object) -> AutoScope | None:
+    if value is None:
+        return None
+    if isinstance(value, str) and value in {"changed", "full"}:
+        return cast(AutoScope, value)
+    raise ValueError(f"Invalid scope value: {value!r}")
 
-    if json_output:
-        output_path = _json_output_path(out)
+
+def _as_path_filters(value: object) -> list[Path] | None:
+    if value is None:
+        return None
+    if isinstance(value, list) and all(isinstance(path_filter, Path) for path_filter in value):
+        return value
+    raise ValueError("Path filters must be a list of Path instances.")
+
+
+def _as_optional_path(value: object) -> Path | None:
+    if value is None:
+        return None
+    if isinstance(value, Path):
+        return value
+    raise ValueError("Output path must be a Path instance.")
+
+
+def _build_review_run_request(
+    files: list[Path],
+    kwargs: dict[str, object],
+) -> ReviewRunRequest:
+    request_kwargs = dict(kwargs)
+    request = ReviewRunRequest(
+        files=files,
+        include_tests=bool(request_kwargs.pop("include_tests", False)),
+        scope=_as_auto_scope(request_kwargs.pop("scope", None)),
+        path_filters=_as_path_filters(request_kwargs.pop("path_filters", None)),
+        include_noise=bool(request_kwargs.pop("include_noise", False)),
+        json_output=bool(request_kwargs.pop("json_output", False)),
+        out=_as_optional_path(request_kwargs.pop("out", None)),
+        score_only=bool(request_kwargs.pop("score_only", False)),
+        no_tests=bool(request_kwargs.pop("no_tests", False)),
+        fix=bool(request_kwargs.pop("fix", False)),
+    )
+    if request_kwargs:
+        unexpected = ", ".join(sorted(request_kwargs))
+        raise ValueError(f"Unexpected keyword arguments: {unexpected}")
+    return request
+
+
+def _render_review_result(report: ReviewReport, request: ReviewRunRequest) -> tuple[int, str | None]:
+    if request.json_output:
+        output_path = _json_output_path(request.out)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(report.model_dump_json(), encoding="utf-8")
         return report.ci_exit_code or 0, str(output_path)
-    if score_only:
+    if request.score_only:
         return report.ci_exit_code or 0, str(report.reward_delta)
 
     _render_report(report)
     return report.ci_exit_code or 0, None
 
 
-__all__ = ["run_command"]
+def _validate_review_request(request: ReviewRunRequest) -> None:
+    if request.json_output and request.score_only:
+        raise ValueError("Use either --json or --score-only, not both.")
+    if not request.json_output and request.out is not None:
+        raise ValueError("Use --out together with --json.")
+
+
+@beartype
+@require(
+    lambda request_or_files: request_or_files is None or isinstance(request_or_files, (list, ReviewRunRequest)),
+    "request must be a review request or a list of Path objects",
+)
+@ensure(lambda result: isinstance(result, tuple))
+def run_command(
+    request_or_files: ReviewRunRequest | list[Path] | None = None,
+    **kwargs: object,
+) -> tuple[int, str | None]:
+    """Execute a governed review run over the provided files."""
+    request = (
+        request_or_files
+        if isinstance(request_or_files, ReviewRunRequest)
+        else _build_review_run_request(
+            list(request_or_files or []),
+            kwargs,
+        )
+    )
+    _validate_review_request(request)
+
+    resolved_files = _resolve_files(
+        request.files,
+        include_tests=request.include_tests,
+        scope=request.scope,
+        path_filters=request.path_filters or [],
+    )
+    report = _run_review_with_progress(
+        resolved_files,
+        no_tests=request.no_tests,
+        include_noise=request.include_noise,
+        fix=request.fix,
+    )
+    return _render_review_result(report, request)
+
+
+__all__ = ["ReviewRunRequest", "run_command"]

@@ -10,7 +10,7 @@ from pathlib import Path
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import _normalize_path_variants, _tool_error
+from specfact_code_review._review_utils import normalize_path_variants, tool_error
 from specfact_code_review.run.findings import ReviewFinding
 
 
@@ -29,7 +29,7 @@ _SYNC_RUNTIME_ICONTRACT_ENTRYPOINTS = {
 def _allowed_paths(files: list[Path]) -> set[str]:
     allowed: set[str] = set()
     for file_path in files:
-        allowed.update(_normalize_path_variants(file_path))
+        allowed.update(normalize_path_variants(file_path))
     return allowed
 
 
@@ -47,17 +47,22 @@ def _has_icontract(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     return any(_decorator_name(decorator) in {"require", "ensure"} for decorator in node.decorator_list)
 
 
+def _class_public_nodes(node: ast.ClassDef) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+    return [
+        class_node
+        for class_node in ast.iter_child_nodes(node)
+        if isinstance(class_node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not class_node.name.startswith("_")
+    ]
+
+
 def _public_api_nodes(tree: ast.AST) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
     public_nodes: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith("_"):
             public_nodes.append(node)
+            continue
         if isinstance(node, ast.ClassDef):
-            for class_node in ast.iter_child_nodes(node):
-                if isinstance(class_node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not class_node.name.startswith(
-                    "_"
-                ):
-                    public_nodes.append(class_node)
+            public_nodes.extend(_class_public_nodes(node))
     return public_nodes
 
 
@@ -78,7 +83,7 @@ def _scan_file(file_path: Path) -> list[ReviewFinding]:
     try:
         tree = ast.parse(file_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, SyntaxError) as exc:
-        return [_tool_error(tool="contract_runner", file_path=file_path, message=f"Unable to parse AST: {exc}")]
+        return [tool_error(tool="contract_runner", file_path=file_path, message=f"Unable to parse AST: {exc}")]
 
     findings: list[ReviewFinding] = []
     for node in _public_api_nodes(tree):
@@ -115,7 +120,7 @@ def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
         return []
     except (FileNotFoundError, OSError) as exc:
         return [
-            _tool_error(
+            tool_error(
                 tool="crosshair",
                 file_path=files[0],
                 message=f"Unable to execute CrossHair: {exc}",
@@ -130,7 +135,7 @@ def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
         if match is None:
             continue
         filename = match.group("file")
-        if _normalize_path_variants(filename).isdisjoint(allowed_paths):
+        if normalize_path_variants(filename).isdisjoint(allowed_paths):
             continue
         message = match.group("message")
         if message.startswith(_IGNORED_CROSSHAIR_PREFIXES):

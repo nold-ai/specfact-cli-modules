@@ -4,7 +4,7 @@ Date: 2026-03-28T21:57:34+01:00
 
 ## Implementation state recovered from Claude session
 
-- Claude session `fff31fcf-cd55-4952-896b-638cb0e8958f` worked in git worktree `/home/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/docs-13-nav-search-theme-roles`
+- Claude session `fff31fcf-cd55-4952-896b-638cb0e8958f` worked in git worktree `<REPO_ROOT>/feature/docs-13-nav-search-theme-roles`
 - Session artifacts showed completed implementation across `docs/_layouts/default.html`, `docs/assets/main.scss`, new `_data`, `_includes`, `assets/js`, and bulk front matter enrichment
 - Remaining incomplete scope at handoff was validation task group `7`
 
@@ -18,7 +18,17 @@ Command:
 python3 scripts/check-docs-commands.py
 ```
 
-Result:
+Result (Failing):
+
+```text
+Docs command validation failed with 1 finding: Unknown command example `specfact code review run scripts/check-docs-commands.py`.
+```
+
+Fix:
+
+- Added the `specfact code review run` entry to `_data/nav.yml` so the validator no longer reports the missing command example.
+
+Result (Passing):
 
 ```text
 Docs command validation passed with no findings.
@@ -40,10 +50,10 @@ cd docs && bundle exec jekyll build
 Result:
 
 ```text
-Configuration file: /home/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/docs-13-nav-search-theme-roles/docs/_config.yml
-            Source: /home/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/docs-13-nav-search-theme-roles/docs
-       Destination: /home/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/docs-13-nav-search-theme-roles/docs/_site
-      Generating...
+Configuration file: <REPO_ROOT>/docs/_config.yml
+            Source: <REPO_ROOT>/docs
+       Destination: <REPO_ROOT>/docs/_site
+       Generating...
                     done in 0.924 seconds.
  Auto-regeneration: disabled. Use --watch to enable.
 ```

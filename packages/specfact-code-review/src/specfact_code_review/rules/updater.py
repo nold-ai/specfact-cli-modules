@@ -19,7 +19,7 @@ from specfact_code_review.ledger.client import LedgerRun
 _BUNDLED_SKILL_PATH = ("resources", "skills", "specfact-code-review", "SKILL.md")
 
 
-MAX_SKILL_LINES = 35
+MAX_SKILL_LINES = 40
 SKILL_PATH = Path("skills/specfact-code-review/SKILL.md")
 
 CURSOR_RULES_PATH = Path(".cursor/rules/house_rules.mdc")
@@ -35,7 +35,7 @@ DEFAULT_DO_RULES = (
     "- Keep functions under 120 LOC, shallow nesting, and <= 5 parameters (KISS)",
     "- Delete unused private helpers and speculative abstractions quickly (YAGNI)",
     "- Extract repeated function shapes once the second copy appears (DRY)",
-    "- Split persistence and transport concerns instead of mixing repository.* with http_client.* (SOLID)",
+    "- Split persistence and transport concerns instead of mixing `repository.*` with `http_client.*` (SOLID)",
     "- Add @require/@ensure (icontract) + @beartype to all new public APIs",
     "- Run hatch run contract-test-contracts before any commit",
     "- Write the test file BEFORE the feature file (TDD-first)",
@@ -45,7 +45,7 @@ DEFAULT_DONT_RULES = (
     "- Don't enable known noisy findings unless you explicitly want strict/full review output",
     "- Don't use bare except: or except Exception: pass",
     "- Don't add # noqa / # type: ignore without inline justification",
-    "- Don't mix read + write in the same method or call repository.* and http_client.* together",
+    "- Don't mix read + write in the same method or call `repository.*` and `http_client.*` together",
     "- Don't import at module level if it triggers network calls",
     "- Don't hardcode secrets; use env vars via pydantic.BaseSettings",
     "- Don't create functions that exceed the KISS thresholds without a documented reason",
@@ -124,12 +124,12 @@ def _cursor_rule_parts(content: str) -> tuple[str, str]:
     if not content.startswith("---\n"):
         return body, description
 
-    _, _, remainder = content.partition("\n---\n")
-    if not remainder:
+    front_matter, separator, remainder = content.partition("\n---\n")
+    if not separator or not remainder:
         return body, description
 
     body = remainder.lstrip("\n")
-    match = re.search(r"^description:\s*(?P<description>.+)$", content, flags=re.MULTILINE)
+    match = re.search(r"^description:\s*(?P<description>.+)$", front_matter, flags=re.MULTILINE)
     if match:
         description = match.group("description").strip()
     return body, description

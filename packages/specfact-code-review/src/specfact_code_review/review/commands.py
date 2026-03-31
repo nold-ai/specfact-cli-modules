@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import argparse
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+import click
 import typer
+from icontract import ensure, require
 from icontract.errors import ViolationError
 
 from specfact_code_review.ledger.commands import app as ledger_app
@@ -39,63 +43,85 @@ def _resolve_include_tests(*, files: list[Path], include_tests: bool | None, int
     return typer.confirm("Include changed and untracked test files in this review?", default=False)
 
 
-@review_app.command("run")
-def _run(
-    files: list[Path] = typer.Argument(None, metavar="FILES..."),
-    *,
-    scope: Literal["changed", "full"] | None = typer.Option(
-        None,
-        "--scope",
-        help="Auto-discovery scope when positional files are omitted: changed or full.",
-    ),
-    path_filters: list[Path] | None = typer.Option(
-        None,
-        "--path",
-        help="Repeatable repo-relative path prefix used to limit auto-discovered review files.",
-    ),
-    include_tests: bool | None = typer.Option(
-        None,
-        "--include-tests/--exclude-tests",
-        help="Include changed test files when review scope is auto-detected from git diff.",
-    ),
-    include_noise: bool = typer.Option(
-        False,
-        "--include-noise/--suppress-noise",
-        help="Include known low-signal findings such as test-scope contract noise.",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Write ReviewReport JSON to a file. Use --out to override the default path.",
-    ),
-    out: Path | None = typer.Option(
-        None,
-        "--out",
-        help="JSON output file path used with --json. Default: review-report.json.",
-    ),
-    score_only: bool = typer.Option(False, "--score-only", help="Print only the reward delta integer."),
-    no_tests: bool = typer.Option(False, "--no-tests", help="Skip the TDD gate."),
-    fix: bool = typer.Option(False, "--fix", help="Apply Ruff autofixes and re-run the review."),
-    interactive: bool = typer.Option(False, "--interactive", help="Ask review-scope questions before running."),
-) -> None:
-    """Execute code review runs."""
+@dataclass(frozen=True)
+class _RunInvocation:
+    files: list[Path]
+    scope: Literal["changed", "full"] | None
+    path_filters: list[Path] | None
+    include_tests: bool | None
+    include_noise: bool
+    json_output: bool
+    out: Path | None
+    score_only: bool
+    no_tests: bool
+    fix: bool
+    interactive: bool
+
+
+def _parse_run_invocation(arguments: list[str]) -> _RunInvocation:
+    parser = argparse.ArgumentParser(prog="specfact code review run", add_help=False, allow_abbrev=False)
+    parser.add_argument("files", nargs="*", type=Path)
+    parser.add_argument("--scope", choices=("changed", "full"))
+    parser.add_argument("--path", dest="path_filters", action="append", type=Path, default=None)
+
+    include_tests_group = parser.add_mutually_exclusive_group()
+    include_tests_group.add_argument("--include-tests", dest="include_tests", action="store_true")
+    include_tests_group.add_argument("--exclude-tests", dest="include_tests", action="store_false")
+    parser.set_defaults(include_tests=None)
+
+    include_noise_group = parser.add_mutually_exclusive_group()
+    include_noise_group.add_argument("--include-noise", dest="include_noise", action="store_true")
+    include_noise_group.add_argument("--suppress-noise", dest="include_noise", action="store_false")
+    parser.set_defaults(include_noise=False)
+
+    parser.add_argument("--json", dest="json_output", action="store_true")
+    parser.add_argument("--out", type=Path)
+    parser.add_argument("--score-only", dest="score_only", action="store_true")
+    parser.add_argument("--no-tests", dest="no_tests", action="store_true")
+    parser.add_argument("--fix", action="store_true")
+    parser.add_argument("--interactive", action="store_true")
+    parsed = parser.parse_args(arguments)
+    return _RunInvocation(
+        files=parsed.files,
+        scope=parsed.scope,
+        path_filters=parsed.path_filters,
+        include_tests=parsed.include_tests,
+        include_noise=parsed.include_noise,
+        json_output=parsed.json_output,
+        out=parsed.out,
+        score_only=parsed.score_only,
+        no_tests=parsed.no_tests,
+        fix=parsed.fix,
+        interactive=parsed.interactive,
+    )
+
+
+@review_app.command(
+    "run",
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+@require(lambda ctx: isinstance(ctx, click.Context), "ctx must be a Click context")
+@ensure(lambda result: result is None, "run command does not return")
+def run(ctx: click.Context) -> None:
+    """Run the full code review workflow."""
     try:
+        invocation = _parse_run_invocation(list(ctx.args))
         resolved_include_tests = _resolve_include_tests(
-            files=files,
-            include_tests=include_tests,
-            interactive=interactive,
+            files=invocation.files,
+            include_tests=invocation.include_tests,
+            interactive=invocation.interactive,
         )
         exit_code, output = run_command(
-            files,
+            invocation.files,
             include_tests=resolved_include_tests,
-            scope=scope,
-            path_filters=path_filters,
-            include_noise=include_noise,
-            json_output=json_output,
-            out=out,
-            score_only=score_only,
-            no_tests=no_tests,
-            fix=fix,
+            scope=invocation.scope,
+            path_filters=invocation.path_filters,
+            include_noise=invocation.include_noise,
+            json_output=invocation.json_output,
+            out=invocation.out,
+            score_only=invocation.score_only,
+            no_tests=invocation.no_tests,
+            fix=invocation.fix,
         )
     except (ValueError, ViolationError) as exc:
         raise typer.BadParameter(_friendly_run_command_error(exc)) from exc

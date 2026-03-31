@@ -10,7 +10,7 @@ from pathlib import Path
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import _tool_error
+from specfact_code_review._review_utils import tool_error
 from specfact_code_review.run.findings import ReviewFinding
 
 
@@ -192,7 +192,7 @@ def run_ast_clean_code(files: list[Path]) -> list[ReviewFinding]:
             tree = ast.parse(file_path.read_text(encoding="utf-8"), filename=str(file_path))
         except (OSError, SyntaxError) as exc:
             findings.append(
-                _tool_error(tool="ast", file_path=file_path, message=f"Unable to parse Python source: {exc}")
+                tool_error(tool="ast", file_path=file_path, message=f"Unable to parse Python source: {exc}")
             )
             continue
 

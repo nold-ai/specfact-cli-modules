@@ -8,7 +8,7 @@ from unittest.mock import Mock
 from pytest import MonkeyPatch
 
 from specfact_code_review.tools.radon_runner import run_radon
-from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process
+from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
 
 def test_run_radon_maps_complexity_thresholds_and_filters_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -66,20 +66,7 @@ def test_run_radon_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatch
 
 
 def test_run_radon_emits_kiss_metrics_from_source_shape(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
-    file_path = tmp_path / "target.py"
-    body = "\n".join(f"                total += {index}" for index in range(81))
-    file_path.write_text(
-        (
-            "def noisy(a, b, c, d, e, f):\n"
-            "    total = 0\n"
-            "    if a:\n"
-            "        if b:\n"
-            "            if c:\n"
-            f"{body}\n"
-            "    return total\n"
-        ),
-        encoding="utf-8",
-    )
+    file_path = create_noisy_file(tmp_path)
     monkeypatch.setattr(
         subprocess,
         "run",
@@ -97,20 +84,7 @@ def test_run_radon_emits_kiss_metrics_from_source_shape(tmp_path: Path, monkeypa
 
 
 def test_run_radon_uses_dedicated_tool_identifier_for_kiss_findings(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
-    file_path = tmp_path / "target.py"
-    body = "\n".join(f"                total += {index}" for index in range(81))
-    file_path.write_text(
-        (
-            "def noisy(a, b, c, d, e, f):\n"
-            "    total = 0\n"
-            "    if a:\n"
-            "        if b:\n"
-            "            if c:\n"
-            f"{body}\n"
-            "    return total\n"
-        ),
-        encoding="utf-8",
-    )
+    file_path = create_noisy_file(tmp_path)
     monkeypatch.setattr(
         subprocess,
         "run",

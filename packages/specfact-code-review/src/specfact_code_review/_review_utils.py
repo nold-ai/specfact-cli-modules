@@ -6,10 +6,17 @@ import os
 from pathlib import Path
 from typing import Literal
 
+from beartype import beartype
+from icontract import ensure, require
+
 from specfact_code_review.run.findings import ReviewFinding
 
 
-def _normalize_path_variants(path_value: str | Path) -> set[str]:
+@beartype
+@require(lambda path_value: isinstance(path_value, str | Path))
+@ensure(lambda result: isinstance(result, set))
+def normalize_path_variants(path_value: str | Path) -> set[str]:
+    """Return a normalized set of path spellings for source matching."""
     path = Path(path_value)
     variants = {
         os.path.normpath(str(path)),
@@ -24,7 +31,13 @@ def _normalize_path_variants(path_value: str | Path) -> set[str]:
     return variants
 
 
-def _tool_error(
+@beartype
+@require(lambda tool: isinstance(tool, str) and bool(tool.strip()))
+@require(lambda file_path: isinstance(file_path, Path))
+@require(lambda message: isinstance(message, str) and bool(message.strip()))
+@require(lambda severity: severity in {"error", "warning", "info"})
+@ensure(lambda result: isinstance(result, ReviewFinding))
+def tool_error(
     *,
     tool: str,
     file_path: Path,

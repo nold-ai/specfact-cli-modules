@@ -467,7 +467,7 @@ def test_coverage_findings_skips_package_initializers_without_coverage_data() ->
 
     findings, coverage_by_source = _coverage_findings([source_file], {"files": {}})
 
-    assert findings == []
+    assert not findings
     assert coverage_by_source == {}
 
 
@@ -485,18 +485,15 @@ def test_run_pytest_with_coverage_disables_global_fail_under(monkeypatch: Monkey
 
     command = recorded["command"]
     assert isinstance(command, list)
-    assert command[:3] == [_pytest_python_executable(), "-m", "pytest"]
+    assert command[0] == _pytest_python_executable()
+    assert command[1] == "-c"
+    assert "import specfact_code_review" in command[2]
+    assert "--import-mode=importlib" in command
     assert "--cov-fail-under=0" in command
 
 
-def test_pytest_python_executable_prefers_local_venv(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.chdir(tmp_path)
-    venv_python = tmp_path / ".venv/bin/python"
-    venv_python.parent.mkdir(parents=True)
-    venv_python.write_text("#!/bin/sh\n", encoding="utf-8")
-    venv_python.chmod(0o755)
-
-    assert _pytest_python_executable() == str(venv_python.resolve())
+def test_pytest_python_executable_uses_current_interpreter() -> None:
+    assert _pytest_python_executable() == sys.executable
 
 
 def test_pytest_targets_collapse_multi_file_batch_to_common_test_directory() -> None:
@@ -532,8 +529,8 @@ def test_run_pytest_with_coverage_propagates_pythonpath(monkeypatch: MonkeyPatch
     env = kwargs["env"]
     assert isinstance(env, dict)
     assert env["PYTHONPATH"].split(os.pathsep) == [
-        str(workspace_root.resolve()),
         str(Path("packages/specfact-code-review/src").resolve()),
+        str(workspace_root.resolve()),
         str(tmp_path / "existing"),
         str(bundle_root.resolve()),
     ]

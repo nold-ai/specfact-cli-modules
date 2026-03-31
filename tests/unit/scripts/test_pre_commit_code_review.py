@@ -173,6 +173,7 @@ def test_main_timeout_fails_hook(monkeypatch: pytest.MonkeyPatch, capsys: pytest
 
     monkeypatch.setattr(module, "ensure_runtime_available", _fake_ensure)
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
+    monkeypatch.setattr(module, "_repo_root", lambda: repo_root)
 
     exit_code = module.main(["src/app.py"])
 

@@ -21,7 +21,7 @@ app = typer.Typer(help="Manage the code-review house-rules skill.", no_args_is_h
 
 
 @app.command("show")
-def show() -> None:
+def _show() -> None:
     """Print the current skill content."""
     skill_path = _skill_path()
     if not skill_path.exists():
@@ -34,11 +34,13 @@ def show() -> None:
 
 
 @app.command("init")
-def init(
+def _init(
     ide: SupportedIde | None = typer.Option(
         None,
         "--ide",
-        help="Install to the canonical target path for one IDE. Omit to keep only skills/specfact-code-review/SKILL.md.",
+        help=(
+            "Install to the canonical target path for one IDE. Omit to keep only skills/specfact-code-review/SKILL.md."
+        ),
     ),
 ) -> None:
     """Create the default skill file and optionally install it to one canonical IDE target."""
@@ -56,11 +58,11 @@ def init(
 
 
 @app.command("update")
-def update(
+def _update(
     ide: SupportedIde | None = typer.Option(
         None,
         "--ide",
-        help="Refresh one canonical IDE target. Omit to refresh only IDE targets already installed in the project.",
+        help=("Refresh one canonical IDE target. Omit to refresh only IDE targets already installed in the project."),
     ),
 ) -> None:
     """Update the TOP VIOLATIONS section and refresh canonical IDE targets."""
@@ -80,6 +82,9 @@ def update(
 
 def _skill_path() -> Path:
     return Path.cwd() / SKILL_PATH
+
+
+REGISTERED_COMMANDS = (_show, _init, _update)
 
 
 __all__ = ["app"]

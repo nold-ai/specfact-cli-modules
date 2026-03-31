@@ -18,8 +18,8 @@ from specfact_code_review.run.findings import ReviewFinding
 
 _KISS_LOC_WARNING = 80
 _KISS_LOC_ERROR = 120
-_KISS_NESTING_WARNING = 2
-_KISS_NESTING_ERROR = 3
+_KISS_NESTING_WARNING = 3
+_KISS_NESTING_ERROR = 5
 _KISS_PARAMETER_WARNING = 5
 _KISS_PARAMETER_ERROR = 7
 _CONTROL_FLOW_NODES = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.Match)

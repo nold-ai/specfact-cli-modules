@@ -1,4 +1,4 @@
-## 1. Change Setup
+# 1. Change Setup
 
 - [ ] 1.1 Update `openspec/CHANGE_ORDER.md` with `docs-14-module-release-history`
 - [ ] 1.2 Add capability specs for structured module release history and docs rendering
@@ -33,7 +33,7 @@
 
 - [ ] 6.1 Update `openspec/config.yaml` rules so release-oriented changes include release-history extraction/update expectations where applicable
 - [ ] 6.2 Add rule guidance for future docs updates that depend on publish-driven module history
-- [ ] 6.3 Add rule guidance for AI copilot release-note generation style: user-facing benefits first, shipped scope explicit, and no technical bla bla
+- [ ] 6.3 Add rule guidance for AI copilot release-note generation style: user-facing benefits first, shipped scope explicit, and no unnecessary technical jargon or generic filler text
 
 ## 7. Verification
 

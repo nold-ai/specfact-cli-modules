@@ -35,5 +35,4 @@ The project OpenSpec configuration SHALL guide future release-oriented changes t
 
 - **GIVEN** a future release-oriented change uses AI copilot to help draft module release or patch notes
 - **WHEN** project OpenSpec rules are consulted
-- **THEN** they instruct the AI to keep notes user-focused and scope-explicit
-- **AND** they discourage technical bla bla or generic filler text
+- **THEN** they instruct the AI to keep notes user-focused, scope-explicit, and they MUST avoid unnecessary technical jargon or generic filler text

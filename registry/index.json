@@ -76,6 +76,7 @@
       "latest_version": "0.45.1",
       "download_url": "modules/specfact-code-review-0.45.1.tar.gz",
       "checksum_sha256": "72372145e9633d55c559f1efe4c0eb284d5814398b5bad837810dd69654f1dbb",
+      "core_compatibility": ">=0.40.0,<1.0.0",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",

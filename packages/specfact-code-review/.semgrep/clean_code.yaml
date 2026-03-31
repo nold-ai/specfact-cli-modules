@@ -58,7 +58,7 @@ rules:
     message: Public API names should be specific; avoid generic names like process, handle, or manager.
     severity: WARNING
     languages: [python]
-    pattern-regex: '(?m)^(?:def|class)\s+(?:process|handle|manager|data)\b'
+    pattern-regex: '(?m)^(?:def|class)\s+(?!_+)(?:process|handle|manager|data)\b'
 
   - id: swallowed-exception-pattern
     message: Exception handlers must not swallow failures with pass or silent returns.

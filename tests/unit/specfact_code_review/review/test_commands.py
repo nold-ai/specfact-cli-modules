@@ -25,7 +25,7 @@ def test_review_run_interactive_prompts_for_test_inclusion(monkeypatch: Any) -> 
 
     assert result.exit_code == 0
     assert "Include changed and untracked test files in this review?" in result.output
-    assert recorded["files"] is None
+    assert recorded["files"] == []
     assert recorded["kwargs"]["include_tests"] is True
 
 

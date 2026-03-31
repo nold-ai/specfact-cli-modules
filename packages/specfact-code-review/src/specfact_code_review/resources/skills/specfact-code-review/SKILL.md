@@ -9,6 +9,7 @@ allowed-tools: []
 Updated: 2026-03-30 | Module: nold-ai/specfact-code-review
 
 ## DO
+
 - Ask whether tests should be included before repo-wide review; default to excluding tests unless test changes are the target
 - Use intention-revealing names; avoid placeholder public names like data/process/handle
 - Keep functions under 120 LOC, shallow nesting, and <= 5 parameters (KISS)
@@ -21,6 +22,7 @@ Updated: 2026-03-30 | Module: nold-ai/specfact-code-review
 - Return typed values from all public methods and guard chained attribute access
 
 ## DON'T
+
 - Don't enable known noisy findings unless you explicitly want strict/full review output
 - Don't use bare except: or except Exception: pass
 - Don't add # noqa / # type: ignore without inline justification
@@ -30,4 +32,5 @@ Updated: 2026-03-30 | Module: nold-ai/specfact-code-review
 - Don't create functions that exceed the KISS thresholds without a documented reason
 
 ## TOP VIOLATIONS (auto-updated by specfact code review rules update)
+
 <!-- auto-managed: do not edit manually -->

@@ -16,7 +16,7 @@ from uuid import uuid4
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import _normalize_path_variants, _tool_error
+from specfact_code_review._review_utils import normalize_path_variants, tool_error
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 from specfact_code_review.run.scorer import score_review
 from specfact_code_review.tools.ast_clean_code_runner import run_ast_clean_code
@@ -49,6 +49,7 @@ _PR_CONTEXT_ENVS = (
     "SPECFACT_CODE_REVIEW_PR_PROPOSAL",
 )
 _CLEAN_CODE_CONTEXT_HINTS = ("clean code", "naming", "kiss", "yagni", "dry", "solid", "complexity")
+_TARGETED_TEST_TIMEOUT = int(os.environ.get("SPECFACT_CODE_REVIEW_TARGETED_TEST_TIMEOUT", "120"))
 
 
 def _source_relative_path(source_file: Path) -> Path | None:
@@ -89,11 +90,11 @@ def _coverage_for_source(source_file: Path, payload: dict[str, object]) -> float
     files_payload = payload.get("files")
     if not isinstance(files_payload, dict):
         return None
-    allowed_paths = _normalize_path_variants(source_file)
+    allowed_paths = normalize_path_variants(source_file)
     for filename, file_payload in files_payload.items():
         if not isinstance(filename, str):
             continue
-        if _normalize_path_variants(filename).isdisjoint(allowed_paths):
+        if normalize_path_variants(filename).isdisjoint(allowed_paths):
             continue
         if not isinstance(file_payload, dict):
             return None
@@ -108,7 +109,7 @@ def _coverage_for_source(source_file: Path, payload: dict[str, object]) -> float
 
 def _pytest_env() -> dict[str, str]:
     env = os.environ.copy()
-    pythonpath_entries: list[str] = [str(Path.cwd().resolve()), str(_SOURCE_ROOT.resolve())]
+    pythonpath_entries: list[str] = [str(_SOURCE_ROOT.resolve()), str(Path.cwd().resolve())]
     _extend_unique_entries(pythonpath_entries, env.get("PYTHONPATH", ""), split_by=os.pathsep)
     _extend_unique_entries(
         pythonpath_entries,
@@ -150,11 +151,6 @@ def _pytest_targets(test_files: list[Path]) -> list[Path]:
 
 
 def _pytest_python_executable() -> str:
-    local_candidates = [Path(".venv/bin/python"), Path(".venv/Scripts/python.exe")]
-    for candidate in local_candidates:
-        resolved = candidate.resolve()
-        if resolved.is_file():
-            return str(resolved)
     return sys.executable
 
 
@@ -163,10 +159,18 @@ def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.Comple
         coverage_path = Path(coverage_file.name)
 
     test_targets = _pytest_targets(test_files)
+    source_root = str(_SOURCE_ROOT.resolve())
+    repo_root = str(Path.cwd().resolve())
     command = [
         _pytest_python_executable(),
-        "-m",
-        "pytest",
+        "-c",
+        (
+            "import pathlib, sys, pytest; "
+            f"sys.path[:0] = [{source_root!r}, {repo_root!r}]; "
+            "import specfact_code_review; "
+            "raise SystemExit(pytest.main(sys.argv[1:]))"
+        ),
+        "--import-mode=importlib",
         "--cov",
         str(_PACKAGE_ROOT),
         "--cov-fail-under=0",
@@ -178,7 +182,7 @@ def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.Comple
         capture_output=True,
         text=True,
         check=False,
-        timeout=120,
+        timeout=_TARGETED_TEST_TIMEOUT,
         env=_pytest_env(),
     )
     return result, coverage_path
@@ -287,7 +291,7 @@ def _coverage_findings(
         percent_covered = _coverage_for_source(source_file, coverage_payload)
         if percent_covered is None and source_file.name != "__init__.py":
             return [
-                _tool_error(
+                tool_error(
                     tool="pytest",
                     file_path=source_file,
                     message=f"Coverage data missing for {source_file}",
@@ -327,7 +331,7 @@ def _evaluate_tdd_gate(files: list[Path]) -> tuple[list[ReviewFinding], dict[str
         test_result, coverage_path = _run_pytest_with_coverage(test_files)
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
         return [
-            _tool_error(
+            tool_error(
                 tool="pytest",
                 file_path=source_files[0],
                 message=f"Unable to execute targeted tests: {exc}",
@@ -352,7 +356,7 @@ def _evaluate_tdd_gate(files: list[Path]) -> tuple[list[ReviewFinding], dict[str
         coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         return [
-            _tool_error(
+            tool_error(
                 tool="pytest",
                 file_path=source_files[0],
                 message=f"Unable to read coverage report: {exc}",
