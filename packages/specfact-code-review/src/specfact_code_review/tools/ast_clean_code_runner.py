@@ -16,7 +16,6 @@ from specfact_code_review.run.findings import ReviewFinding
 
 _REPOSITORY_ROOTS = {"repo", "repository"}
 _HTTP_ROOTS = {"client", "http_client", "requests", "session"}
-_CONTROL_FLOW_NODES = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.Match)
 
 
 class _ShapeNormalizer(ast.NodeTransformer):
