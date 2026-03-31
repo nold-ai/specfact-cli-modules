@@ -105,7 +105,4 @@ def _format_violation(entry: object) -> str:
     return str(entry)
 
 
-REGISTERED_COMMANDS = (_update, _status, _reset)
-
-
 __all__ = ["app"]

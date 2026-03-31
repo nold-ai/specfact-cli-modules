@@ -10,15 +10,15 @@ import importlib.util
 
 def test_all_exports() -> None:
     """Test that __all__ contains expected exports."""
-    from specfact_code_review import __all__
+    import specfact_code_review
 
-    assert isinstance(__all__, tuple)
-    assert len(__all__) > 0
-    assert "app" in __all__
-    assert "export_from_bundle" in __all__
-    assert "import_to_bundle" in __all__
-    assert "sync_with_bundle" in __all__
-    assert "validate_bundle" in __all__
+    assert isinstance(specfact_code_review.__all__, tuple)
+    assert len(specfact_code_review.__all__) > 0
+    assert "app" in specfact_code_review.__all__
+    assert "export_from_bundle" in specfact_code_review.__all__
+    assert "import_to_bundle" in specfact_code_review.__all__
+    assert "sync_with_bundle" in specfact_code_review.__all__
+    assert "validate_bundle" in specfact_code_review.__all__
 
 
 def test_getattr_raises_for_invalid_attribute() -> None:

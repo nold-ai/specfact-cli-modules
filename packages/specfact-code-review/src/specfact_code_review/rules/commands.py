@@ -84,7 +84,4 @@ def _skill_path() -> Path:
     return Path.cwd() / SKILL_PATH
 
 
-REGISTERED_COMMANDS = (_show, _init, _update)
-
-
 __all__ = ["app"]
