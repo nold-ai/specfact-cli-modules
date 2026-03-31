@@ -463,12 +463,23 @@ def test_run_tdd_gate_returns_no_finding_for_passing_tests_with_sufficient_cover
 
 
 def test_coverage_findings_skips_package_initializers_without_coverage_data() -> None:
-    source_file = Path("packages/specfact-code-review/src/specfact_code_review/tools/__init__.py")
+    source_file = Path("packages/specfact-code-review/src/specfact_code_review/review/__init__.py")
 
     findings, coverage_by_source = _coverage_findings([source_file], {"files": {}})
 
     assert not findings
     assert coverage_by_source == {}
+
+
+def test_coverage_findings_does_not_skip_non_empty_package_initializers() -> None:
+    source_file = Path("packages/specfact-code-review/src/specfact_code_review/tools/__init__.py")
+
+    findings, coverage_by_source = _coverage_findings([source_file], {"files": {}})
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert "Coverage data missing" in findings[0].message
+    assert coverage_by_source is None
 
 
 def test_run_pytest_with_coverage_disables_global_fail_under(monkeypatch: MonkeyPatch) -> None:

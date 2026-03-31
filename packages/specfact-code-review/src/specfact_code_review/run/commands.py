@@ -383,22 +383,66 @@ def _build_review_run_request(
     files: list[Path],
     kwargs: dict[str, object],
 ) -> ReviewRunRequest:
+    # Validate files is a list of Path instances
+    if not isinstance(files, list):
+        raise ValueError(f"files must be a list, got {type(files).__name__}")
+    if not all(isinstance(file_path, Path) for file_path in files):
+        raise ValueError("files must contain only Path instances")
+
     request_kwargs = dict(kwargs)
+
+    # Validate and extract known boolean flags with proper type checking
+    def _get_bool_param(name: str, default: bool = False) -> bool:
+        value = request_kwargs.pop(name, default)
+        if value is None:
+            return default
+        if not isinstance(value, bool):
+            raise ValueError(f"{name} must be a boolean, got {type(value).__name__}")
+        return value
+
+    # Validate and extract known path/scope parameters
+    def _get_optional_param(name: str, validator: Callable[[object], object], default: object = None) -> object:
+        value = request_kwargs.pop(name, default)
+        if value is None or value == default:
+            return default
+        return validator(value)
+
+    # Get include_tests with proper default
+    include_tests_value = request_kwargs.pop("include_tests", None)
+    include_tests = False  # default value
+    if include_tests_value is not None:
+        if not isinstance(include_tests_value, bool):
+            raise ValueError(f"include_tests must be a boolean, got {type(include_tests_value).__name__}")
+        include_tests = include_tests_value
+
+    # Get optional parameters with proper type casting
+    scope_value = _get_optional_param("scope", _as_auto_scope)
+    path_filters_value = _get_optional_param("path_filters", _as_path_filters)
+    out_value = _get_optional_param("out", _as_optional_path)
+
+    # Cast the optional parameters to their proper types
+    scope = cast(AutoScope | None, scope_value)
+    path_filters = cast(list[Path] | None, path_filters_value)
+    out = cast(Path | None, out_value)
+
     request = ReviewRunRequest(
         files=files,
-        include_tests=bool(request_kwargs.pop("include_tests", False)),
-        scope=_as_auto_scope(request_kwargs.pop("scope", None)),
-        path_filters=_as_path_filters(request_kwargs.pop("path_filters", None)),
-        include_noise=bool(request_kwargs.pop("include_noise", False)),
-        json_output=bool(request_kwargs.pop("json_output", False)),
-        out=_as_optional_path(request_kwargs.pop("out", None)),
-        score_only=bool(request_kwargs.pop("score_only", False)),
-        no_tests=bool(request_kwargs.pop("no_tests", False)),
-        fix=bool(request_kwargs.pop("fix", False)),
+        include_tests=include_tests,
+        scope=scope,
+        path_filters=path_filters,
+        include_noise=_get_bool_param("include_noise"),
+        json_output=_get_bool_param("json_output"),
+        out=out,
+        score_only=_get_bool_param("score_only"),
+        no_tests=_get_bool_param("no_tests"),
+        fix=_get_bool_param("fix"),
     )
+
+    # Reject any unexpected keyword arguments
     if request_kwargs:
         unexpected = ", ".join(sorted(request_kwargs))
         raise ValueError(f"Unexpected keyword arguments: {unexpected}")
+
     return request
 
 
@@ -409,7 +453,7 @@ def _render_review_result(report: ReviewReport, request: ReviewRunRequest) -> tu
         output_path.write_text(report.model_dump_json(), encoding="utf-8")
         return report.ci_exit_code or 0, str(output_path)
     if request.score_only:
-        return report.ci_exit_code or 0, str(report.reward_delta)
+        return report.ci_exit_code or 0, str(report.score)
 
     _render_report(report)
     return report.ci_exit_code or 0, None

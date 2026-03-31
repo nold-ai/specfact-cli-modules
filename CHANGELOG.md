@@ -17,7 +17,7 @@ and this project follows SemVer for bundle versions.
 ### Changed
 
 - Refresh the canonical `specfact-code-review` house-rules skill to a compact
-  clean-code charter and bump the bundle metadata for the signed 0.45.2 release.
+  clean-code charter and bump the bundle metadata for the signed 0.45.1 release.
 
 ## [0.44.0] - 2026-03-17
 

@@ -29,6 +29,7 @@ TOP_VIOLATIONS_HEADER = "## TOP VIOLATIONS (auto-updated by specfact code review
 TOP_VIOLATIONS_MARKER = "<!-- auto-managed: do not edit manually -->"
 DEFAULT_DESCRIPTION = "House rules for AI coding sessions derived from review findings"
 DEFAULT_DO_RULES = (
+    "- Verify an active OpenSpec change covers the requested scope and follow the sequence: spec delta → failing tests → implementation → passing tests → quality gates",
     "- Ask whether tests should be included before repo-wide review; "
     "default to excluding tests unless test changes are the target",
     "- Use intention-revealing names; avoid placeholder public names like data/process/handle",

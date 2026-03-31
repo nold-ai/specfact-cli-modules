@@ -281,6 +281,26 @@ def _collect_tdd_inputs(files: list[Path]) -> tuple[list[Path], list[Path], list
     return source_files, test_files, findings
 
 
+def _is_empty_init_file(source_file: Path) -> bool:
+    """Check if __init__.py is a marker/empty module with no executable statements."""
+    if source_file.name != "__init__.py":
+        return False
+
+    try:
+        content = source_file.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+    # Strip whitespace, comments, and docstrings
+    stripped_content = re.sub(r'"""[^"""]*"""', "", content, flags=re.DOTALL)
+    stripped_content = re.sub(r"'''[^']*'''", "", stripped_content, flags=re.DOTALL)
+    stripped_content = re.sub(r"#.*$", "", stripped_content, flags=re.MULTILINE)
+    stripped_content = stripped_content.strip()
+
+    # Consider empty if only contains 'pass' or is completely empty
+    return stripped_content in ("", "pass")
+
+
 def _coverage_findings(
     source_files: list[Path],
     coverage_payload: dict[str, object],
@@ -289,7 +309,9 @@ def _coverage_findings(
     coverage_by_source: dict[str, float] = {}
     for source_file in source_files:
         percent_covered = _coverage_for_source(source_file, coverage_payload)
-        if percent_covered is None and source_file.name != "__init__.py":
+        if percent_covered is None:
+            if source_file.name == "__init__.py" and _is_empty_init_file(source_file):
+                continue  # Exempt empty __init__.py files
             return [
                 tool_error(
                     tool="pytest",
@@ -297,8 +319,6 @@ def _coverage_findings(
                     message=f"Coverage data missing for {source_file}",
                 )
             ], None
-        if percent_covered is None:
-            continue
         coverage_by_source[str(source_file)] = percent_covered
         if percent_covered >= _COVERAGE_THRESHOLD:
             continue
