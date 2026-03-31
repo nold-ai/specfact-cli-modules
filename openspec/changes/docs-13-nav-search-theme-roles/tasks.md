@@ -1,5 +1,3 @@
-# docs-13 Tasks
-
 ## 1. Data-Driven Navigation
 
 - [x] 1.1 Create `docs/_data/nav.yml` with all seven sections, correct bundle links (Overview + command pages for all 6 bundles), correct Team & Enterprise paths, and complete Workflows section
@@ -54,3 +52,10 @@
 - [x] 7.4 Verify light/dark toggle works and persists across page loads
 - [x] 7.5 Verify search returns results for known keywords
 - [x] 7.6 Verify expertise filter hides/shows nav items correctly
+
+## 8. Module Changelog Visibility
+
+- [ ] 8.1 Define a canonical source for per-module release history that is updated automatically whenever a module version is published
+- [ ] 8.2 Add homepage or overview rendering for recent module release history using that canonical source, with graceful fallback when no history is available
+- [ ] 8.3 Extend the publish flow so `.github/workflows/publish-modules.yml` writes the new release-history entry alongside the existing registry metadata update
+- [ ] 8.4 Verify the rendered changelog entries match the canonical release-history source for all official modules

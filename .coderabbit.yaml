@@ -1,0 +1,117 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit aligns with AGENTS.md: bundle contracts, adapter boundaries to specfact_cli, Hatch gates.
+# `reviews.auto_review.base_branches` includes `dev` so PRs into `dev` are auto-reviewed (not only the
+# repo default branch). See https://docs.coderabbit.ai/reference/configuration (auto_review).
+# Pre-push / finalize: run `cr --base dev` (or `coderabbit review`) from repo root; see
+# https://docs.coderabbit.ai/cli/overview
+# PR description: include `@coderabbitai summary` (default placeholder) for the high-level summary.
+# Linked analysis: pair with nold-ai/specfact-cli (install CodeRabbit app on both repos).
+#
+language: "en-US"
+early_access: false
+tone_instructions: >-
+  Prioritize adapter boundaries between bundled modules and specfact_cli core: registry,
+  module-package.yaml, signing, and docs parity with modules.specfact.io. Flag cross-repo impact when
+  core APIs or contracts change.
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_details: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  poem: false
+  collapse_walkthrough: true
+  changed_files_summary: true
+  review_status: true
+  commit_status: true
+  high_level_summary_instructions: |
+    Structure the summary for specfact-cli-modules maintainers:
+    - Bundle and module surface: commands, adapters, bridge/runtime behavior vs. specfact_cli APIs.
+    - Manifest and integrity: module-package.yaml, semver, signature verification, registry impacts.
+    - Cross-repo: required specfact-cli changes, import/contract alignment, dev-deps path assumptions.
+    - Docs: modules.specfact.io / GitHub Pages accuracy, documentation-url-contract, CHANGELOG.
+    - If applicable: OpenSpec change ID and scenario coverage for module-specific behavior.
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    base_branches:
+      - "^dev$"
+  path_instructions:
+    - path: "packages/**/src/**/*.py"
+      instructions: |
+        Focus on adapter and bridge patterns: imports from specfact_cli (models, runtime, validators),
+        Typer/Rich command surfaces, and clear boundaries so core upgrades do not silently break bundles.
+        Flag breaking assumptions about registry loading, lazy imports, and environment/mode behavior.
+    - path: "packages/**/module-package.yaml"
+      instructions: |
+        Validate metadata: name, version, commands, dependencies, and parity with packaged src.
+        Call out semver and signing implications when manifests or payloads change.
+    - path: "registry/**"
+      instructions: |
+        Registry and index consistency: bundle listings, version pins, and compatibility with
+        published module artifacts.
+    - path: "src/**/*.py"
+      instructions: |
+        Repo infrastructure (not bundle code): keep parity with specfact-cli quality patterns;
+        contract-first public helpers where applicable; avoid print() in library paths.
+    - path: "openspec/**/*.md"
+      instructions: |
+        Specification truth: proposal/tasks/spec deltas vs. bundle behavior, CHANGE_ORDER, and
+        drift vs. shipped modules or docs.
+    - path: "tests/**/*.py"
+      instructions: |
+        Contract-first and integration tests: migration suites, bundle validation, and flakiness.
+        Ensure changes to adapters or bridges have targeted coverage.
+    - path: ".github/workflows/**"
+      instructions: |
+        CI: secrets, hatch/verify-modules-signature gates, contract-test alignment, action versions.
+    - path: "scripts/**/*.py"
+      instructions: |
+        Deterministic tooling: signing, publishing, docs generation; subprocess and path safety.
+    - path: "tools/**/*.py"
+      instructions: |
+        Developer tooling aligned with pyproject Hatch scripts and CI expectations.
+    - path: "docs/**/*.md"
+      instructions: |
+        User-facing and cross-site accuracy: Jekyll front matter, links per documentation-url-contract,
+        CLI examples matching bundled commands.
+
+  tools:
+    ruff:
+      enabled: true
+    semgrep:
+      enabled: true
+    yamllint:
+      enabled: true
+    actionlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+
+  pre_merge_checks:
+    title:
+      mode: warning
+      requirements: "Prefer Conventional Commits-style prefixes (feat:, fix:, docs:, test:, refactor:, chore:)."
+    issue_assessment:
+      mode: warning
+
+knowledge_base:
+  learnings:
+    scope: local
+  linked_repositories:
+    - repository: "nold-ai/specfact-cli"
+      instructions: >-
+        Core CLI and shared runtime: Typer app, module registry/bootstrap, specfact_cli public APIs,
+        contract-test and bundled-module signing flows. When modules change adapters or contracts,
+        flag required core changes, import paths, and coordinated version or signature updates.
+
+chat:
+  auto_reply: true

@@ -11,6 +11,10 @@ from specfact_code_review.tools.pylint_runner import run_pylint
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process
 
 
+def test_run_pylint_returns_empty_for_no_files() -> None:
+    assert run_pylint([]) == []
+
+
 def test_run_pylint_maps_bare_except_to_architecture(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     payload = [
@@ -85,6 +89,18 @@ def test_run_pylint_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatc
         "run",
         Mock(return_value=completed_process("pylint", stdout="not-json", returncode=32)),
     )
+
+    findings = run_pylint([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert findings[0].tool == "pylint"
+
+
+def test_run_pylint_returns_tool_error_for_invalid_payload_item(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = [{"path": str(file_path), "line": 7, "message": "No exception type(s) specified"}]
+    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload))))
 
     findings = run_pylint([file_path])
 

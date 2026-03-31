@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from pathlib import Path
 
 import yaml
@@ -18,16 +19,35 @@ def test_pre_commit_config_has_signature_and_modules_quality_hooks() -> None:
     repos = config.get("repos")
     assert isinstance(repos, list)
 
-    hook_ids = {
-        hook.get("id")
-        for repo in repos
-        if isinstance(repo, dict)
-        for hook in repo.get("hooks", [])
-        if isinstance(hook, dict)
-    }
+    hook_ids: set[str] = set()
+    ordered_hook_ids: list[str] = []
+    seen: set[str] = set()
+    for repo in repos:
+        if not isinstance(repo, dict):
+            continue
+        for hook in repo.get("hooks", []):
+            if not isinstance(hook, dict):
+                continue
+            hook_id = hook.get("id")
+            if not isinstance(hook_id, str):
+                continue
+            hook_ids.add(hook_id)
+            if hook_id not in seen:
+                ordered_hook_ids.append(hook_id)
+                seen.add(hook_id)
 
+    assert "specfact-code-review-gate" in hook_ids
     assert "verify-module-signatures" in hook_ids
     assert "modules-quality-checks" in hook_ids
+
+    expected_order = [
+        "verify-module-signatures",
+        "modules-quality-checks",
+        "specfact-code-review-gate",
+    ]
+    index_map = {hook_id: index for index, hook_id in enumerate(ordered_hook_ids)}
+    for earlier, later in itertools.pairwise(expected_order):
+        assert index_map[earlier] < index_map[later]
 
 
 def test_modules_pre_commit_script_enforces_required_quality_commands() -> None:

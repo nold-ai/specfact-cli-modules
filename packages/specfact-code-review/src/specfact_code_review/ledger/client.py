@@ -184,6 +184,14 @@ class LedgerClient:
         self._local_path.parent.mkdir(parents=True, exist_ok=True)
         self._local_path.write_text(state.model_dump_json(indent=2), encoding="utf-8")
 
+    def _ledger_run_from_payload_entry(self, entry: object) -> LedgerRun | None:
+        if not isinstance(entry, dict):
+            return None
+        try:
+            return LedgerRun.model_validate(entry)
+        except ValidationError:
+            return None
+
     def _read_supabase_runs(self, *, limit: int) -> list[LedgerRun] | None:
         try:
             response = requests.get(
@@ -206,11 +214,10 @@ class LedgerClient:
 
         runs: list[LedgerRun] = []
         for entry in reversed(payload):
-            if isinstance(entry, dict):
-                try:
-                    runs.append(LedgerRun.model_validate(entry))
-                except ValidationError:
-                    return None
+            run = self._ledger_run_from_payload_entry(entry)
+            if run is None:
+                return None
+            runs.append(run)
         return runs
 
     def _read_supabase_state(self) -> LedgerState | None:

@@ -123,17 +123,21 @@ def _iter_inline_examples(text: str, source: Path) -> list[CommandExample]:
     return examples
 
 
-def _extract_command_examples(path: Path) -> list[CommandExample]:
-    text = path.read_text(encoding="utf-8")
+def _extract_command_examples_from_text(text: str, source: Path) -> list[CommandExample]:
     seen: set[tuple[int, str]] = set()
     examples: list[CommandExample] = []
-    for example in [*_iter_bash_examples(text, path), *_iter_inline_examples(text, path)]:
+    for example in [*_iter_bash_examples(text, source), *_iter_inline_examples(text, source)]:
         key = (example.line_number, example.text)
         if key in seen:
             continue
         seen.add(key)
         examples.append(example)
     return examples
+
+
+def _extract_command_examples(path: Path, *, text: str | None = None) -> list[CommandExample]:
+    content = text or path.read_text(encoding="utf-8")
+    return _extract_command_examples_from_text(content, path)
 
 
 def _load_docs_texts(paths: list[Path]) -> dict[Path, str]:
@@ -197,12 +201,7 @@ def _command_example_is_valid(command_text: str, valid_paths: set[CommandPath]) 
 def _validate_command_examples(text_by_path: dict[Path, str], valid_paths: set[CommandPath]) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
     for path, text in text_by_path.items():
-        seen: set[tuple[int, str]] = set()
-        for example in [*_iter_bash_examples(text, path), *_iter_inline_examples(text, path)]:
-            key = (example.line_number, example.text)
-            if key in seen:
-                continue
-            seen.add(key)
+        for example in _extract_command_examples_from_text(text, path):
             if _command_example_is_valid(example.text, valid_paths):
                 continue
             findings.append(

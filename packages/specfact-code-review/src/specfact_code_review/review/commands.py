@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 import typer
+from icontract import ensure, require
 from icontract.errors import ViolationError
 
 from specfact_code_review.ledger.commands import app as ledger_app
@@ -40,57 +41,45 @@ def _resolve_include_tests(*, files: list[Path], include_tests: bool | None, int
 
 
 @review_app.command("run")
-def _run(
-    files: list[Path] = typer.Argument(None, metavar="FILES..."),
-    *,
-    scope: Literal["changed", "full"] | None = typer.Option(
-        None,
-        "--scope",
-        help="Auto-discovery scope when positional files are omitted: changed or full.",
-    ),
-    path_filters: list[Path] | None = typer.Option(
-        None,
-        "--path",
-        help="Repeatable repo-relative path prefix used to limit auto-discovered review files.",
-    ),
-    include_tests: bool | None = typer.Option(
-        None,
-        "--include-tests/--exclude-tests",
-        help="Include changed test files when review scope is auto-detected from git diff.",
-    ),
-    include_noise: bool = typer.Option(
-        False,
-        "--include-noise/--suppress-noise",
-        help="Include known low-signal findings such as test-scope contract noise.",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Write ReviewReport JSON to a file. Use --out to override the default path.",
-    ),
-    out: Path | None = typer.Option(
-        None,
-        "--out",
-        help="JSON output file path used with --json. Default: review-report.json.",
-    ),
-    score_only: bool = typer.Option(False, "--score-only", help="Print only the reward delta integer."),
-    no_tests: bool = typer.Option(False, "--no-tests", help="Skip the TDD gate."),
-    fix: bool = typer.Option(False, "--fix", help="Apply Ruff autofixes and re-run the review."),
-    interactive: bool = typer.Option(False, "--interactive", help="Ask review-scope questions before running."),
+@require(lambda ctx: True, "run command validation")
+@ensure(lambda result: result is None, "run command does not return")
+def run(
+    ctx: typer.Context,
+    files: list[Path] = typer.Argument(None),
+    scope: Literal["changed", "full"] = typer.Option(None),
+    path: list[Path] = typer.Option(None, "--path"),
+    include_tests: bool = typer.Option(None, "--include-tests"),
+    exclude_tests: bool = typer.Option(None, "--exclude-tests"),
+    include_noise: bool = typer.Option(False, "--include-noise"),
+    suppress_noise: bool = typer.Option(False, "--suppress-noise"),
+    json_output: bool = typer.Option(False, "--json"),
+    out: Path = typer.Option(None, "--out"),
+    score_only: bool = typer.Option(False, "--score-only"),
+    no_tests: bool = typer.Option(False, "--no-tests"),
+    fix: bool = typer.Option(False, "--fix"),
+    interactive: bool = typer.Option(False, "--interactive"),
 ) -> None:
-    """Execute code review runs."""
+    """Run the full code review workflow."""
+    # Resolve mutually exclusive test inclusion options
+    if include_tests is not None and exclude_tests is not None:
+        raise typer.BadParameter("Cannot use both --include-tests and --exclude-tests")
+
+    resolved_include_tests = _resolve_include_tests(
+        files=files or [],
+        include_tests=include_tests,
+        interactive=interactive,
+    )
+
+    # Resolve noise inclusion (suppress-noise takes precedence)
+    resolved_include_noise = include_noise and not suppress_noise
+
     try:
-        resolved_include_tests = _resolve_include_tests(
-            files=files,
-            include_tests=include_tests,
-            interactive=interactive,
-        )
         exit_code, output = run_command(
-            files,
+            files or [],
             include_tests=resolved_include_tests,
             scope=scope,
-            path_filters=path_filters,
-            include_noise=include_noise,
+            path_filters=path,
+            include_noise=resolved_include_noise,
             json_output=json_output,
             out=out,
             score_only=score_only,

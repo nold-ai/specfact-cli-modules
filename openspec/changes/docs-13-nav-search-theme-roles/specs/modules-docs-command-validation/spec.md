@@ -1,5 +1,3 @@
-# Specs - Modules Docs Command Validation
-
 ## MODIFIED Requirements
 
 ### Requirement: Docs validation SHALL reject stale command and resource references

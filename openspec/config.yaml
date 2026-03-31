@@ -1,20 +1,86 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context (injected into ALL artifact requests)
+# Keep concise; focus on ecosystem role, layout, and constraints agents often miss.
+context: |
+  Ecosystem role: **specfact-cli-modules** is the official home for nold-ai **bundled module packages** and the
+  **module registry** consumed by SpecFact CLI. The CLI discovers and loads bundles via `registry/index.json`
+  and `packages/<bundle>/module-package.yaml`; published user docs for bundles live on **modules.specfact.io**
+  (and GitHub Pages under this repo). This repo does **not** ship the core CLI—peer **specfact-cli** is a dev
+  dependency (`hatch run dev-deps` → sibling `../specfact-cli`, `SPECFACT_CLI_REPO`, or matching worktree).
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Repository layout:
+  - `packages/<bundle>/` — bundle source, `module-package.yaml`, Typer apps and commands
+  - `registry/index.json` — marketplace index (versions, URLs, checksums)
+  - `scripts/`, `tools/` — signing, verify, publish, pre-commit helpers
+  - `tests/` — bundle behavior, migration parity, registry tests
+  - `docs/` — bundle and registry documentation (Jekyll; permalink rules in front matter)
+  - `openspec/` — OpenSpec changes; use `openspec/CHANGE_ORDER.md` for sequencing
+
+  Tech stack (bundle + tooling): Python 3.11+, Hatch, Typer, Pydantic. Contract-first public APIs:
+  `@icontract` (`@require`/`@ensure`) and `@beartype` where bundle code exposes stable surfaces. Testing: pytest;
+  `hatch run contract-test` / `smart-test` align with specfact-cli discipline when bundles integrate core APIs.
+
+  Bundle ↔ core coupling:
+  - Bundle Python may `import specfact_cli` (models, validators, registry helpers)—keep **core_compatibility**
+    in `module-package.yaml` truthful when raising minimum specfact-cli.
+  - Version bumps: **semver** per AGENTS.md (`patch`/`minor`/`major`); registry rows and signatures must stay
+    consistent with published artifacts.
+
+  Quality & CI (typical order): `format` → `type-check` → `lint` → `yaml-lint` → module **signature verification**
+  (`verify-modules-signature`, enforce version bump when manifests change) → `contract-test` → `smart-test` →
+  `test`. Pre-commit: signatures → `pre-commit-quality-checks.sh` → `pre_commit_code_review.py` (JSON report under
+  `.specfact/`). CI: `.github/workflows/pr-orchestrator.yml` (matrix Python, gates above).
+
+  Documentation & cross-site: Canonical modules URLs and core↔modules handoffs—**docs/reference/documentation-url-contract.md**
+  (do not invent permalinks; match published modules.specfact.io). Core user docs live on **docs.specfact.io**;
+  keep cross-links honest when a change affects both repos.
+
+  OpenSpec discipline: Spec deltas before tests before implementation; **TDD_EVIDENCE.md** for behavior changes.
+  **Archive** changes only via `openspec archive <change-id>` (no manual folder moves); update **CHANGE_ORDER.md**
+  when lifecycle changes.
+
+  Philosophy (aligned with specfact-cli): Contract-first and regression-safe bundle evolution; offline-first
+  publishing assumptions unless a task explicitly adds network steps.
+
+  Code review JSON (dogfood): Treat `.specfact/code-review.json` as mandatory evidence before an OpenSpec
+  change is complete. If the file is missing or stale (see tasks), run
+  `specfact code review run --json --out .specfact/code-review.json` and resolve **every** finding at any
+  severity (warning or error) unless the proposal documents a rare, explicit exception.
+
+# Per-artifact rules (only injected into matching artifacts)
+rules:
+  proposal:
+    - Align bundle and registry changes with semver, `core_compatibility`, signing, and AGENTS.md release policy.
+    - State impact on `registry/index.json` and any `packages/<bundle>/module-package.yaml` when versions or artifacts change.
+    - For user-facing doc or command changes, note affected `docs/` paths and modules.specfact.io permalinks.
+
+  specs:
+    - Use Given/When/Then for scenarios; tie scenarios to tests under `tests/` for bundle or registry behavior.
+    - Call out new or changed Typer commands and Pydantic models with contract expectations where relevant.
+
+  design:
+    - Describe how the bundle integrates with `specfact_cli` imports and registry discovery—avoid circular or undeclared core dependencies.
+    - For publish/sign flows, reference `scripts/` entrypoints and integrity expectations.
+
+  tasks:
+    - Enforce SDD+TDD order: branch/worktree → spec deltas → failing tests → implementation → passing tests →
+      TDD_EVIDENCE.md → quality gates → PR.
+    - Include module signing / version-bump tasks when `module-package.yaml` or bundle payloads change (see AGENTS.md).
+    - Record TDD evidence in `openspec/changes/<change-id>/TDD_EVIDENCE.md` for behavior changes.
+    - |-
+      SpecFact code review JSON (dogfood, required before PR): Include tasks to
+        - (1) Ensure `.specfact/code-review.json` is present and **fresh**: if the file is missing, or its
+          last-modified time is older than any file you changed in this change under `packages/`, `registry/`,
+          `scripts/`, `tools/`, `tests/`, or under `openspec/changes/<change-id>/` **excluding**
+          `openspec/changes/<change-id>/TDD_EVIDENCE.md` (evidence-only updates there do not by themselves
+          invalidate the review file; re-run when proposal, specs, tasks, design, or code change). Run a new
+          review, e.g.
+          `hatch run specfact code review run --json --out .specfact/code-review.json` with `--scope changed`
+          during iteration and `--scope full` (or equivalent coverage) before the final PR.
+        - (2) Read the JSON report and remediate **all** findings regardless of severity (warning, advisory,
+          error, or equivalent in the schema): treat them as blocking until fixed or the proposal explicitly
+          documents a justified exception approved in the change.
+        - (3) Re-run the review after substantive edits until the report shows a passing outcome per the
+          review module (e.g. overall verdict PASS / CI exit 0); record the review command(s) and timestamp
+          in `TDD_EVIDENCE.md` or the PR description when the change touches behavior or quality gates.

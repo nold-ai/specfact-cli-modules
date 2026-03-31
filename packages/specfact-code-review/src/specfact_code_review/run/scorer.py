@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal
 
 from beartype import beartype
@@ -25,20 +26,25 @@ class ReviewScore(BaseModel):
     ci_exit_code: Literal[0, 1] = Field(..., description="CI-compatible exit code.")
 
 
-def _bonus_points(
-    zero_loc_violations: bool,
-    zero_complexity_violations: bool,
-    all_apis_have_icontract: bool,
-    coverage_90_plus: bool,
-    no_new_suppressions: bool,
-) -> int:
+@dataclass(frozen=True)
+class ReviewScoreModifiers:
+    """Optional bonuses that influence the computed score."""
+
+    zero_loc_violations: bool = False
+    zero_complexity_violations: bool = False
+    all_apis_have_icontract: bool = False
+    coverage_90_plus: bool = False
+    no_new_suppressions: bool = False
+
+
+def _bonus_points(modifiers: ReviewScoreModifiers) -> int:
     return 5 * sum(
         [
-            zero_loc_violations,
-            zero_complexity_violations,
-            all_apis_have_icontract,
-            coverage_90_plus,
-            no_new_suppressions,
+            modifiers.zero_loc_violations,
+            modifiers.zero_complexity_violations,
+            modifiers.all_apis_have_icontract,
+            modifiers.coverage_90_plus,
+            modifiers.no_new_suppressions,
         ]
     )
 
@@ -70,23 +76,23 @@ def _determine_verdict(
 @ensure(lambda result: 0 <= result.score <= 120)
 def score_review(
     findings: list[ReviewFinding],
-    *,
-    zero_loc_violations: bool = False,
-    zero_complexity_violations: bool = False,
-    all_apis_have_icontract: bool = False,
-    coverage_90_plus: bool = False,
-    no_new_suppressions: bool = False,
+    **kwargs: object,
 ) -> ReviewScore:
     """Compute the governed review score, reward delta, and verdict."""
+    modifiers = ReviewScoreModifiers(
+        zero_loc_violations=bool(kwargs.pop("zero_loc_violations", False)),
+        zero_complexity_violations=bool(kwargs.pop("zero_complexity_violations", False)),
+        all_apis_have_icontract=bool(kwargs.pop("all_apis_have_icontract", False)),
+        coverage_90_plus=bool(kwargs.pop("coverage_90_plus", False)),
+        no_new_suppressions=bool(kwargs.pop("no_new_suppressions", False)),
+    )
+    if kwargs:
+        unexpected = ", ".join(sorted(kwargs))
+        raise ValueError(f"Unexpected keyword arguments: {unexpected}")
+
     score = 100
     score -= sum(_deduction_for_finding(finding) for finding in findings)
-    score += _bonus_points(
-        zero_loc_violations=zero_loc_violations,
-        zero_complexity_violations=zero_complexity_violations,
-        all_apis_have_icontract=all_apis_have_icontract,
-        coverage_90_plus=coverage_90_plus,
-        no_new_suppressions=no_new_suppressions,
-    )
+    score += _bonus_points(modifiers)
     score = max(0, min(120, score))
     overall_verdict, ci_exit_code = _determine_verdict(score=score, findings=findings)
     return ReviewScore(

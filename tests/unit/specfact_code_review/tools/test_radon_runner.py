@@ -8,7 +8,7 @@ from unittest.mock import Mock
 from pytest import MonkeyPatch
 
 from specfact_code_review.tools.radon_runner import run_radon
-from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process
+from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
 
 def test_run_radon_maps_complexity_thresholds_and_filters_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -63,3 +63,36 @@ def test_run_radon_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatch
     assert len(findings) == 1
     assert findings[0].category == "tool_error"
     assert findings[0].tool == "radon"
+
+
+def test_run_radon_emits_kiss_metrics_from_source_shape(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = create_noisy_file(tmp_path)
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+    )
+
+    findings = run_radon([file_path])
+
+    assert {finding.rule for finding in findings} >= {
+        "kiss.loc.warning",
+        "kiss.nesting.warning",
+        "kiss.parameter-count.warning",
+    }
+    assert {finding.category for finding in findings} == {"kiss"}
+
+
+def test_run_radon_uses_dedicated_tool_identifier_for_kiss_findings(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = create_noisy_file(tmp_path)
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+    )
+
+    findings = run_radon([file_path])
+
+    kiss_findings = [finding for finding in findings if finding.rule.startswith("kiss.")]
+    assert kiss_findings
+    assert {finding.tool for finding in kiss_findings} == {"radon-kiss"}

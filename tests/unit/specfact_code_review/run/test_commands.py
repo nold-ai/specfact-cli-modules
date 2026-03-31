@@ -87,7 +87,7 @@ def test_run_command_score_only_prints_reward_delta(monkeypatch: Any) -> None:
     result = runner.invoke(app, ["review", "run", "--score-only", "tests/fixtures/review/clean_module.py"])
 
     assert result.exit_code == 0
-    assert result.output == "12\n"
+    assert result.output == "92\n"
 
 
 def test_run_command_uses_git_diff_when_files_are_omitted(monkeypatch: Any, tmp_path: Path) -> None:

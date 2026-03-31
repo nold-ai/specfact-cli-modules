@@ -45,7 +45,10 @@ Use it together with the [Codebase](../codebase/overview/) bundle (`import`, `an
 
 ## Bundle-owned skills and policy packs
 
-House rules and review payloads ship **inside the bundle** (for example Semgrep packs and skill metadata). They are **not** core CLI-owned resources. Install or refresh IDE-side assets with `specfact init ide` after upgrading the bundle.
+House rules and review payloads ship **inside the bundle** (for example Semgrep
+packs, the `specfact/clean-code-principles` policy-pack manifest, and skill
+metadata). They are **not** core CLI-owned resources. Install or refresh
+IDE-side assets with `specfact init ide` after upgrading the bundle.
 
 ## Quick examples
 

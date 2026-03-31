@@ -128,6 +128,40 @@ def test_module_package_layout_matches_init_ide_resource_contract() -> None:
     assert (codebase / "resources" / "prompts" / "specfact.01-import.md").is_file()
 
 
+def test_code_review_bundle_packages_clean_code_policy_pack_manifest() -> None:
+    module_root = REPO_ROOT / "packages" / "specfact-code-review"
+    roots = (
+        module_root / "resources" / "policy-packs" / "specfact" / "clean-code-principles.yaml",
+        module_root
+        / "src"
+        / "specfact_code_review"
+        / "resources"
+        / "policy-packs"
+        / "specfact"
+        / "clean-code-principles.yaml",
+    )
+    expected_rules = {
+        "banned-generic-public-names",
+        "swallowed-exception-pattern",
+        "kiss.loc.warning",
+        "kiss.loc.error",
+        "kiss.nesting.warning",
+        "kiss.nesting.error",
+        "kiss.parameter-count.warning",
+        "kiss.parameter-count.error",
+        "yagni.unused-private-helper",
+        "dry.duplicate-function-shape",
+        "solid.mixed-dependency-role",
+        "clean-code.pr-checklist-missing-rationale",
+    }
+
+    for manifest_path in roots:
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+        assert data["pack_ref"] == "specfact/clean-code-principles"
+        assert data["default_mode"] == "advisory"
+        assert {rule["id"] for rule in data["rules"]} == expected_rules
+
+
 def test_backlog_artifact_contains_prompt_payload(tmp_path: Path) -> None:
     artifact = _build_bundle_artifact("specfact-backlog", tmp_path)
     with tarfile.open(artifact, "r:gz") as archive:
@@ -139,6 +173,12 @@ def test_backlog_artifact_contains_prompt_payload(tmp_path: Path) -> None:
 
     expected = {f"specfact-backlog/resources/prompts/{prompt}" for prompt in _EXPECTED_PROMPTS["specfact-backlog"]}
     assert names == expected
+
+
+def test_code_review_artifact_contains_policy_pack_payload(tmp_path: Path) -> None:
+    artifact = _build_bundle_artifact("specfact-code-review", tmp_path)
+    with tarfile.open(artifact, "r:gz") as archive:
+        assert "specfact-code-review/resources/policy-packs/specfact/clean-code-principles.yaml" in archive.getnames()
 
 
 def test_core_prompt_discovery_finds_installed_backlog_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

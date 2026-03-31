@@ -53,3 +53,25 @@ rules:
     severity: WARNING
     languages: [python]
     pattern: print(...)
+
+  - id: banned-generic-public-names
+    message: Public API names should be specific; avoid generic names like process, handle, or manager.
+    severity: WARNING
+    languages: [python]
+    pattern-regex: '(?im)^(?:def|class)\s+(?!_+)\w*(?:process|handle|manager|data)\w*\b'
+
+  - id: swallowed-exception-pattern
+    message: Exception handlers must not swallow failures with pass.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          try:
+              ...
+          except Exception:
+              pass
+      - pattern: |
+          try:
+              ...
+          except:
+              pass

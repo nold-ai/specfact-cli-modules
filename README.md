@@ -53,6 +53,8 @@ pre-commit install
 pre-commit run --all-files
 ```
 
+**Code review gate (matches specfact-cli core):** runs **after** module signature verification and `pre-commit-quality-checks.sh`. Staged `*.py` / `*.pyi` files run `specfact code review run --json --out .specfact/code-review.json` via `scripts/pre_commit_code_review.py`. The helper prints only a short findings summary and copy-paste prompts on stderr (not the nested CLI’s full tool output); enable `verbose: true` on the hook in `.pre-commit-config.yaml`. Requires a local **specfact-cli** install (`hatch run dev-deps` resolves sibling `../specfact-cli` or `SPECFACT_CLI_REPO`).
+
 Scope notes:
 - Pre-commit runs `hatch run lint` when any staged file is `*.py`, matching the CI quality job (Ruff alone does not run pylint).
 - `ruff` runs on the full repo.
