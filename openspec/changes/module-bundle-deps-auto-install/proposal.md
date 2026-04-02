@@ -26,6 +26,7 @@ Several official bundles share a top-level command group (for example `specfact 
 
 - `packages/specfact-code-review/module-package.yaml` — `bundle_dependencies` populated.
 - `registry/index.json` — matching `bundle_dependencies` for the code-review module entry.
+- **Compatibility** — `bundle_dependencies` auto-install is implemented in specfact-cli; when bumping this bundle, **review `core_compatibility`** in both `packages/specfact-code-review/module-package.yaml` and the corresponding `registry/index.json` row so they stay aligned and reflect the **minimum specfact-cli** that supports `_extract_bundle_dependencies` / `_install_bundle_dependencies_for_module` (e.g. raise the lower bound to `>=0.44.0` if needed).
 - Published artifact tarball and signatures after version bump; `.github/workflows/publish-modules.yml` path unchanged except normal publish flow.
 - `tests/` — assertions for registry/manifest parity if not already covered.
 - Potential docs: `docs/bundles/code-review/overview.md` or reference pages if we surface the dependency to users.

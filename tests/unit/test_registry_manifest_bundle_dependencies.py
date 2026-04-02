@@ -32,7 +32,7 @@ def _manifest_bundle_dependencies(module_id: str) -> list[str] | None:
         return None
     deps = raw.get("bundle_dependencies")
     if deps is None:
-        return None
+        return []
     assert isinstance(deps, list)
     return [str(x) for x in deps]
 

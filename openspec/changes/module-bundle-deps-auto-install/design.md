@@ -12,7 +12,7 @@ Official bundles ship `module-package.yaml` with `commands` and optional `bundle
 
 **Non-Goals:**
 
-- Changing SpecFact CLI resolver logic in this repo (core lives in `specfact-cli`); if transitive install behavior is incomplete there, track a sibling issue in core.
+- Changing SpecFact CLI marketplace installer logic in this repo (core lives in `specfact-cli`); transitive `bundle_dependencies` behavior is confirmed in core (see “Resolved” below).
 - Re-evaluating every bundle’s full dependency graph beyond the known code-review gap (optional follow-up audits).
 
 ## Decisions
@@ -33,6 +33,10 @@ Official bundles ship `module-package.yaml` with `commands` and optional `bundle
 2. Run publish/sign verification locally; publish via normal workflow.
 3. No data migration for end users beyond reinstalling or updating modules.
 
-## Open Questions
+## Resolved: transitive `bundle_dependencies` installs
 
-- Confirm in specfact-cli (or docs) that `bundle_dependencies` triggers transitive installs; if not, whether to add `nold-ai/specfact-project` explicitly to code-review.
+**Confirmed.** Marketplace installs recurse through `bundle_dependencies`: `_install_bundle_dependencies_for_module` in `specfact-cli` (`src/specfact_cli/registry/module_installer.py`) calls `install_module()` for each missing peer before placing the requested module, so transitive peers (e.g. codebase → project) are installed in order.
+
+**Spec evidence:** `specfact-cli` `openspec/specs/official-bundle-tier/spec.md` — requirement **“Module installer auto-installs bundle dependencies for official-tier bundles”** (installer SHALL automatically install listed dependencies when an official bundle declares `bundle_dependencies`).
+
+**This change’s delta spec:** `openspec/changes/module-bundle-deps-auto-install/specs/module-bundle-dependencies/spec.md` — manifest/registry parity and acyclicity for declared peers.
