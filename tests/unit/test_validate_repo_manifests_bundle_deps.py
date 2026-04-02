@@ -8,9 +8,15 @@ from pathlib import Path
 
 
 def _load_validate_repo_module():
+    """Load tools/validate_repo_manifests.py with a unique module name.
+
+    Avoids ``sys.modules['validate_repo_manifests']`` collisions if another import
+    path cached an older copy of the module during the same pytest session.
+    """
     root = Path(__file__).resolve().parents[2]
     path = root / "tools" / "validate_repo_manifests.py"
-    spec = importlib.util.spec_from_file_location("validate_repo_manifests", path)
+    name = "specfact_cli_modules_validate_repo_manifests"
+    spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
