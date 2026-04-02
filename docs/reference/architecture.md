@@ -161,6 +161,6 @@ Formal ADR pages are not yet published on the modules docs site. The current arc
 
 ## Related Docs
 
-- [Directory Structure](directory-structure.md)
+- [Directory Structure](https://docs.specfact.io/reference/directory-structure/) (core CLI docs)
 - [Module Development Guide](/authoring/module-development/)
 - [Adapter Development Guide](/authoring/adapter-development/)
