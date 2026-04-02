@@ -1,12 +1,13 @@
 name: nold-ai/specfact-code-review
-version: 0.45.4
+version: 0.46.0
 commands:
   - code
 tier: official
 publisher:
   name: nold-ai
   email: hello@noldai.com
-bundle_dependencies: []
+bundle_dependencies:
+  - nold-ai/specfact-codebase
 pip_dependencies:
   - basedpyright
   - crosshair-tool
@@ -22,5 +23,5 @@ description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:78f1426086fb967c2f0ba8b0f5e65c5368205cd2a2ecd6f9d2a98531ed3ee402
-  signature: 8AadiIQUR3mxaxh0Mk6voN1zX94GeVLbL57ZUjTF//cqz8mQaOmd4Vz4/zEMVNRstYkQ4l9rrzays4C47tnpBQ==
+  checksum: sha256:be81548f14a967c440355496c595f43cae1ea703e344cc0e115496f8788ab981
+  signature: a4IiiR9KfMeL6gCSMnv7udC76/SxyjFRW27pk9AXl/BuQlprjHVeSU5jsUlwlVBvySzL52LBi/1jJn91gWApCA==
