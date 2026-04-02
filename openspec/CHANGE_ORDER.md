@@ -72,3 +72,9 @@ Adds bidirectional conversion between spec-kit feature folders and OpenSpec chan
 | speckit | 03 | speckit-03-change-proposal-bridge | [#116](https://github.com/nold-ai/specfact-cli-modules/issues/116) | specfact-cli/speckit-02-v04-adapter-alignment ([specfact-cli#453](https://github.com/nold-ai/specfact-cli/issues/453)) |
 
 **Cross-repo dependency**: Requires `speckit-02-v04-adapter-alignment` in `nold-ai/specfact-cli` to be implemented first (provides `ToolCapabilities.extension_commands` consumed by `SpecKitBacklogSync`).
+
+### Module bundle peer dependencies
+
+| Module | Order | Change folder | GitHub # | Blocked by |
+|--------|-------|---------------|----------|------------|
+| peer-deps | 01 | module-bundle-deps-auto-install | [#135](https://github.com/nold-ai/specfact-cli-modules/issues/135) | — |

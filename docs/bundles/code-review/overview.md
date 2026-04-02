@@ -16,7 +16,7 @@ Use it together with the [Codebase](../codebase/overview/) bundle (`import`, `an
 
 ## Prerequisites
 
-- `specfact module install nold-ai/specfact-code-review`
+- `specfact module install nold-ai/specfact-code-review` — the manifest `bundle_dependencies` list includes **`nold-ai/specfact-codebase`**, so SpecFact CLI **will automatically install** the Codebase bundle alongside this one for the full shared **`specfact code`** command surface (import, analyze, drift, and related commands live there).
 - Optional tool installs (Ruff, Radon, Semgrep, Pyright, etc.) as described in command help
 
 ## `specfact code review` — nested commands

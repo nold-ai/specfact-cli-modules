@@ -1,5 +1,5 @@
 name: nold-ai/specfact-spec
-version: 0.40.16
+version: 0.40.17
 commands:
   - spec
 tier: official
@@ -8,10 +8,18 @@ publisher:
   email: hello@noldai.com
 bundle_dependencies:
   - nold-ai/specfact-project
+pip_dependencies:
+  - beartype
+  - icontract
+  - jinja2
+  - pyyaml
+  - requests
+  - rich
+  - typer
 core_compatibility: '>=0.40.0,<1.0.0'
 description: Official SpecFact specification bundle package.
 category: spec
 bundle_group_command: spec
 integrity:
-  checksum: sha256:28ad2375fff8965efda0e9e7816549f7ab05140a99010170d0da1607eb8f037f
-  signature: t9D2viaejsv6WQmAqvAFz1Ll6VXO0Q8wGwkVIvMt32amqI2MZN3++ecmeytiiTjzEGGHWQ1+xZm/zQYu51BMAg==
+  checksum: sha256:c5d058196cbf7cc871f350cfb6483ca59a28a299d16e78c330d7a21705575323
+  signature: uWxT+qpVqTjF3BmO2rqdnSwII3YNQi3aA7UScZT6/PPN3Q0KvbtboVf1xLgIIp8/jjiWvks1dZFgXgyDNzozDg==

@@ -1,5 +1,5 @@
 name: nold-ai/specfact-project
-version: 0.41.2
+version: 0.41.3
 commands:
   - project
 tier: official
@@ -7,10 +7,25 @@ publisher:
   name: nold-ai
   email: hello@noldai.com
 bundle_dependencies: []
+pip_dependencies:
+  - beartype
+  - gitpython
+  - icontract
+  - jinja2
+  - lz4
+  - networkx
+  - pydantic
+  - pyyaml
+  - requests
+  - rich
+  - ruamel.yaml
+  - tomli
+  - typer
+  - watchdog
 core_compatibility: '>=0.40.0,<1.0.0'
 description: Official SpecFact project bundle package.
 category: project
 bundle_group_command: project
 integrity:
-  checksum: sha256:af5decf47e8db14e860a9ef17a4392e13129cd998a11913cfb6a296bb69e0ccc
-  signature: L3T4/NjXtaJFdqoL8At9o7uyXWfFpIYfeA1f7UkDf3jAGki57cnTBAgl3+RBeF32sr0Xcg7SBZ8AogJbXddCDA==
+  checksum: sha256:96e0b0266d79064beaeada8dfa3a0c2decf80038c640a422200be9bc5d51a0db
+  signature: J05ibXhduI10YnFVlNiEZik8S+VHsTbpU1FkWEYYeb+LKS4d74+f7AdWMgAz8DKNUwSrlBkjfqvLpoOh65XhBQ==

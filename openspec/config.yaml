@@ -64,7 +64,8 @@ rules:
     - For publish/sign flows, reference `scripts/` entrypoints and integrity expectations.
 
   tasks:
-    - Enforce SDD+TDD order: branch/worktree → spec deltas → failing tests → implementation → passing tests →
+    - >-
+      Enforce SDD+TDD order: branch/worktree → spec deltas → failing tests → implementation → passing tests →
       TDD_EVIDENCE.md → quality gates → PR.
     - Include module signing / version-bump tasks when `module-package.yaml` or bundle payloads change (see AGENTS.md).
     - Record TDD evidence in `openspec/changes/<change-id>/TDD_EVIDENCE.md` for behavior changes.
