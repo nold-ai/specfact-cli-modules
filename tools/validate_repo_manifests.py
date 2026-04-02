@@ -100,9 +100,5 @@ def main() -> int:
     return 0
 
 
-# Backward-compatible names (older tests or dynamic imports)
-_registry_module_ids = registry_module_ids
-_validate_manifest_bundle_dependency_refs = validate_manifest_bundle_dependency_refs
-
 if __name__ == "__main__":
     raise SystemExit(main())
