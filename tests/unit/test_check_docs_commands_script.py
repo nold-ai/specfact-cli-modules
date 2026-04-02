@@ -115,6 +115,23 @@ def test_validate_core_docs_links_rejects_unknown_route(tmp_path: Path) -> None:
     assert "missing/page" in findings[0].message
 
 
+def test_validate_core_docs_links_allows_core_handoff_routes(tmp_path: Path) -> None:
+    """Handoff URLs used in modules docs must stay in ALLOWED_CORE_DOCS_ROUTES (see scripts/check-docs-commands.py)."""
+    script = _load_script()
+    doc_path = tmp_path / "handoff.md"
+    doc_path.write_text(
+        "[Debug](https://docs.specfact.io/core-cli/debug-logging/)\n"
+        "[Debug anchor](https://docs.specfact.io/core-cli/debug-logging/#examining-ado-api-errors)\n"
+        "[Directory](https://docs.specfact.io/reference/directory-structure/)\n"
+        "[Feature keys](https://docs.specfact.io/reference/feature-keys/)\n",
+        encoding="utf-8",
+    )
+
+    findings = _script_attr(script, "_validate_core_docs_links")({doc_path: doc_path.read_text(encoding="utf-8")})
+
+    assert not findings
+
+
 def test_docs_review_workflow_runs_docs_command_validation() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8")
 
