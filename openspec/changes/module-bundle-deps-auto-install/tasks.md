@@ -18,7 +18,7 @@
 - [x] 4.1 Record failing/passing test notes in `openspec/changes/module-bundle-deps-auto-install/TDD_EVIDENCE.md`.
 - [x] 4.2 Run full quality gate sequence from AGENTS.md (`format`, `type-check`, `lint`, `yaml-lint`, `verify-modules-signature`, `contract-test`, `smart-test`, `test`). (Full suite run; `verify-modules-signature` without `--require-signature` passes; **with** `--require-signature` pending until signing step above.)
 - [ ] 4.3 Ensure `.specfact/code-review.json` is present and fresh relative to edits under `packages/`, `registry/`, `tests/`, and this change folder (excluding evidence-only `TDD_EVIDENCE.md` updates). Run `hatch run specfact code review run --json --out .specfact/code-review.json` with `--scope changed` while iterating and `--scope full` before the final PR; remediate all findings. **Blocked here:** `specfact code review` requires workflow bundles (`Command 'code' is not installed`); run after `specfact module install` / profile init locally.
-- [ ] 4.4 Open PR to `dev` and link GitHub issue below.
+- [x] 4.4 Open PR to `dev` and link GitHub issue below. — PR [#136](https://github.com/nold-ai/specfact-cli-modules/pull/136) (issue [#135](https://github.com/nold-ai/specfact-cli-modules/issues/135)).
 
 ## 5. Source tracking
 
