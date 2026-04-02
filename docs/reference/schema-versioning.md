@@ -178,4 +178,4 @@ schema_metadata:
 
 - [Architecture - Change Tracking Models](../reference/architecture.md#change-tracking-models-v11-schema) - Technical details
 - [Architecture - Bridge Adapter Interface](../reference/architecture.md#bridge-adapter-interface) - Adapter implementation guide
-- [Directory Structure](directory-structure.md) - Bundle file organization
+- [Directory Structure](https://docs.specfact.io/reference/directory-structure/) - Bundle file organization (core CLI docs)
