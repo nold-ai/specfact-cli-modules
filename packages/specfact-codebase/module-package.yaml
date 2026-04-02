@@ -1,5 +1,5 @@
 name: nold-ai/specfact-codebase
-version: 0.41.3
+version: 0.41.4
 commands:
   - code
 tier: official
@@ -8,10 +8,21 @@ publisher:
   email: hello@noldai.com
 bundle_dependencies:
   - nold-ai/specfact-project
+pip_dependencies:
+  - beartype
+  - click
+  - icontract
+  - pydantic
+  - pyyaml
+  - rich
+  - ruamel.yaml
+  - tomli
+  - tomlkit
+  - typer
 core_compatibility: '>=0.40.0,<1.0.0'
 description: Official SpecFact codebase bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:bdd12151c2ba736e254552adf472d7e217036dfe7fdf661e90204e74be44a2da
-  signature: VMeonMTm8x/ZFn8CBzr6mcZHi0WcldLMiAQl1Ihhs6DuwK+cF1BI/U+G05j21rbdPE9+5qZyZ5QZVEj4V3yECQ==
+  checksum: sha256:436e9e3d0d56a6eae861c4a6bef0a8f805f00b8b5bd8b0e037c19dede4972117
+  signature: FQOsqabH5ATcyLfjTVrVJPIC4KiuwwFbCQZL+BZAu6dFoOz/DLjk91NZAyc7z6oq5dpVfwMHFsKEYqzW4wlDDA==

@@ -18,7 +18,16 @@ from typer.main import get_command as typer_get_command
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = REPO_ROOT / "docs"
 CORE_DOCS_HOST = "docs.specfact.io"
-ALLOWED_CORE_DOCS_ROUTES = frozenset({"/", "/reference/documentation-url-contract/"})
+ALLOWED_CORE_DOCS_ROUTES = frozenset(
+    {
+        "/",
+        "/reference/documentation-url-contract/",
+        # Core-owned reference / guides linked from modules docs (see specfact-cli docs/ permalinks)
+        "/core-cli/debug-logging/",
+        "/reference/directory-structure/",
+        "/reference/feature-keys/",
+    }
+)
 CORE_COMMAND_PREFIXES = frozenset(
     {
         ("specfact",),

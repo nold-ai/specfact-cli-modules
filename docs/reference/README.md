@@ -19,12 +19,12 @@ Complete technical reference for the official modules site and bundle-owned work
 - **[Command Syntax Policy](command-syntax-policy.md)** - Source-of-truth argument syntax conventions for docs
 - **[Authentication](authentication.md)** - Device code auth flows and token storage
 - **[Architecture](architecture.md)** - Technical design, module structure, and internals
-- **[Debug Logging](debug-logging.md)** - Where and what is logged when using `--debug`
+- **[Debug Logging](https://docs.specfact.io/core-cli/debug-logging/)** - Where and what is logged when using `--debug` (core CLI docs)
 - **[Operational Modes](modes.md)** - CI/CD vs CoPilot modes
 - **[Specmatic API](specmatic.md)** - Specmatic integration API reference (functions, classes, integration points)
 - **[Telemetry](telemetry.md)** - Opt-in analytics and privacy guarantees
-- **[Feature Keys](feature-keys.md)** - Key normalization and formats
-- **[Directory Structure](directory-structure.md)** - Project structure and organization
+- **[Feature Keys](https://docs.specfact.io/reference/feature-keys/)** - Key normalization and formats (core CLI docs)
+- **[Directory Structure](https://docs.specfact.io/reference/directory-structure/)** - Project structure and organization (core CLI docs)
 - **[Schema Versioning](schema-versioning.md)** - Bundle schema versions and backward compatibility (v1.0, v1.1)
 - **[Module Security](module-security.md)** - Marketplace/module integrity and publisher metadata
 - **[Module Categories](module-categories.md)** - Category grouping model, canonical module assignments, bundles, and first-run profiles

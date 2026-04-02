@@ -1046,5 +1046,5 @@ If template rendering fails:
 ## Related Documentation
 
 - [Command Reference - Project Commands](../reference/commands.md#project---project-bundle-management) - Complete command documentation including `project merge` and `project resolve-conflict`
-- [Project Bundle Structure](../reference/directory-structure.md) - Project bundle organization
+- [Project Bundle Structure](https://docs.specfact.io/reference/directory-structure/) - Project bundle organization (core CLI docs)
 - See [Project Commands](../reference/commands.md#project---project-bundle-management) for template customization options
