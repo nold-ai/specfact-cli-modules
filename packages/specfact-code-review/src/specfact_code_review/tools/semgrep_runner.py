@@ -74,11 +74,17 @@ def _normalize_rule_id(rule: str) -> str:
 
 
 def _resolve_config_path() -> Path:
-    package_root = Path(__file__).resolve().parents[3]
-    config_path = package_root / ".semgrep" / "clean_code.yaml"
-    if config_path.exists():
-        return config_path
-    raise FileNotFoundError(f"Semgrep config not found at {config_path}")
+    """Locate ``.semgrep/clean_code.yaml`` for src-layout checkouts, wheels, and bundled installs.
+
+    ``parents[3]`` only matches one tree shape; walking ancestors finds the policy pack when it lives
+    next to ``src/`` (development), under ``specfact_code_review/`` (some installs), or at bundle root.
+    """
+    here = Path(__file__).resolve()
+    for parent in [here.parent, *here.parents]:
+        candidate = parent / ".semgrep" / "clean_code.yaml"
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(f"Semgrep config not found (no .semgrep/clean_code.yaml above {here})")
 
 
 def _run_semgrep_command(files: list[Path]) -> subprocess.CompletedProcess[str]:
@@ -96,6 +102,7 @@ def _run_semgrep_command(files: list[Path]) -> subprocess.CompletedProcess[str]:
             [
                 "semgrep",
                 "--disable-version-check",
+                "--quiet",
                 "--config",
                 str(_resolve_config_path()),
                 "--json",
@@ -114,7 +121,13 @@ def _load_semgrep_results(files: list[Path]) -> list[object]:
     for _attempt in range(SEMGREP_RETRY_ATTEMPTS):
         try:
             result = _run_semgrep_command(files)
-            return _parse_semgrep_results(json.loads(result.stdout))
+            raw_out = result.stdout.strip()
+            if not raw_out:
+                err_tail = (result.stderr or "").strip()
+                if len(err_tail) > 4000:
+                    err_tail = err_tail[:4000] + "…"
+                raise ValueError(f"semgrep returned empty stdout (returncode={result.returncode}); stderr={err_tail!r}")
+            return _parse_semgrep_results(json.loads(raw_out))
         except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
             last_error = exc
     if last_error is None:
