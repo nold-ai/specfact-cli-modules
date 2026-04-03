@@ -301,6 +301,23 @@ def _is_empty_init_file(source_file: Path) -> bool:
     return stripped_content in ("", "pass")
 
 
+def _is_coverage_omitted_init_by_project_policy(source_file: Path) -> bool:
+    """True when repo coverage omits this file (``pyproject.toml`` ``[tool.coverage.run]`` ``omit``).
+
+    ``src/**/__init__.py`` and ``packages/**/__init__.py`` are omitted from coverage; the pytest-cov
+    JSON report therefore has no ``percent_covered`` for them — not a TDD gap.
+    """
+    try:
+        path = source_file if source_file.is_absolute() else (Path.cwd() / source_file).resolve()
+        rel = path.relative_to(Path.cwd().resolve())
+    except (ValueError, OSError):
+        rel = source_file
+    if rel.name != "__init__.py":
+        return False
+    parts = rel.parts
+    return len(parts) >= 2 and parts[0] in ("src", "packages")
+
+
 def _coverage_findings(
     source_files: list[Path],
     coverage_payload: dict[str, object],
@@ -312,6 +329,8 @@ def _coverage_findings(
         if percent_covered is None:
             if source_file.name == "__init__.py" and _is_empty_init_file(source_file):
                 continue  # Exempt empty __init__.py files
+            if _is_coverage_omitted_init_by_project_policy(source_file):
+                continue
             return [
                 tool_error(
                     tool="pytest",
