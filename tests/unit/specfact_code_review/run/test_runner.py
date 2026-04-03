@@ -471,15 +471,14 @@ def test_coverage_findings_skips_package_initializers_without_coverage_data() ->
     assert coverage_by_source == {}
 
 
-def test_coverage_findings_does_not_skip_non_empty_package_initializers() -> None:
+def test_coverage_findings_skips_package_initializers_omitted_from_coverage_reports() -> None:
+    """``packages/**/__init__.py`` is omitted in coverage config; JSON has no per-file summary."""
     source_file = Path("packages/specfact-code-review/src/specfact_code_review/tools/__init__.py")
 
     findings, coverage_by_source = _coverage_findings([source_file], {"files": {}})
 
-    assert len(findings) == 1
-    assert findings[0].category == "tool_error"
-    assert "Coverage data missing" in findings[0].message
-    assert coverage_by_source is None
+    assert not findings
+    assert coverage_by_source == {}
 
 
 def test_run_pytest_with_coverage_disables_global_fail_under(monkeypatch: MonkeyPatch) -> None:

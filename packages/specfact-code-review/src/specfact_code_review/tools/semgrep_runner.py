@@ -26,6 +26,8 @@ SEMGREP_RULE_CATEGORY = {
 }
 SEMGREP_TIMEOUT_SECONDS = 90
 SEMGREP_RETRY_ATTEMPTS = 2
+_SEMGREP_STDERR_SNIP_MAX = 4000
+_MAX_CONFIG_PARENT_WALK = 32
 SemgrepCategory = Literal["clean_code", "architecture", "naming"]
 
 
@@ -73,21 +75,53 @@ def _normalize_rule_id(rule: str) -> str:
     return rule
 
 
-def _resolve_config_path() -> Path:
-    """Locate ``.semgrep/clean_code.yaml`` for src-layout checkouts, wheels, and bundled installs.
+def _is_bundle_boundary(directory: Path) -> bool:
+    """True when ``directory`` is a sensible workspace root (do not search parents above it)."""
+    return (directory / ".git").exists() or (directory / "module-package.yaml").is_file()
 
-    ``parents[3]`` only matches one tree shape; walking ancestors finds the policy pack when it lives
-    next to ``src/`` (development), under ``specfact_code_review/`` (some installs), or at bundle root.
+
+@beartype
+@require(lambda bundle_root, module_file: bundle_root is None or isinstance(bundle_root, Path))
+@require(lambda bundle_root, module_file: module_file is None or isinstance(module_file, Path))
+@ensure(lambda result: isinstance(result, Path), "result must be a Path")
+def find_semgrep_config(
+    *,
+    bundle_root: Path | None = None,
+    module_file: Path | None = None,
+) -> Path:
+    """Locate ``.semgrep/clean_code.yaml`` for this package or an explicit bundle root.
+
+    When ``bundle_root`` is set, only ``bundle_root/.semgrep/clean_code.yaml`` is considered.
+
+    Otherwise walk parents of ``module_file`` (default: this module), checking each directory for
+    ``.semgrep/clean_code.yaml``. Stop ascending when a bundle boundary is hit (``.git`` or
+    ``module-package.yaml``) so unrelated trees (e.g. a stray ``~/.semgrep``) are never used.
     """
-    here = Path(__file__).resolve()
-    for parent in [here.parent, *here.parents]:
+    if bundle_root is not None:
+        br = bundle_root.resolve()
+        candidate = br / ".semgrep" / "clean_code.yaml"
+        if candidate.is_file():
+            return candidate
+        raise FileNotFoundError(f"Semgrep config not found at {candidate} (bundle_root={br})")
+
+    here = (module_file if module_file is not None else Path(__file__)).resolve()
+    for depth, parent in enumerate([here.parent, *here.parents]):
+        if depth > _MAX_CONFIG_PARENT_WALK:
+            break
+        if parent == parent.parent:
+            break
         candidate = parent / ".semgrep" / "clean_code.yaml"
         if candidate.is_file():
             return candidate
-    raise FileNotFoundError(f"Semgrep config not found (no .semgrep/clean_code.yaml above {here})")
+        if _is_bundle_boundary(parent):
+            break
+        # Installed wheels live under site-packages; do not walk into lib/, $HOME, or other trees.
+        if parent.name == "site-packages":
+            break
+    raise FileNotFoundError(f"Semgrep config not found (no .semgrep/clean_code.yaml under bundle for {here})")
 
 
-def _run_semgrep_command(files: list[Path]) -> subprocess.CompletedProcess[str]:
+def _run_semgrep_command(files: list[Path], *, bundle_root: Path | None) -> subprocess.CompletedProcess[str]:
     with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
         semgrep_home = Path(temp_home)
         semgrep_log_dir = semgrep_home / ".semgrep"
@@ -104,7 +138,7 @@ def _run_semgrep_command(files: list[Path]) -> subprocess.CompletedProcess[str]:
                 "--disable-version-check",
                 "--quiet",
                 "--config",
-                str(_resolve_config_path()),
+                str(find_semgrep_config(bundle_root=bundle_root)),
                 "--json",
                 *(str(file_path) for file_path in files),
             ],
@@ -116,16 +150,22 @@ def _run_semgrep_command(files: list[Path]) -> subprocess.CompletedProcess[str]:
         )
 
 
-def _load_semgrep_results(files: list[Path]) -> list[object]:
+def _snip_stderr_tail(stderr: str) -> str:
+    """Keep the last ``_SEMGREP_STDERR_SNIP_MAX`` chars so the most recent diagnostics stay visible."""
+    err_raw = stderr.strip()
+    if len(err_raw) <= _SEMGREP_STDERR_SNIP_MAX:
+        return err_raw
+    return "…" + err_raw[-_SEMGREP_STDERR_SNIP_MAX:]
+
+
+def _load_semgrep_results(files: list[Path], *, bundle_root: Path | None) -> list[object]:
     last_error: Exception | None = None
     for _attempt in range(SEMGREP_RETRY_ATTEMPTS):
         try:
-            result = _run_semgrep_command(files)
+            result = _run_semgrep_command(files, bundle_root=bundle_root)
             raw_out = result.stdout.strip()
             if not raw_out:
-                err_tail = (result.stderr or "").strip()
-                if len(err_tail) > 4000:
-                    err_tail = err_tail[:4000] + "…"
+                err_tail = _snip_stderr_tail(result.stderr or "")
                 raise ValueError(f"semgrep returned empty stdout (returncode={result.returncode}); stderr={err_tail!r}")
             return _parse_semgrep_results(json.loads(raw_out))
         except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
@@ -202,13 +242,20 @@ def _finding_from_result(item: dict[str, object], *, allowed_paths: set[str]) ->
     lambda result: all(isinstance(finding, ReviewFinding) for finding in result),
     "result must contain ReviewFinding instances",
 )
-def run_semgrep(files: list[Path]) -> list[ReviewFinding]:
-    """Run Semgrep for the provided files and map findings into ReviewFinding records."""
+def run_semgrep(files: list[Path], *, bundle_root: Path | None = None) -> list[ReviewFinding]:
+    """Run Semgrep for the provided files and map findings into ReviewFinding records.
+
+    Args:
+        files: Paths to scan.
+        bundle_root: Optional directory that contains ``.semgrep/clean_code.yaml`` (e.g. extracted
+            bundle root). When omitted, config is resolved from this package upward until a bundle
+            boundary (``.git`` or ``module-package.yaml``).
+    """
     if not files:
         return []
 
     try:
-        raw_results = _load_semgrep_results(files)
+        raw_results = _load_semgrep_results(files, bundle_root=bundle_root)
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep output: {exc}")
 

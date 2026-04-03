@@ -6,10 +6,11 @@ from specfact_code_review.tools.contract_runner import run_contract_check
 from specfact_code_review.tools.pylint_runner import run_pylint
 from specfact_code_review.tools.radon_runner import run_radon
 from specfact_code_review.tools.ruff_runner import run_ruff
-from specfact_code_review.tools.semgrep_runner import run_semgrep
+from specfact_code_review.tools.semgrep_runner import find_semgrep_config, run_semgrep
 
 
 __all__ = [
+    "find_semgrep_config",
     "run_ast_clean_code",
     "run_basedpyright",
     "run_contract_check",

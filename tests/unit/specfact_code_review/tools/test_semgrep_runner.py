@@ -9,7 +9,7 @@ from unittest.mock import Mock
 import pytest
 from pytest import MonkeyPatch
 
-from specfact_code_review.tools.semgrep_runner import run_semgrep
+from specfact_code_review.tools.semgrep_runner import _snip_stderr_tail, find_semgrep_config, run_semgrep
 from tests.unit.specfact_code_review.tools.helpers import completed_process
 
 
@@ -175,6 +175,35 @@ def test_run_semgrep_ignores_unsupported_rules(tmp_path: Path, monkeypatch: Monk
     findings = run_semgrep([file_path])
 
     assert not findings
+
+
+def test_find_semgrep_config_with_explicit_bundle_root(tmp_path: Path) -> None:
+    root = tmp_path / "bundle"
+    (root / ".semgrep").mkdir(parents=True)
+    (root / ".semgrep" / "clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    assert find_semgrep_config(bundle_root=root) == root / ".semgrep" / "clean_code.yaml"
+
+
+def test_snip_stderr_tail_keeps_last_chars() -> None:
+    """Long stderr should retain the suffix (most recent diagnostics), not the prefix."""
+    long = "UNIQUE_HEAD_MARKER" + ("A" * 5000) + "END_OF_ERROR"
+    out = _snip_stderr_tail(long)
+    assert "END_OF_ERROR" in out
+    assert out.startswith("…")
+    assert "UNIQUE_HEAD_MARKER" not in out
+
+
+def test_find_semgrep_config_stops_at_git_directory(tmp_path: Path) -> None:
+    """Do not resolve a config outside the repo (e.g. stray ~/.semgrep)."""
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    nested = repo / "nested" / "pkg" / "tools"
+    nested.mkdir(parents=True)
+    (repo / "nested" / ".semgrep").mkdir(parents=True)
+    (repo / "nested" / ".semgrep" / "clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    fake_here = nested / "runner.py"
+    fake_here.write_text("#", encoding="utf-8")
+    assert find_semgrep_config(module_file=fake_here) == repo / "nested" / ".semgrep" / "clean_code.yaml"
 
 
 def test_run_semgrep_retries_after_transient_parse_failure(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
