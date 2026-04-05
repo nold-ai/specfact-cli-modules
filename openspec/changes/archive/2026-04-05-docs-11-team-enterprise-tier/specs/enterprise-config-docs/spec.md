@@ -1,9 +1,5 @@
-# enterprise-config-docs Specification
+## MODIFIED Requirements
 
-## Purpose
-
-Define requirements for enterprise configuration documentation covering profiles, overlays, and multi-repo policy.
-## Requirements
 ### Requirement: Enterprise configuration docs SHALL cover profiles, overlays, and multi-repo policy
 
 Enterprise guidance SHALL explain custom profiles, domain overlays, central configuration, and multi-repo operations using supported commands.
@@ -19,4 +15,3 @@ Enterprise guidance SHALL explain custom profiles, domain overlays, central conf
 - **GIVEN** the `multi-repo` doc
 - **WHEN** a user managing multiple repositories reads the page
 - **THEN** it covers shared bundle configuration, cross-repo sync, and repository-specific overrides
-

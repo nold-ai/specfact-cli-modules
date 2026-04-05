@@ -1,9 +1,5 @@
-# daily-devops-routine-docs Specification
+## MODIFIED Requirements
 
-## Purpose
-
-Define requirements for workflow documentation covering the daily development routine from standup through release readiness.
-## Requirements
 ### Requirement: Workflow docs SHALL document a current daily development routine
 
 Workflow documentation SHALL provide a complete day-level routine that links standup, backlog refinement, development, review, and release readiness to the current bundle command surface.
@@ -14,4 +10,3 @@ Workflow documentation SHALL provide a complete day-level routine that links sta
 - **WHEN** a user reads the page
 - **THEN** it shows morning standup, refinement, development, review, and end-of-day patterns
 - **AND** each step links to the relevant bundle command reference
-

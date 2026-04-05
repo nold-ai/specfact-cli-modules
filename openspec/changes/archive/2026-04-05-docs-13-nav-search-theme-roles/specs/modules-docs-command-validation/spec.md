@@ -1,9 +1,5 @@
-# Modules Docs Command Validation
+## MODIFIED Requirements
 
-## Purpose
-
-Define requirements for CI-based validation of command examples and resource references across the modules documentation site.
-## Requirements
 ### Requirement: Docs validation SHALL reject stale command and resource references
 
 The modules-side docs validation workflow SHALL reject command examples across published module docs that do not match implemented bundle commands and SHALL also reject stale references to migrated core-owned resource paths.
@@ -48,6 +44,8 @@ Published module docs SHALL include Jekyll front matter and valid internal links
 - **AND** its internal links resolve to current canonical modules docs routes
 - **AND** the docs review run completes without warnings
 
+## ADDED Requirements
+
 ### Requirement: Nav data file link targets SHALL be validated
 
 The docs validation script SHALL verify that every URL in `_data/nav.yml` corresponds to an existing page with a matching permalink.
@@ -65,4 +63,3 @@ The docs validation script SHALL verify that every URL in `_data/nav.yml` corres
 - **WHEN** the validation runs
 - **THEN** every URL in the nav file matches an existing page's permalink
 - **AND** the check passes
-

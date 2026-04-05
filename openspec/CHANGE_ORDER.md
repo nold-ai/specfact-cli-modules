@@ -21,57 +21,29 @@
 | ✅ fix-backlog-provider-required-field-mappings | archived 2026-03-17 |
 | ✅ review-run-dogfood-followup | archived 2026-03-17 |
 | ✅ docs-cli-command-alignment | archived 2026-03-20 |
-
-## Plan-derived addendum (2026-03-22 clean code enforcement plan)
-
-- `clean-code-02-expanded-review-module` is the next modules-repo change.
-- It expands the code-review bundle with clean-code finding categories, new analysis runners, the clean-code policy-pack payload, and the house-rules skill update consumed by specfact-cli.
-- It is sequenced after the archived code-review runner and review-run changes and before specfact-cli change `clean-code-01-principle-gates`.
+| ✅ docs-06-modules-site-ia-restructure | archived 2026-04-05 |
+| ✅ docs-08-bundle-overview-pages | archived 2026-04-05 |
+| ✅ docs-09-missing-command-docs | archived 2026-04-05 |
+| ✅ docs-10-workflow-consolidation | archived 2026-04-05 |
+| ✅ docs-11-team-enterprise-tier | archived 2026-04-05 |
+| ✅ docs-12-docs-validation-ci | archived 2026-04-05 |
+| ✅ clean-code-02-expanded-review-module | archived 2026-04-05 |
+| ✅ docs-13-nav-search-theme-roles | archived 2026-04-05 |
+| ✅ speckit-03-change-proposal-bridge | archived 2026-04-05 |
 
 ## Pending
-
-### Packaging and bundle payloads
-
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| packaging | 01 | packaging-01-bundle-resource-payloads | [#101](https://github.com/nold-ai/specfact-cli-modules/issues/101) | specfact-cli/packaging-02-cross-platform-runtime-and-module-resources defines the consuming installed-resource contract; specfact-cli/init-ide-prompt-source-selection ([#382](https://github.com/nold-ai/specfact-cli/issues/382)) owns runtime selection/export orchestration |
-
-### Code review bundle expansion
-
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| clean-code | 02 | clean-code-02-expanded-review-module | [#94](https://github.com/nold-ai/specfact-cli-modules/issues/94) | specfact-cli/code-review-zero-findings (#423); code-review-02 ✅; code-review-04 ✅; code-review-07 ✅; code-review-08 ✅; code-review-10 ✅ |
-
-## Plan-derived addendum (2026-03-23 docs refactoring beginner-to-enterprise plan)
-
-The 2026-03-23 docs refactoring plan adds 6 changes to the modules repo to restructure the docs site into a progressive beginner-to-enterprise hierarchy with per-bundle organization, workflow consolidation, and team/enterprise tiers.
-
-All changes sync to GitHub as issues with labels: `documentation`, `change-proposal`, `openspec`. No parent Feature required (modules repo does not use the Feature/Epic hierarchy).
-
-Cross-repo dependency: `docs-06-modules-site-ia-restructure` is a prerequisite for specfact-cli/`docs-07-core-handoff-conversion` (core handoff pages redirect to modules targets).
 
 ### Documentation restructure
 
 | Module | Order | Change folder | GitHub # | Blocked by |
 |--------|-------|---------------|----------|------------|
-| docs | 06 | docs-06-modules-site-ia-restructure | [#95](https://github.com/nold-ai/specfact-cli-modules/issues/95) | docs-01 ✅; docs-cli-command-alignment ✅ — implemented, pending archive (§7 URL contract) |
-| docs | 08 | docs-08-bundle-overview-pages | [#96](https://github.com/nold-ai/specfact-cli-modules/issues/96) | docs-06-modules-site-ia-restructure |
-| docs | 09 | docs-09-missing-command-docs | [#97](https://github.com/nold-ai/specfact-cli-modules/issues/97) | docs-06-modules-site-ia-restructure |
-| docs | 10 | docs-10-workflow-consolidation | [#98](https://github.com/nold-ai/specfact-cli-modules/issues/98) | docs-06-modules-site-ia-restructure |
-| docs | 11 | docs-11-team-enterprise-tier | [#99](https://github.com/nold-ai/specfact-cli-modules/issues/99) | docs-06-modules-site-ia-restructure |
-| docs | 12 | docs-12-docs-validation-ci | [#100](https://github.com/nold-ai/specfact-cli-modules/issues/100) | docs-06 through docs-10; specfact-cli/docs-12-docs-validation-ci |
-| docs | 13 | docs-13-nav-search-theme-roles | [#123](https://github.com/nold-ai/specfact-cli-modules/issues/123) | docs-06 through docs-12 (fixes navigation gaps left by prior changes; adds search, theme toggle, and role-based navigation) |
-| docs | 14 | docs-14-module-release-history | [#124](https://github.com/nold-ai/specfact-cli-modules/issues/124) | docs-13-nav-search-theme-roles; publish-modules workflow (adds publish-driven module release history, AI-assisted backfill for already-published versions, and docs rendering of shipped features/improvements) |
+| docs | 14 | docs-14-module-release-history | [#124](https://github.com/nold-ai/specfact-cli-modules/issues/124) | docs-13 ✅; publish-modules workflow |
 
-### Spec-Kit v0.4.x change proposal bridge (spec-kit integration review, 2026-03-27)
-
-Adds bidirectional conversion between spec-kit feature folders and OpenSpec change proposals, plus backlog extension issue mapping detection to prevent duplicate issue creation.
+### Packaging and bundle payloads
 
 | Module | Order | Change folder | GitHub # | Blocked by |
 |--------|-------|---------------|----------|------------|
-| speckit | 03 | speckit-03-change-proposal-bridge | [#116](https://github.com/nold-ai/specfact-cli-modules/issues/116) | specfact-cli/speckit-02-v04-adapter-alignment ([specfact-cli#453](https://github.com/nold-ai/specfact-cli/issues/453)) |
-
-**Cross-repo dependency**: Requires `speckit-02-v04-adapter-alignment` in `nold-ai/specfact-cli` to be implemented first (provides `ToolCapabilities.extension_commands` consumed by `SpecKitBacklogSync`).
+| packaging | 01 | packaging-01-bundle-resource-payloads | [#101](https://github.com/nold-ai/specfact-cli-modules/issues/101) | specfact-cli/packaging-02-cross-platform-runtime-and-module-resources; specfact-cli/init-ide-prompt-source-selection ([#382](https://github.com/nold-ai/specfact-cli/issues/382)) |
 
 ### Module bundle peer dependencies
 

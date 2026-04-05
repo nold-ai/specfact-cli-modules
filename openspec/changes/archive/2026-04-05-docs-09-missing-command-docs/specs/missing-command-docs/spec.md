@@ -1,9 +1,5 @@
-# Missing Command Documentation Specification
+## MODIFIED Requirements
 
-## Purpose
-
-Define requirements for command reference pages that were previously undocumented across the spec, govern, and code-review bundles.
-## Requirements
 ### Requirement: Missing command reference pages SHALL document the implemented command surface
 Previously undocumented command pages SHALL describe the current option surface, examples, and relevant bundle-owned resource guidance for their commands.
 
@@ -33,4 +29,3 @@ Previously undocumented command pages SHALL describe the current option surface,
 - **GIVEN** the code-review bundle overview links to deep-dive pages
 - **WHEN** a user follows links to run, ledger, and rules
 - **THEN** each page exists and contains command reference, examples, and related commands
-
