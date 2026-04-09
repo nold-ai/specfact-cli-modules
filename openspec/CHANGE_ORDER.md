@@ -75,7 +75,7 @@ These changes are the modules-side runtime companions to split core governance a
 |--------|-------|---------------|----------|------------|
 | governance | 01 | governance-01-evidence-output | [#169](https://github.com/nold-ai/specfact-cli-modules/issues/169) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#247`; validation runtime `#171` |
 | governance | 02 | governance-02-exception-management | [#167](https://github.com/nold-ai/specfact-cli-modules/issues/167) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#248`; policy runtime `#158` |
-| governance | 03 | governance-03-github-hierarchy-cache | [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); paired core change `specfact-cli/governance-02-github-hierarchy-cache` |
+| governance | 03 | governance-03-github-hierarchy-cache | [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); paired core `governance-02-github-hierarchy-cache` [specfact-cli#491](https://github.com/nold-ai/specfact-cli/issues/491) |
 | validation | 02 | validation-02-full-chain-engine | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#241`; runtime inputs from `#164` and `#165`; policy semantics from `#158` |
 
 ### Documentation restructure

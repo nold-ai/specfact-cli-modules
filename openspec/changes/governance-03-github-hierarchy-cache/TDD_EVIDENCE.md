@@ -26,3 +26,19 @@
 - `python3 -m py_compile scripts/sync_github_hierarchy_cache.py` → PASS
 - `python3 scripts/sync_github_hierarchy_cache.py --force` → generated `.specfact/backlog/github_hierarchy_cache.md`
 - Second `python3 scripts/sync_github_hierarchy_cache.py` run → `GitHub hierarchy cache unchanged (13 issues).`
+
+## Final scoped quality gates
+
+Full gate order (per `AGENTS.md` / `CLAUDE.md`). Run from repo root before merge; record PASS/FAIL after each step:
+
+1. `hatch run format` → PASS
+2. `hatch run type-check` → PASS
+3. `hatch run lint` → PASS
+4. `hatch run yaml-lint` → PASS
+5. `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump` → PASS
+6. `hatch run contract-test` → PASS
+7. `hatch run smart-test` → PASS
+8. `hatch run test` → PASS
+9. `hatch run specfact code review run --json --out .specfact/code-review.json` → PASS (no unresolved findings)
+
+**Scoped exception:** None for this change; the list above is the required sequence. If CI or policy later narrows scope for a hotfix, update this block with an explicit rationale, approver, and approval id/date instead of omitting gates.

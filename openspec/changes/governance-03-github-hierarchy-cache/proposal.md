@@ -5,8 +5,7 @@ The modules repository now has its own Epic and Feature hierarchy, but contribut
 ## What Changes
 
 - Add a deterministic repo-local hierarchy cache generator for `specfact-cli-modules` Epic and Feature issues.
-- Persist a central markdown inventory under `openspec/` with issue number, title, brief summary, labels, and hierarchy relationships.
-- Add a lightweight fingerprint/state check so the sync exits quickly when Epic and Feature metadata has not changed.
+- Persist a repo-local markdown hierarchy cache at `.specfact/backlog/github_hierarchy_cache.md` (ignored; not committed) with issue number, title, brief summary, labels, and hierarchy relationships, plus a companion fingerprint/state file `.specfact/backlog/github_hierarchy_cache_state.json` so the sync can exit quickly when Epic and Feature metadata has not changed.
 - Update governance instructions in `AGENTS.md` for modules-side GitHub issue setup to consult the cache first and rerun sync only when needed.
 - Keep the modules-side cache behavior aligned with the paired core change so both repos expose the same planning lookup pattern.
 
@@ -28,4 +27,4 @@ The modules repository now has its own Epic and Feature hierarchy, but contribut
 
 - GitHub Issue: [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178)
 - Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163)
-- Paired Core Change: `specfact-cli/governance-02-github-hierarchy-cache`
+- Paired core (specfact-cli): `governance-02-github-hierarchy-cache` — tracked in `specfact-cli` `openspec/CHANGE_ORDER.md` with [specfact-cli#491](https://github.com/nold-ai/specfact-cli/issues/491) (distinct from the older `governance-02-exception-management` / `#248` row in the same file).
