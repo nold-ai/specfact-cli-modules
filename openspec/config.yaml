@@ -54,6 +54,13 @@ rules:
     - Align bundle and registry changes with semver, `core_compatibility`, signing, and AGENTS.md release policy.
     - State impact on `registry/index.json` and any `packages/<bundle>/module-package.yaml` when versions or artifacts change.
     - For user-facing doc or command changes, note affected `docs/` paths and modules.specfact.io permalinks.
+    - >-
+      For public GitHub issue setup in this repo, resolve Parent Feature or Epic from
+      `.specfact/backlog/github_hierarchy_cache.md` first (regenerate via `python scripts/sync_github_hierarchy_cache.py`
+      when missing or stale). The cache is ephemeral local state and MUST NOT be committed.
+      **Pending until core:** `specfact backlog add` / `specfact backlog sync` do not yet read this cache automatically;
+      until a paired core change wires cache-first lookup into those commands, treat this rule as **contributor and
+      agent workflow** (docs + local script), not as enforced bundle runtime behavior.
 
   specs:
     - Use Given/When/Then for scenarios; tie scenarios to tests under `tests/` for bundle or registry behavior.
@@ -67,6 +74,11 @@ rules:
     - >-
       Enforce SDD+TDD order: branch/worktree → spec deltas → failing tests → implementation → passing tests →
       TDD_EVIDENCE.md → quality gates → PR.
+    - >-
+      Before GitHub issue creation or parent linking, consult `.specfact/backlog/github_hierarchy_cache.md`; rerun
+      `python scripts/sync_github_hierarchy_cache.py` when the cache is missing or stale. Treat this cache as ephemeral
+      local state, not a committed OpenSpec artifact. **Pending until core:** backlog CLI commands do not yet consume
+      the cache automatically—track alignment with the paired `specfact-cli` governance hierarchy-cache change.
     - Include module signing / version-bump tasks when `module-package.yaml` or bundle payloads change (see AGENTS.md).
     - Record TDD evidence in `openspec/changes/<change-id>/TDD_EVIDENCE.md` for behavior changes.
     - |-
