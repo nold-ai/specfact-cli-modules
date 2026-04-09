@@ -1,0 +1,26 @@
+## 1. Branch and paired-change setup
+
+- [ ] 1.1 Create `bugfix/project-runtime-01-safe-artifact-write-policy` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
+- [ ] 1.2 Confirm the paired core change `profile-04-safe-project-artifact-writes` is implemented or available for integration and document the minimum required core compatibility.
+- [ ] 1.3 If a modules-side tracking issue is created, link it back to `specfact-cli#487` and the paired core issue/change for traceability.
+
+## 2. Runtime tests and failing evidence
+
+- [ ] 2.1 Inventory first-adopter bundle commands that write persistent user-project artifacts and select the initial runtime adoption scope.
+- [ ] 2.2 Write tests from the new scenarios proving bundle commands preserve unrelated user content, fail safely on unsupported merges, and surface explicit replacement behavior when required.
+- [ ] 2.3 Run the targeted runtime tests before implementation and record failing commands/timestamps in `openspec/changes/project-runtime-01-safe-artifact-write-policy/TDD_EVIDENCE.md`.
+
+## 3. Runtime safe-write adoption
+
+- [ ] 3.1 Integrate the core safe-write helper into the selected runtime package commands with explicit ownership metadata and required contract decorators on any new public APIs.
+- [ ] 3.2 Update package code paths for the first adopters so they no longer perform raw overwrite behavior against user-project artifacts.
+- [ ] 3.3 Adjust package metadata, compatibility declarations, and any supporting docs/prompts required by the new runtime dependency on the core safe-write contract.
+
+## 4. Verification, docs, and release hygiene
+
+- [ ] 4.1 Re-run the targeted runtime tests and any broader affected package coverage, then record passing evidence in `TDD_EVIDENCE.md`.
+- [ ] 4.2 Update affected modules docs to explain preservation guarantees and explicit replacement semantics for adopted commands.
+- [ ] 4.3 Run quality gates: `hatch run format`, `hatch run type-check`, `hatch run lint`, `hatch run yaml-lint`, `hatch run contract-test`, and the relevant `smart-test`/`test` coverage for changed packages.
+- [ ] 4.4 Run module signature verification, bump package versions where required, re-sign changed manifests if needed, and verify registry consistency.
+- [ ] 4.5 Ensure `.specfact/code-review.json` is fresh, remediate all findings, and record the final review command/timestamp in `TDD_EVIDENCE.md` or PR notes.
+- [ ] 4.6 Open the modules PR to `dev`, cross-link the paired core PR, and note any deferred runtime adoption paths as follow-up issues if the initial scope is intentionally limited.

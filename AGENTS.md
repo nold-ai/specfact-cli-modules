@@ -109,6 +109,8 @@ Before changing code, verify an active OpenSpec change explicitly covers the req
 - If missing scope: create or extend a change first (`openspec` workflow)
 - Follow strict TDD order: spec delta -> failing tests -> implementation -> passing tests -> quality gates
 - Record failing/passing evidence in `openspec/changes/<change-id>/TDD_EVIDENCE.md`
+- For GitHub issue setup, parent linking, or blocker lookup, consult `.specfact/backlog/github_hierarchy_cache.md` first. This cache is ephemeral local state and MUST NOT be committed.
+- Rerun `python scripts/sync_github_hierarchy_cache.py` whenever the cache is missing or stale, and recreate it as part of OpenSpec and GitHub issue work.
 
 ### OpenSpec archive rule (hard requirement)
 
