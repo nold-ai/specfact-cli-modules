@@ -4,8 +4,9 @@
 The system SHALL provide `specfact backlog sync` command for bidirectional backlog synchronization, and related governance workflows SHALL be able to resolve current Epic and Feature planning metadata from the repo-local hierarchy cache before performing manual GitHub lookups.
 
 #### Scenario: Sync from OpenSpec to backlog
+
 - **WHEN** the user runs `specfact backlog sync --adapter github --project-id <repo>`
-- **THEN** OpenSpec changes are exported to GitHub issues/ADO work items
+- **THEN** OpenSpec changes are exported to GitHub issues
 - **AND** state mapping preserves status semantics
 
 #### Scenario: Bidirectional sync with cross-adapter

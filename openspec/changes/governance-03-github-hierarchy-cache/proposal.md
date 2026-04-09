@@ -1,3 +1,5 @@
+# Governance: GitHub hierarchy cache (specfact-cli-modules)
+
 ## Why
 
 The modules repository now has its own Epic and Feature hierarchy, but contributors still have to query GitHub directly to rediscover parent Features and Epics before syncing OpenSpec changes. That creates unnecessary API traffic and makes cross-repo governance slower and less deterministic than it should be.
@@ -12,9 +14,11 @@ The modules repository now has its own Epic and Feature hierarchy, but contribut
 ## Capabilities
 
 ### New Capabilities
+
 - `github-hierarchy-cache`: Deterministic synchronization of GitHub Epic and Feature hierarchy metadata into a repo-local OpenSpec markdown cache for low-cost parent and planning lookups.
 
 ### Modified Capabilities
+
 - `backlog-sync`: Modules-side backlog and change-sync workflows must be able to resolve current Epic and Feature planning metadata from the repo-local cache before performing manual GitHub lookups.
 
 ## Impact
@@ -28,3 +32,7 @@ The modules repository now has its own Epic and Feature hierarchy, but contribut
 - GitHub Issue: [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178)
 - Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163)
 - Paired core (specfact-cli): `governance-02-github-hierarchy-cache` — tracked in `specfact-cli` `openspec/CHANGE_ORDER.md` with [specfact-cli#491](https://github.com/nold-ai/specfact-cli/issues/491) (distinct from the older `governance-02-exception-management` / `#248` row in the same file).
+
+## Code review note (SpecFact dogfood)
+
+Icontract `@require` preconditions on `fetch_hierarchy_issues`, `render_cache_markdown`, and `sync_cache` intentionally use small, similarly shaped predicates (each checks one string field). The code-review module may emit low-severity DRY / duplicate-shape hints for those helpers; that is accepted here because collapsing them would break icontract’s per-parameter argument binding (e.g. `**kwargs` predicates are not supported the same way).

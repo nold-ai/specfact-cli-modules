@@ -39,6 +39,11 @@ Full gate order (per `AGENTS.md` / `CLAUDE.md`). Run from repo root before merge
 6. `hatch run contract-test` → PASS
 7. `hatch run smart-test` → PASS
 8. `hatch run test` → PASS
-9. `hatch run specfact code review run --json --out .specfact/code-review.json` → PASS (no unresolved findings)
+9. `hatch run specfact code review run --json --out .specfact/code-review.json` → PASS (`overall_verdict` PASS, `ci_exit_code` 0)
 
 **Scoped exception:** None for this change; the list above is the required sequence. If CI or policy later narrows scope for a hotfix, update this block with an explicit rationale, approver, and approval id/date instead of omitting gates.
+
+### `.specfact/code-review.json` (this change)
+
+- Last refresh: `2026-04-09T21:05:38Z` (UTC), command: `hatch run specfact code review run --json --out .specfact/code-review.json --scope changed`
+- Outcome: PASS. Any low-severity DRY hints on icontract precondition helpers are documented under **Code review note** in `proposal.md` (accepted; do not merge predicates in ways that break icontract binding).
