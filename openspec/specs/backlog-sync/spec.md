@@ -4,12 +4,12 @@
 TBD - created by archiving change backlog-02-migrate-core-commands. Update Purpose after archive.
 ## Requirements
 ### Requirement: Restore backlog sync command functionality
-
-The system SHALL provide `specfact backlog sync` command for bidirectional backlog synchronization.
+The system SHALL provide `specfact backlog sync` command for bidirectional backlog synchronization, and related governance workflows SHALL be able to resolve current Epic and Feature planning metadata from the repo-local hierarchy cache before performing manual GitHub lookups.
 
 #### Scenario: Sync from OpenSpec to backlog
+
 - **WHEN** the user runs `specfact backlog sync --adapter github --project-id <repo>`
-- **THEN** OpenSpec changes are exported to GitHub issues/ADO work items
+- **THEN** OpenSpec changes are exported to GitHub issues
 - **AND** state mapping preserves status semantics
 
 #### Scenario: Bidirectional sync with cross-adapter
@@ -25,8 +25,13 @@ The system SHALL provide `specfact backlog sync` command for bidirectional backl
 - **WHEN** the user runs `specfact backlog ceremony sync`
 - **THEN** the command forwards to `specfact backlog sync`
 
-### Requirement: Backlog sync checks for existing external issue mappings before creation
+#### Scenario: Cache-first hierarchy lookup for parent issue assignment
+- **GIVEN** a contributor needs a parent Feature or Epic while preparing GitHub sync metadata
+- **WHEN** the local hierarchy cache is present and current
+- **THEN** the contributor can resolve the parent relationship from the cache without an additional GitHub lookup
+- **AND** the sync script is rerun only when the cache is stale or missing
 
+### Requirement: Backlog sync checks for existing external issue mappings before creation
 The backlog sync system SHALL check for existing issue mappings from external tools (including spec-kit extensions) before creating new backlog issues, to prevent duplicates.
 
 #### Scenario: Backlog sync with spec-kit extension mappings available
