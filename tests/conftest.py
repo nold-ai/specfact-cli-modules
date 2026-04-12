@@ -10,9 +10,12 @@ from pathlib import Path
 
 import pytest
 
+from specfact_cli_modules.dev_bootstrap import apply_specfact_workspace_env
+
 
 os.environ.setdefault("TEST_MODE", "true")
 MODULES_REPO_ROOT = Path(__file__).resolve().parents[1]
+apply_specfact_workspace_env(MODULES_REPO_ROOT)
 repo_root_str = str(MODULES_REPO_ROOT)
 LOCAL_BUNDLE_SRCS = tuple(
     str(bundle_src.resolve()) for bundle_src in sorted((MODULES_REPO_ROOT / "packages").glob("*/src"))
@@ -68,26 +71,6 @@ _enforce_local_bundle_sources()
 # Lock specfact_project to the modules-repo package path to avoid accidental shadowing.
 with suppress(ModuleNotFoundError):
     importlib.import_module("specfact_project")
-
-
-def _resolve_core_repo() -> Path | None:
-    configured = os.environ.get("SPECFACT_CLI_REPO")
-    if configured:
-        candidate = Path(configured).expanduser().resolve()
-        if (candidate / "src" / "specfact_cli").exists():
-            return candidate
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        sibling = parent.parent / "specfact-cli"
-        if (sibling / "src" / "specfact_cli").exists():
-            return sibling.resolve()
-    return None
-
-
-core_repo = _resolve_core_repo()
-if core_repo is not None:
-    os.environ.setdefault("SPECFACT_REPO_ROOT", str(core_repo))
-    os.environ.setdefault("SPECFACT_MODULES_REPO", str(MODULES_REPO_ROOT))
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:

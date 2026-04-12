@@ -28,18 +28,20 @@ from icontract import ensure, require
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _load_ensure_core_dependency() -> Callable[[Path], int]:
-    """Load ``ensure_core_dependency`` from the local source tree without package install assumptions."""
+def _load_dev_bootstrap() -> Any:
+    """Load ``specfact_cli_modules.dev_bootstrap`` without package install assumptions."""
     module_path = REPO_ROOT / "src" / "specfact_cli_modules" / "dev_bootstrap.py"
     spec = importlib.util.spec_from_file_location("specfact_cli_modules.dev_bootstrap", module_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Could not load dev bootstrap module from {module_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return cast(Callable[[Path], int], module.ensure_core_dependency)
+    return module
 
 
-ensure_core_dependency = _load_ensure_core_dependency()
+_dev_bootstrap = _load_dev_bootstrap()
+ensure_core_dependency = cast(Callable[[Path], int], _dev_bootstrap.ensure_core_dependency)
+apply_specfact_workspace_env = _dev_bootstrap.apply_specfact_workspace_env
 
 
 PYTHON_SUFFIXES = {".py", ".pyi"}
@@ -247,6 +249,7 @@ def ensure_runtime_available() -> tuple[bool, str | None]:
 @ensure(lambda result: isinstance(result, int))
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the code review gate; write JSON under ``.specfact/`` and return CLI exit code."""
+    apply_specfact_workspace_env(REPO_ROOT)
     files = filter_review_files(list(argv or []))
     if len(files) == 0:
         sys.stdout.write("No staged Python files to review; skipping code review gate.\n")

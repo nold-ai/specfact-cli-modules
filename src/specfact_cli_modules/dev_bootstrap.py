@@ -47,12 +47,28 @@ def resolve_core_repo(repo_root: Path) -> Path | None:
     return _configured_core_repo() or _paired_worktree_core_repo(repo_root) or _walk_parent_siblings(repo_root)
 
 
+def apply_specfact_workspace_env(repo_root: Path) -> None:
+    """Default SPECFACT_* workspace env for this checkout (matches specfact-cli test/CI patterns).
+
+    Pins ``SPECFACT_MODULES_REPO`` to the modules repo root and ``SPECFACT_REPO_ROOT`` to the resolved
+    sibling/core specfact-cli checkout when known. Discovery then agrees with ``specfact module list
+    --show-origin`` expectations; project ``.specfact/modules`` still wins over ``~/.specfact/modules``
+    when both exist—remove stale user copies with ``specfact module uninstall <name> --scope user``.
+    """
+    resolved = repo_root.resolve()
+    os.environ.setdefault("SPECFACT_MODULES_REPO", str(resolved))
+    core = resolve_core_repo(repo_root)
+    if core is not None:
+        os.environ.setdefault("SPECFACT_REPO_ROOT", str(core))
+
+
 def _installed_core_exists() -> bool:
     return importlib.util.find_spec("specfact_cli") is not None
 
 
 def ensure_core_dependency(repo_root: Path) -> int:
     """Install specfact-cli editable dependency if the active environment is not aligned."""
+    apply_specfact_workspace_env(repo_root)
     if _installed_core_exists():
         return 0
     core_repo = resolve_core_repo(repo_root)

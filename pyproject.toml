@@ -16,6 +16,7 @@ dev = []
 type = "virtual"
 path = ".venv"
 dependencies = [
+    "json5>=0.9.28",
     "icontract>=2.7.1",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
@@ -30,6 +31,10 @@ dependencies = [
     "typer>=0.20.0",
     "pyyaml>=6.0.3",
 ]
+
+# Align with specfact-cli CI / pytest: anchor module discovery to this checkout for every `hatch run …`.
+[tool.hatch.envs.default.env-vars]
+SPECFACT_MODULES_REPO = "{root}"
 
 [tool.hatch.envs.hatch-test]
 extra-dependencies = [

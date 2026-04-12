@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from specfact_cli_modules.dev_bootstrap import ensure_core_dependency, resolve_core_repo
+from specfact_cli_modules.dev_bootstrap import apply_specfact_workspace_env, ensure_core_dependency, resolve_core_repo
 
 
 def _make_core_repo(path: Path) -> Path:
@@ -43,6 +44,35 @@ def test_resolve_core_repo_prefers_explicit_environment(monkeypatch: pytest.Monk
     monkeypatch.setenv("SPECFACT_CLI_REPO", str(expected))
 
     assert resolve_core_repo(repo_root) == expected.resolve()
+
+
+def test_apply_specfact_workspace_env_sets_defaults(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / "modules-repo"
+    repo_root.mkdir()
+    core = _make_core_repo(tmp_path / "core")
+
+    monkeypatch.delenv("SPECFACT_MODULES_REPO", raising=False)
+    monkeypatch.delenv("SPECFACT_REPO_ROOT", raising=False)
+    monkeypatch.delenv("SPECFACT_CLI_REPO", raising=False)
+    monkeypatch.setattr(
+        "specfact_cli_modules.dev_bootstrap.resolve_core_repo",
+        lambda _root: core.resolve(),
+    )
+
+    apply_specfact_workspace_env(repo_root)
+
+    assert os.environ["SPECFACT_MODULES_REPO"] == str(repo_root.resolve())
+    assert os.environ["SPECFACT_REPO_ROOT"] == str(core.resolve())
+
+
+def test_apply_specfact_workspace_env_respects_existing_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / "modules-repo"
+    repo_root.mkdir()
+    monkeypatch.setenv("SPECFACT_MODULES_REPO", "/already/set")
+    monkeypatch.setenv("SPECFACT_REPO_ROOT", "/core/set")
+    apply_specfact_workspace_env(repo_root)
+    assert os.environ["SPECFACT_MODULES_REPO"] == "/already/set"
+    assert os.environ["SPECFACT_REPO_ROOT"] == "/core/set"
 
 
 def test_ensure_core_dependency_allows_preinstalled_core(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
