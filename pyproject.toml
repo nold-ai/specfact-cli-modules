@@ -60,6 +60,7 @@ contract-test-contracts = "python tools/contract_first_smart_test.py contracts {
 contract-test-exploration = "python tools/contract_first_smart_test.py exploration {args}"
 contract-test-scenarios = "python tools/contract_first_smart_test.py scenarios {args}"
 contract-test-status = "python tools/contract_first_smart_test.py status"
+validate-agent-rule-signals = "python scripts/validate_agent_rule_applies_when.py"
 
 # NOTE: Use 'hatch run test' instead of 'hatch test'
 # The hatch-test environment cannot install specfact-cli from sibling directory

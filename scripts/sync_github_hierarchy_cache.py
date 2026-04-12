@@ -289,26 +289,21 @@ def _is_not_blank(value: str) -> bool:
 
 
 @beartype
+def _require_non_blank_argument(value: str, *_unused: object) -> bool:
+    """Return whether a shared string precondition value is non-blank."""
+    return _is_not_blank(value)
+
+
+@beartype
 def _all_supported_issue_types(result: list[HierarchyIssue]) -> bool:
     """Return whether every issue has a supported issue type."""
     return all(issue.issue_type in SUPPORTED_ISSUE_TYPES for issue in result)
 
 
 @beartype
-def _require_repo_owner_for_fetch(*, repo_owner: str, repo_name: str, fingerprint_only: bool) -> bool:
-    _ = (repo_name, fingerprint_only)
-    return _is_not_blank(repo_owner)
-
-
-@beartype
-def _require_repo_name_for_fetch(*, repo_owner: str, repo_name: str, fingerprint_only: bool) -> bool:
-    _ = (repo_owner, fingerprint_only)
-    return _is_not_blank(repo_name)
-
-
-@beartype
-@require(_require_repo_owner_for_fetch, "repo_owner must not be blank")
-@require(_require_repo_name_for_fetch, "repo_name must not be blank")
+# pylint: disable=unnecessary-lambda
+@require(lambda repo_owner: _require_non_blank_argument(repo_owner), "repo_owner must not be blank")
+@require(lambda repo_name: _require_non_blank_argument(repo_name), "repo_name must not be blank")
 @ensure(_all_supported_issue_types, "Only Epic and Feature issues should be returned")
 def fetch_hierarchy_issues(*, repo_owner: str, repo_name: str, fingerprint_only: bool) -> list[HierarchyIssue]:
     """Fetch Epic and Feature issues from GitHub for the given repository."""
@@ -403,33 +398,10 @@ def _render_issue_section(*, title: str, issues: list[HierarchyIssue]) -> list[s
 
 
 @beartype
-def _require_repo_full_name_for_render(
-    *, repo_full_name: str, issues: list[HierarchyIssue], generated_at: str, fingerprint: str
-) -> bool:
-    _ = (issues, generated_at, fingerprint)
-    return _is_not_blank(repo_full_name)
-
-
-@beartype
-def _require_generated_at_for_render(
-    *, repo_full_name: str, issues: list[HierarchyIssue], generated_at: str, fingerprint: str
-) -> bool:
-    _ = (repo_full_name, issues, fingerprint)
-    return _is_not_blank(generated_at)
-
-
-@beartype
-def _require_fingerprint_for_render(
-    *, repo_full_name: str, issues: list[HierarchyIssue], generated_at: str, fingerprint: str
-) -> bool:
-    _ = (repo_full_name, issues, generated_at)
-    return _is_not_blank(fingerprint)
-
-
-@beartype
-@require(_require_repo_full_name_for_render, "repo_full_name must not be blank")
-@require(_require_generated_at_for_render, "generated_at must not be blank")
-@require(_require_fingerprint_for_render, "fingerprint must not be blank")
+# pylint: disable=unnecessary-lambda
+@require(lambda repo_full_name: _require_non_blank_argument(repo_full_name), "repo_full_name must not be blank")
+@require(lambda generated_at: _require_non_blank_argument(generated_at), "generated_at must not be blank")
+@require(lambda fingerprint: _require_non_blank_argument(fingerprint), "fingerprint must not be blank")
 def render_cache_markdown(
     *,
     repo_full_name: str,
@@ -489,24 +461,9 @@ def _write_state(
 
 
 @beartype
-def _require_repo_owner_for_sync(
-    *, repo_owner: str, repo_name: str, output_path: Path, state_path: Path, force: bool = False
-) -> bool:
-    _ = (repo_name, output_path, state_path, force)
-    return _is_not_blank(repo_owner)
-
-
-@beartype
-def _require_repo_name_for_sync(
-    *, repo_owner: str, repo_name: str, output_path: Path, state_path: Path, force: bool = False
-) -> bool:
-    _ = (repo_owner, output_path, state_path, force)
-    return _is_not_blank(repo_name)
-
-
-@beartype
-@require(_require_repo_owner_for_sync, "repo_owner must not be blank")
-@require(_require_repo_name_for_sync, "repo_name must not be blank")
+# pylint: disable=unnecessary-lambda
+@require(lambda repo_owner: _require_non_blank_argument(repo_owner), "repo_owner must not be blank")
+@require(lambda repo_name: _require_non_blank_argument(repo_name), "repo_name must not be blank")
 def sync_cache(
     *,
     repo_owner: str,
@@ -523,8 +480,14 @@ def sync_cache(
         fingerprint_only=False,
     )
     fingerprint = compute_hierarchy_fingerprint(detailed_issues)
+    repo_full_name = f"{repo_owner}/{repo_name}"
 
-    if not force and state.get("fingerprint") == fingerprint and output_path.exists():
+    if (
+        not force
+        and state.get("repo") == repo_full_name
+        and state.get("fingerprint") == fingerprint
+        and output_path.exists()
+    ):
         return SyncResult(
             changed=False,
             issue_count=len(detailed_issues),
@@ -536,7 +499,7 @@ def sync_cache(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         render_cache_markdown(
-            repo_full_name=f"{repo_owner}/{repo_name}",
+            repo_full_name=repo_full_name,
             issues=detailed_issues,
             generated_at=generated_at,
             fingerprint=fingerprint,
@@ -545,7 +508,7 @@ def sync_cache(
     )
     _write_state(
         state_path=state_path,
-        repo_full_name=f"{repo_owner}/{repo_name}",
+        repo_full_name=repo_full_name,
         fingerprint=fingerprint,
         issue_count=len(detailed_issues),
         generated_at=generated_at,
@@ -576,13 +539,20 @@ def main(argv: list[str] | None = None) -> int:
     """Run the hierarchy cache sync."""
     parser = _build_parser()
     args = parser.parse_args(argv)
-    result = sync_cache(
-        repo_owner=args.repo_owner,
-        repo_name=args.repo_name,
-        output_path=Path(args.output),
-        state_path=Path(args.state_file),
-        force=bool(args.force),
-    )
+    try:
+        result = sync_cache(
+            repo_owner=args.repo_owner,
+            repo_name=args.repo_name,
+            output_path=Path(args.output),
+            state_path=Path(args.state_file),
+            force=bool(args.force),
+        )
+    except RuntimeError as exc:
+        sys.stderr.write(f"GitHub hierarchy cache sync failed: {exc}\n")
+        return 1
+    except OSError as exc:
+        sys.stderr.write(f"GitHub hierarchy cache sync failed: {exc}\n")
+        return 1
     if result.changed:
         sys.stdout.write(f"Updated GitHub hierarchy cache with {result.issue_count} issues at {result.output_path}\n")
     else:

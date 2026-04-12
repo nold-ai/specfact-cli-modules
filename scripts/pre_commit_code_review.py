@@ -13,17 +13,33 @@ If ``specfact_cli`` is not installed, attempts ``hatch run dev-deps`` / ``ensure
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from subprocess import TimeoutExpired
 from typing import Any, cast
 
 from icontract import ensure, require
 
-from specfact_cli_modules.dev_bootstrap import ensure_core_dependency
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_ensure_core_dependency() -> Callable[[Path], int]:
+    """Load ``ensure_core_dependency`` from the local source tree without package install assumptions."""
+    module_path = REPO_ROOT / "src" / "specfact_cli_modules" / "dev_bootstrap.py"
+    spec = importlib.util.spec_from_file_location("specfact_cli_modules.dev_bootstrap", module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load dev bootstrap module from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return cast(Callable[[Path], int], module.ensure_core_dependency)
+
+
+ensure_core_dependency = _load_ensure_core_dependency()
 
 
 PYTHON_SUFFIXES = {".py", ".pyi"}
@@ -71,32 +87,37 @@ def build_review_command(files: Sequence[str]) -> list[str]:
 
 def _repo_root() -> Path:
     """Repository root (parent of ``scripts/``)."""
-    return Path(__file__).resolve().parents[1]
+    return REPO_ROOT
 
 
+def _classify_severity(item: object) -> str:
+    """Map one review finding to a bucket name."""
+    if not isinstance(item, dict):
+        return "other"
+    row = cast(dict[str, Any], item)
+    raw = row.get("severity")
+    if not isinstance(raw, str):
+        return "other"
+
+    key = raw.lower().strip()
+    if key in ("error", "err"):
+        return "error"
+    if key in ("warning", "warn"):
+        return "warning"
+    if key in ("advisory", "advise"):
+        return "advisory"
+    if key == "info":
+        return "info"
+    return "other"
+
+
+@require(lambda findings: findings is not None)
+@ensure(lambda result: set(result) == {"error", "warning", "advisory", "info", "other"})
 def count_findings_by_severity(findings: list[object]) -> dict[str, int]:
     """Bucket review findings by severity (unknown severities go to ``other``)."""
     buckets = {"error": 0, "warning": 0, "advisory": 0, "info": 0, "other": 0}
     for item in findings:
-        if not isinstance(item, dict):
-            buckets["other"] += 1
-            continue
-        row = cast(dict[str, Any], item)
-        raw = row.get("severity")
-        if not isinstance(raw, str):
-            buckets["other"] += 1
-            continue
-        key = raw.lower().strip()
-        if key in ("error", "err"):
-            buckets["error"] += 1
-        elif key in ("warning", "warn"):
-            buckets["warning"] += 1
-        elif key in ("advisory", "advise"):
-            buckets["advisory"] += 1
-        elif key == "info":
-            buckets["info"] += 1
-        else:
-            buckets["other"] += 1
+        buckets[_classify_severity(item)] += 1
     return buckets
 
 
