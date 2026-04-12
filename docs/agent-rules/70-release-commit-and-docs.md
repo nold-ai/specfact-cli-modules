@@ -44,7 +44,7 @@ depends_on:
 
 1. Branch from `origin/dev` into a feature or hotfix branch.
 2. Bump the bundle version in `packages/<bundle>/module-package.yaml`.
-3. Run `python scripts/publish-module.py --bundle <bundle>` as the publish pre-check.
+3. Run `python scripts/publish_module.py --bundle <bundle>` as the publish pre-check.
 4. Publish with the project tooling wrapper when release work is actually intended.
 5. Update `registry/index.json` with `latest_version`, artifact URL, and checksum.
 

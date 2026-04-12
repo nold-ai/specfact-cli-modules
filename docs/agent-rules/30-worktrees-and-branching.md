@@ -40,7 +40,7 @@ depends_on:
 
 - The primary checkout remains the canonical `dev` workspace.
 - Use worktree paths under `../specfact-cli-modules-worktrees/<branch-type>/<branch-slug>`.
-- Derive the absolute worktree root from the repository parent directory. For this repo, `../specfact-cli-modules-worktrees/` resolves under `/home/dom/git/nold-ai/`, so do not collapse the path to `/home/dom/git/specfact-cli-modules-worktrees/...` when rendering or repairing worktree locations.
+- Derive the absolute worktree root from the repository parent directory (the directory that contains your primary clone), not from a host-specific path. From `REPO_ROOT`, the worktree lives at `REPO_ROOT/../specfact-cli-modules-worktrees/<branch-type>/<branch-slug>/` (same relative shape as `../specfact-cli-modules-worktrees/`). Do not collapse or rewrite that path so the worktree appears under the wrong parent directory when documenting or repairing worktrees.
 - Never create a worktree for `dev` or `main`.
 - One branch maps to one worktree path at a time.
 - Keep one active OpenSpec change scope per branch where possible.

@@ -3,7 +3,7 @@
 ## 1. Branch, tracking, and worktree setup
 
 - [x] 1.1 Confirm GitHub issue exists for this change, is linked under **Parent Feature [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163)**, and **proposal.md → Tracking** lists the issue URL and paired core [specfact-cli#494](https://github.com/nold-ai/specfact-cli/issues/494). Update **openspec/CHANGE_ORDER.md** (Validation and governance section) with a new row: `governance | 04 | governance-04-deterministic-agent-governance-loading | <modules-issue#> | Parent #163; paired core #494; baseline #178`.
-- [x] 1.2 Before implementation edits, create a dedicated worktree from `origin/dev` (not the primary `dev` checkout): `git fetch origin` then `git worktree add ../specfact-cli-modules-worktrees/feature/governance-04-deterministic-agent-governance-loading -b feature/governance-04-deterministic-agent-governance-loading origin/dev`. Treat that path as relative to the repo parent (`/home/dom/git/nold-ai/` in this environment) when rendering absolute paths.
+- [x] 1.2 Before implementation edits, create a dedicated worktree from `origin/dev` (not the primary `dev` checkout): `git fetch origin` then `git worktree add ../specfact-cli-modules-worktrees/feature/governance-04-deterministic-agent-governance-loading -b feature/governance-04-deterministic-agent-governance-loading origin/dev`. Treat that path as relative to the repository parent directory (`REPO_ROOT/..`) when rendering absolute paths for your environment.
 - [x] 1.3 In the worktree: `hatch env create` and `hatch run dev-deps` so `specfact` CLI is available for code-review dogfood tasks.
 - [x] 1.4 Pre-flight from worktree: `hatch run smart-test-status` and `hatch run contract-test-status` (or full quick sanity per AGENTS.md if those targets differ).
 - [x] 1.5 Run `openspec validate governance-04-deterministic-agent-governance-loading --strict` and capture output in `CHANGE_VALIDATION.md`; fix artifact issues until green.
@@ -13,7 +13,7 @@
 
 - [x] 2.1 Finalize spec deltas for `agent-governance-loading` and `github-hierarchy-cache`; re-run `openspec validate governance-04-deterministic-agent-governance-loading --strict` after edits.
 - [x] 2.2 Add or extend tests (or doc-validation hooks) covering: required YAML frontmatter on `docs/agent-rules/*.md`, presence of always-load files referenced from `INDEX.md`, deterministic ordering/precedence statements where encoded in tests, bootstrap text that requires cache refresh when missing/stale, canonical `applies_when` signal validation, and cache-script repo/error hardening behavior (align with paired specfact-cli validators where practical).
-- [ ] 2.3 Record failing-first evidence in `TDD_EVIDENCE.md` before editing governance markdown or shrinking `AGENTS.md`.
+- [x] 2.3 Record failing-first evidence in `TDD_EVIDENCE.md` before editing governance markdown or shrinking `AGENTS.md` (see **Task 2.3** in `TDD_EVIDENCE.md`: waived with rationale; tests in task 2.2 lock behavior post-implementation).
 
 ## 3. Governance implementation
 

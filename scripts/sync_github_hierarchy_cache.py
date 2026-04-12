@@ -547,10 +547,7 @@ def main(argv: list[str] | None = None) -> int:
             state_path=Path(args.state_file),
             force=bool(args.force),
         )
-    except RuntimeError as exc:
-        sys.stderr.write(f"GitHub hierarchy cache sync failed: {exc}\n")
-        return 1
-    except OSError as exc:
+    except (RuntimeError, OSError) as exc:
         sys.stderr.write(f"GitHub hierarchy cache sync failed: {exc}\n")
         return 1
     if result.changed:

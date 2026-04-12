@@ -34,15 +34,18 @@ _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL | re.MULTILI
 
 
 @beartype
-def _parse_frontmatter(text: str) -> dict[str, object] | None:
+def _parse_frontmatter(text: str) -> dict[str, object] | str:
+    """Return a frontmatter mapping, or a human-readable error message when parsing fails."""
     match = _FRONTMATTER_RE.match(text)
     if not match:
-        return None
+        return "missing or invalid opening YAML frontmatter block (expected --- at file start)"
     try:
         loaded = yaml.safe_load(match.group(1))
-    except yaml.YAMLError:
-        return None
-    return loaded if isinstance(loaded, dict) else None
+    except yaml.YAMLError as exc:
+        return f"YAML parse error in frontmatter: {exc}"
+    if not isinstance(loaded, dict):
+        return "frontmatter must parse to a mapping (YAML dict), not a list or scalar"
+    return loaded
 
 
 @beartype
@@ -50,9 +53,11 @@ def _iter_signal_errors(rules_dir: Path) -> list[str]:
     errors: list[str] = []
     for path in sorted(rules_dir.glob("*.md")):
         text = path.read_text(encoding="utf-8")
-        data = _parse_frontmatter(text)
-        if data is None:
+        parsed = _parse_frontmatter(text)
+        if isinstance(parsed, str):
+            errors.append(f"{path.name}: {parsed}")
             continue
+        data = parsed
         raw = data.get("applies_when")
         if raw is None:
             continue
@@ -84,8 +89,8 @@ def _report_errors(errors: list[str]) -> int:
     if not errors:
         return 0
     sys.stderr.write(
-        "validate_agent_rule_applies_when: invalid applies_when values "
-        "(see docs/agent-rules/INDEX.md — Task signal definitions):\n"
+        "validate_agent_rule_applies_when: agent rule doc validation failed "
+        "(frontmatter and applies_when; see docs/agent-rules/INDEX.md — Task signal definitions):\n"
     )
     for line in errors:
         sys.stderr.write(f"  {line}\n")
