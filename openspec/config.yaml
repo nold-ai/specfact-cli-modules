@@ -29,8 +29,9 @@ context: |
 
   Quality & CI (typical order): `format` → `type-check` → `lint` → `yaml-lint` → module **signature verification**
   (`verify-modules-signature`, enforce version bump when manifests change) → `contract-test` → `smart-test` →
-  `test`. Pre-commit: signatures → `pre-commit-quality-checks.sh` → `pre_commit_code_review.py` (JSON report under
-  `.specfact/`). CI: `.github/workflows/pr-orchestrator.yml` (matrix Python, gates above).
+  `test`. Pre-commit: signatures → split `pre-commit-quality-checks.sh` hooks (format, yaml-if-staged, bundle,
+  lint-if-staged, then block2: `pre_commit_code_review.py` + contract tests; JSON report under `.specfact/`).
+  CI: `.github/workflows/pr-orchestrator.yml` (matrix Python, gates above).
 
   Documentation & cross-site: Canonical modules URLs and core↔modules handoffs—**docs/reference/documentation-url-contract.md**
   (do not invent permalinks; match published modules.specfact.io). Core user docs live on **docs.specfact.io**;

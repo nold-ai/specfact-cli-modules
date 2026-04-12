@@ -53,10 +53,10 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-**Code review gate (matches specfact-cli core):** runs **after** module signature verification and `pre-commit-quality-checks.sh`. Staged `*.py` / `*.pyi` files run `specfact code review run --json --out .specfact/code-review.json` via `scripts/pre_commit_code_review.py`. The helper prints only a short findings summary and copy-paste prompts on stderr (not the nested CLI’s full tool output); enable `verbose: true` on the hook in `.pre-commit-config.yaml`. Requires a local **specfact-cli** install (`hatch run dev-deps` resolves sibling `../specfact-cli` or `SPECFACT_CLI_REPO`).
+**Code review gate (matches specfact-cli core):** runs in **Block 2** after module signatures and Block 1 quality hooks (`pre-commit-quality-checks.sh block2`, which calls `scripts/pre_commit_code_review.py`). Staged `*.py` / `*.pyi` files run `specfact code review run --json --out .specfact/code-review.json`. The helper prints only a short findings summary and copy-paste prompts on stderr (not the nested CLI’s full tool output). Block 1 is split into separate pre-commit hooks so output appears between stages instead of buffering until the end. Requires a local **specfact-cli** install (`hatch run dev-deps` resolves sibling `../specfact-cli` or `SPECFACT_CLI_REPO`).
 
 Scope notes:
-- Pre-commit runs `hatch run lint` when any staged file is `*.py`, matching the CI quality job (Ruff alone does not run pylint).
+- Pre-commit runs `hatch run lint` in the **Block 1 — lint** hook when any staged path matches `*.py` / `*.pyi`, matching the CI quality job (Ruff alone does not run pylint).
 - `ruff` runs on the full repo.
 - `basedpyright` and `pylint` are scoped to `src/`, `tests/`, and `tools/` for modules-repo infrastructure parity.
 - Bundle-package behavioral validation is covered through `test`, `contract-test`, and migration-specific suite additions under `tests/`.

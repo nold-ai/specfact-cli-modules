@@ -8,17 +8,44 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+_EXPECTED_HOOK_ORDER = [
+    "verify-module-signatures",
+    "modules-block1-format",
+    "modules-block1-yaml",
+    "modules-block1-bundle",
+    "modules-block1-lint",
+    "modules-block2",
+]
+
+_REQUIRED_HOOK_IDS = frozenset(_EXPECTED_HOOK_ORDER)
+_FORBIDDEN_HOOK_IDS = frozenset({"modules-quality-checks", "specfact-code-review-gate"})
+
+_REQUIRED_SCRIPT_FRAGMENTS = (
+    "hatch run format",
+    "hatch run yaml-lint",
+    "hatch run check-bundle-imports",
+    "hatch run lint",
+    "hatch run contract-test",
+    "pre_commit_code_review.py",
+    "run_code_review_gate",
+    "contract-test-status",
+    "print_block1_overview",
+    "Block 1 — stage 1/4",
+    "Block 1 — stage 4/4",
+    "block1-format",
+    "block1-yaml",
+    "run_block2",
+)
+
 
 def _load_pre_commit_config() -> dict[str, object]:
     loaded = yaml.safe_load((REPO_ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
     return loaded if isinstance(loaded, dict) else {}
 
 
-def test_pre_commit_config_has_signature_and_modules_quality_hooks() -> None:
-    config = _load_pre_commit_config()
-    assert config.get("fail_fast") is True
-    repos = config.get("repos")
-    assert isinstance(repos, list)
+def _collect_ordered_hook_ids(repos: object) -> tuple[set[str], list[str]]:
+    if not isinstance(repos, list):
+        return set(), []
 
     hook_ids: set[str] = set()
     ordered_hook_ids: list[str] = []
@@ -36,18 +63,23 @@ def test_pre_commit_config_has_signature_and_modules_quality_hooks() -> None:
             if hook_id not in seen:
                 ordered_hook_ids.append(hook_id)
                 seen.add(hook_id)
+    return hook_ids, ordered_hook_ids
 
-    assert "verify-module-signatures" in hook_ids
-    assert "modules-quality-checks" in hook_ids
-    assert "specfact-code-review-gate" not in hook_ids
 
-    expected_order = [
-        "verify-module-signatures",
-        "modules-quality-checks",
-    ]
+def _assert_pairwise_hook_order(ordered_hook_ids: list[str], expected_order: list[str]) -> None:
     index_map = {hook_id: index for index, hook_id in enumerate(ordered_hook_ids)}
     for earlier, later in itertools.pairwise(expected_order):
         assert index_map[earlier] < index_map[later]
+
+
+def test_pre_commit_config_has_signature_and_modules_quality_hooks() -> None:
+    config = _load_pre_commit_config()
+    assert config.get("fail_fast") is True
+
+    hook_ids, ordered_hook_ids = _collect_ordered_hook_ids(config.get("repos"))
+    assert _REQUIRED_HOOK_IDS.issubset(hook_ids)
+    assert hook_ids.isdisjoint(_FORBIDDEN_HOOK_IDS)
+    _assert_pairwise_hook_order(ordered_hook_ids, _EXPECTED_HOOK_ORDER)
 
 
 def test_modules_pre_commit_script_enforces_required_quality_commands() -> None:
@@ -55,11 +87,5 @@ def test_modules_pre_commit_script_enforces_required_quality_commands() -> None:
     assert script_path.exists()
 
     script_text = script_path.read_text(encoding="utf-8")
-    assert "hatch run format" in script_text
-    assert "hatch run yaml-lint" in script_text
-    assert "hatch run check-bundle-imports" in script_text
-    assert "hatch run lint" in script_text
-    assert "hatch run contract-test" in script_text
-    assert "pre_commit_code_review.py" in script_text
-    assert "run_code_review_gate" in script_text
-    assert "contract-test-status" in script_text
+    for fragment in _REQUIRED_SCRIPT_FRAGMENTS:
+        assert fragment in script_text

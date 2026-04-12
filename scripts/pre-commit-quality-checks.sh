@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Pre-commit checks for specfact-cli-modules.
-# - Always enforce formatter safety and bundle import boundaries.
-# - Run YAML validation when staged YAML files exist.
-# - Skip heavier tests for safe-only doc/version/workflow changes.
+#
+# Pre-commit buffers each hook's output until that hook finishes; one long hook looks
+# "silent" until the end. This script is split into subcommands (see .pre-commit-config.yaml)
+# so each stage completes and prints before the next hook starts.
+#
+# Subcommands: block1-format | block1-yaml | block1-bundle | block1-lint | block2 | all
+# Run with no args or `all` for manual/CI full pipeline.
 
 set -e
 
@@ -12,10 +16,32 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info() { echo -e "${BLUE}$*${NC}"; }
-success() { echo -e "${GREEN}$*${NC}"; }
-warn() { echo -e "${YELLOW}$*${NC}"; }
-error() { echo -e "${RED}$*${NC}"; }
+info() { echo -e "${BLUE}$*${NC}" >&2; }
+success() { echo -e "${GREEN}$*${NC}" >&2; }
+warn() { echo -e "${YELLOW}$*${NC}" >&2; }
+error() { echo -e "${RED}$*${NC}" >&2; }
+
+print_block1_overview() {
+  echo "" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  echo "  modules pre-commit — Block 1: quality checks (4 stages)" >&2
+  echo "    1/4  format (hatch run format; tree must not change)" >&2
+  echo "    2/4  YAML manifests (hatch run yaml-lint) if staged *.yaml/*.yml" >&2
+  echo "    3/4  bundle import boundaries (hatch run check-bundle-imports)" >&2
+  echo "    4/4  lint (hatch run lint) if staged *.py / *.pyi" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  echo "" >&2
+}
+
+print_block2_overview() {
+  echo "" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  echo "  modules pre-commit — Block 2: code review + contract tests (2 stages)" >&2
+  echo "    1/2  code review gate (hatch run python scripts/pre_commit_code_review.py)" >&2
+  echo "    2/2  contract-first tests (contract-test-status → hatch run contract-test)" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  echo "" >&2
+}
 
 staged_files() {
   git diff --cached --name-only
@@ -26,7 +52,7 @@ has_staged_yaml() {
 }
 
 has_staged_python() {
-  staged_files | grep -E '\.py$' >/dev/null 2>&1
+  staged_files | grep -E '\.pyi?$' >/dev/null 2>&1
 }
 
 staged_python_files() {
@@ -63,7 +89,7 @@ check_safe_change() {
 }
 
 run_format_safety() {
-  info "🧹 Running formatter safety check"
+  info "📦 Block 1 — stage 1/4: format — running \`hatch run format\` (fails if working tree would change)"
   local before_unstaged after_unstaged
   before_unstaged=$(git diff --binary -- . || true)
   if hatch run format; then
@@ -73,59 +99,54 @@ run_format_safety() {
       warn "💡 Run: hatch run format && git add -A"
       exit 1
     fi
-    success "✅ Formatting check passed"
+    success "✅ Block 1 — stage 1/4: format passed"
   else
-    error "❌ Formatting check failed"
+    error "❌ Block 1 — stage 1/4: format failed"
     exit 1
   fi
 }
 
 run_yaml_lint_if_needed() {
   if has_staged_yaml; then
-    info "🔎 YAML changes detected — running manifest validation"
+    info "📦 Block 1 — stage 2/4: YAML — running \`hatch run yaml-lint\` (staged YAML detected)"
     if hatch run yaml-lint; then
-      success "✅ YAML validation passed"
+      success "✅ Block 1 — stage 2/4: YAML validation passed"
     else
-      error "❌ YAML validation failed"
+      error "❌ Block 1 — stage 2/4: YAML validation failed"
       exit 1
     fi
   else
-    info "ℹ️  No staged YAML changes — skipping YAML validation"
+    info "📦 Block 1 — stage 2/4: YAML — skipped (no staged *.yaml / *.yml)"
   fi
 }
 
 run_bundle_import_checks() {
-  info "🔎 Running bundle import boundary checks"
+  info "📦 Block 1 — stage 3/4: bundle imports — running \`hatch run check-bundle-imports\`"
   if hatch run check-bundle-imports; then
-    success "✅ Bundle import boundaries passed"
+    success "✅ Block 1 — stage 3/4: bundle import boundaries passed"
   else
-    error "❌ Bundle import boundary check failed"
+    error "❌ Block 1 — stage 3/4: bundle import boundary check failed"
     exit 1
   fi
 }
 
 # Parity with CI quality job (.github/workflows/pr-orchestrator.yml: hatch run lint).
-# Ruff does not enforce pylint rules (e.g. C0301 max line length on docstrings); pre-commit must run lint too.
 run_lint_if_staged_python() {
   if ! has_staged_python; then
-    info "ℹ️  No staged Python files — skipping hatch run lint (pylint-inclusive)"
+    info "📦 Block 1 — stage 4/4: lint — skipped (no staged *.py / *.pyi)"
     return 0
   fi
-  info "🔎 Staged Python detected — running hatch run lint (ruff + basedpyright + pylint)"
+  info "📦 Block 1 — stage 4/4: lint — running \`hatch run lint\` (ruff, basedpyright, pylint)"
   if hatch run lint; then
-    success "✅ Lint passed"
+    success "✅ Block 1 — stage 4/4: lint passed"
   else
-    error "❌ Lint failed (matches CI quality gate)"
+    error "❌ Block 1 — stage 4/4: lint failed (matches CI quality gate)"
     warn "💡 Run: hatch run lint"
     exit 1
   fi
 }
 
 run_code_review_gate() {
-  # Build a bash array so we invoke pre_commit_code_review.py exactly once. Using xargs
-  # here can split into multiple subprocesses when the argument list is long (default
-  # max-chars), each overwriting .specfact/code-review.json — yielding partial or empty
-  # findings and a misleading artifact.
   local py_array=()
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
@@ -133,51 +154,120 @@ run_code_review_gate() {
   done < <(staged_python_files)
 
   if [ ${#py_array[@]} -eq 0 ]; then
-    info "ℹ️  Block 2 — stage 1/2: no staged Python files — skipping code review gate"
+    info "📦 Block 2 — stage 1/2: code review — skipped (no staged *.py / *.pyi)"
     return
   fi
 
-  info "🛡️ Block 2 — stage 1/2: code review gate (staged Python)"
+  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#py_array[@]} file(s))"
   if hatch run python scripts/pre_commit_code_review.py "${py_array[@]}"; then
-    success "✅ Code review gate passed"
+    success "✅ Block 2 — stage 1/2: code review gate passed"
   else
-    error "❌ Code review gate failed"
+    error "❌ Block 2 — stage 1/2: code review gate failed"
     warn "💡 Fix blocking review findings or run: hatch run python scripts/pre_commit_code_review.py <files>"
     exit 1
   fi
 }
 
 run_contract_tests_visible() {
-  info "🧪 Block 2 — stage 2/2: contract tests — checking contract-test-status"
+  info "📦 Block 2 — stage 2/2: contract tests — running \`hatch run contract-test-status\`"
   if hatch run contract-test-status > /dev/null 2>&1; then
-    success "✅ No contract-test input changes — skipping contract-test run"
+    success "✅ Block 2 — stage 2/2: contract tests — skipped (contract-test-status: no input changes)"
   else
-    warn "🔄 Contract-test inputs changed — running contract-first tests..."
+    info "📦 Block 2 — stage 2/2: contract tests — running \`hatch run contract-test\`"
     if hatch run contract-test; then
-      success "✅ Contract-first tests passed"
+      success "✅ Block 2 — stage 2/2: contract-first tests passed"
       warn "💡 CI may still run the full quality matrix"
     else
-      error "❌ Contract-first tests failed"
+      error "❌ Block 2 — stage 2/2: contract-first tests failed"
       warn "💡 Run: hatch run contract-test-status"
       exit 1
     fi
   fi
 }
 
-warn "🔍 Running modules pre-commit quality checks"
+run_block1_format() {
+  warn "🔍 modules pre-commit — Block 1 — hook: format (1/4)"
+  print_block1_overview
+  run_format_safety
+}
 
-info "📦 Block 1: format, conditional YAML / bundle imports / lint"
-run_format_safety
-run_yaml_lint_if_needed
-run_bundle_import_checks
-run_lint_if_staged_python
+run_block1_yaml() {
+  warn "🔍 modules pre-commit — Block 1 — hook: YAML (2/4)"
+  run_yaml_lint_if_needed
+}
 
-if check_safe_change; then
-  success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
-  info "💡 Only docs, workflow, version, or pre-commit metadata changed"
-  exit 0
-fi
+run_block1_bundle() {
+  warn "🔍 modules pre-commit — Block 1 — hook: bundle imports (3/4)"
+  run_bundle_import_checks
+}
 
-warn "📦 Block 2: code review + contract tests"
-run_code_review_gate
-run_contract_tests_visible
+run_block1_lint() {
+  warn "🔍 modules pre-commit — Block 1 — hook: lint (4/4)"
+  run_lint_if_staged_python
+}
+
+run_block2() {
+  warn "🔍 modules pre-commit — Block 2 — hook: review + contract tests"
+  if check_safe_change; then
+    success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
+    info "💡 Only docs, workflow, version, or pre-commit metadata changed"
+    exit 0
+  fi
+  print_block2_overview
+  run_code_review_gate
+  run_contract_tests_visible
+}
+
+run_all() {
+  warn "🔍 Running full modules pre-commit pipeline (\`all\` — manual or CI)"
+  print_block1_overview
+  run_format_safety
+  run_yaml_lint_if_needed
+  run_bundle_import_checks
+  run_lint_if_staged_python
+  success "✅ Block 1 complete (all stages passed or skipped as expected)"
+  if check_safe_change; then
+    success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
+    info "💡 Only docs, workflow, version, or pre-commit metadata changed"
+    exit 0
+  fi
+  print_block2_overview
+  run_code_review_gate
+  run_contract_tests_visible
+}
+
+usage() {
+  error "Usage: $0 {block1-format|block1-yaml|block1-bundle|block1-lint|block2|all}"
+  exit 2
+}
+
+main() {
+  case "${1:-all}" in
+    block1-format)
+      run_block1_format
+      ;;
+    block1-yaml)
+      run_block1_yaml
+      ;;
+    block1-bundle)
+      run_block1_bundle
+      ;;
+    block1-lint)
+      run_block1_lint
+      ;;
+    block2)
+      run_block2
+      ;;
+    all)
+      run_all
+      ;;
+    -h|--help|help)
+      usage
+      ;;
+    *)
+      usage
+      ;;
+  esac
+}
+
+main "$@"

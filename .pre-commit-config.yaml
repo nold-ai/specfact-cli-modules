@@ -10,9 +10,38 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      - id: modules-quality-checks
-        name: Run modules pre-commit quality checks
-        entry: ./scripts/pre-commit-quality-checks.sh
+      # One hook = one pre-commit buffer flush. Split Block 1 so format/YAML/bundle/lint output
+      # appears after each stage instead of only when the whole block finishes.
+      - id: modules-block1-format
+        name: "Block 1 — stage 1/4 — format"
+        entry: ./scripts/pre-commit-quality-checks.sh block1-format
         language: system
         pass_filenames: false
+        always_run: true
+        verbose: true
+      - id: modules-block1-yaml
+        name: "Block 1 — stage 2/4 — yaml-lint (when YAML staged)"
+        entry: ./scripts/pre-commit-quality-checks.sh block1-yaml
+        language: system
+        files: \.(yaml|yml)$
+        verbose: true
+      - id: modules-block1-bundle
+        name: "Block 1 — stage 3/4 — bundle import boundaries"
+        entry: ./scripts/pre-commit-quality-checks.sh block1-bundle
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+      - id: modules-block1-lint
+        name: "Block 1 — stage 4/4 — lint (when Python staged)"
+        entry: ./scripts/pre-commit-quality-checks.sh block1-lint
+        language: system
+        files: \.(py|pyi)$
+        verbose: true
+      - id: modules-block2
+        name: "Block 2 — code review + contract tests"
+        entry: ./scripts/pre-commit-quality-checks.sh block2
+        language: system
+        pass_filenames: false
+        always_run: true
         verbose: true
