@@ -18,6 +18,8 @@ from beartype import beartype
 from icontract import ensure, require
 
 
+# pylint: disable=unnecessary-lambda  # icontract `@require` / `@ensure` need lambdas for parameter introspection
+
 DEFAULT_REPO_OWNER = "nold-ai"
 _SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -289,7 +291,7 @@ def _is_not_blank(value: str) -> bool:
 
 
 @beartype
-def _require_non_blank_argument(value: str, *_unused: object) -> bool:
+def _require_non_blank_argument(value: str) -> bool:
     """Return whether a shared string precondition value is non-blank."""
     return _is_not_blank(value)
 
@@ -301,7 +303,6 @@ def _all_supported_issue_types(result: list[HierarchyIssue]) -> bool:
 
 
 @beartype
-# pylint: disable=unnecessary-lambda
 @require(lambda repo_owner: _require_non_blank_argument(repo_owner), "repo_owner must not be blank")
 @require(lambda repo_name: _require_non_blank_argument(repo_name), "repo_name must not be blank")
 @ensure(_all_supported_issue_types, "Only Epic and Feature issues should be returned")
@@ -398,7 +399,6 @@ def _render_issue_section(*, title: str, issues: list[HierarchyIssue]) -> list[s
 
 
 @beartype
-# pylint: disable=unnecessary-lambda
 @require(lambda repo_full_name: _require_non_blank_argument(repo_full_name), "repo_full_name must not be blank")
 @require(lambda generated_at: _require_non_blank_argument(generated_at), "generated_at must not be blank")
 @require(lambda fingerprint: _require_non_blank_argument(fingerprint), "fingerprint must not be blank")
@@ -461,7 +461,6 @@ def _write_state(
 
 
 @beartype
-# pylint: disable=unnecessary-lambda
 @require(lambda repo_owner: _require_non_blank_argument(repo_owner), "repo_owner must not be blank")
 @require(lambda repo_name: _require_non_blank_argument(repo_name), "repo_name must not be blank")
 def sync_cache(

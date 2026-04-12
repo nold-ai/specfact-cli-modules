@@ -49,9 +49,8 @@ depends_on:
 
 ## Pre-commit order
 
-1. Module signature verification
-2. `scripts/pre-commit-quality-checks.sh`
-3. `scripts/pre_commit_code_review.py`
+1. Module signature verification (`.pre-commit-config.yaml`, `fail_fast: true` so a failing earlier hook never runs later stages).
+2. `scripts/pre-commit-quality-checks.sh` — **Block 1:** `hatch run format` (fails if reformatting would change the tree), conditional YAML / bundle-import / lint checks. **Block 2** (skipped for “safe-only” staged paths): `hatch run python scripts/pre_commit_code_review.py …` on staged Python sources, then `contract-test-status` / `hatch run contract-test` with visible stage labels in the script output.
 
 ## SpecFact code review JSON
 

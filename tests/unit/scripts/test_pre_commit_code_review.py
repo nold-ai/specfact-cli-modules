@@ -86,6 +86,16 @@ def test_main_propagates_review_gate_exit_code(
         assert module.REVIEW_JSON_OUT in cmd
         assert kwargs.get("cwd") == str(repo_root)
         assert kwargs.get("timeout") == 300
+        _write_sample_review_report(
+            repo_root,
+            {
+                "overall_verdict": "FAIL",
+                "findings": [
+                    {"severity": "error", "rule": "e1"},
+                    {"severity": "warning", "rule": "w1"},
+                ],
+            },
+        )
         return subprocess.CompletedProcess(cmd, 1, stdout=".specfact/code-review.json\n", stderr="")
 
     monkeypatch.setattr(module, "_repo_root", _fake_root)
@@ -154,7 +164,8 @@ def test_main_missing_report_still_returns_exit_code_and_warns(
 
     assert exit_code == 2
     err = capsys.readouterr().err
-    assert "no report file" in err
+    assert "expected review report at" in err
+    assert "not created" in err
     assert ".specfact/code-review.json" in err
 
 

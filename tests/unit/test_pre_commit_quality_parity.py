@@ -16,6 +16,7 @@ def _load_pre_commit_config() -> dict[str, object]:
 
 def test_pre_commit_config_has_signature_and_modules_quality_hooks() -> None:
     config = _load_pre_commit_config()
+    assert config.get("fail_fast") is True
     repos = config.get("repos")
     assert isinstance(repos, list)
 
@@ -36,14 +37,13 @@ def test_pre_commit_config_has_signature_and_modules_quality_hooks() -> None:
                 ordered_hook_ids.append(hook_id)
                 seen.add(hook_id)
 
-    assert "specfact-code-review-gate" in hook_ids
     assert "verify-module-signatures" in hook_ids
     assert "modules-quality-checks" in hook_ids
+    assert "specfact-code-review-gate" not in hook_ids
 
     expected_order = [
         "verify-module-signatures",
         "modules-quality-checks",
-        "specfact-code-review-gate",
     ]
     index_map = {hook_id: index for index, hook_id in enumerate(ordered_hook_ids)}
     for earlier, later in itertools.pairwise(expected_order):
@@ -60,3 +60,6 @@ def test_modules_pre_commit_script_enforces_required_quality_commands() -> None:
     assert "hatch run check-bundle-imports" in script_text
     assert "hatch run lint" in script_text
     assert "hatch run contract-test" in script_text
+    assert "pre_commit_code_review.py" in script_text
+    assert "run_code_review_gate" in script_text
+    assert "contract-test-status" in script_text

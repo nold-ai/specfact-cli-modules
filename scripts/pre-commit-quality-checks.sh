@@ -29,6 +29,10 @@ has_staged_python() {
   staged_files | grep -E '\.py$' >/dev/null 2>&1
 }
 
+staged_python_files() {
+  staged_files | grep -E '\.pyi?$' || true
+}
+
 check_safe_change() {
   local files
   files=$(staged_files)
@@ -117,28 +121,63 @@ run_lint_if_staged_python() {
   fi
 }
 
-run_contract_test_fast_path() {
-  info "🧪 Running contract-test fast path"
-  if hatch run contract-test; then
-    success "✅ Contract-first tests passed"
+run_code_review_gate() {
+  # Build a bash array so we invoke pre_commit_code_review.py exactly once. Using xargs
+  # here can split into multiple subprocesses when the argument list is long (default
+  # max-chars), each overwriting .specfact/code-review.json — yielding partial or empty
+  # findings and a misleading artifact.
+  local py_array=()
+  while IFS= read -r line; do
+    [ -z "${line}" ] && continue
+    py_array+=("${line}")
+  done < <(staged_python_files)
+
+  if [ ${#py_array[@]} -eq 0 ]; then
+    info "ℹ️  Block 2 — stage 1/2: no staged Python files — skipping code review gate"
+    return
+  fi
+
+  info "🛡️ Block 2 — stage 1/2: code review gate (staged Python)"
+  if hatch run python scripts/pre_commit_code_review.py "${py_array[@]}"; then
+    success "✅ Code review gate passed"
   else
-    error "❌ Contract-first tests failed"
-    warn "💡 Run 'hatch run contract-test-status' for details"
+    error "❌ Code review gate failed"
+    warn "💡 Fix blocking review findings or run: hatch run python scripts/pre_commit_code_review.py <files>"
     exit 1
+  fi
+}
+
+run_contract_tests_visible() {
+  info "🧪 Block 2 — stage 2/2: contract tests — checking contract-test-status"
+  if hatch run contract-test-status > /dev/null 2>&1; then
+    success "✅ No contract-test input changes — skipping contract-test run"
+  else
+    warn "🔄 Contract-test inputs changed — running contract-first tests..."
+    if hatch run contract-test; then
+      success "✅ Contract-first tests passed"
+      warn "💡 CI may still run the full quality matrix"
+    else
+      error "❌ Contract-first tests failed"
+      warn "💡 Run: hatch run contract-test-status"
+      exit 1
+    fi
   fi
 }
 
 warn "🔍 Running modules pre-commit quality checks"
 
+info "📦 Block 1: format, conditional YAML / bundle imports / lint"
 run_format_safety
 run_yaml_lint_if_needed
 run_bundle_import_checks
 run_lint_if_staged_python
 
 if check_safe_change; then
-  success "✅ Safe change detected - skipping contract tests"
+  success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
   info "💡 Only docs, workflow, version, or pre-commit metadata changed"
   exit 0
 fi
 
-run_contract_test_fast_path
+warn "📦 Block 2: code review + contract tests"
+run_code_review_gate
+run_contract_tests_visible

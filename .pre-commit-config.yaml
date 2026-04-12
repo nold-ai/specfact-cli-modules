@@ -1,3 +1,6 @@
+# Stop after the first failing hook so a broken Block 1 never runs Block 2 (code review + contract tests).
+fail_fast: true
+
 repos:
   - repo: local
     hooks:
@@ -12,9 +15,4 @@ repos:
         entry: ./scripts/pre-commit-quality-checks.sh
         language: system
         pass_filenames: false
-      - id: specfact-code-review-gate
-        name: Run code review gate on staged Python files
-        entry: hatch run python scripts/pre_commit_code_review.py
-        language: system
-        files: \.pyi?$
         verbose: true
