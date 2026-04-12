@@ -7,7 +7,7 @@
 ## Scope summary
 
 - **New capability:** `agent-governance-loading`
-- **Modified capability:** `github-hierarchy-cache` (session-bootstrap cache refresh scenario; cache-first guidance also references `openspec/config.yaml`)
+- **Modified capability:** `github-hierarchy-cache` (session-bootstrap cache refresh scenario, repo-aware state reuse, and cache-refresh CLI failure signaling; cache-first guidance also references `openspec/config.yaml`)
 
 ## Notes
 

@@ -108,6 +108,6 @@ Repository instruction surfaces other than `AGENTS.md` SHALL reference the canon
 
 #### Scenario: Alias instruction surfaces stay synchronized
 
-- **WHEN** a contributor reads another repository instruction surface such as `CLAUDE.md` or generated IDE guidance
+- **WHEN** a contributor reads another repository instruction surface such as `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`, or generated IDE guidance
 - **THEN** the surface SHALL reference the canonical rule system for governance semantics
 - **AND** it SHALL avoid copying long-form governance content that could drift from the canonical source
