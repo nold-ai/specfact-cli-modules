@@ -35,6 +35,9 @@ _REQUIRED_SCRIPT_FRAGMENTS = (
     "block1-format",
     "block1-yaml",
     "run_block2",
+    "usage_error",
+    "show_help",
+    "also: -h | --help | help",
 )
 
 

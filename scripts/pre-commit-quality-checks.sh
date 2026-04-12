@@ -236,9 +236,15 @@ run_all() {
   run_contract_tests_visible
 }
 
-usage() {
-  error "Usage: $0 {block1-format|block1-yaml|block1-bundle|block1-lint|block2|all}"
+usage_error() {
+  error "Usage: $0 {block1-format|block1-yaml|block1-bundle|block1-lint|block2|all} (also: -h | --help | help)"
   exit 2
+}
+
+show_help() {
+  echo "Usage: $0 {block1-format|block1-yaml|block1-bundle|block1-lint|block2|all}" >&2
+  echo "Help aliases: -h, --help, help" >&2
+  exit 0
 }
 
 main() {
@@ -262,10 +268,10 @@ main() {
       run_all
       ;;
     -h|--help|help)
-      usage
+      show_help
       ;;
     *)
-      usage
+      usage_error
       ;;
   esac
 }
