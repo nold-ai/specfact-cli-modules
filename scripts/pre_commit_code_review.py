@@ -13,17 +13,35 @@ If ``specfact_cli`` is not installed, attempts ``hatch run dev-deps`` / ``ensure
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from subprocess import TimeoutExpired
 from typing import Any, cast
 
 from icontract import ensure, require
 
-from specfact_cli_modules.dev_bootstrap import ensure_core_dependency
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_dev_bootstrap() -> Any:
+    """Load ``specfact_cli_modules.dev_bootstrap`` without package install assumptions."""
+    module_path = REPO_ROOT / "src" / "specfact_cli_modules" / "dev_bootstrap.py"
+    spec = importlib.util.spec_from_file_location("specfact_cli_modules.dev_bootstrap", module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load dev bootstrap module from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_dev_bootstrap = _load_dev_bootstrap()
+ensure_core_dependency = cast(Callable[[Path], int], _dev_bootstrap.ensure_core_dependency)
+apply_specfact_workspace_env = _dev_bootstrap.apply_specfact_workspace_env
 
 
 PYTHON_SUFFIXES = {".py", ".pyi"}
@@ -71,54 +89,114 @@ def build_review_command(files: Sequence[str]) -> list[str]:
 
 def _repo_root() -> Path:
     """Repository root (parent of ``scripts/``)."""
-    return Path(__file__).resolve().parents[1]
+    return REPO_ROOT
 
 
+def _report_path(repo_root: Path) -> Path:
+    """Absolute path to the machine-readable review report."""
+    return repo_root / REVIEW_JSON_OUT
+
+
+def _prepare_report_path(repo_root: Path) -> Path:
+    """Create the review-report directory and clear any stale report file."""
+    report_path = _report_path(repo_root)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    if report_path.is_file():
+        report_path.unlink()
+    return report_path
+
+
+def _run_review_subprocess(
+    cmd: list[str],
+    repo_root: Path,
+    files: Sequence[str],
+) -> subprocess.CompletedProcess[str] | None:
+    """Run the nested SpecFact review command and handle timeout reporting."""
+    try:
+        return subprocess.run(
+            cmd,
+            check=False,
+            text=True,
+            capture_output=True,
+            cwd=str(repo_root),
+            timeout=300,
+        )
+    except TimeoutExpired:
+        joined_cmd = " ".join(cmd)
+        sys.stderr.write(f"Code review gate timed out after 300s (command: {joined_cmd!r}, files: {list(files)!r}).\n")
+        return None
+
+
+def _emit_completed_output(result: subprocess.CompletedProcess[str]) -> None:
+    """Forward captured subprocess output to stderr when the JSON report is missing."""
+    if result.stdout:
+        sys.stderr.write(result.stdout if result.stdout.endswith("\n") else result.stdout + "\n")
+    if result.stderr:
+        sys.stderr.write(result.stderr if result.stderr.endswith("\n") else result.stderr + "\n")
+
+
+def _missing_report_exit_code(
+    report_path: Path,
+    result: subprocess.CompletedProcess[str],
+) -> int:
+    """Return the gate exit code when the nested review run failed to create its JSON report."""
+    _emit_completed_output(result)
+    sys.stderr.write(
+        f"Code review: expected review report at {report_path.relative_to(_repo_root())} but it was not created.\n",
+    )
+    return result.returncode if result.returncode != 0 else 1
+
+
+def _classify_severity(item: object) -> str:
+    """Map one review finding to a bucket name."""
+    if not isinstance(item, dict):
+        return "other"
+    row = cast(dict[str, Any], item)
+    raw = row.get("severity")
+    if not isinstance(raw, str):
+        return "other"
+
+    key = raw.lower().strip()
+    if key in ("error", "err"):
+        return "error"
+    if key in ("warning", "warn"):
+        return "warning"
+    if key in ("advisory", "advise"):
+        return "advisory"
+    if key == "info":
+        return "info"
+    return "other"
+
+
+@require(lambda findings: findings is not None)
+@ensure(lambda result: set(result) == {"error", "warning", "advisory", "info", "other"})
 def count_findings_by_severity(findings: list[object]) -> dict[str, int]:
     """Bucket review findings by severity (unknown severities go to ``other``)."""
     buckets = {"error": 0, "warning": 0, "advisory": 0, "info": 0, "other": 0}
     for item in findings:
-        if not isinstance(item, dict):
-            buckets["other"] += 1
-            continue
-        row = cast(dict[str, Any], item)
-        raw = row.get("severity")
-        if not isinstance(raw, str):
-            buckets["other"] += 1
-            continue
-        key = raw.lower().strip()
-        if key in ("error", "err"):
-            buckets["error"] += 1
-        elif key in ("warning", "warn"):
-            buckets["warning"] += 1
-        elif key in ("advisory", "advise"):
-            buckets["advisory"] += 1
-        elif key == "info":
-            buckets["info"] += 1
-        else:
-            buckets["other"] += 1
+        buckets[_classify_severity(item)] += 1
     return buckets
 
 
-def _print_review_findings_summary(repo_root: Path) -> None:
+def _print_review_findings_summary(repo_root: Path) -> bool:
     """Parse ``REVIEW_JSON_OUT`` and print a one-line findings count (errors / warnings / etc.)."""
-    report_path = repo_root / REVIEW_JSON_OUT
+    report_path = _report_path(repo_root)
     if not report_path.is_file():
         sys.stderr.write(f"Code review: no report file at {REVIEW_JSON_OUT} (could not print findings summary).\n")
-        return
+        return False
     try:
         data = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as exc:
         sys.stderr.write(f"Code review: could not read {REVIEW_JSON_OUT}: {exc}\n")
-        return
+        return False
     except json.JSONDecodeError as exc:
         sys.stderr.write(f"Code review: invalid JSON in {REVIEW_JSON_OUT}: {exc}\n")
-        return
+        return False
 
     findings_raw = data.get("findings")
     if not isinstance(findings_raw, list):
         sys.stderr.write(f"Code review: report has no findings list in {REVIEW_JSON_OUT}.\n")
-        return
+        return False
 
     counts = count_findings_by_severity(findings_raw)
     total = len(findings_raw)
@@ -142,6 +220,7 @@ def _print_review_findings_summary(repo_root: Path) -> None:
         f"  Read `{REVIEW_JSON_OUT}` and fix every finding (errors first), using file and line from each entry.\n"
     )
     sys.stderr.write(f"  @workspace Open `{REVIEW_JSON_OUT}` and remediate each item in `findings`.\n")
+    return True
 
 
 @ensure(lambda result: isinstance(result, tuple) and len(result) == 2)
@@ -170,6 +249,7 @@ def ensure_runtime_available() -> tuple[bool, str | None]:
 @ensure(lambda result: isinstance(result, int))
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the code review gate; write JSON under ``.specfact/`` and return CLI exit code."""
+    apply_specfact_workspace_env(REPO_ROOT)
     files = filter_review_files(list(argv or []))
     if len(files) == 0:
         sys.stdout.write("No staged Python files to review; skipping code review gate.\n")
@@ -180,23 +260,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         sys.stdout.write(f"Unable to run the code review gate. {guidance}\n")
         return 1
 
+    repo_root = _repo_root()
     cmd = build_review_command(files)
-    try:
-        result = subprocess.run(
-            cmd,
-            check=False,
-            text=True,
-            capture_output=True,
-            cwd=str(_repo_root()),
-            timeout=300,
-        )
-    except TimeoutExpired:
-        joined_cmd = " ".join(cmd)
-        sys.stderr.write(f"Code review gate timed out after 300s (command: {joined_cmd!r}, files: {files!r}).\n")
+    report_path = _prepare_report_path(repo_root)
+    result = _run_review_subprocess(cmd, repo_root, files)
+    if result is None:
         return 1
-    # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners and runner
-    # spam); the report is in REVIEW_JSON_OUT and we print a short summary below.
-    _print_review_findings_summary(_repo_root())
+    if not report_path.is_file():
+        return _missing_report_exit_code(report_path, result)
+    # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners); full report
+    # is in REVIEW_JSON_OUT; we print a short summary on stderr below.
+    if not _print_review_findings_summary(repo_root):
+        return 1
     return result.returncode
 
 

@@ -29,8 +29,11 @@ context: |
 
   Quality & CI (typical order): `format` → `type-check` → `lint` → `yaml-lint` → module **signature verification**
   (`verify-modules-signature`, enforce version bump when manifests change) → `contract-test` → `smart-test` →
-  `test`. Pre-commit: signatures → `pre-commit-quality-checks.sh` → `pre_commit_code_review.py` (JSON report under
-  `.specfact/`). CI: `.github/workflows/pr-orchestrator.yml` (matrix Python, gates above).
+  `test`. Pre-commit: signatures → split `pre-commit-quality-checks.sh` hooks (format, yaml-if-staged, bundle,
+  lint-if-staged, then block2: `pre_commit_code_review.py` + contract tests; JSON report under `.specfact/`).
+  Hatch default env sets `SPECFACT_MODULES_REPO={root}`; `apply_specfact_workspace_env` also sets
+  `SPECFACT_REPO_ROOT` when the sibling core checkout resolves (parity with specfact-cli test/CI module discovery).
+  CI: `.github/workflows/pr-orchestrator.yml` (matrix Python, gates above).
 
   Documentation & cross-site: Canonical modules URLs and core↔modules handoffs—**docs/reference/documentation-url-contract.md**
   (do not invent permalinks; match published modules.specfact.io). Core user docs live on **docs.specfact.io**;
@@ -39,6 +42,9 @@ context: |
   OpenSpec discipline: Spec deltas before tests before implementation; **TDD_EVIDENCE.md** for behavior changes.
   **Archive** changes only via `openspec archive <change-id>` (no manual folder moves); update **CHANGE_ORDER.md**
   when lifecycle changes.
+
+  Canonical contributor and agent governance now lives in `AGENTS.md` plus `docs/agent-rules/**`. Prefer those
+  canonical rule docs over duplicating long workflow prose inside individual OpenSpec artifacts.
 
   Philosophy (aligned with specfact-cli): Contract-first and regression-safe bundle evolution; offline-first
   publishing assumptions unless a task explicitly adds network steps.
@@ -58,9 +64,8 @@ rules:
       For public GitHub issue setup in this repo, resolve Parent Feature or Epic from
       `.specfact/backlog/github_hierarchy_cache.md` first (regenerate via `python scripts/sync_github_hierarchy_cache.py`
       when missing or stale). The cache is ephemeral local state and MUST NOT be committed.
-      **Pending until core:** `specfact backlog add` / `specfact backlog sync` do not yet read this cache automatically;
-      until a paired core change wires cache-first lookup into those commands, treat this rule as **contributor and
-      agent workflow** (docs + local script), not as enforced bundle runtime behavior.
+      Treat this rule as mandatory contributor and agent workflow before public issue creation, parent linking,
+      or blocker work.
 
   specs:
     - Use Given/When/Then for scenarios; tie scenarios to tests under `tests/` for bundle or registry behavior.
@@ -77,8 +82,10 @@ rules:
     - >-
       Before GitHub issue creation or parent linking, consult `.specfact/backlog/github_hierarchy_cache.md`; rerun
       `python scripts/sync_github_hierarchy_cache.py` when the cache is missing or stale. Treat this cache as ephemeral
-      local state, not a committed OpenSpec artifact. **Pending until core:** backlog CLI commands do not yet consume
-      the cache automatically—track alignment with the paired `specfact-cli` governance hierarchy-cache change.
+      local state, not a committed OpenSpec artifact.
+    - >-
+      For publicly tracked changes, include explicit readiness tasks for parent linkage, labels, project assignment,
+      blockers, blocked-by relationships, and `in progress` concurrency verification before implementation begins.
     - Include module signing / version-bump tasks when `module-package.yaml` or bundle payloads change (see AGENTS.md).
     - Record TDD evidence in `openspec/changes/<change-id>/TDD_EVIDENCE.md` for behavior changes.
     - |-

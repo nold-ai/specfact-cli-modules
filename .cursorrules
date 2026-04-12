@@ -1,0 +1,5 @@
+Follow `AGENTS.md` as the mandatory bootstrap contract.
+
+Then load `docs/agent-rules/INDEX.md` and the canonical rule files selected by its applicability matrix.
+
+Do not treat this file as a standalone handbook. The source of truth for worktree policy, OpenSpec gating, GitHub hierarchy-cache refresh, TDD order, quality gates, versioning, and documentation rules lives in `docs/agent-rules/`.
