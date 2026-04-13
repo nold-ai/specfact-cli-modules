@@ -1,3 +1,5 @@
+# Proposal: Deterministic agent governance loading
+
 ## Why
 
 `AGENTS.md` in **specfact-cli-modules** mixes bootstrap policy, quality gates, and long-form workflow detail in one surface. That raises token cost for every session and makes cross-model behavior less deterministic around worktrees, OpenSpec, cache-first GitHub hierarchy, TDD, and PR completion gates. This change aligns the modules repo with the **deterministic agent-governance** model already shipped in **specfact-cli** ([specfact-cli#494](https://github.com/nold-ai/specfact-cli/issues/494)) so both repositories share the same loading semantics and stop conditions.

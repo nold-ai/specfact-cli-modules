@@ -16,6 +16,7 @@ dev = []
 type = "virtual"
 path = ".venv"
 dependencies = [
+    "beartype>=0.22.0",
     "json5>=0.9.28",
     "icontract>=2.7.1",
     "pytest>=8.4.2",

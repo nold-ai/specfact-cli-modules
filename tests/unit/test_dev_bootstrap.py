@@ -82,14 +82,19 @@ def test_apply_specfact_workspace_env_without_core_repo(monkeypatch: pytest.Monk
     assert "SPECFACT_REPO_ROOT" not in os.environ
 
 
-def test_apply_specfact_workspace_env_respects_existing_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_apply_specfact_workspace_env_overwrites_stale_exports(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     repo_root = tmp_path / "modules-repo"
     repo_root.mkdir()
-    monkeypatch.setenv("SPECFACT_MODULES_REPO", "/already/set")
-    monkeypatch.setenv("SPECFACT_REPO_ROOT", "/core/set")
+    core = _make_core_repo(tmp_path / "core")
+    monkeypatch.setenv("SPECFACT_MODULES_REPO", "/stale/modules")
+    monkeypatch.setenv("SPECFACT_REPO_ROOT", "/stale/core")
+    monkeypatch.setattr(
+        "specfact_cli_modules.dev_bootstrap.resolve_core_repo",
+        lambda _root: core.resolve(),
+    )
     apply_specfact_workspace_env(repo_root)
-    assert os.environ["SPECFACT_MODULES_REPO"] == "/already/set"
-    assert os.environ["SPECFACT_REPO_ROOT"] == "/core/set"
+    assert os.environ["SPECFACT_MODULES_REPO"] == str(repo_root.resolve())
+    assert os.environ["SPECFACT_REPO_ROOT"] == str(core.resolve())
 
 
 def test_ensure_core_dependency_allows_matching_editable_core(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

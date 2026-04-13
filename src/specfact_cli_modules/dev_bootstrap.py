@@ -56,10 +56,10 @@ def apply_specfact_workspace_env(repo_root: Path) -> None:
     when both exist—remove stale user copies with ``specfact module uninstall <name> --scope user``.
     """
     resolved = repo_root.resolve()
-    os.environ.setdefault("SPECFACT_MODULES_REPO", str(resolved))
+    os.environ["SPECFACT_MODULES_REPO"] = str(resolved)
     core = resolve_core_repo(repo_root)
     if core is not None:
-        os.environ.setdefault("SPECFACT_REPO_ROOT", str(core))
+        os.environ["SPECFACT_REPO_ROOT"] = str(core)
 
 
 def _installed_core_exists() -> bool:

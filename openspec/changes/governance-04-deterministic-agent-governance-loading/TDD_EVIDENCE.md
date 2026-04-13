@@ -52,3 +52,7 @@
   - `hatch run specfact module install nold-ai/specfact-codebase nold-ai/specfact-code-review --scope project --source bundled --repo . --reinstall` → bundled module artifacts not found for those ids
 - Local worktree note:
   - After relocating the worktree directory, the ignored `.venv/bin/semgrep` and `.venv/bin/pysemgrep` entrypoints had stale absolute shebangs. Those local launchers were repaired in-place so changed-scope code review could run successfully from the corrected worktree path.
+
+## Change validation / release note
+
+- **Full-repo review gate:** Until `hatch run specfact code review run --json --out .specfact/code-review.json --scope full` passes (or an approved exception is documented for task **4.2** with the report artifact attached), promotion trains that require a green full review remain blocked. Triage should start with high-severity items (for example legacy complexity in `packages/specfact-backlog/src/specfact_backlog/backlog/commands.py`).

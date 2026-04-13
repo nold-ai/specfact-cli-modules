@@ -37,7 +37,7 @@ print_block2_overview() {
   echo "" >&2
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
   echo "  modules pre-commit — Block 2: code review + contract tests (2 stages)" >&2
-  echo "    1/2  code review gate (hatch run python scripts/pre_commit_code_review.py)" >&2
+  echo "    1/2  code review gate (staged paths under packages/, registry/, scripts/, tools/, tests/, openspec/changes/)" >&2
   echo "    2/2  contract-first tests (contract-test-status → hatch run contract-test)" >&2
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
   echo "" >&2
@@ -59,6 +59,20 @@ staged_python_files() {
   staged_files | grep -E '\.pyi?$' || true
 }
 
+# Paths passed to scripts/pre_commit_code_review.py (packages/, registry/, scripts/, tools/, tests/, openspec/changes/).
+staged_review_gate_files() {
+  local line
+  while IFS= read -r line; do
+    [ -z "${line}" ] && continue
+    case "${line}" in
+      */TDD_EVIDENCE.md|TDD_EVIDENCE.md) continue ;;
+      packages/*|registry/*|scripts/*|tools/*|tests/*|openspec/changes/*)
+        printf '%s\n' "${line}"
+        ;;
+    esac
+  done < <(staged_files)
+}
+
 check_safe_change() {
   local files
   files=$(staged_files)
@@ -77,7 +91,7 @@ check_safe_change() {
         ;;
       pyproject.toml|README.md|CHANGELOG.md|.pre-commit-config.yaml)
         ;;
-      scripts/pre-commit-quality-checks.sh)
+      scripts/pre-commit-quality-checks.sh|scripts/pre_commit_code_review.py|tools/contract_first_smart_test.py)
         ;;
       *)
         other_changes=$((other_changes + 1))
@@ -147,23 +161,23 @@ run_lint_if_staged_python() {
 }
 
 run_code_review_gate() {
-  local py_array=()
+  local review_array=()
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
-    py_array+=("${line}")
-  done < <(staged_python_files)
+    review_array+=("${line}")
+  done < <(staged_review_gate_files)
 
-  if [ ${#py_array[@]} -eq 0 ]; then
-    info "📦 Block 2 — stage 1/2: code review — skipped (no staged *.py / *.pyi)"
+  if [ ${#review_array[@]} -eq 0 ]; then
+    info "📦 Block 2 — stage 1/2: code review — skipped (no staged paths under packages/, registry/, scripts/, tools/, tests/, or openspec/changes/)"
     return
   fi
 
-  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#py_array[@]} file(s))"
-  if hatch run python scripts/pre_commit_code_review.py "${py_array[@]}"; then
+  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s))"
+  if hatch run python scripts/pre_commit_code_review.py "${review_array[@]}"; then
     success "✅ Block 2 — stage 1/2: code review gate passed"
   else
     error "❌ Block 2 — stage 1/2: code review gate failed"
-    warn "💡 Fix blocking review findings or run: hatch run python scripts/pre_commit_code_review.py <files>"
+    warn "💡 Fix blocking review findings or run: hatch run python scripts/pre_commit_code_review.py <paths>"
     exit 1
   fi
 }

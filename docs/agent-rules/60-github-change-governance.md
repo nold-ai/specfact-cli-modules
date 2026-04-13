@@ -59,6 +59,6 @@ Before implementation on a publicly tracked change issue:
 
 If the linked GitHub issue appears to be `in progress`, do not treat that as blocking until you have a current view of GitHub state:
 
-1. If `.specfact/backlog/github_hierarchy_cache.md` is missing, or was last updated more than about five minutes ago, run `python scripts/sync_github_hierarchy_cache.py`.
+1. If `.specfact/backlog/github_hierarchy_cache.md` is missing, or its hierarchy metadata is older than **300 seconds** compared to current UTC time, run `python scripts/sync_github_hierarchy_cache.py`. Treat the cache as fresh when `.specfact/backlog/github_hierarchy_cache_state.json` exists and its `generated_at` ISO-8601 timestamp is within the last 300 seconds; otherwise compare the markdown file’s last modification time (mtime) in UTC against “now” and refresh when the age exceeds 300 seconds.
 2. Re-read the issue state from GitHub or the refreshed cache-backed workflow and confirm the issue is still `in progress`.
 3. Only after that verification, if it remains `in progress`, pause implementation and ask the user to clarify whether the change is already being worked in another session.

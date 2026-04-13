@@ -14,6 +14,7 @@ from dev_bootstrap_support import ROOT, ensure_core_dependency
 
 # Staged paths that should trigger `contract-test` in pre-commit when present.
 _RELEVANT_PREFIXES = (
+    "contracts/",
     "tests/",
     "packages/",
     "src/",
