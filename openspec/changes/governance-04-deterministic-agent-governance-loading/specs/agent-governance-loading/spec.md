@@ -1,3 +1,5 @@
+# Specification: Agent governance loading
+
 ## ADDED Requirements
 
 ### Requirement: Compact AGENTS bootstrap contract

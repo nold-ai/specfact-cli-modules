@@ -25,37 +25,53 @@ def _load_script_module() -> Any:
     return module
 
 
-def test_filter_review_files_keeps_only_python_sources() -> None:
-    """Only relevant staged Python files should be reviewed."""
+SAMPLE_FAIL_REVIEW_REPORT: dict[str, object] = {
+    "overall_verdict": "FAIL",
+    "findings": [
+        {"severity": "error", "rule": "e1"},
+        {"severity": "warning", "rule": "w1"},
+    ],
+}
+
+
+def test_filter_review_gate_paths_keeps_contract_relevant_trees() -> None:
+    """Review gate should include staged paths under tooling and contract trees."""
     module = _load_script_module()
 
-    assert module.filter_review_files(["src/app.py", "README.md", "tests/test_app.py", "notes.txt"]) == [
-        "src/app.py",
-        "tests/test_app.py",
-    ]
+    assert module.filter_review_gate_paths(
+        [
+            "src/app.py",
+            "README.md",
+            "tests/test_app.py",
+            "openspec/changes/foo/tasks.md",
+            "openspec/changes/foo/TDD_EVIDENCE.md",
+            "notes.txt",
+        ]
+    ) == ["tests/test_app.py", "openspec/changes/foo/tasks.md"]
 
 
 def test_build_review_command_writes_json_report() -> None:
     """Pre-commit gate should write ReviewReport JSON for IDE/Copilot and use exit verdict."""
     module = _load_script_module()
 
-    command = module.build_review_command(["src/app.py", "tests/test_app.py"])
+    command = module.build_review_command(["tests/test_app.py", "packages/specfact-spec/src/x.py"])
 
     assert command[:5] == [sys.executable, "-m", "specfact_cli.cli", "code", "review"]
     assert "--json" in command
     assert "--out" in command
     assert module.REVIEW_JSON_OUT in command
-    assert command[-2:] == ["src/app.py", "tests/test_app.py"]
+    assert command[-2:] == ["tests/test_app.py", "packages/specfact-spec/src/x.py"]
 
 
 def test_main_skips_when_no_relevant_files(capsys: pytest.CaptureFixture[str]) -> None:
-    """Hook should not fail commits when no staged Python files are present."""
+    """Hook should not fail commits when no staged review-relevant paths are present."""
     module = _load_script_module()
 
-    exit_code = module.main(["README.md", "docs/guide.md"])
+    exit_code = module.main(["README.md", "docs/guide.md", "src/app.py"])
 
     assert exit_code == 0
-    assert "No staged Python files" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "skipping code review gate" in out
 
 
 def test_main_propagates_review_gate_exit_code(
@@ -64,16 +80,7 @@ def test_main_propagates_review_gate_exit_code(
     """Blocking review verdicts must block the commit by returning non-zero."""
     module = _load_script_module()
     repo_root = tmp_path
-    _write_sample_review_report(
-        repo_root,
-        {
-            "overall_verdict": "FAIL",
-            "findings": [
-                {"severity": "error", "rule": "e1"},
-                {"severity": "warning", "rule": "w1"},
-            ],
-        },
-    )
+    _write_sample_review_report(repo_root, SAMPLE_FAIL_REVIEW_REPORT)
 
     def _fake_root() -> Path:
         return repo_root
@@ -86,23 +93,14 @@ def test_main_propagates_review_gate_exit_code(
         assert module.REVIEW_JSON_OUT in cmd
         assert kwargs.get("cwd") == str(repo_root)
         assert kwargs.get("timeout") == 300
-        _write_sample_review_report(
-            repo_root,
-            {
-                "overall_verdict": "FAIL",
-                "findings": [
-                    {"severity": "error", "rule": "e1"},
-                    {"severity": "warning", "rule": "w1"},
-                ],
-            },
-        )
+        _write_sample_review_report(repo_root, SAMPLE_FAIL_REVIEW_REPORT)
         return subprocess.CompletedProcess(cmd, 1, stdout=".specfact/code-review.json\n", stderr="")
 
     monkeypatch.setattr(module, "_repo_root", _fake_root)
     monkeypatch.setattr(module, "ensure_runtime_available", _fake_ensure)
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
 
-    exit_code = module.main(["src/app.py"])
+    exit_code = module.main(["tests/unit/test_app.py"])
 
     assert exit_code == 1
     captured = capsys.readouterr()
@@ -160,7 +158,7 @@ def test_main_missing_report_still_returns_exit_code_and_warns(
     monkeypatch.setattr(module, "ensure_runtime_available", _fake_ensure)
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
 
-    exit_code = module.main(["src/app.py"])
+    exit_code = module.main(["tests/unit/test_app.py"])
 
     assert exit_code == 2
     err = capsys.readouterr().err
@@ -186,12 +184,12 @@ def test_main_timeout_fails_hook(monkeypatch: pytest.MonkeyPatch, capsys: pytest
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
     monkeypatch.setattr(module, "_repo_root", lambda: repo_root)
 
-    exit_code = module.main(["src/app.py"])
+    exit_code = module.main(["tests/unit/test_app.py"])
 
     assert exit_code == 1
     err = capsys.readouterr().err
     assert "timed out after 300s" in err
-    assert "src/app.py" in err
+    assert "tests/unit/test_app.py" in err
 
 
 def test_main_prints_actionable_setup_guidance_when_runtime_missing(
@@ -205,7 +203,7 @@ def test_main_prints_actionable_setup_guidance_when_runtime_missing(
 
     monkeypatch.setattr(module, "ensure_runtime_available", _fake_ensure)
 
-    exit_code = module.main(["src/app.py"])
+    exit_code = module.main(["tests/unit/test_app.py"])
 
     assert exit_code == 1
     assert "dev-deps" in capsys.readouterr().out

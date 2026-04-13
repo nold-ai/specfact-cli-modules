@@ -74,6 +74,22 @@ def test_frontmatter_scalar_root_is_rejected(tmp_path: Path) -> None:
     assert "mapping" in errors[0].lower()
 
 
+def test_applies_when_list_rejects_non_string_entries(tmp_path: Path) -> None:
+    rules_dir = tmp_path / "docs" / "agent-rules"
+    rules_dir.mkdir(parents=True)
+    (rules_dir / "bad_list.md").write_text(
+        "---\napplies_when: [session-bootstrap, 42]\n---\n# body\n",
+        encoding="utf-8",
+    )
+
+    mod = _load_validator_module()
+    errors = mod._iter_signal_errors(rules_dir)
+
+    assert len(errors) == 1
+    assert "bad_list.md" in errors[0]
+    assert "applies_when" in errors[0]
+
+
 def test_valid_applies_when_in_temp_rules_dir_passes(tmp_path: Path) -> None:
     rules_dir = tmp_path / "docs" / "agent-rules"
     rules_dir.mkdir(parents=True)

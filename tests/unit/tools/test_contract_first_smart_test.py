@@ -29,6 +29,7 @@ def cfst_mod():
 
 
 def test_names_require_contract_test_detects_relevant_paths(cfst_mod) -> None:
+    assert cfst_mod._names_require_contract_test(["contracts/some_contract.yaml"]) is True
     assert cfst_mod._names_require_contract_test(["tests/unit/test_x.py"]) is True
     assert cfst_mod._names_require_contract_test(["packages/specfact-backlog/src/x.py"]) is True
     assert cfst_mod._names_require_contract_test(["src/specfact_cli_modules/x.py"]) is True
@@ -59,3 +60,14 @@ def test_contract_test_status_returns_zero_when_only_irrelevant_staged(
         lambda _root: ["docs/README.md"],
     )
     assert cfst_mod._contract_test_status() == 0
+
+
+def test_contract_test_status_returns_one_when_relevant_files_are_staged(
+    monkeypatch: pytest.MonkeyPatch, cfst_mod
+) -> None:
+    monkeypatch.setattr(
+        cfst_mod,
+        "_git_staged_names",
+        lambda _root: ["contracts/some_contract.yaml"],
+    )
+    assert cfst_mod._contract_test_status() == 1

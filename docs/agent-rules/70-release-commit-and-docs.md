@@ -42,7 +42,7 @@ depends_on:
 
 ## Registry and publish flow
 
-1. Branch from `origin/dev` into a feature or hotfix branch.
+1. Branch from `origin/dev` into a worktree branch whose name uses one of: `feature/*`, `bugfix/*`, `hotfix/*`, or `chore/*` (expected sibling worktrees live under `../specfact-cli-modules-worktrees/` per session-bootstrap rules).
 2. Bump the bundle version in `packages/<bundle>/module-package.yaml`.
 3. Run `python scripts/publish_module.py --bundle <bundle>` as the publish pre-check.
 4. Publish with the project tooling wrapper when release work is actually intended.
