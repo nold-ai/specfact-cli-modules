@@ -32,6 +32,7 @@
 | ✅ speckit-03-change-proposal-bridge | archived 2026-04-05 |
 | ✅ packaging-01-bundle-resource-payloads | archived 2026-04-05 |
 | ✅ module-bundle-deps-auto-install | archived 2026-04-05 |
+| ✅ governance-03-github-hierarchy-cache | archived 2026-04-09 |
 
 ## Pending
 
@@ -53,6 +54,7 @@
 | Module | Order | Change folder | GitHub # | Blocked by |
 |--------|-------|---------------|----------|------------|
 | sync | 01 | sync-01-unified-kernel | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Parent Feature: [#147](https://github.com/nold-ai/specfact-cli-modules/issues/147); preview/apply safety baseline from `specfact-cli#177` |
+| project-runtime | 01 | project-runtime-01-safe-artifact-write-policy | [#177](https://github.com/nold-ai/specfact-cli-modules/issues/177) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); paired core change [specfact-cli#490](https://github.com/nold-ai/specfact-cli/issues/490); related bug [specfact-cli#487](https://github.com/nold-ai/specfact-cli/issues/487) |
 
 ### Cross-layer runtime follow-ups
 
@@ -74,6 +76,7 @@ These changes are the modules-side runtime companions to split core governance a
 |--------|-------|---------------|----------|------------|
 | governance | 01 | governance-01-evidence-output | [#169](https://github.com/nold-ai/specfact-cli-modules/issues/169) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#247`; validation runtime `#171` |
 | governance | 02 | governance-02-exception-management | [#167](https://github.com/nold-ai/specfact-cli-modules/issues/167) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#248`; policy runtime `#158` |
+| governance | 04 | governance-04-deterministic-agent-governance-loading | [#181](https://github.com/nold-ai/specfact-cli-modules/issues/181) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); paired core [specfact-cli#494](https://github.com/nold-ai/specfact-cli/issues/494); baseline [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178) (implements archived `governance-03-github-hierarchy-cache`, paired core [specfact-cli#491](https://github.com/nold-ai/specfact-cli/issues/491)) |
 | validation | 02 | validation-02-full-chain-engine | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#241`; runtime inputs from `#164` and `#165`; policy semantics from `#158` |
 
 ### Documentation restructure

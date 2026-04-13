@@ -190,6 +190,39 @@
       url: /authoring/extending-projectbundle/
       expertise: [advanced]
 
+- section: Agent Governance
+  items:
+    - title: Rules Index
+      url: /contributing/agent-rules/
+      expertise: [advanced]
+    - title: Non-Negotiable Checklist
+      url: /contributing/agent-rules/non-negotiable-checklist/
+      expertise: [advanced]
+    - title: Session Bootstrap
+      url: /contributing/agent-rules/session-bootstrap/
+      expertise: [advanced]
+    - title: Repository Context
+      url: /contributing/agent-rules/repository-context/
+      expertise: [advanced]
+    - title: Worktrees and Branching
+      url: /contributing/agent-rules/worktrees-and-branching/
+      expertise: [advanced]
+    - title: OpenSpec and TDD
+      url: /contributing/agent-rules/openspec-and-tdd/
+      expertise: [advanced]
+    - title: Quality Gates and Review
+      url: /contributing/agent-rules/quality-gates-and-review/
+      expertise: [advanced]
+    - title: GitHub Change Governance
+      url: /contributing/agent-rules/github-change-governance/
+      expertise: [advanced]
+    - title: Release, Commit, and Docs
+      url: /contributing/agent-rules/release-commit-and-docs/
+      expertise: [advanced]
+    - title: Migrated Guidance Catalog
+      url: /contributing/agent-rules/migrated-guidance-catalog/
+      expertise: [advanced]
+
 - section: Reference
   items:
     - title: Core vs Modules URL Contract

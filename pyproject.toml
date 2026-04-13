@@ -16,6 +16,8 @@ dev = []
 type = "virtual"
 path = ".venv"
 dependencies = [
+    "beartype>=0.22.0",
+    "json5>=0.9.28",
     "icontract>=2.7.1",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
@@ -30,6 +32,10 @@ dependencies = [
     "typer>=0.20.0",
     "pyyaml>=6.0.3",
 ]
+
+# Align with specfact-cli CI / pytest: anchor module discovery to this checkout for every `hatch run …`.
+[tool.hatch.envs.default.env-vars]
+SPECFACT_MODULES_REPO = "{root}"
 
 [tool.hatch.envs.hatch-test]
 extra-dependencies = [
@@ -60,6 +66,7 @@ contract-test-contracts = "python tools/contract_first_smart_test.py contracts {
 contract-test-exploration = "python tools/contract_first_smart_test.py exploration {args}"
 contract-test-scenarios = "python tools/contract_first_smart_test.py scenarios {args}"
 contract-test-status = "python tools/contract_first_smart_test.py status"
+validate-agent-rule-signals = "python scripts/validate_agent_rule_applies_when.py"
 
 # NOTE: Use 'hatch run test' instead of 'hatch test'
 # The hatch-test environment cannot install specfact-cli from sibling directory

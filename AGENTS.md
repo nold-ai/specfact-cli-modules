@@ -1,152 +1,57 @@
 # AGENTS.md
 
-## Project
+This file is the mandatory bootstrap governance surface for coding agents working in this repository. It is intentionally compact. The detailed rules that used to live here have been preserved in `docs/agent-rules/` so new sessions do not pay the full context cost up front.
 
-`specfact-cli-modules` hosts official nold-ai bundle packages and the module registry used by SpecFact CLI.
+## Mandatory bootstrap
 
-## Local setup
+1. Read this file.
+2. Read [docs/agent-rules/INDEX.md](docs/agent-rules/INDEX.md).
+3. Read [docs/agent-rules/05-non-negotiable-checklist.md](docs/agent-rules/05-non-negotiable-checklist.md).
+4. Detect repository root, active branch, and worktree state.
+5. Reject implementation from the `dev` or `main` checkout unless the user explicitly overrides that rule.
+6. If GitHub hierarchy metadata is needed and `.specfact/backlog/github_hierarchy_cache.md` is missing or stale, refresh it with `python scripts/sync_github_hierarchy_cache.py`.
+7. Load any additional rule files required by the applicability matrix in [docs/agent-rules/INDEX.md](docs/agent-rules/INDEX.md) before implementation.
 
-```bash
-hatch env create
-hatch run dev-deps
-```
+## Precedence
 
-`dev-deps` installs `specfact-cli` from `$SPECFACT_CLI_REPO` when set, otherwise `../specfact-cli`.
-In worktrees, the bootstrap should prefer the matching `specfact-cli-worktrees/<branch>` checkout before falling back to the canonical sibling repo.
+1. Direct system and developer instructions
+2. Explicit user override where repository governance allows it
+3. This file
+4. [docs/agent-rules/05-non-negotiable-checklist.md](docs/agent-rules/05-non-negotiable-checklist.md)
+5. Other selected files under `docs/agent-rules/`
+6. Change-local OpenSpec artifacts and workflow notes
 
-## Quality gates
+## Non-negotiable gates
 
-Run in this order:
+- Work in a git worktree unless the user explicitly overrides that rule.
+- Do not implement from the `dev` or `main` checkout by default.
+- Treat a provided OpenSpec change id as candidate scope, not automatic permission to proceed.
+- Verify the selected change against current repository reality and dependency state before implementation.
+- Do not auto-refine stale or ambiguous changes without the user.
+- Perform `spec -> tests -> failing evidence -> code -> passing evidence` in that order for behavior changes.
+- Require public GitHub metadata completeness before implementation when linked issue workflow applies: parent, labels, project assignment, blockers, and blocked-by relationships.
+- If a linked GitHub issue is already `in progress`, pause and ask for clarification before implementation.
+- Run the required verification and quality gates for the touched scope before finalization.
+- Fix SpecFact code review findings, including warnings, unless a rare explicit exception is documented.
+- Treat the clean-code compliance gate as mandatory: the review surface enforces `naming`, `kiss`, `yagni`, `dry`, and `solid` categories and blocks regressions.
+- Enforce module signatures and version bumps when signed module assets or manifests are affected.
+- Finalize completed OpenSpec changes with `openspec archive <change-id>` (see [docs/agent-rules/40-openspec-and-tdd.md](docs/agent-rules/40-openspec-and-tdd.md)); do not manually move change folders under `openspec/changes/archive/`.
 
-```bash
-hatch run format
-hatch run type-check
-hatch run lint
-hatch run yaml-lint
-hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
-hatch run contract-test
-hatch run smart-test
-hatch run test
+## Strategic context
 
-# SpecFact code review JSON (dogfood; see "SpecFact Code Review JSON" below and openspec/config.yaml)
-hatch run specfact code review run --json --out .specfact/code-review.json
-```
+This public modules repository does not depend on a sibling internal wiki checkout for change design. Shared design and governance context lives in the paired public `specfact-cli` repository and the active OpenSpec artifacts in this repo. When a modules change is explicitly paired with a core change, review both public change folders before widening scope or redefining shared workflow semantics.
 
-CI orchestration runs in `.github/workflows/pr-orchestrator.yml` and enforces:
-- module signature + version-bump verification
-- matrix quality gates on Python 3.11/3.12/3.13
+## Canonical rule docs
 
-## Pre-commit (local)
+- [docs/agent-rules/INDEX.md](docs/agent-rules/INDEX.md)
+- [docs/agent-rules/05-non-negotiable-checklist.md](docs/agent-rules/05-non-negotiable-checklist.md)
+- [docs/agent-rules/10-session-bootstrap.md](docs/agent-rules/10-session-bootstrap.md)
+- [docs/agent-rules/20-repository-context.md](docs/agent-rules/20-repository-context.md)
+- [docs/agent-rules/30-worktrees-and-branching.md](docs/agent-rules/30-worktrees-and-branching.md)
+- [docs/agent-rules/40-openspec-and-tdd.md](docs/agent-rules/40-openspec-and-tdd.md)
+- [docs/agent-rules/50-quality-gates-and-review.md](docs/agent-rules/50-quality-gates-and-review.md)
+- [docs/agent-rules/60-github-change-governance.md](docs/agent-rules/60-github-change-governance.md)
+- [docs/agent-rules/70-release-commit-and-docs.md](docs/agent-rules/70-release-commit-and-docs.md)
+- [docs/agent-rules/80-current-guidance-catalog.md](docs/agent-rules/80-current-guidance-catalog.md)
 
-Install and run pre-commit hooks so they mirror the CI quality gates:
-
-```bash
-pre-commit install
-pre-commit run --all-files
-```
-
-Hooks run in order: **module signature verification** → **`scripts/pre-commit-quality-checks.sh`** (includes `hatch run lint` / pylint for staged Python) → **`scripts/pre_commit_code_review.py`** (SpecFact code review gate writing `.specfact/code-review.json`). That last hook is fast feedback on staged `*.py` / `*.pyi` files; it does not replace the **PR / change-completion** review rules in the next section when OpenSpec tasks require a full-scope run.
-
-## SpecFact Code Review JSON (Dogfood, Quality Gate)
-
-This matches **`openspec/config.yaml`** (project `context` and **`rules.tasks`** for code review): treat **`.specfact/code-review.json`** as mandatory evidence before an OpenSpec change is considered complete and before you rely on “all gates green” for a PR. Requires a working **specfact-cli** install (`hatch run dev-deps`).
-
-**When to (re)run the review**
-
-- The file is **missing**, or
-- It is **stale**: the report’s last-modified time is older than any file you changed for this work under `packages/`, `registry/`, `scripts/`, `tools/`, `tests/`, or under `openspec/changes/<change-id>/` **except** `openspec/changes/<change-id>/TDD_EVIDENCE.md` — evidence-only edits there do **not** by themselves invalidate the review; re-run when proposal, specs, tasks, design, or code change.
-
-**Command**
-
-```bash
-hatch run specfact code review run --json --out .specfact/code-review.json
-```
-
-- While iterating on a branch, prefer a **changed-files scope** when available (e.g. `--scope changed`) so feedback stays fast.
-- Before the **final PR** for a change, run a **full** (or equivalent) scope so the report covers the whole quality surface your tasks expect (e.g. `--scope full`).
-
-**Remediation**
-
-- Read the JSON report and fix **every** finding at any severity (warning, advisory, error, or equivalent in the schema) unless the change proposal documents a **rare, explicit, justified** exception.
-- After substantive edits, re-run until the report shows a **passing** outcome from the review module (e.g. overall verdict PASS / CI exit 0 per schema).
-- Record the review command(s) and timestamp in `openspec/changes/<change-id>/TDD_EVIDENCE.md` or in the PR description when the change touches behavior or quality gates.
-
-**Consistency**
-
-- OpenSpec change **`tasks.md`** should include explicit tasks for generating/updating this file and clearing findings (see `openspec/config.yaml` → `rules.tasks` → “SpecFact code review JSON”). Agent runs should treat those tasks and this section as the same bar.
-
-## Development workflow
-
-### Branch protection
-
-`dev` and `main` are protected. Never work directly on them.
-
-- Use feature branches for implementation: `feature/*`, `bugfix/*`, `hotfix/*`, `chore/*`
-- Open PRs to `dev` (or to `main` only when explicitly required by release workflow)
-
-### Git worktree policy
-
-Use worktrees for parallel branch work.
-
-- Allowed branch types in worktrees: `feature/*`, `bugfix/*`, `hotfix/*`, `chore/*`
-- Forbidden in worktrees: `dev`, `main`
-- Keep primary checkout as canonical `dev` workspace
-- Keep worktree paths under `../specfact-cli-modules-worktrees/<branch-type>/<branch-slug>`
-
-Recommended create/list/cleanup:
-
-```bash
-git fetch origin
-git worktree add ../specfact-cli-modules-worktrees/feature/<branch-slug> -b feature/<branch-slug> origin/dev
-git worktree list
-git worktree remove ../specfact-cli-modules-worktrees/feature/<branch-slug>
-```
-
-### OpenSpec workflow (required)
-
-Before changing code, verify an active OpenSpec change explicitly covers the requested scope.
-
-- If missing scope: create or extend a change first (`openspec` workflow)
-- Follow strict TDD order: spec delta -> failing tests -> implementation -> passing tests -> quality gates
-- Record failing/passing evidence in `openspec/changes/<change-id>/TDD_EVIDENCE.md`
-
-### OpenSpec archive rule (hard requirement)
-
-Do not manually move folders under `openspec/changes/` into `openspec/changes/archive/`.
-
-- Archiving MUST be done with `openspec archive <change-id>` (or equivalent workflow command that wraps it)
-- Use the default archive behavior that syncs specs/deltas as part of archive
-- Update `openspec/CHANGE_ORDER.md` in the same change when archive status changes
-
-## Scope rules
-
-- Keep bundle package code under `packages/`.
-- Keep registry metadata in `registry/index.json` and `packages/*/module-package.yaml`.
-- `type-check` and `lint` are scoped to `src/`, `tests/`, and `tools/` for repo tooling quality.
-- Use `tests/` for bundle behavior and migration parity tests.
-- This repository hosts official nold-ai bundles only; third-party bundles publish from their own repositories.
-
-## Bundle versioning policy
-
-### SemVer rules
-
-- `patch`: bug fix with no command/API change
-- `minor`: new command, option, or public API addition
-- `major`: breaking API/behavior change or command removal
-
-### core_compatibility rules
-
-- When a bundle requires a newer minimum `specfact-cli`, update `core_compatibility` in:
-  - `packages/<bundle>/module-package.yaml`
-  - `registry/index.json` entry metadata (when field is carried there)
-- Treat `core_compatibility` review as mandatory on each version bump.
-
-### Release process
-
-1. Branch from `origin/dev` into a feature/hotfix branch.
-2. Bump bundle version in `packages/<bundle>/module-package.yaml`.
-3. Run publish pre-check:
-   - `python scripts/publish-module.py --bundle <bundle>`
-4. Publish with project tooling (`scripts/publish-module.py --bundle <name>` wrapper + packaging flow).
-5. Update `registry/index.json` with new `latest_version`, artifact URL, and checksum.
-6. Tag release and merge via PR after quality gates pass.
+Detailed guidance was moved by reference, not removed. If a rule seems missing here, consult the canonical rule docs before assuming the instruction was dropped.
