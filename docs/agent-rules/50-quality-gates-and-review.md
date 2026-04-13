@@ -47,6 +47,7 @@ depends_on:
 7. `hatch run contract-test`
 8. `hatch run smart-test`
 9. `hatch run test`
+10. `hatch run specfact code review run --json --out .specfact/code-review.json` (full-repo scope when required: add `--scope full`; machine-readable evidence lives at `.specfact/code-review.json` and unresolved findings block merge unless an explicit exception is documented)
 
 ## Pre-commit order
 

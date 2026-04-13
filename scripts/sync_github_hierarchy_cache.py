@@ -310,7 +310,14 @@ def _fetch_all_subissue_nodes(
             msg = completed.stderr.strip() or completed.stdout.strip() or "GitHub GraphQL query failed"
             raise RuntimeError(f"subIssues fetch failed for issue #{issue_number} ({issue_url}): {msg}")
 
-        payload = json.loads(completed.stdout)
+        raw_out = completed.stdout or ""
+        try:
+            payload = json.loads(raw_out)
+        except json.JSONDecodeError as exc:
+            excerpt = raw_out[:500] + ("…" if len(raw_out) > 500 else "")
+            raise RuntimeError(
+                f"subIssues: invalid JSON for issue #{issue_number} ({issue_url}): {exc}; body_excerpt={excerpt!r}"
+            ) from exc
         if "errors" in payload:
             raise RuntimeError(
                 f"subIssues GraphQL errors for issue #{issue_number} ({issue_url}): "

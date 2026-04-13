@@ -60,6 +60,8 @@ def apply_specfact_workspace_env(repo_root: Path) -> None:
     core = resolve_core_repo(repo_root)
     if core is not None:
         os.environ["SPECFACT_REPO_ROOT"] = str(core)
+    else:
+        os.environ.pop("SPECFACT_REPO_ROOT", None)
 
 
 def _installed_core_exists() -> bool:
