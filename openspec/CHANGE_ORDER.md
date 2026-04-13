@@ -77,8 +77,13 @@ These changes are the modules-side runtime companions to split core governance a
 | governance | 02 | governance-02-exception-management | [#167](https://github.com/nold-ai/specfact-cli-modules/issues/167) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#248`; policy runtime `#158` |
 | governance | 03 | governance-03-github-hierarchy-cache | [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); paired core `governance-02-github-hierarchy-cache` [specfact-cli#491](https://github.com/nold-ai/specfact-cli/issues/491) |
 | governance | 04 | governance-04-deterministic-agent-governance-loading | [#181](https://github.com/nold-ai/specfact-cli-modules/issues/181) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); paired core [specfact-cli#494](https://github.com/nold-ai/specfact-cli/issues/494); baseline [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178) |
-| marketplace | 06 | marketplace-06-ci-module-signing | [#185](https://github.com/nold-ai/specfact-cli-modules/issues/185) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); paired core [specfact-cli#500](https://github.com/nold-ai/specfact-cli/issues/500) |
 | validation | 02 | validation-02-full-chain-engine | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#241`; runtime inputs from `#164` and `#165`; policy semantics from `#158` |
+
+### Module trust chain and CI security
+
+| Module | Order | Change folder | GitHub # | Blocked by |
+|--------|-------|---------------|----------|------------|
+| marketplace | 06 | marketplace-06-ci-module-signing | [#185](https://github.com/nold-ai/specfact-cli-modules/issues/185) | Parent Feature: [#187](https://github.com/nold-ai/specfact-cli-modules/issues/187); Parent Epic: [#186](https://github.com/nold-ai/specfact-cli-modules/issues/186); paired core [specfact-cli#500](https://github.com/nold-ai/specfact-cli/issues/500) |
 
 ### Documentation restructure
 
