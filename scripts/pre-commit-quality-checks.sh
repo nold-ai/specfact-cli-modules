@@ -91,7 +91,7 @@ check_safe_change() {
         ;;
       pyproject.toml|README.md|CHANGELOG.md|.pre-commit-config.yaml)
         ;;
-      scripts/pre-commit-quality-checks.sh|scripts/pre_commit_code_review.py|tools/contract_first_smart_test.py)
+      scripts/pre-commit-quality-checks.sh)
         ;;
       *)
         other_changes=$((other_changes + 1))
