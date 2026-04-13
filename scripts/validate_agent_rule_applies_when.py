@@ -52,7 +52,11 @@ def _parse_frontmatter(text: str) -> dict[str, object] | str:
 def _iter_signal_errors(rules_dir: Path) -> list[str]:
     errors: list[str] = []
     for path in sorted(rules_dir.glob("*.md")):
-        text = path.read_text(encoding="utf-8")
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            errors.append(f"{path.name}: failed to read file: {exc}")
+            continue
         parsed = _parse_frontmatter(text)
         if isinstance(parsed, str):
             errors.append(f"{path.name}: {parsed}")
@@ -64,7 +68,12 @@ def _iter_signal_errors(rules_dir: Path) -> list[str]:
         if isinstance(raw, str):
             signals = [raw]
         elif isinstance(raw, list):
-            signals = [str(item) for item in raw if item is not None]
+            invalid = [item for item in raw if item is not None and not isinstance(item, str)]
+            if invalid:
+                bad_types = sorted({type(item).__name__ for item in invalid})
+                errors.append(f"{path.name}: applies_when list entries must be str or null; got types: {bad_types}")
+                continue
+            signals = [item for item in raw if isinstance(item, str)]
         else:
             errors.append(f"{path.name}: applies_when must be a list or string")
             continue

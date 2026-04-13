@@ -2,7 +2,7 @@
 
 - **Validated on (local):** 2026-04-12
 - **Strict command:** `openspec validate governance-04-deterministic-agent-governance-loading --strict`
-- **Result:** PASS
+- **Result:** **PENDING / BLOCKED** — `openspec validate … --strict` passed, but the mandatory full-repo SpecFact code review gate is still **FAIL** (`.specfact/code-review.json` reports **934** findings). Do not mark this change fully validated until `hatch run specfact code review run --json --out .specfact/code-review.json --scope full` exits **PASS** or an explicit, approved exception is recorded.
 
 ## Scope summary
 

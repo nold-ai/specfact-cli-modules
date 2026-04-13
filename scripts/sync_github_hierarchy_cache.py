@@ -78,6 +78,19 @@ SUPPORTED_ISSUE_TYPES = frozenset({"Epic", "Feature"})
 SUPPORTED_ISSUE_TYPES_ORDER: tuple[str, ...] = ("Epic", "Feature")
 _SUMMARY_SKIP_LINES = {"why", "scope", "summary", "changes", "capabilities", "impact"}
 _GH_GRAPHQL_TIMEOUT_SEC = 120
+_SUBISSUES_PAGE_SIZE = 100
+
+_SUBISSUES_PAGE_QUERY = f"""
+query($owner: String!, $name: String!, $issueNumber: Int!, $after: String) {{
+  repository(owner: $owner, name: $name) {{
+    issue(number: $issueNumber) {{
+      subIssues(first: {_SUBISSUES_PAGE_SIZE}, after: $after) {{
+        pageInfo {{ hasNextPage endCursor }}
+        nodes {{ number title url issueType {{ name }} }} }}
+    }}
+  }}
+}}
+""".strip()
 
 
 @beartype
@@ -97,7 +110,6 @@ query($owner: String!, $name: String!, $after: String) {{
 {body_field}        issueType {{ name }}
         labels(first: 100) {{ nodes {{ name }} }}
         parent {{ number title url }}
-        subIssues(first: 100) {{ nodes {{ number title url issueType {{ name }} }} }}
       }}
     }}
   }}
@@ -221,7 +233,12 @@ def _child_links(subissue_nodes: list[Mapping[str, Any]]) -> list[IssueLink]:
 
 
 @beartype
-def _parse_issue_node(node: Mapping[str, Any], *, include_body: bool) -> HierarchyIssue | None:
+def _parse_issue_node(
+    node: Mapping[str, Any],
+    *,
+    include_body: bool,
+    children: list[IssueLink],
+) -> HierarchyIssue | None:
     """Convert a GraphQL issue node to HierarchyIssue when supported."""
     issue_type_node = _mapping_value(node, "issueType")
     issue_type_name = str(issue_type_node["name"]) if issue_type_node and issue_type_node.get("name") else None
@@ -238,8 +255,101 @@ def _parse_issue_node(node: Mapping[str, Any], *, include_body: bool) -> Hierarc
         summary=summary,
         updated_at=str(node["updatedAt"]),
         parent=_parse_issue_link(_mapping_value(node, "parent")),
-        children=_child_links(_mapping_nodes(_mapping_value(node, "subIssues"))),
+        children=children,
     )
+
+
+@beartype
+def _fetch_all_subissue_nodes(
+    *,
+    repo_owner: str,
+    repo_name: str,
+    issue_number: int,
+    issue_url: str,
+) -> list[Mapping[str, Any]]:
+    """Fetch every sub-issue node for one parent issue (paginated)."""
+    collected: list[Mapping[str, Any]] = []
+    after: str | None = None
+    while True:
+        command = [
+            "gh",
+            "api",
+            "graphql",
+            "-f",
+            f"query={_SUBISSUES_PAGE_QUERY}",
+            "-F",
+            f"owner={repo_owner}",
+            "-F",
+            f"name={repo_name}",
+            "-F",
+            f"issueNumber={issue_number}",
+        ]
+        if after is not None:
+            command.extend(["-F", f"after={after}"])
+
+        try:
+            completed = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=_GH_GRAPHQL_TIMEOUT_SEC,
+            )
+        except subprocess.TimeoutExpired as exc:
+            detail = (
+                f"GitHub GraphQL subIssues pagination timed out after {_GH_GRAPHQL_TIMEOUT_SEC}s "
+                f"for issue #{issue_number} ({issue_url})"
+            )
+            out = (exc.stdout or "").strip()
+            err = (exc.stderr or "").strip()
+            if out or err:
+                detail = f"{detail}; stdout={out!r}; stderr={err!r}"
+            raise RuntimeError(detail) from exc
+
+        if completed.returncode != 0:
+            msg = completed.stderr.strip() or completed.stdout.strip() or "GitHub GraphQL query failed"
+            raise RuntimeError(f"subIssues fetch failed for issue #{issue_number} ({issue_url}): {msg}")
+
+        raw_out = completed.stdout or ""
+        try:
+            payload = json.loads(raw_out)
+        except json.JSONDecodeError as exc:
+            excerpt = raw_out[:500] + ("…" if len(raw_out) > 500 else "")
+            raise RuntimeError(
+                f"subIssues: invalid JSON for issue #{issue_number} ({issue_url}): {exc}; body_excerpt={excerpt!r}"
+            ) from exc
+        if "errors" in payload:
+            raise RuntimeError(
+                f"subIssues GraphQL errors for issue #{issue_number} ({issue_url}): "
+                f"{json.dumps(payload['errors'], indent=2)}"
+            )
+
+        repository = payload.get("data", {}).get("repository")
+        if not isinstance(repository, Mapping):
+            raise RuntimeError(f"subIssues: missing repository for issue #{issue_number} ({issue_url})")
+
+        issue_payload = repository.get("issue")
+        if not isinstance(issue_payload, Mapping):
+            raise RuntimeError(f"subIssues: missing issue #{issue_number} ({issue_url})")
+
+        sub_connection = issue_payload.get("subIssues")
+        if not isinstance(sub_connection, Mapping):
+            raise RuntimeError(f"subIssues: missing connection for issue #{issue_number} ({issue_url})")
+
+        page_nodes = _mapping_nodes(sub_connection)
+        collected.extend(page_nodes)
+
+        page_info = sub_connection.get("pageInfo")
+        if not isinstance(page_info, Mapping):
+            raise RuntimeError(f"subIssues: missing pageInfo for issue #{issue_number} ({issue_url})")
+
+        if not page_info.get("hasNextPage"):
+            break
+        after = page_info.get("endCursor")
+        if not isinstance(after, str) or not after:
+            raise RuntimeError(f"subIssues: hasNextPage without endCursor for issue #{issue_number} ({issue_url})")
+
+    return collected
 
 
 @beartype
@@ -320,7 +430,22 @@ def fetch_hierarchy_issues(*, repo_owner: str, repo_name: str, fingerprint_only:
         for node in nodes:
             if not isinstance(node, Mapping):
                 continue
-            parsed = _parse_issue_node(node, include_body=not fingerprint_only)
+            issue_type_node = _mapping_value(node, "issueType")
+            issue_type_name = str(issue_type_node["name"]) if issue_type_node and issue_type_node.get("name") else None
+            if issue_type_name not in SUPPORTED_ISSUE_TYPES:
+                continue
+
+            issue_number = int(node["number"])
+            issue_url = str(node["url"])
+            sub_nodes = _fetch_all_subissue_nodes(
+                repo_owner=repo_owner,
+                repo_name=repo_name,
+                issue_number=issue_number,
+                issue_url=issue_url,
+            )
+            children = _child_links(sub_nodes)
+
+            parsed = _parse_issue_node(node, include_body=not fingerprint_only, children=children)
             if parsed is not None:
                 issues.append(parsed)
         page_info = issue_connection.get("pageInfo", {})
@@ -341,9 +466,10 @@ def compute_hierarchy_fingerprint(issues: list[HierarchyIssue]) -> str:
             {
                 "number": issue.number,
                 "title": issue.title,
+                "url": issue.url,
                 "issue_type": issue.issue_type,
-                "updated_at": issue.updated_at,
                 "labels": sorted(issue.labels, key=str.lower),
+                "summary": issue.summary,
                 "parent_number": issue.parent.number if issue.parent else None,
                 "child_numbers": [child.number for child in sorted(issue.children, key=lambda item: item.number)],
             }

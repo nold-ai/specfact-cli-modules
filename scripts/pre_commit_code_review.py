@@ -44,21 +44,34 @@ ensure_core_dependency = cast(Callable[[Path], int], _dev_bootstrap.ensure_core_
 apply_specfact_workspace_env = _dev_bootstrap.apply_specfact_workspace_env
 
 
-PYTHON_SUFFIXES = {".py", ".pyi"}
-
 # Default matches dogfood / OpenSpec: machine-readable report under ignored ``.specfact/``.
 REVIEW_JSON_OUT = ".specfact/code-review.json"
 
 
+def _is_review_gate_path(path: str) -> bool:
+    """Return whether a repo-relative path should participate in the pre-commit review gate."""
+    normalized = path.replace("\\", "/").strip()
+    if not normalized or normalized.endswith(("/TDD_EVIDENCE.md", "TDD_EVIDENCE.md")):
+        return False
+    prefixes = (
+        "packages/",
+        "registry/",
+        "scripts/",
+        "tools/",
+        "tests/",
+        "openspec/changes/",
+    )
+    return any(normalized.startswith(prefix) for prefix in prefixes)
+
+
 @require(lambda paths: paths is not None)
 @ensure(lambda result: len(result) == len(set(result)))
-@ensure(lambda result: all(Path(path).suffix.lower() in PYTHON_SUFFIXES for path in result))
-def filter_review_files(paths: Sequence[str]) -> list[str]:
-    """Return only staged Python source files relevant to code review."""
+def filter_review_gate_paths(paths: Sequence[str]) -> list[str]:
+    """Return staged paths under contract- and tooling-heavy trees for the review gate."""
     seen: set[str] = set()
     filtered: list[str] = []
     for path in paths:
-        if Path(path).suffix.lower() not in PYTHON_SUFFIXES:
+        if not _is_review_gate_path(path):
             continue
         if path in seen:
             continue
@@ -250,9 +263,12 @@ def ensure_runtime_available() -> tuple[bool, str | None]:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the code review gate; write JSON under ``.specfact/`` and return CLI exit code."""
     apply_specfact_workspace_env(REPO_ROOT)
-    files = filter_review_files(list(argv or []))
+    files = filter_review_gate_paths(list(argv or []))
     if len(files) == 0:
-        sys.stdout.write("No staged Python files to review; skipping code review gate.\n")
+        sys.stdout.write(
+            "No staged review-relevant files under packages/, registry/, scripts/, tools/, tests/, "
+            "or openspec/changes/; skipping code review gate.\n"
+        )
         return 0
 
     available, guidance = ensure_runtime_available()

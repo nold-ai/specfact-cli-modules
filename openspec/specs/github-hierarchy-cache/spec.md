@@ -1,8 +1,11 @@
 # github-hierarchy-cache Specification
 
 ## Purpose
-TBD - created by archiving change governance-03-github-hierarchy-cache. Update Purpose after archive.
+
+This capability standardizes a **repo-local, deterministic GitHub Epic/Feature hierarchy cache** for SpecFact modules and paired `specfact-cli` workflows. It defines how contributors sync hierarchy metadata from GitHub into ignored `.specfact/backlog/` files, how fingerprints detect unchanged trees, and how governance (for example `AGENTS.md` and `docs/agent-rules/`) MUST consult that cache before manual GitHub parent lookups. It builds on the archived OpenSpec change **`governance-03-github-hierarchy-cache`**; shipped behavior and drift against `openspec/**/*.md` remain governed by `openspec/CHANGE_ORDER.md` and the modules release checklist.
+
 ## Requirements
+
 ### Requirement: Repository hierarchy cache sync
 
 The repository SHALL provide a deterministic sync mechanism that retrieves GitHub Epic and Feature issues for the current repository and writes a local hierarchy cache under ignored `.specfact/backlog/`.
@@ -30,4 +33,3 @@ Repository governance instructions SHALL direct contributors and agents to consu
 - **THEN** the instructions tell them to consult the local hierarchy cache first
 - **AND** the instructions define when the sync script must be rerun to refresh stale hierarchy metadata
 - **AND** the instructions state that the cache is local ephemeral state and must not be committed
-

@@ -75,6 +75,36 @@ def _make_issue(
     )
 
 
+def test_compute_hierarchy_fingerprint_ignores_updated_at_but_reflects_rendered_fields() -> None:
+    """Fingerprint should match cache markdown inputs, not GitHub activity timestamps."""
+    module = _load_script_module()
+
+    base = _make_issue(
+        module,
+        number=485,
+        title="[Epic] Governance",
+        issue_type="Epic",
+        options={"labels": ["Epic"], "summary": "Same summary.", "updated_at": "2026-04-09T08:00:00Z"},
+    )
+    moved_time = _make_issue(
+        module,
+        number=485,
+        title="[Epic] Governance",
+        issue_type="Epic",
+        options={"labels": ["Epic"], "summary": "Same summary.", "updated_at": "2026-04-10T12:00:00Z"},
+    )
+    assert module.compute_hierarchy_fingerprint([base]) == module.compute_hierarchy_fingerprint([moved_time])
+
+    different_summary = _make_issue(
+        module,
+        number=485,
+        title="[Epic] Governance",
+        issue_type="Epic",
+        options={"labels": ["Epic"], "summary": "Changed summary.", "updated_at": "2026-04-09T08:00:00Z"},
+    )
+    assert module.compute_hierarchy_fingerprint([base]) != module.compute_hierarchy_fingerprint([different_summary])
+
+
 def test_compute_hierarchy_fingerprint_is_order_independent() -> None:
     """Fingerprinting should stay stable regardless of input ordering."""
     module = _load_script_module()
@@ -465,13 +495,14 @@ def test_default_repo_name_falls_back_when_git_unavailable(monkeypatch: pytest.M
         raise FileNotFoundError("git not found")
 
     monkeypatch.setattr(subprocess, "run", _no_git)
-    module = _load_script_module()
-    script_path = Path(__file__).resolve().parents[3] / "scripts" / "sync_github_hierarchy_cache.py"
-    expected_fallback = script_path.resolve().parents[1].name
-    assert expected_fallback == module.DEFAULT_REPO_NAME
-
-    _load_script_module.cache_clear()
-    sys.modules.pop("sync_github_hierarchy_cache", None)
+    try:
+        module = _load_script_module()
+        script_path = Path(__file__).resolve().parents[3] / "scripts" / "sync_github_hierarchy_cache.py"
+        expected_fallback = script_path.resolve().parents[1].name
+        assert expected_fallback == module.DEFAULT_REPO_NAME
+    finally:
+        _load_script_module.cache_clear()
+        sys.modules.pop("sync_github_hierarchy_cache", None)
 
 
 def test_main_reports_runtime_error_to_stderr_and_returns_one(
