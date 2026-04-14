@@ -13,7 +13,8 @@ manifests back to the PR branch.
 - **WHEN** a pull request targeting `dev` is approved by a reviewer
 - **AND** the PR contains changes to one or more files under `packages/`
 - **THEN** the CI signing workflow SHALL discover all `packages/*/module-package.yaml` manifests
-  whose payload changed relative to `origin/dev`
+  whose payload changed on the PR branch since the merge-base with `origin/dev` (not merely
+  divergent from the moving `origin/dev` tip)
 - **AND** SHALL sign them using `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and
   `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
 - **AND** SHALL commit the updated manifests back to the PR branch
@@ -22,7 +23,8 @@ manifests back to the PR branch.
 
 - **WHEN** a pull request targeting `main` is approved
 - **AND** the PR contains changes to one or more files under `packages/`
-- **THEN** the CI signing workflow SHALL sign all changed manifests relative to `origin/main`
+- **THEN** the CI signing workflow SHALL sign all changed manifests relative to the merge-base
+  between the PR head and `origin/main`
 - **AND** SHALL commit the signed manifests back to the PR branch before merge
 
 #### Scenario: PR approved with no package changes
@@ -37,6 +39,13 @@ manifests back to the PR branch.
 - **AND** `SPECFACT_MODULE_PRIVATE_SIGN_KEY` is empty or unset
 - **THEN** the workflow SHALL fail with a clear error naming the missing secret
 - **AND** SHALL NOT commit partial changes
+
+#### Scenario: Fork PR is out of scope for automated signing
+
+- **WHEN** a pull request targets `dev` or `main` but the head branch lives in a fork
+  (`head.repo` differs from the base repository)
+- **THEN** the signing workflow SHALL NOT run (the default `GITHUB_TOKEN` cannot push to the
+  contributor fork; maintainers sign or merge via same-repo branches instead)
 
 ### Requirement: Manifest discovery covers packages directory
 

@@ -34,3 +34,20 @@ for pull requests or pushes targeting `dev`; it SHALL enforce `--require-signatu
 - **WHEN** a commit is pushed to `main` (post-merge)
 - **THEN** the `verify-module-signatures` job SHALL run with `--require-signature`
 - **AND** fail if any `packages/*/module-package.yaml` lacks a valid signature
+
+### Requirement: pre-commit verify mirrors pr-orchestrator signature policy
+
+The repository pre-commit hook that runs `verify-modules-signature.py` SHALL apply the same branch rule as the `verify-module-signatures` CI job: omit `--require-signature` unless the integration target is `main` (local branch `main`, or `GITHUB_BASE_REF=main` on pull request events in Actions).
+
+#### Scenario: Commit on a feature branch without a signing key
+
+- **WHEN** a developer commits on a branch other than `main`
+- **AND** manifests satisfy checksum and version-bump policy but lack a valid signature
+- **THEN** the pre-commit signature hook SHALL pass (no `--require-signature`)
+- **AND** the developer SHALL remain unblocked until a `main`-targeting flow enforces signatures in CI
+
+#### Scenario: Commit on main requires signatures
+
+- **WHEN** a developer commits on branch `main`
+- **AND** any `packages/*/module-package.yaml` lacks a valid signature under `--require-signature`
+- **THEN** the pre-commit signature hook SHALL fail
