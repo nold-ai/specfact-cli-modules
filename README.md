@@ -50,7 +50,7 @@ hatch run specfact code review run --json --out .specfact/code-review.json
 
 **Module signatures:** `pr-orchestrator` enforces `--require-signature` only for events targeting **`main`**; for **`dev`** (and feature branches) CI checks checksums and version bumps without requiring a cryptographic signature yet. Add `--require-signature` to the `verify-modules-signature` command when you want the same bar as **`main`** (for example before merging to `main`). Pre-commit runs `scripts/pre-commit-verify-modules-signature.sh`, which mirrors that policy (signatures required on branch `main`, or when `GITHUB_BASE_REF=main` in Actions).
 
-**CI signing:** Approved PRs to `dev` or `main` from **this repository** (not forks) run `.github/workflows/sign-modules-on-approval.yml`, which can commit signed manifests using repository secrets. See [Module signing](/authoring/module-signing/).
+**CI signing:** Approved PRs to `dev` or `main` from **this repository** (not forks) run `.github/workflows/sign-modules-on-approval.yml`, which can commit signed manifests using repository secrets. See [Module signing](./docs/authoring/module-signing.md).
 
 To mirror CI locally with git hooks, enable pre-commit:
 

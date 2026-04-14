@@ -82,7 +82,7 @@ Repository workflow `.github/workflows/publish-modules.yml`:
 
 - Bump module `version` in `module-package.yaml` whenever payload or manifest content changes; keep versions immutable for published artifacts.
 - Use `namespace/name` for any module you publish to a registry.
-- Before releasing from **`main`**, run `scripts/verify-modules-signature.py --require-signature --payload-from-filesystem` (or your registry’s policy). On **`dev`**, CI may accept checksum-only manifests until promotion; align with your registry’s requirements.
+- Before releasing from **`main`**, run `scripts/verify-modules-signature.py --require-signature --enforce-version-bump --payload-from-filesystem` (or your registry’s policy). On **`dev`**, only signature strictness differs: CI may accept checksum-only manifests (omit `--require-signature`), but when signed module assets or manifests are in play you should still run `scripts/verify-modules-signature.py --enforce-version-bump --payload-from-filesystem` so version bumps stay enforced; add `--require-signature` when you want the same bar as **`main`** before promotion.
 - Prefer `--download-base-url` and `--index-fragment` when integrating with a custom registry index.
 
 ## See also
