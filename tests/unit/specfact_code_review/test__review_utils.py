@@ -16,13 +16,15 @@ def test_normalize_path_variants_includes_relative_and_resolved_paths(tmp_path: 
     assert file_path.resolve().as_posix() in variants
 
 
-def test_python_source_paths_for_tools_keeps_only_py_suffix(tmp_path: Path) -> None:
+def test_python_source_paths_for_tools_keeps_py_and_pyi_suffixes(tmp_path: Path) -> None:
     py_file = tmp_path / "a.py"
+    pyi_file = tmp_path / "b.pyi"
     yaml_file = tmp_path / "module-package.yaml"
     py_file.write_text("x = 1\n", encoding="utf-8")
+    pyi_file.write_text("def f() -> None: ...\n", encoding="utf-8")
     yaml_file.write_text("name: t\n", encoding="utf-8")
 
-    assert python_source_paths_for_tools([py_file, yaml_file]) == [py_file]
+    assert python_source_paths_for_tools([py_file, pyi_file, yaml_file]) == [py_file, pyi_file]
 
 
 def test_tool_error_returns_review_finding_defaults(tmp_path: Path) -> None:

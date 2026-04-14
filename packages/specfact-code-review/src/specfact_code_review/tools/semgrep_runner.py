@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -407,17 +408,20 @@ def _append_semgrep_bug_finding(
     "result must contain ReviewFinding instances",
 )
 def run_semgrep_bugs(files: list[Path], *, bundle_root: Path | None = None) -> list[ReviewFinding]:
-    """Second Semgrep pass using ``.semgrep/bugs.yaml`` when present; no-op if config is absent."""
+    """Second Semgrep pass using ``.semgrep/bugs.yaml`` when present; no-op if config is absent.
+
+    When ``semgrep`` is not on PATH, returns no findings: ``run_semgrep`` (first pass) already emits
+    the single skip finding for the missing tool.
+    """
     if not files:
+        return []
+
+    if shutil.which("semgrep") is None:
         return []
 
     config_path = find_semgrep_bugs_config(bundle_root=bundle_root)
     if config_path is None:
         return []
-
-    skipped = skip_if_tool_missing("semgrep", files[0])
-    if skipped:
-        return skipped
 
     try:
         raw_results = _load_semgrep_results(files, bundle_root=bundle_root, config_file=config_path)
