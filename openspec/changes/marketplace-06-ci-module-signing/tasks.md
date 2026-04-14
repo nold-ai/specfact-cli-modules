@@ -61,8 +61,9 @@
 
 ## 6. PR and cleanup
 
-- [ ] 6.1 Push the branch and open a PR targeting `dev`; verify CI passes (dev PRs no longer
-  require `--require-signature`).
-- [ ] 6.2 Link the PR to the GitHub issue created in 1.2 and to the paired specfact-cli PR.
+- [x] 6.1 Push the branch and open a PR targeting `dev`; verify CI passes (dev PRs no longer
+  require `--require-signature`). PR: [specfact-cli-modules#188](https://github.com/nold-ai/specfact-cli-modules/pull/188).
+- [x] 6.2 Link the PR to the GitHub issue created in 1.2 and to the paired specfact-cli PR.
+  *(Closes #185 in PR body; link specfact-cli PR manually when it exists.)*
 - [ ] 6.3 After merge: remove the worktree, delete the local branch, run `git worktree prune`.
 - [ ] 6.4 Record cleanup completion in `TDD_EVIDENCE.md`.

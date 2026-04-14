@@ -39,6 +39,10 @@ hatch run specfact code review run --json --out .specfact/code-review.json --inc
 `scripts/pre_commit_code_review.py` now skips `openspec/changes/**/*.md` (including `tasks.md`) so
 the SpecFact review gate does not parse Markdown task lists as Python (false positives).
 
-## PR / cleanup (post-merge, human)
+## PR
 
-Tasks 6.1–6.4 (push PR, link issues, worktree cleanup after merge): not executed in this session.
+- Opened: [specfact-cli-modules#188](https://github.com/nold-ai/specfact-cli-modules/pull/188) (target `dev`).
+
+## Cleanup (post-merge, human)
+
+Tasks 6.3–6.4 (remove worktree / branch after merge, record cleanup): pending merge.
