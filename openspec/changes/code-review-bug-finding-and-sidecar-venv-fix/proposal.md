@@ -40,3 +40,12 @@ External repo validation (crewAI, gpt-researcher, and 8 OSS baseline repos) reve
 - `packages/specfact-code-review/.semgrep/bugs.yaml` — new file
 - `packages/specfact-codebase/` — sidecar framework extractors: exclude `.specfact/` from scan paths
 - Versioning: patch bump `specfact-codebase` for the sidecar fix; patch or minor bump `specfact-code-review` when behaviour and manifest changes ship (tooling + CLI surface)
+
+## Source Tracking
+
+- **GitHub Issue**: [#174](https://github.com/nold-ai/specfact-cli-modules/issues/174)
+- **Repository**: nold-ai/specfact-cli-modules
+- **Parent Feature**: [#175](https://github.com/nold-ai/specfact-cli-modules/issues/175) — Code review external repo quality and bug finding
+- **Epic**: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162)
+- **OpenSpec change folder**: `code-review-bug-finding-and-sidecar-venv-fix`
+- **Change order**: `openspec/CHANGE_ORDER.md` — Pending → “Code review and sidecar validation improvements”
