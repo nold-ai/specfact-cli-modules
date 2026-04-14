@@ -1,3 +1,5 @@
+# Tasks: marketplace-06-ci-module-signing
+
 ## 1. Branch, coordination, and issue sync
 
 - [x] 1.1 Create `feature/marketplace-06-ci-module-signing` in a dedicated worktree from `origin/dev`;

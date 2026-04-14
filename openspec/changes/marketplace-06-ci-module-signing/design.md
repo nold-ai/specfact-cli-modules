@@ -39,31 +39,36 @@ are already configured via `publish-modules.yml`.
 
 ## Decisions
 
-### Decision 1: Reuse `scripts/sign-modules.py` with `--changed-only` and packages root
+### Decision 1: Reuse `scripts/sign-modules.py` with `--changed-only` and merge-base
 
-**Chosen**: Run `sign-modules.py --changed-only --base-ref "origin/<base>" --bump-version patch
---payload-from-filesystem` from the repo root. The script's `_iter_manifests()` discovers
-manifests under `src/specfact_cli/modules/` and `modules/`; for this repo those directories are
-absent, so `--changed-only` must be combined with explicit manifest discovery or the script
-patched to also check `packages/`.
+**Chosen**: In CI, `git fetch origin <base>`, compute `MERGE_BASE="$(git merge-base HEAD "origin/<base>")"`,
+then run `sign-modules.py --changed-only --base-ref "$MERGE_BASE" --bump-version patch
+--payload-from-filesystem` with **no explicit manifest arguments** so the script selects changed
+modules itself. `_iter_manifests()` discovers `packages/*/module-package.yaml` (this repo layout).
 
-**Approach**: Pass manifests explicitly by discovering them in the workflow step:
+**Approach** (workflow sign step):
+
 ```bash
-mapfile -t MANIFESTS < <(find packages -name 'module-package.yaml' -type f | sort)
-python scripts/sign-modules.py "${MANIFESTS[@]}"
+git fetch origin "${PR_BASE_REF}" --no-tags
+MERGE_BASE="$(git merge-base HEAD "origin/${PR_BASE_REF}")"
+python scripts/sign-modules.py \
+  --changed-only \
+  --base-ref "$MERGE_BASE" \
+  --bump-version patch \
+  --payload-from-filesystem
 ```
-Use `--allow-same-version` is NOT used; `--bump-version patch` auto-bumps version when unchanged
-from base ref (same policy as specfact-cli).
 
-**Alternative**: Patch `sign-modules.py` `_iter_manifests()` to also scan `packages/`. Rejected
-for this change — keeping the script unchanged reduces diff surface; the explicit discovery in the
-workflow is transparent.
+`--allow-same-version` is not used; `--bump-version patch` auto-bumps when the version is unchanged
+from the comparison ref (same policy as specfact-cli).
+
+A separate workflow step may still **count** manifests under `packages/` for job summary only; it
+does not feed paths into `sign-modules.py`.
 
 ### Decision 2: Same trigger as specfact-cli (`pull_request_review`, approved)
 
 All design decisions from `specfact-cli/marketplace-06-ci-module-signing` Design § Decisions 1–5
-apply identically. See that document for rationale. The key difference is the manifest discovery
-path (`packages/` vs `src/specfact_cli/modules/` + `modules/`).
+apply identically. See that document for rationale. This repo’s `sign-modules.py` discovers manifests
+under `packages/`; merge-base scoping for `--changed-only` matches PR-local changes.
 
 ### Decision 3: pr-orchestrator split mirrors specfact-cli exactly
 

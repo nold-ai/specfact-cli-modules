@@ -51,10 +51,9 @@ REVIEW_JSON_OUT = ".specfact/code-review.json"
 def _is_review_gate_path(path: str) -> bool:
     """Return whether a repo-relative path should participate in the pre-commit review gate."""
     normalized = path.replace("\\", "/").strip()
-    if not normalized or normalized.endswith(("/TDD_EVIDENCE.md", "TDD_EVIDENCE.md")):
+    if not normalized:
         return False
-    # OpenSpec change docs are Markdown; the review CLI treats them as Python and emits noise.
-    if normalized.startswith("openspec/changes/") and normalized.lower().endswith(".md"):
+    if normalized.startswith("openspec/changes/") and Path(normalized).name.casefold() == "tdd_evidence.md":
         return False
     prefixes = (
         "packages/",
@@ -81,6 +80,17 @@ def filter_review_gate_paths(paths: Sequence[str]) -> list[str]:
         seen.add(path)
         filtered.append(path)
     return filtered
+
+
+def _specfact_review_paths(paths: Sequence[str]) -> list[str]:
+    """Paths to pass to SpecFact ``code review run`` (it treats inputs as Python; skip OpenSpec Markdown)."""
+    result: list[str] = []
+    for raw in paths:
+        normalized = raw.replace("\\", "/").strip()
+        if normalized.startswith("openspec/changes/") and normalized.lower().endswith(".md"):
+            continue
+        result.append(raw)
+    return result
 
 
 @require(lambda files: files is not None)
@@ -274,15 +284,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         return 0
 
+    specfact_files = _specfact_review_paths(files)
+    if len(specfact_files) == 0:
+        sys.stdout.write(
+            "Staged review paths are only OpenSpec Markdown under openspec/changes/; "
+            "skipping SpecFact code review (those files are not Python review targets).\n"
+        )
+        return 0
+
     available, guidance = ensure_runtime_available()
     if available is False:
         sys.stdout.write(f"Unable to run the code review gate. {guidance}\n")
         return 1
 
     repo_root = _repo_root()
-    cmd = build_review_command(files)
+    cmd = build_review_command(specfact_files)
     report_path = _prepare_report_path(repo_root)
-    result = _run_review_subprocess(cmd, repo_root, files)
+    result = _run_review_subprocess(cmd, repo_root, specfact_files)
     if result is None:
         return 1
     if not report_path.is_file():

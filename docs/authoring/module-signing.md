@@ -135,7 +135,7 @@ python scripts/verify-modules-signature.py --require-signature --payload-from-fi
 
 ### Signing on approval (same-repo PRs)
 
-Workflow **`sign-modules-on-approval.yml`** runs when a review is **submitted** and **approved** on a PR whose base is **`dev`** or **`main`**, and only when the PR head is in **this** repository (`head.repo` equals the base repo). It uses `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`, discovers changes against the **merge-base** with the base branch (not the moving base tip alone), runs `scripts/sign-modules.py --changed-only --bump-version patch --payload-from-filesystem`, and commits results with `[skip ci]`. **Fork PRs** are skipped (the default `GITHUB_TOKEN` cannot push to a contributor fork).
+Workflow **`sign-modules-on-approval.yml`** runs when a review is **submitted** and **approved** on a PR whose base is **`dev`** or **`main`**, and only when the PR head is in **this** repository (`head.repo` equals the base repo). It checks out **`github.event.pull_request.head.sha`** (the commit that was approved, not the moving branch tip), uses `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE` (each validated with a named error if missing), discovers changes against the **merge-base** with the base branch (not the moving base tip alone), runs `scripts/sign-modules.py --changed-only --bump-version patch --payload-from-filesystem`, and commits results with `[skip ci]`. If `git push` is rejected because the PR branch advanced after approval, the job fails with guidance to update the branch and re-approve. **Fork PRs** are skipped (the default `GITHUB_TOKEN` cannot push to a contributor fork).
 
 ### Pre-commit
 

@@ -36,8 +36,8 @@ manifests back to the PR branch.
 #### Scenario: Missing signing secret
 
 - **WHEN** the signing workflow triggers on approval
-- **AND** `SPECFACT_MODULE_PRIVATE_SIGN_KEY` is empty or unset
-- **THEN** the workflow SHALL fail with a clear error naming the missing secret
+- **AND** `SPECFACT_MODULE_PRIVATE_SIGN_KEY` is empty or unset, or `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE` is empty or unset
+- **THEN** the workflow SHALL fail before checkout/signing with a clear error naming which secret(s) are missing
 - **AND** SHALL NOT commit partial changes
 
 #### Scenario: Fork PR is out of scope for automated signing

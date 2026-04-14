@@ -34,6 +34,13 @@ SAMPLE_FAIL_REVIEW_REPORT: dict[str, object] = {
 }
 
 
+def test_specfact_review_paths_skips_openspec_markdown() -> None:
+    module = _load_script_module()
+    assert module._specfact_review_paths(
+        ["tests/test_app.py", "openspec/changes/foo/tasks.md", "openspec/changes/foo/proposal.md"]
+    ) == ["tests/test_app.py"]
+
+
 def test_filter_review_gate_paths_keeps_contract_relevant_trees() -> None:
     """Review gate should include staged paths under tooling and contract trees."""
     module = _load_script_module()
@@ -48,7 +55,11 @@ def test_filter_review_gate_paths_keeps_contract_relevant_trees() -> None:
             "openspec/changes/foo/TDD_EVIDENCE.md",
             "notes.txt",
         ]
-    ) == ["tests/test_app.py"]
+    ) == [
+        "tests/test_app.py",
+        "openspec/changes/foo/tasks.md",
+        "openspec/changes/foo/proposal.md",
+    ]
 
 
 def test_build_review_command_writes_json_report() -> None:
@@ -73,6 +84,17 @@ def test_main_skips_when_no_relevant_files(capsys: pytest.CaptureFixture[str]) -
     assert exit_code == 0
     out = capsys.readouterr().out
     assert "skipping code review gate" in out
+
+
+def test_main_skips_specfact_when_only_openspec_markdown(capsys: pytest.CaptureFixture[str]) -> None:
+    """OpenSpec Markdown is gate-relevant but must not be passed to SpecFact as Python paths."""
+    module = _load_script_module()
+
+    exit_code = module.main(["openspec/changes/foo/tasks.md", "openspec/changes/foo/proposal.md"])
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "skipping SpecFact code review" in out
 
 
 def test_main_propagates_review_gate_exit_code(

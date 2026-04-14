@@ -29,7 +29,7 @@ def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
 def test_sign_modules_on_approval_checkout_and_python() -> None:
     workflow = _workflow_text()
     assert "actions/checkout@v4" in workflow
-    assert "github.event.pull_request.head.ref" in workflow
+    assert "github.event.pull_request.head.sha" in workflow
     assert "PR_HEAD_REF:" in workflow
     assert "PR_BASE_REF:" in workflow
     assert 'python-version: "3.12"' in workflow or "python-version: '3.12'" in workflow
@@ -46,11 +46,20 @@ def test_sign_modules_on_approval_dependencies_and_discover() -> None:
     assert "id: discover" in workflow
 
 
-def test_sign_modules_on_approval_sign_and_secrets() -> None:
+def test_sign_modules_on_approval_secrets_guard() -> None:
     workflow = _workflow_text()
     assert "Guard signing secrets" in workflow
     assert '[ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY:-}" ]' in workflow
+    assert '[ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE:-}" ]' in workflow
+    assert "Missing secret: SPECFACT_MODULE_PRIVATE_SIGN_KEY" in workflow
+    assert "Missing secret: SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE" in workflow
     assert "exit 1" in workflow
+    assert "SPECFACT_MODULE_PRIVATE_SIGN_KEY" in workflow
+    assert "SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE" in workflow
+
+
+def test_sign_modules_on_approval_sign_step_merge_base() -> None:
+    workflow = _workflow_text()
     assert "MERGE_BASE=" in workflow
     assert "git merge-base HEAD" in workflow
     assert 'git fetch origin "${PR_BASE_REF}"' in workflow
@@ -61,14 +70,14 @@ def test_sign_modules_on_approval_sign_and_secrets() -> None:
     assert '"$MERGE_BASE"' in workflow
     assert "--bump-version patch" in workflow
     assert "--payload-from-filesystem" in workflow
-    assert "SPECFACT_MODULE_PRIVATE_SIGN_KEY" in workflow
-    assert "SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE" in workflow
 
 
 def test_sign_modules_on_approval_commit_push_and_summary() -> None:
     workflow = _workflow_text()
     assert "github-actions[bot]" in workflow
     assert "chore(modules): ci sign changed modules [skip ci]" in workflow
+    assert "git push origin" in workflow
+    assert "Push to ${PR_HEAD_REF} failed" in workflow
     assert "HEAD:${PR_HEAD_REF}" in workflow
     assert "GITHUB_STEP_SUMMARY" in workflow
     assert "COMMIT_CHANGED:" in workflow
