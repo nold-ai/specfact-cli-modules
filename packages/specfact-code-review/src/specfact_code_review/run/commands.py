@@ -71,7 +71,7 @@ def _filter_files_by_focus(files: list[Path], facets: tuple[str, ...]) -> list[P
         return files
 
     def _matches_focus(file_path: Path, facet: str) -> bool:
-        if file_path.suffix != ".py":
+        if file_path.suffix not in (".py", ".pyi"):
             return False
         if facet == "tests":
             return _is_test_file(file_path)
@@ -115,7 +115,7 @@ def _changed_files_from_git_diff(*, include_tests: bool) -> list[Path]:
     python_files = [
         file_path
         for file_path in [*tracked_files, *untracked_files]
-        if file_path.suffix == ".py" and file_path.is_file() and not _is_ignored_review_path(file_path)
+        if file_path.suffix in (".py", ".pyi") and file_path.is_file() and not _is_ignored_review_path(file_path)
     ]
     deduped_python_files = list(dict.fromkeys(python_files))
     if include_tests:
@@ -135,7 +135,7 @@ def _all_python_files_from_git() -> list[Path]:
     python_files = [
         file_path
         for file_path in [*tracked_files, *untracked_files]
-        if file_path.suffix == ".py" and file_path.is_file() and not _is_ignored_review_path(file_path)
+        if file_path.suffix in (".py", ".pyi") and file_path.is_file() and not _is_ignored_review_path(file_path)
     ]
     return list(dict.fromkeys(python_files))
 
@@ -472,7 +472,6 @@ def _build_review_run_request(
         raise ValueError("files must contain only Path instances")
 
     request_kwargs = dict(kwargs)
-    had_include_tests_key = "include_tests" in request_kwargs
 
     # Validate and extract known boolean flags with proper type checking
     def _get_bool_param(name: str, default: bool = False) -> bool:
@@ -509,7 +508,7 @@ def _build_review_run_request(
     out = cast(Path | None, out_value)
 
     focus_facets = cast(tuple[str, ...], _as_focus_facets(request_kwargs.pop("focus_facets", None)))
-    if focus_facets and had_include_tests_key:
+    if focus_facets and include_tests:
         raise ValueError("Cannot combine focus_facets with include_tests; use --focus alone to scope files.")
 
     request = ReviewRunRequest(
@@ -578,9 +577,10 @@ def run_command(
     )
     _validate_review_request(request)
 
+    include_for_resolve = request.include_tests or ("tests" in request.focus_facets)
     resolved_files = _resolve_files(
         request.files,
-        include_tests=request.include_tests,
+        include_tests=include_for_resolve,
         scope=request.scope,
         path_filters=request.path_filters or [],
     )

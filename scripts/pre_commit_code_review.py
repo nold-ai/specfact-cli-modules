@@ -207,25 +207,25 @@ def count_findings_by_severity(findings: list[object]) -> dict[str, int]:
     return buckets
 
 
-def _print_review_findings_summary(repo_root: Path) -> bool:
-    """Parse ``REVIEW_JSON_OUT`` and print a one-line findings count (errors / warnings / etc.)."""
+def _print_review_findings_summary(repo_root: Path) -> dict[str, int] | None:
+    """Parse ``REVIEW_JSON_OUT``, print a one-line findings count, and return severity buckets."""
     report_path = _report_path(repo_root)
     if not report_path.is_file():
         sys.stderr.write(f"Code review: no report file at {REVIEW_JSON_OUT} (could not print findings summary).\n")
-        return False
+        return None
     try:
         data = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as exc:
         sys.stderr.write(f"Code review: could not read {REVIEW_JSON_OUT}: {exc}\n")
-        return False
+        return None
     except json.JSONDecodeError as exc:
         sys.stderr.write(f"Code review: invalid JSON in {REVIEW_JSON_OUT}: {exc}\n")
-        return False
+        return None
 
     findings_raw = data.get("findings")
     if not isinstance(findings_raw, list):
         sys.stderr.write(f"Code review: report has no findings list in {REVIEW_JSON_OUT}.\n")
-        return False
+        return None
 
     counts = count_findings_by_severity(findings_raw)
     total = len(findings_raw)
@@ -249,7 +249,7 @@ def _print_review_findings_summary(repo_root: Path) -> bool:
         f"  Read `{REVIEW_JSON_OUT}` and fix every finding (errors first), using file and line from each entry.\n"
     )
     sys.stderr.write(f"  @workspace Open `{REVIEW_JSON_OUT}` and remediate each item in `findings`.\n")
-    return True
+    return counts
 
 
 @ensure(lambda result: isinstance(result, tuple) and len(result) == 2)
@@ -310,17 +310,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _missing_report_exit_code(report_path, result)
     # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners); full report
     # is in REVIEW_JSON_OUT; we print a short summary on stderr below.
-    if not _print_review_findings_summary(repo_root):
+    counts = _print_review_findings_summary(repo_root)
+    if counts is None:
         return 1
-    try:
-        data = json.loads(report_path.read_text(encoding="utf-8"))
-        findings_raw = data.get("findings")
-        if isinstance(findings_raw, list):
-            counts = count_findings_by_severity(findings_raw)
-            if counts["error"] == 0:
-                return 0
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        pass
+    if counts["error"] == 0:
+        return 0
     return result.returncode
 
 

@@ -23,7 +23,7 @@
 - For KISS/radon changes in the editable module to be exercised, link the dev module before CLI review:
   - `hatch run python scripts/link_dev_module.py specfact-code-review --force`
 - Full-repo JSON report: `hatch run specfact code review run --json --out .specfact/code-review.json`
-  - After dev link: **0 error-severity** findings; remaining items are **warnings** (historical KISS/complexity across the repo). Process exit code may remain non-zero when warnings drive verdict policy.
+  - After dev link: **0 error-severity** findings; remaining items are **warnings** (historical KISS/complexity across the repo). The pre-commit / quality gate exit policy is **error-severity only**: **warnings do not block**—only **error**-severity findings affect the CI exit code.
 - Scoped check on primary touched sources (Typer `run`, `radon_runner`, `run/commands`, FastAPI/Flask extractors): `PASS_WITH_ADVISORY`, **`ci_exit_code` 0**, report at `.specfact/code-review-touch.json`.
 
 ## Registry

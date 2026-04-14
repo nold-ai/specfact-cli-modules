@@ -35,6 +35,11 @@ REVIEW_TOOL_PIP_PACKAGES: dict[ReviewToolId, str] = {
     "pytest": "pytest",
 }
 
+# Pytest is listed in REVIEW_TOOL_PIP_PACKAGES for documentation parity with module-package.yaml, but it is
+# intentionally omitted here: skip_if_tool_missing() only consults _EXECUTABLE_ON_PATH and would treat a
+# stray `pytest` script on PATH as “tool present” even when the review interpreter cannot import pytest.
+# TDD coverage instead uses skip_if_pytest_unavailable(), which probes importlib.util.find_spec("pytest")
+# and importlib.util.find_spec("pytest_cov") for the active Python environment.
 _EXECUTABLE_ON_PATH: dict[ReviewToolId, str] = {
     "ruff": "ruff",
     "radon": "radon",

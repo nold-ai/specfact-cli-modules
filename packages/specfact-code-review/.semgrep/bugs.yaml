@@ -29,9 +29,13 @@ rules:
 
   - id: specfact-bugs-yaml-unsafe
     languages: [python]
-    message: yaml.load without Loader= can execute arbitrary objects; use yaml.safe_load.
+    message: >
+      yaml.load(...) without an explicit Loader= uses unsafe defaults; use yaml.safe_load() or pass
+      Loader= explicitly (e.g. SafeLoader/FullLoader).
     severity: WARNING
-    pattern: yaml.load(...)
+    patterns:
+      - pattern: yaml.load(...)
+      - pattern-not-regex: yaml\.load\([^)]*Loader\s*=
     metadata:
       specfact-category: security
 

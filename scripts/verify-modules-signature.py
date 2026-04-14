@@ -391,6 +391,27 @@ def verify_manifest(
 
 
 @beartype
+@require(lambda manifest_path: manifest_path.exists(), "manifest_path must exist")
+def verify_manifest_metadata_only(manifest_path: Path, *, require_signature: bool) -> None:
+    """Validate manifest shape only; no payload digest or cryptographic verification."""
+    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("manifest YAML must be object")
+    integrity = raw.get("integrity")
+    if not isinstance(integrity, dict):
+        raise ValueError("missing integrity metadata")
+    checksum = str(integrity.get("checksum", "")).strip()
+    if not checksum:
+        raise ValueError("missing integrity.checksum")
+    _parse_checksum(checksum)
+    signature = str(integrity.get("signature", "")).strip()
+    if require_signature and not signature:
+        raise ValueError("missing integrity.signature")
+    if signature and len(signature) < 32:
+        raise ValueError("integrity.signature is present but implausibly short")
+
+
+@beartype
 @ensure(lambda result: result in {0, 1}, "main must return a process exit code")
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -422,9 +443,19 @@ def main() -> int:
             "--payload-from-filesystem."
         ),
     )
+    parser.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help=(
+            "Only validate module-package.yaml structure (integrity.checksum format; "
+            "integrity.signature required when --require-signature). Skips payload digest and "
+            "cryptographic checks so developers are not forced to re-sign locally; CI must run "
+            "the full verifier without this flag."
+        ),
+    )
     args = parser.parse_args()
 
-    public_key_pem = _resolve_public_key(args)
+    public_key_pem = "" if args.metadata_only else _resolve_public_key(args)
     manifests = _iter_manifests()
     if not manifests:
         _emit_line("No module-package.yaml manifests found.")
@@ -433,18 +464,25 @@ def main() -> int:
     failures: list[str] = []
     for manifest in manifests:
         try:
-            verification_mode = verify_manifest(
-                manifest,
-                require_signature=args.require_signature,
-                public_key_pem=public_key_pem,
-                payload_from_filesystem=args.payload_from_filesystem,
-            )
-            suffix = (
-                " (filesystem payload)"
-                if verification_mode == "filesystem" and not args.payload_from_filesystem
-                else ""
-            )
-            _emit_line(f"OK  {manifest}{suffix}")
+            if args.metadata_only:
+                verify_manifest_metadata_only(
+                    manifest,
+                    require_signature=args.require_signature,
+                )
+                _emit_line(f"OK  {manifest} (metadata-only)")
+            else:
+                verification_mode = verify_manifest(
+                    manifest,
+                    require_signature=args.require_signature,
+                    public_key_pem=public_key_pem,
+                    payload_from_filesystem=args.payload_from_filesystem,
+                )
+                suffix = (
+                    " (filesystem payload)"
+                    if verification_mode == "filesystem" and not args.payload_from_filesystem
+                    else ""
+                )
+                _emit_line(f"OK  {manifest}{suffix}")
         except ValueError as exc:
             failures.append(f"FAIL {manifest}: {exc}")
 

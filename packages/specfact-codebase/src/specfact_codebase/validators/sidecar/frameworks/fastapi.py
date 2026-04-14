@@ -17,6 +17,9 @@ from icontract import ensure, require
 from specfact_codebase.validators.sidecar.frameworks.base import BaseFrameworkExtractor, RouteInfo
 
 
+_FASTAPI_HTTP_VERBS: frozenset[str] = frozenset({"get", "post", "put", "delete", "patch", "head", "options"})
+
+
 class FastAPIExtractor(BaseFrameworkExtractor):
     """FastAPI framework extractor."""
 
@@ -144,26 +147,68 @@ class FastAPIExtractor(BaseFrameworkExtractor):
         return imports
 
     @beartype
+    def _route_path_from_decorator_call(self, call: ast.Call) -> str | None:
+        if call.args:
+            lit = self._extract_string_literal(call.args[0])
+            if lit:
+                return lit
+        for keyword in call.keywords:
+            if keyword.arg in ("path", "route") and keyword.value is not None:
+                lit = self._extract_string_literal(keyword.value)
+                if lit:
+                    return lit
+        return None
+
+    @beartype
+    def _http_methods_from_api_route_keywords(self, call: ast.Call) -> list[str]:
+        for keyword in call.keywords:
+            if keyword.arg != "methods" or keyword.value is None:
+                continue
+            node = keyword.value
+            if not isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+                return []
+            methods: list[str] = []
+            for element in node.elts:
+                raw = self._extract_string_literal(element)
+                if raw is None:
+                    continue
+                lowered = raw.lower()
+                if lowered in _FASTAPI_HTTP_VERBS:
+                    methods.append(lowered.upper())
+            return methods
+        return []
+
+    @beartype
+    def _decorator_route_name(self, decorator: ast.expr) -> str | None:
+        if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute):
+            return decorator.func.attr.lower()
+        if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name):
+            return decorator.func.id.lower()
+        return None
+
+    @beartype
     def _path_method_from_route_decorator(self, decorator: ast.expr, path: str, method: str) -> tuple[str, str]:
         if not isinstance(decorator, ast.Call):
             return path, method
-        func = decorator.func
-        if isinstance(func, ast.Attribute):
-            next_method = func.attr.upper()
-            next_path = path
-            if decorator.args:
-                lit = self._extract_string_literal(decorator.args[0])
-                if lit:
-                    next_path = lit
-            return next_path, next_method
-        if isinstance(func, ast.Name):
-            next_method = func.id.upper()
-            next_path = path
-            if decorator.args:
-                lit = self._extract_string_literal(decorator.args[0])
-                if lit:
-                    next_path = lit
-            return next_path, next_method
+        name = self._decorator_route_name(decorator)
+        if name is None:
+            return path, method
+
+        if name == "api_route":
+            extracted_path = self._route_path_from_decorator_call(decorator)
+            if extracted_path is not None:
+                path = extracted_path
+            methods = self._http_methods_from_api_route_keywords(decorator)
+            if methods:
+                method = methods[0]
+            return path, method
+
+        if name in _FASTAPI_HTTP_VERBS:
+            extracted_path = self._route_path_from_decorator_call(decorator)
+            if extracted_path is not None:
+                path = extracted_path
+            return path, name.upper()
+
         return path, method
 
     @beartype

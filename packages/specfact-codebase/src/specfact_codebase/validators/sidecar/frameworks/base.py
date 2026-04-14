@@ -33,12 +33,14 @@ class RouteInfo(BaseModel):
 class BaseFrameworkExtractor(ABC):
     """Abstract base class for framework-specific route and schema extractors."""
 
-    _EXCLUDED_DIR_NAMES: frozenset[str] = frozenset({".specfact", ".git", "__pycache__", "node_modules"})
+    _EXCLUDED_DIR_NAMES: frozenset[str] = frozenset(
+        {".specfact", ".git", "__pycache__", "node_modules", "venv", ".venv"}
+    )
 
     @beartype
     @staticmethod
     def _path_touches_excluded_dir(path: Path) -> bool:
-        """True when any path component is a directory we must not scan (venv, VCS, caches)."""
+        """True when any path component is an excluded dir (.specfact, venvs, VCS, caches, node_modules)."""
         return any(part in BaseFrameworkExtractor._EXCLUDED_DIR_NAMES for part in path.parts)
 
     @beartype
