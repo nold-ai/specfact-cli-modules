@@ -55,3 +55,77 @@ scenarios:
       exit_code: 2
       stderr_contains:
         - choose positional files or auto-scope controls
+  - name: mode-shadow-dirty-exit-zero
+    type: pattern
+    argv:
+      - --json
+      - --mode
+      - shadow
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - review-report.json
+  - name: mode-enforce-dirty-exit-nonzero
+    type: pattern
+    argv:
+      - --json
+      - --mode
+      - enforce
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 1
+      stdout_contains:
+        - review-report.json
+  - name: focus-source-and-docs-union
+    type: pattern
+    argv:
+      - --scope
+      - full
+      - --path
+      - packages/specfact-code-review
+      - --json
+      - --focus
+      - source
+      - --focus
+      - docs
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - '"run_id":'
+  - name: focus-tests-narrows-to-test-tree
+    type: pattern
+    argv:
+      - --scope
+      - full
+      - --path
+      - packages/specfact-code-review
+      - --json
+      - --focus
+      - tests
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - '"run_id":'
+  - name: level-error-json-clean-module
+    type: pattern
+    argv:
+      - --json
+      - --level
+      - error
+      - tests/fixtures/review/clean_module.py
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - review-report.json
+  - name: focus-cannot-combine-with-include-tests
+    type: anti-pattern
+    argv:
+      - tests/fixtures/review/clean_module.py
+      - --focus
+      - source
+      - --include-tests
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - Cannot combine --focus with --include-tests or --exclude-tests

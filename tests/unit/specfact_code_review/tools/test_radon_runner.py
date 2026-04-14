@@ -11,6 +11,17 @@ from specfact_code_review.tools.radon_runner import run_radon
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
 
+def test_run_radon_returns_empty_when_only_non_python_paths(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    manifest = tmp_path / "module-package.yaml"
+    manifest.write_text("name: example\n", encoding="utf-8")
+    run_mock = Mock()
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    assert not run_radon([manifest])
+
+    run_mock.assert_not_called()
+
+
 def test_run_radon_maps_complexity_thresholds_and_filters_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     other_path = tmp_path / "other.py"

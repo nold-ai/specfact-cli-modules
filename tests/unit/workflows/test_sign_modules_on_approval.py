@@ -52,14 +52,28 @@ def _assert_pull_request_review_submitted(doc: dict[Any, Any]) -> None:
     assert pr_review["types"] == ["submitted"]
 
 
-def _assert_sign_job_branch_filters(doc: dict[Any, Any]) -> None:
+def _assert_sign_job_has_no_top_level_if(doc: dict[Any, Any]) -> None:
     job = _sign_modules_job(doc)
-    job_if = job["if"]
-    assert isinstance(job_if, str)
-    assert "github.event.review.state == 'approved'" in job_if
-    assert "github.event.pull_request.base.ref == 'dev'" in job_if
-    assert "github.event.pull_request.base.ref == 'main'" in job_if
-    assert "github.event.pull_request.head.repo.full_name == github.repository" in job_if
+    assert "if" not in job, "Job-level `if` prevents a stable required check; gating belongs in steps"
+
+
+def _assert_eligibility_gate_step(doc: dict[Any, Any]) -> None:
+    job = _sign_modules_job(doc)
+    steps = job["steps"]
+    assert isinstance(steps, list)
+    gate = steps[0]
+    assert isinstance(gate, dict)
+    assert gate.get("name") == "Eligibility gate (required status check)"
+    assert gate.get("id") == "gate"
+    run = gate["run"]
+    assert isinstance(run, str)
+    assert "github.event.review.state" in run
+    assert "approved" in run
+    assert 'echo "sign=false"' in run
+    assert 'echo "sign=true"' in run
+    assert "github.event.pull_request.base.ref" in run
+    assert "github.event.pull_request.head.repo.full_name" in run
+    assert "github.repository" in run
 
 
 def _assert_concurrency_and_permissions(doc: dict[Any, Any]) -> None:
@@ -76,7 +90,8 @@ def _assert_concurrency_and_permissions(doc: dict[Any, Any]) -> None:
 def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
     doc = _parsed_workflow()
     _assert_pull_request_review_submitted(doc)
-    _assert_sign_job_branch_filters(doc)
+    _assert_sign_job_has_no_top_level_if(doc)
+    _assert_eligibility_gate_step(doc)
     _assert_concurrency_and_permissions(doc)
 
 
@@ -116,7 +131,7 @@ def test_sign_modules_on_approval_secrets_guard() -> None:
 
 def test_sign_modules_on_approval_sign_step_merge_base() -> None:
     workflow = _workflow_text()
-    assert "MERGE_BASE=" in workflow
+    assert "merge-base" in workflow
     assert "git merge-base HEAD" in workflow
     assert 'git fetch origin "${PR_BASE_REF}"' in workflow
     assert "--no-tags" in workflow
@@ -126,6 +141,8 @@ def test_sign_modules_on_approval_sign_step_merge_base() -> None:
     assert '"$MERGE_BASE"' in workflow
     assert "--bump-version patch" in workflow
     assert "--payload-from-filesystem" in workflow
+    assert "steps.gate.outputs.sign == 'true'" in workflow
+    assert '--base-ref "origin/' not in workflow
 
 
 def _assert_discover_step_writes_outputs(steps: list[Any]) -> None:
@@ -151,8 +168,9 @@ def _assert_job_summary_step(steps: list[Any]) -> None:
     assert summary.get("if") == "always()"
     env = summary["env"]
     assert isinstance(env, dict)
-    assert env["COMMIT_CHANGED"] == "${{ steps.commit.outputs.changed }}"
-    assert env["MANIFESTS_COUNT"] == "${{ steps.discover.outputs.manifests_count }}"
+    assert env["COMMIT_CHANGED"] == "${{ steps.commit.outputs.changed || '' }}"
+    assert env["MANIFESTS_COUNT"] == "${{ steps.discover.outputs.manifests_count || '' }}"
+    assert env["GATE_SIGN"] == "${{ steps.gate.outputs.sign }}"
     summary_run = summary["run"]
     assert isinstance(summary_run, str)
     assert "GITHUB_STEP_SUMMARY" in summary_run

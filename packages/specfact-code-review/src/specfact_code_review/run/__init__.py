@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
+from typing import Literal
 
 from beartype import beartype
 from icontract import ensure, require
@@ -23,6 +24,9 @@ def run_review(
     no_tests: bool = False,
     include_noise: bool = False,
     progress_callback: Callable[[str], None] | None = None,
+    bug_hunt: bool = False,
+    review_level: Literal["error", "warning"] | None = None,
+    review_mode: Literal["shadow", "enforce"] = "enforce",
 ) -> ReviewReport:
     """Lazily import the orchestrator to avoid package import cycles."""
     run_review_impl = import_module("specfact_code_review.run.runner").run_review
@@ -31,6 +35,9 @@ def run_review(
         no_tests=no_tests,
         include_noise=include_noise,
         progress_callback=progress_callback,
+        bug_hunt=bug_hunt,
+        review_level=review_level,
+        review_mode=review_mode,
     )
 
 

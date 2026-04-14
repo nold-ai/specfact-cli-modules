@@ -68,3 +68,72 @@ def test_verify_manifest_falls_back_to_filesystem_payload_when_checksum_matches(
     )
 
     assert verification_mode == "filesystem"
+
+
+def test_verify_manifest_integrity_shape_only_accepts_checksum_only_manifest(tmp_path: Path) -> None:
+    verify_script = _load_verify_script()
+    module_dir = tmp_path / "packages" / "specfact-example"
+    module_dir.mkdir(parents=True)
+    manifest_path = module_dir / "module-package.yaml"
+    manifest_path.write_text(
+        yaml.safe_dump(
+            {
+                "name": "nold-ai/specfact-example",
+                "version": "0.1.0",
+                "integrity": {
+                    "checksum": "sha256:" + "a" * 64,
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    verify_script.verify_manifest_integrity_shape_only(manifest_path, require_signature=False)
+
+
+def test_verify_manifest_integrity_shape_only_rejects_bad_checksum_format(tmp_path: Path) -> None:
+    verify_script = _load_verify_script()
+    module_dir = tmp_path / "packages" / "specfact-example"
+    module_dir.mkdir(parents=True)
+    manifest_path = module_dir / "module-package.yaml"
+    manifest_path.write_text(
+        yaml.safe_dump(
+            {
+                "name": "nold-ai/specfact-example",
+                "version": "0.1.0",
+                "integrity": {"checksum": "not-a-valid-checksum"},
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    try:
+        verify_script.verify_manifest_integrity_shape_only(manifest_path, require_signature=False)
+    except ValueError as exc:
+        assert "checksum" in str(exc).lower()
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_verify_manifest_integrity_shape_only_enforces_signature_when_requested(tmp_path: Path) -> None:
+    verify_script = _load_verify_script()
+    module_dir = tmp_path / "packages" / "specfact-example"
+    module_dir.mkdir(parents=True)
+    manifest_path = module_dir / "module-package.yaml"
+    manifest_path.write_text(
+        yaml.safe_dump(
+            {
+                "name": "nold-ai/specfact-example",
+                "version": "0.1.0",
+                "integrity": {"checksum": "sha256:" + "b" * 64},
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    try:
+        verify_script.verify_manifest_integrity_shape_only(manifest_path, require_signature=True)
+    except ValueError as exc:
+        assert "signature" in str(exc).lower()
+    else:
+        raise AssertionError("expected ValueError")

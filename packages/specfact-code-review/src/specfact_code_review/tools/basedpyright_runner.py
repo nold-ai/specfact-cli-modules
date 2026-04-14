@@ -10,8 +10,9 @@ from typing import Literal
 from beartype import beartype
 from icontract import require
 
-from specfact_code_review._review_utils import normalize_path_variants, tool_error
+from specfact_code_review._review_utils import normalize_path_variants, python_source_paths_for_tools, tool_error
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 def _allowed_paths(files: list[Path]) -> set[str]:
@@ -88,8 +89,13 @@ def _findings_from_diagnostics(diagnostics: list[object], *, allowed_paths: set[
 @require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
 def run_basedpyright(files: list[Path]) -> list[ReviewFinding]:
     """Run basedpyright and map diagnostics into ReviewFinding records."""
+    files = python_source_paths_for_tools(files)
     if not files:
         return []
+
+    skipped = skip_if_tool_missing("basedpyright", files[0])
+    if skipped:
+        return skipped
 
     try:
         result = subprocess.run(
@@ -100,7 +106,7 @@ def run_basedpyright(files: list[Path]) -> list[ReviewFinding]:
             timeout=30,
         )
         diagnostics = _diagnostics_from_output(result.stdout)
-    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, KeyError, subprocess.TimeoutExpired) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, KeyError, subprocess.TimeoutExpired) as exc:
         return [
             tool_error(
                 tool="basedpyright",

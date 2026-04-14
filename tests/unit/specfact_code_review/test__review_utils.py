@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from specfact_code_review._review_utils import normalize_path_variants, tool_error
+from specfact_code_review._review_utils import normalize_path_variants, python_source_paths_for_tools, tool_error
 
 
 def test_normalize_path_variants_includes_relative_and_resolved_paths(tmp_path: Path) -> None:
@@ -14,6 +14,15 @@ def test_normalize_path_variants_includes_relative_and_resolved_paths(tmp_path: 
 
     assert str(file_path.resolve()) in variants
     assert file_path.resolve().as_posix() in variants
+
+
+def test_python_source_paths_for_tools_keeps_only_py_suffix(tmp_path: Path) -> None:
+    py_file = tmp_path / "a.py"
+    yaml_file = tmp_path / "module-package.yaml"
+    py_file.write_text("x = 1\n", encoding="utf-8")
+    yaml_file.write_text("name: t\n", encoding="utf-8")
+
+    assert python_source_paths_for_tools([py_file, yaml_file]) == [py_file]
 
 
 def test_tool_error_returns_review_finding_defaults(tmp_path: Path) -> None:

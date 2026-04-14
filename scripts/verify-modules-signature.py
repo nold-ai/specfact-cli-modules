@@ -391,8 +391,32 @@ def verify_manifest(
 
 
 @beartype
-@ensure(lambda result: result in {0, 1}, "main must return a process exit code")
-def main() -> int:
+@require(lambda manifest_path: manifest_path.exists(), "manifest_path must exist")
+@ensure(lambda result: result is None, "integrity-shape-only verification raises or returns None")
+def verify_manifest_integrity_shape_only(
+    manifest_path: Path,
+    *,
+    require_signature: bool,
+) -> None:
+    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("manifest YAML must be object")
+    integrity = raw.get("integrity")
+    if not isinstance(integrity, dict):
+        raise ValueError("missing integrity metadata")
+
+    checksum = str(integrity.get("checksum", "")).strip()
+    if not checksum:
+        raise ValueError("missing integrity.checksum")
+    _parse_checksum(checksum)
+    signature = str(integrity.get("signature", "")).strip()
+    if require_signature and not signature:
+        raise ValueError("missing integrity.signature")
+    if signature and len(signature) < 32:
+        raise ValueError("integrity.signature is present but implausibly short")
+
+
+def _parse_verify_cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--require-signature", action="store_true", help="Require integrity.signature for every manifest"
@@ -422,39 +446,69 @@ def main() -> int:
             "--payload-from-filesystem."
         ),
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help=(
+            "Only validate module-package.yaml structure (integrity.checksum format; "
+            "integrity.signature required when --require-signature). Skips payload digest and "
+            "cryptographic checks so PRs to dev can pass before approval-time signing updates "
+            "manifests; push to main and fork PRs to main still use the full verifier in CI."
+        ),
+    )
+    return parser.parse_args()
 
-    public_key_pem = _resolve_public_key(args)
+
+def _verify_manifests_for_cli(args: argparse.Namespace, public_key_pem: str, manifests: list[Path]) -> list[str]:
+    failures: list[str] = []
+    for manifest in manifests:
+        try:
+            if args.metadata_only:
+                verify_manifest_integrity_shape_only(
+                    manifest,
+                    require_signature=args.require_signature,
+                )
+                _emit_line(f"OK  {manifest} (metadata-only)")
+            else:
+                verification_mode = verify_manifest(
+                    manifest,
+                    require_signature=args.require_signature,
+                    public_key_pem=public_key_pem,
+                    payload_from_filesystem=args.payload_from_filesystem,
+                )
+                suffix = (
+                    " (filesystem payload)"
+                    if verification_mode == "filesystem" and not args.payload_from_filesystem
+                    else ""
+                )
+                _emit_line(f"OK  {manifest}{suffix}")
+        except ValueError as exc:
+            failures.append(f"FAIL {manifest}: {exc}")
+    return failures
+
+
+def _version_bump_failures_for_cli(args: argparse.Namespace) -> list[str]:
+    if not args.enforce_version_bump:
+        return []
+    base_ref = _resolve_version_check_base(args.version_check_base)
+    try:
+        return _verify_version_bumps(base_ref)
+    except ValueError as exc:
+        return [f"FAIL version-check: {exc}"]
+
+
+@beartype
+@ensure(lambda result: result in {0, 1}, "main must return a CLI exit code")
+def main() -> int:
+    args = _parse_verify_cli_args()
+    public_key_pem = "" if args.metadata_only else _resolve_public_key(args)
     manifests = _iter_manifests()
     if not manifests:
         _emit_line("No module-package.yaml manifests found.")
         return 0
 
-    failures: list[str] = []
-    for manifest in manifests:
-        try:
-            verification_mode = verify_manifest(
-                manifest,
-                require_signature=args.require_signature,
-                public_key_pem=public_key_pem,
-                payload_from_filesystem=args.payload_from_filesystem,
-            )
-            suffix = (
-                " (filesystem payload)"
-                if verification_mode == "filesystem" and not args.payload_from_filesystem
-                else ""
-            )
-            _emit_line(f"OK  {manifest}{suffix}")
-        except ValueError as exc:
-            failures.append(f"FAIL {manifest}: {exc}")
-
-    version_failures: list[str] = []
-    if args.enforce_version_bump:
-        base_ref = _resolve_version_check_base(args.version_check_base)
-        try:
-            version_failures = _verify_version_bumps(base_ref)
-        except ValueError as exc:
-            version_failures.append(f"FAIL version-check: {exc}")
+    failures = _verify_manifests_for_cli(args, public_key_pem, manifests)
+    version_failures = _version_bump_failures_for_cli(args)
 
     if failures or version_failures:
         if failures:

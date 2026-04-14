@@ -13,6 +13,7 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 SEMGREP_RULE_CATEGORY = {
@@ -29,6 +30,16 @@ SEMGREP_RETRY_ATTEMPTS = 2
 _SEMGREP_STDERR_SNIP_MAX = 4000
 _MAX_CONFIG_PARENT_WALK = 32
 SemgrepCategory = Literal["clean_code", "architecture", "naming"]
+BugSemgrepCategory = Literal["security", "clean_code"]
+
+BUG_RULE_CATEGORY: dict[str, BugSemgrepCategory] = {
+    "specfact-bugs-eval-exec": "security",
+    "specfact-bugs-os-system": "security",
+    "specfact-bugs-pickle-loads": "security",
+    "specfact-bugs-yaml-unsafe": "security",
+    "specfact-bugs-hardcoded-password": "security",
+    "specfact-bugs-useless-comparison": "clean_code",
+}
 
 
 def _normalize_path_variants(path_value: str | Path) -> set[str]:
@@ -121,7 +132,40 @@ def find_semgrep_config(
     raise FileNotFoundError(f"Semgrep config not found (no .semgrep/clean_code.yaml under bundle for {here})")
 
 
-def _run_semgrep_command(files: list[Path], *, bundle_root: Path | None) -> subprocess.CompletedProcess[str]:
+@beartype
+@require(lambda bundle_root, module_file: bundle_root is None or isinstance(bundle_root, Path))
+@require(lambda bundle_root, module_file: module_file is None or isinstance(module_file, Path))
+@ensure(lambda result: result is None or isinstance(result, Path))
+def find_semgrep_bugs_config(
+    *,
+    bundle_root: Path | None = None,
+    module_file: Path | None = None,
+) -> Path | None:
+    """Locate ``.semgrep/bugs.yaml`` for this package or bundle root; return ``None`` if absent."""
+    if bundle_root is not None:
+        br = bundle_root.resolve()
+        candidate = br / ".semgrep" / "bugs.yaml"
+        return candidate if candidate.is_file() else None
+
+    here = (module_file if module_file is not None else Path(__file__)).resolve()
+    for depth, parent in enumerate([here.parent, *here.parents]):
+        if depth > _MAX_CONFIG_PARENT_WALK:
+            break
+        if parent == parent.parent:
+            break
+        candidate = parent / ".semgrep" / "bugs.yaml"
+        if candidate.is_file():
+            return candidate
+        if _is_bundle_boundary(parent):
+            break
+        if parent.name == "site-packages":
+            break
+    return None
+
+
+def _run_semgrep_command(
+    files: list[Path], *, bundle_root: Path | None, config_file: Path
+) -> subprocess.CompletedProcess[str]:
     with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
         semgrep_home = Path(temp_home)
         semgrep_log_dir = semgrep_home / ".semgrep"
@@ -138,7 +182,7 @@ def _run_semgrep_command(files: list[Path], *, bundle_root: Path | None) -> subp
                 "--disable-version-check",
                 "--quiet",
                 "--config",
-                str(find_semgrep_config(bundle_root=bundle_root)),
+                str(config_file),
                 "--json",
                 *(str(file_path) for file_path in files),
             ],
@@ -158,11 +202,11 @@ def _snip_stderr_tail(stderr: str) -> str:
     return "…" + err_raw[-_SEMGREP_STDERR_SNIP_MAX:]
 
 
-def _load_semgrep_results(files: list[Path], *, bundle_root: Path | None) -> list[object]:
+def _load_semgrep_results(files: list[Path], *, bundle_root: Path | None, config_file: Path) -> list[object]:
     last_error: Exception | None = None
     for _attempt in range(SEMGREP_RETRY_ATTEMPTS):
         try:
-            result = _run_semgrep_command(files, bundle_root=bundle_root)
+            result = _run_semgrep_command(files, bundle_root=bundle_root, config_file=config_file)
             raw_out = result.stdout.strip()
             if not raw_out:
                 err_tail = _snip_stderr_tail(result.stderr or "")
@@ -254,8 +298,13 @@ def run_semgrep(files: list[Path], *, bundle_root: Path | None = None) -> list[R
     if not files:
         return []
 
+    skipped = skip_if_tool_missing("semgrep", files[0])
+    if skipped:
+        return skipped
+
     try:
-        raw_results = _load_semgrep_results(files, bundle_root=bundle_root)
+        config_path = find_semgrep_config(bundle_root=bundle_root)
+        raw_results = _load_semgrep_results(files, bundle_root=bundle_root, config_file=config_path)
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep output: {exc}")
 
@@ -281,3 +330,106 @@ def _append_semgrep_finding(
     finding = _finding_from_result(item, allowed_paths=allowed_paths)
     if finding is not None:
         findings.append(finding)
+
+
+def _normalize_bug_rule_id(rule: str) -> str:
+    for rule_id in BUG_RULE_CATEGORY:
+        if rule == rule_id or rule.endswith(f".{rule_id}"):
+            return rule_id
+    return rule.rsplit(".", 1)[-1]
+
+
+def _finding_from_bug_result(item: dict[str, object], *, allowed_paths: set[str]) -> ReviewFinding | None:
+    filename = item["path"]
+    if not isinstance(filename, str):
+        raise ValueError("semgrep filename must be a string")
+    if _normalize_path_variants(filename).isdisjoint(allowed_paths):
+        return None
+
+    raw_rule = item["check_id"]
+    if not isinstance(raw_rule, str):
+        raise ValueError("semgrep rule must be a string")
+    rule = _normalize_bug_rule_id(raw_rule)
+    category = BUG_RULE_CATEGORY.get(rule)
+    if category is None:
+        return None
+
+    start = item["start"]
+    if not isinstance(start, dict):
+        raise ValueError("semgrep start location must be an object")
+    line = start["line"]
+    if not isinstance(line, int):
+        raise ValueError("semgrep line must be an integer")
+
+    extra = item["extra"]
+    if not isinstance(extra, dict):
+        raise ValueError("semgrep extra payload must be an object")
+    message = extra["message"]
+    if not isinstance(message, str):
+        raise ValueError("semgrep message must be a string")
+
+    severity_raw = extra.get("severity", "WARNING")
+    severity: Literal["error", "warning"] = (
+        "error" if isinstance(severity_raw, str) and severity_raw.upper() == "ERROR" else "warning"
+    )
+
+    return ReviewFinding(
+        category=category,
+        severity=severity,
+        tool="semgrep",
+        rule=rule,
+        file=filename,
+        line=line,
+        message=message,
+        fixable=False,
+    )
+
+
+def _append_semgrep_bug_finding(
+    findings: list[ReviewFinding],
+    item: object,
+    *,
+    allowed_paths: set[str],
+) -> None:
+    if not isinstance(item, dict):
+        raise ValueError("semgrep finding must be an object")
+    finding = _finding_from_bug_result(item, allowed_paths=allowed_paths)
+    if finding is not None:
+        findings.append(finding)
+
+
+@beartype
+@require(lambda files: isinstance(files, list), "files must be a list")
+@require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
+@ensure(lambda result: isinstance(result, list), "result must be a list")
+@ensure(
+    lambda result: all(isinstance(finding, ReviewFinding) for finding in result),
+    "result must contain ReviewFinding instances",
+)
+def run_semgrep_bugs(files: list[Path], *, bundle_root: Path | None = None) -> list[ReviewFinding]:
+    """Second Semgrep pass using ``.semgrep/bugs.yaml`` when present; no-op if config is absent."""
+    if not files:
+        return []
+
+    config_path = find_semgrep_bugs_config(bundle_root=bundle_root)
+    if config_path is None:
+        return []
+
+    skipped = skip_if_tool_missing("semgrep", files[0])
+    if skipped:
+        return skipped
+
+    try:
+        raw_results = _load_semgrep_results(files, bundle_root=bundle_root, config_file=config_path)
+    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
+        return _tool_error(files[0], f"Unable to parse Semgrep bugs pass output: {exc}")
+
+    allowed_paths = _allowed_paths(files)
+    findings: list[ReviewFinding] = []
+    try:
+        for item in raw_results:
+            _append_semgrep_bug_finding(findings, item, allowed_paths=allowed_paths)
+    except (KeyError, TypeError, ValueError) as exc:
+        return _tool_error(files[0], f"Unable to parse Semgrep bugs finding payload: {exc}")
+
+    return findings
