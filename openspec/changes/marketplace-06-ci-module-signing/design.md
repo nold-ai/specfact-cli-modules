@@ -13,8 +13,10 @@ This repo differs from `specfact-cli` in two important ways that shape the imple
    `pr-orchestrator.yml` has a `verify-module-signatures` job, and it always runs
    `--require-signature` regardless of target branch.
 
-3. **No pre-commit signing check**: The modules pre-commit (`scripts/pre-commit-quality-checks.sh`)
-   does NOT include a module-signature verification step. No pre-commit changes are required.
+3. **Pre-commit verify hook**: `.pre-commit-config.yaml` already runs `verify-modules-signature.py` on
+   every commit. That entry is replaced with a thin wrapper that mirrors `pr-orchestrator` policy
+   (`--require-signature` only when the current branch is `main` or `GITHUB_REF_NAME` is `main`).
+   Block 1 quality stages in `pre-commit-quality-checks.sh` are unchanged.
 
 Both repos share the same `scripts/sign-modules.py` logic (or a copy of it) and the same GitHub
 secrets (`SPECFACT_MODULE_PRIVATE_SIGN_KEY`, `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`), which
@@ -28,8 +30,8 @@ are already configured via `publish-modules.yml`.
 - Enable non-interactive development on feature/dev branches without a local private key.
 
 **Non-Goals:**
-- Adding a pre-commit signature verification step (none exists today; introducing one would
-  recreate the problem).
+- Adding *new* mandatory local signing with a private key (the wrapper relaxes `--require-signature`
+  off `main` instead).
 - Adding a `sign-modules.yml` hardening workflow (out of scope; this repo's release flow differs
   from specfact-cli).
 - Changing `publish-modules.yml` or the registry index logic.

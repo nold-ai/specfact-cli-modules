@@ -11,8 +11,9 @@ workflow and updating `pr-orchestrator.yml`, tests were turned green.
 Run from worktree `feature/marketplace-06-ci-module-signing` (repo root of this change):
 
 ```bash
-python -m pytest tests/unit/workflows/ -q
-# 7 passed (2026-04-14)
+python -m pytest tests/unit/workflows/ tests/unit/test_pre_commit_quality_parity.py \
+  tests/unit/test_pre_commit_verify_modules_signature_script.py -q
+# workflow + pre-commit parity tests (2026-04-14)
 
 hatch run lint
 # All checks passed

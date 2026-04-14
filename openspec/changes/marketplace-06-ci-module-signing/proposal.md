@@ -16,8 +16,9 @@ policy set by `specfact-cli/marketplace-06-ci-module-signing`.
   via CI secrets, and commits signed manifests back to the PR branch.
 - **MODIFY**: `.github/workflows/pr-orchestrator.yml` `verify-module-signatures` job — drop
   `--require-signature` for PRs and pushes targeting `dev`; keep it for `main`-targeting events.
-- **NO CHANGE**: `scripts/pre-commit-quality-checks.sh` — the modules pre-commit does not include
-  a module-signature verification step; no pre-commit changes are needed.
+- **MODIFY**: `.pre-commit-config.yaml` verify hook — run `scripts/pre-commit-verify-modules-signature.sh`
+  so local verification matches CI branch policy (`--require-signature` only on `main`; checksum +
+  version enforcement elsewhere). `scripts/pre-commit-quality-checks.sh` itself is unchanged.
 - **NO CHANGE**: `publish-modules.yml` — handles signing at publish/registry-update time;
   unchanged.
 - **NO CHANGE**: Module install-time verification (end users always install from the main registry;
@@ -36,17 +37,21 @@ policy set by `specfact-cli/marketplace-06-ci-module-signing`.
 - `ci-integration`: The `verify-module-signatures` job in `pr-orchestrator.yml` applies a
   branch-aware policy — checksum-only for dev-targeting events, full `--require-signature` for
   main-targeting events.
+- `modules-pre-commit-quality-parity`: The always-run pre-commit verify step matches that policy
+  (`main` only: `--require-signature`; other branches: checksum + version bump only).
 
 ## Impact
 
 - **Affected workflows**: `.github/workflows/pr-orchestrator.yml`
 - **New workflow**: `.github/workflows/sign-modules-on-approval.yml`
+- **Pre-commit**: `.pre-commit-config.yaml`, new `scripts/pre-commit-verify-modules-signature.sh`
 - **GitHub secrets used** (already configured via publish-modules.yml):
   `SPECFACT_MODULE_PRIVATE_SIGN_KEY`, `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
 - **Permissions added**: `contents: write` on the new signing workflow
 - **Module manifest paths**: `packages/*/module-package.yaml` (found under `packages/` in this
   repo, not `src/` or `modules/` as in specfact-cli)
-- **No Python source changes**: all modifications are to YAML workflows only
+- **Supporting changes**: shell wrapper + unit tests for pre-commit parity; main spec
+  `openspec/specs/modules-pre-commit-quality-parity/spec.md` updated to match behavior
 - **Paired change**: `specfact-cli/marketplace-06-ci-module-signing` — covers the pre-commit hook,
   `sign-modules.yml`, and pr-orchestrator changes in the core CLI repo
 - **Source Tracking**:

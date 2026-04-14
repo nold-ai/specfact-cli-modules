@@ -29,8 +29,9 @@ context: |
 
   Quality & CI (typical order): `format` → `type-check` → `lint` → `yaml-lint` → module **signature verification**
   (`verify-modules-signature`, enforce version bump when manifests change) → `contract-test` → `smart-test` →
-  `test`. Pre-commit: signatures → split `pre-commit-quality-checks.sh` hooks (format, yaml-if-staged, bundle,
-  lint-if-staged, then block2: `pre_commit_code_review.py` + contract tests; JSON report under `.specfact/`).
+  `test`. Pre-commit: `pre-commit-verify-modules-signature.sh` (branch-aware `--require-signature` on `main` only),
+  then split `pre-commit-quality-checks.sh` hooks (format, yaml-if-staged, bundle, lint-if-staged, then block2:
+  `pre_commit_code_review.py` + contract tests; JSON report under `.specfact/`).
   Hatch default env sets `SPECFACT_MODULES_REPO={root}`; `apply_specfact_workspace_env` also sets
   `SPECFACT_REPO_ROOT` when the sibling core checkout resolves (parity with specfact-cli test/CI module discovery).
   CI: `.github/workflows/pr-orchestrator.yml` (matrix Python, gates above).

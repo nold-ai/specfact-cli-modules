@@ -6,7 +6,7 @@ repos:
     hooks:
       - id: verify-module-signatures
         name: Verify module signatures and version bumps
-        entry: hatch run ./scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump
+        entry: ./scripts/pre-commit-verify-modules-signature.sh
         language: system
         pass_filenames: false
         always_run: true

@@ -5,12 +5,14 @@ TBD - created by archiving change modules-pre-commit-quality-parity. Update Purp
 ## Requirements
 ### Requirement: Modules Repo Pre-Commit Must Verify Bundle Signatures
 
-The modules repo pre-commit configuration SHALL fail a commit when bundle signatures or required version bumps are stale.
+The modules repo pre-commit configuration SHALL fail a commit when module payload integrity or required version bumps are stale, and SHALL mirror CI branch policy for cryptographic signatures.
 
 #### Scenario: Signature verification hook is configured
 - **WHEN** a developer installs and runs the repository pre-commit hooks
 - **THEN** the hook set includes an always-run signature verification command
-- **AND** that command enforces both required signatures and version-bump policy.
+- **AND** that command always enforces filesystem payload checksums and version-bump policy (`--payload-from-filesystem --enforce-version-bump`)
+- **AND** when the active Git branch is `main` (or GitHub Actions sets `GITHUB_REF_NAME` to `main`), that command also enforces `--require-signature`
+- **AND** on any other branch (for example `dev` or a feature branch), that command SHALL NOT pass `--require-signature`, matching `pr-orchestrator` behavior for non-`main` targets
 
 ### Requirement: Modules Repo Pre-Commit Must Catch Formatting And Quality Drift Early
 
