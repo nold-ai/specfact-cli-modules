@@ -21,5 +21,6 @@ def test_pr_orchestrator_verify_splits_signature_requirement_by_target_branch() 
     assert branch_guard in workflow
     assert require_append in workflow
     assert workflow.index(branch_guard) < workflow.index(require_append)
+    assert '[ "$TARGET_BRANCH" = "main" ]' in workflow
     assert "--require-signature" in workflow
     assert "VERIFY_CMD" in workflow

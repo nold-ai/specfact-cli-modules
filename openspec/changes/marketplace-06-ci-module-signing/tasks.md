@@ -39,9 +39,10 @@
   cannot be pushed with the default token).
 - [x] 4.3 Add steps: checkout PR head, set up Python 3.12, install signing deps
   (`pyyaml beartype icontract cryptography cffi`).
-- [x] 4.4 Add manifest discovery step:
-  `mapfile -t MANIFESTS < <(find packages -name 'module-package.yaml' -type f | sort)`.
-- [x] 4.5 Add signing step: `git fetch origin <base>` then set `MERGE_BASE="$(git merge-base HEAD
+- [x] 4.4 Add manifest discovery step (count for job summary):
+  `mapfile -t MANIFESTS < <(find packages -name 'module-package.yaml' -type f | sort)`;
+  write `manifests_count` to `GITHUB_OUTPUT`.
+- [x] 4.5 Add signing step: `git fetch origin <base> --no-tags` then set `MERGE_BASE="$(git merge-base HEAD
   "origin/<base>")"` so `--changed-only` reflects **PR-scoped** deltas (not the base-branch tip vs a
   stale branch); run `python scripts/sign-modules.py --changed-only --base-ref "$MERGE_BASE"
   --bump-version patch --payload-from-filesystem` (version auto-bump when unchanged since merge-base;

@@ -19,8 +19,7 @@ def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
     assert "github.event.review.state == 'approved'" in workflow
     assert "github.event.pull_request.base.ref == 'dev'" in workflow
     assert "github.event.pull_request.base.ref == 'main'" in workflow
-    assert "github.event.pull_request.head.repo.full_name" in workflow
-    assert "github.repository" in workflow
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in workflow
 
 
 def test_sign_modules_on_approval_checkout_and_python() -> None:
@@ -32,7 +31,7 @@ def test_sign_modules_on_approval_checkout_and_python() -> None:
     assert 'python-version: "3.12"' in workflow or "python-version: '3.12'" in workflow
 
 
-def test_sign_modules_on_approval_dependencies_and_manifest_discovery() -> None:
+def test_sign_modules_on_approval_dependencies_and_discover() -> None:
     workflow = _workflow_text()
     assert "beartype" in workflow and "icontract" in workflow
     assert "cryptography" in workflow and "cffi" in workflow
@@ -48,12 +47,14 @@ def test_sign_modules_on_approval_sign_and_secrets() -> None:
     assert "Guard signing secrets" in workflow
     assert '[ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY:-}" ]' in workflow
     assert "exit 1" in workflow
+    assert "MERGE_BASE=" in workflow
+    assert "git merge-base HEAD" in workflow
+    assert 'git fetch origin "${PR_BASE_REF}"' in workflow
+    assert "--no-tags" in workflow
     assert "scripts/sign-modules.py" in workflow
     assert "--changed-only" in workflow
     assert "--base-ref" in workflow
-    assert "MERGE_BASE=" in workflow
-    assert "git merge-base" in workflow
-    assert "git fetch origin" in workflow
+    assert '"$MERGE_BASE"' in workflow
     assert "--bump-version patch" in workflow
     assert "--payload-from-filesystem" in workflow
     assert "SPECFACT_MODULE_PRIVATE_SIGN_KEY" in workflow
