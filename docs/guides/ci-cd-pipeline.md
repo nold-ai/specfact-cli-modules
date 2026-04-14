@@ -35,11 +35,13 @@ hatch run format
 hatch run type-check
 hatch run lint
 hatch run yaml-lint
-hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
+hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump
 hatch run contract-test
 hatch run smart-test
 hatch run test
 ```
+
+Add `--require-signature` to the verify step when checking the same policy as **`main`** (for example before promoting work to `main`). On feature branches and for PRs targeting **`dev`**, CI does not require signatures yet; pre-commit matches that via `scripts/pre-commit-verify-modules-signature.sh`.
 
 Use the same order locally before pushing changes that affect docs, bundles, or registry metadata.
 
@@ -47,10 +49,15 @@ Use the same order locally before pushing changes that affect docs, bundles, or 
 
 Map the local commands to the pipeline stages this repository enforces:
 
-- Pre-commit stage: `pre-commit run --all-files`
+- Pre-commit stage: `pre-commit run --all-files` (first hook: branch-aware module verify, then Block 1 / Block 2)
 - Quality gates stage: `hatch run format` -> `hatch run type-check` -> `hatch run lint` -> `hatch run yaml-lint`
-- Release-readiness stage: `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`
+- Module integrity stage: `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump` (add `--require-signature` for **main**-equivalent checks)
 - Validation stage: `hatch run contract-test` -> `hatch run smart-test` -> `hatch run test`
+
+GitHub Actions also runs:
+
+- **`pr-orchestrator`**: `verify-module-signatures` uses `--require-signature` only when the event targets **`main`**.
+- **`sign-modules-on-approval`**: after an **approved** review on a PR to **`dev`** or **`main`**, signs changed `packages/*/module-package.yaml` using repository secrets and pushes a commit back to the PR branch (**same-repo PRs only**; fork heads cannot be updated with the default token).
 
 ## 3. Add scoped workflow checks while developing
 

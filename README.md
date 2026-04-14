@@ -41,12 +41,16 @@ hatch run type-check
 hatch run lint
 hatch run yaml-lint
 hatch run check-bundle-imports
-hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
+hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump
 hatch run contract-test
 hatch run smart-test
 hatch run test
 hatch run specfact code review run --json --out .specfact/code-review.json
 ```
+
+**Module signatures:** `pr-orchestrator` enforces `--require-signature` only for events targeting **`main`**; for **`dev`** (and feature branches) CI checks checksums and version bumps without requiring a cryptographic signature yet. Add `--require-signature` to the `verify-modules-signature` command when you want the same bar as **`main`** (for example before merging to `main`). Pre-commit runs `scripts/pre-commit-verify-modules-signature.sh`, which mirrors that policy (signatures required on branch `main`, or when `GITHUB_BASE_REF=main` in Actions).
+
+**CI signing:** Approved PRs to `dev` or `main` from **this repository** (not forks) run `.github/workflows/sign-modules-on-approval.yml`, which can commit signed manifests using repository secrets. See [Module signing](/authoring/module-signing/).
 
 To mirror CI locally with git hooks, enable pre-commit:
 
@@ -55,7 +59,7 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-**Code review gate (matches specfact-cli core):** runs in **Block 2** after module signatures and Block 1 quality hooks (`pre-commit-quality-checks.sh block2`, which calls `scripts/pre_commit_code_review.py`). Staged paths under `packages/`, `registry/`, `scripts/`, `tools/`, `tests/`, and `openspec/changes/` (excluding `TDD_EVIDENCE.md`) are forwarded to the helper, which runs `specfact code review run --json --out .specfact/code-review.json` with that path list. The helper prints only a short findings summary and copy-paste prompts on stderr (not the nested CLI’s full tool output). Block 1 is split into separate pre-commit hooks so output appears between stages instead of buffering until the end. Requires a local **specfact-cli** install (`hatch run dev-deps` resolves sibling `../specfact-cli` or `SPECFACT_CLI_REPO`).
+**Code review gate (matches specfact-cli core):** runs in **Block 2** after the module verify hook and Block 1 quality hooks (`pre-commit-quality-checks.sh block2`, which calls `scripts/pre_commit_code_review.py`). Staged paths under `packages/`, `registry/`, `scripts/`, `tools/`, `tests/`, and `openspec/changes/` (excluding `TDD_EVIDENCE.md` and other `openspec/changes/**/*.md`) are forwarded to the helper, which runs `specfact code review run --json --out .specfact/code-review.json` with that path list. The helper prints only a short findings summary and copy-paste prompts on stderr (not the nested CLI’s full tool output). Block 1 is split into separate pre-commit hooks so output appears between stages instead of buffering until the end. Requires a local **specfact-cli** install (`hatch run dev-deps` resolves sibling `../specfact-cli` or `SPECFACT_CLI_REPO`).
 
 Scope notes:
 - Pre-commit runs `hatch run lint` in the **Block 1 — lint** hook when any staged path matches `*.py` / `*.pyi`, matching the CI quality job (Ruff alone does not run pylint).

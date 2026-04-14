@@ -78,11 +78,13 @@ hatch run format
 hatch run type-check
 hatch run lint
 hatch run yaml-lint
-hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
+hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump
 hatch run contract-test
 hatch run smart-test
 hatch run test
 ```
+
+Append `--require-signature` to the verify line when you need the **`main`** policy (signatures mandatory). Otherwise this order matches **`dev`** / feature CI for `verify-module-signatures` plus checksum and version enforcement.
 
 Use this chain as the full required pre-push gate order so the local run matches the repository CI quality gates.
 

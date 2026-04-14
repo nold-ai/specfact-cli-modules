@@ -40,14 +40,16 @@ Paste command output snippets or link workflow runs.
 
 ### Signature + version integrity (required)
 
-- [ ] `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`
-- [ ] Changed bundle versions were bumped before signing
-- [ ] Manifests re-signed after bundle content changes
+- [ ] `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump` passes (matches PRs targeting **`dev`**)
+- [ ] If this PR targets **`main`**, also confirmed: `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump` (and/or approval triggered **`sign-modules-on-approval`** for same-repo PRs)
+- [ ] Changed bundle versions were bumped when module payloads changed
+- [ ] Manifests signed when required by your target branch (CI may sign on **approval** for `dev`/`main` same-repo PRs)
 
 ## CI and Branch Protection
 
 - [ ] PR orchestrator jobs expected:
   - `verify-module-signatures`
+  - `sign-modules-on-approval` (on approval, same-repo PRs to `dev`/`main` only)
   - `quality (3.11)`
   - `quality (3.12)`
   - `quality (3.13)`

@@ -46,8 +46,10 @@ Module packages carry **publisher** and **integrity** metadata so installation, 
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY`
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
 - **Verification command**:
-  - `scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump`
-  - `--version-check-base <git-ref>` can be used in CI PR comparisons.
+  - Default strict local / **main** check: `scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump`
+  - **Dev / feature parity with CI** (checksum + version bump, signature optional): omit `--require-signature` (see `pr-orchestrator` and `scripts/pre-commit-verify-modules-signature.sh`).
+  - `--version-check-base <git-ref>` is used for PR comparisons in CI.
+- **CI signing**: Approved same-repo PRs to `dev` or `main` may receive automated signing commits via `sign-modules-on-approval.yml` (repository secrets; merge-base scoped `--changed-only`).
 
 ## Public key and key rotation
 

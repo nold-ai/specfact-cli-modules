@@ -89,7 +89,8 @@ hatch run python scripts/sign-modules.py \
   --base-ref origin/dev \
   --bump-version patch
 
-# Verify after signing (must match sign payload mode)
+# Verify after signing (must match sign payload mode). For a dev-targeting branch, CI omits
+# --require-signature; add it when checking as for main:
 hatch run python scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev
 ```
 
@@ -110,26 +111,35 @@ python scripts/sign-modules.py --allow-unsigned --payload-from-filesystem packag
 
 ## Verify Signatures Locally
 
-Strict verification (checksum + signature required):
+Checksum + version enforcement (matches **`dev`** / feature CI and pre-commit when not on `main`):
 
 ```bash
-python scripts/verify-modules-signature.py --require-signature --payload-from-filesystem
+python scripts/verify-modules-signature.py --payload-from-filesystem --enforce-version-bump
+```
+
+Strict verification (checksum + **signature** required, matches **`main`** CI):
+
+```bash
+python scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump
 ```
 
 With explicit public key file:
 
 ```bash
-python scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --public-key-file resources/keys/module-signing-public.pem
+python scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump --public-key-file resources/keys/module-signing-public.pem
 ```
 
 ## CI Enforcement
 
-`pr-orchestrator.yml` contains a strict gate:
+`pr-orchestrator.yml` job **`verify-module-signatures`** always runs with `--payload-from-filesystem --enforce-version-bump`. It adds **`--require-signature` only when the pull request or push targets `main`**. For **`dev`** and feature work, the job still enforces checksums and version bumps so unsigned manifests can land on `dev`; signatures are expected by the time changes reach **`main`**.
 
-- Job: `verify-module-signatures`
-- Command: `python scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump`
+### Signing on approval (same-repo PRs)
 
-This runs on PR/push for `dev` and `main` and fails the pipeline if module signatures/checksums are missing or stale.
+Workflow **`sign-modules-on-approval.yml`** runs when a review is **submitted** and **approved** on a PR whose base is **`dev`** or **`main`**, and only when the PR head is in **this** repository (`head.repo` equals the base repo). It uses `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`, discovers changes against the **merge-base** with the base branch (not the moving base tip alone), runs `scripts/sign-modules.py --changed-only --bump-version patch --payload-from-filesystem`, and commits results with `[skip ci]`. **Fork PRs** are skipped (the default `GITHUB_TOKEN` cannot push to a contributor fork).
+
+### Pre-commit
+
+The first pre-commit hook runs **`scripts/pre-commit-verify-modules-signature.sh`**, which mirrors CI: **`--require-signature` on branch `main`**, or when **`GITHUB_BASE_REF=main`** in Actions pull-request contexts; otherwise checksum + version enforcement only.
 
 ## Rotation Procedure
 
