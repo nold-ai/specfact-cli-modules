@@ -44,10 +44,11 @@ def test_filter_review_gate_paths_keeps_contract_relevant_trees() -> None:
             "README.md",
             "tests/test_app.py",
             "openspec/changes/foo/tasks.md",
+            "openspec/changes/foo/proposal.md",
             "openspec/changes/foo/TDD_EVIDENCE.md",
             "notes.txt",
         ]
-    ) == ["tests/test_app.py", "openspec/changes/foo/tasks.md"]
+    ) == ["tests/test_app.py"]
 
 
 def test_build_review_command_writes_json_report() -> None:

@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _workflow_text() -> str:
+    path = REPO_ROOT / ".github" / "workflows" / "sign-modules-on-approval.yml"
+    return path.read_text(encoding="utf-8")
+
+
+def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
+    workflow = _workflow_text()
+    assert "pull_request_review:" in workflow
+    assert "types:" in workflow
+    assert "submitted" in workflow
+    assert "github.event.review.state == 'approved'" in workflow
+    assert "github.event.pull_request.base.ref == 'dev'" in workflow
+    assert "github.event.pull_request.base.ref == 'main'" in workflow
+
+
+def test_sign_modules_on_approval_checkout_and_python() -> None:
+    workflow = _workflow_text()
+    assert "actions/checkout@v4" in workflow
+    assert "github.event.pull_request.head.sha" in workflow
+    assert "PR_HEAD_REF:" in workflow
+    assert "PR_BASE_REF:" in workflow
+    assert 'python-version: "3.12"' in workflow or "python-version: '3.12'" in workflow
+
+
+def test_sign_modules_on_approval_dependencies_and_manifest_discovery() -> None:
+    workflow = _workflow_text()
+    assert "beartype" in workflow and "icontract" in workflow
+    assert "cryptography" in workflow and "cffi" in workflow
+    assert "mapfile -t MANIFESTS" in workflow
+    assert "find packages -name 'module-package.yaml'" in workflow
+
+
+def test_sign_modules_on_approval_sign_and_secrets() -> None:
+    workflow = _workflow_text()
+    assert "scripts/sign-modules.py" in workflow
+    assert "--changed-only" in workflow
+    assert "--base-ref" in workflow
+    assert "--bump-version patch" in workflow
+    assert "--payload-from-filesystem" in workflow
+    assert "SPECFACT_MODULE_PRIVATE_SIGN_KEY" in workflow
+    assert "SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE" in workflow
+
+
+def test_sign_modules_on_approval_commit_push_and_summary() -> None:
+    workflow = _workflow_text()
+    assert "github-actions[bot]" in workflow
+    assert "chore(modules): ci sign changed modules [skip ci]" in workflow
+    assert "HEAD:${PR_HEAD_REF}" in workflow
+    assert "GITHUB_STEP_SUMMARY" in workflow
+    assert "COMMIT_CHANGED:" in workflow

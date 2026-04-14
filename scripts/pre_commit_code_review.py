@@ -53,6 +53,9 @@ def _is_review_gate_path(path: str) -> bool:
     normalized = path.replace("\\", "/").strip()
     if not normalized or normalized.endswith(("/TDD_EVIDENCE.md", "TDD_EVIDENCE.md")):
         return False
+    # OpenSpec change docs are Markdown; the review CLI treats them as Python and emits noise.
+    if normalized.startswith("openspec/changes/") and normalized.lower().endswith(".md"):
+        return False
     prefixes = (
         "packages/",
         "registry/",
