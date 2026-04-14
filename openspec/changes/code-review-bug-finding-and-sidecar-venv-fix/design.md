@@ -13,12 +13,15 @@ The `specfact-code-review` bundle runs seven analysis tools in sequence (ruff, r
 - Add a `bugs.yaml` semgrep config with Python security/bug rules, wired as a second semgrep pass
 - Auto-suppress `MISSING_ICONTRACT` when no `@require`/`@ensure` imports are found in the reviewed files
 - Exclude `.specfact/` from all sidecar framework extractor scan paths
+- Add `--mode shadow|enforce`, repeatable `--focus source|tests|docs`, and `--level error|warning` with clear CLI validation and stable JSON/human output
+- Align `module-package.yaml` `pip_dependencies` with every external review tool and implement runtime skips with explicit `tool_error` messages when a tool is missing
 
 **Non-Goals:**
 - Replacing CrossHair with a different symbolic execution engine
 - Adding semgrep cloud/registry rules (offline-first; rules must be bundled locally)
-- Changing the score model or CI exit codes for bug-hunt findings
+- Changing default **enforce** exit semantics for existing users (shadow is strictly opt-in)
 - Fixing CrossHair's analysis depth beyond timeout tuning
+- Teaching the review runner to lint non-Python doc formats (Markdown/RST) in this change — `--focus docs` applies to **Python files under `docs/`** only
 
 ## Decisions
 
@@ -46,18 +49,79 @@ Add `_EXCLUDED_DIR_NAMES = frozenset({".specfact", ".git", "__pycache__", "node_
 
 Alternative considered: filtering at the orchestrator level before passing `repo_path` to extractors. Rejected — extractors own the scan, fixing at the source is cleaner and prevents future extractors from re-introducing the bug.
 
+**D5: `--mode` with default `enforce`**
+
+- **`enforce`**: After findings are collected and post-processed (`--level` filter), compute score/verdict/`ci_exit_code` exactly as today; process exit matches `ci_exit_code`.
+- **`shadow`**: Same tool execution and same reported findings (after `--level`), but **force** `ci_exit_code = 0` and process exit `0` even when verdict would be `FAIL`. Human and JSON output still show the real `overall_verdict` so operators can see risk while not blocking the pipeline.
+
+Alternative considered: shadow mode hiding failures in JSON. Rejected — that would defeat auditability; only enforcement (exit) is relaxed.
+
+**D6: Repeatable `--focus` as a set union over path facets**
+
+Facets (Python files only, after normal ignore rules):
+
+| Facet | Membership rule |
+|-------|-----------------|
+| `tests` | `tests` appears in `path.parts` (same heuristic as `_is_test_file`) |
+| `docs` | `docs` appears in `path.parts` |
+| `source` | suffix `.py`, **not** `tests` facet, **not** `docs` facet |
+
+When `--focus` is passed one or more times, the reviewed file set is the **union** of matching files intersected with the scope-resolved set (positional, `--scope changed|full`, `--path`, etc.). When `--focus` is **omitted**, file resolution stays backward compatible with `--include-tests` / `--exclude-tests` / interactive defaults.
+
+When **any** `--focus` is present, **`--include-tests` and `--exclude-tests` are disallowed** (Typer `BadParameter`) to avoid contradictory intent.
+
+**D7: `--level` as a severity floor on the reported and scored finding list**
+
+Apply **after** all tools finish:
+
+- **`error`**: keep findings where `severity == "error"` only.
+- **`warning`**: keep `severity in {"error", "warning"}`; drop `info`.
+- **Omitted**: keep all severities (current behaviour).
+
+Recompute `score`, `overall_verdict`, `reward_delta`, and `ci_exit_code` from the **filtered** list so tables, JSON, score line, and exit code stay consistent. Tools still run on the full resolved file set (performance unchanged); only the governance envelope uses the filtered list.
+
+**D8: Typer wiring stays in `review/commands.py`**
+
+New options are declared next to existing `run` flags; parsing/validation errors surface as `typer.BadParameter` with stable messages suitable for cli-contract tests.
+
+**D9: Canonical tool → pip package map owned by the code-review package**
+
+Maintain a single source of truth (Python module or documented table consumed by a test) mapping each **review tool id** to:
+
+- the CLI executable name probed on `PATH` (where applicable), and
+- the **PyPI distribution name** declared in `module-package.yaml` `pip_dependencies` (e.g. `crosshair-tool` → executable `crosshair`).
+
+Covered tools for the default pipeline: `ruff`, `radon`, `semgrep`, `basedpyright`, `pylint`, `crosshair`, plus `pytest` / `pytest-cov` for the TDD gate subprocess. **AST clean-code** analysis uses the stdlib and shipped Python code only — no extra `pip_dependencies` row.
+
+When a new runner is added (e.g. second Semgrep pass), the map and `pip_dependencies` MUST be updated in the same change.
+
+**D10: Availability check before subprocess; skip with one `tool_error`**
+
+Each external runner SHALL call a shared helper (e.g. `ensure_tool_available(tool_id, file_path) -> list[ReviewFinding]`) that returns a non-empty list (single finding) when the tool is missing, so the runner returns immediately **without** invoking the tool. This avoids misclassifying `FileNotFoundError` as “parse JSON failed” or similar.
+
+**D11: Standard skip message shape**
+
+Skip findings SHALL use `category="tool_error"`, `rule="tool_error"` (or a dedicated `TOOL_SKIPPED` rule if implementation prefers — spec requires stable filtering by category/tool), `severity="warning"` unless policy elevates missing tools to `error`. The message MUST:
+
+- name the **tool id** (e.g. `ruff`, `semgrep`),
+- state that **review checks for that tool were skipped** because it is **not installed** or not on `PATH`,
+- cite the **pip package name** from the manifest (e.g. “install `ruff`”).
+
+For pytest invoked via `sys.executable`, treat “pytest not importable” / failed launcher the same way with tool id `pytest` and packages `pytest` / `pytest-cov` as appropriate.
+
 ## Risks / Trade-offs
 
 - **CrossHair false positives in bug-hunt mode**: Longer timeouts mean CrossHair explores more paths and may surface `SideEffectDetected` warnings on I/O-heavy functions. Mitigated: `_IGNORED_CROSSHAIR_PREFIXES` already filters `SideEffectDetected`; no change needed.
 - **`bugs.yaml` rule maintenance**: Bundled semgrep rules can go stale. Mitigated: keep the initial set small (5–10 high-confidence rules), document in the file header that additions require a PR with test evidence.
+- **False confidence when many tools are skipped**: A run may PASS while major tools were skipped. Mitigated: skip findings are visible in human and JSON output; optional follow-up could promote missing-tool severity in enforce mode — out of scope unless added to tasks later.
 - **MISSING_ICONTRACT auto-suppression masking real gaps**: If a bundle file imports icontract but only for one function, all other uncovered functions are still flagged. The auto-suppression only fires when zero icontract imports exist — so internal bundles are unaffected.
 - **Sidecar exclusion breaking legitimate `.specfact/` source scanning**: No known repo puts application source under `.specfact/`. Risk is negligible.
 
 ## Migration Plan
 
-No migrations required. Both changes are additive (`--bug-hunt` flag, `bugs.yaml` config) or bug fixes (venv exclusion, MISSING_ICONTRACT suppression). Existing behaviour is unchanged when `--bug-hunt` is not passed and when `bugs.yaml` is absent.
+No migrations required. New flags are additive with **defaults preserving today’s behaviour**: `--mode` defaults to `enforce`, `--focus` omitted uses legacy test inclusion rules, `--level` omitted keeps all severities. Sidecar and MISSING_ICONTRACT changes remain backward compatible when not triggered.
 
-Patch version bump on `specfact-codebase` (sidecar bug fix). No version bump required on `specfact-code-review` for the `--bug-hunt` flag or MISSING_ICONTRACT change — both are backwards-compatible additions. If the semgrep `bugs.yaml` is shipped as a bundled resource, a minor bump on `specfact-code-review` is appropriate.
+Patch version bump on `specfact-codebase` (sidecar bug fix). `specfact-code-review` should receive at least a **patch** bump once shipped (new CLI surface + behaviour). If policy treats bundled `bugs.yaml` as a material artefact, prefer a **minor** bump for the review bundle.
 
 ## Open Questions
 
