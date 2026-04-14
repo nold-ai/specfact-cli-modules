@@ -10,7 +10,9 @@ import sys
 import tempfile
 from collections.abc import Callable, Iterable
 from contextlib import suppress
+from functools import partial
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 from beartype import beartype
@@ -25,7 +27,8 @@ from specfact_code_review.tools.contract_runner import run_contract_check
 from specfact_code_review.tools.pylint_runner import run_pylint
 from specfact_code_review.tools.radon_runner import run_radon
 from specfact_code_review.tools.ruff_runner import run_ruff
-from specfact_code_review.tools.semgrep_runner import run_semgrep
+from specfact_code_review.tools.semgrep_runner import run_semgrep, run_semgrep_bugs
+from specfact_code_review.tools.tool_availability import skip_if_pytest_unavailable
 
 
 _SOURCE_ROOT = Path("packages/specfact-code-review/src")
@@ -243,16 +246,28 @@ def _checklist_findings() -> list[ReviewFinding]:
     ]
 
 
-def _tool_steps() -> list[tuple[str, Callable[[list[Path]], list[ReviewFinding]]]]:
+def _tool_steps(*, bug_hunt: bool) -> list[tuple[str, Callable[[list[Path]], list[ReviewFinding]]]]:
     return [
         ("Running Ruff checks...", run_ruff),
         ("Running Radon complexity checks...", run_radon),
         ("Running Semgrep rules...", run_semgrep),
+        ("Running Semgrep bug rules...", run_semgrep_bugs),
         ("Running AST clean-code checks...", run_ast_clean_code),
         ("Running basedpyright type checks...", run_basedpyright),
         ("Running pylint checks...", run_pylint),
-        ("Running contract checks...", run_contract_check),
+        ("Running contract checks...", partial(run_contract_check, bug_hunt=bug_hunt)),
     ]
+
+
+def _filter_findings_by_review_level(
+    findings: list[ReviewFinding],
+    level: Literal["error", "warning"] | None,
+) -> list[ReviewFinding]:
+    if level is None:
+        return findings
+    if level == "error":
+        return [finding for finding in findings if finding.severity == "error"]
+    return [finding for finding in findings if finding.severity in {"error", "warning"}]
 
 
 def _collect_tdd_inputs(files: list[Path]) -> tuple[list[Path], list[Path], list[ReviewFinding]]:
@@ -366,6 +381,10 @@ def _evaluate_tdd_gate(files: list[Path]) -> tuple[list[ReviewFinding], dict[str
     if findings:
         return findings, None
 
+    pytest_skip = skip_if_pytest_unavailable(source_files[0])
+    if pytest_skip:
+        return pytest_skip, None
+
     try:
         test_result, coverage_path = _run_pytest_with_coverage(test_files)
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
@@ -442,10 +461,13 @@ def run_review(
     no_tests: bool = False,
     include_noise: bool = False,
     progress_callback: Callable[[str], None] | None = None,
+    bug_hunt: bool = False,
+    review_level: Literal["error", "warning"] | None = None,
+    review_mode: Literal["shadow", "enforce"] = "enforce",
 ) -> ReviewReport:
     """Run all configured review runners and build the governed report."""
     findings: list[ReviewFinding] = []
-    for description, runner in _tool_steps():
+    for description, runner in _tool_steps(bug_hunt=bug_hunt):
         if progress_callback is not None:
             progress_callback(description)
         findings.extend(runner(files))
@@ -463,6 +485,8 @@ def run_review(
     if not include_noise:
         findings = _suppress_known_noise(findings)
 
+    findings = _filter_findings_by_review_level(findings, review_level)
+
     score = score_review(
         findings=findings,
         zero_loc_violations=not any(finding.tool == "ruff" and finding.rule == "E501" for finding in findings),
@@ -471,9 +495,12 @@ def run_review(
         coverage_90_plus=coverage_90_plus,
         no_new_suppressions=_has_no_suppressions(files),
     )
-    return ReviewReport(
+    report = ReviewReport(
         run_id=f"review-{uuid4()}",
         score=score.score,
         findings=findings,
         summary=_summary_for_findings(findings),
     )
+    if review_mode == "shadow":
+        return report.model_copy(update={"ci_exit_code": 0})
+    return report

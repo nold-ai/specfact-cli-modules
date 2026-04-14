@@ -12,10 +12,30 @@ from icontract import ensure, require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 _CROSSHAIR_LINE_RE = re.compile(r"^(?P<file>.+?):(?P<line>\d+):\s*(?:error|warning|info):\s*(?P<message>.+)$")
 _IGNORED_CROSSHAIR_PREFIXES = ("SideEffectDetected:",)
+
+
+def _has_icontract_usage(files: list[Path]) -> bool:
+    """True when any reviewed file imports the icontract package."""
+    for file_path in files:
+        try:
+            tree = ast.parse(file_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, SyntaxError):
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module == "icontract":
+                return True
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "icontract":
+                        return True
+    return False
+
+
 _SYNC_RUNTIME_ICONTRACT_ENTRYPOINTS = {
     "bridge_probe.py",
     "bridge_sync.py",
@@ -104,17 +124,23 @@ def _scan_file(file_path: Path) -> list[ReviewFinding]:
     return findings
 
 
-def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
+def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
     if not files:
         return []
 
+    skipped = skip_if_tool_missing("crosshair", files[0])
+    if skipped:
+        return skipped
+
+    per_path_timeout = "10" if bug_hunt else "2"
+    proc_timeout = 120 if bug_hunt else 30
     try:
         result = subprocess.run(
-            ["crosshair", "check", "--per_path_timeout", "2", *(str(file_path) for file_path in files)],
+            ["crosshair", "check", "--per_path_timeout", per_path_timeout, *(str(file_path) for file_path in files)],
             capture_output=True,
             text=True,
             check=False,
-            timeout=30,
+            timeout=proc_timeout,
         )
     except subprocess.TimeoutExpired:
         return []
@@ -163,13 +189,14 @@ def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
     lambda result: all(isinstance(finding, ReviewFinding) for finding in result),
     "result must contain ReviewFinding instances",
 )
-def run_contract_check(files: list[Path]) -> list[ReviewFinding]:
+def run_contract_check(files: list[Path], *, bug_hunt: bool = False) -> list[ReviewFinding]:
     """Run AST-based contract checks and a CrossHair fast pass for the provided files."""
     if not files:
         return []
 
     findings: list[ReviewFinding] = []
-    for file_path in files:
-        findings.extend(_scan_file(file_path))
-    findings.extend(_run_crosshair(files))
+    if _has_icontract_usage(files):
+        for file_path in files:
+            findings.extend(_scan_file(file_path))
+    findings.extend(_run_crosshair(files, bug_hunt=bug_hunt))
     return findings

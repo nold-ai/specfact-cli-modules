@@ -1,7 +1,8 @@
 """Run specfact code review as a staged-file pre-commit gate (modules repo).
 
 Writes a machine-readable JSON report to ``.specfact/code-review.json`` (gitignored)
-so IDEs and Copilot can read findings; exit code still reflects the governed CI verdict.
+so IDEs and Copilot can read findings. The hook exits non-zero only when the report
+contains error-severity findings (warning-only verdicts do not block commits).
 
 If ``specfact_cli`` is not installed, attempts ``hatch run dev-deps`` / ``ensure_core_dependency``
 (sibling ``specfact-cli`` checkout) before failing.
@@ -83,13 +84,15 @@ def filter_review_gate_paths(paths: Sequence[str]) -> list[str]:
 
 
 def _specfact_review_paths(paths: Sequence[str]) -> list[str]:
-    """Paths to pass to SpecFact ``code review run`` (it treats inputs as Python; skip OpenSpec Markdown)."""
+    """Paths to pass to SpecFact ``code review run`` (Python sources only; skip Markdown and binary artifacts)."""
     result: list[str] = []
     for raw in paths:
         normalized = raw.replace("\\", "/").strip()
         if normalized.startswith("openspec/changes/") and normalized.lower().endswith(".md"):
             continue
-        result.append(raw)
+        lower = normalized.lower()
+        if lower.endswith((".py", ".pyi")):
+            result.append(raw)
     return result
 
 
@@ -287,8 +290,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     specfact_files = _specfact_review_paths(files)
     if len(specfact_files) == 0:
         sys.stdout.write(
-            "Staged review paths are only OpenSpec Markdown under openspec/changes/; "
-            "skipping SpecFact code review (those files are not Python review targets).\n"
+            "Staged review paths include no Python files (.py/.pyi) for SpecFact "
+            "(e.g. only Markdown, YAML, or registry bundles); skipping SpecFact code review.\n"
         )
         return 0
 
@@ -309,6 +312,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     # is in REVIEW_JSON_OUT; we print a short summary on stderr below.
     if not _print_review_findings_summary(repo_root):
         return 1
+    try:
+        data = json.loads(report_path.read_text(encoding="utf-8"))
+        findings_raw = data.get("findings")
+        if isinstance(findings_raw, list):
+            counts = count_findings_by_severity(findings_raw)
+            if counts["error"] == 0:
+                return 0
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        pass
     return result.returncode
 
 

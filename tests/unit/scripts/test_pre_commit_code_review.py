@@ -34,11 +34,19 @@ SAMPLE_FAIL_REVIEW_REPORT: dict[str, object] = {
 }
 
 
-def test_specfact_review_paths_skips_openspec_markdown() -> None:
+def test_specfact_review_paths_keeps_only_python_sources() -> None:
     module = _load_script_module()
     assert module._specfact_review_paths(
-        ["tests/test_app.py", "openspec/changes/foo/tasks.md", "openspec/changes/foo/proposal.md"]
-    ) == ["tests/test_app.py"]
+        [
+            "tests/test_app.py",
+            "openspec/changes/foo/tasks.md",
+            "openspec/changes/foo/proposal.md",
+            "registry/modules/specfact-code-review-0.47.0.tar.gz",
+            "registry/index.json",
+            "packages/specfact-code-review/module-package.yaml",
+            "src/pkg/stub.pyi",
+        ]
+    ) == ["tests/test_app.py", "src/pkg/stub.pyi"]
 
 
 def test_filter_review_gate_paths_keeps_contract_relevant_trees() -> None:
@@ -95,6 +103,39 @@ def test_main_skips_specfact_when_only_openspec_markdown(capsys: pytest.CaptureF
     assert exit_code == 0
     out = capsys.readouterr().out
     assert "skipping SpecFact code review" in out
+    assert ".py/.pyi" in out
+
+
+def test_main_warnings_only_does_not_block_despite_cli_fail_exit(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Pre-commit gate blocks on error findings only; warning-only FAIL verdict is advisory."""
+    module = _load_script_module()
+    repo_root = tmp_path
+    payload: dict[str, object] = {
+        "overall_verdict": "FAIL",
+        "findings": [{"severity": "warning", "rule": "w1"}],
+    }
+    _write_sample_review_report(repo_root, payload)
+
+    def _fake_root() -> Path:
+        return repo_root
+
+    def _fake_ensure() -> tuple[bool, str | None]:
+        return True, None
+
+    def _fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        _write_sample_review_report(repo_root, payload)
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="")
+
+    monkeypatch.setattr(module, "_repo_root", _fake_root)
+    monkeypatch.setattr(module, "ensure_runtime_available", _fake_ensure)
+    monkeypatch.setattr(module.subprocess, "run", _fake_run)
+
+    exit_code = module.main(["tests/unit/test_app.py"])
+    err = capsys.readouterr().err
+    assert exit_code == 0
+    assert "warnings=1" in err
 
 
 def test_main_propagates_review_gate_exit_code(

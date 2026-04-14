@@ -1,0 +1,52 @@
+# Bundled high-confidence bug / security patterns for specfact-code-review second pass.
+# Additions should ship with tests (see openspec change code-review-bug-finding-and-sidecar-venv-fix).
+rules:
+  - id: specfact-bugs-eval-exec
+    languages: [python]
+    message: Avoid eval() and exec(); they enable arbitrary code execution.
+    severity: ERROR
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+    metadata:
+      specfact-category: security
+
+  - id: specfact-bugs-os-system
+    languages: [python]
+    message: Avoid os.system(); prefer subprocess with a fixed argument list.
+    severity: WARNING
+    pattern: os.system(...)
+    metadata:
+      specfact-category: security
+
+  - id: specfact-bugs-pickle-loads
+    languages: [python]
+    message: pickle.loads on untrusted data is unsafe; validate inputs or use a safe format.
+    severity: WARNING
+    pattern: pickle.loads(...)
+    metadata:
+      specfact-category: security
+
+  - id: specfact-bugs-yaml-unsafe
+    languages: [python]
+    message: yaml.load without Loader= can execute arbitrary objects; use yaml.safe_load.
+    severity: WARNING
+    pattern: yaml.load(...)
+    metadata:
+      specfact-category: security
+
+  - id: specfact-bugs-hardcoded-password
+    languages: [python]
+    message: Possible hardcoded password assignment; use configuration or secrets management.
+    severity: WARNING
+    pattern-regex: (?i)(password|passwd|secret)\s*=\s*['"][^'"]+['"]
+    metadata:
+      specfact-category: security
+
+  - id: specfact-bugs-useless-comparison
+    languages: [python]
+    message: Comparison may be always True or always False (same variable on both sides).
+    severity: WARNING
+    pattern: $X == $X
+    metadata:
+      specfact-category: clean_code

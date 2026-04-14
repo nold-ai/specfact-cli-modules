@@ -38,7 +38,7 @@ class DjangoExtractor(BaseFrameworkExtractor):
         if manage_py.exists():
             return True
 
-        urls_files = list(repo_path.rglob("urls.py"))
+        urls_files = [path for path in self._iter_python_files(repo_path) if path.name == "urls.py"]
         return len(urls_files) > 0
 
     @beartype
@@ -98,7 +98,7 @@ class DjangoExtractor(BaseFrameworkExtractor):
             if candidate.exists():
                 return candidate
 
-        urls_files = list(repo_path.rglob("urls.py"))
+        urls_files = [path for path in self._iter_python_files(repo_path) if path.name == "urls.py"]
         return urls_files[0] if urls_files else None
 
     @beartype

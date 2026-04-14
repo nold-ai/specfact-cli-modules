@@ -12,6 +12,7 @@ from icontract import ensure, require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 PYLINT_CATEGORY_MAP: dict[str, Literal["architecture"]] = {
@@ -105,6 +106,10 @@ def run_pylint(files: list[Path]) -> list[ReviewFinding]:
     if not files:
         return []
 
+    skipped = skip_if_tool_missing("pylint", files[0])
+    if skipped:
+        return skipped
+
     try:
         result = subprocess.run(
             ["pylint", "--output-format", "json", *[str(file_path) for file_path in files]],
@@ -114,7 +119,7 @@ def run_pylint(files: list[Path]) -> list[ReviewFinding]:
             timeout=30,
         )
         payload = _payload_from_output(result.stdout)
-    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return [tool_error(tool="pylint", file_path=files[0], message=f"Unable to parse pylint output: {exc}")]
 
     allowed_paths = _allowed_paths(files)

@@ -48,7 +48,7 @@ class FastAPIExtractor(BaseFrameworkExtractor):
         for search_path in [repo_path, repo_path / "src", repo_path / "app", repo_path / "backend" / "app"]:
             if not search_path.exists():
                 continue
-            for py_file in search_path.rglob("*.py"):
+            for py_file in self._iter_python_files(search_path):
                 if py_file.name in ["main.py", "app.py"]:
                     try:
                         content = py_file.read_text(encoding="utf-8")
@@ -79,7 +79,7 @@ class FastAPIExtractor(BaseFrameworkExtractor):
         for search_path in [repo_path, repo_path / "src", repo_path / "app", repo_path / "backend" / "app"]:
             if not search_path.exists():
                 continue
-            for py_file in search_path.rglob("*.py"):
+            for py_file in self._iter_python_files(search_path):
                 try:
                     routes = self._extract_routes_from_file(py_file)
                     results.extend(routes)
@@ -144,6 +144,29 @@ class FastAPIExtractor(BaseFrameworkExtractor):
         return imports
 
     @beartype
+    def _path_method_from_route_decorator(self, decorator: ast.expr, path: str, method: str) -> tuple[str, str]:
+        if not isinstance(decorator, ast.Call):
+            return path, method
+        func = decorator.func
+        if isinstance(func, ast.Attribute):
+            next_method = func.attr.upper()
+            next_path = path
+            if decorator.args:
+                lit = self._extract_string_literal(decorator.args[0])
+                if lit:
+                    next_path = lit
+            return next_path, next_method
+        if isinstance(func, ast.Name):
+            next_method = func.id.upper()
+            next_path = path
+            if decorator.args:
+                lit = self._extract_string_literal(decorator.args[0])
+                if lit:
+                    next_path = lit
+            return next_path, next_method
+        return path, method
+
+    @beartype
     def _extract_route_from_function(
         self, func_node: ast.FunctionDef, imports: dict[str, str], py_file: Path
     ) -> RouteInfo | None:
@@ -152,23 +175,8 @@ class FastAPIExtractor(BaseFrameworkExtractor):
         method = "GET"
         operation_id = func_node.name
 
-        # Check decorators for route information
         for decorator in func_node.decorator_list:
-            if isinstance(decorator, ast.Call):
-                if isinstance(decorator.func, ast.Attribute):
-                    # @app.get(), @app.post(), etc.
-                    method = decorator.func.attr.upper()
-                    if decorator.args:
-                        path_arg = self._extract_string_literal(decorator.args[0])
-                        if path_arg:
-                            path = path_arg
-                elif isinstance(decorator.func, ast.Name):
-                    # @get(), @post(), etc.
-                    method = decorator.func.id.upper()
-                    if decorator.args:
-                        path_arg = self._extract_string_literal(decorator.args[0])
-                        if path_arg:
-                            path = path_arg
+            path, method = self._path_method_from_route_decorator(decorator, path, method)
 
         normalized_path, path_params = self._extract_path_parameters(path)
 

@@ -12,6 +12,7 @@ from icontract import require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 def _allowed_paths(files: list[Path]) -> set[str]:
@@ -91,6 +92,10 @@ def run_basedpyright(files: list[Path]) -> list[ReviewFinding]:
     if not files:
         return []
 
+    skipped = skip_if_tool_missing("basedpyright", files[0])
+    if skipped:
+        return skipped
+
     try:
         result = subprocess.run(
             ["basedpyright", "--outputjson", "--project", ".", *[str(file_path) for file_path in files]],
@@ -100,7 +105,7 @@ def run_basedpyright(files: list[Path]) -> list[ReviewFinding]:
             timeout=30,
         )
         diagnostics = _diagnostics_from_output(result.stdout)
-    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, KeyError, subprocess.TimeoutExpired) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, KeyError, subprocess.TimeoutExpired) as exc:
         return [
             tool_error(
                 tool="basedpyright",

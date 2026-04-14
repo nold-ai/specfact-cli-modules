@@ -12,6 +12,7 @@ from icontract import ensure, require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 def _allowed_paths(files: list[Path]) -> set[str]:
@@ -99,6 +100,10 @@ def run_ruff(files: list[Path]) -> list[ReviewFinding]:
     if not files:
         return []
 
+    skipped = skip_if_tool_missing("ruff", files[0])
+    if skipped:
+        return skipped
+
     try:
         result = subprocess.run(
             ["ruff", "check", "--output-format", "json", *[str(file_path) for file_path in files]],
@@ -108,7 +113,7 @@ def run_ruff(files: list[Path]) -> list[ReviewFinding]:
             timeout=30,
         )
         payload = _payload_from_output(result.stdout)
-    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return [tool_error(tool="ruff", file_path=files[0], message=f"Unable to parse Ruff output: {exc}")]
 
     allowed_paths = _allowed_paths(files)

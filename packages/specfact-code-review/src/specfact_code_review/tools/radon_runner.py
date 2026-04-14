@@ -14,6 +14,7 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 _KISS_LOC_WARNING = 80
@@ -163,10 +164,30 @@ def _kiss_nesting_findings(
     return findings
 
 
+def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Typer command callbacks legitimately take many injected options; skip parameter-count KISS on them."""
+    args0 = function_node.args.args
+    if not args0:
+        return False
+    first = args0[0]
+    if first.arg != "ctx":
+        return False
+    ann = first.annotation
+    if ann is None:
+        return False
+    try:
+        rendered = ast.unparse(ann)
+    except AttributeError:
+        return False
+    return rendered.endswith("Context")
+
+
 def _kiss_parameter_findings(
     function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path
 ) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
+    if _typer_cli_entrypoint_exempt(function_node):
+        return findings
     parameter_count = len(function_node.args.posonlyargs)
     parameter_count += len(function_node.args.args)
     parameter_count += len(function_node.args.kwonlyargs)
@@ -272,6 +293,10 @@ def run_radon(files: list[Path]) -> list[ReviewFinding]:
     """Run Radon for the provided files and map complexity findings into ReviewFinding records."""
     if not files:
         return []
+
+    skipped = skip_if_tool_missing("radon", files[0])
+    if skipped:
+        return skipped
 
     payload = _run_radon_command(files)
     findings: list[ReviewFinding] = []

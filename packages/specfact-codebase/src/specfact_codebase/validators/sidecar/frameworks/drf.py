@@ -38,7 +38,7 @@ class DRFExtractor(BaseFrameworkExtractor):
             True if DRF is detected
         """
         # Check for rest_framework imports
-        for py_file in repo_path.rglob("*.py"):
+        for py_file in self._iter_python_files(repo_path):
             try:
                 content = py_file.read_text(encoding="utf-8")
                 if "rest_framework" in content or "from rest_framework" in content:
