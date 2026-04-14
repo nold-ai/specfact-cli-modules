@@ -32,6 +32,15 @@ def normalize_path_variants(path_value: str | Path) -> set[str]:
 
 
 @beartype
+@require(lambda files: isinstance(files, list))
+@require(lambda files: all(isinstance(p, Path) for p in files))
+@ensure(lambda result: isinstance(result, list))
+def python_source_paths_for_tools(files: list[Path]) -> list[Path]:
+    """Paths Python linters and typecheckers should analyze (excludes YAML manifests, etc.)."""
+    return [path for path in files if path.suffix == ".py"]
+
+
+@beartype
 @require(lambda tool: isinstance(tool, str) and bool(tool.strip()))
 @require(lambda file_path: isinstance(file_path, Path))
 @require(lambda message: isinstance(message, str) and bool(message.strip()))

@@ -70,7 +70,7 @@ def test_verify_manifest_falls_back_to_filesystem_payload_when_checksum_matches(
     assert verification_mode == "filesystem"
 
 
-def test_verify_manifest_metadata_only_accepts_valid_manifest(tmp_path: Path) -> None:
+def test_verify_manifest_integrity_shape_only_accepts_checksum_only_manifest(tmp_path: Path) -> None:
     verify_script = _load_verify_script()
     module_dir = tmp_path / "packages" / "specfact-example"
     module_dir.mkdir(parents=True)
@@ -82,17 +82,16 @@ def test_verify_manifest_metadata_only_accepts_valid_manifest(tmp_path: Path) ->
                 "version": "0.1.0",
                 "integrity": {
                     "checksum": "sha256:" + "a" * 64,
-                    "signature": "x" * 64,
                 },
             },
             sort_keys=False,
         ),
         encoding="utf-8",
     )
-    verify_script.verify_manifest_metadata_only(manifest_path, require_signature=False)
+    verify_script.verify_manifest_integrity_shape_only(manifest_path, require_signature=False)
 
 
-def test_verify_manifest_metadata_only_rejects_bad_checksum_format(tmp_path: Path) -> None:
+def test_verify_manifest_integrity_shape_only_rejects_bad_checksum_format(tmp_path: Path) -> None:
     verify_script = _load_verify_script()
     module_dir = tmp_path / "packages" / "specfact-example"
     module_dir.mkdir(parents=True)
@@ -109,14 +108,14 @@ def test_verify_manifest_metadata_only_rejects_bad_checksum_format(tmp_path: Pat
         encoding="utf-8",
     )
     try:
-        verify_script.verify_manifest_metadata_only(manifest_path, require_signature=False)
+        verify_script.verify_manifest_integrity_shape_only(manifest_path, require_signature=False)
     except ValueError as exc:
         assert "checksum" in str(exc).lower()
     else:
         raise AssertionError("expected ValueError")
 
 
-def test_verify_manifest_metadata_only_enforces_signature_when_requested(tmp_path: Path) -> None:
+def test_verify_manifest_integrity_shape_only_enforces_signature_when_requested(tmp_path: Path) -> None:
     verify_script = _load_verify_script()
     module_dir = tmp_path / "packages" / "specfact-example"
     module_dir.mkdir(parents=True)
@@ -133,7 +132,7 @@ def test_verify_manifest_metadata_only_enforces_signature_when_requested(tmp_pat
         encoding="utf-8",
     )
     try:
-        verify_script.verify_manifest_metadata_only(manifest_path, require_signature=True)
+        verify_script.verify_manifest_integrity_shape_only(manifest_path, require_signature=True)
     except ValueError as exc:
         assert "signature" in str(exc).lower()
     else:

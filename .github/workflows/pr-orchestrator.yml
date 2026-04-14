@@ -80,29 +80,28 @@ jobs:
       - name: Verify bundled module signatures and version bumps
         run: |
           set -euo pipefail
-          TARGET_BRANCH=""
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
-          else
-            TARGET_BRANCH="${GITHUB_REF#refs/heads/}"
-          fi
-
-          BASE_REF=""
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
-          fi
-
           if [ -z "${SPECFACT_MODULE_PUBLIC_SIGN_KEY:-}" ] && [ -z "${SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM:-}" ]; then
             echo "warning: no public signing key secret set; verifier must resolve key from repo/default path"
           fi
 
           VERIFY_CMD=(python scripts/verify-modules-signature.py --payload-from-filesystem --enforce-version-bump)
-          if [ "$TARGET_BRANCH" = "main" ]; then
-            VERIFY_CMD+=(--require-signature)
-          fi
-          if [ -n "$BASE_REF" ]; then
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
+            TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
             VERIFY_CMD+=(--version-check-base "$BASE_REF")
+            if [ "$TARGET_BRANCH" = "dev" ]; then
+              VERIFY_CMD+=(--metadata-only)
+            elif [ "$TARGET_BRANCH" = "main" ] && \
+                 [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+              VERIFY_CMD+=(--require-signature)
+            fi
+          else
+            if [ "${{ github.ref_name }}" = "main" ]; then
+              VERIFY_CMD+=(--require-signature)
+            fi
           fi
+
           "${VERIFY_CMD[@]}"
 
   quality:

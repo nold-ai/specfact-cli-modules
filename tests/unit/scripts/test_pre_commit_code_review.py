@@ -49,6 +49,13 @@ def test_specfact_review_paths_keeps_only_python_sources() -> None:
     ) == ["tests/test_app.py", "src/pkg/stub.pyi"]
 
 
+def test_filter_review_gate_paths_excludes_module_package_manifest() -> None:
+    """module-package.yaml is not Python; it must not trigger the code-review gate."""
+    module = _load_script_module()
+
+    assert module.filter_review_gate_paths(["packages/specfact-code-review/module-package.yaml"]) == []
+
+
 def test_filter_review_gate_paths_keeps_contract_relevant_trees() -> None:
     """Review gate should include staged paths under tooling and contract trees."""
     module = _load_script_module()
@@ -124,7 +131,7 @@ def test_main_warnings_only_does_not_block_despite_cli_fail_exit(
     def _fake_ensure() -> tuple[bool, str | None]:
         return True, None
 
-    def _fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    def _fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         _write_sample_review_report(repo_root, payload)
         return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="")
 
@@ -152,11 +159,11 @@ def test_main_propagates_review_gate_exit_code(
     def _fake_ensure() -> tuple[bool, str | None]:
         return True, None
 
-    def _fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    def _fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         assert "--json" in cmd
         assert module.REVIEW_JSON_OUT in cmd
-        assert kwargs.get("cwd") == str(repo_root)
-        assert kwargs.get("timeout") == 300
+        assert _kwargs.get("cwd") == str(repo_root)
+        assert _kwargs.get("timeout") == 300
         _write_sample_review_report(repo_root, SAMPLE_FAIL_REVIEW_REPORT)
         return subprocess.CompletedProcess(cmd, 1, stdout=".specfact/code-review.json\n", stderr="")
 
@@ -239,9 +246,9 @@ def test_main_timeout_fails_hook(monkeypatch: pytest.MonkeyPatch, capsys: pytest
     def _fake_ensure() -> tuple[bool, str | None]:
         return True, None
 
-    def _fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        assert kwargs.get("cwd") == str(repo_root)
-        assert kwargs.get("timeout") == 300
+    def _fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert _kwargs.get("cwd") == str(repo_root)
+        assert _kwargs.get("timeout") == 300
         raise subprocess.TimeoutExpired(cmd, 300)
 
     monkeypatch.setattr(module, "ensure_runtime_available", _fake_ensure)

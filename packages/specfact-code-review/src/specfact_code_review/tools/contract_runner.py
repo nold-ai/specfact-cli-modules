@@ -10,7 +10,7 @@ from pathlib import Path
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import normalize_path_variants, tool_error
+from specfact_code_review._review_utils import normalize_path_variants, python_source_paths_for_tools, tool_error
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
@@ -191,12 +191,13 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
 )
 def run_contract_check(files: list[Path], *, bug_hunt: bool = False) -> list[ReviewFinding]:
     """Run AST-based contract checks and a CrossHair fast pass for the provided files."""
-    if not files:
+    py_files = python_source_paths_for_tools(files)
+    if not py_files:
         return []
 
     findings: list[ReviewFinding] = []
-    if _has_icontract_usage(files):
-        for file_path in files:
+    if _has_icontract_usage(py_files):
+        for file_path in py_files:
             findings.extend(_scan_file(file_path))
-    findings.extend(_run_crosshair(files, bug_hunt=bug_hunt))
+    findings.extend(_run_crosshair(py_files, bug_hunt=bug_hunt))
     return findings

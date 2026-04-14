@@ -13,6 +13,7 @@ from typing import Any
 from beartype import beartype
 from icontract import ensure, require
 
+from specfact_code_review._review_utils import python_source_paths_for_tools
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
@@ -291,6 +292,7 @@ def _ensure_review_findings(result: list[ReviewFinding]) -> bool:
 )
 def run_radon(files: list[Path]) -> list[ReviewFinding]:
     """Run Radon for the provided files and map complexity findings into ReviewFinding records."""
+    files = python_source_paths_for_tools(files)
     if not files:
         return []
 

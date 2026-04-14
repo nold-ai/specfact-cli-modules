@@ -46,10 +46,10 @@ Module packages carry **publisher** and **integrity** metadata so installation, 
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY`
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
 - **Verification command** (`scripts/verify-modules-signature.py`):
-  - **Strict** (signatures required): `--require-signature --enforce-version-bump --payload-from-filesystem` (and optional `--version-check-base <git-ref>` in CI), same idea as the **specfact-cli** docs for `verify-modules-signature.py`.
-  - **`--metadata-only`**: validates manifest shape (`integrity.checksum` format; optional `integrity.signature` presence when `--require-signature`) **without** hashing the bundle or verifying crypto — for **local pre-commit** on non-`main` branches only. **CI** (`.github/workflows/pr-orchestrator.yml`) always runs the **full** verifier without `--metadata-only`.
-- **Pre-commit** (this repo): `scripts/pre-commit-verify-modules-signature.sh` follows the same **`require` / `omit`** policy shape as **specfact-cli** `scripts/pre-commit-verify-modules.sh`, driven by `scripts/git-branch-module-signature-flag.sh`. Here, `omit` maps to `--metadata-only` so developers are not forced to re-sign locally; **specfact-cli** `omit` still runs **full checksum** verification against paths under `modules/` / `src/specfact_cli/modules/`.
-  - `--version-check-base <git-ref>` is used for PR comparisons in CI.
+  - **Baseline (PR/CI and local hook)**: `--payload-from-filesystem --enforce-version-bump` — full payload checksum verification plus version-bump enforcement. This is the default integration path **without** `--require-signature` when the target branch is **`dev`** (pull requests to `dev`, or pushes to `dev`).
+  - **Strict mode**: add `--require-signature` so every manifest must include a verifiable `integrity.signature`. In `.github/workflows/pr-orchestrator.yml` this is appended for **pull requests whose base is `main`** and for **pushes to `main`**, in addition to the baseline flags. Locally, `scripts/pre-commit-verify-modules-signature.sh` adds `--require-signature` only when the checkout (or `GITHUB_BASE_REF` in Actions) is **`main`**; otherwise it runs the same baseline flags only.
+  - **Pull request CI** also passes `--version-check-base <git-ref>` (typically `origin/<base branch>`) so version rules compare against the PR base.
+  - **CI uses the full verifier** (payload digest + rules above). It does **not** pass `--metadata-only`. The script still supports `--metadata-only` for optional tooling that only needs manifest shape and checksum format checks.
 - **CI signing**: Approved same-repo PRs to `dev` or `main` may receive automated signing commits via `sign-modules-on-approval.yml` (repository secrets; merge-base scoped `--changed-only`).
 
 ## Public key and key rotation

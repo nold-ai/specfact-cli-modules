@@ -1,8 +1,7 @@
 """Run specfact code review as a staged-file pre-commit gate (modules repo).
 
 Writes a machine-readable JSON report to ``.specfact/code-review.json`` (gitignored)
-so IDEs and Copilot can read findings. The hook exits non-zero only when the report
-contains error-severity findings (warning-only verdicts do not block commits).
+so IDEs and Copilot can read findings; exit code still reflects the governed CI verdict.
 
 If ``specfact_cli`` is not installed, attempts ``hatch run dev-deps`` / ``ensure_core_dependency``
 (sibling ``specfact-cli`` checkout) before failing.
@@ -54,6 +53,8 @@ def _is_review_gate_path(path: str) -> bool:
     normalized = path.replace("\\", "/").strip()
     if not normalized:
         return False
+    if normalized.endswith("module-package.yaml"):
+        return False
     if normalized.startswith("openspec/changes/") and Path(normalized).name.casefold() == "tdd_evidence.md":
         return False
     prefixes = (
@@ -84,15 +85,15 @@ def filter_review_gate_paths(paths: Sequence[str]) -> list[str]:
 
 
 def _specfact_review_paths(paths: Sequence[str]) -> list[str]:
-    """Paths to pass to SpecFact ``code review run`` (Python sources only; skip Markdown and binary artifacts)."""
+    """Paths to pass to SpecFact ``code review run`` (Python sources only; skip Markdown and non-.py/.pyi)."""
     result: list[str] = []
     for raw in paths:
         normalized = raw.replace("\\", "/").strip()
         if normalized.startswith("openspec/changes/") and normalized.lower().endswith(".md"):
             continue
-        lower = normalized.lower()
-        if lower.endswith((".py", ".pyi")):
-            result.append(raw)
+        if not normalized.endswith((".py", ".pyi")):
+            continue
+        result.append(raw)
     return result
 
 
@@ -207,25 +208,29 @@ def count_findings_by_severity(findings: list[object]) -> dict[str, int]:
     return buckets
 
 
-def _print_review_findings_summary(repo_root: Path) -> dict[str, int] | None:
-    """Parse ``REVIEW_JSON_OUT``, print a one-line findings count, and return severity buckets."""
+def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None]:
+    """Parse ``REVIEW_JSON_OUT``, print a one-line findings count, return ``(ok, error_count)``."""
     report_path = _report_path(repo_root)
     if not report_path.is_file():
         sys.stderr.write(f"Code review: no report file at {REVIEW_JSON_OUT} (could not print findings summary).\n")
-        return None
+        return False, None
     try:
         data = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as exc:
         sys.stderr.write(f"Code review: could not read {REVIEW_JSON_OUT}: {exc}\n")
-        return None
+        return False, None
     except json.JSONDecodeError as exc:
         sys.stderr.write(f"Code review: invalid JSON in {REVIEW_JSON_OUT}: {exc}\n")
-        return None
+        return False, None
+
+    if not isinstance(data, dict):
+        sys.stderr.write(f"Code review: expected top-level JSON object in {REVIEW_JSON_OUT}.\n")
+        return False, None
 
     findings_raw = data.get("findings")
     if not isinstance(findings_raw, list):
         sys.stderr.write(f"Code review: report has no findings list in {REVIEW_JSON_OUT}.\n")
-        return None
+        return False, None
 
     counts = count_findings_by_severity(findings_raw)
     total = len(findings_raw)
@@ -249,7 +254,7 @@ def _print_review_findings_summary(repo_root: Path) -> dict[str, int] | None:
         f"  Read `{REVIEW_JSON_OUT}` and fix every finding (errors first), using file and line from each entry.\n"
     )
     sys.stderr.write(f"  @workspace Open `{REVIEW_JSON_OUT}` and remediate each item in `findings`.\n")
-    return counts
+    return True, counts["error"]
 
 
 @ensure(lambda result: isinstance(result, tuple) and len(result) == 2)
@@ -290,8 +295,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     specfact_files = _specfact_review_paths(files)
     if len(specfact_files) == 0:
         sys.stdout.write(
-            "Staged review paths include no Python files (.py/.pyi) for SpecFact "
-            "(e.g. only Markdown, YAML, or registry bundles); skipping SpecFact code review.\n"
+            "Staged review paths are only OpenSpec Markdown under openspec/changes/; "
+            "skipping SpecFact code review (no staged .py/.pyi targets; Markdown is not passed to SpecFact).\n"
         )
         return 0
 
@@ -310,10 +315,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _missing_report_exit_code(report_path, result)
     # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners); full report
     # is in REVIEW_JSON_OUT; we print a short summary on stderr below.
-    counts = _print_review_findings_summary(repo_root)
-    if counts is None:
+    summary_ok, error_count = _print_review_findings_summary(repo_root)
+    if not summary_ok or error_count is None:
         return 1
-    if counts["error"] == 0:
+    if error_count == 0:
         return 0
     return result.returncode
 
