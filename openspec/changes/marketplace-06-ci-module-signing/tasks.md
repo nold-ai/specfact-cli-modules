@@ -34,18 +34,19 @@
 
 - [x] 4.1 Create `.github/workflows/sign-modules-on-approval.yml` with trigger:
   `pull_request_review: types: [submitted]`.
-- [x] 4.2 Add job condition:
-  `if: github.event.review.state == 'approved' && (github.event.pull_request.base.ref == 'dev' || github.event.pull_request.base.ref == 'main')`.
+- [x] 4.2 Add job condition: approved review, base `dev` or `main`, and
+  `github.event.pull_request.head.repo.full_name == github.repository` (same-repo only; fork PRs
+  cannot be pushed with the default token).
 - [x] 4.3 Add steps: checkout PR head, set up Python 3.12, install signing deps
   (`pyyaml beartype icontract cryptography cffi`).
 - [x] 4.4 Add manifest discovery step:
   `mapfile -t MANIFESTS < <(find packages -name 'module-package.yaml' -type f | sort)`.
-- [x] 4.5 Add signing step: compute `BASE_REF="origin/${{ github.event.pull_request.base.ref }}"`;
-  for each changed manifest (compare against BASE_REF), run
-  `python scripts/sign-modules.py --allow-same-version --payload-from-filesystem "<manifest>"`;
-  or use `--changed-only --base-ref "$BASE_REF"` if the script supports `packages/` discovery.
-  Fail immediately if `SPECFACT_MODULE_PRIVATE_SIGN_KEY` or `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
-  is empty.
+- [x] 4.5 Add signing step: `git fetch origin <base>` then set `MERGE_BASE="$(git merge-base HEAD
+  "origin/<base>")"` so `--changed-only` reflects **PR-scoped** deltas (not the base-branch tip vs a
+  stale branch); run `python scripts/sign-modules.py --changed-only --base-ref "$MERGE_BASE"
+  --bump-version patch --payload-from-filesystem` (version auto-bump when unchanged since merge-base;
+  no `--allow-same-version`). Fail immediately if `SPECFACT_MODULE_PRIVATE_SIGN_KEY` or
+  `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE` is empty.
 - [x] 4.6 Add write-back step: configure git user (github-actions bot), `git add` changed manifests,
   commit `chore(modules): ci sign changed modules [skip ci]` (skip if no changes), push using
   `GITHUB_TOKEN` with `permissions: contents: write`.

@@ -16,7 +16,8 @@ jobs:
   sign-modules:
     if: >-
       github.event.review.state == 'approved' &&
-      (github.event.pull_request.base.ref == 'dev' || github.event.pull_request.base.ref == 'main')
+      (github.event.pull_request.base.ref == 'dev' || github.event.pull_request.base.ref == 'main') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     env:
       SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
@@ -34,7 +35,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
       - name: Set up Python 3.12
@@ -48,19 +49,22 @@ jobs:
           python -m pip install pyyaml beartype icontract cryptography cffi
 
       - name: Discover module manifests
+        id: discover
         run: |
           set -euo pipefail
           mapfile -t MANIFESTS < <(find packages -name 'module-package.yaml' -type f | sort)
+          echo "manifests_count=${#MANIFESTS[@]}" >> "$GITHUB_OUTPUT"
           echo "Discovered ${#MANIFESTS[@]} module-package.yaml file(s) under packages/"
 
       - name: Sign changed module manifests
         id: sign
         run: |
           set -euo pipefail
-          BASE_REF="origin/${PR_BASE_REF}"
+          git fetch origin "${PR_BASE_REF}" --no-tags
+          MERGE_BASE="$(git merge-base HEAD "origin/${PR_BASE_REF}")"
           python scripts/sign-modules.py \
             --changed-only \
-            --base-ref "$BASE_REF" \
+            --base-ref "$MERGE_BASE" \
             --bump-version patch \
             --payload-from-filesystem
 
@@ -84,12 +88,14 @@ jobs:
         if: always()
         env:
           COMMIT_CHANGED: ${{ steps.commit.outputs.changed }}
+          MANIFESTS_COUNT: ${{ steps.discover.outputs.manifests_count }}
         run: |
           {
             echo "### Module signing (CI approval)"
+            echo "Manifests discovered under \`packages/\`: ${MANIFESTS_COUNT:-unknown}"
             if [ "${COMMIT_CHANGED}" = "true" ]; then
               echo "Committed signed manifest updates to ${PR_HEAD_REF}."
             else
-              echo "No changes detected (manifests already signed or no module changes since base)."
+              echo "No changes detected (manifests already signed or no module changes on this PR vs merge-base)."
             fi
           } >> "$GITHUB_STEP_SUMMARY"

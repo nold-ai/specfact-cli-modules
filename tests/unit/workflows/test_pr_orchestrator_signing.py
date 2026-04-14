@@ -16,9 +16,10 @@ def test_pr_orchestrator_verify_splits_signature_requirement_by_target_branch() 
     assert "github.event.pull_request.base.ref" in workflow
     assert "TARGET_BRANCH" in workflow
     assert "GITHUB_REF#refs/heads/" in workflow or "${GITHUB_REF#refs/heads/}" in workflow
-    assert '[ "$TARGET_BRANCH" = "main" ]' in workflow
+    branch_guard = 'if [ "$TARGET_BRANCH" = "main" ]; then'
+    require_append = "VERIFY_CMD+=(--require-signature)"
+    assert branch_guard in workflow
+    assert require_append in workflow
+    assert workflow.index(branch_guard) < workflow.index(require_append)
     assert "--require-signature" in workflow
-    # Dev (and non-main) path must omit full signature enforcement: script invoked without the flag
-    # when targeting dev — enforced by pairing VERIFY_CMD construction with the branch check.
     assert "VERIFY_CMD" in workflow
-    assert "VERIFY_CMD+=(--require-signature)" in workflow
