@@ -15,7 +15,7 @@ This repo differs from `specfact-cli` in two important ways that shape the imple
 
 3. **Pre-commit verify hook**: `.pre-commit-config.yaml` already runs `verify-modules-signature.py` on
    every commit. That entry is replaced with a thin wrapper that mirrors `pr-orchestrator` policy
-   (`--require-signature` only when the current branch is `main` or `GITHUB_REF_NAME` is `main`).
+   (`--require-signature` when the current branch is `main`, or `GITHUB_BASE_REF` is `main` in Actions).
    Block 1 quality stages in `pre-commit-quality-checks.sh` are unchanged.
 
 Both repos share the same `scripts/sign-modules.py` logic (or a copy of it) and the same GitHub

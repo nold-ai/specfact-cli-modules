@@ -20,6 +20,10 @@ def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
     assert "github.event.pull_request.base.ref == 'dev'" in workflow
     assert "github.event.pull_request.base.ref == 'main'" in workflow
     assert "github.event.pull_request.head.repo.full_name == github.repository" in workflow
+    assert "concurrency:" in workflow
+    assert "cancel-in-progress: true" in workflow
+    assert "permissions:" in workflow
+    assert "contents: write" in workflow
 
 
 def test_sign_modules_on_approval_checkout_and_python() -> None:

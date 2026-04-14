@@ -37,7 +37,7 @@ for pull requests or pushes targeting `dev`; it SHALL enforce `--require-signatu
 
 ### Requirement: pre-commit verify mirrors pr-orchestrator signature policy
 
-The repository pre-commit hook that runs `verify-modules-signature.py` SHALL apply the same branch rule as the `verify-module-signatures` CI job: omit `--require-signature` unless the current context is `main` (local branch `main` or `GITHUB_REF_NAME=main` in Actions).
+The repository pre-commit hook that runs `verify-modules-signature.py` SHALL apply the same branch rule as the `verify-module-signatures` CI job: omit `--require-signature` unless the integration target is `main` (local branch `main`, or `GITHUB_BASE_REF=main` on pull request events in Actions).
 
 #### Scenario: Commit on a feature branch without a signing key
 

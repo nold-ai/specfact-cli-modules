@@ -51,7 +51,7 @@ depends_on:
 
 ## Pre-commit order
 
-1. Module signature verification via `scripts/pre-commit-verify-modules-signature.sh` (`.pre-commit-config.yaml`; `fail_fast: true` so a failing earlier hook never runs later stages). The hook adds `--require-signature` only on branch `main` (or `GITHUB_REF_NAME=main`).
+1. Module signature verification via `scripts/pre-commit-verify-modules-signature.sh` (`.pre-commit-config.yaml`; `fail_fast: true` so a failing earlier hook never runs later stages). The hook adds `--require-signature` on branch `main`, or when `GITHUB_BASE_REF` is `main` (PR target in Actions).
 2. **Block 1** — four separate hooks (each flushes pre-commit output when it exits, so you see progress between stages): `pre-commit-quality-checks.sh block1-format` (always), `block1-yaml` when staged `*.yaml` / `*.yml`, `block1-bundle` (always), `block1-lint` when staged `*.py` / `*.pyi`.
 3. **Block 2** — `pre-commit-quality-checks.sh block2` (skipped for “safe-only” staged paths): `hatch run python scripts/pre_commit_code_review.py …` on **staged paths under `packages/`, `registry/`, `scripts/`, `tools/`, `tests/`, and `openspec/changes/`** (excluding `TDD_EVIDENCE.md`), then `contract-test-status` / `hatch run contract-test`.
 

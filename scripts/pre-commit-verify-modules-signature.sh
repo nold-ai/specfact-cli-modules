@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Mirror pr-orchestrator verify-module-signatures policy: require cryptographic signatures on `main`
-# only; on other branches (feature, dev, detached HEAD) use checksum + version enforcement so local
-# commits work without a private signing key (CI signs on approval before main).
+# Mirror pr-orchestrator verify-module-signatures policy: require cryptographic signatures only when
+# the integration target is `main`. Locally that is branch `main`; in GitHub Actions pull_request*
+# contexts use GITHUB_BASE_REF (PR base / target), not GITHUB_REF_NAME (head).
 set -euo pipefail
 _repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$_repo_root"
 
 _branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
 _require_signature=false
-if [[ "$_branch" == "main" || "${GITHUB_REF_NAME:-}" == "main" ]]; then
+if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
+  if [[ "${GITHUB_BASE_REF}" == "main" ]]; then
+    _require_signature=true
+  fi
+elif [[ "$_branch" == "main" ]]; then
   _require_signature=true
 fi
 

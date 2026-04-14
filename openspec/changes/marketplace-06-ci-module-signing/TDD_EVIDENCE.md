@@ -1,10 +1,39 @@
 # TDD evidence: marketplace-06-ci-module-signing
 
-## Red (workflow tests before implementation)
+Chain: delta specs (`ci-integration`, `ci-module-signing-on-approval`) → workflow tests → **Red** evidence →
+implement `.github/workflows/sign-modules-on-approval.yml` + `pr-orchestrator.yml` → **Green** evidence.
 
-Not captured in this session: `sign-modules-on-approval.yml` did not exist until implementation, so
-`tests/unit/workflows/test_sign_modules_on_approval.py` would fail on missing file. After adding the
-workflow and updating `pr-orchestrator.yml`, tests were turned green.
+## Red (workflow tests before `sign-modules-on-approval.yml` existed)
+
+Artifacts: `tests/unit/workflows/test_sign_modules_on_approval.py` (expects
+`.github/workflows/sign-modules-on-approval.yml`), and companion tests for
+`pr-orchestrator.yml` / pre-commit parity added in the same change.
+
+Captured **2026-04-14** by temporarily moving the workflow file aside and running one failing test:
+
+```bash
+python -m pytest \
+  tests/unit/workflows/test_sign_modules_on_approval.py::test_sign_modules_on_approval_trigger_and_job_filter \
+  -q
+```
+
+Excerpt (failure: missing `sign-modules-on-approval.yml`):
+
+```text
+tests/unit/workflows/test_sign_modules_on_approval.py F                  [100%]
+
+=================================== FAILURES ===================================
+_____________ test_sign_modules_on_approval_trigger_and_job_filter _____________
+
+    def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
+>       workflow = _workflow_text()
+...
+E       FileNotFoundError: [Errno 2] No such file or directory: '.../.github/workflows/sign-modules-on-approval.yml'
+
+=========================== short test summary info ============================
+FAILED tests/unit/workflows/test_sign_modules_on_approval.py::test_sign_modules_on_approval_trigger_and_job_filter
+============================== 1 failed in 0.22s ===============================
+```
 
 ## Green (verification)
 

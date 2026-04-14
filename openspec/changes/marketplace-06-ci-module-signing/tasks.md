@@ -27,7 +27,8 @@
   --enforce-version-bump` with `--version-check-base`.
 - [x] 3.4 Run actionlint on the modified workflow and fix any findings.
 - [x] 3.5 Align `.pre-commit-config.yaml` module verify hook with CI: add
-  `scripts/pre-commit-verify-modules-signature.sh` (`--require-signature` on `main` / `GITHUB_REF_NAME=main`
+  `scripts/pre-commit-verify-modules-signature.sh` (`--require-signature` when branch is `main` or
+  `GITHUB_BASE_REF=main` in Actions PR contexts)
   only); update `modules-pre-commit-quality-parity` spec and tests.
 
 ## 4. New workflow — sign-modules-on-approval.yml
