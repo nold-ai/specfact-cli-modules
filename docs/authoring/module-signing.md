@@ -89,9 +89,17 @@ hatch run python scripts/sign-modules.py \
   --base-ref origin/dev \
   --bump-version patch
 
-# Verify after signing (must match sign payload mode). For a dev-targeting branch, CI omits
-# --require-signature; add it when checking as for main:
+# Verify after signing (must match sign payload mode). This matches dev-targeting CI: checksum +
+# version policy only—dev CI omits --require-signature:
+hatch run python scripts/verify-modules-signature.py --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev
+
+# Main-equivalent (strict) verification: dev CI does not run this, but use it locally when you want
+# cryptographic signatures enforced like on main. Same verifier flags as above, plus
+# --require-signature. Example with --version-check-base origin/dev (typical feature → dev PR);
+# before merging to main, point --version-check-base at origin/main so version policy matches the
+# integration target:
 hatch run python scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev
+hatch run python scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/main
 ```
 
 Wrapper for single manifest:
