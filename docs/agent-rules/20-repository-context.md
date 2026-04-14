@@ -45,7 +45,8 @@ hatch run format
 hatch run type-check
 hatch run lint
 hatch run yaml-lint
-hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
+hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump
+# add --require-signature for main-equivalent checks (see agent-rules/50-quality-gates-and-review.md)
 hatch run contract-test
 hatch run smart-test
 hatch run test

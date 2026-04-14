@@ -85,6 +85,23 @@ def test_pre_commit_config_has_signature_and_modules_quality_hooks() -> None:
     _assert_pairwise_hook_order(ordered_hook_ids, _EXPECTED_HOOK_ORDER)
 
 
+def test_pre_commit_verify_modules_signature_uses_branch_aware_wrapper() -> None:
+    config = _load_pre_commit_config()
+    repos = config.get("repos")
+    assert isinstance(repos, list)
+    for repo in repos:
+        if not isinstance(repo, dict):
+            continue
+        for hook in repo.get("hooks", []):
+            if not isinstance(hook, dict):
+                continue
+            if hook.get("id") != "verify-module-signatures":
+                continue
+            assert hook.get("entry") == "./scripts/pre-commit-verify-modules-signature.sh"
+            return
+    raise AssertionError("verify-module-signatures hook not found")
+
+
 def test_modules_pre_commit_script_enforces_required_quality_commands() -> None:
     script_path = REPO_ROOT / "scripts" / "pre-commit-quality-checks.sh"
     assert script_path.exists()

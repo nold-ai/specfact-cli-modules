@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: sign-modules-on-approval
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+concurrency:
+  group: sign-modules-on-approval-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  sign-modules:
+    if: >-
+      github.event.review.state == 'approved' &&
+      (github.event.pull_request.base.ref == 'dev' || github.event.pull_request.base.ref == 'main') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
+      SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE }}
+      PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - name: Guard signing secrets
+        run: |
+          set -euo pipefail
+          if [ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY:-}" ]; then
+            echo "::error::Missing secret: SPECFACT_MODULE_PRIVATE_SIGN_KEY"
+            exit 1
+          fi
+          if [ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE:-}" ]; then
+            echo "::error::Missing secret: SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install signing dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml beartype icontract cryptography cffi
+
+      - name: Discover module manifests
+        id: discover
+        run: |
+          set -euo pipefail
+          mapfile -t MANIFESTS < <(find packages -name 'module-package.yaml' -type f | sort)
+          echo "manifests_count=${#MANIFESTS[@]}" >> "$GITHUB_OUTPUT"
+          echo "Discovered ${#MANIFESTS[@]} module-package.yaml file(s) under packages/"
+
+      - name: Sign changed module manifests
+        id: sign
+        run: |
+          set -euo pipefail
+          git fetch origin "${PR_BASE_REF}" --no-tags
+          MERGE_BASE="$(git merge-base HEAD "origin/${PR_BASE_REF}")"
+          python scripts/sign-modules.py \
+            --changed-only \
+            --base-ref "$MERGE_BASE" \
+            --bump-version patch \
+            --payload-from-filesystem
+
+      - name: Commit and push signed manifests
+        id: commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -z "$(git status --porcelain -- packages/)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No manifest changes to commit."
+            exit 0
+          fi
+          git add -u -- packages/
+          git commit -m "chore(modules): ci sign changed modules [skip ci]"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          if ! git push origin "HEAD:${PR_HEAD_REF}"; then
+            echo "::error::Push to ${PR_HEAD_REF} failed (branch may have advanced after the approved commit). Update the PR branch and re-approve if signing is still required."
+            exit 1
+          fi
+
+      - name: Write job summary
+        if: always()
+        env:
+          COMMIT_CHANGED: ${{ steps.commit.outputs.changed }}
+          MANIFESTS_COUNT: ${{ steps.discover.outputs.manifests_count }}
+        run: |
+          {
+            echo "### Module signing (CI approval)"
+            echo "Manifests discovered under \`packages/\`: ${MANIFESTS_COUNT:-unknown}"
+            if [ "${COMMIT_CHANGED}" = "true" ]; then
+              echo "Committed signed manifest updates to ${PR_HEAD_REF}."
+            else
+              echo "No changes detected (manifests already signed or no module changes on this PR vs merge-base)."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

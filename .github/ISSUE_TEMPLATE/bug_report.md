@@ -22,7 +22,9 @@ hatch run <command>
 Example:
 
 ```bash
-hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
+hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump
+# For main-equivalent failures, also try:
+# hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump
 ```
 
 ## Expected Behavior
@@ -55,7 +57,7 @@ Typical commands:
 - `hatch run lint`
 - `hatch run yaml-lint`
 - `hatch run check-bundle-imports`
-- `hatch run verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`
+- `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump` (and `--require-signature` if reproducing on **`main`**)
 
 ## Additional Context
 
