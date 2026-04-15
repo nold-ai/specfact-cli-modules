@@ -368,8 +368,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BUNDLE_REASONS_JSON: ${{ steps.bundles.outputs.bundle_reasons_json }}
         run: |
-          if git diff --quiet -- registry/index.json registry/modules registry/signatures; then
-            echo "No registry changes to commit."
+          if git diff --quiet -- registry/index.json registry/modules registry/signatures && git diff --quiet -- packages/; then
+            echo "No registry or signed package manifest changes to commit."
             exit 0
           fi
 
@@ -380,7 +380,10 @@ jobs:
           PUBLISH_BRANCH="auto/publish-${TARGET_BRANCH}-${GITHUB_RUN_ID}"
           git checkout -b "${PUBLISH_BRANCH}"
 
+          # Registry artifacts plus any module-package.yaml updates from in-workflow signing
+          # (otherwise dev→main PRs fail verify-modules-signature --require-signature).
           git add registry/index.json registry/modules registry/signatures
+          git add -u packages/
           git commit -m "chore(registry): publish changed modules [skip ci]"
 
           if [ "${DRY_RUN:-false}" = "true" ]; then
