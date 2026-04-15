@@ -248,6 +248,9 @@ def _resolve_candidate_markdown_target(
         readme_candidate = (candidate / "README.md").resolve()
         if readme_candidate.is_file() and is_docs_markdown(readme_candidate, docs_root):
             return _path_lookup_result(readme_candidate, target_value, route_to_path, path_to_route)
+        index_candidate = (candidate / "index.md").resolve()
+        if index_candidate.is_file() and is_docs_markdown(index_candidate, docs_root):
+            return _path_lookup_result(index_candidate, target_value, route_to_path, path_to_route)
         return None, None
     if candidate.is_file() and is_docs_markdown(candidate, docs_root):
         return _path_lookup_result(candidate, target_value, route_to_path, path_to_route)
@@ -491,7 +494,7 @@ def build_valid_internal_routes(docs_root: Path) -> set[str]:
 @require(lambda docs_dir: isinstance(docs_dir, Path))
 @ensure(lambda result: isinstance(result, list))
 def scan_gemfile_lock_installability(docs_dir: Path) -> list[ValidationFinding]:
-    """Run ``bundle check`` when Ruby/Bundler is available; otherwise skip."""
+    """Run ``bundle check`` in ``docs_dir``; requires ``bundle`` on PATH (no silent skip)."""
     gemfile_lock = docs_dir / "Gemfile.lock"
     if not gemfile_lock.is_file():
         return [
@@ -511,8 +514,6 @@ def scan_gemfile_lock_installability(docs_dir: Path) -> list[ValidationFinding]:
             timeout=120,
             check=False,
         )
-    except FileNotFoundError:
-        return []
     except subprocess.TimeoutExpired:
         return [
             ValidationFinding(
