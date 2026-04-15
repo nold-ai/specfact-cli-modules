@@ -46,11 +46,13 @@ Module packages carry **publisher** and **integrity** metadata so installation, 
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY`
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
 - **Verification command** (`scripts/verify-modules-signature.py`):
-  - **Baseline (PR/CI and local hook)**: `--payload-from-filesystem --enforce-version-bump` — full payload checksum verification plus version-bump enforcement. This is the default integration path **without** `--require-signature` when the target branch is **`dev`** (pull requests to `dev`, or pushes to `dev`).
-  - **Strict mode**: add `--require-signature` so every manifest must include a verifiable `integrity.signature`. In `.github/workflows/pr-orchestrator.yml` this is appended for **pull requests whose base is `main`** and for **pushes to `main`**, in addition to the baseline flags. Locally, `scripts/pre-commit-verify-modules-signature.sh` adds `--require-signature` only when the checkout (or `GITHUB_BASE_REF` in Actions) is **`main`**; otherwise it runs the same baseline flags only.
+  - **Baseline (CI)**: `--payload-from-filesystem --enforce-version-bump` — full payload checksum verification plus version-bump enforcement.
+  - **Dev-target PR mode**: `.github/workflows/pr-orchestrator.yml` appends `--metadata-only` for pull requests targeting `dev` so branch work is not blocked before approval-time signing refreshes manifests.
+  - **Strict mode**: add `--require-signature` so every manifest must include a verifiable `integrity.signature`. In `.github/workflows/pr-orchestrator.yml` this is appended for **pull requests whose base is `main`** and for **pushes to `main`**, in addition to the baseline flags. Locally, `scripts/pre-commit-verify-modules-signature.sh` adds `--require-signature` only when the checkout (or `GITHUB_BASE_REF` in Actions) is **`main`**.
+  - **Local non-main hook mode**: `scripts/pre-commit-verify-modules-signature.sh` otherwise keeps the baseline command shape but adds `--metadata-only`, avoiding local checksum/signature enforcement on branches that are expected to be signed by CI.
   - **Pull request CI** also passes `--version-check-base <git-ref>` (typically `origin/<base branch>`) so version rules compare against the PR base.
-  - **CI uses the full verifier** (payload digest + rules above). It does **not** pass `--metadata-only`. The script still supports `--metadata-only` for optional tooling that only needs manifest shape and checksum format checks.
-- **CI signing**: Approved same-repo PRs to `dev` or `main` may receive automated signing commits via `sign-modules-on-approval.yml` (repository secrets; merge-base scoped `--changed-only`).
+  - **CI uses the full verifier** for `main` and push checks (payload digest + rules above), while PRs targeting `dev` intentionally pass `--metadata-only`. The script still supports `--metadata-only` for optional tooling that only needs manifest shape and checksum format checks.
+- **CI signing**: Approved same-repo PRs to `dev` or `main` from trusted reviewer associations may receive automated signing commits via `sign-modules-on-approval.yml` (repository secrets; merge-base scoped `--changed-only`).
 
 ## Public key and key rotation
 

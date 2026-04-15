@@ -121,6 +121,7 @@ def test_main_warnings_only_does_not_block_despite_cli_fail_exit(
     repo_root = tmp_path
     payload: dict[str, object] = {
         "overall_verdict": "FAIL",
+        "ci_exit_code": 0,
         "findings": [{"severity": "warning", "rule": "w1"}],
     }
     _write_sample_review_report(repo_root, payload)
@@ -186,6 +187,26 @@ def test_main_propagates_review_gate_exit_code(
     assert "Copy-paste for Copilot or Cursor:" in err
     assert "Read `.specfact/code-review.json`" in err
     assert "@workspace Open `.specfact/code-review.json`" in err
+
+
+def test_main_uses_report_ci_exit_code_for_fixable_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    module = _load_script_module()
+    repo_root = tmp_path
+    payload = {
+        "overall_verdict": "PASS_WITH_ADVISORY",
+        "ci_exit_code": 0,
+        "findings": [{"severity": "error", "rule": "fixable", "fixable": True}],
+    }
+
+    def _fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        _write_sample_review_report(repo_root, payload)
+        return subprocess.CompletedProcess(cmd, 1, stdout=".specfact/code-review.json\n", stderr="")
+
+    monkeypatch.setattr(module, "_repo_root", lambda: repo_root)
+    monkeypatch.setattr(module, "ensure_runtime_available", lambda: (True, None))
+    monkeypatch.setattr(module.subprocess, "run", _fake_run)
+
+    assert module.main(["tests/unit/test_app.py"]) == 0
 
 
 def _write_sample_review_report(repo_root: Path, payload: dict[str, object]) -> None:

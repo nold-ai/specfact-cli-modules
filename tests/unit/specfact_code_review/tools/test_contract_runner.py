@@ -28,8 +28,11 @@ def _stub_crosshair_on_path(monkeypatch: MonkeyPatch) -> None:  # pyright: ignor
     monkeypatch.setattr("specfact_code_review.tools.tool_availability.shutil.which", _which)
 
 
-def test_run_contract_check_skips_missing_icontract_when_package_unused(monkeypatch: MonkeyPatch) -> None:
-    file_path = FIXTURES_DIR / "public_without_contracts.py"
+def test_run_contract_check_skips_missing_icontract_when_package_unused(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    file_path = tmp_path / "public_without_contracts.py"
+    file_path.write_text("def public_without_contracts(value: int) -> int:\n    return value + 1\n", encoding="utf-8")
     run_mock = Mock(return_value=completed_process("crosshair", stdout=""))
     monkeypatch.setattr(subprocess, "run", run_mock)
 
@@ -37,6 +40,15 @@ def test_run_contract_check_skips_missing_icontract_when_package_unused(monkeypa
 
     assert not findings
     assert_tool_run(run_mock, ["crosshair", "check", "--per_path_timeout", "2", str(file_path)])
+
+
+def test_run_contract_check_uses_batch_level_icontract_detection(monkeypatch: MonkeyPatch) -> None:
+    file_path = FIXTURES_DIR / "public_without_contracts.py"
+    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("crosshair", stdout="")))
+
+    findings = run_contract_check([file_path])
+
+    assert "MISSING_ICONTRACT" in {finding.rule for finding in findings}
 
 
 def test_run_contract_check_skips_decorated_public_function(monkeypatch: MonkeyPatch) -> None:

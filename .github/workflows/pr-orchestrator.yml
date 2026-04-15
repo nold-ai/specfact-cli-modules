@@ -92,8 +92,7 @@ jobs:
             VERIFY_CMD+=(--version-check-base "$BASE_REF")
             if [ "$TARGET_BRANCH" = "dev" ]; then
               VERIFY_CMD+=(--metadata-only)
-            elif [ "$TARGET_BRANCH" = "main" ] && \
-                 [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            elif [ "$TARGET_BRANCH" = "main" ]; then
               VERIFY_CMD+=(--require-signature)
             fi
           else

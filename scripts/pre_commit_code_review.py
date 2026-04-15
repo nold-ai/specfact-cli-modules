@@ -208,33 +208,36 @@ def count_findings_by_severity(findings: list[object]) -> dict[str, int]:
     return buckets
 
 
-def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None]:
-    """Parse ``REVIEW_JSON_OUT``, print a one-line findings count, return ``(ok, error_count)``."""
+def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None, int | None]:
+    """Parse ``REVIEW_JSON_OUT``, print counts, return ``(ok, error_count, ci_exit_code)``."""
     report_path = _report_path(repo_root)
     if not report_path.is_file():
         sys.stderr.write(f"Code review: no report file at {REVIEW_JSON_OUT} (could not print findings summary).\n")
-        return False, None
+        return False, None, None
     try:
         data = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as exc:
         sys.stderr.write(f"Code review: could not read {REVIEW_JSON_OUT}: {exc}\n")
-        return False, None
+        return False, None, None
     except json.JSONDecodeError as exc:
         sys.stderr.write(f"Code review: invalid JSON in {REVIEW_JSON_OUT}: {exc}\n")
-        return False, None
+        return False, None, None
 
     if not isinstance(data, dict):
         sys.stderr.write(f"Code review: expected top-level JSON object in {REVIEW_JSON_OUT}.\n")
-        return False, None
+        return False, None, None
 
     findings_raw = data.get("findings")
     if not isinstance(findings_raw, list):
         sys.stderr.write(f"Code review: report has no findings list in {REVIEW_JSON_OUT}.\n")
-        return False, None
+        return False, None, None
 
     counts = count_findings_by_severity(findings_raw)
     total = len(findings_raw)
     verdict = data.get("overall_verdict", "?")
+    ci_exit_code = data.get("ci_exit_code")
+    if ci_exit_code not in {0, 1}:
+        ci_exit_code = 1 if verdict == "FAIL" else 0
     parts = [
         f"errors={counts['error']}",
         f"warnings={counts['warning']}",
@@ -254,7 +257,7 @@ def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None]:
         f"  Read `{REVIEW_JSON_OUT}` and fix every finding (errors first), using file and line from each entry.\n"
     )
     sys.stderr.write(f"  @workspace Open `{REVIEW_JSON_OUT}` and remediate each item in `findings`.\n")
-    return True, counts["error"]
+    return True, counts["error"], ci_exit_code
 
 
 @ensure(lambda result: isinstance(result, tuple) and len(result) == 2)
@@ -315,12 +318,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _missing_report_exit_code(report_path, result)
     # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners); full report
     # is in REVIEW_JSON_OUT; we print a short summary on stderr below.
-    summary_ok, error_count = _print_review_findings_summary(repo_root)
-    if not summary_ok or error_count is None:
+    summary_ok, error_count, ci_exit_code = _print_review_findings_summary(repo_root)
+    if not summary_ok or error_count is None or ci_exit_code is None:
         return 1
     if error_count == 0:
         return 0
-    return result.returncode
+    return ci_exit_code
 
 
 if __name__ == "__main__":

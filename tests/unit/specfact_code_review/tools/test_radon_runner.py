@@ -107,3 +107,46 @@ def test_run_radon_uses_dedicated_tool_identifier_for_kiss_findings(tmp_path: Pa
     kiss_findings = [finding for finding in findings if finding.rule.startswith("kiss.")]
     assert kiss_findings
     assert {finding.tool for finding in kiss_findings} == {"radon-kiss"}
+
+
+def test_run_radon_requires_typer_decorator_for_context_parameter_exemption(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    file_path = tmp_path / "commands.py"
+    file_path.write_text(
+        """
+def callback(ctx: typer.Context, a: str, b: str, c: str, d: str, e: str) -> None:
+    return None
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+    )
+
+    findings = run_radon([file_path])
+
+    assert "kiss.parameter-count.warning" in {finding.rule for finding in findings}
+
+
+def test_run_radon_exempts_typer_command_context_parameters(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "commands.py"
+    file_path.write_text(
+        """
+@app.command("run")
+def callback(ctx: typer.Context, a: str, b: str, c: str, d: str, e: str) -> None:
+    return None
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+    )
+
+    findings = run_radon([file_path])
+
+    assert "kiss.parameter-count.warning" not in {finding.rule for finding in findings}

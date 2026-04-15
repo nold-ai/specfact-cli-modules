@@ -17,22 +17,55 @@ from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 _CROSSHAIR_LINE_RE = re.compile(r"^(?P<file>.+?):(?P<line>\d+):\s*(?:error|warning|info):\s*(?P<message>.+)$")
 _IGNORED_CROSSHAIR_PREFIXES = ("SideEffectDetected:",)
+_ICONTRACT_SCAN_EXCLUDED_DIRS = frozenset(
+    {".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", "__pycache__", "venv", ".venv"}
+)
+
+
+def _icontract_usage_scan_roots(files: list[Path]) -> list[Path]:
+    roots: list[Path] = []
+    for file_path in files:
+        parts = file_path.parts
+        if "packages" in parts:
+            package_index = parts.index("packages")
+            if len(parts) > package_index + 1:
+                roots.append(Path(*parts[: package_index + 2]))
+                continue
+        roots.append(file_path.parent)
+    return list(dict.fromkeys(roots))
+
+
+def _iter_icontract_usage_candidates(root: Path) -> list[Path]:
+    if not root.exists() or not root.is_dir():
+        return []
+    return [
+        path
+        for path in root.rglob("*.py")
+        if path.is_file() and not any(part in _ICONTRACT_SCAN_EXCLUDED_DIRS for part in path.parts)
+    ]
 
 
 def _has_icontract_usage(files: list[Path]) -> bool:
-    """True when any reviewed file imports the icontract package."""
-    for file_path in files:
-        try:
-            tree = ast.parse(file_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, SyntaxError):
-            continue
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module == "icontract":
+    """True when any reviewed file's package/repo scan root imports the icontract package."""
+    for root in _icontract_usage_scan_roots(files):
+        for file_path in _iter_icontract_usage_candidates(root):
+            if _file_imports_icontract(file_path):
                 return True
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name == "icontract":
-                        return True
+    return False
+
+
+def _file_imports_icontract(file_path: Path) -> bool:
+    try:
+        tree = ast.parse(file_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, SyntaxError):
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "icontract":
+            return True
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "icontract":
+                    return True
     return False
 
 

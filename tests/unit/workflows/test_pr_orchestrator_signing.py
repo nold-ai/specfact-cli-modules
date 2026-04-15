@@ -26,7 +26,6 @@ def test_pr_orchestrator_verify_pr_to_dev_passes_integrity_shape_flag() -> None:
     workflow = _workflow_text()
     assert "--metadata-only" in workflow
     assert '[ "$TARGET_BRANCH" = "dev" ]' in workflow
-    assert "github.event.pull_request.head.repo.full_name" in workflow
     dev_guard = 'if [ "$TARGET_BRANCH" = "dev" ]; then'
     metadata_append = "VERIFY_CMD+=(--metadata-only)"
     assert dev_guard in workflow
@@ -36,11 +35,14 @@ def test_pr_orchestrator_verify_pr_to_dev_passes_integrity_shape_flag() -> None:
 
 def test_pr_orchestrator_verify_require_signature_on_main_paths() -> None:
     workflow = _workflow_text()
+    main_pr_guard = 'elif [ "$TARGET_BRANCH" = "main" ]; then'
     main_ref_guard = '[ "${{ github.ref_name }}" = "main" ]; then'
     require_append = "VERIFY_CMD+=(--require-signature)"
+    assert main_pr_guard in workflow
     assert main_ref_guard in workflow
     assert require_append in workflow
     assert workflow.count(require_append) == 2
+    assert "github.event.pull_request.head.repo.full_name" not in workflow
     push_require_block = (
         'if [ "${{ github.ref_name }}" = "main" ]; then\n              VERIFY_CMD+=(--require-signature)'
     )

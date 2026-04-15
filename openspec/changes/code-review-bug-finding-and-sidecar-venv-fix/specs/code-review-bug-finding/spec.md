@@ -1,3 +1,5 @@
+# Code Review Bug Finding
+
 ## ADDED Requirements
 
 ### Requirement: Semgrep bug-finding rules pass
@@ -10,14 +12,14 @@ silently skipped without error.
 #### Scenario: bugs.yaml present — security findings emitted
 
 - **WHEN** `.semgrep/bugs.yaml` exists in the bundle
-- **AND** `run_semgrep` is called on Python files matching a bug rule
-- **THEN** `ReviewFinding` records are returned with `category="security"` or `category="correctness"`
+- **AND** `run_semgrep_bugs` is called on Python files matching a bug rule
+- **THEN** `ReviewFinding` records are returned with `category="security"` or `category="clean_code"`
 - **AND** findings reference the matched rule id from `bugs.yaml`
 
 #### Scenario: bugs.yaml absent — pass is a no-op
 
 - **WHEN** no `.semgrep/bugs.yaml` file is discoverable
-- **AND** `run_semgrep` is called
+- **AND** `run_semgrep_bugs` is called
 - **THEN** no finding is returned for the missing bugs pass
 - **AND** no exception propagates to the caller
 
@@ -25,6 +27,7 @@ silently skipped without error.
 
 - **WHEN** `specfact code review run --json` is executed on a file matching a bug rule
 - **THEN** the output JSON contains findings from both the clean-code and bug-finding passes
+- **AND** `run_review` wires `run_semgrep_bugs` alongside the existing `run_semgrep` pass
 
 ### Requirement: CrossHair bug-hunt mode
 
