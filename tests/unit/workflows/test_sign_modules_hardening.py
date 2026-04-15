@@ -55,10 +55,14 @@ def test_sign_modules_hardening_triggers_on_push_pr_and_dispatch() -> None:
     paths = push["paths"]
     assert isinstance(paths, list)
     assert "packages/**" in paths
+    assert "registry/**" in paths
 
     pr = on["pull_request"]
     assert isinstance(pr, dict)
     assert pr["branches"] == ["dev", "main"]
+    pr_paths = pr["paths"]
+    assert isinstance(pr_paths, list)
+    assert "registry/**" in pr_paths
 
     dispatch = on["workflow_dispatch"]
     assert isinstance(dispatch, dict)

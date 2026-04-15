@@ -201,6 +201,37 @@ jobs:
           ignored_dir_names = {".git", "tests", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
           ignored_suffixes = {".pyc", ".pyo"}
 
+          def manifest_has_signature(data: dict) -> bool:
+              integrity_obj = data.get("integrity")
+              if not isinstance(integrity_obj, dict):
+                  return False
+              return bool(str(integrity_obj.get("signature") or "").strip())
+
+          signing_key = os.environ.get("SPECFACT_MODULE_PRIVATE_SIGN_KEY", "").strip()
+
+          def sign_manifest_if_unsigned(manifest_path: Path, *, reason: str) -> None:
+              if not signing_key:
+                  return
+              if not manifest_path.is_file():
+                  return
+              raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+              if not isinstance(raw, dict):
+                  return
+              if manifest_has_signature(raw):
+                  return
+              print(f"Signing {manifest_path} ({reason}).", flush=True)
+              subprocess.run(
+                  [
+                      "python",
+                      "scripts/sign-modules.py",
+                      "--payload-from-filesystem",
+                      "--allow-same-version",
+                      str(manifest_path),
+                  ],
+                  cwd=str(repo_root),
+                  check=True,
+              )
+
           skipped_bundles: list[str] = []
           current_branch = os.environ.get("GITHUB_REF_NAME", "").strip()
           baseline_ref = determine_registry_baseline_ref(
@@ -266,34 +297,17 @@ jobs:
             if not isinstance(manifest, dict):
                 raise ValueError(f"Invalid manifest content: {manifest_path}")
 
-            def manifest_has_signature(data: dict) -> bool:
-                integrity_obj = data.get("integrity")
-                if not isinstance(integrity_obj, dict):
-                    return False
-                return bool(str(integrity_obj.get("signature") or "").strip())
-
             if not manifest_has_signature(manifest):
-                if os.environ.get("SPECFACT_MODULE_PRIVATE_SIGN_KEY", "").strip():
-                    print(
-                        f"Signing {manifest_path} before registry packaging (missing integrity.signature).",
-                        flush=True,
-                    )
-                    subprocess.run(
-                        [
-                            "python",
-                            "scripts/sign-modules.py",
-                            "--payload-from-filesystem",
-                            str(manifest_path),
-                        ],
-                        cwd=str(repo_root),
-                        check=True,
-                    )
-                    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-                    if not isinstance(manifest, dict):
-                        raise ValueError(f"Invalid manifest content after signing: {manifest_path}")
-                    if not manifest_has_signature(manifest):
-                        raise ValueError(f"Signing did not produce integrity.signature: {manifest_path}")
-                else:
+                sign_manifest_if_unsigned(
+                    manifest_path,
+                    reason="missing integrity.signature before registry packaging",
+                )
+                manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+                if not isinstance(manifest, dict):
+                    raise ValueError(f"Invalid manifest content after signing: {manifest_path}")
+                if signing_key and not manifest_has_signature(manifest):
+                    raise ValueError(f"Signing did not produce integrity.signature: {manifest_path}")
+                if not signing_key:
                     print(
                         f"::warning::Publishing {bundle} with checksum-only tree manifest "
                         "(SPECFACT_MODULE_PRIVATE_SIGN_KEY unset).",
@@ -357,6 +371,18 @@ jobs:
 
           if skipped_bundles:
             print(f"Skipped already-published bundles: {skipped_bundles}")
+
+          for bundle in skipped_bundles:
+              sign_manifest_if_unsigned(
+                  repo_root / "packages" / bundle / "module-package.yaml",
+                  reason="registry version already published; still align git manifest signature",
+              )
+
+          for manifest_path in sorted((repo_root / "packages").glob("*/module-package.yaml")):
+              sign_manifest_if_unsigned(
+                  manifest_path,
+                  reason="final pass: ensure no unsigned module-package.yaml remains before commit",
+              )
 
           registry_index_path.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
           PY

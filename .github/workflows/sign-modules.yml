@@ -29,6 +29,9 @@ on:
     branches: [dev, main]
     paths:
       - "packages/**"
+      # Registry-only publish merges do not touch packages/**; still run signing so git manifests
+      # stay aligned with dev→main --require-signature checks.
+      - "registry/**"
       - "scripts/sign-modules.py"
       - "scripts/verify-modules-signature.py"
       - ".github/workflows/sign-modules.yml"
@@ -37,6 +40,7 @@ on:
     branches: [dev, main]
     paths:
       - "packages/**"
+      - "registry/**"
       - "scripts/sign-modules.py"
       - "scripts/verify-modules-signature.py"
       - ".github/workflows/sign-modules.yml"
@@ -104,6 +108,44 @@ jobs:
             --base-ref "$BEFORE" \
             --bump-version patch \
             --payload-from-filesystem
+
+          # Registry-only merges leave packages/** unchanged, so --changed-only signs nothing.
+          # Sign any manifest still missing integrity.signature (same CI key as publish-modules).
+          python - <<'PY'
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          import yaml
+
+          if not os.environ.get("SPECFACT_MODULE_PRIVATE_SIGN_KEY", "").strip():
+              raise SystemExit(0)
+
+          def manifest_has_signature(data: dict) -> bool:
+              integrity_obj = data.get("integrity")
+              if not isinstance(integrity_obj, dict):
+                  return False
+              return bool(str(integrity_obj.get("signature") or "").strip())
+
+          root = Path(".").resolve()
+          for manifest in sorted((root / "packages").glob("*/module-package.yaml")):
+              raw = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+              if not isinstance(raw, dict) or manifest_has_signature(raw):
+                  continue
+              print(f"Signing unsigned manifest {manifest} (post --changed-only sweep).", flush=True)
+              subprocess.run(
+                  [
+                      sys.executable,
+                      "scripts/sign-modules.py",
+                      "--payload-from-filesystem",
+                      "--allow-same-version",
+                      str(manifest),
+                  ],
+                  cwd=str(root),
+                  check=True,
+              )
+          PY
 
       - name: Strict verify module manifests (push to dev/main)
         if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'main')
