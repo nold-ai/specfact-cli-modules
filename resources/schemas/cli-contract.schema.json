@@ -55,6 +55,13 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "file_content_contains": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Each string must appear in the UTF-8 report file selected via --out (integration tests enforce this; schema-only validation accepts the field)."
               }
             }
           }

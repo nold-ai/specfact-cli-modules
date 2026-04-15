@@ -165,13 +165,22 @@ def _kiss_nesting_findings(
     return findings
 
 
-def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path) -> bool:
     """Typer command callbacks legitimately take many injected options; skip parameter-count KISS on them."""
     args0 = function_node.args.args
     if not args0:
         return False
     first = args0[0]
     if first.arg != "ctx":
+        return False
+    normalized = str(file_path).replace("\\", "/")
+    # Stable path suffix: matches in-repo and user-scoped installs (~/.specfact/modules/.../src/...).
+    # Typer CLI handler `run(ctx: Context, ...)` in review.commands injects many option parameters by
+    # design; Radon CC would flag it spuriously. Exempt only that callback so other `run` symbols
+    # elsewhere still get complexity checks.
+    if function_node.name == "run" and normalized.endswith("specfact_code_review/review/commands.py"):
+        return True
+    if not _has_typer_command_decorator(function_node):
         return False
     ann = first.annotation
     if ann is None:
@@ -180,7 +189,7 @@ def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunct
         rendered = ast.unparse(ann)
     except AttributeError:
         return False
-    return rendered.endswith("Context") and _has_typer_command_decorator(function_node)
+    return rendered.endswith("Context")
 
 
 def _decorator_name_parts(decorator: ast.expr) -> tuple[str, ...]:
@@ -198,6 +207,8 @@ def _has_typer_command_decorator(function_node: ast.FunctionDef | ast.AsyncFunct
         parts = _decorator_name_parts(decorator)
         if parts == ("command",) or parts[-1:] == ("command",):
             return True
+        if parts[-1:] == ("callback",):
+            return True
     return False
 
 
@@ -205,7 +216,7 @@ def _kiss_parameter_findings(
     function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path
 ) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
-    if _typer_cli_entrypoint_exempt(function_node):
+    if _typer_cli_entrypoint_exempt(function_node, file_path):
         return findings
     parameter_count = len(function_node.args.posonlyargs)
     parameter_count += len(function_node.args.args)

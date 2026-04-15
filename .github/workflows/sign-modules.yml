@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-# Auto-sign changed module manifests on push to dev/main, then strict-verify. PRs use checksum-only
-# verification so feature branches are not blocked before CI can reconcile signatures on the branch.
+# Auto-sign changed module manifests on push to dev/main, then strict-verify. PRs use full payload
+# checksum + version bump without `--require-signature` until `main`.
 name: Module Signature Hardening
 
 on:
@@ -52,6 +52,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Same public-key env as pr-orchestrator so strict verify can check signatures against the
+    # configured release key (not only resources/keys/module-signing-public.pem in the checkout).
+    env:
+      SPECFACT_MODULE_PUBLIC_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PUBLIC_SIGN_KEY }}
+      SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM: ${{ secrets.SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -147,7 +152,7 @@ jobs:
             echo "No manifest signing changes to commit."
             exit 0
           fi
-          git commit -m "chore(modules): auto-sign module manifests [skip ci]"
+          git commit -m "chore(modules): auto-sign module manifests"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
   reproducibility:
@@ -277,7 +282,7 @@ jobs:
             echo "No staged module manifest updates."
             exit 0
           fi
-          git commit -m "chore(modules): manual workflow_dispatch sign changed modules [skip ci]"
+          git commit -m "chore(modules): manual workflow_dispatch sign changed modules"
           git push origin "HEAD:${GITHUB_REF_NAME}"
           echo "## Signed manifests pushed" >> "${GITHUB_STEP_SUMMARY}"
           echo "Branch: \`${GITHUB_REF_NAME}\` (base: \`origin/${{ github.event.inputs.base_branch }}\`, bump: \`${{ github.event.inputs.version_bump }}\`, resign_all: \`${{ github.event.inputs.resign_all_manifests }}\`)." >> "${GITHUB_STEP_SUMMARY}"

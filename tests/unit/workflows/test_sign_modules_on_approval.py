@@ -67,15 +67,18 @@ def _assert_eligibility_gate_step(doc: dict[Any, Any]) -> None:
     assert gate.get("id") == "gate"
     run = gate["run"]
     assert isinstance(run, str)
-    assert "github.event.review.state" in run
-    assert "github.event.review.user.author_association" in run
-    assert "approved" in run
-    assert "COLLABORATOR|MEMBER|OWNER" in run
-    assert 'echo "sign=false"' in run
-    assert 'echo "sign=true"' in run
-    assert "github.event.pull_request.base.ref" in run
-    assert "github.event.pull_request.head.repo.full_name" in run
-    assert "github.repository" in run
+    for needle in (
+        "github.event.review.state",
+        "github.event.review.user.author_association",
+        "approved",
+        "COLLABORATOR|MEMBER|OWNER",
+        'echo "sign=false"',
+        'echo "sign=true"',
+        "github.event.pull_request.base.ref",
+        "github.event.pull_request.head.repo.full_name",
+        "github.repository",
+    ):
+        assert needle in run, needle
 
 
 def _assert_concurrency_and_permissions(doc: dict[Any, Any]) -> None:
@@ -133,17 +136,20 @@ def test_sign_modules_on_approval_secrets_guard() -> None:
 
 def test_sign_modules_on_approval_sign_step_merge_base() -> None:
     workflow = _workflow_text()
-    assert "merge-base" in workflow
-    assert "git merge-base HEAD" in workflow
-    assert 'git fetch origin "${PR_BASE_REF}"' in workflow
-    assert "--no-tags" in workflow
-    assert "scripts/sign-modules.py" in workflow
-    assert "--changed-only" in workflow
-    assert "--base-ref" in workflow
-    assert '"$MERGE_BASE"' in workflow
-    assert "--bump-version patch" in workflow
-    assert "--payload-from-filesystem" in workflow
-    assert "steps.gate.outputs.sign == 'true'" in workflow
+    for needle in (
+        "merge-base",
+        "git merge-base HEAD",
+        'git fetch origin "${PR_BASE_REF}"',
+        "--no-tags",
+        "scripts/sign-modules.py",
+        "--changed-only",
+        "--base-ref",
+        '"$MERGE_BASE"',
+        "--bump-version patch",
+        "--payload-from-filesystem",
+        "steps.gate.outputs.sign == 'true'",
+    ):
+        assert needle in workflow, needle
     assert '--base-ref "origin/' not in workflow
 
 
@@ -160,7 +166,7 @@ def _assert_commit_and_push_step(steps: list[Any]) -> None:
     assert commit_step.get("id") == "commit"
     commit_run = commit_step["run"]
     assert isinstance(commit_run, str)
-    assert 'git commit -m "chore(modules): ci sign changed modules [skip ci]"' in commit_run
+    assert 'git commit -m "chore(modules): ci sign changed modules"' in commit_run
     assert 'git push origin "HEAD:${PR_HEAD_REF}"' in commit_run
     assert "Push to ${PR_HEAD_REF} failed" in commit_run
 

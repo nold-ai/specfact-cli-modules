@@ -44,6 +44,24 @@ def test_review_run_non_interactive_defaults_to_excluding_tests(monkeypatch: Any
     assert recorded["kwargs"]["include_tests"] is False
 
 
+def test_review_run_focus_source_sets_include_tests_false(monkeypatch: Any) -> None:
+    recorded: dict[str, Any] = {}
+
+    def _fake_run_command(_files: list[Path], **kwargs: object) -> tuple[int, str | None]:
+        recorded["kwargs"] = kwargs
+        return 0, None
+
+    monkeypatch.setattr("specfact_code_review.review.commands.run_command", _fake_run_command)
+
+    result = runner.invoke(
+        app,
+        ["review", "run", "--focus", "source", "tests/fixtures/review/clean_module.py"],
+    )
+
+    assert result.exit_code == 0
+    assert recorded["kwargs"]["include_tests"] is False
+
+
 def test_review_run_explicit_files_do_not_prompt_and_keep_tests(monkeypatch: Any) -> None:
     recorded: dict[str, Any] = {}
 

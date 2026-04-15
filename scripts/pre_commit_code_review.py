@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
@@ -142,6 +143,17 @@ def _run_review_subprocess(
     files: Sequence[str],
 ) -> subprocess.CompletedProcess[str] | None:
     """Run the nested SpecFact review command and handle timeout reporting."""
+    env = os.environ.copy()
+    # Ensure nested `python -m specfact_cli.cli` bootstraps this checkout's bundle sources first
+    # (see `specfact_cli/__init__.py::_bootstrap_bundle_paths`) so ~/.specfact/modules tarballs do not
+    # shadow in-repo `specfact_code_review` during the pre-commit gate.
+    env["SPECFACT_MODULES_REPO"] = str(repo_root.resolve())
+    env["SPECFACT_CLI_MODULES_REPO"] = str(repo_root.resolve())
+    code_review_src = repo_root / "packages" / "specfact-code-review" / "src"
+    if code_review_src.is_dir():
+        prefix = str(code_review_src)
+        previous = env.get("PYTHONPATH", "").strip()
+        env["PYTHONPATH"] = f"{prefix}{os.pathsep}{previous}" if previous else prefix
     try:
         return subprocess.run(
             cmd,
@@ -149,6 +161,7 @@ def _run_review_subprocess(
             text=True,
             capture_output=True,
             cwd=str(repo_root),
+            env=env,
             timeout=300,
         )
     except TimeoutExpired:

@@ -13,7 +13,6 @@ from specfact_code_review.ledger.commands import app as ledger_app
 from specfact_code_review.rules.commands import app as rules_app
 from specfact_code_review.run.commands import (
     ConflictingScopeError,
-    FocusFacetConflictError,
     InvalidOptionCombinationError,
     MissingOutForJsonError,
     NoReviewableFilesError,
@@ -33,7 +32,6 @@ def _friendly_run_command_error(exc: RunCommandError | ValueError | ViolationErr
             InvalidOptionCombinationError,
             MissingOutForJsonError,
             ConflictingScopeError,
-            FocusFacetConflictError,
             NoReviewableFilesError,
         ),
     ):
@@ -71,7 +69,7 @@ def _resolve_review_run_flags(
         unknown = [facet for facet in focus_list if facet not in {"source", "tests", "docs"}]
         if unknown:
             raise typer.BadParameter(f"Invalid --focus value(s): {unknown!r}; use source, tests, or docs.")
-        resolved_include_tests = True
+        resolved_include_tests = "tests" in focus_list
     else:
         resolved_include_tests = _resolve_include_tests(
             files=files or [],
@@ -93,8 +91,8 @@ def run(
     files: list[Path] = typer.Argument(None),
     scope: Literal["changed", "full"] = typer.Option(None),
     path: list[Path] = typer.Option(None, "--path"),
-    include_tests: bool = typer.Option(None, "--include-tests"),
-    exclude_tests: bool = typer.Option(None, "--exclude-tests"),
+    include_tests: bool | None = typer.Option(None, "--include-tests"),
+    exclude_tests: bool | None = typer.Option(None, "--exclude-tests"),
     focus: list[str] | None = typer.Option(None, "--focus", help="Limit to source, tests, and/or docs (repeatable)."),
     mode: Literal["shadow", "enforce"] = typer.Option("enforce", "--mode"),
     level: Literal["error", "warning"] | None = typer.Option(None, "--level"),

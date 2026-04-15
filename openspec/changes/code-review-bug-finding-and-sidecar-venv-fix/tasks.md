@@ -53,5 +53,5 @@
 
 - [x] 7.1 Run `hatch run test` — all new and existing tests pass
 - [x] 7.2 Run `hatch run format && hatch run type-check && hatch run lint` — clean
-- [x] 7.3 Run `specfact code review run --json --out .specfact/code-review.json` — resolve any findings
+- [x] 7.3 Run `hatch run specfact code review run --json --out .specfact/code-review.json` — resolve any findings
 - [x] 7.4 Record passing test output in `TDD_EVIDENCE.md`

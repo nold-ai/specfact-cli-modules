@@ -122,7 +122,7 @@ jobs:
             exit 0
           fi
           git add -u -- packages/
-          git commit -m "chore(modules): ci sign changed modules [skip ci]"
+          git commit -m "chore(modules): ci sign changed modules"
           echo "changed=true" >> "$GITHUB_OUTPUT"
           if ! git push origin "HEAD:${PR_HEAD_REF}"; then
             echo "::error::Push to ${PR_HEAD_REF} failed (branch may have advanced after the approved commit). Update the PR branch and re-approve if signing is still required."

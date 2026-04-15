@@ -17,7 +17,7 @@ def test_run_radon_returns_empty_when_only_non_python_paths(tmp_path: Path, monk
     run_mock = Mock()
     monkeypatch.setattr(subprocess, "run", run_mock)
 
-    assert not run_radon([manifest])
+    assert run_radon([manifest]) == []
 
     run_mock.assert_not_called()
 
