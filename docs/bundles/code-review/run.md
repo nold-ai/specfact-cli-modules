@@ -43,10 +43,13 @@ The command prints **progress** to the terminal (spinner/status while the pipeli
 
 Typer validates several incompatible flag mixes before execution:
 
-- **Positional `FILES...` with `--scope` or `--path`**: when you pass explicit paths, do not also pass **`--scope`** or **`--path`** (those options apply only to auto-discovery).
-- **`--focus` with `--include-tests` or `--exclude-tests`**: use **`--focus`** *or* the include/exclude test flags, not both.
-- **`--include-tests` with `--exclude-tests`**: pick at most one test inclusion mode.
-- **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set.
+- **Positional `FILES...` with `--scope` or `--path`**: when you pass explicit paths, do not also pass **`--scope`** or **`--path`** (those options apply only to auto-discovery). Runtime error: **`Choose positional files or auto-scope controls, not both.`**
+- **`--focus` with `--include-tests` or `--exclude-tests`**: use **`--focus`** *or* the include/exclude test flags, not both. Runtime error: **`Cannot combine --focus with --include-tests or --exclude-tests`**
+- **`--include-tests` with `--exclude-tests`**: pick at most one test inclusion mode. Runtime error: **`Cannot use both --include-tests and --exclude-tests`**
+- **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set. Runtime error: **`Use --out together with --json.`**
+- **`--json` with `--score-only`**: do not combine JSON report output with score-only mode (**`Use either --json or --score-only, not both.`**).
+
+**Supported targeting:** either pass **positional Python file paths** for a fixed review set, or omit files and use **`--scope`** / **`--path`** (and related test flags) for auto-discovery — do not mix positional paths with **`--scope`** or **`--path`**.
 
 ## Examples
 

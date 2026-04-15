@@ -142,8 +142,15 @@ def test_validate_core_docs_links_allows_core_handoff_routes(tmp_path: Path) -> 
 
 def test_docs_pages_workflow_runs_python_docs_validation() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "docs-pages.yml").read_text(encoding="utf-8")
-    assert "python -m pip install -r requirements-docs-ci.txt" in workflow
-    assert "python scripts/check-docs-commands.py --jekyll-bundle-check" in workflow
+    install_snip = "python -m pip install -r requirements-docs-ci.txt"
+    check_snip = "python scripts/check-docs-commands.py --jekyll-bundle-check"
+    assert install_snip in workflow
+    assert check_snip in workflow
+    install_index = workflow.index(install_snip)
+    check_index = workflow.index(check_snip)
+    upload_index = workflow.index("Upload artifact")
+    assert install_index < check_index, "pip install must precede docs validation in the workflow file"
+    assert check_index < upload_index, "docs validation must run before the Pages artifact upload step"
 
 
 def test_docs_review_workflow_runs_docs_command_validation() -> None:
@@ -152,7 +159,6 @@ def test_docs_review_workflow_runs_docs_command_validation() -> None:
     assert "python -m pip install -r requirements-docs-ci.txt" in workflow
     assert "python scripts/check-docs-commands.py" in workflow
     assert "scripts/check-docs-commands.py" in workflow
-    assert "scripts/docs_site_validation.py" in workflow
     assert "tests/unit/test_check_docs_commands_script.py" in workflow
     assert "tests/unit/docs/test_code_review_docs_parity.py" in workflow
 

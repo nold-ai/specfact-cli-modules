@@ -175,7 +175,7 @@ def build_route_index(docs_root: Path) -> dict[str, Path]:
     for path in iter_docs_markdown_paths(docs_root):
         text = path.read_text(encoding="utf-8")
         fm, _, _ = split_yaml_front_matter(text)
-        if not fm and path.name.lower() != "readme.md":
+        if not fm:
             continue
         canonical = published_route_for_doc(path, docs_root, fm)
         route_to_path[canonical] = path
@@ -191,7 +191,7 @@ def build_path_to_canonical_route(docs_root: Path) -> dict[Path, str]:
     mapping: dict[Path, str] = {}
     for path in iter_docs_markdown_paths(docs_root):
         fm, _, _ = split_yaml_front_matter(path.read_text(encoding="utf-8"))
-        if not fm and path.name.lower() != "readme.md":
+        if not fm:
             continue
         mapping[path.resolve()] = published_route_for_doc(path, docs_root, fm)
     return mapping
@@ -513,6 +513,15 @@ def scan_gemfile_lock_installability(docs_dir: Path) -> list[ValidationFinding]:
         )
     except FileNotFoundError:
         return []
+    except subprocess.TimeoutExpired:
+        return [
+            ValidationFinding(
+                "docs-build-dependency",
+                gemfile_lock,
+                1,
+                "bundle check timed out after 120s",
+            )
+        ]
 
     if proc.returncode != 0:
         detail = (proc.stderr or proc.stdout or "").strip()
