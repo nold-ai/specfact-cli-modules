@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import shutil
 from pathlib import Path
 
@@ -28,6 +29,11 @@ REPORT_PLACEHOLDER = "CONTRACT_TMP_REPORT.json"
 runner = CliRunner()
 
 
+@functools.cache
+def _load_scenarios() -> dict:
+    return yaml.safe_load(SCENARIO_PATH.read_text(encoding="utf-8"))
+
+
 def _skip_if_tools_missing() -> None:
     missing = [tool for tool in REQUIRED_TOOLS if shutil.which(tool) is None]
     if missing:
@@ -35,7 +41,7 @@ def _skip_if_tools_missing() -> None:
 
 
 def _scenario_names_with_file_expectations() -> list[str]:
-    data = yaml.safe_load(SCENARIO_PATH.read_text(encoding="utf-8"))
+    data = _load_scenarios()
     names: list[str] = []
     for scenario in data.get("scenarios", []):
         expect = scenario.get("expect") or {}
@@ -51,7 +57,7 @@ def test_cli_contract_review_run_json_report_file(
 ) -> None:
     _skip_if_tools_missing()
     monkeypatch.chdir(REPO_ROOT)
-    data = yaml.safe_load(SCENARIO_PATH.read_text(encoding="utf-8"))
+    data = _load_scenarios()
     scenario = next(s for s in data["scenarios"] if s["name"] == scenario_name)
     expect = scenario["expect"]
     fragments: list[str] = expect["file_content_contains"]

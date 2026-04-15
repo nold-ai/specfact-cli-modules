@@ -148,7 +148,7 @@ def _run_review_subprocess(
     # (see `specfact_cli/__init__.py::_bootstrap_bundle_paths`) so ~/.specfact/modules tarballs do not
     # shadow in-repo `specfact_code_review` during the pre-commit gate.
     env["SPECFACT_MODULES_REPO"] = str(repo_root.resolve())
-    env.setdefault("SPECFACT_CLI_MODULES_REPO", str(repo_root.resolve()))
+    env["SPECFACT_CLI_MODULES_REPO"] = str(repo_root.resolve())
     code_review_src = repo_root / "packages" / "specfact-code-review" / "src"
     if code_review_src.is_dir():
         prefix = str(code_review_src)

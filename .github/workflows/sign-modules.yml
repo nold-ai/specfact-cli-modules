@@ -52,6 +52,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Same public-key env as pr-orchestrator so strict verify can check signatures against the
+    # configured release key (not only resources/keys/module-signing-public.pem in the checkout).
+    env:
+      SPECFACT_MODULE_PUBLIC_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PUBLIC_SIGN_KEY }}
+      SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM: ${{ secrets.SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

@@ -91,8 +91,15 @@ def _validate_registry(path: Path) -> list[str]:
 
 
 def _sha256_from_sidecar(text: str) -> str:
-    first = text.strip().splitlines()[0].strip()
-    return first.split()[0].strip().lower()
+    lines = [ln.strip() for ln in text.strip().splitlines() if ln.strip()]
+    if not lines:
+        msg = "sidecar is empty or whitespace-only"
+        raise OSError(msg)
+    tokens = lines[0].split()
+    if not tokens:
+        msg = "sidecar first line has no checksum token"
+        raise OSError(msg)
+    return tokens[0].strip().lower()
 
 
 def _parse_registry_module_fields(mod: dict) -> tuple[str, str, str, str] | list[str]:

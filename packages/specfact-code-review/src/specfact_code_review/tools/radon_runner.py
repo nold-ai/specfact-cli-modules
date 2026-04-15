@@ -175,6 +175,9 @@ def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunct
         return False
     normalized = str(file_path).replace("\\", "/")
     # Stable path suffix: matches in-repo and user-scoped installs (~/.specfact/modules/.../src/...).
+    # Typer CLI handler `run(ctx: Context, ...)` in review.commands injects many option parameters by
+    # design; Radon CC would flag it spuriously. Exempt only that callback so other `run` symbols
+    # elsewhere still get complexity checks.
     if function_node.name == "run" and normalized.endswith("specfact_code_review/review/commands.py"):
         return True
     if not _has_typer_command_decorator(function_node):

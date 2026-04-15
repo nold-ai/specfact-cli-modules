@@ -49,6 +49,16 @@ def test_sign_modules_hardening_triggers_on_push_pr_and_dispatch() -> None:
     assert "base_branch" in dispatch["inputs"]
 
 
+def test_sign_modules_hardening_verify_job_exports_public_signing_secrets() -> None:
+    doc = _parsed_workflow()
+    verify = doc["jobs"]["verify"]
+    assert isinstance(verify, dict)
+    env = verify.get("env")
+    assert isinstance(env, dict)
+    assert env["SPECFACT_MODULE_PUBLIC_SIGN_KEY"] == "${{ secrets.SPECFACT_MODULE_PUBLIC_SIGN_KEY }}"
+    assert env["SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM"] == "${{ secrets.SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM }}"
+
+
 def test_sign_modules_hardening_auto_signs_on_push_non_bot() -> None:
     workflow = _workflow_text()
     assert "github.event_name == 'push'" in workflow
