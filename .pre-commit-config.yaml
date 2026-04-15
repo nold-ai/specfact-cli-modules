@@ -19,10 +19,12 @@ repos:
         pass_filenames: false
         always_run: true
         verbose: true
+      # pass_filenames: false — same chunking issue as lint; script runs repo-wide yaml-lint once.
       - id: modules-block1-yaml
         name: "Block 1 — stage 2/4 — yaml-lint (when YAML staged)"
         entry: ./scripts/pre-commit-quality-checks.sh block1-yaml
         language: system
+        pass_filenames: false
         files: \.(yaml|yml)$
         verbose: true
       - id: modules-block1-bundle
@@ -32,10 +34,13 @@ repos:
         pass_filenames: false
         always_run: true
         verbose: true
+      # pass_filenames: false — otherwise pre-commit re-invokes this hook per filename chunk (ARG_MAX),
+      # and each run still executes full-repo `hatch run lint` (wasteful duplicate output).
       - id: modules-block1-lint
         name: "Block 1 — stage 4/4 — lint (when Python staged)"
         entry: ./scripts/pre-commit-quality-checks.sh block1-lint
         language: system
+        pass_filenames: false
         files: \.(py|pyi)$
         verbose: true
       - id: modules-block2

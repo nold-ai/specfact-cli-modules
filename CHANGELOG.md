@@ -18,6 +18,13 @@ and this project follows SemVer for bundle versions.
 
 - Refresh the canonical `specfact-code-review` house-rules skill to a compact
   clean-code charter and bump the bundle metadata for the signed 0.45.1 release.
+- Document CI module verification: **`pr-orchestrator`** PR checks run
+  `verify-modules-signature` with **`--payload-from-filesystem --enforce-version-bump`**
+  and omit **`--require-signature` by default**; **`--require-signature`** is enforced
+  when the target is **`main`** (including pushes to **`main`**). **`sign-modules.py`**
+  in approval workflows continues to use **`--payload-from-filesystem`**. Sign bundled
+  manifests before merging release PRs or address post-merge verification failures by
+  re-signing and bumping versions as required.
 
 ## [0.44.0] - 2026-03-17
 

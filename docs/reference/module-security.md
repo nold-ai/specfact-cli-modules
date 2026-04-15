@@ -45,11 +45,14 @@ Module packages carry **publisher** and **integrity** metadata so installation, 
 - **CI secrets**:
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY`
   - `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
-- **Verification command**:
-  - Default strict local / **main** check: `scripts/verify-modules-signature.py --require-signature --payload-from-filesystem --enforce-version-bump`
-  - **Dev / feature parity with CI** (checksum + version bump, signature optional): omit `--require-signature` (see `pr-orchestrator` and `scripts/pre-commit-verify-modules-signature.sh`).
-  - `--version-check-base <git-ref>` is used for PR comparisons in CI.
-- **CI signing**: Approved same-repo PRs to `dev` or `main` may receive automated signing commits via `sign-modules-on-approval.yml` (repository secrets; merge-base scoped `--changed-only`).
+- **Verification command** (`scripts/verify-modules-signature.py`):
+  - **Baseline (CI)**: `--payload-from-filesystem --enforce-version-bump` — full payload checksum verification plus version-bump enforcement.
+  - **Dev-target PR mode**: `.github/workflows/pr-orchestrator.yml` uses the baseline verifier for pull requests targeting `dev` (full payload checksum + version bump, **no** `--require-signature`). Cryptographic signing is applied after merge via `sign-modules` / approval workflows, not required on the PR head.
+  - **Strict mode**: add `--require-signature` so every manifest must include a verifiable `integrity.signature`. In `.github/workflows/pr-orchestrator.yml` this is appended for **pull requests whose base is `main`** and for **pushes to `main`**, in addition to the baseline flags. Locally, `scripts/pre-commit-verify-modules-signature.sh` adds `--require-signature` only when the checkout (or `GITHUB_BASE_REF` in Actions) is **`main`**.
+  - **Local non-main hook mode**: `scripts/pre-commit-verify-modules-signature.sh` otherwise runs the same baseline flags as dev-target PR CI (no `--require-signature`). Refresh `integrity.checksum` without a private key using `scripts/sign-modules.py --allow-unsigned --payload-from-filesystem`.
+  - **Pull request CI** also passes `--version-check-base <git-ref>` (typically `origin/<base branch>`) so version rules compare against the PR base.
+  - **`--metadata-only`** remains available for optional tooling that only needs manifest shape and checksum **format** checks without hashing module trees.
+- **CI signing**: Approved same-repo PRs to `dev` or `main` from trusted reviewer associations may receive automated signing commits via `sign-modules-on-approval.yml` (repository secrets; merge-base scoped `--changed-only`).
 
 ## Public key and key rotation
 

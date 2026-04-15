@@ -13,7 +13,9 @@ from typing import Any
 from beartype import beartype
 from icontract import ensure, require
 
+from specfact_code_review._review_utils import python_source_paths_for_tools
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 _KISS_LOC_WARNING = 80
@@ -163,10 +165,59 @@ def _kiss_nesting_findings(
     return findings
 
 
+def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path) -> bool:
+    """Typer command callbacks legitimately take many injected options; skip parameter-count KISS on them."""
+    args0 = function_node.args.args
+    if not args0:
+        return False
+    first = args0[0]
+    if first.arg != "ctx":
+        return False
+    normalized = str(file_path).replace("\\", "/")
+    # Stable path suffix: matches in-repo and user-scoped installs (~/.specfact/modules/.../src/...).
+    # Typer CLI handler `run(ctx: Context, ...)` in review.commands injects many option parameters by
+    # design; Radon CC would flag it spuriously. Exempt only that callback so other `run` symbols
+    # elsewhere still get complexity checks.
+    if function_node.name == "run" and normalized.endswith("specfact_code_review/review/commands.py"):
+        return True
+    if not _has_typer_command_decorator(function_node):
+        return False
+    ann = first.annotation
+    if ann is None:
+        return False
+    try:
+        rendered = ast.unparse(ann)
+    except AttributeError:
+        return False
+    return rendered.endswith("Context")
+
+
+def _decorator_name_parts(decorator: ast.expr) -> tuple[str, ...]:
+    if isinstance(decorator, ast.Call):
+        return _decorator_name_parts(decorator.func)
+    if isinstance(decorator, ast.Name):
+        return (decorator.id,)
+    if isinstance(decorator, ast.Attribute):
+        return (*_decorator_name_parts(decorator.value), decorator.attr)
+    return ()
+
+
+def _has_typer_command_decorator(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    for decorator in function_node.decorator_list:
+        parts = _decorator_name_parts(decorator)
+        if parts == ("command",) or parts[-1:] == ("command",):
+            return True
+        if parts[-1:] == ("callback",):
+            return True
+    return False
+
+
 def _kiss_parameter_findings(
     function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path
 ) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
+    if _typer_cli_entrypoint_exempt(function_node, file_path):
+        return findings
     parameter_count = len(function_node.args.posonlyargs)
     parameter_count += len(function_node.args.args)
     parameter_count += len(function_node.args.kwonlyargs)
@@ -270,8 +321,13 @@ def _ensure_review_findings(result: list[ReviewFinding]) -> bool:
 )
 def run_radon(files: list[Path]) -> list[ReviewFinding]:
     """Run Radon for the provided files and map complexity findings into ReviewFinding records."""
+    files = python_source_paths_for_tools(files)
     if not files:
         return []
+
+    skipped = skip_if_tool_missing("radon", files[0])
+    if skipped:
+        return skipped
 
     payload = _run_radon_command(files)
     findings: list[ReviewFinding] = []

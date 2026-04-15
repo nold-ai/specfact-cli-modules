@@ -10,7 +10,7 @@ from pathlib import Path
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import tool_error
+from specfact_code_review._review_utils import python_source_paths_for_tools, tool_error
 from specfact_code_review.run.findings import ReviewFinding
 
 
@@ -187,7 +187,7 @@ def _solid_findings(file_path: Path, tree: ast.Module) -> list[ReviewFinding]:
 def run_ast_clean_code(files: list[Path]) -> list[ReviewFinding]:
     """Run Python-native AST checks for SOLID, YAGNI, and DRY findings."""
     findings: list[ReviewFinding] = []
-    for file_path in files:
+    for file_path in python_source_paths_for_tools(files):
         try:
             tree = ast.parse(file_path.read_text(encoding="utf-8"), filename=str(file_path))
         except (OSError, SyntaxError) as exc:

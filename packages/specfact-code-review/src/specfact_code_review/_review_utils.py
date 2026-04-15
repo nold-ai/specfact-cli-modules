@@ -31,6 +31,18 @@ def normalize_path_variants(path_value: str | Path) -> set[str]:
     return variants
 
 
+_PYTHON_LINTER_SUFFIXES = frozenset({".py", ".pyi"})
+
+
+@beartype
+@require(lambda files: isinstance(files, list))
+@require(lambda files: all(isinstance(p, Path) for p in files))
+@ensure(lambda result: isinstance(result, list))
+def python_source_paths_for_tools(files: list[Path]) -> list[Path]:
+    """Python source and type stub paths linters/typecheckers should analyze."""
+    return [path for path in files if path.suffix in _PYTHON_LINTER_SUFFIXES]
+
+
 @beartype
 @require(lambda tool: isinstance(tool, str) and bool(tool.strip()))
 @require(lambda file_path: isinstance(file_path, Path))

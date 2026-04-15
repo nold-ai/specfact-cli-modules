@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
@@ -53,6 +54,8 @@ def _is_review_gate_path(path: str) -> bool:
     normalized = path.replace("\\", "/").strip()
     if not normalized:
         return False
+    if normalized.endswith("module-package.yaml"):
+        return False
     if normalized.startswith("openspec/changes/") and Path(normalized).name.casefold() == "tdd_evidence.md":
         return False
     prefixes = (
@@ -83,11 +86,13 @@ def filter_review_gate_paths(paths: Sequence[str]) -> list[str]:
 
 
 def _specfact_review_paths(paths: Sequence[str]) -> list[str]:
-    """Paths to pass to SpecFact ``code review run`` (it treats inputs as Python; skip OpenSpec Markdown)."""
+    """Paths to pass to SpecFact ``code review run`` (Python sources only; skip Markdown and non-.py/.pyi)."""
     result: list[str] = []
     for raw in paths:
         normalized = raw.replace("\\", "/").strip()
         if normalized.startswith("openspec/changes/") and normalized.lower().endswith(".md"):
+            continue
+        if not normalized.endswith((".py", ".pyi")):
             continue
         result.append(raw)
     return result
@@ -138,6 +143,17 @@ def _run_review_subprocess(
     files: Sequence[str],
 ) -> subprocess.CompletedProcess[str] | None:
     """Run the nested SpecFact review command and handle timeout reporting."""
+    env = os.environ.copy()
+    # Ensure nested `python -m specfact_cli.cli` bootstraps this checkout's bundle sources first
+    # (see `specfact_cli/__init__.py::_bootstrap_bundle_paths`) so ~/.specfact/modules tarballs do not
+    # shadow in-repo `specfact_code_review` during the pre-commit gate.
+    env["SPECFACT_MODULES_REPO"] = str(repo_root.resolve())
+    env["SPECFACT_CLI_MODULES_REPO"] = str(repo_root.resolve())
+    code_review_src = repo_root / "packages" / "specfact-code-review" / "src"
+    if code_review_src.is_dir():
+        prefix = str(code_review_src)
+        previous = env.get("PYTHONPATH", "").strip()
+        env["PYTHONPATH"] = f"{prefix}{os.pathsep}{previous}" if previous else prefix
     try:
         return subprocess.run(
             cmd,
@@ -145,6 +161,7 @@ def _run_review_subprocess(
             text=True,
             capture_output=True,
             cwd=str(repo_root),
+            env=env,
             timeout=300,
         )
     except TimeoutExpired:
@@ -204,29 +221,40 @@ def count_findings_by_severity(findings: list[object]) -> dict[str, int]:
     return buckets
 
 
-def _print_review_findings_summary(repo_root: Path) -> bool:
-    """Parse ``REVIEW_JSON_OUT`` and print a one-line findings count (errors / warnings / etc.)."""
+def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None, int | None]:
+    """Parse ``REVIEW_JSON_OUT``, print counts, return ``(ok, error_count, ci_exit_code)``.
+
+    Callers should use ``ci_exit_code`` as the hook exit code; ``error_count`` is informational only
+    because fixable error-severity findings may still yield a passing ``ci_exit_code``.
+    """
     report_path = _report_path(repo_root)
     if not report_path.is_file():
         sys.stderr.write(f"Code review: no report file at {REVIEW_JSON_OUT} (could not print findings summary).\n")
-        return False
+        return False, None, None
     try:
         data = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as exc:
         sys.stderr.write(f"Code review: could not read {REVIEW_JSON_OUT}: {exc}\n")
-        return False
+        return False, None, None
     except json.JSONDecodeError as exc:
         sys.stderr.write(f"Code review: invalid JSON in {REVIEW_JSON_OUT}: {exc}\n")
-        return False
+        return False, None, None
+
+    if not isinstance(data, dict):
+        sys.stderr.write(f"Code review: expected top-level JSON object in {REVIEW_JSON_OUT}.\n")
+        return False, None, None
 
     findings_raw = data.get("findings")
     if not isinstance(findings_raw, list):
         sys.stderr.write(f"Code review: report has no findings list in {REVIEW_JSON_OUT}.\n")
-        return False
+        return False, None, None
 
     counts = count_findings_by_severity(findings_raw)
     total = len(findings_raw)
     verdict = data.get("overall_verdict", "?")
+    ci_exit_code = data.get("ci_exit_code")
+    if ci_exit_code not in {0, 1}:
+        ci_exit_code = 1 if verdict == "FAIL" else 0
     parts = [
         f"errors={counts['error']}",
         f"warnings={counts['warning']}",
@@ -246,7 +274,7 @@ def _print_review_findings_summary(repo_root: Path) -> bool:
         f"  Read `{REVIEW_JSON_OUT}` and fix every finding (errors first), using file and line from each entry.\n"
     )
     sys.stderr.write(f"  @workspace Open `{REVIEW_JSON_OUT}` and remediate each item in `findings`.\n")
-    return True
+    return True, counts["error"], ci_exit_code
 
 
 @ensure(lambda result: isinstance(result, tuple) and len(result) == 2)
@@ -288,7 +316,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if len(specfact_files) == 0:
         sys.stdout.write(
             "Staged review paths are only OpenSpec Markdown under openspec/changes/; "
-            "skipping SpecFact code review (those files are not Python review targets).\n"
+            "skipping SpecFact code review (no staged .py/.pyi targets; Markdown is not passed to SpecFact).\n"
         )
         return 0
 
@@ -307,9 +335,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _missing_report_exit_code(report_path, result)
     # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners); full report
     # is in REVIEW_JSON_OUT; we print a short summary on stderr below.
-    if not _print_review_findings_summary(repo_root):
+    summary_ok, _error_count, ci_exit_code = _print_review_findings_summary(repo_root)
+    if not summary_ok or ci_exit_code is None:
         return 1
-    return result.returncode
+    return int(ci_exit_code)
 
 
 if __name__ == "__main__":

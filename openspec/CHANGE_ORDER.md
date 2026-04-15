@@ -79,6 +79,12 @@ These changes are the modules-side runtime companions to split core governance a
 | governance | 04 | governance-04-deterministic-agent-governance-loading | [#181](https://github.com/nold-ai/specfact-cli-modules/issues/181) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); paired core [specfact-cli#494](https://github.com/nold-ai/specfact-cli/issues/494); baseline [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178) (implements archived `governance-03-github-hierarchy-cache`, paired core [specfact-cli#491](https://github.com/nold-ai/specfact-cli/issues/491)) |
 | validation | 02 | validation-02-full-chain-engine | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#241`; runtime inputs from `#164` and `#165`; policy semantics from `#158` |
 
+### Code review and sidecar validation improvements
+
+| Module | Order | Change folder | GitHub # | Blocked by |
+|--------|-------|---------------|----------|------------|
+| code-review + codebase | 01 | code-review-bug-finding-and-sidecar-venv-fix | [#174](https://github.com/nold-ai/specfact-cli-modules/issues/174) | Parent Feature: [#175](https://github.com/nold-ai/specfact-cli-modules/issues/175); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162) |
+
 ### Module trust chain and CI security
 
 | Module | Order | Change folder | GitHub # | Blocked by |

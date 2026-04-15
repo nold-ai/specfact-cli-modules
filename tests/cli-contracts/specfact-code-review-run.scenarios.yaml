@@ -55,3 +55,116 @@ scenarios:
       exit_code: 2
       stderr_contains:
         - choose positional files or auto-scope controls
+  - name: mode-shadow-dirty-exit-zero
+    type: pattern
+    argv:
+      - --json
+      - --mode
+      - shadow
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - review-report.json
+  - name: bug-hunt-shadow-dirty-exit-zero
+    type: pattern
+    argv:
+      - --json
+      - --bug-hunt
+      - --mode
+      - shadow
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - review-report.json
+  - name: mode-enforce-dirty-exit-nonzero
+    type: pattern
+    argv:
+      - --json
+      - --mode
+      - enforce
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 1
+      stdout_contains:
+        - review-report.json
+  - name: bug-hunt-enforce-dirty-exit-nonzero
+    type: pattern
+    argv:
+      - --json
+      - --bug-hunt
+      - --mode
+      - enforce
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 1
+      stdout_contains:
+        - review-report.json
+  - name: focus-source-and-docs-union
+    type: pattern
+    argv:
+      - --scope
+      - full
+      - --mode
+      - shadow
+      - --path
+      - packages/specfact-code-review
+      - --path
+      - tests/unit/docs
+      - --json
+      - --out
+      - CONTRACT_TMP_REPORT.json
+      - --focus
+      - source
+      - --focus
+      - docs
+    expect:
+      exit_code: 0
+      file_content_contains:
+        - packages/specfact-code-review/src/specfact_code_review
+        - tests/unit/docs
+  - name: focus-tests-narrows-to-test-tree
+    type: pattern
+    argv:
+      - --scope
+      - full
+      - --mode
+      - shadow
+      - --path
+      - tests/unit/specfact_code_review
+      - --json
+      - --out
+      - CONTRACT_TMP_REPORT.json
+      - --bug-hunt
+      - --focus
+      - tests
+    expect:
+      exit_code: 0
+      file_content_contains:
+        - tests/unit/specfact_code_review
+  - name: level-error-json-clean-module
+    type: pattern
+    argv:
+      - --json
+      - --out
+      - CONTRACT_TMP_REPORT.json
+      - --bug-hunt
+      - --level
+      - error
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 1
+      file_content_contains:
+        - '"severity":"error"'
+  - name: focus-cannot-combine-with-include-tests
+    type: anti-pattern
+    argv:
+      - tests/fixtures/review/clean_module.py
+      - --focus
+      - source
+      - --include-tests
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - Cannot combine --focus with --include-tests or --exclude-tests

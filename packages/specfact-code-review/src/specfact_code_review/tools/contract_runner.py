@@ -10,12 +10,159 @@ from pathlib import Path
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import normalize_path_variants, tool_error
+from specfact_code_review._review_utils import normalize_path_variants, python_source_paths_for_tools, tool_error
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 _CROSSHAIR_LINE_RE = re.compile(r"^(?P<file>.+?):(?P<line>\d+):\s*(?:error|warning|info):\s*(?P<message>.+)$")
 _IGNORED_CROSSHAIR_PREFIXES = ("SideEffectDetected:",)
+_ICONTRACT_SCAN_EXCLUDED_DIRS = frozenset(
+    {".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", "__pycache__", "venv", ".venv"}
+)
+
+
+def _repo_root_from_review_paths(files: list[Path]) -> Path | None:
+    """Locate the git repository root from any reviewed path (``.git`` file or directory)."""
+    for file_path in files:
+        try:
+            resolved = file_path.resolve()
+        except OSError:
+            continue
+        for parent in [resolved, *resolved.parents]:
+            if (parent / ".git").exists():
+                return parent
+    return None
+
+
+def _icontract_usage_scan_roots(files: list[Path]) -> list[Path]:
+    """Bundle scan roots for icontract discovery, using paths relative to the repo root when known."""
+    roots: list[Path] = []
+    repo_root = _repo_root_from_review_paths(files)
+    repo_resolved: Path | None = None
+    if repo_root is not None:
+        try:
+            repo_resolved = repo_root.resolve()
+        except OSError:
+            repo_resolved = None
+
+    for file_path in files:
+        if repo_resolved is not None:
+            try:
+                rel_parts = file_path.resolve().relative_to(repo_resolved).parts
+            except (OSError, ValueError):
+                rel_parts = ()
+            if rel_parts and rel_parts[0] == "packages" and len(rel_parts) > 1:
+                roots.append(repo_resolved / "packages" / rel_parts[1])
+                continue
+        else:
+            try:
+                abs_parts = file_path.resolve().parts
+            except OSError:
+                abs_parts = file_path.parts
+            if abs_parts and abs_parts[0] == "packages" and len(abs_parts) > 1:
+                roots.append(Path(*abs_parts[:2]))
+                continue
+        try:
+            roots.append(file_path.resolve().parent)
+        except OSError:
+            roots.append(file_path.parent)
+
+    return list(dict.fromkeys(roots))
+
+
+def _iter_icontract_usage_candidates(root: Path) -> list[Path]:
+    if not root.exists() or not root.is_dir():
+        return []
+    collected: list[Path] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix not in {".py", ".pyi"}:
+            continue
+        if any(part in _ICONTRACT_SCAN_EXCLUDED_DIRS for part in path.parts):
+            continue
+        collected.append(path)
+    return sorted(collected, key=lambda candidate: candidate.as_posix())
+
+
+def _review_paths_include_repo_packages_tree(py_files: list[Path]) -> bool:
+    """True when any reviewed path lies under ``<repo>/packages/…`` (strict repo-relative prefix).
+
+    Without a discoverable git root, fall back to ``\"packages\" in resolved.parts`` so callers
+    outside a normal repo layout still participate in the monorepo ``packages/`` scan when appropriate.
+    """
+    repo_root = _repo_root_from_review_paths(py_files)
+    if repo_root is None:
+        for path in py_files:
+            try:
+                if "packages" in path.resolve().parts:
+                    return True
+            except OSError:
+                if "packages" in path.parts:
+                    return True
+        return False
+    try:
+        repo_resolved = repo_root.resolve()
+    except OSError:
+        for path in py_files:
+            try:
+                if "packages" in path.resolve().parts:
+                    return True
+            except OSError:
+                continue
+        return False
+    for path in py_files:
+        try:
+            rel = path.resolve().relative_to(repo_resolved)
+        except (OSError, ValueError):
+            continue
+        if rel.parts and rel.parts[0] == "packages":
+            return True
+    return False
+
+
+def _root_imports_icontract(root: Path) -> bool:
+    """True when any ``.py`` / ``.pyi`` file under ``root`` imports the ``icontract`` package."""
+    return any(_file_imports_icontract(file_path) for file_path in _iter_icontract_usage_candidates(root))
+
+
+def _has_icontract_usage(py_files: list[Path]) -> bool:
+    """True when icontract is used in any per-path scan root or elsewhere under ``packages/``.
+
+    Review runs often pass only the changed file under ``packages/<bundle>/…``. Icontract may live
+    in a sibling module under the same ``packages/`` tree; a per-bundle root scan alone would miss
+    that signal and incorrectly skip ``MISSING_ICONTRACT`` for the edited file.
+    """
+    for root in dict.fromkeys(_icontract_usage_scan_roots(py_files)):
+        if _root_imports_icontract(root):
+            return True
+    repo_root = _repo_root_from_review_paths(py_files)
+    if repo_root is None:
+        return False
+    if not _review_paths_include_repo_packages_tree(py_files):
+        return False
+    bundled = repo_root / "packages"
+    if not bundled.is_dir():
+        return False
+    return _root_imports_icontract(bundled)
+
+
+def _file_imports_icontract(file_path: Path) -> bool:
+    try:
+        tree = ast.parse(file_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, SyntaxError):
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "icontract":
+            return True
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "icontract":
+                    return True
+    return False
+
+
 _SYNC_RUNTIME_ICONTRACT_ENTRYPOINTS = {
     "bridge_probe.py",
     "bridge_sync.py",
@@ -104,17 +251,23 @@ def _scan_file(file_path: Path) -> list[ReviewFinding]:
     return findings
 
 
-def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
+def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
     if not files:
         return []
 
+    skipped = skip_if_tool_missing("crosshair", files[0])
+    if skipped:
+        return skipped
+
+    per_path_timeout = "10" if bug_hunt else "2"
+    proc_timeout = 120 if bug_hunt else 30
     try:
         result = subprocess.run(
-            ["crosshair", "check", "--per_path_timeout", "2", *(str(file_path) for file_path in files)],
+            ["crosshair", "check", "--per_path_timeout", per_path_timeout, *(str(file_path) for file_path in files)],
             capture_output=True,
             text=True,
             check=False,
-            timeout=30,
+            timeout=proc_timeout,
         )
     except subprocess.TimeoutExpired:
         return []
@@ -163,13 +316,15 @@ def _run_crosshair(files: list[Path]) -> list[ReviewFinding]:
     lambda result: all(isinstance(finding, ReviewFinding) for finding in result),
     "result must contain ReviewFinding instances",
 )
-def run_contract_check(files: list[Path]) -> list[ReviewFinding]:
+def run_contract_check(files: list[Path], *, bug_hunt: bool = False) -> list[ReviewFinding]:
     """Run AST-based contract checks and a CrossHair fast pass for the provided files."""
-    if not files:
+    py_files = python_source_paths_for_tools(files)
+    if not py_files:
         return []
 
     findings: list[ReviewFinding] = []
-    for file_path in files:
-        findings.extend(_scan_file(file_path))
-    findings.extend(_run_crosshair(files))
+    if _has_icontract_usage(py_files):
+        for file_path in py_files:
+            findings.extend(_scan_file(file_path))
+    findings.extend(_run_crosshair(py_files, bug_hunt=bug_hunt))
     return findings

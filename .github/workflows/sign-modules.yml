@@ -1,0 +1,375 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+# Auto-sign changed module manifests on push to dev/main, then strict-verify. PRs use full payload
+# checksum + version bump without `--require-signature` until `main`.
+name: Module Signature Hardening
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_branch:
+        description: Remote branch to compare for --changed-only (fetches origin/<branch>)
+        type: choice
+        options:
+          - dev
+          - main
+        default: dev
+      version_bump:
+        description: Auto-bump when module version is still unchanged from the base ref
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      resign_all_manifests:
+        description: Sign every packages/*/module-package.yaml (not only --changed-only vs base). Use when manifests match the base but lack signatures.
+        type: boolean
+        default: false
+  push:
+    branches: [dev, main]
+    paths:
+      - "packages/**"
+      # Registry-only publish merges do not touch packages/**; still run signing so git manifests
+      # stay aligned with dev→main --require-signature checks.
+      - "registry/**"
+      - "scripts/sign-modules.py"
+      - "scripts/verify-modules-signature.py"
+      - ".github/workflows/sign-modules.yml"
+      - ".github/workflows/sign-modules-on-approval.yml"
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "packages/**"
+      - "registry/**"
+      - "scripts/sign-modules.py"
+      - "scripts/verify-modules-signature.py"
+      - ".github/workflows/sign-modules.yml"
+      - ".github/workflows/sign-modules-on-approval.yml"
+
+concurrency:
+  group: sign-modules-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify Module Signatures
+    runs-on: ubuntu-latest
+    outputs:
+      # Skip reproducibility when we only opened a PR: origin/main is still unsigned until merge.
+      opened_sign_pr: ${{ steps.commit_auto_sign.outputs.opened_sign_pr }}
+    permissions:
+      contents: write
+      pull-requests: write
+    # Same public-key env as pr-orchestrator so strict verify can check signatures against the
+    # configured release key (not only resources/keys/module-signing-public.pem in the checkout).
+    env:
+      SPECFACT_MODULE_PUBLIC_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PUBLIC_SIGN_KEY }}
+      SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM: ${{ secrets.SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch workflow_dispatch comparison base
+        if: github.event_name == 'workflow_dispatch'
+        run: git fetch --no-tags origin "${{ github.event.inputs.base_branch }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install signer dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml beartype icontract cryptography cffi
+
+      - name: Auto-sign changed module manifests (push to dev/main, non-bot actors)
+        if: >-
+          github.event_name == 'push' &&
+          (github.ref_name == 'dev' || github.ref_name == 'main') &&
+          github.actor != 'github-actions[bot]'
+        env:
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY}" ]; then
+            echo "::error::Missing SPECFACT_MODULE_PRIVATE_SIGN_KEY. Configure the secret so pushes to ${GITHUB_REF_NAME} can auto-sign module manifests."
+            exit 1
+          fi
+          BEFORE="${{ github.event.before }}"
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          fi
+          if [ -z "$BEFORE" ]; then
+            echo "::error::Unable to resolve parent commit for --changed-only signing."
+            exit 1
+          fi
+          python scripts/sign-modules.py \
+            --changed-only \
+            --base-ref "$BEFORE" \
+            --bump-version patch \
+            --payload-from-filesystem
+
+          # Registry-only merges leave packages/** unchanged, so --changed-only signs nothing.
+          # Sign any manifest still missing integrity.signature (same CI key as publish-modules).
+          python - <<'PY'
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          import yaml
+
+          if not os.environ.get("SPECFACT_MODULE_PRIVATE_SIGN_KEY", "").strip():
+              raise SystemExit(0)
+
+          def manifest_has_signature(data: dict) -> bool:
+              integrity_obj = data.get("integrity")
+              if not isinstance(integrity_obj, dict):
+                  return False
+              return bool(str(integrity_obj.get("signature") or "").strip())
+
+          root = Path(".").resolve()
+          for manifest in sorted((root / "packages").glob("*/module-package.yaml")):
+              raw = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+              if not isinstance(raw, dict) or manifest_has_signature(raw):
+                  continue
+              print(f"Signing unsigned manifest {manifest} (post --changed-only sweep).", flush=True)
+              subprocess.run(
+                  [
+                      sys.executable,
+                      "scripts/sign-modules.py",
+                      "--payload-from-filesystem",
+                      "--allow-same-version",
+                      str(manifest),
+                  ],
+                  cwd=str(root),
+                  check=True,
+              )
+          PY
+
+      - name: Strict verify module manifests (push to dev/main)
+        if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'main')
+        run: |
+          set -euo pipefail
+          BEFORE="${{ github.event.before }}"
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="HEAD~1"
+          fi
+          python scripts/verify-modules-signature.py \
+            --require-signature \
+            --payload-from-filesystem \
+            --enforce-version-bump \
+            --version-check-base "$BEFORE"
+
+      - name: PR or dispatch verify (checksum-only, no signature required on head)
+        if: github.event_name != 'push'
+        run: |
+          set -euo pipefail
+          BASE_REF=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BASE_REF="origin/${{ github.event.inputs.base_branch }}"
+          fi
+          if [ -z "$BASE_REF" ]; then
+            echo "::error::Missing comparison base for module verification."
+            exit 1
+          fi
+          python scripts/verify-modules-signature.py \
+            --payload-from-filesystem \
+            --enforce-version-bump \
+            --version-check-base "$BASE_REF"
+
+      - name: Commit auto-signed manifests (push to dev/main, non-bot actors)
+        id: commit_auto_sign
+        if: >-
+          github.event_name == 'push' &&
+          (github.ref_name == 'dev' || github.ref_name == 'main') &&
+          github.actor != 'github-actions[bot]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "opened_sign_pr=false" >> "$GITHUB_OUTPUT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u -- packages/
+          if git diff --cached --quiet; then
+            echo "No manifest signing changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(modules): auto-sign module manifests"
+
+          TARGET_BRANCH="${GITHUB_REF_NAME}"
+          SIGN_BRANCH="auto/sign-${TARGET_BRANCH}-${GITHUB_RUN_ID}"
+          git push origin "HEAD:refs/heads/${SIGN_BRANCH}"
+
+          gh pr create \
+            --base "${TARGET_BRANCH}" \
+            --head "${SIGN_BRANCH}" \
+            --title "chore(modules): auto-sign module manifests" \
+            --body "Automated signing from [workflow run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
+
+          Branch \`${TARGET_BRANCH}\` is protected; merge this PR to land signed \`packages/**/module-package.yaml\` updates."
+
+          echo "opened_sign_pr=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::Opened a pull request to merge signed manifests into ${TARGET_BRANCH}."
+
+  reproducibility:
+    name: Assert signing reproducibility
+    if: >-
+      github.event_name == 'push' &&
+      github.ref_name == 'main' &&
+      needs.verify.outputs.opened_sign_pr != 'true'
+    runs-on: ubuntu-latest
+    needs: [verify]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync to remote branch tip (after verify job; merge sign PR before expecting new signatures on main)
+        run: |
+          set -euo pipefail
+          git fetch origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install signer dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml beartype icontract cryptography cffi
+
+      - name: Re-sign manifests and assert no diff
+        env:
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE }}
+        run: |
+          if [ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY}" ]; then
+            echo "::notice::Skipping reproducibility check because SPECFACT_MODULE_PRIVATE_SIGN_KEY is not configured."
+            exit 0
+          fi
+
+          mapfile -t MANIFESTS < <(find packages -name 'module-package.yaml' -type f | sort)
+          if [ "${#MANIFESTS[@]}" -eq 0 ]; then
+            echo "No module manifests found"
+            exit 0
+          fi
+
+          python scripts/sign-modules.py --payload-from-filesystem "${MANIFESTS[@]}"
+
+          if ! git diff --exit-code -- packages/; then
+            echo "::error::Module signatures are stale for the configured signing key. Re-sign and commit manifest updates."
+            git --no-pager diff --name-only -- packages/
+            exit 1
+          fi
+
+  sign-and-push:
+    name: Sign changed modules (manual dispatch)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: [verify]
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Require module signing key secret
+        env:
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
+        run: |
+          if [ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY}" ]; then
+            echo "::error::Missing or empty repository secret SPECFACT_MODULE_PRIVATE_SIGN_KEY."
+            exit 1
+          fi
+
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+          persist-credentials: true
+
+      - name: Fetch comparison base
+        run: git fetch --no-tags origin "${{ github.event.inputs.base_branch }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install signer dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml beartype icontract cryptography cffi
+
+      - name: Sign module manifests
+        env:
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          MERGE_BASE="$(git merge-base HEAD "origin/${{ github.event.inputs.base_branch }}")"
+          BUMP="${{ github.event.inputs.version_bump }}"
+          if [ "${{ github.event.inputs.resign_all_manifests }}" = "true" ]; then
+            mapfile -t MANIFESTS < <(find packages -name 'module-package.yaml' -type f | sort)
+            if [ "${#MANIFESTS[@]}" -eq 0 ]; then
+              echo "No module manifests found"
+              exit 0
+            fi
+            python scripts/sign-modules.py --payload-from-filesystem "${MANIFESTS[@]}"
+          else
+            python scripts/sign-modules.py \
+              --changed-only \
+              --base-ref "$MERGE_BASE" \
+              --bump-version "${BUMP}" \
+              --payload-from-filesystem
+          fi
+
+      - name: Commit and push signed manifests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No manifest changes to commit."
+            echo "## No signing changes" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          git add -u -- packages/
+          if git diff --cached --quiet; then
+            echo "No staged module manifest updates."
+            exit 0
+          fi
+          git commit -m "chore(modules): manual workflow_dispatch sign changed modules"
+
+          TARGET_BRANCH="${GITHUB_REF_NAME}"
+          if [ "${TARGET_BRANCH}" = "dev" ] || [ "${TARGET_BRANCH}" = "main" ]; then
+            SIGN_BRANCH="auto/sign-dispatch-${TARGET_BRANCH}-${GITHUB_RUN_ID}"
+            git push origin "HEAD:refs/heads/${SIGN_BRANCH}"
+            gh pr create \
+              --base "${TARGET_BRANCH}" \
+              --head "${SIGN_BRANCH}" \
+              --title "chore(modules): manual sign changed modules" \
+              --body "Manual signing from [workflow run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
+
+            Protected branch \`${TARGET_BRANCH}\`: merge this PR to land updates (base compare: \`origin/${{ github.event.inputs.base_branch }}\`)."
+            echo "## Opened pull request" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            git push origin "HEAD:${TARGET_BRANCH}"
+            echo "## Signed manifests pushed" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          echo "Branch: \`${GITHUB_REF_NAME}\` (base: \`origin/${{ github.event.inputs.base_branch }}\`, bump: \`${{ github.event.inputs.version_bump }}\`, resign_all: \`${{ github.event.inputs.resign_all_manifests }}\`)." >> "${GITHUB_STEP_SUMMARY}"

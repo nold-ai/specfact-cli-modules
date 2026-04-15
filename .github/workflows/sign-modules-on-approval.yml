@@ -14,10 +14,6 @@ permissions:
 
 jobs:
   sign-modules:
-    if: >-
-      github.event.review.state == 'approved' &&
-      (github.event.pull_request.base.ref == 'dev' || github.event.pull_request.base.ref == 'main') &&
-      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     env:
       SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
@@ -25,7 +21,43 @@ jobs:
       PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
       PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
     steps:
+      - name: Eligibility gate (required status check)
+        id: gate
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event.review.state }}" != "approved" ]; then
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping module signing: review state is not approved."
+            exit 0
+          fi
+          author_association="${{ github.event.review.user.author_association }}"
+          case "$author_association" in
+            COLLABORATOR|MEMBER|OWNER)
+              ;;
+            *)
+              echo "sign=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::Skipping module signing: reviewer association '${author_association}' is not trusted for signing."
+              exit 0
+              ;;
+          esac
+          base_ref="${{ github.event.pull_request.base.ref }}"
+          if [ "$base_ref" != "dev" ] && [ "$base_ref" != "main" ]; then
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping module signing: base branch is not dev or main."
+            exit 0
+          fi
+          head_repo="${{ github.event.pull_request.head.repo.full_name }}"
+          this_repo="${{ github.repository }}"
+          if [ "$head_repo" != "$this_repo" ]; then
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping module signing: fork PR (head repo differs from target repo)."
+            exit 0
+          fi
+          echo "sign=true" >> "$GITHUB_OUTPUT"
+          echo "Eligible for module signing (approved by trusted reviewer, same-repo PR to dev or main)."
+
       - name: Guard signing secrets
+        if: steps.gate.outputs.sign == 'true'
         run: |
           set -euo pipefail
           if [ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY:-}" ]; then
@@ -38,21 +70,25 @@ jobs:
           fi
 
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.sign == 'true'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Set up Python 3.12
+        if: steps.gate.outputs.sign == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install signing dependencies
+        if: steps.gate.outputs.sign == 'true'
         run: |
           python -m pip install --upgrade pip
           python -m pip install pyyaml beartype icontract cryptography cffi
 
       - name: Discover module manifests
+        if: steps.gate.outputs.sign == 'true'
         id: discover
         run: |
           set -euo pipefail
@@ -61,6 +97,7 @@ jobs:
           echo "Discovered ${#MANIFESTS[@]} module-package.yaml file(s) under packages/"
 
       - name: Sign changed module manifests
+        if: steps.gate.outputs.sign == 'true'
         id: sign
         run: |
           set -euo pipefail
@@ -73,6 +110,7 @@ jobs:
             --payload-from-filesystem
 
       - name: Commit and push signed manifests
+        if: steps.gate.outputs.sign == 'true'
         id: commit
         run: |
           set -euo pipefail
@@ -84,7 +122,7 @@ jobs:
             exit 0
           fi
           git add -u -- packages/
-          git commit -m "chore(modules): ci sign changed modules [skip ci]"
+          git commit -m "chore(modules): ci sign changed modules"
           echo "changed=true" >> "$GITHUB_OUTPUT"
           if ! git push origin "HEAD:${PR_HEAD_REF}"; then
             echo "::error::Push to ${PR_HEAD_REF} failed (branch may have advanced after the approved commit). Update the PR branch and re-approve if signing is still required."
@@ -94,15 +132,20 @@ jobs:
       - name: Write job summary
         if: always()
         env:
-          COMMIT_CHANGED: ${{ steps.commit.outputs.changed }}
-          MANIFESTS_COUNT: ${{ steps.discover.outputs.manifests_count }}
+          GATE_SIGN: ${{ steps.gate.outputs.sign }}
+          COMMIT_CHANGED: ${{ steps.commit.outputs.changed || '' }}
+          MANIFESTS_COUNT: ${{ steps.discover.outputs.manifests_count || '' }}
         run: |
           {
             echo "### Module signing (CI approval)"
-            echo "Manifests discovered under \`packages/\`: ${MANIFESTS_COUNT:-unknown}"
-            if [ "${COMMIT_CHANGED}" = "true" ]; then
-              echo "Committed signed manifest updates to ${PR_HEAD_REF}."
+            if [ "${GATE_SIGN}" != "true" ]; then
+              echo "Signing skipped (eligibility gate: not approved, wrong base branch, or fork PR)."
             else
-              echo "No changes detected (manifests already signed or no module changes on this PR vs merge-base)."
+              echo "Manifests discovered under \`packages/\`: ${MANIFESTS_COUNT:-unknown}"
+              if [ "${COMMIT_CHANGED}" = "true" ]; then
+                echo "Committed signed manifest updates to ${PR_HEAD_REF}."
+              else
+                echo "No changes detected (manifests already signed or no module changes on this PR vs merge-base)."
+              fi
             fi
           } >> "$GITHUB_STEP_SUMMARY"

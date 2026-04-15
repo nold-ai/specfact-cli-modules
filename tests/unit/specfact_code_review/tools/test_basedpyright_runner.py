@@ -15,6 +15,17 @@ def test_run_basedpyright_returns_empty_for_no_files() -> None:
     assert run_basedpyright([]) == []
 
 
+def test_run_basedpyright_skips_yaml_manifests(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    manifest = tmp_path / "module-package.yaml"
+    manifest.write_text("name: example\nversion: 1\n", encoding="utf-8")
+    run_mock = Mock()
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    assert run_basedpyright([manifest]) == []
+
+    run_mock.assert_not_called()
+
+
 def test_run_basedpyright_maps_error_diagnostic_to_type_safety(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     payload = {

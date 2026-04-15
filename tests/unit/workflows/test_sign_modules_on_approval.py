@@ -52,14 +52,33 @@ def _assert_pull_request_review_submitted(doc: dict[Any, Any]) -> None:
     assert pr_review["types"] == ["submitted"]
 
 
-def _assert_sign_job_branch_filters(doc: dict[Any, Any]) -> None:
+def _assert_sign_job_has_no_top_level_if(doc: dict[Any, Any]) -> None:
     job = _sign_modules_job(doc)
-    job_if = job["if"]
-    assert isinstance(job_if, str)
-    assert "github.event.review.state == 'approved'" in job_if
-    assert "github.event.pull_request.base.ref == 'dev'" in job_if
-    assert "github.event.pull_request.base.ref == 'main'" in job_if
-    assert "github.event.pull_request.head.repo.full_name == github.repository" in job_if
+    assert "if" not in job, "Job-level `if` prevents a stable required check; gating belongs in steps"
+
+
+def _assert_eligibility_gate_step(doc: dict[Any, Any]) -> None:
+    job = _sign_modules_job(doc)
+    steps = job["steps"]
+    assert isinstance(steps, list)
+    gate = steps[0]
+    assert isinstance(gate, dict)
+    assert gate.get("name") == "Eligibility gate (required status check)"
+    assert gate.get("id") == "gate"
+    run = gate["run"]
+    assert isinstance(run, str)
+    for needle in (
+        "github.event.review.state",
+        "github.event.review.user.author_association",
+        "approved",
+        "COLLABORATOR|MEMBER|OWNER",
+        'echo "sign=false"',
+        'echo "sign=true"',
+        "github.event.pull_request.base.ref",
+        "github.event.pull_request.head.repo.full_name",
+        "github.repository",
+    ):
+        assert needle in run, needle
 
 
 def _assert_concurrency_and_permissions(doc: dict[Any, Any]) -> None:
@@ -76,7 +95,8 @@ def _assert_concurrency_and_permissions(doc: dict[Any, Any]) -> None:
 def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
     doc = _parsed_workflow()
     _assert_pull_request_review_submitted(doc)
-    _assert_sign_job_branch_filters(doc)
+    _assert_sign_job_has_no_top_level_if(doc)
+    _assert_eligibility_gate_step(doc)
     _assert_concurrency_and_permissions(doc)
 
 
@@ -116,16 +136,21 @@ def test_sign_modules_on_approval_secrets_guard() -> None:
 
 def test_sign_modules_on_approval_sign_step_merge_base() -> None:
     workflow = _workflow_text()
-    assert "MERGE_BASE=" in workflow
-    assert "git merge-base HEAD" in workflow
-    assert 'git fetch origin "${PR_BASE_REF}"' in workflow
-    assert "--no-tags" in workflow
-    assert "scripts/sign-modules.py" in workflow
-    assert "--changed-only" in workflow
-    assert "--base-ref" in workflow
-    assert '"$MERGE_BASE"' in workflow
-    assert "--bump-version patch" in workflow
-    assert "--payload-from-filesystem" in workflow
+    for needle in (
+        "merge-base",
+        "git merge-base HEAD",
+        'git fetch origin "${PR_BASE_REF}"',
+        "--no-tags",
+        "scripts/sign-modules.py",
+        "--changed-only",
+        "--base-ref",
+        '"$MERGE_BASE"',
+        "--bump-version patch",
+        "--payload-from-filesystem",
+        "steps.gate.outputs.sign == 'true'",
+    ):
+        assert needle in workflow, needle
+    assert '--base-ref "origin/' not in workflow
 
 
 def _assert_discover_step_writes_outputs(steps: list[Any]) -> None:
@@ -141,7 +166,7 @@ def _assert_commit_and_push_step(steps: list[Any]) -> None:
     assert commit_step.get("id") == "commit"
     commit_run = commit_step["run"]
     assert isinstance(commit_run, str)
-    assert 'git commit -m "chore(modules): ci sign changed modules [skip ci]"' in commit_run
+    assert 'git commit -m "chore(modules): ci sign changed modules"' in commit_run
     assert 'git push origin "HEAD:${PR_HEAD_REF}"' in commit_run
     assert "Push to ${PR_HEAD_REF} failed" in commit_run
 
@@ -151,8 +176,9 @@ def _assert_job_summary_step(steps: list[Any]) -> None:
     assert summary.get("if") == "always()"
     env = summary["env"]
     assert isinstance(env, dict)
-    assert env["COMMIT_CHANGED"] == "${{ steps.commit.outputs.changed }}"
-    assert env["MANIFESTS_COUNT"] == "${{ steps.discover.outputs.manifests_count }}"
+    assert env["COMMIT_CHANGED"] == "${{ steps.commit.outputs.changed || '' }}"
+    assert env["MANIFESTS_COUNT"] == "${{ steps.discover.outputs.manifests_count || '' }}"
+    assert env["GATE_SIGN"] == "${{ steps.gate.outputs.sign }}"
     summary_run = summary["run"]
     assert isinstance(summary_run, str)
     assert "GITHUB_STEP_SUMMARY" in summary_run

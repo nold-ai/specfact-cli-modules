@@ -10,8 +10,9 @@ from typing import Literal
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import normalize_path_variants, tool_error
+from specfact_code_review._review_utils import normalize_path_variants, python_source_paths_for_tools, tool_error
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
 def _allowed_paths(files: list[Path]) -> set[str]:
@@ -96,8 +97,13 @@ def _result_is_review_findings(result: list[ReviewFinding]) -> bool:
 @ensure(_result_is_review_findings, "result must contain ReviewFinding instances")
 def run_ruff(files: list[Path]) -> list[ReviewFinding]:
     """Run Ruff for the provided files and map findings into ReviewFinding records."""
+    files = python_source_paths_for_tools(files)
     if not files:
         return []
+
+    skipped = skip_if_tool_missing("ruff", files[0])
+    if skipped:
+        return skipped
 
     try:
         result = subprocess.run(
@@ -108,7 +114,7 @@ def run_ruff(files: list[Path]) -> list[ReviewFinding]:
             timeout=30,
         )
         payload = _payload_from_output(result.stdout)
-    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return [tool_error(tool="ruff", file_path=files[0], message=f"Unable to parse Ruff output: {exc}")]
 
     allowed_paths = _allowed_paths(files)

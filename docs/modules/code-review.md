@@ -37,6 +37,22 @@ Options:
   findings such as test-scope contract noise
 - `--interactive`: ask whether changed test files should be included before
   auto-detected review runs
+- `--bug-hunt`: use longer CrossHair budgets (`--per_path_timeout 10`, subprocess
+  timeout 120s) for deeper counterexample search; other tools keep normal speed
+- `--mode shadow|enforce`: **enforce** (default) keeps today’s non-zero process
+  exit when the governed report says the run failed; **shadow** still runs the
+  full toolchain and preserves `overall_verdict` in JSON, but forces
+  `ci_exit_code` and the process exit code to `0` so CI or hooks can log signal
+  without blocking
+- `--focus`: repeatable facet filter applied after scope resolution; values are
+  `source` (non-test, non-docs Python), `tests` (paths with a `tests/` segment),
+  and `docs` (Python under a `docs/` directory segment). Multiple `--focus`
+  values **union** their file sets, then intersect with the resolved scope. When
+  any `--focus` is set, **`--include-tests` and `--exclude-tests` are rejected**
+  (use focus alone to express test intent)
+- `--level error|warning`: drop findings below the chosen severity **before**
+  scoring and report construction so JSON, tables, score, verdict, and
+  `ci_exit_code` all match the filtered list. Omit to keep all severities
 
 When `FILES` is omitted, the command falls back to:
 
@@ -80,8 +96,10 @@ findings such as:
 
 ### Exit codes
 
-- `0`: `PASS` or `PASS_WITH_ADVISORY`
-- `1`: `FAIL`
+- `0`: `PASS` or `PASS_WITH_ADVISORY`, or any outcome under **`--mode shadow`**
+  (shadow forces success at the process level even when `overall_verdict` is
+  `FAIL`)
+- `1`: `FAIL` under default **enforce** semantics
 - `2`: invalid CLI usage, such as a missing file path or incompatible options
 
 ### Output modes
@@ -249,9 +267,17 @@ Additional behavior:
 - semgrep rule IDs emitted with path prefixes are normalized back to the governed rule IDs above
 - malformed output, a missing `results` list, or a missing Semgrep executable yields a single `tool_error` finding
 
+### Semgrep bug-rules pass
+
+After the clean-code Semgrep pass, the orchestrator runs
+`specfact_code_review.tools.semgrep_runner.run_semgrep_bugs(files)`, which uses
+`packages/specfact-code-review/.semgrep/bugs.yaml` when present. Findings are
+mapped to `security` or `correctness`. If the config file is missing, the pass
+is skipped with no error.
+
 ### Contract runner
 
-`specfact_code_review.tools.contract_runner.run_contract_check(files)` combines two
+`specfact_code_review.tools.contract_runner.run_contract_check(files, *, bug_hunt=False)` combines two
 contract-oriented checks:
 
 1. an AST scan for public functions missing `@require` / `@ensure`
@@ -261,20 +287,27 @@ AST scan behavior:
 
 - only public module-level and class-level functions are checked
 - functions prefixed with `_` are treated as private and skipped
+- the AST scan for `MISSING_ICONTRACT` runs only when a batch-level package/repo
+  scan root imports `icontract` (`from icontract …` or `import icontract`).
+  Reviewed files in a package that uses icontract are scanned even when the
+  changed file itself does not import icontract
 - missing icontract decorators become `contracts` findings with rule
-  `MISSING_ICONTRACT`
+  `MISSING_ICONTRACT` when the scan runs
 - unreadable or invalid Python files degrade to a single `tool_error` finding instead
   of raising
 
 CrossHair behavior:
 
 ```bash
-crosshair check --per_path_timeout 2 <files...>
+crosshair check --per_path_timeout 2 <files...>   # default
+crosshair check --per_path_timeout 10 <files...>  # with CLI --bug-hunt
 ```
 
 - CrossHair counterexamples map to `contracts` warnings with tool `crosshair`
 - timeouts are skipped so the AST scan can still complete
 - missing CrossHair binaries degrade to a single `tool_error` finding
+- with **`--bug-hunt`**, the per-path timeout is **10** seconds and the
+  subprocess budget is **120** seconds instead of **2** / **30**
 
 Operational note:
 
@@ -369,17 +402,25 @@ specfact code review rules update
 
 ## Review orchestration
 
-`specfact_code_review.run.runner.run_review(files, no_tests=False)` orchestrates the
-bundle runners in this order:
+`specfact_code_review.run.runner.run_review(
+files,
+no_tests=False,
+include_noise=False,
+progress_callback=None,
+bug_hunt=False,
+review_level=None,
+review_mode="enforce",
+)` orchestrates the bundle runners in this order:
 
 1. Ruff
 2. Radon
-3. Semgrep
-4. AST clean-code checks
-5. basedpyright
-6. pylint
-7. contract runner
-8. TDD gate, unless `no_tests=True`
+3. Semgrep (clean-code ruleset)
+4. Semgrep bug rules (`.semgrep/bugs.yaml`, skipped if absent)
+5. AST clean-code checks
+6. basedpyright
+7. pylint
+8. contract runner (AST + CrossHair; optional bug-hunt timeouts)
+9. TDD gate, unless `no_tests=True`
 
 When `SPECFACT_CODE_REVIEW_PR_MODE=1` is present, the runner also evaluates a
 bundle-local advisory PR checklist from `SPECFACT_CODE_REVIEW_PR_TITLE`,
@@ -387,6 +428,23 @@ bundle-local advisory PR checklist from `SPECFACT_CODE_REVIEW_PR_TITLE`,
 adding a new CLI flag.
 
 The merged findings are then scored into a governed `ReviewReport`.
+
+Representative programmatic use:
+
+```python
+from pathlib import Path
+
+from specfact_code_review.run.runner import run_review
+
+report = run_review(
+    [Path("src/app.py")],
+    no_tests=False,
+    include_noise=False,
+    bug_hunt=True,
+    review_level="error",
+    review_mode="shadow",
+)
+```
 
 ## Bundled policy pack
 

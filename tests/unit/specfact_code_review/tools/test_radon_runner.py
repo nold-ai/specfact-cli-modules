@@ -11,6 +11,17 @@ from specfact_code_review.tools.radon_runner import run_radon
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
 
+def test_run_radon_returns_empty_when_only_non_python_paths(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    manifest = tmp_path / "module-package.yaml"
+    manifest.write_text("name: example\n", encoding="utf-8")
+    run_mock = Mock()
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    assert run_radon([manifest]) == []
+
+    run_mock.assert_not_called()
+
+
 def test_run_radon_maps_complexity_thresholds_and_filters_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     other_path = tmp_path / "other.py"
@@ -96,3 +107,46 @@ def test_run_radon_uses_dedicated_tool_identifier_for_kiss_findings(tmp_path: Pa
     kiss_findings = [finding for finding in findings if finding.rule.startswith("kiss.")]
     assert kiss_findings
     assert {finding.tool for finding in kiss_findings} == {"radon-kiss"}
+
+
+def test_run_radon_requires_typer_decorator_for_context_parameter_exemption(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    file_path = tmp_path / "commands.py"
+    file_path.write_text(
+        """
+def callback(ctx: typer.Context, a: str, b: str, c: str, d: str, e: str) -> None:
+    return None
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+    )
+
+    findings = run_radon([file_path])
+
+    assert "kiss.parameter-count.warning" in {finding.rule for finding in findings}
+
+
+def test_run_radon_exempts_typer_command_context_parameters(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "commands.py"
+    file_path.write_text(
+        """
+@app.command("run")
+def callback(ctx: typer.Context, a: str, b: str, c: str, d: str, e: str) -> None:
+    return None
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+    )
+
+    findings = run_radon([file_path])
+
+    assert "kiss.parameter-count.warning" not in {finding.rule for finding in findings}

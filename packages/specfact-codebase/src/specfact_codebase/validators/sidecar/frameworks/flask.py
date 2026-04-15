@@ -48,7 +48,7 @@ class FlaskExtractor(BaseFrameworkExtractor):
         for search_path in [repo_path, repo_path / "src", repo_path / "app", repo_path / "backend" / "app"]:
             if not search_path.exists():
                 continue
-            for py_file in search_path.rglob("*.py"):
+            for py_file in self._iter_python_files(search_path):
                 if py_file.name in ["app.py", "main.py", "__init__.py"]:
                     try:
                         content = py_file.read_text(encoding="utf-8")
@@ -79,7 +79,7 @@ class FlaskExtractor(BaseFrameworkExtractor):
         for search_path in [repo_path, repo_path / "src", repo_path / "app", repo_path / "backend" / "app"]:
             if not search_path.exists():
                 continue
-            for py_file in search_path.rglob("*.py"):
+            for py_file in self._iter_python_files(search_path):
                 try:
                     routes = self._extract_routes_from_file(py_file)
                     results.extend(routes)
@@ -108,6 +108,24 @@ class FlaskExtractor(BaseFrameworkExtractor):
         return {}
 
     @beartype
+    def _register_flask_assign_symbols(
+        self, target: ast.expr, value: ast.expr, app_names: set[str], bp_names: set[str]
+    ) -> None:
+        if not isinstance(target, ast.Name) or not isinstance(value, ast.Call):
+            return
+        func = value.func
+        if isinstance(func, ast.Name) and func.id == "Flask":
+            app_names.add(target.id)
+            return
+        if isinstance(func, ast.Attribute) and func.attr == "Flask":
+            app_names.add(target.id)
+            return
+        if (isinstance(func, ast.Name) and func.id == "Blueprint") or (
+            isinstance(func, ast.Attribute) and func.attr == "Blueprint"
+        ):
+            bp_names.add(target.id)
+
+    @beartype
     def _extract_routes_from_file(self, py_file: Path) -> list[RouteInfo]:
         """Extract routes from a Python file."""
         try:
@@ -125,22 +143,10 @@ class FlaskExtractor(BaseFrameworkExtractor):
 
         # First pass: Find Flask app and Blueprint instances
         for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name):
-                        if isinstance(node.value, ast.Call):
-                            if isinstance(node.value.func, ast.Name):
-                                func_name = node.value.func.id
-                                if func_name == "Flask":
-                                    app_names.add(target.id)
-                            elif isinstance(node.value.func, ast.Attribute):
-                                if node.value.func.attr == "Flask":
-                                    app_names.add(target.id)
-                        elif isinstance(node.value, ast.Call) and (
-                            (isinstance(node.value.func, ast.Name) and node.value.func.id == "Blueprint")
-                            or (isinstance(node.value.func, ast.Attribute) and node.value.func.attr == "Blueprint")
-                        ):
-                            bp_names.add(target.id)
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                self._register_flask_assign_symbols(target, node.value, app_names, bp_names)
 
         # Second pass: Extract routes from functions with decorators
         for node in ast.walk(tree):
@@ -179,6 +185,7 @@ class FlaskExtractor(BaseFrameworkExtractor):
         """Extract route information from a function with Flask decorators."""
         path = None
         methods = ["GET"]  # Default method
+        _ = (imports, py_file)
 
         # Check decorators for route information
         for decorator in func_node.decorator_list:
@@ -187,6 +194,7 @@ class FlaskExtractor(BaseFrameworkExtractor):
                 isinstance(decorator, ast.Call)
                 and isinstance(decorator.func, ast.Attribute)
                 and decorator.func.attr == "route"
+                and self._is_owned_route_decorator(decorator.func, app_names, bp_names)
             ):
                 # Extract path from first argument
                 if decorator.args:
@@ -219,6 +227,12 @@ class FlaskExtractor(BaseFrameworkExtractor):
             )
 
         return results
+
+    @beartype
+    def _is_owned_route_decorator(self, func: ast.Attribute, app_names: set[str], bp_names: set[str]) -> bool:
+        if isinstance(func.value, ast.Name):
+            return func.value.id in app_names or func.value.id in bp_names
+        return False
 
     @beartype
     def _extract_string_literal(self, node: ast.AST) -> str | None:
