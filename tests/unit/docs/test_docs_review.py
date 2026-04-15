@@ -166,8 +166,7 @@ def _navigation_sources() -> list[Path]:
 def _scan_navigation_targets() -> tuple[list[str], set[Path]]:
     docs_root = _docs_root()
     repo_root = _repo_root()
-    route_to_path = dsv.build_route_index(docs_root)
-    path_to_route = dsv.build_path_to_canonical_route(docs_root)
+    route_to_path, path_to_route = dsv.build_route_mappings(docs_root)
     ctx = dsv.DocsLinkResolutionContext(docs_root, route_to_path, path_to_route, dsv.MODULES_DOCS_HOST)
     failures: list[str] = []
     targets: set[Path] = set()

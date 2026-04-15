@@ -41,6 +41,8 @@
 
 ## 6. Local And CI Gate Integration
 
+**Implementation repository:** Deliverables in this section (for example `.github/workflows/docs-review.yml`, `.github/workflows/docs-pages.yml`, `scripts/docs_site_validation.py`, `requirements-docs-ci.txt`, `scripts/pre-commit-quality-checks.sh`, `.pre-commit-config.yaml`, and `tests/unit/docs/test_code_review_docs_parity.py`) are implemented and maintained in **nold-ai/specfact-cli-modules**. They are **not** expected to appear on the paired **nold-ai/specfact-cli** `dev` branch unless a separate, explicitly tracked cross-repo coordination change says otherwise.
+
 - [x] 6.1 Update `scripts/pre-commit-quality-checks.sh` so docs-only staged changes run deterministic docs validation before skipping code-specific review and contract-test stages.
 - [x] 6.2 Update `.pre-commit-config.yaml` if needed to expose docs validation as a separate visible hook or stage.
 - [x] 6.3 Update `.github/workflows/docs-review.yml` so it runs the shared docs validation command and docs unit tests with clear logs for each category.
