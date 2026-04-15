@@ -45,6 +45,84 @@ def test_validate_manifest_bundle_dependency_refs_flags_dangling_id(tmp_path: Pa
     assert str(manifest) in errors[0]
 
 
+def test_validate_registry_consistency_allows_manifest_version_ahead_of_registry(tmp_path: Path) -> None:
+    """Between publish runs the package manifest may bump while index.json still lists the last publish."""
+    v = _load_validate_repo_module()
+    modules_dir = tmp_path / "registry" / "modules"
+    modules_dir.mkdir(parents=True)
+    tarball_name = "specfact-project-0.41.3.tar.gz"
+    digest = "a3df973c103e0708bef7a6ad23ead9b45e3354ba2ecb878f4d64e753e163a817"
+    (modules_dir / f"{tarball_name}.sha256").write_text(f"{digest}\n", encoding="utf-8")
+    registry_path = tmp_path / "index.json"
+    registry_path.write_text(
+        json.dumps(
+            {
+                "modules": [
+                    {
+                        "id": "nold-ai/specfact-project",
+                        "latest_version": "0.41.3",
+                        "download_url": f"modules/{tarball_name}",
+                        "checksum_sha256": digest,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    pkg = tmp_path / "packages" / "specfact-project"
+    pkg.mkdir(parents=True)
+    (pkg / "module-package.yaml").write_text(
+        "name: nold-ai/specfact-project\n"
+        "version: 0.41.4\n"
+        "tier: official\n"
+        "publisher:\n  name: nold-ai\n  email: hello@noldai.com\n"
+        "description: d\n"
+        "bundle_group_command: x\n",
+        encoding="utf-8",
+    )
+    errors = v.validate_registry_consistency(tmp_path, registry_path)
+    assert errors == []
+
+
+def test_validate_registry_consistency_flags_manifest_behind_registry(tmp_path: Path) -> None:
+    v = _load_validate_repo_module()
+    modules_dir = tmp_path / "registry" / "modules"
+    modules_dir.mkdir(parents=True)
+    tarball_name = "specfact-project-0.41.3.tar.gz"
+    digest = "a3df973c103e0708bef7a6ad23ead9b45e3354ba2ecb878f4d64e753e163a817"
+    (modules_dir / f"{tarball_name}.sha256").write_text(f"{digest}\n", encoding="utf-8")
+    registry_path = tmp_path / "index.json"
+    registry_path.write_text(
+        json.dumps(
+            {
+                "modules": [
+                    {
+                        "id": "nold-ai/specfact-project",
+                        "latest_version": "0.41.3",
+                        "download_url": f"modules/{tarball_name}",
+                        "checksum_sha256": digest,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    pkg = tmp_path / "packages" / "specfact-project"
+    pkg.mkdir(parents=True)
+    (pkg / "module-package.yaml").write_text(
+        "name: nold-ai/specfact-project\n"
+        "version: 0.41.2\n"
+        "tier: official\n"
+        "publisher:\n  name: nold-ai\n  email: hello@noldai.com\n"
+        "description: d\n"
+        "bundle_group_command: x\n",
+        encoding="utf-8",
+    )
+    errors = v.validate_registry_consistency(tmp_path, registry_path)
+    assert len(errors) == 1
+    assert "behind" in errors[0]
+
+
 def test_validate_registry_consistency_flags_bad_checksum(tmp_path: Path) -> None:
     v = _load_validate_repo_module()
     modules_dir = tmp_path / "registry" / "modules"

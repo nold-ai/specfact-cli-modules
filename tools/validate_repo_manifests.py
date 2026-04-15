@@ -1,16 +1,69 @@
 #!/usr/bin/env python3
-"""Validate bundle manifests and registry JSON in specfact-cli-modules."""
+"""Validate bundle manifests and registry JSON in specfact-cli-modules.
+
+Registry ``latest_version`` describes the last **published** row in git. A package
+``module-package.yaml`` may use a **higher** semver (ahead of publish); that is allowed so local
+and PR work does not rewrite ``registry/`` before ``publish-modules`` runs on ``dev``/``main``.
+"""
 
 from __future__ import annotations
 
 import json
 import re
+import sys
+from collections.abc import Callable
+from functools import wraps
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import yaml
 
 
+_FuncT = TypeVar("_FuncT", bound=Callable[..., Any])
+
+if TYPE_CHECKING:
+    from beartype import beartype
+    from icontract import ensure, require
+else:
+    try:
+        from beartype import beartype
+    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+
+        def beartype(func: _FuncT) -> _FuncT:
+            return func
+
+    try:
+        from icontract import ensure, require
+    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+
+        def require(
+            _condition: Callable[..., bool],
+            _description: str | None = None,
+        ) -> Callable[[_FuncT], _FuncT]:
+            def decorator(func: _FuncT) -> _FuncT:
+                @wraps(func)
+                def wrapper(*args: Any, **kwargs: Any) -> Any:
+                    return func(*args, **kwargs)
+
+                return cast(_FuncT, wrapper)
+
+            return decorator
+
+        def ensure(
+            _condition: Callable[..., bool],
+            _description: str | None = None,
+        ) -> Callable[[_FuncT], _FuncT]:
+            return require(_condition, _description)
+
+
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _emit_line(message: str, *, error: bool = False) -> None:
+    stream = sys.stderr if error else sys.stdout
+    stream.write(f"{message}\n")
+
+
 REQUIRED_KEYS = {"name", "version", "tier", "publisher", "description", "bundle_group_command"}
 
 
@@ -77,6 +130,28 @@ def _validate_registry_sidecar(root: Path, label: str, download_url: str, checks
     return []
 
 
+def _semver_triplet(version: str) -> tuple[int, int, int] | None:
+    parts = version.strip().split(".")
+    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+        return None
+    return int(parts[0]), int(parts[1]), int(parts[2])
+
+
+def _manifest_registry_version_relation(manifest_version: str, registry_version: str) -> str:
+    """Return ``eq`` | ``gt`` | ``lt`` | ``unknown`` (non-comparable semver triplets)."""
+    mt = _semver_triplet(manifest_version)
+    rt = _semver_triplet(registry_version)
+    if mt is not None and rt is not None:
+        if mt < rt:
+            return "lt"
+        if mt > rt:
+            return "gt"
+        return "eq"
+    if manifest_version == registry_version:
+        return "eq"
+    return "unknown"
+
+
 def _validate_registry_manifest_alignment(
     root: Path, label: str, slug: str, module_id: str, latest_version: str
 ) -> list[str]:
@@ -96,11 +171,19 @@ def _validate_registry_manifest_alignment(
         errors.append(f"{label}: {manifest_path} name {manifest_name!r} does not match registry id {module_id!r}")
 
     manifest_version = str(raw.get("version") or "").strip()
-    if manifest_version != latest_version:
+    relation = _manifest_registry_version_relation(manifest_version, latest_version)
+    if relation == "lt":
         errors.append(
-            f"{label}: {manifest_path} version {manifest_version!r} does not match "
+            f"{label}: {manifest_path} version {manifest_version!r} is behind "
             f"registry latest_version {latest_version!r}"
         )
+    elif relation == "unknown":
+        errors.append(
+            f"{label}: {manifest_path} version {manifest_version!r} does not match "
+            f"registry latest_version {latest_version!r} (expected semver x.y.z for both or exact match)"
+        )
+    # ``gt``: manifest is ahead of the published registry row — normal between publish runs; CI
+    # (`publish-modules`) updates registry + artifacts. Do not require local registry edits here.
 
     return errors
 
@@ -124,6 +207,9 @@ def _registry_module_consistency_errors(root: Path, label: str, mod: dict) -> li
     return _validate_registry_manifest_alignment(root, label, slug, module_id, latest_version)
 
 
+@beartype
+@require(lambda root: root.is_dir(), "root must be a directory")
+@require(lambda registry_path: registry_path.is_file(), "registry_path must be a file")
 def validate_registry_consistency(root: Path, registry_path: Path) -> list[str]:
     """Cross-check registry/index.json against tarball sidecars and package manifests."""
     errors: list[str] = []
@@ -146,6 +232,8 @@ def validate_registry_consistency(root: Path, registry_path: Path) -> list[str]:
     return errors
 
 
+@beartype
+@require(lambda registry_path: registry_path.is_file(), "registry_path must be a file")
 def registry_module_ids(registry_path: Path) -> set[str]:
     data = json.loads(registry_path.read_text(encoding="utf-8"))
     modules = data.get("modules")
@@ -154,6 +242,9 @@ def registry_module_ids(registry_path: Path) -> set[str]:
     return {str(m["id"]).strip() for m in modules if isinstance(m, dict) and str(m.get("id") or "").strip()}
 
 
+@beartype
+@require(lambda manifest_path: manifest_path.is_file(), "manifest_path must be a file")
+@require(lambda registry_ids: isinstance(registry_ids, set), "registry_ids must be a set")
 def validate_manifest_bundle_dependency_refs(manifest_path: Path, registry_ids: set[str]) -> list[str]:
     """Ensure each bundle_dependencies entry targets a module id present in registry/index.json."""
     errors: list[str] = []
@@ -180,6 +271,8 @@ def validate_manifest_bundle_dependency_refs(manifest_path: Path, registry_ids: 
     return errors
 
 
+@beartype
+@ensure(lambda result: result in {0, 1}, "main must return a process exit code")
 def main() -> int:
     manifest_paths = sorted(ROOT.glob("packages/*/module-package.yaml"))
     errors: list[str] = []
@@ -202,12 +295,12 @@ def main() -> int:
             errors.extend(validate_manifest_bundle_dependency_refs(manifest, registry_ids))
 
     if errors:
-        print("Manifest/registry validation failed:")
+        _emit_line("Manifest/registry validation failed:")
         for err in errors:
-            print(f"- {err}")
+            _emit_line(f"- {err}")
         return 1
 
-    print(f"Validated {len(manifest_paths)} manifests and registry/index.json")
+    _emit_line(f"Validated {len(manifest_paths)} manifests and registry/index.json")
     return 0
 
 

@@ -30,7 +30,7 @@ context: |
   Quality & CI (typical order): `format` → `type-check` → `lint` → `yaml-lint` → module **signature verification**
   (`verify-modules-signature`, enforce version bump when manifests change) → `contract-test` → `smart-test` →
   `test`. Pre-commit: `pre-commit-verify-modules-signature.sh` (branch-aware `--require-signature` when target is
-  `main`: local branch `main` or `GITHUB_BASE_REF=main` on PR events),
+  `main`: local branch `main` or `GITHUB_BASE_REF=main` on PR events; otherwise baseline payload checksum + version bump),
   then split `pre-commit-quality-checks.sh` hooks (format, yaml-if-staged, bundle, lint-if-staged, then block2:
   `pre_commit_code_review.py` + contract tests; JSON report under `.specfact/`).
   Hatch default env sets `SPECFACT_MODULES_REPO={root}`; `apply_specfact_workspace_env` also sets

@@ -41,7 +41,7 @@ hatch run smart-test
 hatch run test
 ```
 
-Add `--require-signature` to the verify step when checking the same policy as **`main`** (for example before promoting work to `main`). On feature branches and for PRs targeting **`dev`**, CI does not require signatures yet; pre-commit matches that via `scripts/pre-commit-verify-modules-signature.sh`.
+Add `--require-signature` to the verify step when checking the same policy as **`main`** (for example before promoting work to `main`). On feature branches and for PRs targeting **`dev`**, CI still enforces payload checksums and version bumps but does not require `integrity.signature` yet; pre-commit matches that via `scripts/pre-commit-verify-modules-signature.sh`.
 
 Use the same order locally before pushing changes that affect docs, bundles, or registry metadata.
 
