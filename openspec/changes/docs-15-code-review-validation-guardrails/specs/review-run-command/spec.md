@@ -14,7 +14,7 @@ The Code Review run documentation SHALL describe every supported public `specfac
 
 - **WHEN** the command rejects combinations such as positional files with `--scope` or `--path`, or `--focus` with `--include-tests`
 - **THEN** the Code Review docs describe the invalid combination behavior
-- **AND** the docs include a user-facing alternative for the supported targeting style: pass explicit **positional Python file paths** for a fixed review set, or use **`--scope`** / **`--path`** (without positional files) to auto-discover targets from the repo
+- **AND** the docs include a user-facing alternative for the supported targeting style aligned with the public **`run`** signature (**`files: list[Path]`**): pass explicit **positional files** (file paths) for a fixed review set, or use **`--scope`** / **`--path`** (without positional files) to auto-discover targets from the repo
 
 ## Requirement: Code Review docs SHALL stay aligned with review behavior
 

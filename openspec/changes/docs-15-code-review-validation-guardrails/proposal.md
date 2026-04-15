@@ -1,3 +1,5 @@
+# Proposal: docs-15 — Code review validation guardrails
+
 ## Why
 
 Recent Code Review bundle changes added `specfact code review run` behavior and options that are not consistently documented on the bundle deep-dive pages, and published module overview pages contain links that pass source-file checks while breaking after Jekyll publishes them under permalink routes. This slipped through because the current docs and pre-commit gates validate selected source-path and command categories, but do not systematically validate generated-page URL semantics, required front matter completeness, docs build dependency health, or docs drift caused by command option changes.

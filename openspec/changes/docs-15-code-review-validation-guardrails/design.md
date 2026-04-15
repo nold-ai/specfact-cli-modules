@@ -1,3 +1,5 @@
+# Design: docs-15 — Code review validation guardrails
+
 ## Context
 
 The modules docs site is a Jekyll site published at `modules.specfact.io`. Many authored pages set explicit `permalink` values such as `/bundles/code-review/overview/`, so browser URL resolution happens relative to the published permalink route rather than the source file path. Current validation has two separate surfaces: `tests/unit/docs/test_docs_review.py` performs several source-oriented link and front matter checks, while `scripts/check-docs-commands.py` validates command examples, selected cross-site routes, resource path drift, and navigation data. Both currently pass even when a published page has relative links that resolve to broken public URLs.
