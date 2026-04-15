@@ -167,34 +167,42 @@ def list_redirect_from_routes(front_matter: dict[str, Any]) -> list[str]:
 
 @beartype
 @require(lambda docs_root: isinstance(docs_root, Path))
-@ensure(lambda result: isinstance(result, dict))
-def build_route_index(docs_root: Path) -> dict[str, Path]:
-    """Map every published and redirect alias route to its declaring markdown file."""
+@ensure(
+    lambda result: (
+        isinstance(result, tuple) and len(result) == 2 and isinstance(result[0], dict) and isinstance(result[1], dict)
+    )
+)
+def build_route_mappings(docs_root: Path) -> tuple[dict[str, Path], dict[Path, str]]:
+    """Map routes to declaring files and resolved files to canonical routes in one tree pass."""
     route_to_path: dict[str, Path] = {}
+    path_to_route: dict[Path, str] = {}
 
     for path in iter_docs_markdown_paths(docs_root):
-        text = path.read_text(encoding="utf-8")
-        fm, _, _ = split_yaml_front_matter(text)
+        fm, _, _ = split_yaml_front_matter(path.read_text(encoding="utf-8"))
         if not fm:
             continue
         canonical = published_route_for_doc(path, docs_root, fm)
         route_to_path[canonical] = path
         for alias in list_redirect_from_routes(fm):
             route_to_path[alias] = path
-    return route_to_path
+        path_to_route[path.resolve()] = canonical
+    return route_to_path, path_to_route
+
+
+@beartype
+@require(lambda docs_root: isinstance(docs_root, Path))
+@ensure(lambda result: isinstance(result, dict))
+def build_route_index(docs_root: Path) -> dict[str, Path]:
+    """Map every published and redirect alias route to its declaring markdown file."""
+    return build_route_mappings(docs_root)[0]
 
 
 @beartype
 @require(lambda docs_root: isinstance(docs_root, Path))
 @ensure(lambda result: isinstance(result, dict))
 def build_path_to_canonical_route(docs_root: Path) -> dict[Path, str]:
-    mapping: dict[Path, str] = {}
-    for path in iter_docs_markdown_paths(docs_root):
-        fm, _, _ = split_yaml_front_matter(path.read_text(encoding="utf-8"))
-        if not fm:
-            continue
-        mapping[path.resolve()] = published_route_for_doc(path, docs_root, fm)
-    return mapping
+    """Map each markdown source path to its canonical published route."""
+    return build_route_mappings(docs_root)[1]
 
 
 def _normalize_jekyll_relative_url(link: str) -> str:
@@ -410,8 +418,7 @@ def extract_markdown_links_with_lines(body: str) -> list[tuple[int, str]]:
 @ensure(lambda result: isinstance(result, list))
 def scan_published_route_body_links(docs_root: Path, repo_root: Path) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
-    route_to_path = build_route_index(docs_root)
-    path_to_route = build_path_to_canonical_route(docs_root)
+    route_to_path, path_to_route = build_route_mappings(docs_root)
     ctx = DocsLinkResolutionContext(docs_root, route_to_path, path_to_route, MODULES_DOCS_HOST)
 
     for path in iter_docs_markdown_paths(docs_root):
@@ -487,7 +494,8 @@ def scan_frontmatter_findings(docs_root: Path, repo_root: Path) -> list[Validati
 @ensure(lambda result: isinstance(result, set))
 def build_valid_internal_routes(docs_root: Path) -> set[str]:
     """All routes that should be treated as in-site targets (canonical + redirect aliases)."""
-    return set(build_route_index(docs_root).keys())
+    route_to_path, _ = build_route_mappings(docs_root)
+    return set(route_to_path.keys())
 
 
 @beartype

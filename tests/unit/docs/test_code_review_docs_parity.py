@@ -91,9 +91,9 @@ def test_code_review_run_doc_describes_invalid_flag_combinations() -> None:
     text = RUN_DOC.read_text(encoding="utf-8")
     assert "## Invalid combinations" in text
 
-    assert "_resolve_review_run_flags()" in text
-    assert "_validate_review_request()" in text
-    assert "_raise_if_targeting_styles_conflict()" in text
+    assert "review flags" in text.lower()
+    assert "request validation" in text.lower()
+    assert "conflicting targeting styles" in text.lower()
     assert "progress" in text
     assert "default **`enforce`**" in text
     assert "Optional reporting level override" in text

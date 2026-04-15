@@ -62,7 +62,7 @@ Options (aligned with `specfact code review run --help`):
 
 ### Invalid combinations
 
-The command rejects incompatible mixes (same rules as the bundle run guide): Typer raises **`BadParameter`** from **`_resolve_review_run_flags()`** for **`--include-tests`** with **`--exclude-tests`**, and for **`--focus`** with **`--include-tests`** or **`--exclude-tests`**; other pairings are enforced in **`run_command()`** via **`_validate_review_request()`**, **`_raise_if_targeting_styles_conflict()`**, and related helpers.
+The command rejects incompatible mixes (same rules as the bundle run guide): Typer raises **`BadParameter`** while validating **review flags** (**`--include-tests`** with **`--exclude-tests`**, or **`--focus`** with **`--include-tests`** / **`--exclude-tests`**). **Request validation** and **conflicting targeting styles** rules in the run pipeline enforce the remaining pairings (output modes and positional files vs **`--scope`** / **`--path`**), still surfaced as **`typer.BadParameter`**.
 
 - **Positional `FILES...` with `--scope` or `--path`**: choose explicit files **or**
   auto-scope controls, not both.
