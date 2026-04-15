@@ -62,7 +62,7 @@ Options (aligned with `specfact code review run --help`):
 
 ### Invalid combinations
 
-Typer rejects incompatible mixes (same rules as the bundle run guide):
+The command rejects incompatible mixes (same rules as the bundle run guide): Typer raises **`BadParameter`** from **`_resolve_review_run_flags()`** for **`--include-tests`** with **`--exclude-tests`**, and for **`--focus`** with **`--include-tests`** or **`--exclude-tests`**; other pairings are enforced in **`run_command()`** via **`_validate_review_request()`**, **`_raise_if_targeting_styles_conflict()`**, and related helpers.
 
 - **Positional `FILES...` with `--scope` or `--path`**: choose explicit files **or**
   auto-scope controls, not both.
@@ -70,6 +70,7 @@ Typer rejects incompatible mixes (same rules as the bundle run guide):
   the include/exclude flags, not both.
 - **`--include-tests` with `--exclude-tests`**: pick at most one test inclusion mode.
 - **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set.
+- **`--json` with `--score-only`**: pick one, not both (**`--json`** cannot be used with **`--score-only`**).
 
 When `FILES` is omitted, the command falls back to:
 

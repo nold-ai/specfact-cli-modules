@@ -16,7 +16,7 @@ Bundle overview pages SHALL use links that resolve correctly from the published 
 - **THEN** the link resolves to the target bundle's canonical published overview route
 - **AND** docs validation fails if the link resolves to a route nested under the source overview page
 
-## Requirement: Bundle overview related links SHALL be covered by docs validation tests
+## Requirement: Bundle overview-related links SHALL be covered by docs validation tests
 
 The bundle overview docs test suite SHALL include coverage that fails when any overview page contains a body link that is valid by source-file path but broken under published permalink semantics.
 

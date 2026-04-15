@@ -50,6 +50,14 @@ def test_code_review_run_doc_mentions_public_ty_options() -> None:
     for flag in sorted(flags):
         assert flag in text, f"docs/bundles/code-review/run.md must document {flag}"
 
+    assert "progress" in text
+    assert "spinner" in text or "status" in text
+    assert "default **`enforce`**" in text
+    assert "Optional reporting level override" in text
+    assert "--bug-hunt" in text
+    assert "exploratory" in text.lower()
+    assert "review-report.json" in text
+
 
 def _resolver_messages_for_docs_parity() -> list[str]:
     messages: list[str] = []
@@ -82,6 +90,14 @@ def _resolver_messages_for_docs_parity() -> list[str]:
 def test_code_review_run_doc_describes_invalid_flag_combinations() -> None:
     text = RUN_DOC.read_text(encoding="utf-8")
     assert "## Invalid combinations" in text
+
+    assert "_resolve_review_run_flags()" in text
+    assert "_validate_review_request()" in text
+    assert "_raise_if_targeting_styles_conflict()" in text
+    assert "progress" in text
+    assert "default **`enforce`**" in text
+    assert "Optional reporting level override" in text
+    assert "review-report.json" in text
 
     for msg in _resolver_messages_for_docs_parity():
         assert msg in text, f"run.md must document Typer resolver text: {msg!r}"

@@ -41,7 +41,9 @@ The command prints **progress** to the terminal (spinner/status while the pipeli
 
 ## Invalid combinations
 
-Typer validates several incompatible flag mixes before execution:
+The command validates several incompatible flag mixes before the review pipeline runs.
+
+The Typer entrypoint calls **`_resolve_review_run_flags()`** first; that helper raises **`typer.BadParameter`** for **`--include-tests`** together with **`--exclude-tests`**, and for **`--focus`** together with **`--include-tests`** or **`--exclude-tests`**. Other pairings are rejected later by command-layer validators such as **`_validate_review_request()`** and **`_raise_if_targeting_styles_conflict()`** (wired from **`run_command()`**), including **`--json`** with **`--score-only`**, **`--out`** without **`--json`**, and positional **`FILES...`** with **`--scope`** or **`--path`**. Those command-layer checks are still surfaced as **`typer.BadParameter`** with the messages below.
 
 - **Positional `FILES...` with `--scope` or `--path`**: when you pass explicit paths, do not also pass **`--scope`** or **`--path`** (those options apply only to auto-discovery). Runtime error: **`Choose positional files or auto-scope controls, not both.`**
 - **`--focus` with `--include-tests` or `--exclude-tests`**: use **`--focus`** *or* the include/exclude test flags, not both. Runtime error: **`Cannot combine --focus with --include-tests or --exclude-tests`**
@@ -49,7 +51,7 @@ Typer validates several incompatible flag mixes before execution:
 - **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set. Runtime error: **`Use --out together with --json.`**
 - **`--json` with `--score-only`**: do not combine JSON report output with score-only mode (**`Use either --json or --score-only, not both.`**).
 
-**Supported targeting:** either pass **positional Python file paths** for a fixed review set, or omit files and use **`--scope`** / **`--path`** (and related test flags) for auto-discovery — do not mix positional paths with **`--scope`** or **`--path`**.
+**Supported targeting:** either pass **positional file paths** for a fixed review set (the pipeline still only reviews Python sources it accepts, such as **`.py`** / **`.pyi`**), or omit files and use **`--scope`** / **`--path`** (and related test flags) for auto-discovery — do not mix positional paths with **`--scope`** or **`--path`**.
 
 ## Examples
 
