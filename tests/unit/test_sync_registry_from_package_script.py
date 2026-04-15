@@ -28,6 +28,61 @@ def _minimal_registry(module_id: str, version: str, checksum: str, download_url:
     }
 
 
+def test_sync_registry_tarball_bytes_match_for_identical_trees(tmp_path: Path) -> None:
+    """Tar/gzip layers use fixed metadata so two runs produce identical artifact bytes."""
+
+    def _write_minimal_repo(root: Path) -> str:
+        (root / "registry" / "modules").mkdir(parents=True)
+        (root / "registry" / "signatures").mkdir(parents=True)
+        bundle = "specfact-syncregdet"
+        bdir = root / "packages" / bundle
+        bdir.mkdir(parents=True)
+        old_ver = "0.1.0"
+        old_name = f"{bundle}-{old_ver}.tar.gz"
+        (root / "registry" / "modules" / old_name).write_bytes(b"old")
+        (root / "registry" / "modules" / f"{old_name}.sha256").write_text(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n", encoding="utf-8"
+        )
+        manifest = {
+            "name": "nold-ai/specfact-syncregdet",
+            "version": "0.1.1",
+            "tier": "official",
+            "publisher": {"name": "nold-ai", "email": "hello@noldai.com"},
+            "description": "test bundle",
+            "bundle_group_command": "syncregdet",
+            "integrity": {"checksum": "sha256:deadbeef", "signature": "dummy"},
+        }
+        (bdir / "module-package.yaml").write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
+        (bdir / "README.md").write_text("hello", encoding="utf-8")
+        reg_path = root / "registry" / "index.json"
+        reg_path.write_text(
+            json.dumps(
+                _minimal_registry(
+                    "nold-ai/specfact-syncregdet",
+                    old_ver,
+                    "a" * 64,
+                    f"modules/{old_name}",
+                ),
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return bundle
+
+    root_a = tmp_path / "a"
+    root_b = tmp_path / "b"
+    bundle = _write_minimal_repo(root_a)
+    _write_minimal_repo(root_b)
+    cmd_a = [sys.executable, str(SCRIPT), "--repo-root", str(root_a), "--bundle", bundle]
+    cmd_b = [sys.executable, str(SCRIPT), "--repo-root", str(root_b), "--bundle", bundle]
+    subprocess.run(cmd_a, check=True, cwd=str(REPO_ROOT))
+    subprocess.run(cmd_b, check=True, cwd=str(REPO_ROOT))
+    art_a = root_a / "registry" / "modules" / f"{bundle}-0.1.1.tar.gz"
+    art_b = root_b / "registry" / "modules" / f"{bundle}-0.1.1.tar.gz"
+    assert art_a.read_bytes() == art_b.read_bytes()
+
+
 def test_sync_registry_from_package_updates_index_and_artifacts(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     (root / "registry" / "modules").mkdir(parents=True)

@@ -9,7 +9,9 @@ pre-commit — or you risk skipping or confusing the real publish flow on ``dev`
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
+import io
 import json
 import sys
 import tarfile
@@ -78,9 +80,18 @@ def _bundle_dir(repo_root: Path, bundle: str) -> Path:
     return path
 
 
+_TAR_DETERMINISTIC_MTIME = 0
+
+
 def _write_bundle_tarball(bundle_dir: Path, dest: Path) -> None:
+    """Write ``.tar.gz`` with stable member metadata and gzip header so digest/registry rows match across runs."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(dest, mode="w:gz") as tar:
+    bundle_name = bundle_dir.name
+    gz_buffer = io.BytesIO()
+    with (
+        gzip.GzipFile(fileobj=gz_buffer, mode="wb", mtime=_TAR_DETERMINISTIC_MTIME) as gz_stream,
+        tarfile.open(fileobj=gz_stream, mode="w", format=tarfile.GNU_FORMAT) as tar,
+    ):
         for path in sorted(bundle_dir.rglob("*")):
             if not path.is_file():
                 continue
@@ -89,8 +100,19 @@ def _write_bundle_tarball(bundle_dir: Path, dest: Path) -> None:
                 continue
             if path.suffix.lower() in _IGNORED_SUFFIXES:
                 continue
-            bundle_name = bundle_dir.name
-            tar.add(path, arcname=f"{bundle_name}/{rel.as_posix()}")
+            arcname = f"{bundle_name}/{rel.as_posix()}"
+            payload = path.read_bytes()
+            info = tarfile.TarInfo(arcname)
+            info.size = len(payload)
+            info.mtime = _TAR_DETERMINISTIC_MTIME
+            info.mode = 0o644
+            info.uid = 0
+            info.gid = 0
+            info.uname = "root"
+            info.gname = "root"
+            info.type = tarfile.REGTYPE
+            tar.addfile(info, io.BytesIO(payload))
+    dest.write_bytes(gz_buffer.getvalue())
 
 
 def _load_module_manifest(bundle_dir: Path) -> tuple[dict[str, object], str, str]:
@@ -117,12 +139,10 @@ def _load_registry_index(repo_root: Path) -> tuple[Path, dict[str, object]]:
     return registry_path, reg
 
 
-def _prepare_registry_output_dirs(repo_root: Path) -> tuple[Path, Path]:
+def _prepare_registry_modules_dir(repo_root: Path) -> Path:
     modules_dir = repo_root / "registry" / "modules"
-    signatures_dir = repo_root / "registry" / "signatures"
     modules_dir.mkdir(parents=True, exist_ok=True)
-    signatures_dir.mkdir(parents=True, exist_ok=True)
-    return modules_dir, signatures_dir
+    return modules_dir
 
 
 def _build_registry_tarball_and_digest(
@@ -134,19 +154,6 @@ def _build_registry_tarball_and_digest(
     digest = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
     (artifact_path.with_suffix(artifact_path.suffix + ".sha256")).write_text(f"{digest}\n", encoding="utf-8")
     return artifact_name, digest
-
-
-def _maybe_write_tarball_signature(
-    manifest: dict[str, object], signatures_dir: Path, bundle_name: str, version: str
-) -> None:
-    integrity = manifest.get("integrity")
-    if not isinstance(integrity, dict):
-        return
-    signature_text = str(integrity.get("signature") or "").strip()
-    if not signature_text:
-        return
-    sig_path = signatures_dir / f"{bundle_name}-{version}.tar.sig"
-    sig_path.write_text(signature_text + "\n", encoding="utf-8")
 
 
 def _upsert_registry_module_row(
@@ -186,10 +193,9 @@ def _sync_one_bundle(repo_root: Path, bundle: str) -> None:
     bundle_dir = _bundle_dir(repo_root, bundle)
     manifest, module_id, version = _load_module_manifest(bundle_dir)
     registry_path, registry = _load_registry_index(repo_root)
-    modules_dir, signatures_dir = _prepare_registry_output_dirs(repo_root)
+    modules_dir = _prepare_registry_modules_dir(repo_root)
     bundle_name = bundle_dir.name
     artifact_name, digest = _build_registry_tarball_and_digest(bundle_dir, modules_dir, bundle_name, version)
-    _maybe_write_tarball_signature(manifest, signatures_dir, bundle_name, version)
     _upsert_registry_module_row(
         registry,
         module_id=module_id,

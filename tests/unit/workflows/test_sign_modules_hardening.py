@@ -5,6 +5,7 @@ from typing import Any, cast
 
 import pytest
 import yaml
+from pytest import FixtureRequest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -19,6 +20,21 @@ def _parsed_workflow() -> dict[Any, Any]:
     loaded = yaml.safe_load(_workflow_text())
     assert isinstance(loaded, dict)
     return cast(dict[Any, Any], loaded)
+
+
+def _strict_push_verify_step_block(workflow: str) -> str:
+    marker = "- name: Strict verify module manifests (push to dev/main)\n"
+    idx = workflow.find(marker)
+    if idx < 0:
+        msg = "strict push verify step not found in sign-modules workflow"
+        raise AssertionError(msg)
+    lines = workflow[idx:].splitlines(keepends=True)
+    block: list[str] = [lines[0]]
+    for line in lines[1:]:
+        if line.startswith("      - name:"):
+            break
+        block.append(line)
+    return "".join(block)
 
 
 def _workflow_on_section(doc: dict[Any, Any]) -> dict[str, Any]:
@@ -87,10 +103,17 @@ def test_sign_modules_hardening_auto_signs_on_push_non_bot() -> None:
         ),
     ),
 )
-def test_sign_modules_hardening_workflow_contains_verify_snippets(needles: tuple[str, ...]) -> None:
+def test_sign_modules_hardening_workflow_contains_verify_snippets(
+    needles: tuple[str, ...], request: FixtureRequest
+) -> None:
     workflow = _workflow_text()
-    for needle in needles:
-        assert needle in workflow
+    if request.node.callspec.id == "push_strict_verify":
+        block = _strict_push_verify_step_block(workflow)
+        for needle in needles:
+            assert needle in block
+    else:
+        for needle in needles:
+            assert needle in workflow
 
 
 def test_sign_modules_hardening_reproducibility_on_main() -> None:

@@ -302,9 +302,9 @@ def main() -> int:
             errors.extend(validate_manifest_bundle_dependency_refs(manifest, registry_ids))
 
     if errors:
-        _emit_line("Manifest/registry validation failed:")
+        _emit_line("Manifest/registry validation failed:", error=True)
         for err in errors:
-            _emit_line(f"- {err}")
+            _emit_line(f"- {err}", error=True)
         return 1
 
     _emit_line(f"Validated {len(manifest_paths)} manifests and registry/index.json")
