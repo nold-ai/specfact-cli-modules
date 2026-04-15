@@ -27,6 +27,18 @@ def test_pr_orchestrator_pr_to_dev_verifier_omits_loose_integrity_mode() -> None
     assert "--metadata-only" not in workflow
 
 
+def test_pr_orchestrator_push_uses_github_event_before_for_version_base() -> None:
+    workflow = _workflow_text()
+    assert 'BEFORE="${{ github.event.before }}"' in workflow
+    assert 'VERIFY_CMD+=(--version-check-base "$BEFORE")' in workflow
+    assert "0000000000000000000000000000000000000000" in workflow
+
+
+def test_pr_orchestrator_installs_pinned_specfact_cli() -> None:
+    workflow = _workflow_text()
+    assert 'hatch run pip install "specfact-cli==0.46.2"' in workflow
+
+
 def test_pr_orchestrator_verify_require_signature_on_main_paths() -> None:
     workflow = _workflow_text()
     main_pr_guard = 'if [ "$TARGET_BRANCH" = "main" ]; then'

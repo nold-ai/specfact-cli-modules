@@ -42,5 +42,5 @@ The skill content is bundled with `nold-ai/specfact-code-review`. Initialize or 
 
 ## Related
 
-- [Code review run](run/)
-- [Code review ledger](ledger/)
+- [Code review run](../run/)
+- [Code review ledger](../ledger/)

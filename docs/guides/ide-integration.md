@@ -1,5 +1,6 @@
 ---
 layout: default
+title: IDE integration (redirect)
 permalink: /guides/ide-integration/
 redirect_to: /ai-ide-workflow/
 ---

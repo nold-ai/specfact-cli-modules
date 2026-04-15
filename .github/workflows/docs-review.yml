@@ -9,9 +9,12 @@ on:
       - "**/*.md"
       - "**/*.mdc"
       - "docs/**"
+      - "requirements-docs-ci.txt"
       - "scripts/check-docs-commands.py"
+      - "scripts/docs_site_validation.py"
       - "tests/unit/test_check_docs_commands_script.py"
       - "tests/unit/docs/test_docs_review.py"
+      - "tests/unit/docs/test_code_review_docs_parity.py"
       - ".github/workflows/docs-review.yml"
   push:
     branches: [main, dev]
@@ -19,9 +22,12 @@ on:
       - "**/*.md"
       - "**/*.mdc"
       - "docs/**"
+      - "requirements-docs-ci.txt"
       - "scripts/check-docs-commands.py"
+      - "scripts/docs_site_validation.py"
       - "tests/unit/test_check_docs_commands_script.py"
       - "tests/unit/docs/test_docs_review.py"
+      - "tests/unit/docs/test_code_review_docs_parity.py"
       - ".github/workflows/docs-review.yml"
   workflow_dispatch:
 
@@ -48,13 +54,13 @@ jobs:
       - name: Install docs review dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest click typer PyYAML beartype icontract rich pydantic specfact-cli
+          python -m pip install -r requirements-docs-ci.txt
 
       - name: Run docs review suite
         run: |
           mkdir -p logs/docs-review
           DOCS_REVIEW_LOG="logs/docs-review/docs-review_$(date -u +%Y%m%d_%H%M%S).log"
-          python -m pytest tests/unit/docs/test_docs_review.py -q 2>&1 | tee "$DOCS_REVIEW_LOG"
+          python -m pytest tests/unit/docs/test_docs_review.py tests/unit/docs/test_code_review_docs_parity.py -q 2>&1 | tee "$DOCS_REVIEW_LOG"
           exit "${PIPESTATUS[0]:-$?}"
 
       - name: Validate docs commands and cross-site links

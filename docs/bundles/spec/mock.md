@@ -50,5 +50,5 @@ The mock command reads contracts from the installed bundle or active plan state.
 
 ## Related
 
-- [Spec validate and backward compatibility](validate/)
-- [Generate Specmatic tests](generate-tests/)
+- [Spec validate and backward compatibility](../validate/)
+- [Generate Specmatic tests](../generate-tests/)

@@ -1,3 +1,10 @@
+---
+layout: default
+title: Getting started
+permalink: /getting-started/
+nav_order: 1
+---
+
 # Getting Started with SpecFact Modules
 
 Welcome to the **modules** getting-started guide. This section covers installing and using official bundles. For core CLI platform setup, see [docs.specfact.io](https://docs.specfact.io).
@@ -80,7 +87,7 @@ Some bundles install dependencies automatically:
 - [Installation Guide](installation.md) - Install SpecFact CLI
 - [First Steps](first-steps.md) - Step-by-step first commands
 - [Module Bootstrap Checklist](module-bootstrap-checklist.md) - Verify bundled modules are installed in user/project scope
-- [Tutorial: Using SpecFact with OpenSpec or Spec-Kit](tutorial-openspec-speckit.md) - Complete beginner-friendly tutorial
+- [OpenSpec integration journey](../guides/openspec-journey.md) and [Spec-Kit integration journey](../guides/speckit-journey.md) - Complete beginner-friendly paths for external spec workflows
 - [DevOps Adapter Integration](../integrations/devops-adapter-overview.md) - Integrate SpecFact into agile DevOps workflows
 - [Backlog Refinement](../bundles/backlog/refinement.md) - AI-assisted template-driven refinement for standardizing work items
 - [Tutorial: Backlog Quickstart Demo (GitHub + ADO)](tutorial-backlog-quickstart-demo.md) - Short end-to-end demo

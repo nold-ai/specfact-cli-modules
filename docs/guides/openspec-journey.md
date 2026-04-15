@@ -476,7 +476,7 @@ This separation enables:
 
 ### Getting Started
 
-- [Getting Started](../getting-started/README.md) - Quick setup guide
+- [Getting Started](/getting-started/) - Quick setup guide
 - [Architecture](../reference/architecture.md) - System architecture and design
 
 ---

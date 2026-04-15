@@ -94,6 +94,14 @@ jobs:
               VERIFY_CMD+=(--require-signature)
             fi
           else
+            # Push/workflow_dispatch: compare against the ref tip before this push (not HEAD~1).
+            # Merge commits and signing-only updates keep the same semver; HEAD~1 is the wrong
+            # parent for three-way merges and falsely fails --enforce-version-bump.
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE="HEAD~1"
+            fi
+            VERIFY_CMD+=(--version-check-base "$BEFORE")
             if [ "${{ github.ref_name }}" = "main" ]; then
               VERIFY_CMD+=(--require-signature)
             fi
@@ -132,7 +140,7 @@ jobs:
         run: hatch env create
       - name: Install specfact-cli dependency
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
-        run: hatch run pip install specfact-cli
+        run: hatch run pip install "specfact-cli==0.46.2"
       - name: Format
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run format

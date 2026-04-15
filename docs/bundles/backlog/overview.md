@@ -66,7 +66,7 @@ Deterministic policy validation against backlog snapshots (bundled with this pac
 | `validate` | Run policy checks (JSON/Markdown/both) |
 | `suggest` | Patch-ready suggestions (no automatic writes) |
 
-See [Policy engine](policy-engine/) for details.
+See [Policy engine](../policy-engine/) for details.
 
 ### Auth (`specfact backlog auth`)
 
@@ -111,7 +111,7 @@ specfact backlog daily github --state open --limit 20
 
 ## Deep dives
 
-- [Refinement](refinement/)
-- [Dependency analysis](dependency-analysis/)
-- [Delta](delta/)
-- [Policy engine](policy-engine/)
+- [Refinement](../refinement/)
+- [Dependency analysis](../dependency-analysis/)
+- [Delta](../delta/)
+- [Policy engine](../policy-engine/)
