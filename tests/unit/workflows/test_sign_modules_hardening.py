@@ -79,6 +79,16 @@ def test_sign_modules_hardening_verify_job_exports_public_signing_secrets() -> N
     assert env["SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM"] == "${{ secrets.SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM }}"
 
 
+def test_sign_modules_hardening_verify_job_can_open_sign_prs() -> None:
+    doc = _parsed_workflow()
+    verify = doc["jobs"]["verify"]
+    assert isinstance(verify, dict)
+    perms = verify.get("permissions")
+    assert isinstance(perms, dict)
+    assert perms.get("pull-requests") == "write"
+    assert verify.get("outputs", {}).get("opened_sign_pr") == "${{ steps.commit_auto_sign.outputs.opened_sign_pr }}"
+
+
 def test_sign_modules_hardening_auto_signs_on_push_non_bot() -> None:
     workflow = _workflow_text()
     assert "github.event_name == 'push'" in workflow
@@ -88,6 +98,9 @@ def test_sign_modules_hardening_auto_signs_on_push_non_bot() -> None:
     assert "--bump-version patch" in workflow
     assert 'git commit -m "chore(modules): auto-sign module manifests"' in workflow
     assert "auto-sign module manifests [skip ci]" not in workflow
+    # Protected dev/main: push signing commit to a side branch, then open a PR (not HEAD -> dev).
+    assert "gh pr create" in workflow
+    assert 'git push origin "HEAD:refs/heads/${SIGN_BRANCH}"' in workflow
 
 
 @pytest.mark.parametrize(
@@ -124,7 +137,9 @@ def test_sign_modules_hardening_reproducibility_on_main() -> None:
     doc = _parsed_workflow()
     repro = doc["jobs"]["reproducibility"]
     assert isinstance(repro, dict)
-    assert repro["if"] == "github.event_name == 'push' && github.ref_name == 'main'"
+    assert repro["if"] == (
+        "github.event_name == 'push' && github.ref_name == 'main' && needs.verify.outputs.opened_sign_pr != 'true'"
+    )
     needs = repro["needs"]
     assert needs == ["verify"]
 

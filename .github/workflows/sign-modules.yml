@@ -54,8 +54,12 @@ jobs:
   verify:
     name: Verify Module Signatures
     runs-on: ubuntu-latest
+    outputs:
+      # Skip reproducibility when we only opened a PR: origin/main is still unsigned until merge.
+      opened_sign_pr: ${{ steps.commit_auto_sign.outputs.opened_sign_pr }}
     permissions:
       contents: write
+      pull-requests: write
     # Same public-key env as pr-orchestrator so strict verify can check signatures against the
     # configured release key (not only resources/keys/module-signing-public.pem in the checkout).
     env:
@@ -181,12 +185,17 @@ jobs:
             --version-check-base "$BASE_REF"
 
       - name: Commit auto-signed manifests (push to dev/main, non-bot actors)
+        id: commit_auto_sign
         if: >-
           github.event_name == 'push' &&
           (github.ref_name == 'dev' || github.ref_name == 'main') &&
           github.actor != 'github-actions[bot]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          echo "opened_sign_pr=false" >> "$GITHUB_OUTPUT"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -u -- packages/
@@ -195,11 +204,28 @@ jobs:
             exit 0
           fi
           git commit -m "chore(modules): auto-sign module manifests"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+          TARGET_BRANCH="${GITHUB_REF_NAME}"
+          SIGN_BRANCH="auto/sign-${TARGET_BRANCH}-${GITHUB_RUN_ID}"
+          git push origin "HEAD:refs/heads/${SIGN_BRANCH}"
+
+          gh pr create \
+            --base "${TARGET_BRANCH}" \
+            --head "${SIGN_BRANCH}" \
+            --title "chore(modules): auto-sign module manifests" \
+            --body "Automated signing from [workflow run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
+
+          Branch \`${TARGET_BRANCH}\` is protected; merge this PR to land signed \`packages/**/module-package.yaml\` updates."
+
+          echo "opened_sign_pr=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::Opened a pull request to merge signed manifests into ${TARGET_BRANCH}."
 
   reproducibility:
     name: Assert signing reproducibility
-    if: github.event_name == 'push' && github.ref_name == 'main'
+    if: >-
+      github.event_name == 'push' &&
+      github.ref_name == 'main' &&
+      needs.verify.outputs.opened_sign_pr != 'true'
     runs-on: ubuntu-latest
     needs: [verify]
     permissions:
@@ -210,7 +236,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Sync to remote branch tip (after verify job may have pushed auto-sign commit)
+      - name: Sync to remote branch tip (after verify job; merge sign PR before expecting new signatures on main)
         run: |
           set -euo pipefail
           git fetch origin "${GITHUB_REF_NAME}"
@@ -257,6 +283,7 @@ jobs:
     needs: [verify]
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Require module signing key secret
         env:
@@ -311,7 +338,10 @@ jobs:
           fi
 
       - name: Commit and push signed manifests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --quiet; then
@@ -325,6 +355,21 @@ jobs:
             exit 0
           fi
           git commit -m "chore(modules): manual workflow_dispatch sign changed modules"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-          echo "## Signed manifests pushed" >> "${GITHUB_STEP_SUMMARY}"
+
+          TARGET_BRANCH="${GITHUB_REF_NAME}"
+          if [ "${TARGET_BRANCH}" = "dev" ] || [ "${TARGET_BRANCH}" = "main" ]; then
+            SIGN_BRANCH="auto/sign-dispatch-${TARGET_BRANCH}-${GITHUB_RUN_ID}"
+            git push origin "HEAD:refs/heads/${SIGN_BRANCH}"
+            gh pr create \
+              --base "${TARGET_BRANCH}" \
+              --head "${SIGN_BRANCH}" \
+              --title "chore(modules): manual sign changed modules" \
+              --body "Manual signing from [workflow run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
+
+            Protected branch \`${TARGET_BRANCH}\`: merge this PR to land updates (base compare: \`origin/${{ github.event.inputs.base_branch }}\`)."
+            echo "## Opened pull request" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            git push origin "HEAD:${TARGET_BRANCH}"
+            echo "## Signed manifests pushed" >> "${GITHUB_STEP_SUMMARY}"
+          fi
           echo "Branch: \`${GITHUB_REF_NAME}\` (base: \`origin/${{ github.event.inputs.base_branch }}\`, bump: \`${{ github.event.inputs.version_bump }}\`, resign_all: \`${{ github.event.inputs.resign_all_manifests }}\`)." >> "${GITHUB_STEP_SUMMARY}"
