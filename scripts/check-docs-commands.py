@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import NamedTuple
 from urllib.parse import urlparse
@@ -13,6 +15,13 @@ from urllib.parse import urlparse
 import click
 import yaml
 from typer.main import get_command as typer_get_command
+
+
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+import docs_site_validation  # noqa: E402
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -50,9 +59,6 @@ WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "docs-review.yml"
 MARKDOWN_CODE_RE = re.compile(r"`([^`\n]*specfact [^`\n]*)`")
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 HTML_HREF_RE = re.compile(r'href="([^"]+)"')
-YAML_FRONT_MATTER_DELIMITER = "---"
-
-
 CommandPath = tuple[str, ...]
 
 
@@ -62,11 +68,7 @@ class CommandExample(NamedTuple):
     text: str
 
 
-class ValidationFinding(NamedTuple):
-    category: str
-    source: Path
-    line_number: int
-    message: str
+ValidationFinding = docs_site_validation.ValidationFinding
 
 
 MODULE_APP_MOUNTS = (
@@ -144,26 +146,8 @@ def _extract_command_examples_from_text(text: str, source: Path) -> list[Command
     return examples
 
 
-def _extract_command_examples(path: Path, *, text: str | None = None) -> list[CommandExample]:
-    content = text or path.read_text(encoding="utf-8")
-    return _extract_command_examples_from_text(content, path)
-
-
 def _load_docs_texts(paths: list[Path]) -> dict[Path, str]:
     return {path: path.read_text(encoding="utf-8") for path in paths}
-
-
-def _extract_front_matter(text: str) -> dict[str, object]:
-    lines = text.splitlines()
-    if not lines or lines[0].strip() != YAML_FRONT_MATTER_DELIMITER:
-        return {}
-
-    for index in range(1, len(lines)):
-        if lines[index].strip() != YAML_FRONT_MATTER_DELIMITER:
-            continue
-        data = yaml.safe_load("\n".join(lines[1:index])) or {}
-        return data if isinstance(data, dict) else {}
-    return {}
 
 
 def _normalize_command_text(command_text: str) -> list[str]:
@@ -224,21 +208,30 @@ def _validate_command_examples(text_by_path: dict[Path, str], valid_paths: set[C
     return findings
 
 
-def _validate_legacy_resource_paths(text_by_path: dict[Path, str]) -> list[ValidationFinding]:
+def _scan_text_by_path_for_findings(
+    text_by_path: dict[Path, str],
+    per_line: Callable[[Path, int, str], list[ValidationFinding]],
+) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
     for path, text in text_by_path.items():
         for line_number, raw_line in enumerate(text.splitlines(), start=1):
-            for snippet in LEGACY_RESOURCE_PATH_SNIPPETS:
-                if snippet not in raw_line:
-                    continue
-                findings.append(
-                    ValidationFinding(
-                        category="legacy-resource",
-                        source=path,
-                        line_number=line_number,
-                        message=f"Legacy core-owned resource reference: {snippet}",
-                    )
-                )
+            findings.extend(per_line(path, line_number, raw_line))
+    return findings
+
+
+def _legacy_resource_findings_for_line(path: Path, line_number: int, raw_line: str) -> list[ValidationFinding]:
+    findings: list[ValidationFinding] = []
+    for snippet in LEGACY_RESOURCE_PATH_SNIPPETS:
+        if snippet not in raw_line:
+            continue
+        findings.append(
+            ValidationFinding(
+                category="legacy-resource",
+                source=path,
+                line_number=line_number,
+                message=f"Legacy core-owned resource reference: {snippet}",
+            )
+        )
     return findings
 
 
@@ -261,22 +254,20 @@ def _iter_core_docs_urls_from_text(text: str) -> list[str]:
     return urls
 
 
-def _validate_core_docs_links(text_by_path: dict[Path, str]) -> list[ValidationFinding]:
+def _core_docs_link_findings_for_line(path: Path, line_number: int, raw_line: str) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
-    for path, text in text_by_path.items():
-        for line_number, raw_line in enumerate(text.splitlines(), start=1):
-            for url in _iter_core_docs_urls_from_text(raw_line):
-                route = _normalize_core_docs_route(url)
-                if route is None or route in ALLOWED_CORE_DOCS_ROUTES:
-                    continue
-                findings.append(
-                    ValidationFinding(
-                        category="cross-site-link",
-                        source=path,
-                        line_number=line_number,
-                        message=f"Unsupported docs.specfact.io route: {url}",
-                    )
-                )
+    for url in _iter_core_docs_urls_from_text(raw_line):
+        route = _normalize_core_docs_route(url)
+        if route is None or route in ALLOWED_CORE_DOCS_ROUTES:
+            continue
+        findings.append(
+            ValidationFinding(
+                category="cross-site-link",
+                source=path,
+                line_number=line_number,
+                message=f"Unsupported docs.specfact.io route: {url}",
+            )
+        )
     return findings
 
 
@@ -308,31 +299,6 @@ def _normalize_docs_route(route: str) -> str | None:
     if normalized != "/" and not normalized.endswith("/"):
         normalized += "/"
     return normalized
-
-
-def _route_for_doc(path: Path, text: str) -> str:
-    front_matter = _extract_front_matter(text)
-    permalink = front_matter.get("permalink")
-    if isinstance(permalink, str):
-        normalized = _normalize_docs_route(permalink)
-        if normalized is not None:
-            return normalized
-
-    relative_path = path.relative_to(DOCS_ROOT)
-    if relative_path.name == "index.md":
-        parent = relative_path.parent
-        return "/" if str(parent) == "." else f"/{'/'.join(parent.parts)}/"
-    if relative_path.name.lower() == "readme.md":
-        parent = relative_path.parent
-        return "/" if str(parent) == "." else f"/{'/'.join(parent.parts)}/"
-    path_no_ext = relative_path.with_suffix("")
-    if str(path_no_ext.parent) == ".":
-        return f"/{path_no_ext.name}/" if path_no_ext.name else "/"
-    return f"/{'/'.join(path_no_ext.parts)}/"
-
-
-def _build_valid_docs_routes(text_by_path: dict[Path, str]) -> set[str]:
-    return {_route_for_doc(path, text) for path, text in text_by_path.items()}
 
 
 def _iter_yaml_url_nodes(node: yaml.Node | None) -> list[tuple[str, int]]:
@@ -391,18 +357,33 @@ def _format_findings(findings: list[ValidationFinding]) -> str:
     )
 
 
-def _main() -> int:
+def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Validate modules docs site content and command examples.")
+    parser.add_argument(
+        "--jekyll-bundle-check",
+        action="store_true",
+        help="Run `bundle check` in docs/ (requires Ruby/Bundler; used after bundle install in CI).",
+    )
+    return parser.parse_args(argv)
+
+
+def _main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
     docs_paths = _iter_validation_docs_paths()
     text_by_path = _load_docs_texts(docs_paths)
     valid_paths = _build_valid_command_paths()
-    valid_routes = _build_valid_docs_routes(text_by_path)
+    valid_routes = docs_site_validation.build_valid_internal_routes(DOCS_ROOT)
     findings = [
         *_validate_command_examples(text_by_path, valid_paths),
-        *_validate_legacy_resource_paths(text_by_path),
-        *_validate_core_docs_links(text_by_path),
+        *_scan_text_by_path_for_findings(text_by_path, _legacy_resource_findings_for_line),
+        *_scan_text_by_path_for_findings(text_by_path, _core_docs_link_findings_for_line),
         *_validate_core_docs_config(DOCS_ROOT / "_config.yml"),
         *_validate_nav_data_links(DOCS_ROOT / "_data" / "nav.yml", valid_routes),
+        *docs_site_validation.scan_published_route_body_links(DOCS_ROOT, REPO_ROOT),
+        *docs_site_validation.scan_frontmatter_findings(DOCS_ROOT, REPO_ROOT),
     ]
+    if args.jekyll_bundle_check:
+        findings.extend(docs_site_validation.scan_gemfile_lock_installability(DOCS_ROOT))
     if findings:
         sys.stdout.write(_format_findings(findings) + "\n")
         return 1

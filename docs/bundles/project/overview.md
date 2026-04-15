@@ -76,7 +76,7 @@ Use the top-level group (`specfact sync --help`).
 
 ## Related: codebase import
 
-Brownfield **code import** (`specfact code import`, `specfact import …`) lives in the [Codebase](../codebase/overview/) bundle; it often feeds project bundles. See [Import command features](import-migration/) for behavior that spans both bundles.
+Brownfield **code import** (`specfact code import`, `specfact import …`) lives in the [Codebase](../codebase/overview/) bundle; it often feeds project bundles. See [Import command features](../import-migration/) for behavior that spans both bundles.
 
 ## Bundle-owned prompts and plan templates
 
@@ -93,5 +93,5 @@ specfact migrate artifacts --repo .
 
 ## See also
 
-- [DevOps flow](devops-flow/)
-- [Import command features](import-migration/)
+- [DevOps flow](../devops-flow/)
+- [Import command features](../import-migration/)

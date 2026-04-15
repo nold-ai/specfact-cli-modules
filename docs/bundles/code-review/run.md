@@ -14,6 +14,8 @@ expertise_level: [intermediate, advanced]
 
 `specfact code review run` executes the governed review pipeline for a set of files or for an auto-detected repo scope.
 
+The command prints **progress** to the terminal (spinner/status while the pipeline prepares and runs). With **`--json`**, it writes a machine-readable **`ReviewReport`** JSON file (defaulting to **`review-report.json`** in the working directory when **`--out`** is omitted).
+
 ## Command
 
 - `specfact code review run [FILES...]`
@@ -25,13 +27,26 @@ expertise_level: [intermediate, advanced]
 | `--scope changed\|full` | Review changed files or the full repository when no positional files are provided |
 | `--path <prefix>` | Narrow auto-discovered review files to one or more repo-relative prefixes |
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
+| `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, and/or **`docs`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
+| `--mode shadow\|enforce` | **`shadow`** surfaces findings without failing the exit code for policy violations; **`enforce`** applies normal gating (default **`enforce`**) |
+| `--level error\|warning` | Optional reporting level override for the review run |
+| `--bug-hunt` | Enable exploratory / bug-hunt style heuristics in the review pipeline |
 | `--include-noise`, `--suppress-noise` | Keep or suppress known low-signal findings |
 | `--json` | Emit a `ReviewReport` JSON file |
-| `--out <path>` | Override the default JSON output path |
+| `--out <path>` | JSON output path (only valid together with **`--json`**) |
 | `--score-only` | Print just the reward delta integer |
 | `--no-tests` | Skip the TDD gate |
 | `--fix` | Apply Ruff autofixes, then rerun the review |
 | `--interactive` | Prompt for scope decisions before execution |
+
+## Invalid combinations
+
+Typer validates several incompatible flag mixes before execution:
+
+- **Positional `FILES...` with `--scope`**: when you pass explicit paths, do not also pass **`--scope`** (scope applies only to auto-discovery).
+- **`--focus` with `--include-tests` or `--exclude-tests`**: use **`--focus`** *or* the include/exclude test flags, not both.
+- **`--include-tests` with `--exclude-tests`**: pick at most one test inclusion mode.
+- **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set.
 
 ## Examples
 

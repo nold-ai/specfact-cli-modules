@@ -45,5 +45,5 @@ specfact code review ledger reset --confirm
 
 ## Related
 
-- [Code review run](run/)
-- [Code review rules](rules/)
+- [Code review run](../run/)
+- [Code review rules](../rules/)

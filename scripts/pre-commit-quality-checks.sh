@@ -73,6 +73,41 @@ staged_review_gate_files() {
   done < <(staged_files)
 }
 
+staged_docs_validation_paths() {
+  local line
+  while IFS= read -r line; do
+    [ -z "${line}" ] && continue
+    case "${line}" in
+      docs/*|*.md|scripts/check-docs-commands.py|scripts/docs_site_validation.py)
+        printf '%s\n' "${line}"
+        ;;
+    esac
+  done < <(staged_files)
+}
+
+needs_docs_site_validation() {
+  local line
+  while IFS= read -r line; do
+    [ -z "${line}" ] && continue
+    return 0
+  done < <(staged_docs_validation_paths)
+  return 1
+}
+
+run_docs_site_validation_gate() {
+  if ! needs_docs_site_validation; then
+    return 0
+  fi
+  info "📄 Docs site validation — running \`python scripts/check-docs-commands.py\` (staged docs or docs validation scripts)"
+  if python scripts/check-docs-commands.py; then
+    success "✅ Docs site validation passed"
+  else
+    error "❌ Docs site validation failed"
+    warn "💡 Run: python scripts/check-docs-commands.py"
+    exit 1
+  fi
+}
+
 check_safe_change() {
   local files
   files=$(staged_files)
@@ -222,6 +257,7 @@ run_block1_lint() {
 
 run_block2() {
   warn "🔍 modules pre-commit — Block 2 — hook: review + contract tests"
+  run_docs_site_validation_gate
   if check_safe_change; then
     success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
     info "💡 Only docs, workflow, version, or pre-commit metadata changed"
@@ -240,6 +276,7 @@ run_all() {
   run_bundle_import_checks
   run_lint_if_staged_python
   success "✅ Block 1 complete (all stages passed or skipped as expected)"
+  run_docs_site_validation_gate
   if check_safe_change; then
     success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
     info "💡 Only docs, workflow, version, or pre-commit metadata changed"

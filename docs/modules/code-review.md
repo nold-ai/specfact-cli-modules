@@ -12,7 +12,12 @@ expertise_level: [intermediate, advanced]
 
 ## Review run command
 
-`specfact code review run` now executes the governed review pipeline end to end.
+`specfact code review run` executes the governed review pipeline end to end.
+
+The **bundle run guide** at [Code review run](/bundles/code-review/run/) lists
+the same public flags in a compact table, documents **invalid flag
+combinations**, and matches the Typer surface. This section keeps module-level
+detail (tooling behavior, exit codes, examples).
 
 ### Command shape
 
@@ -20,39 +25,51 @@ expertise_level: [intermediate, advanced]
 specfact code review run [OPTIONS] [FILES...]
 ```
 
-Options:
+Options (aligned with `specfact code review run --help`):
 
-- `--json`: write the governed `ReviewReport` JSON payload to a file
-- `--out PATH`: override the JSON output file path used with `--json`
-- `--score-only`: print only the integer `reward_delta`
-- `--fix`: apply Ruff autofixes and re-run the review before printing results
-- `--no-tests`: skip the targeted TDD gate
 - `--scope changed|full`: choose changed-only or full-repository auto-discovery
   when positional files are omitted
 - `--path PATH`: repeatable repo-relative subtree filter for auto-discovered
   review targets
-- `--include-tests/--exclude-tests`: include or exclude changed test files when
+- `--include-tests` / `--exclude-tests`: include or exclude changed test files when
   review scope is auto-detected from `git diff`
-- `--include-noise/--suppress-noise`: include or suppress known low-signal
-  findings such as test-scope contract noise
-- `--interactive`: ask whether changed test files should be included before
-  auto-detected review runs
-- `--bug-hunt`: use longer CrossHair budgets (`--per_path_timeout 10`, subprocess
-  timeout 120s) for deeper counterexample search; other tools keep normal speed
-- `--mode shadow|enforce`: **enforce** (default) keeps today’s non-zero process
-  exit when the governed report says the run failed; **shadow** still runs the
-  full toolchain and preserves `overall_verdict` in JSON, but forces
-  `ci_exit_code` and the process exit code to `0` so CI or hooks can log signal
-  without blocking
 - `--focus`: repeatable facet filter applied after scope resolution; values are
   `source` (non-test, non-docs Python), `tests` (paths with a `tests/` segment),
   and `docs` (Python under a `docs/` directory segment). Multiple `--focus`
   values **union** their file sets, then intersect with the resolved scope. When
   any `--focus` is set, **`--include-tests` and `--exclude-tests` are rejected**
   (use focus alone to express test intent)
+- `--mode shadow|enforce`: **enforce** (default) keeps today’s non-zero process
+  exit when the governed report says the run failed; **shadow** still runs the
+  full toolchain and preserves `overall_verdict` in JSON, but forces
+  `ci_exit_code` and the process exit code to `0` so CI or hooks can log signal
+  without blocking
 - `--level error|warning`: drop findings below the chosen severity **before**
   scoring and report construction so JSON, tables, score, verdict, and
   `ci_exit_code` all match the filtered list. Omit to keep all severities
+- `--bug-hunt`: enable the bug-hunt pass (CrossHair uses longer budgets: per-path
+  timeout **10s**, subprocess budget **120s**; other tools keep normal speed)
+- `--include-noise` / `--suppress-noise`: include or suppress known low-signal
+  findings such as test-scope contract noise
+- `--json`: emit a `ReviewReport` JSON file (defaults to **`review-report.json`**
+  in the working directory when **`--out`** is omitted)
+- `--out PATH`: JSON output path (**only valid together with `--json`**)
+- `--score-only`: print only the integer `reward_delta`
+- `--no-tests`: skip the targeted TDD gate
+- `--fix`: apply Ruff autofixes and re-run the review before printing results
+- `--interactive`: ask whether changed test files should be included before
+  auto-detected review runs
+
+### Invalid combinations
+
+Typer rejects incompatible mixes (same rules as the bundle run guide):
+
+- **Positional `FILES...` with `--scope` or `--path`**: choose explicit files **or**
+  auto-scope controls, not both.
+- **`--focus` with `--include-tests` or `--exclude-tests`**: use **`--focus`** *or*
+  the include/exclude flags, not both.
+- **`--include-tests` with `--exclude-tests`**: pick at most one test inclusion mode.
+- **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set.
 
 When `FILES` is omitted, the command falls back to:
 
@@ -83,8 +100,8 @@ specfact code review run --scope full --path packages/specfact-code-review
 specfact code review run --scope changed --path packages/specfact-code-review --path tests/unit/specfact_code_review
 ```
 
-Positional `FILES...` cannot be mixed with `--scope` or `--path`. Choose one
-targeting style per invocation.
+Positional `FILES...` cannot be mixed with **`--scope`** or **`--path`** (see
+**Invalid combinations** above).
 
 With default noise suppression, the review also hides known low-signal test
 findings such as:
@@ -111,14 +128,22 @@ During long-running reviews, the CLI now emits step progress to stderr so users
 can see the current phase without breaking stdout-oriented contracts like the
 final `--json` output path.
 
-`--json` writes the `ReviewReport` envelope to `review-report.json` by default.
-Use `--out` to override the file path:
+With **`--json`**, the `ReviewReport` envelope is written to **`review-report.json`**
+in the working directory by default; use **`--out`** only together with
+**`--json`** to pick another path.
 
 ```bash
-specfact code review run --json tests/fixtures/review/clean_module.py
 specfact code review run --json --out /tmp/review-report.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
 specfact code review ledger update --from /tmp/review-report.json
 ```
+
+```bash
+specfact code review run --json packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review ledger update --from review-report.json
+```
+
+The second block writes JSON next to your cwd as **`review-report.json`**; pass
+that same path into **`ledger update --from`**.
 
 `--score-only` is intended for lightweight CI integration:
 
