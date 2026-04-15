@@ -51,6 +51,26 @@ def test_run_contract_check_uses_batch_level_icontract_detection(monkeypatch: Mo
     assert "MISSING_ICONTRACT" in {finding.rule for finding in findings}
 
 
+def test_run_contract_check_detects_icontract_across_package_bundles(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    """MISSING_ICONTRACT must not depend only on the edited bundle: scan ``packages/`` when needed."""
+    (tmp_path / ".git").mkdir()
+    pkg_a = tmp_path / "packages" / "pkg_a"
+    pkg_b = tmp_path / "packages" / "pkg_b"
+    pkg_a.mkdir(parents=True)
+    pkg_b.mkdir(parents=True)
+    (pkg_b / "icontract_anchor.py").write_text("import icontract\n", encoding="utf-8")
+    edited = pkg_a / "new_public_api.py"
+    edited.write_text(
+        "def public_no_contracts(value: int) -> int:\n    return value + 1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("crosshair", stdout="")))
+
+    findings = run_contract_check([edited])
+
+    assert "MISSING_ICONTRACT" in {finding.rule for finding in findings}
+
+
 def test_run_contract_check_skips_decorated_public_function(monkeypatch: MonkeyPatch) -> None:
     file_path = FIXTURES_DIR / "public_with_contracts.py"
     monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("crosshair", stdout="")))

@@ -209,7 +209,11 @@ def count_findings_by_severity(findings: list[object]) -> dict[str, int]:
 
 
 def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None, int | None]:
-    """Parse ``REVIEW_JSON_OUT``, print counts, return ``(ok, error_count, ci_exit_code)``."""
+    """Parse ``REVIEW_JSON_OUT``, print counts, return ``(ok, error_count, ci_exit_code)``.
+
+    Callers should use ``ci_exit_code`` as the hook exit code; ``error_count`` is informational only
+    because fixable error-severity findings may still yield a passing ``ci_exit_code``.
+    """
     report_path = _report_path(repo_root)
     if not report_path.is_file():
         sys.stderr.write(f"Code review: no report file at {REVIEW_JSON_OUT} (could not print findings summary).\n")
@@ -318,12 +322,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _missing_report_exit_code(report_path, result)
     # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners); full report
     # is in REVIEW_JSON_OUT; we print a short summary on stderr below.
-    summary_ok, error_count, ci_exit_code = _print_review_findings_summary(repo_root)
-    if not summary_ok or error_count is None or ci_exit_code is None:
+    summary_ok, _error_count, ci_exit_code = _print_review_findings_summary(repo_root)
+    if not summary_ok or ci_exit_code is None:
         return 1
-    if error_count == 0:
-        return 0
-    return ci_exit_code
+    return int(ci_exit_code)
 
 
 if __name__ == "__main__":

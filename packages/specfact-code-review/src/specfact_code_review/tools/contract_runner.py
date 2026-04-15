@@ -45,13 +45,43 @@ def _iter_icontract_usage_candidates(root: Path) -> list[Path]:
     ]
 
 
-def _has_icontract_usage(files: list[Path]) -> bool:
-    """True when any reviewed file's package/repo scan root imports the icontract package."""
-    for root in _icontract_usage_scan_roots(files):
-        for file_path in _iter_icontract_usage_candidates(root):
-            if _file_imports_icontract(file_path):
-                return True
-    return False
+def _repo_root_from_review_paths(files: list[Path]) -> Path | None:
+    """Locate the git repository root from any reviewed path (``.git`` file or directory)."""
+    for file_path in files:
+        try:
+            resolved = file_path.resolve()
+        except OSError:
+            continue
+        for parent in [resolved, *resolved.parents]:
+            if (parent / ".git").exists():
+                return parent
+    return None
+
+
+def _root_imports_icontract(root: Path) -> bool:
+    """True when any Python file under ``root`` imports the ``icontract`` package."""
+    return any(_file_imports_icontract(file_path) for file_path in _iter_icontract_usage_candidates(root))
+
+
+def _has_icontract_usage(py_files: list[Path]) -> bool:
+    """True when icontract is used in any per-path scan root or elsewhere under ``packages/``.
+
+    Review runs often pass only the changed file under ``packages/<bundle>/…``. Icontract may live
+    in a sibling module under the same ``packages/`` tree; a per-bundle root scan alone would miss
+    that signal and incorrectly skip ``MISSING_ICONTRACT`` for the edited file.
+    """
+    for root in dict.fromkeys(_icontract_usage_scan_roots(py_files)):
+        if _root_imports_icontract(root):
+            return True
+    repo_root = _repo_root_from_review_paths(py_files)
+    if repo_root is None:
+        return False
+    if not any("packages" in path.parts for path in py_files):
+        return False
+    bundled = repo_root / "packages"
+    if not bundled.is_dir():
+        return False
+    return _root_imports_icontract(bundled)
 
 
 def _file_imports_icontract(file_path: Path) -> bool:
