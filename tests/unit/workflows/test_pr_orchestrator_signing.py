@@ -34,6 +34,11 @@ def test_pr_orchestrator_push_uses_github_event_before_for_version_base() -> Non
     assert "0000000000000000000000000000000000000000" in workflow
 
 
+def test_pr_orchestrator_installs_pinned_specfact_cli() -> None:
+    workflow = _workflow_text()
+    assert 'hatch run pip install "specfact-cli==0.46.2"' in workflow
+
+
 def test_pr_orchestrator_verify_require_signature_on_main_paths() -> None:
     workflow = _workflow_text()
     main_pr_guard = 'if [ "$TARGET_BRANCH" = "main" ]; then'

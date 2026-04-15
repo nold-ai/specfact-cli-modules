@@ -69,5 +69,5 @@ Complete technical reference for the official modules site and bundle-owned work
 
 ## Related Documentation
 
-- [Getting Started](../getting-started/README.md) - Installation and first steps
-- [Guides](../guides/README.md) - Usage guides and examples
+- [Getting Started](/getting-started/) - Installation and first steps
+- [Guides](/guides/) - Usage guides and examples

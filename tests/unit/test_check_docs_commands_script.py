@@ -34,7 +34,9 @@ specfact code review run --help
         encoding="utf-8",
     )
 
-    examples = _script_attr(script, "_extract_command_examples")(doc_path)
+    examples = _script_attr(script, "_extract_command_examples_from_text")(
+        doc_path.read_text(encoding="utf-8"), doc_path
+    )
 
     assert [example.text for example in examples] == [
         "specfact code review run --help",
@@ -92,7 +94,9 @@ def test_validate_legacy_resource_paths_reports_stale_core_owned_paths(tmp_path:
         encoding="utf-8",
     )
 
-    findings = _script_attr(script, "_validate_legacy_resource_paths")({doc_path: doc_path.read_text(encoding="utf-8")})
+    scan = _script_attr(script, "_scan_text_by_path_for_findings")
+    per_line = _script_attr(script, "_legacy_resource_findings_for_line")
+    findings = scan({doc_path: doc_path.read_text(encoding="utf-8")}, per_line)
 
     assert len(findings) == 1
     assert findings[0].category == "legacy-resource"
@@ -108,7 +112,9 @@ def test_validate_core_docs_links_rejects_unknown_route(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    findings = _script_attr(script, "_validate_core_docs_links")({doc_path: doc_path.read_text(encoding="utf-8")})
+    scan = _script_attr(script, "_scan_text_by_path_for_findings")
+    per_line = _script_attr(script, "_core_docs_link_findings_for_line")
+    findings = scan({doc_path: doc_path.read_text(encoding="utf-8")}, per_line)
 
     assert len(findings) == 1
     assert findings[0].category == "cross-site-link"
@@ -127,18 +133,34 @@ def test_validate_core_docs_links_allows_core_handoff_routes(tmp_path: Path) -> 
         encoding="utf-8",
     )
 
-    findings = _script_attr(script, "_validate_core_docs_links")({doc_path: doc_path.read_text(encoding="utf-8")})
+    scan = _script_attr(script, "_scan_text_by_path_for_findings")
+    per_line = _script_attr(script, "_core_docs_link_findings_for_line")
+    findings = scan({doc_path: doc_path.read_text(encoding="utf-8")}, per_line)
 
     assert not findings
+
+
+def test_docs_pages_workflow_runs_python_docs_validation() -> None:
+    workflow = (REPO_ROOT / ".github" / "workflows" / "docs-pages.yml").read_text(encoding="utf-8")
+    install_snip = "python -m pip install -r requirements-docs-ci.txt"
+    check_snip = "python scripts/check-docs-commands.py --jekyll-bundle-check"
+    assert install_snip in workflow
+    assert check_snip in workflow
+    install_index = workflow.index(install_snip)
+    check_index = workflow.index(check_snip)
+    upload_index = workflow.index("Upload artifact")
+    assert install_index < check_index, "pip install must precede docs validation in the workflow file"
+    assert check_index < upload_index, "docs validation must run before the Pages artifact upload step"
 
 
 def test_docs_review_workflow_runs_docs_command_validation() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8")
 
-    assert "python -m pip install pytest click typer PyYAML beartype icontract rich pydantic specfact-cli" in workflow
+    assert "python -m pip install -r requirements-docs-ci.txt" in workflow
     assert "python scripts/check-docs-commands.py" in workflow
     assert "scripts/check-docs-commands.py" in workflow
     assert "tests/unit/test_check_docs_commands_script.py" in workflow
+    assert "tests/unit/docs/test_code_review_docs_parity.py" in workflow
 
 
 def test_iter_validation_docs_paths_scans_repo_wide_docs_tree() -> None:
