@@ -106,18 +106,22 @@ scenarios:
     argv:
       - --scope
       - full
+      - --mode
+      - shadow
       - --path
       - packages/specfact-code-review
       - --path
       - tests/unit/docs
       - --json
+      - --out
+      - CONTRACT_TMP_REPORT.json
       - --focus
       - source
       - --focus
       - docs
     expect:
       exit_code: 0
-      stdout_contains:
+      file_content_contains:
         - packages/specfact-code-review/src/specfact_code_review
         - tests/unit/docs
   - name: focus-tests-narrows-to-test-tree
@@ -125,27 +129,33 @@ scenarios:
     argv:
       - --scope
       - full
+      - --mode
+      - shadow
       - --path
       - tests/unit/specfact_code_review
       - --json
+      - --out
+      - CONTRACT_TMP_REPORT.json
       - --bug-hunt
       - --focus
       - tests
     expect:
       exit_code: 0
-      stdout_contains:
+      file_content_contains:
         - tests/unit/specfact_code_review
   - name: level-error-json-clean-module
     type: pattern
     argv:
       - --json
+      - --out
+      - CONTRACT_TMP_REPORT.json
       - --bug-hunt
       - --level
       - error
       - tests/fixtures/review/dirty_module.py
     expect:
       exit_code: 1
-      stdout_contains:
+      file_content_contains:
         - '"severity":"error"'
   - name: focus-cannot-combine-with-include-tests
     type: anti-pattern

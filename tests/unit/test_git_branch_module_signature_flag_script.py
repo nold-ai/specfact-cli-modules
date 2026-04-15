@@ -25,6 +25,25 @@ def test_git_branch_module_signature_flag_script_requires_for_main_base() -> Non
     assert result.stdout.strip() == "require"
 
 
+def test_git_branch_module_signature_flag_script_omits_when_base_ref_unset(tmp_path: Path) -> None:
+    # Without GITHUB_BASE_REF the script falls back to the current git branch; use an isolated
+    # repo on a non-main branch so the outcome is "omit" regardless of the outer worktree branch.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "omit-test@example.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "omit-test"], cwd=repo, check=True)
+    (repo / "tracked").write_text("x", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True)
+    subprocess.run(["git", "checkout", "-b", "side"], cwd=repo, check=True)
+    env = {k: v for k, v in os.environ.items() if k != "GITHUB_BASE_REF"}
+    result = subprocess.run([SCRIPT_PATH], cwd=repo, capture_output=True, text=True, check=False, env=env)
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == "omit"
+
+
 def test_git_branch_module_signature_flag_script_omits_for_non_main_base() -> None:
     env = {**os.environ, "GITHUB_BASE_REF": "feature/x"}
     result = subprocess.run([SCRIPT_PATH], capture_output=True, text=True, check=False, env=env)

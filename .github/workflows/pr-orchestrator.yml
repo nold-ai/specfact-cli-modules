@@ -89,12 +89,10 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
             TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
-            HEAD_REPO="${{ github.event.pull_request.head.repo.full_name }}"
-            THIS_REPO="${{ github.repository }}"
             VERIFY_CMD+=(--version-check-base "$BASE_REF")
             if [ "$TARGET_BRANCH" = "dev" ]; then
               VERIFY_CMD+=(--metadata-only)
-            elif [ "$TARGET_BRANCH" = "main" ] && [ "$HEAD_REPO" = "$THIS_REPO" ]; then
+            elif [ "$TARGET_BRANCH" = "main" ]; then
               VERIFY_CMD+=(--require-signature)
             fi
           else

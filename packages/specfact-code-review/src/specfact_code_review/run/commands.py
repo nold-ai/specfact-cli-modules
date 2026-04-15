@@ -44,10 +44,6 @@ class ConflictingScopeError(RunCommandError):
     error_code = "conflicting_scope"
 
 
-class FocusFacetConflictError(RunCommandError):
-    error_code = "focus_facet_conflict"
-
-
 class NoReviewableFilesError(RunCommandError):
     error_code = "no_reviewable_files"
 
@@ -536,8 +532,6 @@ def _build_review_run_request(
     out = cast(Path | None, out_value)
 
     focus_facets = cast(tuple[str, ...], _as_focus_facets(request_kwargs.pop("focus_facets", None)))
-    if focus_facets and include_tests:
-        raise FocusFacetConflictError("Cannot combine --focus with --include-tests or --exclude-tests")
 
     request = ReviewRunRequest(
         files=files,
@@ -605,7 +599,7 @@ def run_command(
     )
     _validate_review_request(request)
 
-    include_for_resolve = request.include_tests or ("tests" in request.focus_facets)
+    include_for_resolve = request.include_tests or bool(request.focus_facets)
     resolved_files = _resolve_files(
         request.files,
         include_tests=include_for_resolve,
@@ -634,7 +628,6 @@ def run_command(
 
 __all__ = [
     "ConflictingScopeError",
-    "FocusFacetConflictError",
     "InvalidOptionCombinationError",
     "MissingOutForJsonError",
     "NoReviewableFilesError",
