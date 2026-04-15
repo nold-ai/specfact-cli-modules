@@ -47,28 +47,21 @@ def _icontract_usage_scan_roots(files: list[Path]) -> list[Path]:
             repo_resolved = None
 
     for file_path in files:
-        rel_parts: tuple[str, ...]
         if repo_resolved is not None:
             try:
                 rel_parts = file_path.resolve().relative_to(repo_resolved).parts
             except (OSError, ValueError):
-                try:
-                    rel_parts = file_path.resolve().parts
-                except OSError:
-                    rel_parts = file_path.parts
+                rel_parts = ()
+            if rel_parts and rel_parts[0] == "packages" and len(rel_parts) > 1:
+                roots.append(repo_resolved / "packages" / rel_parts[1])
+                continue
         else:
             try:
-                rel_parts = file_path.resolve().parts
+                abs_parts = file_path.resolve().parts
             except OSError:
-                rel_parts = file_path.parts
-
-        if "packages" in rel_parts:
-            package_index = rel_parts.index("packages")
-            if len(rel_parts) > package_index + 1:
-                if repo_resolved is not None:
-                    roots.append(repo_resolved / "packages" / rel_parts[package_index + 1])
-                else:
-                    roots.append(Path(*rel_parts[: package_index + 2]))
+                abs_parts = file_path.parts
+            if abs_parts and abs_parts[0] == "packages" and len(abs_parts) > 1:
+                roots.append(Path(*abs_parts[:2]))
                 continue
         try:
             roots.append(file_path.resolve().parent)
@@ -94,7 +87,11 @@ def _iter_icontract_usage_candidates(root: Path) -> list[Path]:
 
 
 def _review_paths_include_repo_packages_tree(py_files: list[Path]) -> bool:
-    """True when any reviewed path maps under ``<repo>/packages/…`` using repo-relative segments."""
+    """True when any reviewed path lies under ``<repo>/packages/…`` (strict repo-relative prefix).
+
+    Without a discoverable git root, fall back to ``\"packages\" in resolved.parts`` so callers
+    outside a normal repo layout still participate in the monorepo ``packages/`` scan when appropriate.
+    """
     repo_root = _repo_root_from_review_paths(py_files)
     if repo_root is None:
         for path in py_files:
@@ -120,7 +117,7 @@ def _review_paths_include_repo_packages_tree(py_files: list[Path]) -> bool:
             rel = path.resolve().relative_to(repo_resolved)
         except (OSError, ValueError):
             continue
-        if "packages" in rel.parts:
+        if rel.parts and rel.parts[0] == "packages":
             return True
     return False
 
