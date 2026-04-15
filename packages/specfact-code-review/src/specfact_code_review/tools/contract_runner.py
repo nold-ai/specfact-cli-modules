@@ -22,29 +22,6 @@ _ICONTRACT_SCAN_EXCLUDED_DIRS = frozenset(
 )
 
 
-def _icontract_usage_scan_roots(files: list[Path]) -> list[Path]:
-    roots: list[Path] = []
-    for file_path in files:
-        parts = file_path.parts
-        if "packages" in parts:
-            package_index = parts.index("packages")
-            if len(parts) > package_index + 1:
-                roots.append(Path(*parts[: package_index + 2]))
-                continue
-        roots.append(file_path.parent)
-    return list(dict.fromkeys(roots))
-
-
-def _iter_icontract_usage_candidates(root: Path) -> list[Path]:
-    if not root.exists() or not root.is_dir():
-        return []
-    return [
-        path
-        for path in root.rglob("*.py")
-        if path.is_file() and not any(part in _ICONTRACT_SCAN_EXCLUDED_DIRS for part in path.parts)
-    ]
-
-
 def _repo_root_from_review_paths(files: list[Path]) -> Path | None:
     """Locate the git repository root from any reviewed path (``.git`` file or directory)."""
     for file_path in files:
@@ -58,8 +35,98 @@ def _repo_root_from_review_paths(files: list[Path]) -> Path | None:
     return None
 
 
+def _icontract_usage_scan_roots(files: list[Path]) -> list[Path]:
+    """Bundle scan roots for icontract discovery, using paths relative to the repo root when known."""
+    roots: list[Path] = []
+    repo_root = _repo_root_from_review_paths(files)
+    repo_resolved: Path | None = None
+    if repo_root is not None:
+        try:
+            repo_resolved = repo_root.resolve()
+        except OSError:
+            repo_resolved = None
+
+    for file_path in files:
+        rel_parts: tuple[str, ...]
+        if repo_resolved is not None:
+            try:
+                rel_parts = file_path.resolve().relative_to(repo_resolved).parts
+            except (OSError, ValueError):
+                try:
+                    rel_parts = file_path.resolve().parts
+                except OSError:
+                    rel_parts = file_path.parts
+        else:
+            try:
+                rel_parts = file_path.resolve().parts
+            except OSError:
+                rel_parts = file_path.parts
+
+        if "packages" in rel_parts:
+            package_index = rel_parts.index("packages")
+            if len(rel_parts) > package_index + 1:
+                if repo_resolved is not None:
+                    roots.append(repo_resolved / "packages" / rel_parts[package_index + 1])
+                else:
+                    roots.append(Path(*rel_parts[: package_index + 2]))
+                continue
+        try:
+            roots.append(file_path.resolve().parent)
+        except OSError:
+            roots.append(file_path.parent)
+
+    return list(dict.fromkeys(roots))
+
+
+def _iter_icontract_usage_candidates(root: Path) -> list[Path]:
+    if not root.exists() or not root.is_dir():
+        return []
+    collected: list[Path] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix not in {".py", ".pyi"}:
+            continue
+        if any(part in _ICONTRACT_SCAN_EXCLUDED_DIRS for part in path.parts):
+            continue
+        collected.append(path)
+    return sorted(collected, key=lambda candidate: candidate.as_posix())
+
+
+def _review_paths_include_repo_packages_tree(py_files: list[Path]) -> bool:
+    """True when any reviewed path maps under ``<repo>/packages/…`` using repo-relative segments."""
+    repo_root = _repo_root_from_review_paths(py_files)
+    if repo_root is None:
+        for path in py_files:
+            try:
+                if "packages" in path.resolve().parts:
+                    return True
+            except OSError:
+                if "packages" in path.parts:
+                    return True
+        return False
+    try:
+        repo_resolved = repo_root.resolve()
+    except OSError:
+        for path in py_files:
+            try:
+                if "packages" in path.resolve().parts:
+                    return True
+            except OSError:
+                continue
+        return False
+    for path in py_files:
+        try:
+            rel = path.resolve().relative_to(repo_resolved)
+        except (OSError, ValueError):
+            continue
+        if "packages" in rel.parts:
+            return True
+    return False
+
+
 def _root_imports_icontract(root: Path) -> bool:
-    """True when any Python file under ``root`` imports the ``icontract`` package."""
+    """True when any ``.py`` / ``.pyi`` file under ``root`` imports the ``icontract`` package."""
     return any(_file_imports_icontract(file_path) for file_path in _iter_icontract_usage_candidates(root))
 
 
@@ -76,7 +143,7 @@ def _has_icontract_usage(py_files: list[Path]) -> bool:
     repo_root = _repo_root_from_review_paths(py_files)
     if repo_root is None:
         return False
-    if not any("packages" in path.parts for path in py_files):
+    if not _review_paths_include_repo_packages_tree(py_files):
         return False
     bundled = repo_root / "packages"
     if not bundled.is_dir():

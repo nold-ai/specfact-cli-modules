@@ -42,11 +42,20 @@ def test_run_contract_check_skips_missing_icontract_when_package_unused(
     assert_tool_run(run_mock, ["crosshair", "check", "--per_path_timeout", "2", str(file_path)])
 
 
-def test_run_contract_check_uses_batch_level_icontract_detection(monkeypatch: MonkeyPatch) -> None:
-    file_path = FIXTURES_DIR / "public_without_contracts.py"
+def test_run_contract_check_uses_batch_level_icontract_detection(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    """Icontract usage in a sibling module under the same bundle roots ``MISSING_ICONTRACT`` on the edited file."""
+    (tmp_path / ".git").mkdir()
+    pkg = tmp_path / "packages" / "demo_pkg"
+    pkg.mkdir(parents=True)
+    (pkg / "uses_icontract.py").write_text("import icontract\n", encoding="utf-8")
+    tmp_file = pkg / "public_without_contracts.py"
+    tmp_file.write_text(
+        "def public_without_contracts(value: int) -> int:\n    return value + 1\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("crosshair", stdout="")))
 
-    findings = run_contract_check([file_path])
+    findings = run_contract_check([tmp_file])
 
     assert "MISSING_ICONTRACT" in {finding.rule for finding in findings}
 
