@@ -28,6 +28,9 @@ jobs:
   publish:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    env:
+      SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
+      SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -260,7 +263,41 @@ jobs:
 
             manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
             if not isinstance(manifest, dict):
-              raise ValueError(f"Invalid manifest content: {manifest_path}")
+                raise ValueError(f"Invalid manifest content: {manifest_path}")
+
+            def manifest_has_signature(data: dict) -> bool:
+                integrity_obj = data.get("integrity")
+                if not isinstance(integrity_obj, dict):
+                    return False
+                return bool(str(integrity_obj.get("signature") or "").strip())
+
+            if not manifest_has_signature(manifest):
+                if os.environ.get("SPECFACT_MODULE_PRIVATE_SIGN_KEY", "").strip():
+                    print(
+                        f"Signing {manifest_path} before registry packaging (missing integrity.signature).",
+                        flush=True,
+                    )
+                    subprocess.run(
+                        [
+                            "python",
+                            "scripts/sign-modules.py",
+                            "--payload-from-filesystem",
+                            str(manifest_path),
+                        ],
+                        cwd=str(repo_root),
+                        check=True,
+                    )
+                    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+                    if not isinstance(manifest, dict):
+                        raise ValueError(f"Invalid manifest content after signing: {manifest_path}")
+                    if not manifest_has_signature(manifest):
+                        raise ValueError(f"Signing did not produce integrity.signature: {manifest_path}")
+                else:
+                    print(
+                        f"::warning::Publishing {bundle} with checksum-only tree manifest "
+                        "(SPECFACT_MODULE_PRIVATE_SIGN_KEY unset).",
+                        flush=True,
+                    )
 
             module_id = str(manifest.get("name") or f"nold-ai/{bundle}")
             version = str(manifest.get("version") or "").strip()
