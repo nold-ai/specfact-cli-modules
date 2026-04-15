@@ -30,6 +30,16 @@ jobs:
             echo "::notice::Skipping module signing: review state is not approved."
             exit 0
           fi
+          author_association="${{ github.event.review.user.author_association }}"
+          case "$author_association" in
+            COLLABORATOR|MEMBER|OWNER)
+              ;;
+            *)
+              echo "sign=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::Skipping module signing: reviewer association '${author_association}' is not trusted for signing."
+              exit 0
+              ;;
+          esac
           base_ref="${{ github.event.pull_request.base.ref }}"
           if [ "$base_ref" != "dev" ] && [ "$base_ref" != "main" ]; then
             echo "sign=false" >> "$GITHUB_OUTPUT"
@@ -44,7 +54,7 @@ jobs:
             exit 0
           fi
           echo "sign=true" >> "$GITHUB_OUTPUT"
-          echo "Eligible for module signing (approved, same-repo PR to dev or main)."
+          echo "Eligible for module signing (approved by trusted reviewer, same-repo PR to dev or main)."
 
       - name: Guard signing secrets
         if: steps.gate.outputs.sign == 'true'

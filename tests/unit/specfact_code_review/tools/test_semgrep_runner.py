@@ -35,6 +35,18 @@ GOOD_FIXTURES = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def _stub_semgrep_on_path(monkeypatch: MonkeyPatch) -> None:  # pyright: ignore[reportUnusedFunction]
+    real_which = shutil.which
+
+    def _which(name: str) -> str | None:
+        if name == "semgrep":
+            return "/fake/semgrep"
+        return real_which(name)
+
+    monkeypatch.setattr("specfact_code_review.tools.tool_availability.shutil.which", _which)
+
+
 def test_run_semgrep_maps_findings_to_review_finding(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     payload = {
@@ -120,7 +132,8 @@ def test_run_semgrep_filters_findings_to_requested_files(tmp_path: Path, monkeyp
 
 def test_run_semgrep_returns_tool_error_when_semgrep_is_unavailable(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
-    run_mock = Mock(side_effect=FileNotFoundError("semgrep not found"))
+    run_mock = Mock()
+    monkeypatch.setattr("specfact_code_review.tools.tool_availability.shutil.which", lambda _name: None)
     monkeypatch.setattr(subprocess, "run", run_mock)
 
     findings = run_semgrep([file_path])
@@ -128,7 +141,8 @@ def test_run_semgrep_returns_tool_error_when_semgrep_is_unavailable(tmp_path: Pa
     assert len(findings) == 1
     assert findings[0].category == "tool_error"
     assert findings[0].tool == "semgrep"
-    assert findings[0].severity == "error"
+    assert findings[0].severity == "warning"
+    run_mock.assert_not_called()
 
 
 def test_run_semgrep_returns_empty_list_for_clean_file(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -218,7 +232,7 @@ def test_run_semgrep_bugs_returns_empty_when_semgrep_cli_missing(tmp_path: Path,
     (bundle / ".semgrep" / "bugs.yaml").write_text("rules: []\n", encoding="utf-8")
     target = tmp_path / "x.py"
     target.write_text("x = 1\n", encoding="utf-8")
-    monkeypatch.setattr(shutil, "which", lambda _name: None)
+    monkeypatch.setattr("specfact_code_review.tools.tool_availability.shutil.which", lambda _name: None)
 
     assert run_semgrep_bugs([target], bundle_root=bundle) == []
 

@@ -180,7 +180,25 @@ def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunct
         rendered = ast.unparse(ann)
     except AttributeError:
         return False
-    return rendered.endswith("Context")
+    return rendered.endswith("Context") and _has_typer_command_decorator(function_node)
+
+
+def _decorator_name_parts(decorator: ast.expr) -> tuple[str, ...]:
+    if isinstance(decorator, ast.Call):
+        return _decorator_name_parts(decorator.func)
+    if isinstance(decorator, ast.Name):
+        return (decorator.id,)
+    if isinstance(decorator, ast.Attribute):
+        return (*_decorator_name_parts(decorator.value), decorator.attr)
+    return ()
+
+
+def _has_typer_command_decorator(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    for decorator in function_node.decorator_list:
+        parts = _decorator_name_parts(decorator)
+        if parts == ("command",) or parts[-1:] == ("command",):
+            return True
+    return False
 
 
 def _kiss_parameter_findings(

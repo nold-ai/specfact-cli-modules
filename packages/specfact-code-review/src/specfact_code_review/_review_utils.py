@@ -39,7 +39,7 @@ _PYTHON_LINTER_SUFFIXES = frozenset({".py", ".pyi"})
 @require(lambda files: all(isinstance(p, Path) for p in files))
 @ensure(lambda result: isinstance(result, list))
 def python_source_paths_for_tools(files: list[Path]) -> list[Path]:
-    """Paths Python linters and typecheckers should analyze (excludes YAML manifests, etc.)."""
+    """Python source and type stub paths linters/typecheckers should analyze."""
     return [path for path in files if path.suffix in _PYTHON_LINTER_SUFFIXES]
 
 

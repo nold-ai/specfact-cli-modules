@@ -185,6 +185,7 @@ class FlaskExtractor(BaseFrameworkExtractor):
         """Extract route information from a function with Flask decorators."""
         path = None
         methods = ["GET"]  # Default method
+        _ = (imports, py_file)
 
         # Check decorators for route information
         for decorator in func_node.decorator_list:
@@ -193,6 +194,7 @@ class FlaskExtractor(BaseFrameworkExtractor):
                 isinstance(decorator, ast.Call)
                 and isinstance(decorator.func, ast.Attribute)
                 and decorator.func.attr == "route"
+                and self._is_owned_route_decorator(decorator.func, app_names, bp_names)
             ):
                 # Extract path from first argument
                 if decorator.args:
@@ -225,6 +227,12 @@ class FlaskExtractor(BaseFrameworkExtractor):
             )
 
         return results
+
+    @beartype
+    def _is_owned_route_decorator(self, func: ast.Attribute, app_names: set[str], bp_names: set[str]) -> bool:
+        if isinstance(func.value, ast.Name):
+            return func.value.id in app_names or func.value.id in bp_names
+        return False
 
     @beartype
     def _extract_string_literal(self, node: ast.AST) -> str | None:

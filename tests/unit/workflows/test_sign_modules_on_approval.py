@@ -68,7 +68,9 @@ def _assert_eligibility_gate_step(doc: dict[Any, Any]) -> None:
     run = gate["run"]
     assert isinstance(run, str)
     assert "github.event.review.state" in run
+    assert "github.event.review.user.author_association" in run
     assert "approved" in run
+    assert "COLLABORATOR|MEMBER|OWNER" in run
     assert 'echo "sign=false"' in run
     assert 'echo "sign=true"' in run
     assert "github.event.pull_request.base.ref" in run

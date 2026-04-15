@@ -12,7 +12,7 @@ from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, compl
 
 
 def test_run_basedpyright_returns_empty_for_no_files() -> None:
-    assert not run_basedpyright([])
+    assert run_basedpyright([]) == []
 
 
 def test_run_basedpyright_skips_yaml_manifests(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -21,7 +21,7 @@ def test_run_basedpyright_skips_yaml_manifests(tmp_path: Path, monkeypatch: Monk
     run_mock = Mock()
     monkeypatch.setattr(subprocess, "run", run_mock)
 
-    assert not run_basedpyright([manifest])
+    assert run_basedpyright([manifest]) == []
 
     run_mock.assert_not_called()
 

@@ -35,7 +35,7 @@ rules:
     severity: WARNING
     patterns:
       - pattern: yaml.load(...)
-      - pattern-not-regex: yaml\.load\([^)]*Loader\s*=
+      - pattern-not-regex: (?s)yaml\.load\([\s\S]*?Loader\s*=
     metadata:
       specfact-category: security
 
