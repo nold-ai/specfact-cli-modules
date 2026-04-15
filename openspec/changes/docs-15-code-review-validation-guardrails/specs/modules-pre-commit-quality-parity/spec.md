@@ -1,4 +1,4 @@
-## ADDED Requirements
+# ADDED Requirements
 
 ### Requirement: Docs-only pre-commit changes SHALL run docs validation before safe bypass
 

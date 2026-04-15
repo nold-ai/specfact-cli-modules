@@ -1,4 +1,4 @@
-## ADDED Requirements
+# ADDED Requirements
 
 ### Requirement: Docs publishing SHALL validate generated-site readiness before deploy
 

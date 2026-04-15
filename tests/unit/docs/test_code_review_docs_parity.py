@@ -62,6 +62,7 @@ def test_code_review_run_doc_describes_invalid_flag_combinations() -> None:
     assert "## Invalid combinations" in text
     assert "Positional" in text or "positional" in text
     assert "--scope" in text
+    assert "--path" in text
     assert "--focus" in text
     assert "--include-tests" in text
     assert "--exclude-tests" in text

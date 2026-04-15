@@ -49,8 +49,8 @@ def _is_docs_markdown(path: Path) -> bool:
 
 
 def _is_publishable_page(path: Path) -> bool:
-    """True if the file is expected to be a published Jekyll page (not a README index)."""
-    return _is_docs_markdown(path) and path.name != "README.md"
+    """Delegate to shared docs_site_validation semantics (README only when Jekyll-fronted)."""
+    return dsv.is_publishable_page(path, _docs_root())
 
 
 def _iter_docs_markdown_paths() -> list[Path]:
@@ -245,6 +245,14 @@ def test_authored_internal_docs_links_resolve_to_published_docs_targets() -> Non
     """Internal Markdown links must pass the shared published-route scanner."""
     failures, _ = _scan_authored_doc_link_failures()
     assert not failures, "Broken authored docs links:\n" + "\n".join(sorted(failures))
+
+
+def test_extract_markdown_links_with_lines_includes_html_hrefs() -> None:
+    body = 'See <a href="/bundles/backlog/overview/">Backlog</a> and [Spec](/bundles/spec/overview/).\n'
+    links = dsv.extract_markdown_links_with_lines(body)
+    hrefs = {url for _, url in links}
+    assert "/bundles/backlog/overview/" in hrefs
+    assert "/bundles/spec/overview/" in hrefs
 
 
 def test_navigation_link_targets_have_required_front_matter_keys() -> None:

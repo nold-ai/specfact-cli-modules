@@ -78,7 +78,7 @@ staged_docs_validation_paths() {
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
     case "${line}" in
-      docs/*|*.md|scripts/check-docs-commands.py|scripts/docs_site_validation.py)
+      docs/*|*.md|requirements-docs-ci.txt|scripts/check-docs-commands.py|scripts/docs_site_validation.py)
         printf '%s\n' "${line}"
         ;;
     esac
@@ -98,12 +98,12 @@ run_docs_site_validation_gate() {
   if ! needs_docs_site_validation; then
     return 0
   fi
-  info "📄 Docs site validation — running \`python scripts/check-docs-commands.py\` (staged docs or docs validation scripts)"
-  if python scripts/check-docs-commands.py; then
+  info "📄 Docs site validation — running \`hatch run python scripts/check-docs-commands.py\` (staged docs or docs validation scripts)"
+  if hatch run python scripts/check-docs-commands.py; then
     success "✅ Docs site validation passed"
   else
     error "❌ Docs site validation failed"
-    warn "💡 Run: python scripts/check-docs-commands.py"
+    warn "💡 Run: hatch run python scripts/check-docs-commands.py"
     exit 1
   fi
 }

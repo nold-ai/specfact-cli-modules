@@ -43,7 +43,7 @@ The command prints **progress** to the terminal (spinner/status while the pipeli
 
 Typer validates several incompatible flag mixes before execution:
 
-- **Positional `FILES...` with `--scope`**: when you pass explicit paths, do not also pass **`--scope`** (scope applies only to auto-discovery).
+- **Positional `FILES...` with `--scope` or `--path`**: when you pass explicit paths, do not also pass **`--scope`** or **`--path`** (those options apply only to auto-discovery).
 - **`--focus` with `--include-tests` or `--exclude-tests`**: use **`--focus`** *or* the include/exclude test flags, not both.
 - **`--include-tests` with `--exclude-tests`**: pick at most one test inclusion mode.
 - **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set.

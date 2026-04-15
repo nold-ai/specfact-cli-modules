@@ -36,7 +36,7 @@ _REQUIRED_SCRIPT_FRAGMENTS = (
     "block1-yaml",
     "run_block2",
     "run_docs_site_validation_gate",
-    "python scripts/check-docs-commands.py",
+    "hatch run python scripts/check-docs-commands.py",
     "needs_docs_site_validation",
     "usage_error",
     "show_help",

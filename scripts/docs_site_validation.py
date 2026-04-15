@@ -23,7 +23,8 @@ from icontract import ensure, require
 
 MODULES_DOCS_HOST = "modules.specfact.io"
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
-HTML_HREF_RE = re.compile(r'href="([^"]+)"')
+# HTML <a href="..."> or <a href='...'> (single line; skips handled in extract_markdown_links_with_lines)
+HTML_ANCHOR_HREF_RE = re.compile(r"""href\s*=\s*(["'])(?P<u>[^"'<>]+)\1""", re.IGNORECASE)
 JEKYLL_RELATIVE_URL_RE = re.compile(r'\{\{\s*[\'"]([^\'"]+)[\'"]\s*\|\s*relative_url\s*\}\}')
 JEKYLL_SITE_VAR_RE = re.compile(r"\{\{.*\}\}")
 YAML_DELIM = "---"
@@ -71,7 +72,13 @@ def is_docs_markdown(path: Path, docs_root: Path) -> bool:
 @require(lambda path, docs_root: isinstance(path, Path) and isinstance(docs_root, Path))
 @ensure(lambda result: isinstance(result, bool))
 def is_publishable_page(path: Path, docs_root: Path) -> bool:
-    return is_docs_markdown(path, docs_root) and path.name != "README.md"
+    """True for normal docs pages; READMEs only when they use Jekyll front matter (directory indexes)."""
+    if not is_docs_markdown(path, docs_root):
+        return False
+    if path.name.lower() != "readme.md":
+        return True
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return bool(lines and lines[0].strip() == YAML_DELIM)
 
 
 @beartype
@@ -381,8 +388,17 @@ def extract_markdown_links_with_lines(body: str) -> list[tuple[int, str]]:
     for line_number, line in enumerate(body.splitlines(), start=1):
         if "<!-- TODO:" in line:
             continue
+        seen_urls: set[str] = set()
         for match in MARKDOWN_LINK_RE.finditer(line):
-            found.append((line_number, match.group(1)))
+            url = match.group(1)
+            if url not in seen_urls:
+                seen_urls.add(url)
+                found.append((line_number, url))
+        for match in HTML_ANCHOR_HREF_RE.finditer(line):
+            url = match.group("u")
+            if url not in seen_urls:
+                seen_urls.add(url)
+                found.append((line_number, url))
     return found
 
 
@@ -438,10 +454,7 @@ def _frontmatter_findings_for_publishable_path(path: Path, repo_root: Path) -> l
         ]
 
     fm, _, _ = split_yaml_front_matter(text)
-    stub = bool(fm.get("redirect_stub")) or bool(fm.get("redirect_only"))
     missing = [k for k in _REQUIRED_PAGE_KEYS if not fm.get(k)]
-    if stub and "title" in missing:
-        missing = [k for k in missing if k != "title"]
     if not missing:
         return []
     return [
@@ -498,7 +511,7 @@ def scan_gemfile_lock_installability(docs_dir: Path) -> list[ValidationFinding]:
             timeout=120,
             check=False,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError:
         return []
 
     if proc.returncode != 0:

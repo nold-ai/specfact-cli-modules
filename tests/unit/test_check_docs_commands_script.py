@@ -142,13 +142,14 @@ def test_validate_core_docs_links_allows_core_handoff_routes(tmp_path: Path) -> 
 
 def test_docs_pages_workflow_runs_python_docs_validation() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "docs-pages.yml").read_text(encoding="utf-8")
+    assert "python -m pip install -r requirements-docs-ci.txt" in workflow
     assert "python scripts/check-docs-commands.py --jekyll-bundle-check" in workflow
 
 
 def test_docs_review_workflow_runs_docs_command_validation() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8")
 
-    assert "python -m pip install pytest click typer PyYAML beartype icontract rich pydantic specfact-cli" in workflow
+    assert "python -m pip install -r requirements-docs-ci.txt" in workflow
     assert "python scripts/check-docs-commands.py" in workflow
     assert "scripts/check-docs-commands.py" in workflow
     assert "scripts/docs_site_validation.py" in workflow
