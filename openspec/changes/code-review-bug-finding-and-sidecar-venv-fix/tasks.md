@@ -1,4 +1,4 @@
-## 1. Sidecar venv self-scan fix (specfact-codebase)
+# 1. Sidecar venv self-scan fix (specfact-codebase)
 
 - [x] 1.1 Add `_EXCLUDED_DIR_NAMES` constant and `_iter_python_files(root)` generator to `BaseFrameworkExtractor` in `frameworks/base.py` that skips `.specfact`, `.git`, `__pycache__`, `node_modules`
 - [x] 1.2 Replace `search_path.rglob("*.py")` with `self._iter_python_files(search_path)` in `FastAPIExtractor.detect()` and `FastAPIExtractor.extract_routes()`

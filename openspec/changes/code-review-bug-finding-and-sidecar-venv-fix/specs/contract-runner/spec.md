@@ -1,24 +1,26 @@
+# Contract Runner
+
 ## MODIFIED Requirements
 
 ### Requirement: icontract Decorator AST Scan and CrossHair Fast Pass
 
-The system SHALL AST-scan changed Python files for public functions missing
+The system SHALL AST-scan reviewed Python files for public functions missing
 `@require` / `@ensure` decorators, and run CrossHair with a configurable
 per-path timeout for counterexample discovery. When no icontract usage is
-detected in the reviewed files, `MISSING_ICONTRACT` findings SHALL be
+detected in the reviewed files' package/repo scan roots, `MISSING_ICONTRACT` findings SHALL be
 suppressed entirely for that run.
 
 #### Scenario: Public function without icontract decorators produces a contracts finding when icontract is in use
 
 - **GIVEN** a Python file with a public function lacking icontract decorators
-- **AND** at least one other reviewed file imports from `icontract`
+- **AND** at least one file in the reviewed batch's package/repo scan roots imports from `icontract`
 - **WHEN** `run_contract_check(files=[...])` is called
 - **THEN** a `ReviewFinding` is returned with `category="contracts"` and
   `severity="warning"`
 
 #### Scenario: MISSING_ICONTRACT suppressed when no icontract usage detected
 
-- **GIVEN** a set of reviewed Python files containing no `from icontract import` or
+- **GIVEN** the package/repo scan roots for the reviewed Python files contain no `from icontract import` or
   `import icontract` statements
 - **WHEN** `run_contract_check(files=[...])` is called
 - **THEN** no `MISSING_ICONTRACT` findings are returned

@@ -11,25 +11,34 @@ from icontract.errors import ViolationError
 
 from specfact_code_review.ledger.commands import app as ledger_app
 from specfact_code_review.rules.commands import app as rules_app
-from specfact_code_review.run.commands import run_command
+from specfact_code_review.run.commands import (
+    ConflictingScopeError,
+    FocusFacetConflictError,
+    InvalidOptionCombinationError,
+    MissingOutForJsonError,
+    NoReviewableFilesError,
+    RunCommandError,
+    run_command,
+)
 
 
 app = typer.Typer(help="Code command extensions for structured review workflows.", no_args_is_help=True)
 review_app = typer.Typer(help="Governed code review workflows.", no_args_is_help=True)
 
 
-def _friendly_run_command_error(exc: ValueError | ViolationError) -> str:
-    message = str(exc)
-    for expected in (
-        "Use either --json or --score-only, not both.",
-        "Use --out together with --json.",
-        "Choose positional files or auto-scope controls, not both.",
-        "Cannot combine focus_facets with include_tests",
-        "No reviewable Python files matched the selected --focus facets.",
+def _friendly_run_command_error(exc: RunCommandError | ValueError | ViolationError) -> str:
+    if isinstance(
+        exc,
+        (
+            InvalidOptionCombinationError,
+            MissingOutForJsonError,
+            ConflictingScopeError,
+            FocusFacetConflictError,
+            NoReviewableFilesError,
+        ),
     ):
-        if expected in message:
-            return expected
-    return message
+        return str(exc)
+    return str(exc)
 
 
 def _resolve_include_tests(*, files: list[Path], include_tests: bool | None, interactive: bool) -> bool:

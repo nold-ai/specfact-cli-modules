@@ -20,38 +20,7 @@ from specfact_codebase.validators.sidecar.frameworks.base import BaseFrameworkEx
 _ROUTE_HTTP_METHODS = frozenset(
     {"get", "post", "put", "delete", "patch", "options", "head", "trace"},
 )
-
-_EXCLUDED_DIR_PARTS = frozenset(
-    {
-        ".specfact",
-        ".git",
-        "__pycache__",
-        "node_modules",
-        ".mypy_cache",
-        ".pytest_cache",
-        ".ruff_cache",
-        "venv",
-        ".venv",
-    },
-)
-
-
-def _should_skip_path_for_fastapi_scan(path: Path, root: Path) -> bool:
-    """True when ``path`` lies under a directory we must not scan (venvs, caches, etc.)."""
-    try:
-        parts = path.resolve().relative_to(root.resolve()).parts
-    except ValueError:
-        return True
-    return any(part in _EXCLUDED_DIR_PARTS for part in parts)
-
-
-def _iter_scan_python_files(search_path: Path):
-    """Yield ``*.py`` files under ``search_path``, skipping excluded directory trees."""
-    root = search_path.resolve()
-    for path in search_path.rglob("*.py"):
-        if _should_skip_path_for_fastapi_scan(path, root):
-            continue
-        yield path
+_FASTAPI_EXTRA_EXCLUDED_DIR_NAMES = frozenset({".mypy_cache", ".pytest_cache", ".ruff_cache"})
 
 
 def _content_suggests_fastapi(content: str) -> bool:
@@ -65,18 +34,14 @@ def _read_text_if_exists(path: Path) -> str | None:
         return None
 
 
-def _scan_known_app_files(search_path: Path) -> bool:
-    for py_file in _iter_scan_python_files(search_path):
-        if py_file.name not in {"main.py", "app.py"}:
-            continue
-        content = _read_text_if_exists(py_file)
-        if content is not None and _content_suggests_fastapi(content):
-            return True
-    return False
-
-
 class FastAPIExtractor(BaseFrameworkExtractor):
     """FastAPI framework extractor."""
+
+    @beartype
+    def _path_touches_excluded_dir(self, path: Path) -> bool:
+        return super()._path_touches_excluded_dir(path) or any(
+            part in _FASTAPI_EXTRA_EXCLUDED_DIR_NAMES for part in path.parts
+        )
 
     @beartype
     @require(lambda repo_path: repo_path.exists(), "Repository path must exist")
@@ -96,16 +61,26 @@ class FastAPIExtractor(BaseFrameworkExtractor):
             file_path = repo_path / candidate_file
             if not file_path.exists():
                 continue
-            if _should_skip_path_for_fastapi_scan(file_path, repo_path.resolve()):
+            if self._path_touches_excluded_dir(file_path):
                 continue
             content = _read_text_if_exists(file_path)
             if content is not None and _content_suggests_fastapi(content):
                 return True
 
         for search_path in [repo_path, repo_path / "src", repo_path / "app", repo_path / "backend" / "app"]:
-            if search_path.exists() and _scan_known_app_files(search_path):
+            if search_path.exists() and self._scan_known_app_files(search_path):
                 return True
 
+        return False
+
+    @beartype
+    def _scan_known_app_files(self, search_path: Path) -> bool:
+        for py_file in self._iter_python_files(search_path):
+            if py_file.name not in {"main.py", "app.py"}:
+                continue
+            content = _read_text_if_exists(py_file)
+            if content is not None and _content_suggests_fastapi(content):
+                return True
         return False
 
     @beartype
@@ -127,7 +102,7 @@ class FastAPIExtractor(BaseFrameworkExtractor):
         for search_path in [repo_path, repo_path / "src", repo_path / "app", repo_path / "backend" / "app"]:
             if not search_path.exists():
                 continue
-            for py_file in _iter_scan_python_files(search_path):
+            for py_file in self._iter_python_files(search_path):
                 try:
                     routes = self._extract_routes_from_file(py_file)
                     results.extend(routes)
@@ -168,9 +143,7 @@ class FastAPIExtractor(BaseFrameworkExtractor):
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
-                route_info = self._extract_route_from_function(node)
-                if route_info:
-                    results.append(route_info)
+                results.extend(self._extract_routes_from_function(node))
 
         return results
 
@@ -200,12 +173,12 @@ class FastAPIExtractor(BaseFrameworkExtractor):
         return None
 
     @beartype
-    def _path_method_from_api_route_call(self, decorator: ast.Call) -> tuple[str, str] | None:
-        """If ``decorator`` is ``@router.api_route(path, methods=[...])``, return first method + path."""
+    def _path_methods_from_api_route_call(self, decorator: ast.Call) -> list[tuple[str, str]]:
+        """If ``decorator`` is ``@router.api_route(path, methods=[...])``, return all methods + path."""
         if not isinstance(decorator.func, ast.Attribute):
-            return None
+            return []
         if decorator.func.attr != "api_route":
-            return None
+            return []
         path = "/"
         if decorator.args:
             path_arg = self._extract_string_literal(decorator.args[0])
@@ -221,39 +194,39 @@ class FastAPIExtractor(BaseFrameworkExtractor):
                     if lit:
                         methods.append(lit.strip().upper())
         if not methods:
-            return "GET", path
-        return methods[0], path
+            return [("GET", path)]
+        return [(method, path) for method in methods]
 
     @beartype
-    def _extract_route_from_function(self, func_node: ast.FunctionDef) -> RouteInfo | None:
+    def _extract_routes_from_function(self, func_node: ast.FunctionDef) -> list[RouteInfo]:
         """Extract route information from a function with FastAPI decorators."""
-        matched = False
-        path = "/"
-        method = "GET"
+        matched_routes: list[tuple[str, str]] = []
 
         for decorator in func_node.decorator_list:
             if not isinstance(decorator, ast.Call):
                 continue
             got = self._path_method_from_route_call(decorator)
-            if got is None:
-                got = self._path_method_from_api_route_call(decorator)
-            if got is None:
+            if got is not None:
+                matched_routes.append(got)
                 continue
-            matched = True
-            method, path = got
+            matched_routes.extend(self._path_methods_from_api_route_call(decorator))
 
-        if not matched:
-            return None
+        if not matched_routes:
+            return []
 
-        normalized_path, path_params = self._extract_path_parameters(path)
-
-        return RouteInfo(
-            path=normalized_path,
-            method=method,
-            operation_id=func_node.name,
-            function=func_node.name,
-            path_params=path_params,
-        )
+        results: list[RouteInfo] = []
+        for method, path in matched_routes:
+            normalized_path, path_params = self._extract_path_parameters(path)
+            results.append(
+                RouteInfo(
+                    path=normalized_path,
+                    method=method,
+                    operation_id=func_node.name,
+                    function=func_node.name,
+                    path_params=path_params,
+                )
+            )
+        return results
 
     @beartype
     def _extract_string_literal(self, node: ast.AST) -> str | None:

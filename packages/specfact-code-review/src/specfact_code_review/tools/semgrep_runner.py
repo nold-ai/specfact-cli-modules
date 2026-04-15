@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -238,7 +237,9 @@ def _category_for_rule(rule: str) -> SemgrepCategory | None:
     return None
 
 
-def _finding_from_result(item: dict[str, object], *, allowed_paths: set[str]) -> ReviewFinding | None:
+def _extract_common_finding_fields(
+    item: dict[str, object], *, allowed_paths: set[str]
+) -> tuple[str, str, int, str, dict[str, object]] | None:
     filename = item["path"]
     if not isinstance(filename, str):
         raise ValueError("semgrep filename must be a string")
@@ -248,10 +249,6 @@ def _finding_from_result(item: dict[str, object], *, allowed_paths: set[str]) ->
     raw_rule = item["check_id"]
     if not isinstance(raw_rule, str):
         raise ValueError("semgrep rule must be a string")
-    rule = _normalize_rule_id(raw_rule)
-    category = _category_for_rule(rule)
-    if category is None:
-        return None
 
     start = item["start"]
     if not isinstance(start, dict):
@@ -266,6 +263,19 @@ def _finding_from_result(item: dict[str, object], *, allowed_paths: set[str]) ->
     message = extra["message"]
     if not isinstance(message, str):
         raise ValueError("semgrep message must be a string")
+
+    return filename, raw_rule, line, message, extra
+
+
+def _finding_from_result(item: dict[str, object], *, allowed_paths: set[str]) -> ReviewFinding | None:
+    extracted = _extract_common_finding_fields(item, allowed_paths=allowed_paths)
+    if extracted is None:
+        return None
+    filename, raw_rule, line, message, _extra = extracted
+    rule = _normalize_rule_id(raw_rule)
+    category = _category_for_rule(rule)
+    if category is None:
+        return None
 
     return ReviewFinding(
         category=category,
@@ -341,33 +351,14 @@ def _normalize_bug_rule_id(rule: str) -> str:
 
 
 def _finding_from_bug_result(item: dict[str, object], *, allowed_paths: set[str]) -> ReviewFinding | None:
-    filename = item["path"]
-    if not isinstance(filename, str):
-        raise ValueError("semgrep filename must be a string")
-    if _normalize_path_variants(filename).isdisjoint(allowed_paths):
+    extracted = _extract_common_finding_fields(item, allowed_paths=allowed_paths)
+    if extracted is None:
         return None
-
-    raw_rule = item["check_id"]
-    if not isinstance(raw_rule, str):
-        raise ValueError("semgrep rule must be a string")
+    filename, raw_rule, line, message, extra = extracted
     rule = _normalize_bug_rule_id(raw_rule)
     category = BUG_RULE_CATEGORY.get(rule)
     if category is None:
         return None
-
-    start = item["start"]
-    if not isinstance(start, dict):
-        raise ValueError("semgrep start location must be an object")
-    line = start["line"]
-    if not isinstance(line, int):
-        raise ValueError("semgrep line must be an integer")
-
-    extra = item["extra"]
-    if not isinstance(extra, dict):
-        raise ValueError("semgrep extra payload must be an object")
-    message = extra["message"]
-    if not isinstance(message, str):
-        raise ValueError("semgrep message must be a string")
 
     severity_raw = extra.get("severity", "WARNING")
     severity: Literal["error", "warning"] = (
@@ -416,7 +407,8 @@ def run_semgrep_bugs(files: list[Path], *, bundle_root: Path | None = None) -> l
     if not files:
         return []
 
-    if shutil.which("semgrep") is None:
+    skipped = skip_if_tool_missing("semgrep", files[0])
+    if skipped:
         return []
 
     config_path = find_semgrep_bugs_config(bundle_root=bundle_root)

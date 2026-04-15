@@ -277,7 +277,7 @@ is skipped with no error.
 
 ### Contract runner
 
-`specfact_code_review.tools.contract_runner.run_contract_check(files)` combines two
+`specfact_code_review.tools.contract_runner.run_contract_check(files, *, bug_hunt=False)` combines two
 contract-oriented checks:
 
 1. an AST scan for public functions missing `@require` / `@ensure`
@@ -287,9 +287,10 @@ AST scan behavior:
 
 - only public module-level and class-level functions are checked
 - functions prefixed with `_` are treated as private and skipped
-- the AST scan for `MISSING_ICONTRACT` runs **only when the file imports
-  `icontract`** (`from icontract …` or `import icontract`). Files that never
-  reference icontract skip the decorator scan and rely on CrossHair only
+- the AST scan for `MISSING_ICONTRACT` runs only when a batch-level package/repo
+  scan root imports `icontract` (`from icontract …` or `import icontract`).
+  Reviewed files in a package that uses icontract are scanned even when the
+  changed file itself does not import icontract
 - missing icontract decorators become `contracts` findings with rule
   `MISSING_ICONTRACT` when the scan runs
 - unreadable or invalid Python files degrade to a single `tool_error` finding instead
@@ -401,8 +402,15 @@ specfact code review rules update
 
 ## Review orchestration
 
-`specfact_code_review.run.runner.run_review(files, no_tests=False)` orchestrates the
-bundle runners in this order:
+`specfact_code_review.run.runner.run_review(
+files,
+no_tests=False,
+include_noise=False,
+progress_callback=None,
+bug_hunt=False,
+review_level=None,
+review_mode="enforce",
+)` orchestrates the bundle runners in this order:
 
 1. Ruff
 2. Radon
@@ -420,6 +428,23 @@ bundle-local advisory PR checklist from `SPECFACT_CODE_REVIEW_PR_TITLE`,
 adding a new CLI flag.
 
 The merged findings are then scored into a governed `ReviewReport`.
+
+Representative programmatic use:
+
+```python
+from pathlib import Path
+
+from specfact_code_review.run.runner import run_review
+
+report = run_review(
+    [Path("src/app.py")],
+    no_tests=False,
+    include_noise=False,
+    bug_hunt=True,
+    review_level="error",
+    review_mode="shadow",
+)
+```
 
 ## Bundled policy pack
 

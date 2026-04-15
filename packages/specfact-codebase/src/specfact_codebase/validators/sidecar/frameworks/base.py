@@ -7,6 +7,7 @@ that extract routes and schemas from framework code.
 
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
@@ -38,19 +39,23 @@ class BaseFrameworkExtractor(ABC):
     )
 
     @beartype
-    @staticmethod
-    def _path_touches_excluded_dir(path: Path) -> bool:
+    def _path_touches_excluded_dir(self, path: Path) -> bool:
         """True when any path component is an excluded dir (.specfact, venvs, VCS, caches, node_modules)."""
-        return any(part in BaseFrameworkExtractor._EXCLUDED_DIR_NAMES for part in path.parts)
+        return any(part in self._EXCLUDED_DIR_NAMES for part in path.parts)
 
     @beartype
     def _iter_python_files(self, root: Path) -> Iterator[Path]:
         """Yield ``*.py`` files under ``root``, skipping excluded directory subtrees by path."""
         if not root.exists() or not root.is_dir():
             return
-        for py_file in root.rglob("*.py"):
-            if not self._path_touches_excluded_dir(py_file):
-                yield py_file
+        for dirpath, dirnames, filenames in os.walk(root):
+            current_dir = Path(dirpath)
+            dirnames[:] = [
+                dirname for dirname in dirnames if not self._path_touches_excluded_dir(current_dir / dirname)
+            ]
+            for filename in filenames:
+                if filename.endswith(".py"):
+                    yield current_dir / filename
 
     @abstractmethod
     @beartype

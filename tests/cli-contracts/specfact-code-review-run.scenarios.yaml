@@ -66,10 +66,34 @@ scenarios:
       exit_code: 0
       stdout_contains:
         - review-report.json
+  - name: bug-hunt-shadow-dirty-exit-zero
+    type: pattern
+    argv:
+      - --json
+      - --bug-hunt
+      - --mode
+      - shadow
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - review-report.json
   - name: mode-enforce-dirty-exit-nonzero
     type: pattern
     argv:
       - --json
+      - --mode
+      - enforce
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 1
+      stdout_contains:
+        - review-report.json
+  - name: bug-hunt-enforce-dirty-exit-nonzero
+    type: pattern
+    argv:
+      - --json
+      - --bug-hunt
       - --mode
       - enforce
       - tests/fixtures/review/dirty_module.py
@@ -84,6 +108,8 @@ scenarios:
       - full
       - --path
       - packages/specfact-code-review
+      - --path
+      - tests/unit/docs
       - --json
       - --focus
       - source
@@ -92,32 +118,35 @@ scenarios:
     expect:
       exit_code: 0
       stdout_contains:
-        - '"run_id":'
+        - packages/specfact-code-review/src/specfact_code_review
+        - tests/unit/docs
   - name: focus-tests-narrows-to-test-tree
     type: pattern
     argv:
       - --scope
       - full
       - --path
-      - packages/specfact-code-review
+      - tests/unit/specfact_code_review
       - --json
+      - --bug-hunt
       - --focus
       - tests
     expect:
       exit_code: 0
       stdout_contains:
-        - '"run_id":'
+        - tests/unit/specfact_code_review
   - name: level-error-json-clean-module
     type: pattern
     argv:
       - --json
+      - --bug-hunt
       - --level
       - error
-      - tests/fixtures/review/clean_module.py
+      - tests/fixtures/review/dirty_module.py
     expect:
-      exit_code: 0
+      exit_code: 1
       stdout_contains:
-        - review-report.json
+        - '"severity":"error"'
   - name: focus-cannot-combine-with-include-tests
     type: anti-pattern
     argv:
