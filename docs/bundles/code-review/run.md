@@ -16,6 +16,8 @@ expertise_level: [intermediate, advanced]
 
 The command prints **progress** to the terminal (spinner/status while the pipeline prepares and runs). With **`--json`**, it writes a machine-readable **`ReviewReport`** JSON file (defaulting to **`review-report.json`** in the working directory when **`--out`** is omitted).
 
+The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet selects Python files whose path contains a **`docs/`** directory segment (for example tooling beside the Jekyll site), not Markdown documentation pages. For published-site link, front matter, and command-example checks on the modules docs tree, run **`python scripts/check-docs-commands.py`** in this repository (see CI and contributing docs).
+
 ## Command
 
 - `specfact code review run [FILES...]`
@@ -29,7 +31,7 @@ The command prints **progress** to the terminal (spinner/status while the pipeli
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
 | `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, and/or **`docs`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
 | `--mode shadow\|enforce` | **`shadow`** surfaces findings without failing the exit code for policy violations; **`enforce`** applies normal gating (default **`enforce`**) |
-| `--level error\|warning` | Optional reporting level override for the review run |
+| `--level error\|warning` | Optional reporting level override before scoring: **`error`** keeps errors only (drops warnings and info); **`warning`** keeps errors and warnings (drops info only); omit to keep all severities (JSON, verdict, and `ci_exit_code` use the filtered list) |
 | `--bug-hunt` | Enable exploratory / bug-hunt style heuristics in the review pipeline |
 | `--include-noise`, `--suppress-noise` | Keep or suppress known low-signal findings |
 | `--json` | Emit a `ReviewReport` JSON file |
@@ -55,12 +57,63 @@ The Typer entrypoint validates **review flags** first: it raises **`typer.BadPar
 
 ## Examples
 
+### Auto-discovered scope (omit positional files)
+
 ```bash
+# Tracked + untracked changes; tests excluded by default for auto-scope
 specfact code review run --scope changed
+
+# Same, with bug-hunt heuristics on the discovered file set
+specfact code review run --scope changed --bug-hunt
+
+# Full index, limited to one package (repeat --path for more repo-relative prefixes)
 specfact code review run --scope full --path packages/specfact-code-review
+
+# Package sources plus that package’s unit tests
+specfact code review run --scope full --path packages/specfact-code-review --path tests/unit/specfact_code_review
+
+# Errors only before scoring — warnings and info omitted from JSON, verdict, and ci_exit_code
+specfact code review run --scope changed --level error
+
+# Longer CrossHair budgets for exploratory bug-hunt pass (with explicit files)
+specfact code review run --bug-hunt --json --out /tmp/review-bughunt.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
+```
+
+### Shadow mode and JSON to a file
+
+**`--mode shadow`** runs the full toolchain but forces process exit code **`0`** and JSON **`ci_exit_code`** **`0`** so callers can ingest reports without failing a step; **`overall_verdict`** still reflects the real outcome.
+
+```bash
+specfact code review run --scope changed --mode shadow --json --out /tmp/review-report.json
+```
+
+### `--focus` facets (repeatable)
+
+Use **`--focus`** with **`source`**, **`tests`**, and/or **`docs`** (union of facets, then intersect with scope). Do not combine **`--focus`** with **`--include-tests`** or **`--exclude-tests`**.
+
+```bash
+specfact code review run --scope changed --focus tests
+specfact code review run --scope full --path packages/specfact-code-review --focus source
+specfact code review run --scope full --focus docs
+```
+
+### Positional files (explicit Python paths)
+
+Do not pass **`--scope`** or **`--path`** when **`FILES...`** are present.
+
+```bash
 specfact code review run --json --out /tmp/review-report.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
 specfact code review run --score-only packages/specfact-code-review/src/specfact_code_review/run/commands.py
 specfact code review run --fix packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review run --no-tests packages/specfact-code-review/src/specfact_code_review/run/commands.py
+```
+
+### Noise and interactive test inclusion
+
+```bash
+specfact code review run --scope changed --include-noise
+specfact code review run --scope changed --suppress-noise
+specfact code review run --scope changed --interactive
 ```
 
 ## Bundle-owned resources
@@ -71,4 +124,4 @@ The review pipeline uses rules, skills, and policy payloads shipped with the ins
 
 - [Code review ledger](/bundles/code-review/ledger/)
 - [Code review rules](/bundles/code-review/rules/)
-- [Code review module guide](../../modules/code-review/)
+- [Code review module guide](/modules/code-review/)

@@ -47,4 +47,4 @@ specfact govern patch apply --help
 
 - [Govern enforce](../enforce/)
 - [Govern patch](../patch/)
-- [Command reference](../../reference/commands/) — nested `govern` commands
+- [Command reference](/reference/commands/) — nested `govern` commands

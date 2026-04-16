@@ -16,7 +16,7 @@ The **Project** bundle (`nold-ai/specfact-project`) manages SpecFact **project b
 
 - SpecFact CLI and a repository with `.specfact/` layout
 - Bundle installed: `specfact module install nold-ai/specfact-project`
-- For backlog-linked flows: install [Backlog](../backlog/overview/) and link a provider
+- For backlog-linked flows: install [Backlog](/bundles/backlog/overview/) and link a provider
 
 ## Command families
 
@@ -76,7 +76,7 @@ Use the top-level group (`specfact sync --help`).
 
 ## Related: codebase import
 
-Brownfield **code import** (`specfact code import`, `specfact import …`) lives in the [Codebase](../codebase/overview/) bundle; it often feeds project bundles. See [Import command features](../import-migration/) for behavior that spans both bundles.
+Brownfield **code import** (`specfact code import`, `specfact import …`) lives in the [Codebase](/bundles/codebase/overview/) bundle; it often feeds project bundles. See [Import command features](../import-migration/) for behavior that spans both bundles.
 
 ## Bundle-owned prompts and plan templates
 
