@@ -13,7 +13,7 @@ tracks:
   - scripts/pre_commit_code_review.py
   - scripts/verify-modules-signature.py
   - docs/agent-rules/**
-last_reviewed: 2026-04-12
+last_reviewed: 2026-04-16
 exempt: false
 exempt_reason: ""
 id: agent-rules-quality-gates-and-review
@@ -47,7 +47,7 @@ depends_on:
 7. `hatch run contract-test`
 8. `hatch run smart-test`
 9. `hatch run test`
-10. `hatch run specfact code review run --json --out .specfact/code-review.json` (full-repo scope when required: add `--scope full`; machine-readable evidence lives at `.specfact/code-review.json` and unresolved findings block merge unless an explicit exception is documented)
+10. `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json` (always pass **`--bug-hunt`** on manual runs so CrossHair uses bug-hunt timeouts; full-repo scope when required: add **`--scope full`**; machine-readable evidence lives at `.specfact/code-review.json` and unresolved findings block merge unless an explicit exception is documented)
 
 ## Pre-commit order
 
@@ -66,7 +66,7 @@ Run the full pipeline manually with `./scripts/pre-commit-quality-checks.sh` or 
 
 ## Clean-code review gate
 
-The repository enforces the clean-code charter through `specfact code review run`. Zero regressions in `naming`, `kiss`, `yagni`, `dry`, and `solid` are required before merge.
+The repository enforces the clean-code charter through `specfact code review run`. When agents or developers invoke the review manually (outside the pre-commit helper), include **`--bug-hunt`** so the contract runner gives CrossHair the longer bug-hunt budgets documented in the code-review bundle. Zero regressions in `naming`, `kiss`, `yagni`, `dry`, and `solid` are required before merge.
 
 ## Module signature gate
 
