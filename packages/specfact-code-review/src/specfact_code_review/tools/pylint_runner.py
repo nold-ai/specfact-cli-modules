@@ -91,10 +91,15 @@ def _finding_from_item(item: object, *, allowed_paths: set[str]) -> ReviewFindin
     )
 
 
-def _payload_from_output(stdout: str) -> list[object]:
+def _payload_from_output(stdout: str, *, stderr: str, returncode: int | None) -> list[object]:
     stripped = stdout.strip()
     if not stripped:
-        return []
+        err = stderr
+        if len(err) > 4096:
+            err = f"{err[:4096]}... ({len(stderr)} chars total)"
+        raise ValueError(
+            f"pylint produced no JSON on stdout; {stdout=!r}, stderr={err!r}, {returncode=}",
+        )
     payload = json.loads(stripped)
     if not isinstance(payload, list):
         raise ValueError("pylint output must be a list")
@@ -137,7 +142,11 @@ def run_pylint(files: list[Path]) -> list[ReviewFinding]:
             check=False,
             timeout=30,
         )
-        payload = _payload_from_output(result.stdout)
+        payload = _payload_from_output(
+            result.stdout,
+            stderr=result.stderr,
+            returncode=result.returncode,
+        )
     except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return [tool_error(tool="pylint", file_path=files[0], message=f"Unable to parse pylint output: {exc}")]
 

@@ -97,6 +97,46 @@ def test_run_pylint_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatc
     assert findings[0].tool == "pylint"
 
 
+def test_run_pylint_empty_stdout_is_tool_error(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(
+            return_value=completed_process(
+                "pylint",
+                stdout="",
+                stderr="config error: missing plugin",
+                returncode=2,
+            ),
+        ),
+    )
+
+    findings = run_pylint([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert findings[0].tool == "pylint"
+    assert "stdout=''" in findings[0].message
+    assert "config error" in findings[0].message
+    assert "returncode=2" in findings[0].message
+
+
+def test_run_pylint_whitespace_only_stdout_is_tool_error(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("pylint", stdout="  \n\t  ", stderr="", returncode=1)),
+    )
+
+    findings = run_pylint([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert "pylint produced no JSON on stdout" in findings[0].message
+
+
 def test_run_pylint_coerces_line_zero_to_one(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     payload = [
