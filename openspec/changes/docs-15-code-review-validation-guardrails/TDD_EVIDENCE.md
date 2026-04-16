@@ -19,6 +19,11 @@
 
 - `hatch run specfact code review run --json --out .specfact/code-review.json --scope changed` — passing (2026-04-15); evidence at `.specfact/code-review.json`.
 
+## Code Review run guide examples (2026-04-16)
+
+- Expanded `docs/bundles/code-review/run.md` with worked examples (auto-scope, `--path`, shadow + `--json` + `--out`, `--focus`, positional files, `--level`, `--bug-hunt`, noise/interactive); clarified Python-only scope vs Markdown docs validation (`scripts/check-docs-commands.py`). Cross-links on bundle overview fixed to root-absolute routes. `docs/modules/code-review.md` points readers to the bundle guide for recipes.
+- `hatch run pytest tests/unit/docs/test_code_review_docs_parity.py …` and `python scripts/check-docs-commands.py` — passing.
+
 ## Follow-up: bundle permalink vs. `..` links (2026-04-16)
 
 - `hatch run pytest tests/unit/scripts/test_docs_site_validation_link_agreement.py tests/unit/docs/test_docs_review.py::test_authored_internal_docs_links_resolve_to_published_docs_targets -q` — passing.

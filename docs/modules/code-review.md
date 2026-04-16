@@ -101,6 +101,11 @@ specfact code review run --scope full --path packages/specfact-code-review
 specfact code review run --scope changed --path packages/specfact-code-review --path tests/unit/specfact_code_review
 ```
 
+Copy-pastable recipes for **shadow mode**, **JSON `--out`**, **`--focus`**
+(`source` / `tests` / `docs` Python only), **noise flags**, and **interactive**
+test prompts live in the [Code review run](/bundles/code-review/run/) bundle
+guide (same Typer surface as this section).
+
 Positional `FILES...` cannot be mixed with **`--scope`** or **`--path`** (see
 **Invalid combinations** above).
 
