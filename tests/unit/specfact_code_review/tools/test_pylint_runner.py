@@ -97,6 +97,61 @@ def test_run_pylint_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatc
     assert findings[0].tool == "pylint"
 
 
+def test_run_pylint_coerces_line_zero_to_one(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = [
+        {
+            "message-id": "C0301",
+            "path": str(file_path),
+            "line": 0,
+            "message": "line too long",
+        }
+    ]
+    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload))))
+
+    findings = run_pylint([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].line == 1
+
+
+def test_run_pylint_coerces_empty_message_text(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = [
+        {
+            "message-id": "C0301",
+            "path": str(file_path),
+            "line": 3,
+            "message": "",
+        }
+    ]
+    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload))))
+
+    findings = run_pylint([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].message == "(pylint provided no message text)"
+
+
+def test_run_pylint_parses_json_with_surrounding_whitespace(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = [
+        {
+            "message-id": "W0702",
+            "path": str(file_path),
+            "line": 7,
+            "message": "No exception type(s) specified",
+        }
+    ]
+    stdout = "\n  " + json.dumps(payload) + "  \n"
+    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("pylint", stdout=stdout, returncode=16)))
+
+    findings = run_pylint([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].rule == "W0702"
+
+
 def test_run_pylint_returns_tool_error_for_invalid_payload_item(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     payload = [{"path": str(file_path), "line": 7, "message": "No exception type(s) specified"}]
