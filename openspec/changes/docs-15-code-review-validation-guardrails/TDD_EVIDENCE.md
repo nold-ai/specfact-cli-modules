@@ -17,3 +17,11 @@
 ## SpecFact code review
 
 - `hatch run specfact code review run --json --out .specfact/code-review.json --scope changed` — passing (2026-04-15); evidence at `.specfact/code-review.json`.
+
+## Follow-up: bundle permalink vs. `..` links (2026-04-16)
+
+- `hatch run pytest tests/unit/scripts/test_docs_site_validation_link_agreement.py tests/unit/docs/test_docs_review.py::test_authored_internal_docs_links_resolve_to_published_docs_targets -q` — passing.
+- `python scripts/check-docs-commands.py` — passing (no findings).
+- `hatch run format`, `hatch run lint`, `hatch run type-check` — passing.
+- `hatch run contract-test` — passing (624 tests).
+- `hatch run specfact code review run --json --out /tmp/code-review-docs15.json scripts/docs_site_validation.py tests/unit/scripts/test_docs_site_validation_link_agreement.py` — **PASS** (`overall_verdict` PASS, `ci_exit_code` 0; report outside gitignored `.specfact/` for inspection).

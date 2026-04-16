@@ -71,4 +71,4 @@ The review pipeline uses rules, skills, and policy payloads shipped with the ins
 
 - [Code review ledger](/bundles/code-review/ledger/)
 - [Code review rules](/bundles/code-review/rules/)
-- [Code review module guide](../../modules/code-review/)
+- [Code review module guide](/modules/code-review/)
