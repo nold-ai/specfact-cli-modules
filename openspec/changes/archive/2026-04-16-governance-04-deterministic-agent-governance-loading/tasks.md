@@ -7,7 +7,7 @@
 - [x] 1.3 In the worktree: `hatch env create` and `hatch run dev-deps` so `specfact` CLI is available for code-review dogfood tasks.
 - [x] 1.4 Pre-flight from worktree: `hatch run smart-test-status` and `hatch run contract-test-status` (or full quick sanity per AGENTS.md if those targets differ).
 - [x] 1.5 Run `openspec validate governance-04-deterministic-agent-governance-loading --strict` and capture output in `CHANGE_VALIDATION.md`; fix artifact issues until green.
-- [ ] 1.6 After PR merges: `git worktree remove`, `git branch -d`, `git worktree prune` for the feature branch; remove worktree-local `.venv` if unused.
+- [x] 1.6 After PR merges: `git worktree remove`, `git branch -d`, `git worktree prune` for the feature branch; remove worktree-local `.venv` if unused.
 
 ## 2. Spec-first and test-first preparation
 
@@ -28,12 +28,12 @@
 ## 4. Validation and documentation
 
 - [x] 4.1 Run quality gates from the worktree until green: `hatch run format`, `hatch run type-check`, `hatch run lint`, `hatch run yaml-lint`, `hatch run contract-test`, `hatch run smart-test`, `hatch run test` (add signature verify if any `module-package.yaml` / registry payload changes).
-- [ ] 4.2 **SpecFact code review JSON**: ensure `.specfact/code-review.json` exists and is fresh per `openspec/config.yaml` rules; remediate all findings or document a rare justified exception in the proposal; record commands and timestamp in `TDD_EVIDENCE.md`.
+- [x] 4.2 **SpecFact code review JSON**: ensure `.specfact/code-review.json` exists and is fresh per `openspec/config.yaml` rules; remediate all findings or document a rare justified exception in the proposal; record commands and timestamp in `TDD_EVIDENCE.md`.
 - [x] 4.3 If contributor-facing docs under `docs/` must mention the new layout (e.g. onboarding, nav, frontmatter schema), update them without breaking Jekyll front matter or `documentation-url-contract.md` permalinks.
 - [x] 4.4 Re-run `openspec validate governance-04-deterministic-agent-governance-loading --strict` and update `CHANGE_VALIDATION.md`.
 
 ## 5. Delivery
 
 - [x] 5.1 Refresh `TDD_EVIDENCE.md` with passing-after commands and timestamps.
-- [ ] 5.2 Open a PR from `feature/governance-04-deterministic-agent-governance-loading` to `dev` with summary linking modules issue, #163, #494, and #178.
-- [ ] 5.3 After merge, run `openspec archive governance-04-deterministic-agent-governance-loading` from repo root (no manual folder moves) and confirm **openspec/CHANGE_ORDER.md** reflects archived status.
+- [x] 5.2 Open a PR from `feature/governance-04-deterministic-agent-governance-loading` to `dev` with summary linking modules issue, #163, #494, and #178.
+- [x] 5.3 After merge, run `openspec archive governance-04-deterministic-agent-governance-loading` from repo root (no manual folder moves) and confirm **openspec/CHANGE_ORDER.md** reflects archived status.

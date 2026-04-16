@@ -12,7 +12,7 @@ expertise_level: [beginner, intermediate]
 
 The **Codebase** bundle (`nold-ai/specfact-codebase`) mounts under `specfact code` alongside the Code Review bundle. It focuses on **brownfield import**, **contract coverage analysis**, **drift detection**, **sidecar validation**, and **reproducible validation suites**.
 
-For automated review runs (Ruff, Semgrep, ledger, rules), see [Code Review](../code-review/overview/) — also on the `code` command group.
+For automated review runs (Ruff, Semgrep, ledger, rules), see [Code Review](/bundles/code-review/overview/) — also on the `code` command group.
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ For automated review runs (Ruff, Semgrep, ledger, rules), see [Code Review](../c
 | `specfact code import` (default) | Import a repository into a project bundle (`from-code` behavior; see `--help`) |
 | `specfact code import from-bridge` | Import from an external bridge/export flow |
 
-Advanced import topics: [Project import command features](../project/import-migration/) (cross-bundle).
+Advanced import topics: [Project import command features](/bundles/project/import-migration/) (cross-bundle).
 
 ### `analyze` — structure and contracts
 

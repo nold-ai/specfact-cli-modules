@@ -12,7 +12,7 @@ expertise_level: [beginner, intermediate]
 
 The **Code Review** bundle (`nold-ai/specfact-code-review`) extends the shared **`specfact code`** command group with **`review`** workflows: governed review runs, **reward ledger** history, and **house-rules** skill management.
 
-Use it together with the [Codebase](../codebase/overview/) bundle (`import`, `analyze`, `drift`, `validate`, `repro`) on the same `code` surface.
+Use it together with the [Codebase](/bundles/codebase/overview/) bundle (`import`, `analyze`, `drift`, `validate`, `repro`) on the same `code` surface.
 
 ## Prerequisites
 
@@ -63,5 +63,5 @@ specfact code review rules show --help
 - [Code review run](../run/)
 - [Code review ledger](../ledger/)
 - [Code review rules](../rules/)
-- [Code review module](../../modules/code-review/)
-- [Codebase bundle overview](../codebase/overview/) — import, drift, validation, repro
+- [Code review module](/modules/code-review/)
+- [Codebase bundle overview](/bundles/codebase/overview/) — import, drift, validation, repro
