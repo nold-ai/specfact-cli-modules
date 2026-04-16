@@ -5,7 +5,7 @@
 - [x] 1.1 Create `feature/marketplace-06-ci-module-signing` in a dedicated worktree from `origin/dev`;
   run pre-flight status checks.
 - [x] 1.2 ~~Create a GitHub User Story issue~~ Issue created: [specfact-cli-modules#185](https://github.com/nold-ai/specfact-cli-modules/issues/185); `proposal.md` Source Tracking updated. Paired core issue: [specfact-cli#500](https://github.com/nold-ai/specfact-cli/issues/500). *(done)*
-- [ ] 1.3 Confirm `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
+- [x] 1.3 Confirm `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
   are set as repository secrets in `specfact-cli-modules` (should already be present via
   publish-modules.yml). *(human)*
 
@@ -73,5 +73,5 @@
   require `--require-signature`). PR: [specfact-cli-modules#188](https://github.com/nold-ai/specfact-cli-modules/pull/188).
 - [x] 6.2 Link the PR to the GitHub issue created in 1.2 and to the paired specfact-cli PR.
   *(Closes #185 in PR body; link specfact-cli PR manually when it exists.)*
-- [ ] 6.3 After merge: remove the worktree, delete the local branch, run `git worktree prune`.
-- [ ] 6.4 Record cleanup completion in `TDD_EVIDENCE.md`.
+- [x] 6.3 After merge: remove the worktree, delete the local branch, run `git worktree prune`.
+- [x] 6.4 Record cleanup completion in `TDD_EVIDENCE.md`.
