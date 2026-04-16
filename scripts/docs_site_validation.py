@@ -3,6 +3,11 @@
 Used by ``scripts/check-docs-commands.py``, unit tests, and CI. Resolves
 Markdown links relative to each page's *published* permalink (browser
 semantics), not the repository source path.
+
+For pages whose ``permalink`` is under ``/bundles/``, links whose path
+contains parent segments (``..``) are validated against both filesystem
+resolution and browser URL resolution, because bundle permalinks do not
+mirror the ``docs/bundles/<name>/`` directory depth.
 """
 
 from __future__ import annotations
@@ -345,6 +350,30 @@ def _resolve_http_or_opaque(parsed, ctx: DocsLinkResolutionContext) -> tuple[Pat
     return None
 
 
+def _published_route_label(ctx: DocsLinkResolutionContext, doc_path: Path) -> str:
+    """Human-readable route or path for mismatch diagnostics."""
+    resolved = doc_path.resolve()
+    route = ctx.path_to_route.get(resolved)
+    if route is not None:
+        return route
+    try:
+        return str(resolved.relative_to(ctx.docs_root))
+    except ValueError:
+        return str(resolved)
+
+
+def _link_path_has_parent_traversal(raw_link: str) -> bool:
+    """True when the link path walks up with ``..`` (repo vs browser divergence risk)."""
+    stripped = _normalize_jekyll_relative_url(raw_link.strip())
+    path_only = urlparse(stripped).path
+    return ".." in Path(unquote(path_only)).parts
+
+
+def _published_route_is_under_bundles(published_page_route: str) -> bool:
+    """Bundle overview pages use ``permalink`` paths that diverge from the ``docs/`` tree."""
+    return normalize_route(published_page_route).startswith("/bundles/")
+
+
 @beartype
 @require(
     lambda source, ctx, published_page_route, raw_link: (
@@ -381,6 +410,20 @@ def resolve_internal_link_hybrid(
     if fs_first:
         fs_target, fs_err = _resolve_filesystem_relative(source, ctx, raw_link)
         if fs_target is not None and fs_err is None:
+            if _link_path_has_parent_traversal(raw_link) and _published_route_is_under_bundles(published_page_route):
+                pub_target, pub_err = _resolve_published_relative_url(published_page_route, target_path, fragment, ctx)
+                if pub_err is not None:
+                    return None, pub_err
+                if pub_target is None:
+                    return fs_target, None
+                if pub_target.resolve() != fs_target.resolve():
+                    want = _published_route_label(ctx, fs_target)
+                    got = _published_route_label(ctx, pub_target)
+                    return None, (
+                        "repository-relative link matches a markdown file on disk, but browsers "
+                        f"resolve it to a different site route than `{want}` (permalink-relative "
+                        f"navigation targets `{got}`); use a root-absolute path such as `{want}`"
+                    )
             return fs_target, None
 
     pub_target, pub_err = _resolve_published_relative_url(published_page_route, target_path, fragment, ctx)
