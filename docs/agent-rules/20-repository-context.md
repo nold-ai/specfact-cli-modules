@@ -13,7 +13,7 @@ tracks:
   - packages/**
   - registry/index.json
   - pyproject.toml
-last_reviewed: 2026-04-12
+last_reviewed: 2026-04-16
 exempt: false
 exempt_reason: ""
 id: agent-rules-repository-context
@@ -50,7 +50,8 @@ hatch run verify-modules-signature --payload-from-filesystem --enforce-version-b
 hatch run contract-test
 hatch run smart-test
 hatch run test
-hatch run specfact code review run --json --out .specfact/code-review.json
+# manual code review: always include --bug-hunt (CrossHair longer budgets; see bundle docs)
+hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json
 ```
 
 ## Architecture
