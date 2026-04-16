@@ -63,6 +63,6 @@ specfact code repro setup --install-crosshair
 
 ## Related
 
-- [Code analyze contracts](analyze/)
-- [Code drift detect](drift/)
-- [Sidecar validation](sidecar-validation/)
+- [Code analyze contracts](../analyze/)
+- [Code drift detect](../drift/)
+- [Sidecar validation](../sidecar-validation/)

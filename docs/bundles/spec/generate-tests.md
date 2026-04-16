@@ -47,5 +47,5 @@ Generated tests come from the installed Spec bundle version. Keep the bundle ver
 
 ## Related
 
-- [Spec validate and backward compatibility](validate/)
-- [Spec bundle overview](overview/)
+- [Spec validate and backward compatibility](../validate/)
+- [Spec bundle overview](../overview/)

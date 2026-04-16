@@ -60,8 +60,8 @@ specfact code review rules show --help
 
 ## See also
 
-- [Code review run](run/)
-- [Code review ledger](ledger/)
-- [Code review rules](rules/)
+- [Code review run](../run/)
+- [Code review ledger](../ledger/)
+- [Code review rules](../rules/)
 - [Code review module](../../modules/code-review/)
 - [Codebase bundle overview](../codebase/overview/) — import, drift, validation, repro

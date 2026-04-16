@@ -1,0 +1,11 @@
+# Pinned deps for docs validation / docs-review CI (install with: pip install -r requirements-docs-ci.txt).
+# Bump intentionally when upgrading specfact-cli contract tests or tooling.
+beartype==0.22.9
+click==8.1.8
+icontract==2.7.3
+pydantic==2.13.1
+pytest==9.0.3
+PyYAML==6.0.3
+rich==13.5.3
+typer==0.23.1
+specfact-cli==0.46.2

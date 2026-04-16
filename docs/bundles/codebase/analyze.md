@@ -40,6 +40,6 @@ specfact code analyze contracts --bundle auth-module
 
 ## Related
 
-- [Code drift detect](drift/)
-- [Code repro](repro/)
-- [Codebase bundle overview](overview/)
+- [Code drift detect](../drift/)
+- [Code repro](../repro/)
+- [Codebase bundle overview](../overview/)

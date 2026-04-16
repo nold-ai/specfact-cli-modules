@@ -1,5 +1,6 @@
 ---
 layout: default
+title: Brownfield engineer (redirect)
 permalink: /brownfield-engineer/
 redirect_from:
   - /guides/brownfield-engineer/

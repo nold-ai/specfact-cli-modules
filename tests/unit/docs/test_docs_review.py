@@ -7,9 +7,18 @@ validate the modules docs site (modules.specfact.io).
 from __future__ import annotations
 
 import re
+import sys
 import warnings
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote
+
+
+_REPO_FOR_SCRIPTS = Path(__file__).resolve().parents[3]
+_SCRIPTS_DIR = _REPO_FOR_SCRIPTS / "scripts"
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+import docs_site_validation as dsv  # noqa: E402
 
 
 MODULES_DOCS_HOST = "modules.specfact.io"
@@ -17,7 +26,6 @@ CORE_DOCS_HOST = "docs.specfact.io"
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 HTML_HREF_RE = re.compile(r'href="([^"]+)"')
 JEKYLL_RELATIVE_URL_RE = re.compile(r'\{\{\s*[\'"]([^\'"]+)[\'"]\s*\|\s*relative_url\s*\}\}')
-JEKYLL_SITE_VAR_RE = re.compile(r"\{\{.*\}\}")
 REQUIRED_NAV_FRONT_MATTER_KEYS = ("layout", "title", "permalink")
 
 
@@ -41,8 +49,8 @@ def _is_docs_markdown(path: Path) -> bool:
 
 
 def _is_publishable_page(path: Path) -> bool:
-    """True if the file is expected to be a published Jekyll page (not a README index)."""
-    return _is_docs_markdown(path) and path.name != "README.md"
+    """Delegate to shared docs_site_validation semantics (README only when Jekyll-fronted)."""
+    return dsv.is_publishable_page(path, _docs_root())
 
 
 def _iter_docs_markdown_paths() -> list[Path]:
@@ -136,21 +144,6 @@ def _published_route_for_path(path: Path, metadata: dict[str, str]) -> str:
     return _normalize_route(f"/{path.stem}/")
 
 
-def _build_published_docs_index() -> tuple[dict[str, Path], dict[Path, dict[str, str]], dict[Path, str]]:
-    route_to_path: dict[str, Path] = {}
-    path_to_metadata: dict[Path, dict[str, str]] = {}
-    path_to_route: dict[Path, str] = {}
-
-    for path in _iter_docs_markdown_paths():
-        metadata, _ = _split_front_matter(_read_text(path))
-        route = _published_route_for_path(path, metadata)
-        route_to_path[route] = path
-        path_to_metadata[path] = metadata
-        path_to_route[path] = route
-
-    return route_to_path, path_to_metadata, path_to_route
-
-
 def _extract_links(source: Path, content: str) -> list[str]:
     if source.suffix == ".html":
         return HTML_HREF_RE.findall(content)
@@ -163,130 +156,6 @@ def _extract_links(source: Path, content: str) -> list[str]:
     return links
 
 
-def _normalize_jekyll_relative_url(link: str) -> str:
-    match = JEKYLL_RELATIVE_URL_RE.fullmatch(link.strip())
-    if match:
-        return match.group(1)
-    return link
-
-
-def _is_published_docs_route_candidate(route: str) -> bool:
-    return route not in {"/assets/main.css/", "/feed.xml/"}
-
-
-def _resolve_route_target(
-    source: Path,
-    route: str,
-    route_to_path: dict[str, Path],
-) -> tuple[str | None, Path | None, str | None]:
-    if not _is_published_docs_route_candidate(route):
-        return None, None, None
-    target = route_to_path.get(route)
-    if target is None:
-        return route, None, f"{source.relative_to(_repo_root())} -> {route}"
-    return route, target, None
-
-
-def _path_lookup_result(
-    source: Path,
-    target_value: str,
-    candidate: Path,
-    path_to_route: dict[Path, str],
-) -> tuple[str | None, Path | None, str | None]:
-    route = path_to_route.get(candidate)
-    if route is None:
-        return None, None, f"{source.relative_to(_repo_root())} -> {target_value}"
-    return route, candidate, None
-
-
-def _resolve_candidate_markdown_target(
-    source: Path,
-    candidate: Path,
-    target_value: str,
-    path_to_route: dict[Path, str],
-) -> tuple[str | None, Path | None, str | None]:
-    result: tuple[str | None, Path | None, str | None] = (None, None, None)
-
-    if candidate.is_dir():
-        readme_candidate = (candidate / "README.md").resolve()
-        if readme_candidate.is_file() and _is_docs_markdown(readme_candidate):
-            result = _path_lookup_result(source, target_value, readme_candidate, path_to_route)
-    elif candidate.is_file() and _is_docs_markdown(candidate):
-        result = _path_lookup_result(source, target_value, candidate, path_to_route)
-    elif not candidate.suffix:
-        markdown_candidate = candidate.with_suffix(".md")
-        if markdown_candidate.is_file() and _is_docs_markdown(markdown_candidate):
-            result = _path_lookup_result(source, target_value, markdown_candidate.resolve(), path_to_route)
-
-    return result
-
-
-def _ignored_internal_link(stripped: str, parsed_scheme: str) -> bool:
-    if not stripped or stripped.startswith("#") or JEKYLL_SITE_VAR_RE.search(stripped):
-        return True
-    return parsed_scheme in {"mailto", "javascript", "tel"}
-
-
-def _resolve_http_docs_target(
-    source: Path,
-    parsed_path: str,
-    netloc: str,
-    route_to_path: dict[str, Path],
-) -> tuple[str | None, Path | None, str | None]:
-    if netloc != MODULES_DOCS_HOST:
-        return None, None, None
-    route = _normalize_route(parsed_path or "/")
-    return _resolve_route_target(source, route, route_to_path)
-
-
-def _resolve_relative_docs_target(
-    source: Path,
-    target_value: str,
-    route_to_path: dict[str, Path],
-    path_to_route: dict[Path, str],
-) -> tuple[str | None, Path | None, str | None]:
-    if target_value.startswith("/"):
-        route = _normalize_route(target_value)
-        return _resolve_route_target(source, route, route_to_path)
-
-    candidate = (source.parent / target_value).resolve()
-    result = _resolve_candidate_markdown_target(source, candidate, target_value, path_to_route)
-    if result[1] is not None or result[2] is not None:
-        return result
-
-    normalized_route = _normalize_route(target_value)
-    route, target, failure = _resolve_route_target(source, normalized_route, route_to_path)
-    if failure is None:
-        return route, target, None
-    failure = f"{source.relative_to(_repo_root())} -> {target_value} (normalized: {normalized_route})"
-    return route, None, failure
-
-
-def _resolve_internal_docs_target(
-    source: Path,
-    raw_link: str,
-    route_to_path: dict[str, Path],
-    path_to_route: dict[Path, str],
-) -> tuple[str | None, Path | None, str | None]:
-    stripped = _normalize_jekyll_relative_url(raw_link.strip())
-
-    parsed = urlparse(stripped)
-    if _ignored_internal_link(stripped, parsed.scheme):
-        return None, None, None
-
-    if parsed.scheme in {"http", "https"}:
-        return _resolve_http_docs_target(source, parsed.path, parsed.netloc, route_to_path)
-
-    if parsed.scheme:
-        return None, None, None
-
-    target_value = unquote(parsed.path)
-    if not target_value:
-        return None, None, None
-
-    return _resolve_relative_docs_target(source, target_value, route_to_path, path_to_route)
-
-
 def _navigation_sources() -> list[Path]:
     return [
         _repo_file("docs/index.md").resolve(),
@@ -295,38 +164,38 @@ def _navigation_sources() -> list[Path]:
 
 
 def _scan_navigation_targets() -> tuple[list[str], set[Path]]:
-    route_to_path, _, path_to_route = _build_published_docs_index()
+    docs_root = _docs_root()
+    repo_root = _repo_root()
+    route_to_path, path_to_route = dsv.build_route_mappings(docs_root)
+    ctx = dsv.DocsLinkResolutionContext(docs_root, route_to_path, path_to_route, dsv.MODULES_DOCS_HOST)
     failures: list[str] = []
     targets: set[Path] = set()
 
     for source in _navigation_sources():
-        for link in _extract_links(source, _read_text(source)):
-            _, target, failure = _resolve_internal_docs_target(source, link, route_to_path, path_to_route)
-            if failure:
-                failures.append(failure)
+        text = _read_text(source)
+        if source.suffix == ".md":
+            fm, _, _ = dsv.split_yaml_front_matter(text)
+            published = dsv.published_route_for_doc(source, docs_root, fm)
+        else:
+            published = "/"
+        for link in _extract_links(source, text):
+            target, err = dsv.resolve_internal_link_hybrid(
+                source=source,
+                ctx=ctx,
+                published_page_route=published,
+                raw_link=link,
+            )
+            if err:
+                failures.append(f"{source.relative_to(repo_root)}: {err}")
             if target is not None:
-                targets.add(target)
+                targets.add(target.resolve())
 
     return failures, targets
 
 
 def _scan_authored_doc_link_failures() -> tuple[list[str], set[Path]]:
-    route_to_path, _, path_to_route = _build_published_docs_index()
-    failures: list[str] = []
-    targets: set[Path] = set()
-
-    for source in _iter_docs_markdown_paths():
-        metadata, body = _split_front_matter(_read_text(source))
-        if not metadata:
-            continue
-        for link in _extract_links(source, body):
-            _, target, failure = _resolve_internal_docs_target(source, link, route_to_path, path_to_route)
-            if failure:
-                failures.append(failure)
-            if target is not None:
-                targets.add(target)
-
-    return failures, targets
+    findings = dsv.scan_published_route_body_links(_docs_root(), _repo_root())
+    return [f.message for f in findings], set()
 
 
 # ---------------------------------------------------------------------------
@@ -372,57 +241,31 @@ def test_navigation_links_resolve_to_published_docs_routes() -> None:
 
 
 def test_authored_internal_docs_links_resolve_to_published_docs_targets() -> None:
-    """Check internal links in authored docs with front matter.
-
-    Pre-existing broken links in files not touched by the IA restructure are
-    tracked separately (docs-09-missing-command-docs). This test reports all
-    failures but only fails on files within the restructured directories.
-    """
-    restructured_prefixes = ("bundles/", "authoring/", "integrations/", "workflows/", "team-and-enterprise/")
+    """Internal Markdown links must pass the shared published-route scanner."""
     failures, _ = _scan_authored_doc_link_failures()
-    restructured_failures = [
-        f for f in failures if any(f"docs/{p}" in f.split(" -> ")[0] for p in restructured_prefixes)
-    ]
-    if failures and not restructured_failures:
-        warnings.warn(
-            f"Pre-existing broken authored docs links ({len(failures)} total):\n"
-            + "\n".join(sorted(failures)[:10])
-            + ("\n  ..." if len(failures) > 10 else ""),
-            stacklevel=1,
-        )
-    assert not restructured_failures, "Broken authored docs links in restructured files:\n" + "\n".join(
-        sorted(restructured_failures)
-    )
+    assert not failures, "Broken authored docs links:\n" + "\n".join(sorted(failures))
+
+
+def test_extract_markdown_links_with_lines_includes_html_hrefs() -> None:
+    body = 'See <a href="/bundles/backlog/overview/">Backlog</a> and [Spec](/bundles/spec/overview/).\n'
+    links = dsv.extract_markdown_links_with_lines(body)
+    hrefs = {url for _, url in links}
+    assert "/bundles/backlog/overview/" in hrefs
+    assert "/bundles/spec/overview/" in hrefs
 
 
 def test_navigation_link_targets_have_required_front_matter_keys() -> None:
-    """Nav link targets must have layout, title, and permalink.
-
-    Pre-existing files without front matter are warned but not failed,
-    to avoid blocking the restructure on unrelated debt.
-    """
-    restructured_prefixes = ("bundles/", "authoring/", "integrations/", "workflows/", "team-and-enterprise/")
+    """Nav link targets must have layout, title, and permalink."""
     _, targets = _scan_navigation_targets()
-    _, path_to_metadata, _ = _build_published_docs_index()
     missing: list[str] = []
 
     for target in sorted(targets):
-        metadata = path_to_metadata[target]
-        missing_keys = [key for key in REQUIRED_NAV_FRONT_MATTER_KEYS if not metadata.get(key)]
+        fm, _, _ = dsv.split_yaml_front_matter(_read_text(target))
+        missing_keys = [key for key in REQUIRED_NAV_FRONT_MATTER_KEYS if not fm.get(key)]
         if missing_keys:
             missing.append(f"{target.relative_to(_repo_root())}: missing {', '.join(missing_keys)}")
 
-    restructured_missing = [m for m in missing if any(p in m for p in restructured_prefixes)]
-    preexisting_missing = [m for m in missing if m not in restructured_missing]
-    if preexisting_missing:
-        warnings.warn(
-            f"Pre-existing nav targets missing front matter ({len(preexisting_missing)}):\n"
-            + "\n".join(preexisting_missing),
-            stacklevel=1,
-        )
-    assert not restructured_missing, "Restructured nav targets missing required front matter keys:\n" + "\n".join(
-        restructured_missing
-    )
+    assert not missing, "Nav targets missing required front matter keys:\n" + "\n".join(missing)
 
 
 # ---------------------------------------------------------------------------

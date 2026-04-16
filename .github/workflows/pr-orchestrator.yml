@@ -140,7 +140,7 @@ jobs:
         run: hatch env create
       - name: Install specfact-cli dependency
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
-        run: hatch run pip install specfact-cli
+        run: hatch run pip install "specfact-cli==0.46.2"
       - name: Format
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run format
