@@ -44,6 +44,25 @@ def _category_for_message_id(message_id: str) -> Literal["architecture", "style"
     return "style"
 
 
+def _coerce_pylint_line(raw: object) -> int:
+    """Pylint may emit ``0`` for file- or config-scoped messages; ``ReviewFinding`` requires ``line >= 1``."""
+    if raw is None or isinstance(raw, bool):
+        return 1
+    if isinstance(raw, int):
+        return raw if raw >= 1 else 1
+    if isinstance(raw, float):
+        as_int = int(raw)
+        return as_int if as_int >= 1 else 1
+    return 1
+
+
+def _coerce_pylint_message(raw: object) -> str:
+    """Pylint occasionally emits an empty ``msg``; governed findings require non-blank text."""
+    if isinstance(raw, str) and raw.strip():
+        return raw
+    return "(pylint provided no message text)"
+
+
 def _finding_from_item(item: object, *, allowed_paths: set[str]) -> ReviewFinding | None:
     if not isinstance(item, dict):
         raise ValueError("pylint finding must be an object")
@@ -57,12 +76,8 @@ def _finding_from_item(item: object, *, allowed_paths: set[str]) -> ReviewFindin
     message_id = item["message-id"]
     if not isinstance(message_id, str):
         raise ValueError("pylint message-id must be a string")
-    line = item["line"]
-    if not isinstance(line, int):
-        raise ValueError("pylint line must be an integer")
-    message = item["message"]
-    if not isinstance(message, str):
-        raise ValueError("pylint message must be a string")
+    line = _coerce_pylint_line(item.get("line"))
+    message = _coerce_pylint_message(item.get("message"))
 
     return ReviewFinding(
         category=_category_for_message_id(message_id),
@@ -76,8 +91,19 @@ def _finding_from_item(item: object, *, allowed_paths: set[str]) -> ReviewFindin
     )
 
 
-def _payload_from_output(stdout: str) -> list[object]:
-    payload = json.loads(stdout)
+def _payload_from_output(stdout: str, *, stderr: str, returncode: int | None) -> list[object]:
+    stripped = stdout.strip()
+    if not stripped:
+        out = stdout
+        if len(out) > 4096:
+            out = f"{out[:4096]}... ({len(stdout)} chars total)"
+        err = stderr
+        if len(err) > 4096:
+            err = f"{err[:4096]}... ({len(stderr)} chars total)"
+        raise ValueError(
+            f"pylint produced no JSON on stdout; stdout={out!r}, stderr={err!r}, {returncode=}",
+        )
+    payload = json.loads(stripped)
     if not isinstance(payload, list):
         raise ValueError("pylint output must be a list")
     return payload
@@ -119,7 +145,11 @@ def run_pylint(files: list[Path]) -> list[ReviewFinding]:
             check=False,
             timeout=30,
         )
-        payload = _payload_from_output(result.stdout)
+        payload = _payload_from_output(
+            result.stdout,
+            stderr=result.stderr,
+            returncode=result.returncode,
+        )
     except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return [tool_error(tool="pylint", file_path=files[0], message=f"Unable to parse pylint output: {exc}")]
 
