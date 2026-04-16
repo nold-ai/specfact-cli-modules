@@ -31,7 +31,7 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
 | `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, and/or **`docs`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
 | `--mode shadow\|enforce` | **`shadow`** surfaces findings without failing the exit code for policy violations; **`enforce`** applies normal gating (default **`enforce`**) |
-| `--level error\|warning` | Optional reporting level override for the review run |
+| `--level error\|warning` | Optional reporting level override before scoring: **`error`** keeps errors only (drops warnings and info); **`warning`** keeps errors and warnings (drops info only); omit to keep all severities (JSON, verdict, and `ci_exit_code` use the filtered list) |
 | `--bug-hunt` | Enable exploratory / bug-hunt style heuristics in the review pipeline |
 | `--include-noise`, `--suppress-noise` | Keep or suppress known low-signal findings |
 | `--json` | Emit a `ReviewReport` JSON file |
@@ -72,8 +72,8 @@ specfact code review run --scope full --path packages/specfact-code-review
 # Package sources plus that package’s unit tests
 specfact code review run --scope full --path packages/specfact-code-review --path tests/unit/specfact_code_review
 
-# Warnings dropped before scoring (affects JSON, verdict text, and ci_exit_code)
-specfact code review run --scope changed --level warning
+# Errors only before scoring — warnings and info omitted from JSON, verdict, and ci_exit_code
+specfact code review run --scope changed --level error
 
 # Longer CrossHair budgets for exploratory bug-hunt pass (with explicit files)
 specfact code review run --bug-hunt --json --out /tmp/review-bughunt.json packages/specfact-code-review/src/specfact_code_review/run/commands.py

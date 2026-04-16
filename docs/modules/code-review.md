@@ -44,9 +44,10 @@ Options (aligned with `specfact code review run --help`):
   full toolchain and preserves `overall_verdict` in JSON, but forces
   `ci_exit_code` and the process exit code to `0` so CI or hooks can log signal
   without blocking
-- `--level error|warning`: drop findings below the chosen severity **before**
-  scoring and report construction so JSON, tables, score, verdict, and
-  `ci_exit_code` all match the filtered list. Omit to keep all severities
+- `--level error|warning`: filter findings **before** scoring so JSON, tables,
+  score, verdict, and `ci_exit_code` match the filtered list: **`error`**
+  keeps errors only (warnings and info dropped); **`warning`** keeps errors and
+  warnings (info dropped). Omit to keep all severities
 - `--bug-hunt`: enable the bug-hunt pass (CrossHair uses longer budgets: per-path
   timeout **10s**, subprocess budget **120s**; other tools keep normal speed)
 - `--include-noise` / `--suppress-noise`: include or suppress known low-signal
