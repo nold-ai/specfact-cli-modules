@@ -94,11 +94,14 @@ def _finding_from_item(item: object, *, allowed_paths: set[str]) -> ReviewFindin
 def _payload_from_output(stdout: str, *, stderr: str, returncode: int | None) -> list[object]:
     stripped = stdout.strip()
     if not stripped:
+        out = stdout
+        if len(out) > 4096:
+            out = f"{out[:4096]}... ({len(stdout)} chars total)"
         err = stderr
         if len(err) > 4096:
             err = f"{err[:4096]}... ({len(stderr)} chars total)"
         raise ValueError(
-            f"pylint produced no JSON on stdout; {stdout=!r}, stderr={err!r}, {returncode=}",
+            f"pylint produced no JSON on stdout; stdout={out!r}, stderr={err!r}, {returncode=}",
         )
     payload = json.loads(stripped)
     if not isinstance(payload, list):
