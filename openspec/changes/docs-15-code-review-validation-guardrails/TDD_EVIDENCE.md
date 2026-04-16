@@ -9,6 +9,7 @@
 ## OpenSpec
 
 - `openspec validate docs-15-code-review-validation-guardrails --strict` — passing.
+- 2026-04-16: Spec delta headers normalized (`## MODIFIED Requirements`, `### Requirement:`, `#### Scenario:`) under `openspec/changes/docs-15-code-review-validation-guardrails/specs/**/spec.md` so strict validation and future `openspec archive` succeed; `openspec validate docs-15-code-review-validation-guardrails --strict` — passing.
 
 ## Format / lint
 
