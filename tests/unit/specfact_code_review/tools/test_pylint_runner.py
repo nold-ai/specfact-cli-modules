@@ -34,6 +34,7 @@ def test_run_pylint_maps_bare_except_to_architecture(tmp_path: Path, monkeypatch
     assert findings[0].category == "architecture"
     assert findings[0].severity == "warning"
     assert findings[0].rule == "W0702"
+    assert findings[0].line == 7
     assert_tool_run(run_mock, ["pylint", "--output-format", "json", str(file_path)])
 
 
@@ -255,6 +256,9 @@ def test_run_pylint_parses_json_with_surrounding_whitespace(tmp_path: Path, monk
 
     assert len(findings) == 1
     assert findings[0].rule == "W0702"
+    assert findings[0].line == 7
+    assert findings[0].message == "No exception type(s) specified"
+    assert findings[0].category == "architecture"
 
 
 def test_run_pylint_returns_tool_error_for_invalid_payload_item(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
