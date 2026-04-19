@@ -9,7 +9,7 @@ The core repo can define architecture review contracts, but the modules repo sti
 - **NEW**: Add a `specfact-architecture` bundle with an `architecture` command for boundary, interface, and well-architected review.
 - **NEW**: Package analyzers and rule resources for dependency-graph checks, ADR traceability, and interface-diff evaluation.
 - **NEW**: Encode the `ALLOWED_IMPORTS.md` pattern into reusable review rules so the modules repo and user repositories can share the same boundary-checking approach.
-- **NEW**: Add report surfaces that map architecture findings into the paired core review contract and optionally emit evidence for the knowledge runtime.
+- **Introduce** report surfaces that map architecture findings into the paired core review contract and optionally emit evidence for the knowledge runtime.
 - **EXTEND**: Reserve manifest, registry, docs, and signing work for a new official architecture bundle.
 
 ## Capabilities

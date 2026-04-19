@@ -1,8 +1,10 @@
+# Enterprise Audit Client Module Specification
+
 ## ADDED Requirements
 
 ### Requirement: Enterprise audit bundle registration
 
-The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-enterprise-audit` that exposes audit-related commands and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for the paired core enterprise audit contracts.
+The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-enterprise-audit` that exposes audit-related commands and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` entries that explicitly target the paired core change `enterprise-02-rbac-and-audit-trail` (enterprise RBAC, audit trail, and audit-event contracts).
 
 #### Scenario: Bundle manifest is loaded
 
@@ -11,12 +13,12 @@ The modules repository SHALL provide a signed official bundle named `nold-ai/spe
 
 ### Requirement: Audit events are signed and privacy-aware
 
-The bundle SHALL serialize governance actions into the paired core audit-event schema, sign the event payloads, and avoid storing raw restricted content in emitted or queued events.
+The bundle SHALL serialize governance actions into the audit-event schema defined by `enterprise-02-rbac-and-audit-trail`, sign the event payloads, and avoid storing raw restricted content in emitted or queued events.
 
 #### Scenario: A governance action triggers audit emission
 
 - **WHEN** the bundle prepares an audit event for a governed action such as rule promotion or approval
-- **THEN** it emits a signed, privacy-aware event payload aligned with the paired core schema
+- **THEN** it emits a signed, privacy-aware event payload aligned with `enterprise-02-rbac-and-audit-trail`
 
 ### Requirement: Audit delivery supports local queue inspection
 

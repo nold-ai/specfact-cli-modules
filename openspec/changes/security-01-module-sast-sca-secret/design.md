@@ -1,4 +1,4 @@
-## Context
+# Context
 
 Security analysis in the modules repo must package third-party scanners while deferring canonical findings, severity scoring, and policy interpretation to the core repo. This change establishes the bundle boundary for the broadest security surface: source-code analysis, dependency risk, SBOM generation, and secret detection. The bundle has to remain composable with license and privacy modules instead of becoming a catch-all for every security-adjacent concern.
 

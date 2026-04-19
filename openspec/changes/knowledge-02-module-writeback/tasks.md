@@ -1,8 +1,9 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/knowledge-02-module-writeback` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
 - [ ] 1.2 Confirm paired core change `knowledge-02-preflight-context-assembly` and module dependency `knowledge-01-module-memory-runtime` are available and document the minimum required `core_compatibility`.
 - [ ] 1.3 Before implementation, create or sync public GitHub tracking metadata for this change, including parent linkage, labels, project assignment, blockers, blocked-by relationships, and `in progress` concurrency checks.
+- [ ] 1.4 Refresh the GitHub hierarchy cache (`python scripts/sync_github_hierarchy_cache.py`) and verify parent/child plus blocker metadata matches the authoritative GitHub graph before execution starts.
 
 ## 2. Spec and failing-test preparation
 
@@ -16,7 +17,7 @@
 - [ ] 3.1 Scaffold `packages/specfact-knowledge-writeback/` with manifest, Typer entrypoints, target adapters, and preview helpers.
 - [ ] 3.2 Implement adapters for the first approved writeback targets using rules sourced from `specfact-knowledge`.
 - [ ] 3.3 Add deterministic output-manifest generation plus preview/dry-run behavior for every target.
-- [ ] 3.4 Update registry metadata, docs references, signatures, and any import allowlists required by the new bundle.
+- [ ] 3.4 Update registry metadata, docs references, signing inputs, and any import allowlists required by the new bundle.
 
 ## 4. Verification and delivery
 

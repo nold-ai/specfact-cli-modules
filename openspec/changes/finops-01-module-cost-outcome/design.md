@@ -1,4 +1,4 @@
-## Context
+# Context
 
 FinOps reporting depends on core-owned schemas and budget semantics, but the modules repo must package the runtime collectors and classifiers that convert actual session data into evidence. This bundle has to work for both networked provider APIs and local/offline workflows without turning the feature into a cloud-only surface.
 
@@ -46,8 +46,8 @@ FinOps reporting depends on core-owned schemas and budget semantics, but the mod
 ## Migration Plan
 
 1. Confirm paired core telemetry/FinOps contracts are stable enough for integration.
-2. Implement package structure, collectors, and classifier adapters with fixture-based tests.
-3. Publish docs, registry metadata, signatures, and compatibility ranges together.
+2. Implement package structure, collectors, and classifier adapters with fixture-based tests; ship a truthful registry entry, `module-package.yaml`, signing metadata, and docs parity with `modules.specfact.io`; tests SHALL assert `module-package.yaml` exists and validates required adapter-boundary fields alongside collectors and classifier adapters.
+3. Publish documentation to the canonical modules site (`modules.specfact.io`) with docs parity alongside registry metadata, `module-package.yaml`, signatures, compatibility ranges, and adapter-boundary declarations before release.
 
 ## Open Questions
 

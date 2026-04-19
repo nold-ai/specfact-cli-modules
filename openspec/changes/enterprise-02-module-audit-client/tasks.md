@@ -1,4 +1,4 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/enterprise-02-module-audit-client` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
 - [ ] 1.2 Confirm paired core change `enterprise-02-rbac-and-audit-trail` and upstream sequencing from `enterprise-01-module-policy-client` are available and document the minimum required `core_compatibility`.
@@ -16,7 +16,7 @@
 - [ ] 3.1 Scaffold `packages/specfact-enterprise-audit/` with manifest, Typer entrypoints, queue helpers, and signing utilities.
 - [ ] 3.2 Implement audit event preparation and queueing aligned with the paired core audit contracts.
 - [ ] 3.3 Add inspection/retry commands plus deterministic local receipt metadata without requiring immediate network delivery.
-- [ ] 3.4 Update registry metadata, docs references, signatures, and any import allowlists required by the new bundle.
+- [ ] 3.4 Update registry metadata, docs references, signing inputs, and any import allowlists required by the new bundle.
 
 ## 4. Verification and delivery
 

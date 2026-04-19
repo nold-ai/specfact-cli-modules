@@ -1,4 +1,4 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/finops-01-module-cost-outcome` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
 - [ ] 1.2 Confirm paired core changes `telemetry-01-opentelemetry-default-on` and `finops-01-telemetry-and-outcomes` are available and document the minimum required `core_compatibility`.

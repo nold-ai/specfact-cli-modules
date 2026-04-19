@@ -1,8 +1,10 @@
+# License Compliance Module Specification
+
 ## ADDED Requirements
 
 ### Requirement: License compliance bundle registration
 
-The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-license-compliance` that exposes the `license` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for the shared core findings model.
+The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-license-compliance` that exposes the `license` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for `security-01-unified-findings-model` (shared security findings/report contracts reused for license findings).
 
 #### Scenario: Bundle manifest is loaded
 
@@ -11,7 +13,7 @@ The modules repository SHALL provide a signed official bundle named `nold-ai/spe
 
 ### Requirement: SPDX and SBOM evaluation uses the shared findings contract
 
-The bundle SHALL ingest normalized SBOM/license records and emit allow, deny, or exception findings through the paired core findings/report contracts instead of a bundle-local reporting schema.
+The bundle SHALL ingest normalized SBOM/license records and emit allow, deny, or exception findings through the findings/report contracts from `security-01-unified-findings-model` instead of a bundle-local reporting schema.
 
 #### Scenario: A denied license is detected
 

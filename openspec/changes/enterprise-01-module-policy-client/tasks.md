@@ -1,4 +1,4 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/enterprise-01-module-policy-client` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
 - [ ] 1.2 Confirm paired core change `enterprise-01-policy-resolution-extension` is available and document the minimum required `core_compatibility`.
@@ -16,7 +16,7 @@
 - [ ] 3.1 Scaffold `packages/specfact-enterprise-policy/` with manifest, Typer entrypoints, transport/cache helpers, and verification utilities.
 - [ ] 3.2 Implement signed payload fetch, verification, cache storage, and inspection commands that align with the paired core resolution-chain contracts.
 - [ ] 3.3 Integrate no-op behavior for unconfigured environments plus deterministic local metadata for applied policy layers.
-- [ ] 3.4 Update registry metadata, docs references, signatures, and any import allowlists required by the new bundle.
+- [ ] 3.4 Update registry metadata, docs references, signing inputs, and any import allowlists required by the new bundle.
 
 ## 4. Verification and delivery
 

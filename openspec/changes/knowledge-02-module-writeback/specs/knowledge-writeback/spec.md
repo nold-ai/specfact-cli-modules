@@ -20,7 +20,7 @@ The bundle SHALL generate previews or drafts for every supported writeback targe
 
 ### Requirement: Writeback emits deterministic lineage metadata
 
-The bundle SHALL record deterministic metadata that identifies source rules, target type, target destination, and generation timestamps for each writeback operation.
+The bundle SHALL record deterministic metadata that identifies source rules, target type, target destination, and generation timestamps for each writeback operation. Generation timestamps MUST be normalized to a caller-provided deterministic run timestamp (for example `run_start_time`) when supplied; if absent, timestamps MUST be the writeback tool’s own run-start instant. Every recorded timestamp MUST use UTC in ISO-8601 with second precision (`YYYY-MM-DDThh:mm:ssZ`) without fractional seconds or local offsets, and any timestamps supplied in inputs MUST be normalized to that exact format and timezone before persistence so manifests remain reproducible.
 
 #### Scenario: A writeback draft is generated
 

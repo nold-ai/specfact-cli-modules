@@ -1,7 +1,7 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/security-01-module-sast-sca-secret` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
-- [ ] 1.2 Confirm paired core change `security-01-unified-findings-model` is available and document the minimum required `core_compatibility`.
+- [ ] 1.2 Confirm paired core changes `security-01-unified-findings-model` and `policy-02-packs-and-modes` are available, document the minimum required `core_compatibility` against both, and record any sequencing notes in `TDD_EVIDENCE.md`.
 - [ ] 1.3 Before implementation, create or sync public GitHub tracking metadata for this change, including parent linkage, labels, project assignment, blockers, blocked-by relationships, and `in progress` concurrency checks.
 
 ## 2. Spec and failing-test preparation
@@ -16,7 +16,7 @@
 - [ ] 3.1 Scaffold `packages/specfact-security/` with manifest, Typer entrypoints, and scanner/resource wiring.
 - [ ] 3.2 Implement adapters that normalize scanner output into the paired core security findings/report contracts.
 - [ ] 3.3 Integrate profile-aware execution controls, JSON/markdown reporting, and optional knowledge evidence handoff.
-- [ ] 3.4 Update registry metadata, docs references, signatures, and any import allowlists required by the new bundle.
+- [ ] 3.4 Update registry metadata, docs references, signing inputs, and any import allowlists required by the new bundle.
 
 ## 4. Verification and delivery
 

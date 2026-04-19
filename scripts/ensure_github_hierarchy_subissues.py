@@ -16,6 +16,8 @@ import sys
 from typing import Any
 
 
+_GH_GRAPHQL_TIMEOUT_SEC = 120
+
 # Five-pillar modules wave (2026-04): epic #216 -> features -> user stories.
 DEFAULT_EDGES: tuple[tuple[int, int], ...] = (
     (216, 217),
@@ -37,15 +39,29 @@ DEFAULT_EDGES: tuple[tuple[int, int], ...] = (
 )
 
 
-def _gh_graphql(*, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+def _gh_graphql(*, query: str, variables: dict[str, Any], timeout: int = _GH_GRAPHQL_TIMEOUT_SEC) -> dict[str, Any]:
     args = ["gh", "api", "graphql", "-f", f"query={query}"]
     for key, value in variables.items():
+        if value is None:
+            continue
         if isinstance(value, list):
             for item in value:
                 args.extend(["-F", f"{key}[]={item}"])
         else:
             args.extend(["-F", f"{key}={value}"])
-    proc = subprocess.run(args, check=False, capture_output=True, text=True)
+    try:
+        proc = subprocess.run(
+            args,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"gh graphql timed out after {timeout}s (context: gh api graphql); "
+            f"stdout={exc.stdout!r}; stderr={exc.stderr!r}"
+        ) from exc
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "gh graphql failed")
     payload = json.loads(proc.stdout)
@@ -69,18 +85,40 @@ def _issue_node_id(*, owner: str, name: str, number: int) -> str:
 
 def _subissue_numbers(*, owner: str, name: str, parent_number: int) -> set[int]:
     q = """
-    query($owner:String!,$name:String!,$n:Int!){
+    query($owner:String!,$name:String!,$n:Int!,$after:String){
       repository(owner:$owner,name:$name){
-        issue(number:$n){subIssues(first:50){nodes{number}}}
+        issue(number:$n){
+          subIssues(first:100, after:$after){
+            pageInfo{hasNextPage,endCursor}
+            nodes{number}
+          }
+        }
       }
     }
     """.strip()
-    data = _gh_graphql(query=q, variables={"owner": owner, "name": name, "n": parent_number})
-    issue = data.get("repository", {}).get("issue")
-    if not isinstance(issue, dict):
-        raise RuntimeError(f"missing issue #{parent_number}")
-    raw_nodes = issue.get("subIssues", {}).get("nodes", [])
-    return {int(n["number"]) for n in raw_nodes if isinstance(n, dict) and n.get("number") is not None}
+    collected: set[int] = set()
+    after: str | None = None
+    while True:
+        variables: dict[str, Any] = {"owner": owner, "name": name, "n": parent_number, "after": after}
+        data = _gh_graphql(query=q, variables=variables)
+        issue = data.get("repository", {}).get("issue")
+        if not isinstance(issue, dict):
+            raise RuntimeError(f"missing issue #{parent_number}")
+        sub = issue.get("subIssues")
+        if not isinstance(sub, dict):
+            raise RuntimeError(f"missing subIssues for issue #{parent_number}")
+        raw_nodes = sub.get("nodes", [])
+        for node in raw_nodes:
+            if isinstance(node, dict) and node.get("number") is not None:
+                collected.add(int(node["number"]))
+        page_info = sub.get("pageInfo")
+        if not isinstance(page_info, dict) or not page_info.get("hasNextPage"):
+            break
+        cursor = page_info.get("endCursor")
+        if not isinstance(cursor, str) or not cursor:
+            raise RuntimeError(f"subIssues pagination missing endCursor for issue #{parent_number}")
+        after = cursor
+    return collected
 
 
 def _add_sub_issue(*, parent_id: str, child_id: str) -> None:
@@ -105,6 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     owner, name = args.repo_owner, args.repo_name
     added = 0
     skipped = 0
+    would_add = 0
 
     for parent_num, child_num in DEFAULT_EDGES:
         existing = _subissue_numbers(owner=owner, name=name, parent_number=parent_num)
@@ -112,8 +151,8 @@ def main(argv: list[str] | None = None) -> int:
             skipped += 1
             continue
         if args.dry_run:
-            sys.stdout.write(f"would addSubIssue #{child_num} under #{parent_num}\n")
-            added += 1
+            sys.stdout.write(f"[dry-run] would addSubIssue #{child_num} under #{parent_num}\n")
+            would_add += 1
             continue
         parent_id = _issue_node_id(owner=owner, name=name, number=parent_num)
         child_id = _issue_node_id(owner=owner, name=name, number=child_num)
@@ -121,7 +160,10 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(f"addSubIssue #{child_num} -> parent #{parent_num}\n")
         added += 1
 
-    sys.stdout.write(f"Done: {added} added, {skipped} already linked (repo {owner}/{name}).\n")
+    if args.dry_run:
+        sys.stdout.write(f"Done (dry-run): {would_add} would add, {skipped} already linked (repo {owner}/{name}).\n")
+    else:
+        sys.stdout.write(f"Done: {added} added, {skipped} already linked (repo {owner}/{name}).\n")
     return 0
 
 

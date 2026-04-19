@@ -1,4 +1,4 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/security-03-module-pii-gdpr-eu` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
 - [ ] 1.2 Confirm paired core changes `security-01-unified-findings-model` and `security-02-eu-gdpr-baseline` are available and document the minimum required `core_compatibility`.

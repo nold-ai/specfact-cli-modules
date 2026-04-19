@@ -1,4 +1,4 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/architecture-02-module-well-architected` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
 - [ ] 1.2 Confirm paired core change `architecture-02-well-architected-review` is available and document the minimum required `core_compatibility`.
@@ -16,7 +16,7 @@
 - [ ] 3.1 Scaffold `packages/specfact-architecture/` with manifest, Typer entrypoints, analyzer adapters, and rule resources.
 - [ ] 3.2 Implement import-graph, interface-diff, and ADR-traceability adapters that normalize into the paired core architecture findings/report contracts.
 - [ ] 3.3 Integrate repository boundary rules derived from `ALLOWED_IMPORTS.md` and package any provider-specific defaults needed for initial language support.
-- [ ] 3.4 Update registry metadata, docs references, signatures, and any import allowlists required by the new bundle.
+- [ ] 3.4 Update registry metadata, docs references, signing inputs, and any import allowlists required by the new bundle.
 
 ## 4. Verification and delivery
 

@@ -1,3 +1,5 @@
+# Architecture Well-Architected Module Design
+
 ## Context
 
 Architecture governance spans both shared contracts in `specfact-cli` and executable repository analysis in `specfact-cli-modules`. This change defines the module bundle that inspects dependency boundaries, interface changes, and ADR traceability while mapping results into the paired core architecture review model.
@@ -45,7 +47,7 @@ Architecture governance spans both shared contracts in `specfact-cli` and execut
 
 ## Migration Plan
 
-1. Confirm the paired core architecture review contract is stable enough for module integration.
+1. Confirm the paired core architecture review contract (`architecture-02-well-architected-review`) is stable enough for module integration.
 2. Implement package structure, analyzer adapters, and rule-resource translation.
 3. Publish docs, registry metadata, signatures, and compatibility range together.
 

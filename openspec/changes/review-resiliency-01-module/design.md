@@ -1,3 +1,5 @@
+# Review Resiliency Module Design
+
 ## Context
 
 `specfact-cli` owns the resiliency finding model, scorer, and CLI contracts, but `specfact-cli-modules` owns the executable bundle that packages third-party analyzers and rule resources. This change needs a new bundle instead of extending `specfact-code-review` so resiliency policy can evolve independently, ship its own dependencies, and remain optional for users who only want source-quality review.
@@ -45,9 +47,9 @@
 
 ## Migration Plan
 
-1. Land the paired core change so bundle development targets a stable findings contract.
+1. Land paired core change `review-resiliency-01-contracts` so bundle development targets a stable findings contract.
 2. Implement the new package and command surface in a dedicated worktree.
-3. Add registry metadata, docs, signatures, and compatibility declarations together before publishing.
+3. Add registry metadata, docs, signing inputs, and compatibility declarations together before publishing.
 
 ## Open Questions
 

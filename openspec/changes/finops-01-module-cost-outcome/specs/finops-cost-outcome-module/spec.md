@@ -1,8 +1,10 @@
+# FinOps Cost and Outcome Module Specification
+
 ## ADDED Requirements
 
 ### Requirement: FinOps bundle registration
 
-The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-finops` that exposes the `finops` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for the paired core FinOps contracts.
+The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-finops` that exposes the `finops` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for the paired core FinOps evidence contract from `finops-01-telemetry-and-outcomes` (including any telemetry prerequisites coordinated with `telemetry-01-opentelemetry-default-on` as documented in `openspec/CHANGE_ORDER.md`).
 
 #### Scenario: Bundle manifest is loaded
 
@@ -11,7 +13,7 @@ The modules repository SHALL provide a signed official bundle named `nold-ai/spe
 
 ### Requirement: Collectors emit normalized FinOps evidence
 
-The bundle SHALL gather provider-reported or local fallback token/cost data and emit evidence files through the paired core FinOps evidence contract rather than a bundle-local schema.
+The bundle SHALL gather provider-reported or local fallback token/cost data and emit evidence files through the FinOps evidence contract from `finops-01-telemetry-and-outcomes` rather than a bundle-local schema.
 
 #### Scenario: Provider cost data is available
 
@@ -20,7 +22,7 @@ The bundle SHALL gather provider-reported or local fallback token/cost data and 
 
 ### Requirement: Outcome classification is deterministic
 
-The bundle SHALL classify sessions into the paired core outcome enum using explicit workflow signals and SHALL not require LLM-generated free-form summaries for outcome selection.
+The bundle SHALL classify sessions into the outcome enum published with `finops-01-telemetry-and-outcomes` using explicit workflow signals and SHALL not require LLM-generated free-form summaries for outcome selection.
 
 #### Scenario: A session leads to rule promotion
 

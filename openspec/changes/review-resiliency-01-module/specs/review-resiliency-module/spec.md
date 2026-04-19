@@ -1,8 +1,10 @@
+# Review Resiliency Module Specification
+
 ## ADDED Requirements
 
 ### Requirement: Resiliency review bundle registration
 
-The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-review-resiliency` that exposes the `review-resiliency` command, declares any required `bundle_dependencies`, and advertises a truthful `core_compatibility` range for the paired core resiliency contracts.
+The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-review-resiliency` that exposes the `review-resiliency` command, declares any required `bundle_dependencies`, and advertises a truthful `core_compatibility` range scoped to the paired core OpenSpec change `review-resiliency-01-contracts` (resiliency finding, scorer, and report contracts shipped from `specfact-cli`).
 
 #### Scenario: Bundle is installed for review execution
 
@@ -11,7 +13,7 @@ The modules repository SHALL provide a signed official bundle named `nold-ai/spe
 
 ### Requirement: Resiliency findings map to the shared review contracts
 
-The bundle SHALL translate static rule-pack results and any explicitly enabled probe outputs into the paired core resiliency finding and report models without defining a competing schema in the modules repository.
+The bundle SHALL translate static rule-pack results and any explicitly enabled probe outputs into the resiliency finding and report models defined by `review-resiliency-01-contracts` (imported from the `specfact_cli` package paths published with that change) without defining a competing schema in the modules repository.
 
 #### Scenario: Static checks produce resiliency findings
 

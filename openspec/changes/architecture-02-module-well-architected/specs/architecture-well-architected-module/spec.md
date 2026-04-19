@@ -1,3 +1,5 @@
+# Architecture Well-Architected Module Specification
+
 ## ADDED Requirements
 
 ### Requirement: Architecture bundle registration

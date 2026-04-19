@@ -27,6 +27,7 @@ _None._
 - Affected code: future `packages/specfact-pii-gdpr/`, detector adapters, and GDPR rule resources.
 - Affected docs: bundle overview and command-reference documentation for `privacy`.
 - Dependencies: paired core changes `security-01-unified-findings-model` and `security-02-eu-gdpr-baseline`.
+- **Blocked-by (policy-pack core)**: shared policy-pack semantics from `policy-02-packs-and-modes` (see umbrella [specfact-cli#511](https://github.com/nold-ai/specfact-cli/issues/511)) must land before this module can rely on policy-driven GDPR/EU packs instead of ad hoc flags.
 - Release impact: introduces a new signed official bundle and registry entry.
 
 ---

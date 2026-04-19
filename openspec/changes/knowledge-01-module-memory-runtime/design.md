@@ -1,4 +1,4 @@
-## Context
+# Context
 
 Knowledge distillation needs a module-side runtime that gives users a default, local-first place to store evidence, learnings, and rules. The paired core change defines the schema and protocol, but the modules repo owns the package, command surface, and filesystem behavior that make the feature usable without enterprise infrastructure or vector databases.
 

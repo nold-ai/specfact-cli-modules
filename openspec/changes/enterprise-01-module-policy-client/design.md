@@ -1,4 +1,4 @@
-## Context
+# Context
 
 Enterprise policy push belongs to a client-side module in this repo because the server component is explicitly out of scope for the five-pillar OpenSpec wave. This bundle needs to fetch signed payloads, cache them locally, and expose inspection commands while preserving the product’s no-op behavior for users who are not connected to an enterprise endpoint.
 

@@ -1,7 +1,7 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/security-02-module-license-compliance` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
-- [ ] 1.2 Confirm paired core security findings/policy changes are available and document the minimum required `core_compatibility`.
+- [ ] 1.2 Confirm paired core changes `security-01-unified-findings-model` and `security-02-eu-gdpr-baseline` are available, document the minimum required `core_compatibility` against both, and capture any sequencing assumptions in `TDD_EVIDENCE.md`.
 - [ ] 1.3 Before implementation, create or sync public GitHub tracking metadata for this change, including parent linkage, labels, project assignment, blockers, blocked-by relationships, and `in progress` concurrency checks.
 
 ## 2. Spec and failing-test preparation
@@ -14,9 +14,9 @@
 ## 3. Bundle implementation
 
 - [ ] 3.1 Scaffold `packages/specfact-license-compliance/` with manifest, Typer entrypoints, and bundled policy resources.
-- [ ] 3.2 Implement SBOM ingestion and SPDX normalization adapters that emit the shared core findings/report contracts.
+- [ ] 3.2 Implement SBOM ingestion and SPDX normalization adapters that emit the findings/report contracts from `security-01-unified-findings-model`.
 - [ ] 3.3 Integrate policy-mode handling, remediation messaging, and optional SBOM sharing hooks for adjacent security workflows.
-- [ ] 3.4 Update registry metadata, docs references, signatures, and any import allowlists required by the new bundle.
+- [ ] 3.4 Update registry metadata, docs references, signing inputs, and any import allowlists required by the new bundle.
 
 ## 4. Verification and delivery
 

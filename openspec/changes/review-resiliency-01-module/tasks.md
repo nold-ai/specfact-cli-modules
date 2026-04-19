@@ -1,7 +1,7 @@
-## 1. Branch and dependency guardrails
+# 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/review-resiliency-01-module` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
-- [ ] 1.2 Confirm paired core change `review-resiliency-01-contracts` is available for integration and document the minimum required `core_compatibility`.
+- [ ] 1.2 On the paired `nold-ai/specfact-cli` branch that will ship with this bundle, verify `openspec/changes/review-resiliency-01-contracts` exists (or capture the authoritative renamed folder), document the minimum required `core_compatibility`, and update `openspec/CHANGE_ORDER.md` plus section 3.2 references if the upstream change id differs; record the discovered import paths for the resiliency finding/report models in `TDD_EVIDENCE.md` before coding.
 - [ ] 1.3 Before implementation begins, create or sync public GitHub tracking metadata for this change, including parent linkage, labels, project assignment, blockers, blocked-by relationships, and `in progress` concurrency checks.
 
 ## 2. Spec and failing-test preparation
