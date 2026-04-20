@@ -13,12 +13,14 @@ import pytest
 from specfact_project.analyzers.code_analyzer import CodeAnalyzer
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _ensure_import_runtime_patches() -> None:
+def _apply_import_runtime_patches() -> None:
     """Match production import/sync commands: discovery policy patches are not applied at package import."""
     import specfact_project.import_runtime_patches as _import_runtime_patches
 
     _import_runtime_patches.apply_import_runtime_patches()
+
+
+_apply_import_runtime_patches()
 
 
 def _discover_code_files(*args, **kwargs):
@@ -98,6 +100,15 @@ def test_discover_code_files_entry_point_directory_inside_ignored_tree_is_includ
     ]
 
 
+def test_discover_code_files_rejects_entry_point_outside_repo(tmp_path: Path) -> None:
+    """Absolute entry points outside the repo should be rejected before traversal begins."""
+    outside_root = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside_root.mkdir()
+
+    with pytest.raises(ValueError, match="within repository"):
+        _discover_code_files(tmp_path, extensions={".py"}, entry_point=outside_root)
+
+
 def test_install_patch_forwards_keyword_arguments() -> None:
     """Patched callables must preserve normal Python binding rules for positional overrides."""
     import specfact_project.import_runtime_patches as patches
@@ -108,9 +119,6 @@ def test_install_patch_forwards_keyword_arguments() -> None:
         b: str
 
     calls: list[tuple[Any, ...]] = []
-
-    def original(x: int, y: str) -> str:
-        return f"{x}{y}"
 
     def runner(orig: Any, context: Any, args: _Bundle) -> str:
         calls.append((orig, context, args))
@@ -139,15 +147,14 @@ def test_install_patch_accepts_kwargs_only() -> None:
 
     calls: list[tuple[Any, ...]] = []
 
-    def original(a: int, b: str) -> str:
-        return f"{a}{b}"
-
     def runner(orig: Any, context: Any, args: _Bundle) -> str:
         calls.append((orig, context, args))
         return orig(args.a, args.b)
 
     class Target:
-        method = staticmethod(original)
+        @staticmethod
+        def method(a: int, b: str) -> str:
+            return f"{a}{b}"
 
     target = Target()
     patches._install_patch(target, "method", runner, lambda mapping: _Bundle(a=mapping["a"], b=mapping["b"]), "ctx")
@@ -180,6 +187,63 @@ def test_discover_code_files_warns_for_heavy_ignored_and_large_repo(tmp_path: Pa
     assert len(result.files) == 3
     assert any("node_modules" in warning for warning in result.warnings)
     assert any("Repository size may materially extend import duration" in warning for warning in result.warnings)
+
+
+def test_discover_code_files_warns_for_default_heavy_threshold(tmp_path: Path) -> None:
+    """Default heavy-artifact thresholds should remain reachable for a large ignored tree."""
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "real.py").write_text("class RealFeature:\n    pass\n", encoding="utf-8")
+
+    heavy_root = tmp_path / "node_modules"
+    for idx in range(500):
+        package_dir = heavy_root / f"pkg_{idx}"
+        package_dir.mkdir(parents=True, exist_ok=True)
+
+    result = _discover_code_files(tmp_path, extensions={".py"})
+
+    assert [path.relative_to(tmp_path).as_posix() for path in result.files] == ["src/real.py"]
+    assert any("node_modules" in warning for warning in result.warnings)
+
+
+def test_should_ignore_path_short_circuits_ignored_file_check(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Structural ignore checks should avoid file stats once a path is already ignored."""
+    module = importlib.import_module("specfact_project.utils.import_path_policy")
+    ignored_file_checked = False
+
+    def fake_is_ignored_file(path: Path) -> bool:
+        nonlocal ignored_file_checked
+        ignored_file_checked = True
+        return False
+
+    monkeypatch.setattr(module, "_is_ignored_file", fake_is_ignored_file)
+
+    ignored = module.should_ignore_path(tmp_path / ".venv" / "lib", tmp_path)
+
+    assert ignored is True
+    assert ignored_file_checked is False
+
+
+def test_build_discovery_forwards_include_tests(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Runtime patch discovery helper should preserve the caller's include-tests setting."""
+    import specfact_project.import_runtime_patches as patches
+
+    captured: dict[str, Any] = {}
+
+    def fake_discover_code_files(repo_root: Path, **kwargs: Any) -> Any:
+        captured["repo_root"] = repo_root
+        captured["kwargs"] = kwargs
+        return patches.ImportDiscoveryResult(files=[], warnings=[], ignored_counts={})
+
+    monkeypatch.setattr(patches, "discover_code_files", fake_discover_code_files)
+
+    patches._build_discovery(tmp_path, entry_point=Path("src"), include_tests=False)
+
+    assert captured["repo_root"] == tmp_path
+    assert captured["kwargs"]["entry_point"] == Path("src")
+    assert captured["kwargs"]["include_tests"] is False
 
 
 class _CapturingProgress:

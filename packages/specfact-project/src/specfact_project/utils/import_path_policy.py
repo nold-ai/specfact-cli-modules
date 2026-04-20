@@ -75,12 +75,26 @@ class _DiscoveryWalkContext:
     explicit_roots: frozenset[Path]
     normalized_extensions: frozenset[str]
     include_tests: bool
+    ignored_entry_sample_cap: int
+
+
+def _contains_any_part(parts: tuple[str, ...], candidates: frozenset[str] | tuple[str, ...]) -> bool:
+    return any(part in candidates for part in parts)
 
 
 def _resolve_entry_point(repo_root: Path, entry_point: Path | None) -> Path:
+    resolved_repo_root = repo_root.resolve()
     if entry_point is None:
-        return repo_root
-    return entry_point if entry_point.is_absolute() else (repo_root / entry_point).resolve()
+        return resolved_repo_root
+
+    resolved_entry_point = (
+        entry_point.resolve() if entry_point.is_absolute() else (resolved_repo_root / entry_point).resolve()
+    )
+    try:
+        resolved_entry_point.relative_to(resolved_repo_root)
+    except ValueError as exc:
+        raise ValueError(f"Entry point must resolve within repository: {resolved_entry_point}") from exc
+    return resolved_entry_point
 
 
 def _normalize_glob_pattern(pattern: str) -> str:
@@ -128,11 +142,11 @@ def _relative_to_explicit_root(path: Path, explicit_roots: Iterable[Path]) -> Pa
 
 
 def _contains_ignored_dir(parts: tuple[str, ...]) -> bool:
-    return any(part in DEFAULT_IGNORED_DIR_NAMES for part in parts)
+    return _contains_any_part(parts, frozenset(DEFAULT_IGNORED_DIR_NAMES))
 
 
 def _contains_ignored_segment(parts: tuple[str, ...]) -> bool:
-    return any(segment in parts for segment in DEFAULT_IGNORED_SEGMENTS)
+    return _contains_any_part(parts, DEFAULT_IGNORED_SEGMENTS)
 
 
 def _is_hidden_path(parts: tuple[str, ...], allow_hidden: bool) -> bool:
@@ -181,7 +195,7 @@ def load_specfactignore_patterns(repo_root: Path, ignore_file: Path | None = Non
     """Load repo-local ignore patterns from `.specfact/.specfactignore`."""
 
     path = ignore_file or (repo_root / _DEFAULT_SPECFACTIGNORE)
-    if not path.exists():
+    if not path.exists() or path.is_dir():
         return []
 
     patterns: list[str] = []
@@ -216,13 +230,11 @@ def should_ignore_path(
     explicit_relative = _relative_to_explicit_root(path, explicit_root_set)
     structural_path = explicit_relative if explicit_relative is not None else relative_path
     parts = tuple(structural_path.parts)
-    ignored_by_structure = any(
-        (
-            _contains_ignored_dir(parts),
-            _contains_ignored_segment(parts),
-            _is_hidden_path(parts, allow_hidden),
-            _is_ignored_file(path),
-        )
+    ignored_by_structure = (
+        _contains_ignored_dir(parts)
+        or _contains_ignored_segment(parts)
+        or _is_hidden_path(parts, allow_hidden)
+        or _is_ignored_file(path)
     )
     if ignored_by_structure:
         return True
@@ -251,18 +263,22 @@ def should_skip_path(
     )
 
 
-def _count_ignored_entries(path: Path) -> int:
-    if not path.exists() or not path.is_dir():
-        return 1
+def _sample_directory_entries(path: Path, sample_cap: int) -> int:
     count = 0
     try:
         with os.scandir(path) as entries:
-            for _ in entries:
-                count += 1
-                if count >= _MAX_IGNORED_ENTRY_COUNT_SAMPLE:
-                    break
+            for count, _ in enumerate(entries, start=1):
+                if count >= sample_cap:
+                    return count
     except OSError:
         return 1
+    return count
+
+
+def _count_ignored_entries(path: Path, sample_cap: int) -> int:
+    if not path.exists() or not path.is_dir():
+        return 1
+    count = _sample_directory_entries(path, sample_cap)
     return max(count, 1)
 
 
@@ -286,7 +302,9 @@ def _filter_dirnames(
             allow_hidden=context.allow_hidden,
             explicit_roots=context.explicit_roots,
         ):
-            _record_ignored_count(ignored_counts, dirname, _count_ignored_entries(child))
+            _record_ignored_count(
+                ignored_counts, dirname, _count_ignored_entries(child, context.ignored_entry_sample_cap)
+            )
             continue
         kept_dirnames.append(dirname)
     return kept_dirnames
@@ -382,6 +400,7 @@ def _discover_code_files_with_options(repo_root: Path, options: ImportDiscoveryO
         explicit_roots=frozenset(_explicit_root_set((root,) if options.entry_point is not None else ())),
         normalized_extensions=_normalize_extensions(options.extensions),
         include_tests=options.include_tests,
+        ignored_entry_sample_cap=max(_MAX_IGNORED_ENTRY_COUNT_SAMPLE, options.heavy_ignored_entry_threshold),
     )
 
     files: list[Path] = []

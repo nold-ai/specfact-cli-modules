@@ -33,8 +33,9 @@ def _build_discovery(
     repo_root: Path,
     *,
     entry_point: Path | None = None,
+    include_tests: bool = True,
 ) -> ImportDiscoveryResult:
-    return discover_code_files(repo_root, extensions={".py"}, entry_point=entry_point)
+    return discover_code_files(repo_root, extensions={".py"}, entry_point=entry_point, include_tests=include_tests)
 
 
 @dataclass(slots=True)
@@ -65,6 +66,7 @@ def _patched_rglob(
     repo_root: Path,
     *,
     entry_point: Path | None = None,
+    include_tests: bool = True,
     max_files: int | None = None,
 ) -> Iterator[None]:
     resolved_repo_root = repo_root.resolve()
@@ -87,6 +89,7 @@ def _patched_rglob(
                 resolved_repo_root,
                 extensions={extension},
                 entry_point=scoped_entry_point,
+                include_tests=include_tests,
                 max_files=max_files,
             )
             return iter(discovery.files)
@@ -159,20 +162,6 @@ def _run_patched_analyze_codebase(original_analyze_codebase: Any, commands: Any,
         )
 
 
-def _build_analyze_args(args: tuple[Any, ...]) -> _AnalyzeCodebaseArgs:
-    repo, entry_point, bundle, confidence, key_format, routing_result, *rest = args
-    incremental_callback = rest[0] if rest else None
-    return _AnalyzeCodebaseArgs(
-        repo=repo,
-        entry_point=entry_point,
-        bundle=bundle,
-        confidence=confidence,
-        key_format=key_format,
-        routing_result=routing_result,
-        incremental_callback=incremental_callback,
-    )
-
-
 def _build_analyze_args_from_mapping(arguments: dict[str, Any]) -> _AnalyzeCodebaseArgs:
     return _AnalyzeCodebaseArgs(
         repo=arguments["repo"],
@@ -200,10 +189,10 @@ def _install_patch(target: Any, attr_name: str, runner: Any, args_builder: Any, 
 
 
 def _run_patched_extract_relationships(original_extract_relationships: Any, commands: Any, args: _RelationshipArgs):
-    discovery = _build_discovery(args.repo, entry_point=args.entry_point)
+    discovery = _build_discovery(args.repo, entry_point=args.entry_point, include_tests=args.include_tests)
     for warning in discovery.warnings:
         commands.console.print(f"[yellow]⚠ {warning}[/yellow]")
-    with _patched_rglob(args.repo, entry_point=args.entry_point):
+    with _patched_rglob(args.repo, entry_point=args.entry_point, include_tests=args.include_tests):
         return original_extract_relationships(
             args.repo,
             args.entry_point,
@@ -214,30 +203,6 @@ def _run_patched_extract_relationships(original_extract_relationships: Any, comm
             args.should_regenerate_graph,
             args.include_tests,
         )
-
-
-def _build_relationship_args(args: tuple[Any, ...]) -> _RelationshipArgs:
-    (
-        repo,
-        entry_point,
-        bundle_dir,
-        incremental_changes,
-        plan_bundle,
-        should_regenerate_relationships,
-        should_regenerate_graph,
-        *rest,
-    ) = args
-    include_tests = bool(rest[0]) if rest else False
-    return _RelationshipArgs(
-        repo=repo,
-        entry_point=entry_point,
-        bundle_dir=bundle_dir,
-        incremental_changes=incremental_changes,
-        plan_bundle=plan_bundle,
-        should_regenerate_relationships=should_regenerate_relationships,
-        should_regenerate_graph=should_regenerate_graph,
-        include_tests=include_tests,
-    )
 
 
 def _build_relationship_args_from_mapping(arguments: dict[str, Any]) -> _RelationshipArgs:
