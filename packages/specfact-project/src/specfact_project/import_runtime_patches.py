@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -167,8 +167,11 @@ def _build_analyze_args(args: tuple[Any, ...]) -> _AnalyzeCodebaseArgs:
 def _install_patch(target: Any, attr_name: str, runner: Any, args_builder: Any, context: Any) -> None:
     original = getattr(target, attr_name)
 
-    def patched(*args: Any):
-        return runner(original, context, args_builder(args))
+    def patched(*args: Any, **kwargs: Any) -> Any:
+        built = args_builder(args)
+        if kwargs:
+            built = replace(built, **kwargs)
+        return runner(original, context, built)
 
     setattr(target, attr_name, patched)
 

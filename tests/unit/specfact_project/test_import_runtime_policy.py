@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import importlib
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -41,6 +43,49 @@ def test_discover_code_files_prunes_default_ignored_dirs_and_specfactignore(tmp_
 
     assert [path.relative_to(tmp_path).as_posix() for path in result.files] == ["src/real.py"]
     assert _count_python_files(tmp_path) == 1
+
+
+def test_discover_code_files_entry_point_still_applies_default_ignores(tmp_path: Path) -> None:
+    """Scoped discovery must not traverse default ignored dirs under the entry point."""
+    (tmp_path / "app" / "main.py").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "app" / "main.py").write_text("class App:\n    pass\n", encoding="utf-8")
+    noise = tmp_path / "app" / "node_modules" / "pkg" / "noise.py"
+    noise.parent.mkdir(parents=True, exist_ok=True)
+    noise.write_text("class Noise:\n    pass\n", encoding="utf-8")
+
+    result = _discover_code_files(tmp_path, extensions={".py"}, entry_point=Path("app"))
+
+    assert [path.relative_to(tmp_path).as_posix() for path in result.files] == ["app/main.py"]
+
+
+def test_install_patch_forwards_keyword_arguments() -> None:
+    """Patched callables must accept **kwargs and merge them into the built argument bundle."""
+    import specfact_project.import_runtime_patches as patches
+
+    @dataclass
+    class _Bundle:
+        a: int
+        b: str
+
+    calls: list[tuple[Any, ...]] = []
+
+    def original(x: int, y: str) -> str:
+        return f"{x}{y}"
+
+    def runner(orig: Any, context: Any, args: _Bundle) -> str:
+        calls.append((orig, context, args))
+        return orig(args.a, args.b)
+
+    class Target:
+        def method(self, a: int, b: str) -> str:
+            return f"{a}{b}"
+
+    target = Target()
+    patches._install_patch(target, "method", runner, lambda args: _Bundle(a=args[0], b=args[1]), "ctx")
+
+    assert target.method(1, "z", b="y") == "1y"
+    assert len(calls) == 1
+    assert calls[0][2].a == 1 and calls[0][2].b == "y"
 
 
 def test_discover_code_files_warns_for_heavy_ignored_and_large_repo(tmp_path: Path) -> None:

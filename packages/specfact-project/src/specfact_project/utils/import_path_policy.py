@@ -112,8 +112,8 @@ def _explicit_root_set(explicit_roots: Iterable[Path]) -> set[Path]:
 
 
 def _is_explicit_root_path(path: Path, explicit_roots: Iterable[Path]) -> bool:
-    resolved_path = path.resolve()
-    return any(resolved_path == root or root in resolved_path.parents for root in explicit_roots)
+    """True only for the explicit entry root(s), not descendants under that root."""
+    return path.resolve() in explicit_roots
 
 
 def _contains_ignored_dir(parts: tuple[str, ...]) -> bool:
