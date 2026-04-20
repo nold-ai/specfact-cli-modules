@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
+from typing import Any, cast
 
 from beartype import beartype
 from icontract import ensure, require
@@ -39,6 +40,7 @@ DEFAULT_IGNORED_SEGMENTS = (".eggs",)
 _DEFAULT_SPECFACTIGNORE = Path(".specfact") / ".specfactignore"
 _DEFAULT_HEAVY_IGNORED_ENTRY_THRESHOLD = 500
 _DEFAULT_LARGE_REPO_FILE_THRESHOLD = 1000
+_MAX_IGNORED_ENTRY_COUNT_SAMPLE = 100
 
 
 @dataclass(slots=True)
@@ -85,11 +87,19 @@ def _normalize_glob_pattern(pattern: str) -> str:
     normalized = pattern.strip()
     if not normalized:
         return ""
-    return normalized.lstrip("./")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    while normalized.startswith("/"):
+        normalized = normalized[1:]
+    return normalized
 
 
 def _as_tuple(patterns: Iterable[str]) -> tuple[str, ...]:
     return tuple(patterns)
+
+
+def _merged_ignore_patterns(repo_root: Path, ignore_patterns: tuple[str, ...]) -> tuple[str, ...]:
+    return _as_tuple(load_specfactignore_patterns(repo_root)) + ignore_patterns
 
 
 def _normalize_extensions(extensions: Iterable[str]) -> frozenset[str]:
@@ -108,8 +118,8 @@ def _explicit_root_set(explicit_roots: Iterable[Path]) -> set[Path]:
 
 
 def _is_explicit_root_path(path: Path, explicit_roots: Iterable[Path]) -> bool:
-    resolved_path = path.resolve()
-    return any(resolved_path == root or root in resolved_path.parents for root in explicit_roots)
+    """True only for the explicit entry root(s), not descendants under that root."""
+    return path.resolve() in explicit_roots
 
 
 def _contains_ignored_dir(parts: tuple[str, ...]) -> bool:
@@ -238,9 +248,18 @@ def should_skip_path(
 
 
 def _count_ignored_entries(path: Path) -> int:
-    if not path.exists():
+    if not path.exists() or not path.is_dir():
         return 1
-    return max(sum(1 for _ in path.rglob("*")), 1)
+    count = 0
+    try:
+        with os.scandir(path) as entries:
+            for _ in entries:
+                count += 1
+                if count >= _MAX_IGNORED_ENTRY_COUNT_SAMPLE:
+                    break
+    except OSError:
+        return 1
+    return max(count, 1)
 
 
 def _record_ignored_count(ignored_counts: dict[str, int], name: str, count: int) -> None:
@@ -292,7 +311,8 @@ def _build_warnings(
     for ignored_name, count in sorted(ignored_counts.items()):
         if count >= options.heavy_ignored_entry_threshold:
             warnings.append(
-                f"Ignored heavy artifact tree '{ignored_name}' ({count} matching entries) to avoid inflated import duration."
+                f"Ignored heavy artifact tree '{ignored_name}' ({count} top-level entries sampled) "
+                "to avoid inflated import duration."
             )
     if len(files) >= options.large_repo_file_threshold:
         warnings.append(
@@ -350,7 +370,7 @@ def _discover_code_files_with_options(repo_root: Path, options: ImportDiscoveryO
 
     resolved_repo_root = repo_root.resolve()
     root = _resolve_entry_point(resolved_repo_root, options.entry_point).resolve()
-    patterns = options.ignore_patterns or _as_tuple(load_specfactignore_patterns(resolved_repo_root))
+    patterns = _merged_ignore_patterns(resolved_repo_root, options.ignore_patterns)
     context = _DiscoveryWalkContext(
         repo_root=resolved_repo_root,
         patterns=patterns,
@@ -362,6 +382,18 @@ def _discover_code_files_with_options(repo_root: Path, options: ImportDiscoveryO
 
     files: list[Path] = []
     ignored_counts: dict[str, int] = {}
+
+    if root.is_file():
+        included = _process_candidate_file(
+            root,
+            context=context,
+            ignored_counts=ignored_counts,
+            files=files,
+            filename=root.name,
+        )
+        if included and options.max_files is not None and len(files) >= options.max_files:
+            return _finalize_discovery(files, ignored_counts, options)
+        return _finalize_discovery(files, ignored_counts, options)
 
     for current_dir, dirnames, filenames in os.walk(root):
         current_path = Path(current_dir)
@@ -388,21 +420,21 @@ def _discover_code_files_with_options(repo_root: Path, options: ImportDiscoveryO
 def discover_code_files(
     repo_root: Path,
     options: ImportDiscoveryOptions | None = None,
-    **kwargs: object,
+    **kwargs: Any,
 ) -> ImportDiscoveryResult:
     """Discover source files while pruning ignored directories before traversal."""
     if options is None:
         options = ImportDiscoveryOptions(
-            extensions=_normalize_extensions(kwargs.pop("extensions", ())),
-            entry_point=kwargs.pop("entry_point", None),
+            extensions=_normalize_extensions(cast(Iterable[str], kwargs.pop("extensions", ()))),
+            entry_point=cast(Path | None, kwargs.pop("entry_point", None)),
             include_tests=bool(kwargs.pop("include_tests", True)),
-            ignore_patterns=_as_tuple(kwargs.pop("ignore_patterns", ()) or ()),
+            ignore_patterns=_as_tuple(cast(Iterable[str], kwargs.pop("ignore_patterns", ()) or ())),
             allow_hidden=bool(kwargs.pop("allow_hidden", False)),
             heavy_ignored_entry_threshold=int(
                 kwargs.pop("heavy_ignored_entry_threshold", _DEFAULT_HEAVY_IGNORED_ENTRY_THRESHOLD)
             ),
             large_repo_file_threshold=int(kwargs.pop("large_repo_file_threshold", _DEFAULT_LARGE_REPO_FILE_THRESHOLD)),
-            max_files=kwargs.pop("max_files", None),
+            max_files=cast(int | None, kwargs.pop("max_files", None)),
         )
     elif kwargs:
         unexpected = ", ".join(sorted(str(key) for key in kwargs))

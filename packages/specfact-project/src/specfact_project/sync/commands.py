@@ -748,6 +748,10 @@ def sync_repository(
         if target is None:
             target = resolved_repo / ".specfact"
 
+        from specfact_project import import_runtime_patches as _import_runtime_patches
+
+        _import_runtime_patches.apply_import_runtime_patches()
+
         sync = RepositorySync(resolved_repo, target, confidence_threshold=confidence)
 
         if watch:

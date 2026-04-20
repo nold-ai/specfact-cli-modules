@@ -40,12 +40,17 @@ def resolve_project_templates_dir(
     if templates_dir is not None:
         return Path(templates_dir)
 
-    for root in _candidate_template_roots():
+    roots = _candidate_template_roots()
+    for root in roots:
         candidate = _target(root, subdir)
         if _matches_required_glob(candidate, required_glob):
             return candidate
 
-    return _target(_candidate_template_roots()[0], subdir)
+    checked = ", ".join(str(_target(r, subdir)) for r in roots)
+    raise RuntimeError(
+        f"No packaged template root matched required_glob={required_glob!r}; "
+        f"candidates (after subdir={subdir!r}): {checked}"
+    )
 
 
 @beartype
