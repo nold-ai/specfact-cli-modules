@@ -85,7 +85,11 @@ def _normalize_glob_pattern(pattern: str) -> str:
     normalized = pattern.strip()
     if not normalized:
         return ""
-    return normalized.lstrip("./")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    while normalized.startswith("/"):
+        normalized = normalized[1:]
+    return normalized
 
 
 def _as_tuple(patterns: Iterable[str]) -> tuple[str, ...]:
@@ -240,7 +244,14 @@ def should_skip_path(
 def _count_ignored_entries(path: Path) -> int:
     if not path.exists():
         return 1
-    return max(sum(1 for _ in path.rglob("*")), 1)
+    if not path.is_dir():
+        return 1
+    try:
+        with os.scandir(path) as entries:
+            count = sum(1 for _ in entries)
+    except OSError:
+        return 1
+    return max(count, 1)
 
 
 def _record_ignored_count(ignored_counts: dict[str, int], name: str, count: int) -> None:
