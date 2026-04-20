@@ -13,7 +13,6 @@ def _candidate_template_roots() -> tuple[Path, ...]:
     return (
         package_root / "resources" / "templates",
         package_root.parent.parent / "resources" / "templates",
-        Path(__file__).parent.parent.parent.parent / "resources" / "templates",
     )
 
 

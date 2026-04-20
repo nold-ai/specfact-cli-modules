@@ -117,17 +117,22 @@ def _explicit_root_set(explicit_roots: Iterable[Path]) -> set[Path]:
     return {root.resolve() for root in explicit_roots if root.exists()}
 
 
-def _is_explicit_root_path(path: Path, explicit_roots: Iterable[Path]) -> bool:
-    """True only for the explicit entry root(s), not descendants under that root."""
-    return path.resolve() in explicit_roots
+def _relative_to_explicit_root(path: Path, explicit_roots: Iterable[Path]) -> Path | None:
+    resolved_path = path.resolve()
+    for root in explicit_roots:
+        try:
+            return resolved_path.relative_to(root)
+        except ValueError:
+            continue
+    return None
 
 
 def _contains_ignored_dir(parts: tuple[str, ...]) -> bool:
     return any(part in DEFAULT_IGNORED_DIR_NAMES for part in parts)
 
 
-def _contains_ignored_segment(relative_path: Path) -> bool:
-    return any(segment in relative_path.as_posix() for segment in DEFAULT_IGNORED_SEGMENTS)
+def _contains_ignored_segment(parts: tuple[str, ...]) -> bool:
+    return any(segment in parts for segment in DEFAULT_IGNORED_SEGMENTS)
 
 
 def _is_hidden_path(parts: tuple[str, ...], allow_hidden: bool) -> bool:
@@ -208,14 +213,13 @@ def should_ignore_path(
         return True
 
     explicit_root_set = _explicit_root_set(explicit_roots)
-    if explicit_root_set and _is_explicit_root_path(path, explicit_root_set):
-        return False
-
-    parts = tuple(relative_path.parts)
+    explicit_relative = _relative_to_explicit_root(path, explicit_root_set)
+    structural_path = explicit_relative if explicit_relative is not None else relative_path
+    parts = tuple(structural_path.parts)
     ignored_by_structure = any(
         (
             _contains_ignored_dir(parts),
-            _contains_ignored_segment(relative_path),
+            _contains_ignored_segment(parts),
             _is_hidden_path(parts, allow_hidden),
             _is_ignored_file(path),
         )

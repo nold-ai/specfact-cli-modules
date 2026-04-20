@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -17,6 +18,8 @@ from specfact_project.utils.import_path_policy import ImportDiscoveryResult, dis
 
 
 _PATCH_APPLIED = False
+_PATCH_APPLY_LOCK = threading.RLock()
+_CONSOLE_PRINT_PATCH_LOCK = threading.RLock()
 _rglob_patch_lock = threading.RLock()
 
 
@@ -64,29 +67,30 @@ def _patched_rglob(
     entry_point: Path | None = None,
     max_files: int | None = None,
 ) -> Iterator[None]:
-    original_rglob = Path.rglob
     resolved_repo_root = repo_root.resolve()
     resolved_entry_point = entry_point.resolve() if entry_point else None
 
-    def patched(self: Path, pattern: str):  # type: ignore[override]
-        extension = _pattern_to_extension(pattern)
-        if extension is None:
-            return original_rglob(self, pattern)
-
-        resolved_self = self.resolve()
-        if resolved_self not in (resolved_repo_root, resolved_entry_point):
-            return original_rglob(self, pattern)
-
-        scoped_entry_point = None if resolved_self == resolved_repo_root else resolved_self
-        discovery = discover_code_files(
-            resolved_repo_root,
-            extensions={extension},
-            entry_point=scoped_entry_point,
-            max_files=max_files,
-        )
-        return iter(discovery.files)
-
     with _rglob_patch_lock:
+        original_rglob = Path.rglob
+
+        def patched(self: Path, pattern: str):  # type: ignore[override]
+            extension = _pattern_to_extension(pattern)
+            if extension is None:
+                return original_rglob(self, pattern)
+
+            resolved_self = self.resolve()
+            if resolved_self not in (resolved_repo_root, resolved_entry_point):
+                return original_rglob(self, pattern)
+
+            scoped_entry_point = None if resolved_self == resolved_repo_root else resolved_self
+            discovery = discover_code_files(
+                resolved_repo_root,
+                extensions={extension},
+                entry_point=scoped_entry_point,
+                max_files=max_files,
+            )
+            return iter(discovery.files)
+
         Path.rglob = patched  # type: ignore[assignment]
         try:
             yield
@@ -96,18 +100,19 @@ def _patched_rglob(
 
 @contextmanager
 def _patched_console_print(commands_module: Any) -> Iterator[None]:
-    original_print = commands_module.console.print
+    with _CONSOLE_PRINT_PATCH_LOCK:
+        original_print = commands_module.console.print
 
-    def patched(*args: Any, **kwargs: Any) -> None:
-        if args and isinstance(args[0], str) and "typically takes 2-5 minutes" in args[0]:
-            return
-        original_print(*args, **kwargs)
+        def patched(*args: Any, **kwargs: Any) -> None:
+            if args and isinstance(args[0], str) and "typically takes 2-5 minutes" in args[0]:
+                return
+            original_print(*args, **kwargs)
 
-    commands_module.console.print = patched
-    try:
-        yield
-    finally:
-        commands_module.console.print = original_print
+        commands_module.console.print = patched
+        try:
+            yield
+        finally:
+            commands_module.console.print = original_print
 
 
 def _emit_runtime_warnings(commands_module: Any, discovery: ImportDiscoveryResult) -> None:
@@ -168,11 +173,25 @@ def _build_analyze_args(args: tuple[Any, ...]) -> _AnalyzeCodebaseArgs:
     )
 
 
+def _build_analyze_args_from_mapping(arguments: dict[str, Any]) -> _AnalyzeCodebaseArgs:
+    return _AnalyzeCodebaseArgs(
+        repo=arguments["repo"],
+        entry_point=arguments["entry_point"],
+        bundle=arguments["bundle"],
+        confidence=arguments["confidence"],
+        key_format=arguments["key_format"],
+        routing_result=arguments["routing_result"],
+        incremental_callback=arguments.get("incremental_callback"),
+    )
+
+
 def _install_patch(target: Any, attr_name: str, runner: Any, args_builder: Any, context: Any) -> None:
     original = getattr(target, attr_name)
+    signature = inspect.signature(original)
 
     def patched(*args: Any, **kwargs: Any) -> Any:
-        built = args_builder(args)
+        bound = signature.bind_partial(*args, **kwargs)
+        built = args_builder(dict(bound.arguments))
         if kwargs:
             built = replace(built, **kwargs)
         return runner(original, context, built)
@@ -221,6 +240,19 @@ def _build_relationship_args(args: tuple[Any, ...]) -> _RelationshipArgs:
     )
 
 
+def _build_relationship_args_from_mapping(arguments: dict[str, Any]) -> _RelationshipArgs:
+    return _RelationshipArgs(
+        repo=arguments["repo"],
+        entry_point=arguments["entry_point"],
+        bundle_dir=arguments["bundle_dir"],
+        incremental_changes=arguments["incremental_changes"],
+        plan_bundle=arguments["plan_bundle"],
+        should_regenerate_relationships=arguments["should_regenerate_relationships"],
+        should_regenerate_graph=arguments["should_regenerate_graph"],
+        include_tests=bool(arguments.get("include_tests", False)),
+    )
+
+
 def _patch_load_codebase_context(analyze_agent: Any) -> None:
     original_load_codebase_context = analyze_agent.AnalyzeAgent._load_codebase_context
 
@@ -237,25 +269,32 @@ def _patch_load_codebase_context(analyze_agent: Any) -> None:
 def apply_import_runtime_patches(*, commands_module: Any | None = None) -> None:
     """Patch import-runtime entrypoints without modifying legacy high-complexity files."""
     global _PATCH_APPLIED
-    if _PATCH_APPLIED:
-        return
+    with _PATCH_APPLY_LOCK:
+        if _PATCH_APPLIED:
+            return
 
-    from specfact_project.agents import analyze_agent
-    from specfact_project.analyzers import code_analyzer
+        from specfact_project.agents import analyze_agent
+        from specfact_project.analyzers import code_analyzer
 
-    commands = commands_module
-    if commands is None:
-        commands = importlib.import_module("specfact_project.import_cmd.commands")
+        commands = commands_module
+        if commands is None:
+            commands = importlib.import_module("specfact_project.import_cmd.commands")
 
-    _patch_code_analyzer(code_analyzer)
-    _patch_count_python_files(commands)
-    _install_patch(commands, "_analyze_codebase", _run_patched_analyze_codebase, _build_analyze_args, commands)
-    _install_patch(
-        commands,
-        "_extract_relationships_and_graph",
-        _run_patched_extract_relationships,
-        _build_relationship_args,
-        commands,
-    )
-    _patch_load_codebase_context(analyze_agent)
-    _PATCH_APPLIED = True
+        _patch_code_analyzer(code_analyzer)
+        _patch_count_python_files(commands)
+        _install_patch(
+            commands,
+            "_analyze_codebase",
+            _run_patched_analyze_codebase,
+            _build_analyze_args_from_mapping,
+            commands,
+        )
+        _install_patch(
+            commands,
+            "_extract_relationships_and_graph",
+            _run_patched_extract_relationships,
+            _build_relationship_args_from_mapping,
+            commands,
+        )
+        _patch_load_codebase_context(analyze_agent)
+        _PATCH_APPLIED = True

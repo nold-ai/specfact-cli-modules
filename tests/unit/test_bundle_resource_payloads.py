@@ -151,9 +151,16 @@ def test_project_runtime_templates_resolve_at_runtime(tmp_path: Path) -> None:
     from specfact_project.generators.workflow_generator import WorkflowGenerator
 
     protocol = Protocol(
-        states=["draft", "done"],
+        states=["draft", "qa:review"],
         start="draft",
-        transitions=[Transition(from_state="draft", on_event="complete", to_state="done", guard=None)],
+        transitions=[
+            Transition(
+                from_state="draft",
+                on_event="complete:now",
+                to_state="qa:review",
+                guard="ready `#1`",
+            )
+        ],
     )
 
     protocol_output = tmp_path / "protocol.yaml"
@@ -166,6 +173,7 @@ def test_project_runtime_templates_resolve_at_runtime(tmp_path: Path) -> None:
     assert tr["from_state"] == protocol.transitions[0].from_state
     assert tr["on_event"] == protocol.transitions[0].on_event
     assert tr["to_state"] == protocol.transitions[0].to_state
+    assert tr["guard"] == protocol.transitions[0].guard
 
     workflow_output = tmp_path / "specfact-gate.yml"
     WorkflowGenerator().generate_github_action(workflow_output, repo_name="example/project")

@@ -80,8 +80,26 @@ def test_discover_code_files_entry_point_still_applies_default_ignores(tmp_path:
     assert [path.relative_to(tmp_path).as_posix() for path in result.files] == ["app/main.py"]
 
 
+def test_discover_code_files_entry_point_directory_inside_ignored_tree_is_included(tmp_path: Path) -> None:
+    """Explicit directory entry_point under an ignored tree should include descendants relative to that root."""
+    target = tmp_path / ".venv" / "lib" / "site-packages" / "pkg"
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "kept.py").write_text("class Kept:\n    pass\n", encoding="utf-8")
+    (target / "nested").mkdir()
+    (target / "nested" / "also_kept.py").write_text("class Nested:\n    pass\n", encoding="utf-8")
+    (target / "node_modules" / "ghost.py").parent.mkdir(parents=True, exist_ok=True)
+    (target / "node_modules" / "ghost.py").write_text("class Ghost:\n    pass\n", encoding="utf-8")
+
+    result = _discover_code_files(tmp_path, extensions={".py"}, entry_point=Path(".venv/lib/site-packages/pkg"))
+
+    assert [path.relative_to(tmp_path).as_posix() for path in result.files] == [
+        ".venv/lib/site-packages/pkg/kept.py",
+        ".venv/lib/site-packages/pkg/nested/also_kept.py",
+    ]
+
+
 def test_install_patch_forwards_keyword_arguments() -> None:
-    """Patched callables must accept **kwargs and merge them into the built argument bundle."""
+    """Patched callables must preserve normal Python binding rules for positional overrides."""
     import specfact_project.import_runtime_patches as patches
 
     @dataclass
@@ -103,11 +121,40 @@ def test_install_patch_forwards_keyword_arguments() -> None:
             return f"{a}{b}"
 
     target = Target()
-    patches._install_patch(target, "method", runner, lambda args: _Bundle(a=args[0], b=args[1]), "ctx")
+    patches._install_patch(target, "method", runner, lambda mapping: _Bundle(a=mapping["a"], b=mapping["b"]), "ctx")
 
-    assert target.method(1, "z", b="y") == "1y"
+    assert target.method(1, "y") == "1y"
     assert len(calls) == 1
     assert calls[0][2].a == 1 and calls[0][2].b == "y"
+
+
+def test_install_patch_accepts_kwargs_only() -> None:
+    """Patched callables must also support kwargs-only invocation."""
+    import specfact_project.import_runtime_patches as patches
+
+    @dataclass
+    class _Bundle:
+        a: int
+        b: str
+
+    calls: list[tuple[Any, ...]] = []
+
+    def original(a: int, b: str) -> str:
+        return f"{a}{b}"
+
+    def runner(orig: Any, context: Any, args: _Bundle) -> str:
+        calls.append((orig, context, args))
+        return orig(args.a, args.b)
+
+    class Target:
+        method = staticmethod(original)
+
+    target = Target()
+    patches._install_patch(target, "method", runner, lambda mapping: _Bundle(a=mapping["a"], b=mapping["b"]), "ctx")
+
+    assert target.method(a=2, b="q") == "2q"
+    assert len(calls) == 1
+    assert calls[0][2].a == 2 and calls[0][2].b == "q"
 
 
 def test_discover_code_files_warns_for_heavy_ignored_and_large_repo(tmp_path: Path) -> None:
