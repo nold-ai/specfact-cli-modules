@@ -102,6 +102,7 @@ These changes are the modules-side runtime companions to the five-pillar governa
 | Module | Order | Change folder | GitHub # | Blocked by |
 |--------|-------|---------------|----------|------------|
 | code-review + codebase | 01 | code-review-bug-finding-and-sidecar-venv-fix | [#174](https://github.com/nold-ai/specfact-cli-modules/issues/174) | Parent Feature: [#175](https://github.com/nold-ai/specfact-cli-modules/issues/175); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162) |
+| codebase + project-runtime | 02 | codebase-import-runtime-hardening | [#235](https://github.com/nold-ai/specfact-cli-modules/issues/235) | Parent Feature: [#234](https://github.com/nold-ai/specfact-cli-modules/issues/234); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); no known blockers |
 
 ### Module trust chain and CI security
 

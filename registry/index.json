@@ -2,9 +2,9 @@
   "modules": [
     {
       "id": "nold-ai/specfact-project",
-      "latest_version": "0.41.3",
-      "download_url": "modules/specfact-project-0.41.3.tar.gz",
-      "checksum_sha256": "a3df973c103e0708bef7a6ad23ead9b45e3354ba2ecb878f4d64e753e163a817",
+      "latest_version": "0.41.4",
+      "download_url": "modules/specfact-project-0.41.4.tar.gz",
+      "checksum_sha256": "52819c1c2b66efe53bc9780e7d3e37fd3b173e07460c891b7b20fce192fa5ab0",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
