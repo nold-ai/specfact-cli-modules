@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib
+import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
@@ -15,6 +17,7 @@ from specfact_project.utils.import_path_policy import ImportDiscoveryResult, dis
 
 
 _PATCH_APPLIED = False
+_rglob_patch_lock = threading.RLock()
 
 
 def _pattern_to_extension(pattern: str) -> str | None:
@@ -71,7 +74,7 @@ def _patched_rglob(
             return original_rglob(self, pattern)
 
         resolved_self = self.resolve()
-        if resolved_self != resolved_repo_root and resolved_self != resolved_entry_point:
+        if resolved_self not in (resolved_repo_root, resolved_entry_point):
             return original_rglob(self, pattern)
 
         scoped_entry_point = None if resolved_self == resolved_repo_root else resolved_self
@@ -83,11 +86,12 @@ def _patched_rglob(
         )
         return iter(discovery.files)
 
-    Path.rglob = patched  # type: ignore[assignment]
-    try:
-        yield
-    finally:
-        Path.rglob = original_rglob  # type: ignore[assignment]
+    with _rglob_patch_lock:
+        Path.rglob = patched  # type: ignore[assignment]
+        try:
+            yield
+        finally:
+            Path.rglob = original_rglob  # type: ignore[assignment]
 
 
 @contextmanager
@@ -230,7 +234,7 @@ def _patch_load_codebase_context(analyze_agent: Any) -> None:
 @beartype
 @require(lambda: True, "Patch application has no runtime preconditions")
 @ensure(lambda: _PATCH_APPLIED is True, "Patches must be marked applied after execution")
-def apply_import_runtime_patches() -> None:
+def apply_import_runtime_patches(*, commands_module: Any | None = None) -> None:
     """Patch import-runtime entrypoints without modifying legacy high-complexity files."""
     global _PATCH_APPLIED
     if _PATCH_APPLIED:
@@ -238,7 +242,10 @@ def apply_import_runtime_patches() -> None:
 
     from specfact_project.agents import analyze_agent
     from specfact_project.analyzers import code_analyzer
-    from specfact_project.import_cmd import commands
+
+    commands = commands_module
+    if commands is None:
+        commands = importlib.import_module("specfact_project.import_cmd.commands")
 
     _patch_code_analyzer(code_analyzer)
     _patch_count_python_files(commands)

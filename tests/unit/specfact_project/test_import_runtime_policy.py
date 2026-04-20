@@ -11,7 +11,14 @@ from typing import Any
 import pytest
 
 from specfact_project.analyzers.code_analyzer import CodeAnalyzer
-from specfact_project.import_cmd.commands import _count_python_files
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _ensure_import_runtime_patches() -> None:
+    """Match production import/sync commands: discovery policy patches are not applied at package import."""
+    import specfact_project.import_runtime_patches as _import_runtime_patches
+
+    _import_runtime_patches.apply_import_runtime_patches()
 
 
 def _discover_code_files(*args, **kwargs):
@@ -42,7 +49,22 @@ def test_discover_code_files_prunes_default_ignored_dirs_and_specfactignore(tmp_
     result = _discover_code_files(tmp_path, extensions={".py"})
 
     assert [path.relative_to(tmp_path).as_posix() for path in result.files] == ["src/real.py"]
-    assert _count_python_files(tmp_path) == 1
+    from specfact_project.import_cmd import commands as _import_commands
+
+    assert _import_commands._count_python_files(tmp_path) == 1
+
+
+def test_discover_code_files_entry_point_file_inside_ignored_tree_is_included(tmp_path: Path) -> None:
+    """Explicit file entry_point under a default-ignored tree should still be discovered."""
+    target = tmp_path / ".venv" / "lib" / "site-packages" / "target.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("class Scoped:\n    pass\n", encoding="utf-8")
+    (tmp_path / "src" / "other.py").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "src" / "other.py").write_text("class Other:\n    pass\n", encoding="utf-8")
+
+    result = _discover_code_files(tmp_path, extensions={".py"}, entry_point=Path(".venv/lib/site-packages/target.py"))
+
+    assert [path.relative_to(tmp_path).as_posix() for path in result.files] == [".venv/lib/site-packages/target.py"]
 
 
 def test_discover_code_files_entry_point_still_applies_default_ignores(tmp_path: Path) -> None:

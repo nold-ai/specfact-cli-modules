@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import multiprocessing
 import os
+import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -2498,6 +2499,10 @@ def from_code(
     from specfact_cli.cli import get_current_mode
     from specfact_cli.modes import get_router
     from specfact_cli.utils.structure import SpecFactStructure
+
+    from specfact_project import import_runtime_patches as _import_runtime_patches
+
+    _import_runtime_patches.apply_import_runtime_patches(commands_module=sys.modules[__name__])
 
     if is_debug_mode():
         debug_log_operation(

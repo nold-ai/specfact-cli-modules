@@ -158,11 +158,22 @@ def test_project_runtime_templates_resolve_at_runtime(tmp_path: Path) -> None:
 
     protocol_output = tmp_path / "protocol.yaml"
     ProtocolGenerator().generate(protocol, protocol_output)
-    assert "states:" in protocol_output.read_text(encoding="utf-8")
+    protocol_data = yaml.safe_load(protocol_output.read_text(encoding="utf-8"))
+    assert protocol_data["states"] == protocol.states
+    assert protocol_data["start"] == protocol.start
+    assert len(protocol_data["transitions"]) == 1
+    tr = protocol_data["transitions"][0]
+    assert tr["from_state"] == protocol.transitions[0].from_state
+    assert tr["on_event"] == protocol.transitions[0].on_event
+    assert tr["to_state"] == protocol.transitions[0].to_state
 
     workflow_output = tmp_path / "specfact-gate.yml"
     WorkflowGenerator().generate_github_action(workflow_output, repo_name="example/project")
-    assert "example/project" in workflow_output.read_text(encoding="utf-8")
+    workflow_data = yaml.safe_load(workflow_output.read_text(encoding="utf-8"))
+    validate_step = next(
+        step for step in workflow_data["jobs"]["specfact"]["steps"] if step.get("name") == "Run validation"
+    )
+    assert "example/project" in validate_step["run"]
 
     exporter = PersonaExporter()
     assert exporter.templates_dir.name == "persona"
