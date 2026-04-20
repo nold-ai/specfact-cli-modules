@@ -45,11 +45,14 @@ def _step_by_field(steps: list[Any], field: str, value: str) -> dict[str, Any]:
     raise AssertionError(f"No workflow step with {field}={value!r}")
 
 
-def _assert_pull_request_review_submitted(doc: dict[Any, Any]) -> None:
+def _assert_triggers_cover_review_and_pr_updates(doc: dict[Any, Any]) -> None:
     on = _workflow_on_section(doc)
     pr_review = on["pull_request_review"]
     assert isinstance(pr_review, dict)
     assert pr_review["types"] == ["submitted"]
+    pr = on["pull_request"]
+    assert isinstance(pr, dict)
+    assert pr["types"] == ["opened", "synchronize", "reopened", "ready_for_review"]
 
 
 def _assert_sign_job_has_no_top_level_if(doc: dict[Any, Any]) -> None:
@@ -68,10 +71,15 @@ def _assert_eligibility_gate_step(doc: dict[Any, Any]) -> None:
     run = gate["run"]
     assert isinstance(run, str)
     for needle in (
+        'event_name="${{ github.event_name }}"',
         "github.event.review.state",
         "github.event.review.user.author_association",
         "approved",
         "COLLABORATOR|MEMBER|OWNER",
+        "github.event.pull_request.number",
+        "latestReviews(first:100)",
+        "APPROVED",
+        "trusted_review_count",
         'echo "sign=false"',
         'echo "sign=true"',
         "github.event.pull_request.base.ref",
@@ -85,7 +93,7 @@ def _assert_concurrency_and_permissions(doc: dict[Any, Any]) -> None:
     conc = doc["concurrency"]
     assert isinstance(conc, dict)
     assert conc["cancel-in-progress"] is True
-    assert "${{ github.event.pull_request.number }}" in conc["group"]
+    assert "github.event.pull_request.number" in conc["group"]
 
     perms = doc["permissions"]
     assert isinstance(perms, dict)
@@ -94,7 +102,7 @@ def _assert_concurrency_and_permissions(doc: dict[Any, Any]) -> None:
 
 def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
     doc = _parsed_workflow()
-    _assert_pull_request_review_submitted(doc)
+    _assert_triggers_cover_review_and_pr_updates(doc)
     _assert_sign_job_has_no_top_level_if(doc)
     _assert_eligibility_gate_step(doc)
     _assert_concurrency_and_permissions(doc)
@@ -106,6 +114,7 @@ def test_sign_modules_on_approval_checkout_and_python() -> None:
     assert "github.event.pull_request.head.sha" in workflow
     assert "PR_HEAD_REF:" in workflow
     assert "PR_BASE_REF:" in workflow
+    assert "GH_TOKEN: ${{ github.token }}" in workflow
     assert 'python-version: "3.12"' in workflow or "python-version: '3.12'" in workflow
 
 
