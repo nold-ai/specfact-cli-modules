@@ -1,3 +1,5 @@
+# Design
+
 ## Context
 
 The five-pillar enterprise design keeps server contracts out of scope for this wave, but it still needs a client-side audit bundle that can prepare, queue, sign, and inspect governance events. This module must interoperate with the paired core audit schema and with the enterprise policy client while remaining safe for disconnected or partially configured environments.

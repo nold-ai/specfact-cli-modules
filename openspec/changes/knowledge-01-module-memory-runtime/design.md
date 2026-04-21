@@ -45,7 +45,7 @@ Knowledge distillation needs a module-side runtime that gives users a default, l
 
 ## Migration Plan
 
-1. Confirm the paired core knowledge schema and protocol are stable enough for runtime integration.
+1. Confirm the paired core knowledge schema and protocol are stable enough for runtime integration. **Note**: The `MemoryBackend` protocol must either be published in `specfact-cli` or added to the paired core change scope. This design document must explicitly point to the published spec (or pairing ticket) with the required stability guarantee before module implementation.
 2. Implement package structure, markdown-graph backend, and CLI entrypoints.
 3. Publish docs, registry metadata, signatures, and compatibility range together.
 

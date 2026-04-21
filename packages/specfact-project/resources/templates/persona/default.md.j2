@@ -17,12 +17,14 @@ _Generated from bundle `{{ bundle_name }}` on {{ created_at }}._
 {% if business %}
 ## Business
 
+{# Intentional machine-readable JSON embedding for downstream tooling #}
 {{ business | tojson(indent=2) }}
 
 {% endif %}
 {% if product %}
 ## Product
 
+{# Intentional machine-readable JSON embedding for downstream tooling #}
 {{ product | tojson(indent=2) }}
 
 {% endif %}

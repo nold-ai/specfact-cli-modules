@@ -16,7 +16,7 @@
 - [ ] 3.1 Scaffold `packages/specfact-finops/` with manifest, Typer entrypoints, provider adapters, and reporting helpers.
 - [ ] 3.2 Implement collectors that normalize cost/token data into the paired core FinOps evidence/report contracts.
 - [ ] 3.3 Implement deterministic outcome classification plus evidence write paths compatible with downstream knowledge and enterprise analytics.
-- [ ] 3.4 Update registry metadata, docs references, signatures, and any import allowlists required by the new bundle.
+- [ ] 3.4 Update registry metadata, docs references, and any import allowlists required by the new bundle. Note: signature artifacts are validated by CI gates and produced by publish automation; do not manually commit signature files.
 
 ## 4. Verification and delivery
 

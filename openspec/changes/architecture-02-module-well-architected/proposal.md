@@ -12,6 +12,15 @@ The core repo can define architecture review contracts, but the modules repo sti
 - **Introduce** report surfaces that map architecture findings into the paired core review contract and optionally emit evidence for the knowledge runtime.
 - **EXTEND**: Reserve manifest, registry, docs, and signing work for a new official architecture bundle.
 
+### Adapter Contract
+
+The normalized boundary between analyzers and the core review contract defines how architecture findings flow from packaged analyzers into the core review model:
+
+- **Required Core Findings Schema Fields**: `id`, `type`, `severity`, `description`, `source`, `timestamp`, `evidence_refs`
+- **Analyzer Output Mapping**: Outputs from packaged analyzers (dependency-graph, ADR traceability, interface-diff) map to normalized evidence references by populating `evidence_refs` with stable file paths, line ranges, and artifact identifiers
+- **Emission Mode**: Synchronous emission (findings emitted immediately after analyzer completion)
+- **Retry/Ordering Semantics**: Findings are emitted in deterministic analyzer execution order with no retry; failures in one analyzer do not block subsequent analyzers
+
 ## Capabilities
 
 ### New Capabilities
@@ -28,6 +37,7 @@ _None._
 - Affected docs: bundle overview and command-reference documentation for `architecture`.
 - Dependencies: paired core change `architecture-02-well-architected-review`; existing repo guidance from `ALLOWED_IMPORTS.md`.
 - Release impact: introduces a new signed official bundle and registry entry.
+- **Core Compatibility**: The reserved manifest `architecture-02-well-architected-review` specifies `core_compatibility: ">=1.0.0 <2.0.0"` in `module-package.yaml` registry metadata, declaring the required core version range for the paired architecture review contracts.
 
 ---
 

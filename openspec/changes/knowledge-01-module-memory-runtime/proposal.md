@@ -7,9 +7,9 @@ The core repo can define knowledge schemas and memory protocols, but the modules
 ## What Changes
 
 - **NEW**: Add a `specfact-knowledge` bundle with `memory` subcommands for logging, searching, promoting, and distilling.
-- **NEW**: Package the markdown-graph backend as the default runtime implementation for evidence, learnings, and rules under `.specfact/memory/`.
-- **NEW**: Define gitignore, repo-layout, and file-lifecycle expectations for evidence, learnings, rules, and generated graph metadata.
-- **NEW**: Add search and status surfaces that expose the paired core `MemoryBackend` behavior without requiring a vector store.
+- Package the markdown-graph backend as the default runtime implementation for evidence, learnings, and rules under `.specfact/memory/`.
+- Define gitignore, repo-layout, and file-lifecycle expectations for evidence, learnings, rules, and generated graph metadata.
+- Add search and status surfaces that expose the paired core `MemoryBackend` behavior without requiring a vector store.
 - **EXTEND**: Reserve manifest, registry, docs, and signing work for a first-party knowledge bundle.
 
 ## Capabilities
@@ -26,7 +26,7 @@ _None._
 
 - Affected code: future `packages/specfact-knowledge/`, filesystem backend helpers, and command resources.
 - Affected docs: bundle overview and command-reference documentation for `memory`.
-- Dependencies: paired core change `knowledge-01-distillation-engine`.
+- Dependencies: paired core change `knowledge-01-distillation-engine`. **Note**: The paired core change folder `openspec/changes/knowledge-01-distillation-engine` must be created and merged into `specfact-cli` before proceeding with module implementation.
 - Release impact: introduces a new signed official bundle and registry entry.
 
 ---

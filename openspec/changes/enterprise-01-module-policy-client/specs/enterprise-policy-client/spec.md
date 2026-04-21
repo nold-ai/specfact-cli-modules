@@ -1,3 +1,5 @@
+# Enterprise Policy Client
+
 ## ADDED Requirements
 
 ### Requirement: Enterprise policy bundle registration

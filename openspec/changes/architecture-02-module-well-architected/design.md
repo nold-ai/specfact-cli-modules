@@ -47,7 +47,7 @@ Architecture governance spans both shared contracts in `specfact-cli` and execut
 
 ## Migration Plan
 
-1. Confirm the paired core architecture review contract (`architecture-02-well-architected-review`) is stable enough for module integration.
+1. Confirm the paired core architecture review contract (`architecture-02-well-architected-review`) is stable enough for module integration. **Note**: A new core change `architecture-02-well-architected-review` must be created and synced into `specfact-cli` before module integration. This contract should clarify overlap with `architecture-01-solution-layer` regarding shared architecture review semantics and boundaries.
 2. Implement package structure, analyzer adapters, and rule-resource translation.
 3. Publish docs, registry metadata, signatures, and compatibility range together.
 

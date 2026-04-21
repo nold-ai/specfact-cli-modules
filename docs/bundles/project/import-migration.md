@@ -36,8 +36,8 @@ Import progress is now derived from the work discovered after ignore pruning, no
 
 - Default traversal skips hidden and heavyweight directories such as `.git/`, `.specfact/`, `.venv/`, `venv/`, `node_modules/`, `build/`, `dist/`, and `__pycache__/`.
 - Repo-local overrides can be added in `.specfact/.specfactignore`.
-- When import encounters unusually large ignored artifact trees or a very large filtered repository, it emits warnings instead of promising that the run will finish in a specific number of minutes.
-- Remaining time is based on processed-versus-discovered work at the current runtime rate, so early estimates should be treated as provisional on very large repositories.
+- When import encounters ignored artifact trees with >10,000 entries or repositories larger than ~100,000 files, ~10 GB of repository data, or >100,000 commits, it emits warnings instead of promising that the run will finish in a specific number of minutes.
+- Remaining time is based on processed-versus-discovered work at the current runtime rate, so estimates remain provisional for repos above those thresholds.
 
 ### Repo-local Ignore Overrides
 

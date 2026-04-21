@@ -49,10 +49,10 @@ def _assert_triggers_cover_review_and_pr_updates(doc: dict[Any, Any]) -> None:
     on = _workflow_on_section(doc)
     pr_review = on["pull_request_review"]
     assert isinstance(pr_review, dict)
-    assert pr_review["types"] == ["submitted"]
+    assert set(pr_review["types"]) == {"submitted"}
     pr = on["pull_request"]
     assert isinstance(pr, dict)
-    assert pr["types"] == ["opened", "synchronize", "reopened", "ready_for_review"]
+    assert set(pr["types"]) == {"opened", "synchronize", "reopened", "ready_for_review"}
 
 
 def _assert_sign_job_has_no_top_level_if(doc: dict[Any, Any]) -> None:

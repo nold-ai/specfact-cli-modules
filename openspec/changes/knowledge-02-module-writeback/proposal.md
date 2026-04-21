@@ -12,6 +12,13 @@ Distilled rules only create leverage if they are written back into the instructi
 - **NEW**: Normalize selected rule metadata into deterministic writeback manifests that can be audited later.
 - **EXTEND**: Reserve manifest, registry, docs, and signing work for a first-party writeback bundle.
 
+### Writeback Interface
+
+The adapter boundary between writeback commands and the core memory runtime defines how approved rules are projected into instruction surfaces:
+
+- **Adapter Method Signature**: Each writeback adapter implements a standard method accepting rule identifiers, destination path, and dry-run flag
+- **Manifest Schema Fields**: `ruleIds` (list of rule identifiers), `ruleVersions` (semantic versions or commit hashes), `inputDigest` (hash of source rules), `outputDigest` (hash of generated output), `timestamp` (ISO 8601 generation time), `adapterId` (writeback target type), `destination` (file path or endpoint), `previewHash` (preview content hash for verification), `dryRunFlag` (boolean indicating preview-only mode)
+
 ## Capabilities
 
 ### New Capabilities
@@ -28,6 +35,7 @@ _None._
 - Affected docs: bundle overview and command-reference documentation for writeback commands.
 - Dependencies: paired core change `knowledge-02-preflight-context-assembly`; module dependency `knowledge-01-module-memory-runtime`.
 - Release impact: introduces a new signed official bundle and registry entry.
+- **Reserved Manifest Metadata**: The bundle declares `bundle_dependencies: ["knowledge-01-module-memory-runtime"]` with semver range `">=1.0.0 <2.0.0"`, and `core_compatibility: ">=1.0.0 <2.0.0"` for the paired core writeback contracts in `module-package.yaml`.
 
 ---
 

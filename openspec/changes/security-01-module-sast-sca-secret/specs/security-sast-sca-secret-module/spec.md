@@ -4,7 +4,7 @@
 
 ### Requirement: Security bundle registration
 
-The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-security` that exposes the `security` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` entries for `security-01-unified-findings-model` (shared security findings/report contracts) and `policy-02-packs-and-modes` (shared policy and enforcement-mode semantics).
+The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-security` that exposes the `security` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` entries. **Note**: If `security-01-unified-findings-model` is not an accepted core contract in `specfact-cli`, this requirement must be updated. For `policy-02-packs-and-modes`: if it ships as a separate module bundle, it should be declared under `bundle_dependencies` (not `core_compatibility`); if it remains a core contract, it belongs in `core_compatibility`.
 
 #### Scenario: Bundle manifest is loaded
 

@@ -12,6 +12,17 @@ License governance needs a focused runtime bundle that evaluates SBOM and SPDX l
 - **NEW**: Define bundle manifest, registry, docs, and signing expectations for a first-party official license-compliance package.
 - **EXTEND**: Reserve compatibility hooks so this bundle can share generated SBOM data with the broader security bundle without forcing a single runtime package.
 
+### Adapter Contract
+
+The adapter boundary between SBOM/license analyzers and the core security/license findings model specifies how license evaluation flows into the normalized findings contract:
+
+- **Core Findings Schema Fields**: Same as `security-01-unified-findings-model` (reused for license findings): `id`, `type`, `severity`, `description`, `source`, `timestamp`, `evidence_refs`
+- **SPDX-to-Normalized Finding Mapping Rules**:
+  - Denied SPDX identifier → `severity: "high"`, `type: "license-violation"`
+  - Allowed SPDX identifier → `severity: "info"`, `type: "license-compliant"`
+  - Exception-based allow → `severity: "medium"`, `type: "license-exception-applied"`
+  - Unknown/missing license → `severity: "medium"`, `type: "license-unknown"`
+
 ## Capabilities
 
 ### New Capabilities
@@ -20,13 +31,19 @@ License governance needs a focused runtime bundle that evaluates SBOM and SPDX l
 
 ### Modified Capabilities
 
-_None._
+_None.
+
+### Inter-Bundle Compatibility
+
+- **Core Compatibility Version Range**: `core_compatibility: ">=1.0.0 <2.0.0"` for `security-01-unified-findings-model` in `module-package.yaml`
+- **Inter-Bundle Hook Interface**: The bundle can optionally emit SBOM artifacts to a shared location (e.g., `.specfact/sbom/`) that the `security` bundle can consume, enabling SBOM reuse without runtime coupling
+- **Bundle Dependencies Declaration**: If shared policy semantics from `policy-02-packs-and-modes` are required, declare it under `bundle_dependencies` (not `core_compatibility`)
 
 ## Impact
 
 - Affected code: future `packages/specfact-license-compliance/`, SBOM ingestion helpers, and policy mapping resources.
 - Affected docs: bundle overview and command-reference documentation for `license`.
-- Dependencies: paired core changes `security-01-unified-findings-model` and `security-02-eu-gdpr-baseline` for shared policy-pack semantics where relevant.
+- Dependencies: paired core changes `security-01-unified-findings-model` and shared policy-pack semantics from `policy-02-packs-and-modes` (not `security-02-eu-gdpr-baseline`—the latter is for GDPR/PII detection, not license policy). **Note**: If the intention was to reference shared policy-pack semantics, replace `security-02-eu-gdpr-baseline` with `policy-02-packs-and-modes`. If distinct semantics are intended, add a clarifying sentence.
 - Release impact: introduces a new signed official bundle and registry entry.
 
 ---

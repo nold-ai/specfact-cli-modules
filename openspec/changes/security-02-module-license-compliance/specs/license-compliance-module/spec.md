@@ -4,7 +4,7 @@
 
 ### Requirement: License compliance bundle registration
 
-The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-license-compliance` that exposes the `license` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for `security-01-unified-findings-model` (shared security findings/report contracts reused for license findings).
+The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-license-compliance` that exposes the `license` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for `security-01-unified-findings-model` (shared security findings/report contracts reused for license findings). **Note**: Confirm the core change `security-01-unified-findings-model` status in `specfact-cli` and add appropriate notes about `core_compatibility` version requirements before implementation.
 
 #### Scenario: Bundle manifest is loaded
 

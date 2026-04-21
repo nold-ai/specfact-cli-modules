@@ -19,6 +19,10 @@ Security analysis in the modules repo must package third-party scanners while de
 
 ## Decisions
 
+### Command Surface
+
+The bundle exposes a single `security` command that orchestrates all four scanner classes (SAST, SCA, SBOM, secret scanning). Users can enable/disable specific scanner classes via command flags or profile configuration, but all scanners map to the unified command surface rather than separate per-scanner commands.
+
 ### 1. Keep broad security orchestration in one bundle
 
 - **Decision**: SAST, SCA, SBOM, and secret scanning ship together in `specfact-security`.
@@ -48,6 +52,11 @@ Security analysis in the modules repo must package third-party scanners while de
 1. Land the paired core findings model so adapters target a stable schema.
 2. Implement the new package and adapters with fixture-based tests.
 3. Add registry entry, docs, signatures, and compatibility range as one release unit.
+
+**Core Compatibility Details**:
+- **Version Constraint Format**: `core_compatibility: ">=1.0.0 <2.0.0"` in `module-package.yaml`
+- **Initial Core Contract Target Versions**: `security-01-unified-findings-model` (required), `policy-02-packs-and-modes` (required)
+- **Bundle Dependencies**: `policy-02-packs-and-modes` should be declared as a module-level bundle dependency (not core_compatibility) if it ships as a separate bundle; if it remains a core contract, it belongs in `core_compatibility`
 
 ## Open Questions
 

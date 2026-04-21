@@ -4,7 +4,7 @@
 
 ### Requirement: Enterprise audit bundle registration
 
-The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-enterprise-audit` that exposes audit-related commands and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` entries that explicitly target the paired core change `enterprise-02-rbac-and-audit-trail` (enterprise RBAC, audit trail, and audit-event contracts).
+The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-enterprise-audit` that exposes audit-related commands and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` entries. **Note**: The paired core change `enterprise-02-rbac-and-audit-trail` (enterprise RBAC, audit trail, and audit-event contracts) does not currently exist; implementation is blocked until the paired core change is proposed and merged into `specfact-cli`.
 
 #### Scenario: Bundle manifest is loaded
 

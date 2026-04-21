@@ -1,3 +1,5 @@
+# Design: knowledge-02-module-writeback
+
 ## Context
 
 The knowledge runtime stores and distills evidence, but teams also need a controlled way to project approved rules into repo-visible instruction surfaces. This change defines a separate bundle that keeps writeback opt-in, previewable, and traceable while depending on the core preflight/change-assembly work and the base knowledge runtime.

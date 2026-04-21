@@ -1,3 +1,5 @@
+# Tasks: codebase-import-runtime-hardening
+
 ## 1. GitHub readiness and change scaffolding
 
 - [ ] 1.1 Verify `.specfact/backlog/github_hierarchy_cache.md` is fresh, confirm the new change fits the `specfact code` epic, and create or sync the parent Feature plus change issue with labels, project assignment, blockers, and concurrency checks recorded.

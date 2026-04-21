@@ -1,3 +1,5 @@
+# Design
+
 ## Context
 
 `specfact code import` currently computes work by calling `Path.rglob()` in several separate phases and only filters many paths after discovery. That means virtual environments, build outputs, hidden tool directories, and other heavy trees still contribute traversal cost and often distort progress totals. In parallel, `specfact-project` generators load Jinja2 templates from `resources/templates`, but the referenced template files are absent from the bundle payload and the loader logic is less resilient than the prompt/resource patterns already used elsewhere in the repo.
@@ -22,6 +24,7 @@ This change spans multiple runtime surfaces in `specfact-project` and affects th
 ## Decisions
 
 ### Decision 1: Introduce a shared import path policy helper
+
 Create a small shared helper in `specfact_project` that evaluates:
 - built-in excluded directory names and artifact patterns,
 - hidden dot-prefixed names by default,
@@ -36,6 +39,7 @@ Alternative considered:
 - Keep per-callsite substring filters and just add more names. Rejected because it still pays the full traversal cost and keeps totals inconsistent.
 
 ### Decision 2: Switch the relevant scans to pruned traversal
+
 Replace raw `rglob()` use in the import runtime hot paths with a helper that walks directories while mutating `dirnames` to skip ignored trees early.
 
 Why:
@@ -46,6 +50,7 @@ Alternative considered:
 - Keep `rglob()` and filter after discovery. Rejected because it does not solve the filesystem overhead that triggered the user report.
 
 ### Decision 3: Derive ETA from live filtered work
+
 Progress reporting should use the filtered candidate count as the total work and update ETA from processed-versus-discovered progress. Large-artifact warnings should appear when ignored or scanned directories cross configurable thresholds so users understand why the import is slow.
 
 Why:
@@ -53,9 +58,10 @@ Why:
 - Warning users about heavyweight artifacts is more actionable than promising a fixed duration.
 
 Alternative considered:
-- Only change the user-facing wording from “about 5 minutes.” Rejected because runtime feedback would still remain low-signal on large repos.
+- Only change the user-facing wording from "about 5 minutes." Rejected because runtime feedback would still remain low-signal on large repos.
 
 ### Decision 4: Package generator templates as first-class bundle resources
+
 Add the required `.j2` files under `packages/specfact-project/resources/templates/` and resolve them via a helper that checks packaged resource roots first and development roots second. Mirror the resilience pattern already used in `persona_exporter.py`, but centralize it to avoid more one-off path math.
 
 Why:

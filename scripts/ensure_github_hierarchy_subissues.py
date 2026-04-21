@@ -46,9 +46,12 @@ def _gh_graphql(*, query: str, variables: dict[str, Any], timeout: int = _GH_GRA
             continue
         if isinstance(value, list):
             for item in value:
-                args.extend(["-F", f"{key}[]={item}"])
+                args.extend(["-f", f"{key}[]={item}"])
         else:
-            args.extend(["-F", f"{key}={value}"])
+            if isinstance(value, str):
+                args.extend(["-f", f"{key}={value}"])
+            else:
+                args.extend(["-F", f"{key}={value}"])
     try:
         proc = subprocess.run(
             args,
@@ -65,9 +68,14 @@ def _gh_graphql(*, query: str, variables: dict[str, Any], timeout: int = _GH_GRA
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "gh graphql failed")
     payload = json.loads(proc.stdout)
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"gh graphql returned non-dict payload: {proc.stdout}")
     if "errors" in payload:
         raise RuntimeError(json.dumps(payload["errors"], indent=2))
-    return payload["data"]
+    data = payload.get("data")
+    if data is None:
+        raise RuntimeError(f"gh graphql returned no data field: {proc.stdout}")
+    return data
 
 
 def _issue_node_id(*, owner: str, name: str, number: int) -> str:
@@ -145,8 +153,16 @@ def main(argv: list[str] | None = None) -> int:
     skipped = 0
     would_add = 0
 
+    # Simple in-memory caches
+    subissue_cache: dict[int, set[int]] = {}
+    node_id_cache: dict[int, str] = {}
+
     for parent_num, child_num in DEFAULT_EDGES:
-        existing = _subissue_numbers(owner=owner, name=name, parent_number=parent_num)
+        # Check cache for sub-issue numbers
+        if parent_num not in subissue_cache:
+            subissue_cache[parent_num] = _subissue_numbers(owner=owner, name=name, parent_number=parent_num)
+        existing = subissue_cache[parent_num]
+
         if child_num in existing:
             skipped += 1
             continue
@@ -154,8 +170,16 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write(f"[dry-run] would addSubIssue #{child_num} under #{parent_num}\n")
             would_add += 1
             continue
-        parent_id = _issue_node_id(owner=owner, name=name, number=parent_num)
-        child_id = _issue_node_id(owner=owner, name=name, number=child_num)
+
+        # Check cache for node IDs
+        if parent_num not in node_id_cache:
+            node_id_cache[parent_num] = _issue_node_id(owner=owner, name=name, number=parent_num)
+        parent_id = node_id_cache[parent_num]
+
+        if child_num not in node_id_cache:
+            node_id_cache[child_num] = _issue_node_id(owner=owner, name=name, number=child_num)
+        child_id = node_id_cache[child_num]
+
         _add_sub_issue(parent_id=parent_id, child_id=child_id)
         sys.stdout.write(f"addSubIssue #{child_num} -> parent #{parent_num}\n")
         added += 1

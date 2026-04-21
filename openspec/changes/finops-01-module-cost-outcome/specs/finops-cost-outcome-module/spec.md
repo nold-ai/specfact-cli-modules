@@ -4,7 +4,7 @@
 
 ### Requirement: FinOps bundle registration
 
-The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-finops` that exposes the `finops` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for the paired core FinOps evidence contract from `finops-01-telemetry-and-outcomes` (including any telemetry prerequisites coordinated with `telemetry-01-opentelemetry-default-on` as documented in `openspec/CHANGE_ORDER.md`).
+The modules repository SHALL provide a signed official bundle named `nold-ai/specfact-finops` that exposes the `finops` command and declares truthful bundle dependencies, pip dependencies, and `core_compatibility` for the paired core FinOps evidence contract from `finops-01-telemetry-and-outcomes`. The bundle manifest SHALL explicitly list `telemetry-01-opentelemetry-default-on` as a sequencing prerequisite in the manifest's `core_compatibility` or dependency metadata fields, as documented in `openspec/CHANGE_ORDER.md`.
 
 #### Scenario: Bundle manifest is loaded
 

@@ -1,7 +1,7 @@
 # 1. Branch and dependency guardrails
 
 - [ ] 1.1 Create `chore/security-01-module-sast-sca-secret` in a dedicated worktree from `origin/dev` and bootstrap the worktree environment.
-- [ ] 1.2 Confirm paired core changes `security-01-unified-findings-model` and `policy-02-packs-and-modes` are available, document the minimum required `core_compatibility` against both, and record any sequencing notes in `TDD_EVIDENCE.md`.
+- [ ] 1.2 Verify that both referenced core changes (`security-01-unified-findings-model` and `policy-02-packs-and-modes`) exist and are merged in `specfact-cli` before binding core compatibility. Document the minimum required `core_compatibility` versions in `TDD_EVIDENCE.md` and record any sequencing notes.
 - [ ] 1.3 Before implementation, create or sync public GitHub tracking metadata for this change, including parent linkage, labels, project assignment, blockers, blocked-by relationships, and `in progress` concurrency checks.
 
 ## 2. Spec and failing-test preparation

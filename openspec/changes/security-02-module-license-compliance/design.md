@@ -1,3 +1,5 @@
+# Design: security-02-module-license-compliance
+
 ## Context
 
 License governance sits at the boundary of supply-chain security and legal compliance, but the runtime bundle needs to stay narrow enough that organizations can adopt it independently. This change defines the modules-side package that consumes SBOM data, evaluates SPDX license identifiers against policy, and reports findings through the shared core contracts.
