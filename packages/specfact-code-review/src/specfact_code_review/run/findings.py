@@ -31,6 +31,39 @@ PASS_WITH_ADVISORY = "PASS_WITH_ADVISORY"
 FAIL = "FAIL"
 
 
+class EvidenceRef(BaseModel):
+    """Structured representation of supplemental evidence reference."""
+
+    path: str | None = Field(default=None, description="Stable file path reference.")
+    start_line: int | None = Field(default=None, ge=1, description="Start line number (1-based).")
+    end_line: int | None = Field(default=None, ge=1, description="End line number (1-based).")
+    artifact_id: str | None = Field(default=None, description="Artifact identifier.")
+    description: str | None = Field(default=None, description="Description of the evidence.")
+
+    @field_validator("path", "artifact_id", "description")
+    @classmethod
+    def _validate_non_empty_if_present(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("value must not be empty if provided")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_invariants(self) -> EvidenceRef:
+        # At least one locator must be present
+        if self.path is None and self.artifact_id is None and self.start_line is None:
+            raise ValueError("at least one locator (path, artifact_id, or start_line) must be provided")
+
+        # If end_line is provided, start_line must be provided
+        if self.end_line is not None and self.start_line is None:
+            raise ValueError("start_line must be provided if end_line is present")
+
+        # If both start_line and end_line are provided, end_line >= start_line
+        if self.start_line is not None and self.end_line is not None and self.end_line < self.start_line:
+            raise ValueError("end_line must be greater than or equal to start_line")
+
+        return self
+
+
 class ReviewFinding(BaseModel):
     """Structured representation of a code-review finding."""
 
@@ -56,6 +89,10 @@ class ReviewFinding(BaseModel):
     line: int = Field(..., ge=1, description="1-based source line number.")
     message: str = Field(..., description="User-facing finding message.")
     fixable: bool = Field(default=False, description="Whether the finding can be automatically fixed.")
+    evidence_refs: list[EvidenceRef] | None = Field(
+        default=None,
+        description="Optional supplemental references with stable file paths, line ranges, or artifact identifiers.",
+    )
 
     @field_validator("tool", "rule", "file", "message")
     @classmethod

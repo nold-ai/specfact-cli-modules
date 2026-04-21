@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from specfact_cli.models.protocol import Protocol, Transition
 from specfact_cli.utils import ide_setup
 
 from tests.unit._script_test_utils import load_module_from_path
@@ -51,6 +52,12 @@ _FIELD_MAPPING_SEEDS = (
     "ado_scrum.yaml",
     "github_custom.yaml",
 )
+
+_PROJECT_RUNTIME_TEMPLATES = (
+    "protocol.yaml.j2",
+    "github-action.yml.j2",
+)
+_PROJECT_PERSONA_TEMPLATES = ("default.md.j2",)
 
 _IGNORED_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
 _IGNORED_SUFFIXES = {".pyc", ".pyo"}
@@ -128,6 +135,59 @@ def test_module_package_layout_matches_init_ide_resource_contract() -> None:
     assert (codebase / "resources" / "prompts" / "specfact.01-import.md").is_file()
 
 
+def test_project_bundle_packages_runtime_generator_templates() -> None:
+    module_root = REPO_ROOT / "packages" / "specfact-project"
+    for name in _PROJECT_RUNTIME_TEMPLATES:
+        path = module_root / "resources" / "templates" / name
+        assert path.is_file(), f"missing project runtime template {path}"
+    for name in _PROJECT_PERSONA_TEMPLATES:
+        path = module_root / "resources" / "templates" / "persona" / name
+        assert path.is_file(), f"missing project persona template {path}"
+
+
+def test_project_runtime_templates_resolve_at_runtime(tmp_path: Path) -> None:
+    from specfact_project.generators.persona_exporter import PersonaExporter
+    from specfact_project.generators.protocol_generator import ProtocolGenerator
+    from specfact_project.generators.workflow_generator import WorkflowGenerator
+
+    protocol = Protocol(
+        states=["draft", "qa:review"],
+        start="draft",
+        transitions=[
+            Transition(
+                from_state="draft",
+                on_event="complete:now",
+                to_state="qa:review",
+                guard="ready `#1`",
+            )
+        ],
+    )
+
+    protocol_output = tmp_path / "protocol.yaml"
+    ProtocolGenerator().generate(protocol, protocol_output)
+    protocol_data = yaml.safe_load(protocol_output.read_text(encoding="utf-8"))
+    assert protocol_data["states"] == protocol.states
+    assert protocol_data["start"] == protocol.start
+    assert len(protocol_data["transitions"]) == 1
+    tr = protocol_data["transitions"][0]
+    assert tr["from_state"] == protocol.transitions[0].from_state
+    assert tr["on_event"] == protocol.transitions[0].on_event
+    assert tr["to_state"] == protocol.transitions[0].to_state
+    assert tr["guard"] == protocol.transitions[0].guard
+
+    workflow_output = tmp_path / "specfact-gate.yml"
+    WorkflowGenerator().generate_github_action(workflow_output, repo_name="example/project")
+    workflow_data = yaml.safe_load(workflow_output.read_text(encoding="utf-8"))
+    validate_step = next(
+        step for step in workflow_data["jobs"]["specfact"]["steps"] if step.get("name") == "Run validation"
+    )
+    assert "example/project" in validate_step["run"]
+
+    exporter = PersonaExporter()
+    assert exporter.templates_dir.name == "persona"
+    assert (exporter.templates_dir / "default.md.j2").is_file()
+
+
 def test_code_review_bundle_packages_clean_code_policy_pack_manifest() -> None:
     module_root = REPO_ROOT / "packages" / "specfact-code-review"
     roots = (
@@ -179,6 +239,17 @@ def test_code_review_artifact_contains_policy_pack_payload(tmp_path: Path) -> No
     artifact = _build_bundle_artifact("specfact-code-review", tmp_path)
     with tarfile.open(artifact, "r:gz") as archive:
         assert "specfact-code-review/resources/policy-packs/specfact/clean-code-principles.yaml" in archive.getnames()
+
+
+def test_project_artifact_contains_runtime_generator_templates(tmp_path: Path) -> None:
+    artifact = _build_bundle_artifact("specfact-project", tmp_path)
+    with tarfile.open(artifact, "r:gz") as archive:
+        names = set(archive.getnames())
+
+    for name in _PROJECT_RUNTIME_TEMPLATES:
+        assert f"specfact-project/resources/templates/{name}" in names
+    for name in _PROJECT_PERSONA_TEMPLATES:
+        assert f"specfact-project/resources/templates/persona/{name}" in names
 
 
 def test_core_prompt_discovery_finds_installed_backlog_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

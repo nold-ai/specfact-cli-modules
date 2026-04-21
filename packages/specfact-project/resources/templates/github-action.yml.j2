@@ -1,0 +1,27 @@
+name: SpecFact Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  specfact:
+    runs-on: ubuntu-latest
+    timeout-minutes: {{ budget }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "{{ python_version }}"
+
+      - name: Install SpecFact
+        run: pip install specfact-cli
+
+      - name: Run validation
+        run: specfact validate --repo . --name "{{ repo_name }}"

@@ -18,6 +18,7 @@ This guide covers advanced features and optimizations in the `code import` comma
 The `code import` command has been optimized for large codebases and includes several features to improve reliability, performance, and user experience:
 
 - **Progress Reporting**: Real-time progress bars for long-running operations
+- **Default Ignore Policy**: Hidden and heavyweight artifact directories are pruned before traversal
 - **Feature Validation**: Automatic validation of existing features when resuming imports
 - **Early Save Checkpoint**: Features saved immediately after analysis to prevent data loss
 - **Performance Optimizations**: Pre-computed caches for 5-15x faster processing
@@ -28,6 +29,26 @@ The `code import` command has been optimized for large codebases and includes se
 ## Progress Reporting
 
 The import command now provides detailed progress reporting for all major operations:
+
+### Discovery and ETA Semantics
+
+Import progress is now derived from the work discovered after ignore pruning, not from a fixed-duration promise.
+
+- Default traversal skips hidden and heavyweight directories such as `.git/`, `.specfact/`, `.venv/`, `venv/`, `node_modules/`, `build/`, `dist/`, and `__pycache__/`.
+- Repo-local overrides can be added in `.specfact/.specfactignore`.
+- When import encounters ignored artifact trees with more than 500 entries or repositories larger than 1,000 files, it emits warnings instead of promising that the run will finish in a specific number of minutes.
+- Remaining time is based on processed-versus-discovered work at the current runtime rate, so estimates remain provisional for repos above those configured thresholds.
+
+### Repo-local Ignore Overrides
+
+Add extra ignore patterns to `.specfact/.specfactignore` when a repository contains generated or vendored trees outside the default exclusions:
+
+```text
+custom_ignore/
+third_party/generated/**
+```
+
+Patterns are applied before traversal so ignored trees do not inflate scanned-file counts or ETA totals.
 
 ### Feature Analysis Progress
 
@@ -192,7 +213,7 @@ specfact code import my-project --repo . --revalidate-features
 For codebases with 1000+ features:
 
 1. **Use partial analysis**: Start with `--entry-point` to analyze one module at a time
-2. **Monitor progress**: Watch the progress bars to estimate completion time
+2. **Monitor progress**: Treat remaining time as live guidance based on discovered work, not a fixed promise
 3. **Use checkpoints**: Let the early save checkpoint work for you - don't worry about interruptions
 4. **Re-validate periodically**: Use `--revalidate-features` after major code changes
 
@@ -217,8 +238,9 @@ For codebases with 1000+ features:
 
 If source file linking is slow:
 
-- **Check file count**: Large numbers of files (10,000+) will take longer
+- **Check file count**: Large numbers of files (10,000+) will take longer even after default ignore pruning
 - **Monitor progress**: The progress bar shows current status
+- **Review warnings**: Heavy-artifact warnings identify ignored trees that would otherwise dominate runtime
 - **Use entry points**: Limit scope with `--entry-point` for faster processing
 
 ### Validation Issues

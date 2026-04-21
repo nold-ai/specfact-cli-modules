@@ -1,0 +1,59 @@
+# {{ persona_name | replace("-", " ") | title }}
+
+_Generated from bundle `{{ bundle_name }}` on {{ created_at }}._
+
+{% if idea %}
+## Idea
+
+### Title
+{{ idea.title }}
+
+{% if idea.narrative %}
+### Narrative
+{{ idea.narrative }}
+
+{% endif %}
+{% endif %}
+{% if business %}
+## Business
+
+{# Intentional machine-readable JSON embedding for downstream tooling #}
+{{ business | tojson(indent=2) }}
+
+{% endif %}
+{% if product %}
+## Product
+
+{# Intentional machine-readable JSON embedding for downstream tooling #}
+{{ product | tojson(indent=2) }}
+
+{% endif %}
+{% if features %}
+## Features
+
+{% for feature_key, feature in features.items() %}
+### {{ feature.title or feature_key }}
+
+{% if feature.outcomes %}
+#### Outcomes
+{% for outcome in feature.outcomes %}
+- {{ outcome }}
+{% endfor %}
+
+{% endif %}
+{% if feature.acceptance %}
+#### Acceptance
+{% for item in feature.acceptance %}
+- {{ item }}
+{% endfor %}
+
+{% endif %}
+{% if feature.constraints %}
+#### Constraints
+{% for item in feature.constraints %}
+- {{ item }}
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% endif %}

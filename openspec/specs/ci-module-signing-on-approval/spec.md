@@ -6,8 +6,8 @@ TBD - created by archiving change marketplace-06-ci-module-signing. Update Purpo
 ### Requirement: Sign packages manifests on PR approval
 
 The system SHALL automatically sign changed `packages/*/module-package.yaml` manifests using CI
-secrets when a pull request targeting `dev` or `main` is approved, and SHALL commit the signed
-manifests back to the PR branch.
+secrets when a same-repo pull request targeting `dev` or `main` receives a trusted approval review,
+and SHALL commit the signed manifests back to the PR branch.
 
 #### Scenario: PR to dev approved with package module changes
 
@@ -33,6 +33,13 @@ manifests back to the PR branch.
 - **WHEN** a pull request is approved
 - **AND** no files under `packages/` have changed relative to the base branch
 - **THEN** the CI signing workflow SHALL exit cleanly with no commit
+
+#### Scenario: Approval workflow does not trigger on PR synchronize events
+
+- **WHEN** a same-repo pull request already has a trusted approval
+- **AND** the PR later receives a `pull_request` `synchronize` event
+- **THEN** `sign-modules-on-approval.yml` SHALL NOT be triggered by that event
+- **AND** PR-update signing SHALL remain the responsibility of the general PR signing workflow
 
 #### Scenario: Missing signing secret
 
@@ -65,4 +72,3 @@ from `src/specfact_cli/modules/` or `modules/` (which do not exist in this repos
 - **WHEN** the signing workflow runs twice on the same package payload
 - **THEN** the resulting `integrity:` block SHALL be byte-for-byte identical
 - **AND** the second run SHALL produce no git diff and SHALL skip the commit
-

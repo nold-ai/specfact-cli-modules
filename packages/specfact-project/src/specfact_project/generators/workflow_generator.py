@@ -10,6 +10,8 @@ from beartype import beartype
 from icontract import ensure, require
 from jinja2 import Environment, FileSystemLoader
 
+from specfact_project.generators.template_paths import resolve_templates_dir
+
 
 class WorkflowGenerator:
     """
@@ -26,11 +28,7 @@ class WorkflowGenerator:
         Args:
             templates_dir: Directory containing Jinja2 templates (default: resources/templates)
         """
-        if templates_dir is None:
-            # Default to resources/templates relative to project root
-            templates_dir = Path(__file__).parent.parent.parent.parent / "resources" / "templates"
-
-        self.templates_dir = Path(templates_dir)
+        self.templates_dir = resolve_templates_dir(templates_dir)
         self.env = Environment(
             loader=FileSystemLoader(self.templates_dir),
             trim_blocks=True,

@@ -6,11 +6,12 @@ on:
     types: [submitted]
 
 concurrency:
-  group: sign-modules-on-approval-${{ github.event.pull_request.number }}
+  group: sign-modules-on-approval-${{ github.event.pull_request.number || github.event.number }}
   cancel-in-progress: true
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   sign-modules:
@@ -18,28 +19,17 @@ jobs:
     env:
       SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
       SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE }}
-      PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_BASE_REF: ${{ github.event.pull_request.base.ref || github.base_ref }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref || github.head_ref }}
     steps:
       - name: Eligibility gate (required status check)
         id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event.review.state }}" != "approved" ]; then
-            echo "sign=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping module signing: review state is not approved."
-            exit 0
-          fi
-          author_association="${{ github.event.review.user.author_association }}"
-          case "$author_association" in
-            COLLABORATOR|MEMBER|OWNER)
-              ;;
-            *)
-              echo "sign=false" >> "$GITHUB_OUTPUT"
-              echo "::notice::Skipping module signing: reviewer association '${author_association}' is not trusted for signing."
-              exit 0
-              ;;
-          esac
+          review_state="${{ github.event.review.state || '' }}"
+          author_association="${{ github.event.review.user.author_association || '' }}"
           base_ref="${{ github.event.pull_request.base.ref }}"
           if [ "$base_ref" != "dev" ] && [ "$base_ref" != "main" ]; then
             echo "sign=false" >> "$GITHUB_OUTPUT"
@@ -53,8 +43,22 @@ jobs:
             echo "::notice::Skipping module signing: fork PR (head repo differs from target repo)."
             exit 0
           fi
+          if [ "$review_state" != "approved" ]; then
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping module signing: review state is not approved."
+            exit 0
+          fi
+          case "$author_association" in
+            COLLABORATOR|MEMBER|OWNER)
+              ;;
+            *)
+              echo "sign=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::Skipping module signing: reviewer association '${author_association}' is not trusted for signing."
+              exit 0
+              ;;
+          esac
           echo "sign=true" >> "$GITHUB_OUTPUT"
-          echo "Eligible for module signing (approved by trusted reviewer, same-repo PR to dev or main)."
+          echo "Eligible for module signing (same-repo PR to dev or main with trusted approval state)."
 
       - name: Guard signing secrets
         if: steps.gate.outputs.sign == 'true'
@@ -139,7 +143,7 @@ jobs:
           {
             echo "### Module signing (CI approval)"
             if [ "${GATE_SIGN}" != "true" ]; then
-              echo "Signing skipped (eligibility gate: not approved, wrong base branch, or fork PR)."
+              echo "Signing skipped (eligibility gate: no trusted approval, wrong base branch, or fork PR)."
             else
               echo "Manifests discovered under \`packages/\`: ${MANIFESTS_COUNT:-unknown}"
               if [ "${COMMIT_CHANGED}" = "true" ]; then

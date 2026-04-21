@@ -13,8 +13,26 @@ for pull requests or pushes targeting `dev`; it SHALL enforce `--require-signatu
 
 - **WHEN** a pull request targets `dev`
 - **AND** the PR contains package manifest changes with checksum-only integrity blocks
-- **THEN** the `verify-module-signatures` job SHALL pass without `--require-signature`
+- **THEN** the CI signing workflow SHALL repair changed same-repo
+  `packages/*/module-package.yaml` manifests on the PR branch before verification completes
+- **AND** the `verify-module-signatures` job SHALL pass without `--require-signature`
 - **AND** all downstream jobs (`quality`, `contract-tests`, etc.) SHALL not be blocked
+
+#### Scenario: Same-repo PR update re-signs manifests after review fixes
+
+- **WHEN** a same-repo pull request targets `dev` or `main`
+- **AND** a later `pull_request` `synchronize` event adds review-fix commits that change module
+  payloads
+- **THEN** the CI signing workflow SHALL re-sign the changed manifests on the PR head branch
+- **AND** SHALL commit `chore(modules): ci sign changed modules` only when the manifests changed
+- **AND** the workflow SHALL skip this remediation for its own bot-authored signing commit
+
+#### Scenario: Fork PR remains verify-only
+
+- **WHEN** a pull request targets `dev` or `main`
+- **AND** the head branch lives in a fork
+- **THEN** the CI signing workflow SHALL NOT attempt to push repaired manifests to that branch
+- **AND** verification SHALL remain read-only
 
 #### Scenario: Dev-to-main PR with unsigned manifests (before approval)
 
@@ -52,4 +70,3 @@ The repository pre-commit hook that runs `verify-modules-signature.py` SHALL app
 - **WHEN** a developer commits on branch `main`
 - **AND** any `packages/*/module-package.yaml` lacks a valid signature under `--require-signature`
 - **THEN** the pre-commit signature hook SHALL fail
-
