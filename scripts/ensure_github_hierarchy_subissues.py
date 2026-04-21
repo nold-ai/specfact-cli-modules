@@ -116,6 +116,8 @@ def _subissue_numbers(*, owner: str, name: str, parent_number: int) -> set[int]:
         if not isinstance(sub, dict):
             raise RuntimeError(f"missing subIssues for issue #{parent_number}")
         raw_nodes = sub.get("nodes", [])
+        if not isinstance(raw_nodes, list):
+            raise RuntimeError(f"subIssues nodes is not a list for issue #{parent_number}")
         for node in raw_nodes:
             if isinstance(node, dict) and node.get("number") is not None:
                 collected.add(int(node["number"]))

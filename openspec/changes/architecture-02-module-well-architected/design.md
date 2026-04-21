@@ -51,6 +51,14 @@ Architecture governance spans both shared contracts in `specfact-cli` and execut
 2. Implement package structure, analyzer adapters, and rule-resource translation.
 3. Publish docs, registry metadata, signatures, and compatibility range together.
 
+## Dependency Checklist
+
+**BLOCKER**: Module integration and any references to `architecture-02-well-architected-review` are disallowed until the paired `specfact-cli` change exists and is marked stable. This change cannot proceed to implementation until the following conditions are met:
+
+- [ ] The `architecture-02-well-architected-review` artifact exists in `specfact-cli` with a stable contract
+- [ ] Overlaps and boundaries with `architecture-01-solution-layer` are documented and resolved
+- [ ] The paired core change is marked as stable and available for module integration
+
 ## Open Questions
 
 - Which dependency graph providers should be first-class on day one for Python and JavaScript repositories?

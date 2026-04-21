@@ -14,13 +14,33 @@ The core repo can define resiliency contracts and scoring, but SpecFact still la
 
 ### Adapter Contract
 
-The adapter boundary between resiliency analyzers and the core review contract defines how resiliency findings flow into the core review model:
+The adapter boundary between resiliency analyzers and the core review contract defines how resiliency findings flow into the core ReviewFinding model:
 
-- **Core Findings Schema Fields**: `id` (stable finding identifier), `title` (human-readable finding title), `description` (detailed explanation), `location` (file path and line range), `timestamp` (ISO 8601 detection time), `severity` (normalized severity level), `confidence` (confidence score 0.0-1.0), `evidence_refs` (list of evidence references)
-- **Stable Rule Identifier Format**: `resiliency-<category>-<rule-id>` (e.g., `resiliency-retry-001`)
-- **Evidence Reference Format**: `{"type": "code", "path": "relative/file/path.py", "line_start": 42, "line_end": 45, "snippet": "..."}`
-- **Severity Mapping**: Critical (0.9-1.0), High (0.7-0.9), Medium (0.4-0.7), Low (0.0-0.4)
-- **Confidence Scoring**: Pattern-based detections (0.8), heuristic detections (0.6), informational notes (0.4)
+**Mapping to ReviewFinding Fields:**
+
+- **category**: Set based on the resiliency concern (e.g., `"clean_code"` for general resiliency patterns, or extend with resiliency-specific categories if needed)
+- **severity**: Set to `"error"`, `"warning"`, or `"info"` based on the violation severity
+- **tool**: Set to the resiliency analyzer name (e.g., `"resiliency-analyzer"` or specific tool name)
+- **rule**: Set to the stable rule identifier in format `resiliency-<category>-<rule-id>` (e.g., `resiliency-retry-001`)
+- **file**: Set to the repository-relative file path where the violation occurs
+- **line**: Set to the 1-based line number or line range start
+- **message**: Set to a human-readable description of the resiliency finding
+- **fixable**: Optional boolean indicating whether the finding can be auto-fixed (default: false)
+
+**Field Mapping from Custom Schema to ReviewFinding:**
+
+- `id` → `rule` (or use as tool-specific identifier in extended metadata)
+- `title` → Incorporated into `message` as the primary human-readable text
+- `description` → Incorporated into `message` as detailed explanation
+- `location` → Mapped to `file` and `line` fields
+- `timestamp` → Can be preserved as metadata but is not a core ReviewFinding field
+- `confidence` → Can be preserved as metadata but is not a core ReviewFinding field
+- `evidence_refs` → Can be retained as supplemental references but primary location uses `file`/`line`
+
+**Severity Enum Values:**
+
+- Use canonical severity values: `"error"`, `"warning"`, `"info"`
+- Map previous severity ranges to these values as needed
 
 ## Capabilities
 

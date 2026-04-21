@@ -16,7 +16,8 @@
 - [ ] 3.1 Scaffold `packages/specfact-pii-gdpr/` with manifest, Typer entrypoints, detector adapters, and bundled rule resources.
 - [ ] 3.2 Implement normalization into the paired core privacy/GDPR findings/report contracts with redaction-safe evidence references.
 - [ ] 3.3 Integrate shared policy/profile handling for lawful-basis and residency checks plus optional knowledge evidence hooks.
-- [ ] 3.4 Update registry metadata, docs references, and any import allowlists required by the new bundle. Note: signature artifacts are produced by publish automation and validated by CI gates; do not manually commit signature files.
+- [ ] 3.4 Verify compatibility with `nold-ai/specfact-cli` whenever changing shared privacy/GDPR findings or report contracts by running and reviewing the paired public artifacts/tests in specfact-cli and confirming any required adapter changes or test updates before PR handoff.
+- [ ] 3.5 Update registry metadata, docs references, and any import allowlists required by the new bundle. Note: signature artifacts are produced by publish automation and validated by CI gates; do not manually commit signature files.
 
 ## 4. Verification and delivery
 

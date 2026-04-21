@@ -14,10 +14,25 @@ The core repo can define architecture review contracts, but the modules repo sti
 
 ### Adapter Contract
 
-The normalized boundary between analyzers and the core review contract defines how architecture findings flow from packaged analyzers into the core review model:
+The normalized boundary between analyzers and the core review contract defines how architecture findings flow from packaged analyzers into the core ReviewFinding model:
 
-- **Required Core Findings Schema Fields**: `id`, `type`, `severity`, `description`, `source`, `timestamp`, `evidence_refs`
-- **Analyzer Output Mapping**: Outputs from packaged analyzers (dependency-graph, ADR traceability, interface-diff) map to normalized evidence references by populating `evidence_refs` with stable file paths, line ranges, and artifact identifiers
+**Mapping to ReviewFinding Fields:**
+
+- **category**: Set to `"architecture"` for all architecture analyzer findings
+- **tool**: Set to the analyzer name (e.g., `"pylint"` for the pylint-runner expectation, or other analyzer names for dependency-graph, ADR traceability, interface-diff)
+- **rule**: Set to the violation rule identifier from the analyzer (e.g., rule IDs from pylint or custom rule identifiers for boundary violations)
+- **file**: Set to the repository-relative file path where the violation occurs
+- **line**: Set to the 1-based line number or line range start where the violation occurs
+- **message**: Set to a human-readable description of the architecture violation
+- **severity**: Set to `"error"`, `"warning"`, or `"info"` based on the violation severity
+- **fixable**: Optional boolean indicating whether the finding can be auto-fixed (default: false)
+
+**Supplemental Evidence:**
+
+- `evidence_refs` may be retained as supplemental references for additional context (stable file paths, line ranges, artifact identifiers), but primary location data must use the canonical `file` and `line` fields
+
+**Emission Semantics:**
+
 - **Emission Mode**: Synchronous emission (findings emitted immediately after analyzer completion)
 - **Retry/Ordering Semantics**: Findings are emitted in deterministic analyzer execution order with no retry; failures in one analyzer do not block subsequent analyzers
 

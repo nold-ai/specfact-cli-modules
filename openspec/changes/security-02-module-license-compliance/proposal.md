@@ -43,7 +43,7 @@ _None.
 
 - Affected code: future `packages/specfact-license-compliance/`, SBOM ingestion helpers, and policy mapping resources.
 - Affected docs: bundle overview and command-reference documentation for `license`.
-- Dependencies: paired core changes `security-01-unified-findings-model` and shared policy-pack semantics from `policy-02-packs-and-modes` (not `security-02-eu-gdpr-baseline`—the latter is for GDPR/PII detection, not license policy). **Note**: If the intention was to reference shared policy-pack semantics, replace `security-02-eu-gdpr-baseline` with `policy-02-packs-and-modes`. If distinct semantics are intended, add a clarifying sentence.
+- Dependencies: This proposal depends on `security-01-unified-findings-model` and the shared policy-pack semantics from `policy-02-packs-and-modes`.
 - Release impact: introduces a new signed official bundle and registry entry.
 
 ---
