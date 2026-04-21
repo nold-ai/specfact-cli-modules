@@ -103,6 +103,25 @@ def test_sign_modules_hardening_auto_signs_on_push_non_bot() -> None:
     assert 'git push origin "HEAD:refs/heads/${SIGN_BRANCH}"' in workflow
 
 
+def test_sign_modules_hardening_auto_signs_same_repo_pull_requests() -> None:
+    workflow = _workflow_text()
+    for needle in (
+        "github.event_name == 'pull_request'",
+        "github.event.pull_request.head.repo.full_name == github.repository",
+        "github.actor != 'github-actions[bot]'",
+        "PR_HEAD_REF",
+        'git commit -m "chore(modules): ci sign changed modules"',
+        'git push origin "HEAD:${PR_HEAD_REF}"',
+    ):
+        assert needle in workflow
+
+
+def test_sign_modules_hardening_checks_out_pr_head_for_pr_events() -> None:
+    workflow = _workflow_text()
+    assert "github.event.pull_request.head.sha" in workflow
+    assert "github.sha" in workflow
+
+
 @pytest.mark.parametrize(
     "needles",
     (

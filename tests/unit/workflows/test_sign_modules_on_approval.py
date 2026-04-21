@@ -45,14 +45,12 @@ def _step_by_field(steps: list[Any], field: str, value: str) -> dict[str, Any]:
     raise AssertionError(f"No workflow step with {field}={value!r}")
 
 
-def _assert_triggers_cover_review_and_pr_updates(doc: dict[Any, Any]) -> None:
+def _assert_review_only_trigger(doc: dict[Any, Any]) -> None:
     on = _workflow_on_section(doc)
     pr_review = on["pull_request_review"]
     assert isinstance(pr_review, dict)
     assert set(pr_review["types"]) == {"submitted"}
-    pr = on["pull_request"]
-    assert isinstance(pr, dict)
-    assert set(pr["types"]) == {"opened", "synchronize", "reopened", "ready_for_review"}
+    assert "pull_request" not in on
 
 
 def _assert_sign_job_has_no_top_level_if(doc: dict[Any, Any]) -> None:
@@ -71,15 +69,10 @@ def _assert_eligibility_gate_step(doc: dict[Any, Any]) -> None:
     run = gate["run"]
     assert isinstance(run, str)
     for needle in (
-        'event_name="${{ github.event_name }}"',
         "github.event.review.state",
         "github.event.review.user.author_association",
         "approved",
         "COLLABORATOR|MEMBER|OWNER",
-        "github.event.pull_request.number",
-        "latestReviews(first:100)",
-        "APPROVED",
-        "trusted_review_count",
         'echo "sign=false"',
         'echo "sign=true"',
         "github.event.pull_request.base.ref",
@@ -98,11 +91,12 @@ def _assert_concurrency_and_permissions(doc: dict[Any, Any]) -> None:
     perms = doc["permissions"]
     assert isinstance(perms, dict)
     assert perms["contents"] == "write"
+    assert perms["pull-requests"] == "read"
 
 
 def test_sign_modules_on_approval_trigger_and_job_filter() -> None:
     doc = _parsed_workflow()
-    _assert_triggers_cover_review_and_pr_updates(doc)
+    _assert_review_only_trigger(doc)
     _assert_sign_job_has_no_top_level_if(doc)
     _assert_eligibility_gate_step(doc)
     _assert_concurrency_and_permissions(doc)

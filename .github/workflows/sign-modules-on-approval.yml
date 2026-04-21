@@ -2,12 +2,6 @@
 name: sign-modules-on-approval
 
 on:
-  pull_request:
-    branches: [dev, main]
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   pull_request_review:
     types: [submitted]
 
@@ -17,6 +11,7 @@ concurrency:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   sign-modules:
@@ -33,7 +28,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          event_name="${{ github.event_name }}"
           review_state="${{ github.event.review.state || '' }}"
           author_association="${{ github.event.review.user.author_association || '' }}"
           base_ref="${{ github.event.pull_request.base.ref }}"
@@ -49,36 +43,20 @@ jobs:
             echo "::notice::Skipping module signing: fork PR (head repo differs from target repo)."
             exit 0
           fi
-          if [ "$event_name" = "pull_request_review" ]; then
-            if [ "$review_state" != "approved" ]; then
-              echo "sign=false" >> "$GITHUB_OUTPUT"
-              echo "::notice::Skipping module signing: review state is not approved."
-              exit 0
-            fi
-            case "$author_association" in
-              COLLABORATOR|MEMBER|OWNER)
-                ;;
-              *)
-                echo "sign=false" >> "$GITHUB_OUTPUT"
-                echo "::notice::Skipping module signing: reviewer association '${author_association}' is not trusted for signing."
-                exit 0
-                ;;
-            esac
-          else
-            trusted_review_count="$(
-              gh api graphql \
-                -f query='query($owner:String!, $repo:String!, $number:Int!) { repository(owner:$owner, name:$repo) { pullRequest(number:$number) { latestReviews(first:100) { nodes { authorAssociation state } } } } }' \
-                -F owner='${{ github.repository_owner }}' \
-                -F repo='${{ github.event.repository.name }}' \
-                -F number='${{ github.event.pull_request.number }}' \
-              | python3 -c "import json,sys; data=json.load(sys.stdin); reviews=data['data']['repository']['pullRequest']['latestReviews']['nodes']; print(sum(1 for review in reviews if review.get('state') == 'APPROVED' and review.get('authorAssociation') in {'COLLABORATOR','MEMBER','OWNER'}))"
-            )"
-            if [ "$trusted_review_count" = "0" ]; then
-              echo "sign=false" >> "$GITHUB_OUTPUT"
-              echo "::notice::Skipping module signing: no trusted approved review is present for this PR."
-              exit 0
-            fi
+          if [ "$review_state" != "approved" ]; then
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping module signing: review state is not approved."
+            exit 0
           fi
+          case "$author_association" in
+            COLLABORATOR|MEMBER|OWNER)
+              ;;
+            *)
+              echo "sign=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::Skipping module signing: reviewer association '${author_association}' is not trusted for signing."
+              exit 0
+              ;;
+          esac
           echo "sign=true" >> "$GITHUB_OUTPUT"
           echo "Eligible for module signing (same-repo PR to dev or main with trusted approval state)."
 

@@ -70,10 +70,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Fetch workflow_dispatch comparison base
         if: github.event_name == 'workflow_dispatch'
         run: git fetch --no-tags origin "${{ github.event.inputs.base_branch }}"
+
+      - name: Fetch pull_request comparison base
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -150,6 +155,39 @@ jobs:
                   check=True,
               )
           PY
+
+      - name: Auto-sign changed module manifests (same-repo PRs, non-bot actors)
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'github-actions[bot]'
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SPECFACT_MODULE_PRIVATE_SIGN_KEY}" ]; then
+            echo "::error::Missing SPECFACT_MODULE_PRIVATE_SIGN_KEY. Configure the secret so same-repo PRs can auto-sign module manifests."
+            exit 1
+          fi
+          MERGE_BASE="$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")"
+          python scripts/sign-modules.py \
+            --changed-only \
+            --base-ref "$MERGE_BASE" \
+            --bump-version patch \
+            --payload-from-filesystem
+
+          if [ -z "$(git status --porcelain -- packages/)" ]; then
+            echo "No manifest signing changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u -- packages/
+          git commit -m "chore(modules): ci sign changed modules"
+          git push origin "HEAD:${PR_HEAD_REF}"
 
       - name: Strict verify module manifests (push to dev/main)
         if: github.event_name == 'push' && (github.ref_name == 'dev' || github.ref_name == 'main')

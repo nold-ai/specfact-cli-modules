@@ -1,8 +1,7 @@
-# ci-module-signing-on-approval Specification
+# ci-module-signing-on-approval Delta Specification (specfact-cli-modules)
 
-## Purpose
-TBD - created by archiving change marketplace-06-ci-module-signing. Update Purpose after archive.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: Sign packages manifests on PR approval
 
 The system SHALL automatically sign changed `packages/*/module-package.yaml` manifests using CI
@@ -11,18 +10,17 @@ and SHALL commit the signed manifests back to the PR branch.
 
 #### Scenario: PR to dev approved with package module changes
 
-- **WHEN** a pull request targeting `dev` is approved by a reviewer
+- **WHEN** a pull request targeting `dev` is approved by a trusted reviewer
 - **AND** the PR contains changes to one or more files under `packages/`
 - **THEN** the CI signing workflow SHALL discover all `packages/*/module-package.yaml` manifests
-  whose payload changed on the PR branch since the merge-base with `origin/dev` (not merely
-  divergent from the moving `origin/dev` tip)
+  whose payload changed on the PR branch since the merge-base with `origin/dev`
 - **AND** SHALL sign them using `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and
   `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
 - **AND** SHALL commit the updated manifests back to the PR branch
 
 #### Scenario: PR to main approved with package module changes
 
-- **WHEN** a pull request targeting `main` is approved
+- **WHEN** a pull request targeting `main` is approved by a trusted reviewer
 - **AND** the PR contains changes to one or more files under `packages/`
 - **THEN** the CI signing workflow SHALL sign all changed manifests relative to the merge-base
   between the PR head and `origin/main`
@@ -52,8 +50,7 @@ and SHALL commit the signed manifests back to the PR branch.
 
 - **WHEN** a pull request targets `dev` or `main` but the head branch lives in a fork
   (`head.repo` differs from the base repository)
-- **THEN** the signing workflow SHALL NOT run (the default `GITHUB_TOKEN` cannot push to the
-  contributor fork; maintainers sign or merge via same-repo branches instead)
+- **THEN** the signing workflow SHALL NOT run
 
 ### Requirement: Manifest discovery covers packages directory
 
