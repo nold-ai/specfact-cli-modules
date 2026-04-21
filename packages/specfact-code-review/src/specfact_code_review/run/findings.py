@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from beartype import beartype
 from icontract import ensure
@@ -56,6 +56,10 @@ class ReviewFinding(BaseModel):
     line: int = Field(..., ge=1, description="1-based source line number.")
     message: str = Field(..., description="User-facing finding message.")
     fixable: bool = Field(default=False, description="Whether the finding can be automatically fixed.")
+    evidence_refs: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Optional supplemental references with stable file paths, line ranges, or artifact identifiers.",
+    )
 
     @field_validator("tool", "rule", "file", "message")
     @classmethod

@@ -16,7 +16,14 @@ License governance needs a focused runtime bundle that evaluates SBOM and SPDX l
 
 The adapter boundary between SBOM/license analyzers and the core security/license findings model specifies how license evaluation flows into the normalized findings contract:
 
-- **Core Findings Schema Fields**: Same as `security-01-unified-findings-model` (reused for license findings): `id`, `type`, `severity`, `description`, `source`, `timestamp`, `evidence_refs`
+- **Core Findings Schema Fields** (inlined from the unified findings model for license findings):
+  - `id` (string): Unique stable identifier for the finding
+  - `type` (string): Finding type (see SPDX-to-Normalized Finding Mapping Rules below for allowed values)
+  - `severity` (string): Severity level; allowed values: `"high"`, `"medium"`, `"low"`, `"info"`
+  - `description` (string): Human-readable description of the finding
+  - `source` (string): Originating tool or analyzer name
+  - `timestamp` (ISO 8601 string): UTC timestamp when the finding was generated
+  - `evidence_refs` (list of objects, optional): Supplemental references with stable file paths, line ranges, or artifact identifiers
 - **SPDX-to-Normalized Finding Mapping Rules**:
   - Denied SPDX identifier → `severity: "high"`, `type: "license-violation"`
   - Allowed SPDX identifier → `severity: "info"`, `type: "license-compliant"`
@@ -35,7 +42,7 @@ _None.
 
 ### Inter-Bundle Compatibility
 
-- **Core Compatibility Version Range**: `core_compatibility: ">=1.0.0 <2.0.0"` for `security-01-unified-findings-model` in `module-package.yaml`
+- **Core Compatibility Version Range**: `core_compatibility: ">=1.0.0 <2.0.0"` in `module-package.yaml`
 - **Inter-Bundle Hook Interface**: The bundle can optionally emit SBOM artifacts to a shared location (e.g., `.specfact/sbom/`) that the `security` bundle can consume, enabling SBOM reuse without runtime coupling
 - **Bundle Dependencies Declaration**: If shared policy semantics from `policy-02-packs-and-modes` are required, declare it under `bundle_dependencies` (not `core_compatibility`)
 
@@ -43,7 +50,7 @@ _None.
 
 - Affected code: future `packages/specfact-license-compliance/`, SBOM ingestion helpers, and policy mapping resources.
 - Affected docs: bundle overview and command-reference documentation for `license`.
-- Dependencies: This proposal depends on `security-01-unified-findings-model` and the shared policy-pack semantics from `policy-02-packs-and-modes`.
+- Dependencies: This proposal inlines the findings schema (previously referenced from `security-01-unified-findings-model`) and depends on the shared policy-pack semantics from `policy-02-packs-and-modes`.
 - Release impact: introduces a new signed official bundle and registry entry.
 
 ---

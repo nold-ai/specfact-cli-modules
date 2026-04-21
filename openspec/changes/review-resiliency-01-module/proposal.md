@@ -8,8 +8,8 @@ The core repo can define resiliency contracts and scoring, but SpecFact still la
 
 - **NEW**: Add a `specfact-review-resiliency` bundle scaffold under `packages/` with `review-resiliency` as its primary command.
 - **NEW**: Package deterministic resiliency rule packs for retry, timeout, idempotency, backpressure, and graceful-degradation checks that map into the paired core findings contract.
-- **NEW**: Add optional probe adapters for lightweight load-profile validation behind explicit opt-in flags so default review runs stay local-first and safe for CI.
-- **NEW**: Emit findings in the shared review report shape and, when the knowledge bundle is installed, forward evidence metadata to the memory runtime without making that integration mandatory.
+- **OPTIONAL**: Add optional probe adapters for lightweight load-profile validation behind explicit opt-in flags so default review runs stay local-first and safe for CI.
+- **NOTE**: Emit findings in the shared review report shape and, when the knowledge bundle is installed, forward evidence metadata to the memory runtime without making that integration mandatory.
 - **EXTEND**: Document the new bundle on modules docs and declare manifest, registry, and bundle-dependency expectations for later implementation.
 
 ### Adapter Contract
@@ -18,7 +18,7 @@ The adapter boundary between resiliency analyzers and the core review contract d
 
 **Mapping to ReviewFinding Fields:**
 
-- **category**: Set based on the resiliency concern (e.g., `"clean_code"` for general resiliency patterns, or extend with resiliency-specific categories if needed)
+- **category**: Set to an existing allowed enum value from the `ReviewFinding` type's `category` field (e.g., `"clean_code"` for general resiliency patterns). New categories must be proposed via a core-spec change rather than in this module
 - **severity**: Set to `"error"`, `"warning"`, or `"info"` based on the violation severity
 - **tool**: Set to the resiliency analyzer name (e.g., `"resiliency-analyzer"` or specific tool name)
 - **rule**: Set to the stable rule identifier in format `resiliency-<category>-<rule-id>` (e.g., `resiliency-retry-001`)

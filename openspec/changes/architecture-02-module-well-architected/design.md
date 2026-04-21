@@ -29,8 +29,8 @@ Architecture governance spans both shared contracts in `specfact-cli` and execut
 
 ### 2. Treat boundary policies as portable rule resources
 
-- **Decision**: Convert the `ALLOWED_IMPORTS.md` pattern into bundle-consumable rules/resources rather than reading only repository-local markdown ad hoc.
-- **Why**: The bundle needs deterministic, reusable behavior across repositories.
+- **Decision**: Convert the `ALLOWED_IMPORTS.md` pattern into bundle-consumable rules/resources rather than reading only repository-local markdown ad hoc. The portable rule schema and enforcement code must preserve all three policy dimensions from ALLOWED_IMPORTS.md: (1) dual-mode prefix matching by adding a flag/field for exact+dot-prefix matching (preserving the `_is_allowed_prefix` semantics) so the rule parser and matcher honor it, (2) a MIGRATE-tier blocking marker or enforcement-level field that causes unconditional forbids for non-allowed imports in that tier, and (3) directional cross-bundle allowlists (explicit source→target allow entries) so bundle isolation rules are expressible. The rule parser/loader, matcher (where `_is_allowed_prefix` is referenced), and enforcement engine must read these fields and enforce them deterministically.
+- **Why**: The bundle needs deterministic, reusable behavior across repositories while maintaining full enforcement fidelity from ALLOWED_IMPORTS.md.
 - **Alternative considered**: Hard-code modules-repo-specific checks. Rejected because it would not generalize to user repositories.
 
 ### 3. Separate graph extraction from policy evaluation
@@ -47,13 +47,13 @@ Architecture governance spans both shared contracts in `specfact-cli` and execut
 
 ## Migration Plan
 
-1. Confirm the paired core architecture review contract (`architecture-02-well-architected-review`) is stable enough for module integration. **Note**: A new core change `architecture-02-well-architected-review` must be created and synced into `specfact-cli` before module integration. This contract should clarify overlap with `architecture-01-solution-layer` regarding shared architecture review semantics and boundaries.
+1. Confirm the paired core architecture review contract (`architecture-02-well-architected-review`) is stable enough for module integration. **Meta-note**: This design can merge as a design artifact, but implementation PRs must verify the dependency checklist (presence of `architecture-02-well-architected-review` in `specfact-cli`, documented overlaps with `architecture-01-solution-layer`, and a stable paired core change) before any module integration or references are added.
 2. Implement package structure, analyzer adapters, and rule-resource translation.
 3. Publish docs, registry metadata, signatures, and compatibility range together.
 
 ## Dependency Checklist
 
-**BLOCKER**: Module integration and any references to `architecture-02-well-architected-review` are disallowed until the paired `specfact-cli` change exists and is marked stable. This change cannot proceed to implementation until the following conditions are met:
+**Implementation BLOCKER**: Module integration and any references to the contract named `architecture-02-well-architected-review` in the repository `specfact-cli` are disallowed until the paired `specfact-cli` change exists and is marked stable. Implementation PRs cannot proceed until the following conditions are met:
 
 - [ ] The `architecture-02-well-architected-review` artifact exists in `specfact-cli` with a stable contract
 - [ ] Overlaps and boundaries with `architecture-01-solution-layer` are documented and resolved
