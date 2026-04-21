@@ -31,6 +31,23 @@ PASS_WITH_ADVISORY = "PASS_WITH_ADVISORY"
 FAIL = "FAIL"
 
 
+class EvidenceRef(BaseModel):
+    """Structured representation of supplemental evidence reference."""
+
+    path: str | None = Field(default=None, description="Stable file path reference.")
+    start_line: int | None = Field(default=None, ge=1, description="Start line number (1-based).")
+    end_line: int | None = Field(default=None, ge=1, description="End line number (1-based).")
+    artifact_id: str | None = Field(default=None, description="Artifact identifier.")
+    description: str | None = Field(default=None, description="Description of the evidence.")
+
+    @field_validator("path", "artifact_id", "description")
+    @classmethod
+    def _validate_non_empty_if_present(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("value must not be empty if provided")
+        return value
+
+
 class ReviewFinding(BaseModel):
     """Structured representation of a code-review finding."""
 
@@ -56,7 +73,7 @@ class ReviewFinding(BaseModel):
     line: int = Field(..., ge=1, description="1-based source line number.")
     message: str = Field(..., description="User-facing finding message.")
     fixable: bool = Field(default=False, description="Whether the finding can be automatically fixed.")
-    evidence_refs: list[dict[str, Any]] | None = Field(
+    evidence_refs: list[EvidenceRef] | None = Field(
         default=None,
         description="Optional supplemental references with stable file paths, line ranges, or artifact identifiers.",
     )

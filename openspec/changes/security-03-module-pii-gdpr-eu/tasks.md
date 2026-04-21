@@ -17,7 +17,7 @@
 - [ ] 3.2 Update `packages/specfact-pii-gdpr/module-package.yaml` with the minimum required `core_compatibility` value documented in task 1.2.
 - [ ] 3.3 Implement normalization into the paired core privacy/GDPR findings/report contracts with redaction-safe evidence references.
 - [ ] 3.4 Integrate shared policy/profile handling for lawful-basis and residency checks plus optional knowledge evidence hooks.
-- [ ] 3.5 Validate bundled rule resources are packaged: implement a pre-publish validation step that checks all required bundled templates/resources shipped with `packages/specfact-pii-gdpr/` are present in the package bundle, fails the release if any are missing, and ensures the failure message explicitly includes the missing resource path.
+- [ ] 3.5 Validate bundled rule resources: add a pre-publish validation that confirms all templates/resources in packages/specfact-pii-gdpr/ are included in the package, fail the release if any are missing, and include the missing resource path in the error message.
 - [ ] 3.6 Update registry metadata, docs references, and any import allowlists required by the new bundle. Note: signature artifacts are produced by publish automation and validated by CI gates; do not manually commit signature files.
 
 ## 4. Verification and delivery

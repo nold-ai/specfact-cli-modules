@@ -42,7 +42,7 @@ _None.
 
 ### Inter-Bundle Compatibility
 
-- **Core Compatibility Version Range**: `core_compatibility: ">=1.0.0 <2.0.0"` in `module-package.yaml`
+- **Core Compatibility Version Range**: `core_compatibility: ">=1.0.0,<2.0.0"` in `module-package.yaml`
 - **Inter-Bundle Hook Interface**: The bundle can optionally emit SBOM artifacts to a shared location (e.g., `.specfact/sbom/`) that the `security` bundle can consume, enabling SBOM reuse without runtime coupling
 - **Bundle Dependencies Declaration**: If shared policy semantics from `policy-02-packs-and-modes` are required, declare it under `bundle_dependencies` (not `core_compatibility`)
 
