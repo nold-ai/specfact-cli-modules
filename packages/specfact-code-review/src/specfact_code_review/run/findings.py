@@ -47,6 +47,22 @@ class EvidenceRef(BaseModel):
             raise ValueError("value must not be empty if provided")
         return value
 
+    @model_validator(mode="after")
+    def _validate_invariants(self) -> EvidenceRef:
+        # At least one locator must be present
+        if self.path is None and self.artifact_id is None and self.start_line is None:
+            raise ValueError("at least one locator (path, artifact_id, or start_line) must be provided")
+
+        # If end_line is provided, start_line must be provided
+        if self.end_line is not None and self.start_line is None:
+            raise ValueError("start_line must be provided if end_line is present")
+
+        # If both start_line and end_line are provided, end_line >= start_line
+        if self.start_line is not None and self.end_line is not None and self.end_line < self.start_line:
+            raise ValueError("end_line must be greater than or equal to start_line")
+
+        return self
+
 
 class ReviewFinding(BaseModel):
     """Structured representation of a code-review finding."""

@@ -7,8 +7,8 @@ License governance needs a focused runtime bundle that evaluates SBOM and SPDX l
 ## What Changes
 
 - **NEW**: Add a `specfact-license-compliance` bundle with a `license` command focused on SBOM and SPDX license evaluation.
-- **NEW**: Package SBOM ingestion and SPDX normalization adapters that feed the paired core security/license findings model.
-- **NEW**: Add policy-aware handling for allowed, denied, and exception-based license states so reports can surface explicit remediation guidance.
+- **INCLUDES**: Package SBOM ingestion and SPDX normalization adapters that feed the paired core security/license findings model.
+- **ENABLES**: Add policy-aware handling for allowed, denied, and exception-based license states so reports can surface explicit remediation guidance.
 - **NEW**: Define bundle manifest, registry, docs, and signing expectations for a first-party official license-compliance package.
 - **EXTEND**: Reserve compatibility hooks so this bundle can share generated SBOM data with the broader security bundle without forcing a single runtime package.
 

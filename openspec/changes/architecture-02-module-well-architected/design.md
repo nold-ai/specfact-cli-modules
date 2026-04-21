@@ -23,9 +23,22 @@ Architecture governance spans both shared contracts in `specfact-cli` and execut
 
 ### 1. Ship architecture review as a standalone official bundle
 
-- **Decision**: Create `packages/specfact-architecture/` with the `architecture` command and its own manifest/signing lifecycle. Implementation PRs must include a complete `module-package.yaml` for the new specfact-architecture bundle and explicitly declare the adapter/manifest boundaries deferred by this decision. The package must define all required fields (name, version, commands, tier, publisher, bundle_dependencies, pip_dependencies, core_compatibility, integrity) following the same pattern as specfact-govern/specfact-codebase. Set a concrete core_compatibility range (e.g., ">=0.40.0,<1.0.0") that matches the paired specfact-cli change, confirm the architecture-02-well-architected-review entry exists and is stable in specfact-cli, and verify registry integration by passing the existing sign-modules-on-approval and publish-modules workflows so manifests auto-sign and tarballs auto-publish before merging.
+- **Decision**: Create `packages/specfact-architecture/` with the `architecture` command and its own manifest/signing lifecycle.
 - **Why**: Architecture review spans different analyzers, docs, and adoption concerns than existing bundles.
 - **Alternative considered**: Extend `specfact-govern` or `specfact-code-review`. Rejected because it would blur ownership and bundle identity.
+
+#### Implementation Requirements
+
+Implementation PRs must include a complete `module-package.yaml` for the new specfact-architecture bundle and explicitly declare the adapter/manifest boundaries deferred by this decision. The package must define all required fields following the same pattern as specfact-govern/specfact-codebase:
+
+- `name`, `version`, `commands`, `tier`, `publisher`
+- `bundle_dependencies`, `pip_dependencies`
+- `core_compatibility` (e.g., ">=0.40.0,<1.0.0") that matches the paired specfact-cli change
+- `integrity`
+
+Verification steps before merging:
+- Confirm the `architecture-02-well-architected-review` entry exists and is stable in specfact-cli
+- Verify registry integration by passing the existing `sign-modules-on-approval` and `publish-modules` workflows so manifests auto-sign and tarballs auto-publish
 
 ### 2. Treat boundary policies as portable rule resources
 
