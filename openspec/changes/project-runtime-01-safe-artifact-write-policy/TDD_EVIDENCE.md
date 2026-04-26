@@ -44,15 +44,15 @@
 
 ## Code Review
 
-- `2026-04-24T23:58:55+02:00`
+- `2026-04-27T00:08:59+02:00`
 - Command:
-  `hatch run specfact code review run --json --out .specfact/code-review.json --scope full`
-- Result: completed with existing repository baseline debt (`1022 findings`, `418 blocking`) across multiple unrelated bundles and long-lived backlog surfaces
+  `hatch run specfact code review run --level error --json --out .specfact/code-review.json --scope full`
+- Result: completed with existing repository baseline debt (`379 findings`, `379 blocking`) across multiple unrelated bundles and long-lived backlog surfaces
 
-- `2026-04-24T23:58:55+02:00`
+- `2026-04-27T00:09:25+02:00`
 - Command:
-  `hatch run specfact code review run --json --out .specfact/code-review.changed.json --scope changed`
-- Result: completed with pre-existing findings on already-large backlog command surfaces (`178 findings`, `39 blocking`), primarily longstanding complexity/KISS/contract issues in `packages/specfact-backlog/src/specfact_backlog/backlog/commands.py`
+  `hatch run specfact code review run --level error --json --out .specfact/code-review.changed.json --scope changed`
+- Result: passed (`0 findings`, `0 blocking`) — no error-severity findings in changed files
 
 ### Review exception
 
