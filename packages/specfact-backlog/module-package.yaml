@@ -28,3 +28,4 @@ schema_extensions:
     - backlog_core.backlog_config
 integrity:
   checksum: sha256:3b3e24c8092479fb8503053986eb919c5d2c303dc02cb3f593af7f3f9b122dee
+  signature: 9/u9PhsSUuDuB0jXQpXqE+8ZB00l121RnhpDTnrnenwbuDQW0JmZaAfv6fEAdsd3H3NE19fN0i69YHkP1LeZAQ==
