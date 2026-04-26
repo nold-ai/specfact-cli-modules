@@ -2,31 +2,31 @@
 
 ## Why
 
-Core can define safer init/setup behavior, but the broader trust problem remains if bundle runtime commands in `specfact-cli-modules` still overwrite or rewrite user-project artifacts ad hoc. To make issue [specfact-cli#487](https://github.com/nold-ai/specfact-cli/issues/487) impossible by design rather than by one-off fix, runtime package commands that write local artifacts need to adopt the same safe-write contract and conflict semantics.
+SpecFact bundle runtime code should normally keep its local state inside `.specfact/` and avoid mutating user-owned repository artifacts. The existing change overreaches by implying a repo-wide generic safe-write layer for every runtime writer; the practical need is narrower: sanctioned external touchpoints outside `.specfact` need the core safe-write contract, while managed artifacts inside `.specfact` need explicit ownership rules so user-tuned config is preserved and fully owned state remains deterministic.
 
 ## What Changes
 
-- **NEW**: Introduce a runtime-facing artifact write adapter/utility layer for bundle packages that classifies local writes as create-only, mergeable, append-only, or explicit-replace.
-- **NEW**: Standardize backup, recovery metadata, and dry-run/preview surfaces for bundle commands that emit or mutate project artifacts.
-- **NEW**: Define adoption guidance so bundle authors declare ownership boundaries for every local artifact path they write.
-- **EXTEND**: Update initial adopter package commands in `specfact-project`, `specfact-spec`, and other bundle flows that currently write directly into target repos to use the safe-write utility instead of raw overwrite calls.
-- **EXTEND**: Bundle docs and prompts to state the new preservation guarantees and when explicit force/replace semantics are required.
+- **NEW**: Define a runtime artifact boundary policy that distinguishes sanctioned external user-owned artifacts outside `.specfact` from SpecFact-managed artifacts inside `.specfact`.
+- **NEW**: Require any sanctioned runtime touchpoint outside `.specfact` to reuse the paired core safe-write contract from `specfact-cli` rather than introducing a second generic modules-side abstraction.
+- **NEW**: Define `.specfact` ownership classes for bundle runtime artifacts: fully owned generated state may update deterministically, while user-tuned config files must preserve unrelated keys or sections.
+- **EXTEND**: Narrow first-adopter scope to practical backlog bundle paths such as `.specfact/backlog-config.yaml`, mapping files under `.specfact/templates/backlog/`, and sync-managed state/output paths.
+- **EXTEND**: Bundle docs and prompts to state preservation guarantees only for sanctioned external touchpoints and ownership semantics for `.specfact` artifacts.
 
 ## Capabilities
 
 ### New Capabilities
-- `runtime-artifact-write-safety`: Shared runtime safety contract for bundle commands that create or mutate project artifacts in user repositories.
+- `runtime-artifact-write-safety`: Boundary-based runtime write policy for modules bundles, covering sanctioned external user-owned artifact touchpoints and ownership-aware writes inside `.specfact`.
 
 ### Modified Capabilities
-- `backlog-add`: local export helpers and related artifact generation must use the runtime safe-write contract when updating project files.
-- `backlog-sync`: runtime sync/export flows must avoid silent local overwrites and surface preview-or-conflict behavior consistently.
+- `backlog-add`: backlog config and mapping writes under `.specfact` must preserve unrelated user-managed settings while keeping fully owned generated artifacts deterministic.
+- `backlog-sync`: sync-managed artifacts must distinguish fully owned `.specfact` state from explicit external output targets and avoid silent overwrite of user-owned paths.
 
 ## Impact
 
-- Affected code: bundle runtime helpers in `packages/specfact-project/`, `packages/specfact-spec/`, and any command packages that currently call `write_text` directly against user project files.
-- Affected docs: relevant bundle docs on modules.specfact.io covering setup, sync/export, and local artifact generation.
-- Integration points: depends on the paired core change `specfact-cli/openspec/changes/profile-04-safe-project-artifact-writes` for the authoritative policy and terminology.
-- Dependencies: may require a new modules-side feature issue if no existing feature cleanly groups cross-package local-write safety work.
+- Affected code: first-adopter backlog runtime paths in `packages/specfact-backlog/`, especially config, mapping, and sync-managed local artifact writes; broader project/spec bundle adoption is deferred until a generic paired core API exists.
+- Affected docs: backlog bundle docs on modules.specfact.io covering config, sync/export, and local artifact ownership expectations.
+- Integration points: depends on the paired core change `specfact-cli/openspec/changes/profile-04-safe-project-artifact-writes` only for sanctioned external user-owned artifacts outside `.specfact`.
+- Dependencies: does not introduce a generic modules-side safe-write framework; future broad runtime adoption may need a follow-up core API expansion instead of stretching this change further.
 
 ## Source Tracking
 

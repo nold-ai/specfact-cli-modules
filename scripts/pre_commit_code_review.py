@@ -111,6 +111,8 @@ def build_review_command(files: Sequence[str]) -> list[str]:
         "code",
         "review",
         "run",
+        "--level",
+        "error",
         "--json",
         "--out",
         REVIEW_JSON_OUT,
