@@ -32,6 +32,16 @@
   `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump`
 - Result: passed (`Verified 6 module manifest(s).`)
 
+- `2026-04-27T00:07:40+02:00`
+- Command:
+  `hatch run sign-modules --allow-unsigned --payload-from-filesystem packages/specfact-backlog/module-package.yaml`
+- Result: passed after bumping `packages/specfact-backlog/module-package.yaml` to `0.41.21` (TYPE_CHECKING guard tightening in check-bundle-imports.py)
+
+- `2026-04-27T00:07:51+02:00`
+- Command:
+  `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump`
+- Result: passed (`Verified 6 module manifest(s).`)
+
 - `2026-04-24T23:58:55+02:00`
 - Command:
   `hatch run contract-test`

@@ -1,6 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Bundle runtime commands SHALL distinguish sanctioned external artifacts from SpecFact-managed artifacts
+
 Bundle runtime commands SHALL treat files outside `.specfact` as user-owned by default and SHALL treat files inside `.specfact` as SpecFact-managed unless a command explicitly documents a narrower ownership split.
 
 #### Scenario: Runtime command targets a sanctioned external user-owned artifact
@@ -14,6 +15,7 @@ Bundle runtime commands SHALL treat files outside `.specfact` as user-owned by d
 - **AND** it SHALL NOT treat the file as a user-owned external artifact by default
 
 ### Requirement: Partially user-tuned `.specfact` config SHALL preserve unrelated content
+
 Bundle commands that update partially owned config files under `.specfact` SHALL preserve unrelated user-managed keys or sections during supported updates.
 
 #### Scenario: Supported config merge preserves unrelated provider settings

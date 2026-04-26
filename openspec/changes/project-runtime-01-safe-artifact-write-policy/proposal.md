@@ -15,9 +15,11 @@ SpecFact bundle runtime code should normally keep its local state inside `.specf
 ## Capabilities
 
 ### New Capabilities
+
 - `runtime-artifact-write-safety`: Boundary-based runtime write policy for modules bundles, covering sanctioned external user-owned artifact touchpoints and ownership-aware writes inside `.specfact`.
 
 ### Modified Capabilities
+
 - `backlog-add`: backlog config and mapping writes under `.specfact` must preserve unrelated user-managed settings while keeping fully owned generated artifacts deterministic.
 - `backlog-sync`: sync-managed artifacts must distinguish fully owned `.specfact` state from explicit external output targets and avoid silent overwrite of user-owned paths.
 

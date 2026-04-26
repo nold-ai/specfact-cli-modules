@@ -643,10 +643,56 @@ backlog_config:
     assert type_by_type.get("Bug", {}).get("Custom.BugSeverity") == "string"
 
 
-def test_map_fields_preserves_unrelated_backlog_config_sections(monkeypatch, tmp_path: Path) -> None:
+def _setup_ado_map_fields(monkeypatch: Any, tmp_path: Path) -> tuple[Any, list[str]]:
     backlog_commands = importlib.import_module("specfact_backlog.backlog.commands")
-    backlog_app = backlog_commands.app
     monkeypatch.chdir(tmp_path)
+
+    fields_payload = {"value": [{"referenceName": "Custom.Toggle", "name": "Toggle"}]}
+    work_item_types_payload = {"value": [{"name": "User Story"}]}
+    work_item_type_fields_payload = {
+        "value": [
+            {
+                "referenceName": "Custom.Toggle",
+                "name": "Toggle",
+                "alwaysRequired": True,
+                "allowedValues": [],
+            }
+        ]
+    }
+
+    def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
+        if "/_apis/wit/workitemtypes?" in url:
+            return _FakeResponse(work_item_types_payload)
+        if "/_apis/wit/workitemtypes/" in url and "/fields?" in url:
+            return _FakeResponse(work_item_type_fields_payload)
+        if "/_apis/wit/fields/Custom.Toggle?" in url:
+            return _FakeResponse({"allowedValues": [], "type": "boolean"})
+        if "/_apis/wit/fields?" in url:
+            return _FakeResponse(fields_payload)
+        msg = f"Unexpected URL: {url}"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    args = [
+        "map-fields",
+        "--provider",
+        "ado",
+        "--ado-org",
+        "noldai",
+        "--ado-project",
+        "specfact-cli",
+        "--ado-token",
+        "token",
+        "--ado-framework",
+        "scrum",
+        "--non-interactive",
+    ]
+    return backlog_commands.app, args
+
+
+def test_map_fields_preserves_unrelated_backlog_config_sections(monkeypatch, tmp_path: Path) -> None:
+    backlog_app, args = _setup_ado_map_fields(monkeypatch, tmp_path)
 
     config_dir = tmp_path / ".specfact"
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -665,50 +711,7 @@ metadata:
         encoding="utf-8",
     )
 
-    fields_payload = {"value": [{"referenceName": "Custom.Toggle", "name": "Toggle"}]}
-    work_item_types_payload = {"value": [{"name": "User Story"}]}
-    work_item_type_fields_payload = {
-        "value": [
-            {
-                "referenceName": "Custom.Toggle",
-                "name": "Toggle",
-                "alwaysRequired": True,
-                "allowedValues": [],
-            }
-        ]
-    }
-
-    def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
-        if "/_apis/wit/workitemtypes?" in url:
-            return _FakeResponse(work_item_types_payload)
-        if "/_apis/wit/workitemtypes/" in url and "/fields?" in url:
-            return _FakeResponse(work_item_type_fields_payload)
-        if "/_apis/wit/fields/Custom.Toggle?" in url:
-            return _FakeResponse({"allowedValues": [], "type": "boolean"})
-        if "/_apis/wit/fields?" in url:
-            return _FakeResponse(fields_payload)
-        msg = f"Unexpected URL: {url}"
-        raise AssertionError(msg)
-
-    monkeypatch.setattr("requests.get", fake_get)
-
-    result = runner.invoke(
-        backlog_app,
-        [
-            "map-fields",
-            "--provider",
-            "ado",
-            "--ado-org",
-            "noldai",
-            "--ado-project",
-            "specfact-cli",
-            "--ado-token",
-            "token",
-            "--ado-framework",
-            "scrum",
-            "--non-interactive",
-        ],
-    )
+    result = runner.invoke(backlog_app, args)
 
     assert result.exit_code == 0, result.output
     cfg = _load_yaml(config_dir / "backlog-config.yaml")
@@ -718,9 +721,7 @@ metadata:
 
 
 def test_map_fields_preserves_unrelated_custom_mapping_sections(monkeypatch, tmp_path: Path) -> None:
-    backlog_commands = importlib.import_module("specfact_backlog.backlog.commands")
-    backlog_app = backlog_commands.app
-    monkeypatch.chdir(tmp_path)
+    backlog_app, args = _setup_ado_map_fields(monkeypatch, tmp_path)
 
     mapping_path = tmp_path / ".specfact" / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
     mapping_path.parent.mkdir(parents=True, exist_ok=True)
@@ -737,50 +738,7 @@ notes:
         encoding="utf-8",
     )
 
-    fields_payload = {"value": [{"referenceName": "Custom.Toggle", "name": "Toggle"}]}
-    work_item_types_payload = {"value": [{"name": "User Story"}]}
-    work_item_type_fields_payload = {
-        "value": [
-            {
-                "referenceName": "Custom.Toggle",
-                "name": "Toggle",
-                "alwaysRequired": True,
-                "allowedValues": [],
-            }
-        ]
-    }
-
-    def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
-        if "/_apis/wit/workitemtypes?" in url:
-            return _FakeResponse(work_item_types_payload)
-        if "/_apis/wit/workitemtypes/" in url and "/fields?" in url:
-            return _FakeResponse(work_item_type_fields_payload)
-        if "/_apis/wit/fields/Custom.Toggle?" in url:
-            return _FakeResponse({"allowedValues": [], "type": "boolean"})
-        if "/_apis/wit/fields?" in url:
-            return _FakeResponse(fields_payload)
-        msg = f"Unexpected URL: {url}"
-        raise AssertionError(msg)
-
-    monkeypatch.setattr("requests.get", fake_get)
-
-    result = runner.invoke(
-        backlog_app,
-        [
-            "map-fields",
-            "--provider",
-            "ado",
-            "--ado-org",
-            "noldai",
-            "--ado-project",
-            "specfact-cli",
-            "--ado-token",
-            "token",
-            "--ado-framework",
-            "scrum",
-            "--non-interactive",
-        ],
-    )
+    result = runner.invoke(backlog_app, args)
 
     assert result.exit_code == 0, result.output
     mapping_data = _load_yaml(mapping_path)
@@ -788,59 +746,14 @@ notes:
 
 
 def test_map_fields_fails_safe_when_custom_mapping_file_is_invalid(monkeypatch, tmp_path: Path) -> None:
-    backlog_commands = importlib.import_module("specfact_backlog.backlog.commands")
-    backlog_app = backlog_commands.app
-    monkeypatch.chdir(tmp_path)
+    backlog_app, args = _setup_ado_map_fields(monkeypatch, tmp_path)
 
     mapping_path = tmp_path / ".specfact" / "templates" / "backlog" / "field_mappings" / "ado_custom.yaml"
     mapping_path.parent.mkdir(parents=True, exist_ok=True)
     original_content = "- not-a-dict\n"
     mapping_path.write_text(original_content, encoding="utf-8")
 
-    fields_payload = {"value": [{"referenceName": "Custom.Toggle", "name": "Toggle"}]}
-    work_item_types_payload = {"value": [{"name": "User Story"}]}
-    work_item_type_fields_payload = {
-        "value": [
-            {
-                "referenceName": "Custom.Toggle",
-                "name": "Toggle",
-                "alwaysRequired": True,
-                "allowedValues": [],
-            }
-        ]
-    }
-
-    def fake_get(url: str, **_kwargs: Any) -> _FakeResponse:
-        if "/_apis/wit/workitemtypes?" in url:
-            return _FakeResponse(work_item_types_payload)
-        if "/_apis/wit/workitemtypes/" in url and "/fields?" in url:
-            return _FakeResponse(work_item_type_fields_payload)
-        if "/_apis/wit/fields/Custom.Toggle?" in url:
-            return _FakeResponse({"allowedValues": [], "type": "boolean"})
-        if "/_apis/wit/fields?" in url:
-            return _FakeResponse(fields_payload)
-        msg = f"Unexpected URL: {url}"
-        raise AssertionError(msg)
-
-    monkeypatch.setattr("requests.get", fake_get)
-
-    result = runner.invoke(
-        backlog_app,
-        [
-            "map-fields",
-            "--provider",
-            "ado",
-            "--ado-org",
-            "noldai",
-            "--ado-project",
-            "specfact-cli",
-            "--ado-token",
-            "token",
-            "--ado-framework",
-            "scrum",
-            "--non-interactive",
-        ],
-    )
+    result = runner.invoke(backlog_app, args)
 
     assert result.exit_code != 0
     assert mapping_path.read_text(encoding="utf-8") == original_content
