@@ -82,3 +82,4 @@ def test_sync_force_overwrite_external_baseline_creates_backup(monkeypatch, tmp_
     recovery_dir = tmp_path / ".specfact" / "recovery"
     backups = list(recovery_dir.glob("baseline.json.*.bak"))
     assert backups
+    assert backups[0].read_text(encoding="utf-8") == original_content

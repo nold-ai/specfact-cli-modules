@@ -25,7 +25,7 @@
 - `2026-04-24T23:58:55+02:00`
 - Command:
   `hatch run python scripts/sign-modules.py --allow-unsigned --payload-from-filesystem packages/specfact-backlog/module-package.yaml`
-- Result: passed after bumping `packages/specfact-backlog/module-package.yaml` from `0.41.17` to `0.41.18`
+- Result: passed after bumping `packages/specfact-backlog/module-package.yaml` from `0.41.17` to `0.41.20` (intermediate bumps: `0.41.18` initial, `0.41.19` import/LOC/type fixes, `0.41.20` bug-hunt corrections)
 
 - `2026-04-24T23:58:55+02:00`
 - Command:

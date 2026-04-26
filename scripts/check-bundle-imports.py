@@ -91,6 +91,8 @@ def _extract_imported_modules(tree: ast.AST) -> list[tuple[int, str]]:
 
     def _visit(node: ast.AST) -> None:
         if isinstance(node, ast.If) and _is_type_checking_guard(node):
+            for child in node.orelse:
+                _visit(child)
             return
         if isinstance(node, ast.Import):
             for alias in node.names:

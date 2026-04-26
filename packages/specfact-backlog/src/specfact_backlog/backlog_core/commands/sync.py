@@ -192,17 +192,16 @@ def sync(
         raise typer.Exit(code=1)
 
     baseline_graph = _load_baseline_graph(baseline_file)
-    current_graph = _fetch_current_graph(project_id, adapter, template)
-    delta = compute_delta(baseline_graph, current_graph)
-
-    _render_delta_summary(delta)
-
     repo_root = Path.cwd().resolve()
     _prepare_baseline_write(
         baseline_file,
         repo_root=repo_root,
         force_external_overwrite=force_baseline_overwrite,
     )
+    current_graph = _fetch_current_graph(project_id, adapter, template)
+    delta = compute_delta(baseline_graph, current_graph)
+
+    _render_delta_summary(delta)
     baseline_file.parent.mkdir(parents=True, exist_ok=True)
     baseline_file.write_text(current_graph.to_json(), encoding="utf-8")
     print_success(f"Updated baseline graph: {baseline_file}")

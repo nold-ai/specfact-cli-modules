@@ -4147,6 +4147,8 @@ def _normalize_map_field_providers(options: dict[str, Any]) -> list[str]:
     selected = _normalize_provider_values(options.get("provider") or [])
     if selected:
         return selected
+    if options.get("github_project_id") or options.get("github_project_v2_id") or options.get("github_type_field_id"):
+        return ["github"]
     if options.get("ado_org") or options.get("ado_project") or options.get("ado_token"):
         return ["ado"]
     if options.get("non_interactive"):

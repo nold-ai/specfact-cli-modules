@@ -48,7 +48,6 @@ Expected status should show both providers as valid.
 specfact backlog init-config --force
 ```
 
-This creates `.nold-ai/specfact-backlog-config.yaml`.
 This creates `.specfact/backlog-config.yaml`.
 
 ## 2) Map Fields (ADO)
