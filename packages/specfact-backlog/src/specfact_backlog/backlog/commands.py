@@ -4135,11 +4135,12 @@ def map_fields(
 
 def _run_map_fields_command(options: dict[str, Any]) -> None:
     selected = _normalize_map_field_providers(options)
-    if "github" in selected and "ado" not in selected:
+    if "github" in selected:
         console.print(
             "[yellow]GitHub field mapping setup is currently handled by repository issue type metadata.[/yellow]"
         )
-        return
+        if "ado" not in selected:
+            return
     _run_ado_map_fields(options)
 
 
@@ -4165,8 +4166,14 @@ def _normalize_provider_values(raw_values: Any) -> list[str]:
     normalized: list[str] = []
     for raw in values:
         text = str(getattr(raw, "value", raw) or "").strip().lower().replace("-", " ").replace("_", " ")
-        mapped = aliases.get(" ".join(text.split()))
-        if mapped and mapped not in normalized:
+        if not text:
+            continue
+        key = " ".join(text.split())
+        mapped = aliases.get(key)
+        if mapped is None:
+            console.print(f"[red]Error:[/red] Unknown provider {text!r}. Valid providers: ado, github.")
+            raise typer.Exit(1)
+        if mapped not in normalized:
             normalized.append(mapped)
     return normalized
 
