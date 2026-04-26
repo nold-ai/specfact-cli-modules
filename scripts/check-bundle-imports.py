@@ -79,14 +79,35 @@ def _is_allowed_prefix(module_name: str, allowed_prefixes: tuple[str, ...]) -> b
     return any(module_name == prefix or module_name.startswith(prefix + ".") for prefix in allowed_prefixes)
 
 
+def _is_type_checking_guard(node: ast.If) -> bool:
+    test = node.test
+    if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING":
+        return True
+    return (
+        isinstance(test, ast.Attribute)
+        and test.attr == "TYPE_CHECKING"
+        and isinstance(test.value, ast.Name)
+        and test.value.id == "typing"
+    )
+
+
 def _extract_imported_modules(tree: ast.AST) -> list[tuple[int, str]]:
     imports: list[tuple[int, str]] = []
-    for node in ast.walk(tree):
+
+    def _visit(node: ast.AST) -> None:
+        if isinstance(node, ast.If) and _is_type_checking_guard(node):
+            for child in node.orelse:
+                _visit(child)
+            return
         if isinstance(node, ast.Import):
             for alias in node.names:
                 imports.append((node.lineno, alias.name))
         elif isinstance(node, ast.ImportFrom) and node.module:
             imports.append((node.lineno, node.module))
+        for child in ast.iter_child_nodes(node):
+            _visit(child)
+
+    _visit(tree)
     return imports
 
 

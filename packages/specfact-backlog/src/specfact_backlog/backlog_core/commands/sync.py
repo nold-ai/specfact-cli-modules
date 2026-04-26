@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
@@ -27,6 +29,51 @@ def _load_baseline_graph(baseline_file: Path) -> BacklogGraph:
     if not baseline_file.exists():
         return BacklogGraph(provider="unknown", project_key="unknown")
     return BacklogGraph.from_json(baseline_file.read_text(encoding="utf-8"))
+
+
+@beartype
+def _is_specfact_managed_path(path: Path, repo_root: Path) -> bool:
+    try:
+        relative = path.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        return False
+    return relative.parts[:1] == (".specfact",)
+
+
+@beartype
+def _prepare_baseline_write(
+    baseline_file: Path,
+    *,
+    repo_root: Path,
+    force_external_overwrite: bool,
+) -> None:
+    resolved_baseline = baseline_file.resolve()
+    if not resolved_baseline.exists() or _is_specfact_managed_path(resolved_baseline, repo_root):
+        return
+    if not force_external_overwrite:
+        print_warning(
+            "Refusing to overwrite existing external baseline file without "
+            f"--force-baseline-overwrite: {resolved_baseline}"
+        )
+        raise typer.Exit(code=1)
+    backup_path = _backup_file_to_recovery(repo_root, resolved_baseline)
+    print_info(f"Backed up external baseline to {backup_path}")
+
+
+@beartype
+def _backup_file_to_recovery(repo_root: Path, file_path: Path) -> Path:
+    """Mirror the paired core recovery-backup naming for sanctioned external baseline writes."""
+    recovery_dir = (repo_root / ".specfact" / "recovery").resolve()
+    recovery_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
+    safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", file_path.name)
+    backup_path = recovery_dir / f"{safe_name}.{stamp}.bak"
+    suffix = 0
+    while backup_path.exists():
+        suffix += 1
+        backup_path = recovery_dir / f"{safe_name}.{stamp}.{suffix}.bak"
+    shutil.copy2(file_path, backup_path)
+    return backup_path
 
 
 @beartype
@@ -129,6 +176,13 @@ def sync(
     baseline_file: Annotated[Path, typer.Option("--baseline-file", help="Path to baseline graph JSON")] = Path(
         ".specfact/backlog-baseline.json"
     ),
+    force_baseline_overwrite: Annotated[
+        bool,
+        typer.Option(
+            "--force-baseline-overwrite",
+            help="Explicitly replace an existing baseline file outside .specfact after creating a recovery backup",
+        ),
+    ] = False,
     output_format: Annotated[str, typer.Option("--output-format", help="Output format: plan|json")] = "plan",
     template: Annotated[str, typer.Option("--template", help="Template name for mapping")] = "github_projects",
 ) -> None:
@@ -138,11 +192,16 @@ def sync(
         raise typer.Exit(code=1)
 
     baseline_graph = _load_baseline_graph(baseline_file)
+    repo_root = Path.cwd().resolve()
+    _prepare_baseline_write(
+        baseline_file,
+        repo_root=repo_root,
+        force_external_overwrite=force_baseline_overwrite,
+    )
     current_graph = _fetch_current_graph(project_id, adapter, template)
     delta = compute_delta(baseline_graph, current_graph)
 
     _render_delta_summary(delta)
-
     baseline_file.parent.mkdir(parents=True, exist_ok=True)
     baseline_file.write_text(current_graph.to_json(), encoding="utf-8")
     print_success(f"Updated baseline graph: {baseline_file}")

@@ -193,6 +193,8 @@ This command will:
 9. Validate the mapping before saving
 10. Save the mapping to `.specfact/templates/backlog/field_mappings/ado_custom.yaml`
 
+When an existing `.specfact/templates/backlog/field_mappings/ado_custom.yaml` already contains unrelated top-level sections, `specfact backlog map-fields` preserves them. If the file is not a valid YAML mapping, the command fails safely and leaves the file unchanged.
+
 **Interactive Menu Navigation:**
 
 - Use **↑** (Up arrow) and **↓** (Down arrow) to navigate through available ADO fields

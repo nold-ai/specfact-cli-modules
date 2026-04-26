@@ -31,10 +31,12 @@ specfact backlog delta rollback-analysis --project-id <id> --adapter <github|ado
 
 ## Baseline
 
-`status`, `cost-estimate`, and `rollback-analysis` rely on a backlog baseline graph (default `.nold-ai/specfact-backlog-baseline.json`).
+`status`, `cost-estimate`, and `rollback-analysis` rely on a backlog baseline graph (default `.specfact/backlog-baseline.json`).
 
 Generate/update baseline with:
 
 ```bash
 specfact project snapshot --bundle <bundle>
 ```
+
+When `specfact backlog sync --baseline-file` targets an existing path outside `.specfact`, replacement is blocked unless you pass `--force-baseline-overwrite`. The replaced file is backed up under `.specfact/recovery/`.
