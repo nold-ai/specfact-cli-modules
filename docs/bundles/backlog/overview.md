@@ -56,6 +56,15 @@ After installation, `specfact backlog --help` lists the backlog command group. T
 | `cost-estimate` | Rough effort points from delta volume |
 | `rollback-analysis` | Rollback risk from current delta |
 
+## Local artifact ownership
+
+Backlog runtime state is expected to live under `.specfact/`.
+
+- `.specfact/backlog-config.yaml` is a partially user-tuned config file. Backlog commands update only the managed provider subtree and preserve unrelated settings.
+- `.specfact/templates/backlog/field_mappings/ado_custom.yaml` is also partially user-tuned. `specfact backlog map-fields` preserves unrelated top-level sections and fails safe if the existing file is not a valid YAML mapping.
+- `.specfact/backlog-baseline.json` and generated files under `.specfact/plans/` are SpecFact-managed state and may be rewritten deterministically.
+- If you point `specfact backlog sync --baseline-file` to an existing path outside `.specfact`, SpecFact treats that file as user-owned and requires `--force-baseline-overwrite` before replacement. The previous file is backed up under `.specfact/recovery/`.
+
 ### Policy (`specfact backlog policy`)
 
 Deterministic policy validation against backlog snapshots (bundled with this package; not core CLI-owned).

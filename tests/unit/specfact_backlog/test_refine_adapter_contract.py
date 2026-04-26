@@ -43,13 +43,18 @@ def test_fetch_backlog_items_accepts_core_backlog_adapter(monkeypatch) -> None:
 
     monkeypatch.setattr(backlog_commands, "AdapterRegistry", _registry_factory)
 
-    # pylint: disable=protected-access
-    items = backlog_commands._fetch_backlog_items(
-        "ado",
+    connection = backlog_commands._AdapterContext(
+        adapter="ado",
         ado_org="test-org",
         ado_project="test-project",
         ado_token="test-token",
-        limit=1,
+    )
+    filters = backlog_commands.BacklogFilters(limit=1)
+
+    # pylint: disable=protected-access
+    items = backlog_commands._fetch_backlog_items(
+        connection,
+        filters,
     )
 
     assert len(items) == 1

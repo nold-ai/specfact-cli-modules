@@ -1,78 +1,87 @@
 ## Context
 
-Many bundle commands in `specfact-cli-modules` write directly into user repositories using local `write_text` or bespoke write logic. Even where behavior is currently harmless, the repo lacks a consistent contract for ownership, merge strategy, preview, and recovery when bundle commands materialize artifacts. If only core init/setup adopts safer semantics, runtime package commands can still recreate the same trust failure elsewhere.
+The existing proposal assumed that many bundle runtime commands directly mutate user-owned repository files and therefore need a generic runtime safe-write layer. The current codebase and intended product model are narrower: bundle runtime code should normally keep its local artifacts under `.specfact/`, with only a small number of sanctioned external touchpoints outside `.specfact` such as IDE or prompt-related files.
 
-The paired core change defines the authoritative policy language. This modules-side design focuses on adopting that policy in runtime packages without introducing a competing abstraction.
+That changes the practical design boundary. The paired core change defines safe handling for user-owned project artifacts outside `.specfact`, but it does not currently expose a broad generic runtime artifact API for arbitrary YAML, Markdown, or bundle-specific local files. This modules-side change therefore needs to separate two concerns:
+
+- external user-owned artifacts outside `.specfact`, which should reuse core safe-write semantics
+- SpecFact-managed artifacts inside `.specfact`, which need clear ownership rules but not the full core trust-boundary machinery
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Reuse the core safe-write contract from `specfact-cli` in bundle runtime code.
-- Standardize how bundle commands declare file ownership and write intent.
-- Add adoption for first-runner package commands that materialize or mutate local project artifacts.
-- Add tests ensuring bundle commands preserve unrelated user content when they touch partially owned artifacts.
+- Reuse the paired core safe-write contract only for sanctioned runtime touchpoints outside `.specfact`.
+- Standardize how bundle commands classify `.specfact` artifacts as fully owned state or merge-preserve config.
+- Add a practical first-adopter scope in the backlog bundle where local writes are real and user-facing.
+- Add tests that prove partially user-tuned `.specfact` config survives supported updates and external user-owned paths are not silently overwritten.
 
 **Non-Goals:**
-- Refactor every single `write_text` call in the repo regardless of target ownership.
-- Move ownership policy definition into modules; core remains authoritative.
-- Turn all bundle writers into interactive review workflows in this change.
+- Refactor every `write_text` call in the repo regardless of path, ownership, or risk.
+- Invent a second generic runtime safe-write framework in `specfact-cli-modules` while core remains narrower.
+- Treat all `.specfact` files as user-owned artifacts that require the full profile-04 policy.
+- Change upstream provider writeback semantics; GitHub/ADO issue updates remain a separate concern.
 
 ## Decisions
 
-### 1. Runtime packages will depend on the core safe-write helper instead of creating a duplicate modules-side helper
+### 1. External user-owned artifacts outside `.specfact` are the exception path and SHALL reuse core semantics
 
-Bundle code already imports `specfact_cli` surfaces where needed. This change will reuse the core helper and ownership model so both repos speak the same semantics.
+Bundle code already imports `specfact_cli` surfaces where needed. When a modules runtime command touches a sanctioned external user-owned artifact outside `.specfact`, it should reuse the paired core safe-write semantics rather than define a competing contract.
 
 Rationale:
 - One contract, one enforcement surface.
-- Avoids drift between “core-safe” and “runtime-safe” behavior.
+- Matches the actual user trust boundary.
 
 Alternative considered:
-- Create a modules-local wrapper and later reconcile. Rejected because it duplicates the core design immediately.
+- Create a modules-local generic safe-write abstraction for all runtime files. Rejected because the core API is not yet broad enough to justify a mirrored abstraction here.
 
-### 2. Adoption scope will prioritize commands that write into user repos, not internal generated temp artifacts
+### 2. `.specfact` artifacts SHALL use an ownership-aware policy rather than the full external safe-write contract
 
-The first slice should cover commands that write persistent user-facing artifacts in target repositories. Internal temp files, caches, or package-build outputs are not the same risk class.
+The first slice should distinguish between:
 
-Rationale:
-- Keeps scope manageable while addressing the highest-risk trust boundary.
-
-### 3. Runtime commands must declare artifact ownership at the call site
-
-Each adopting command will explicitly state whether the target artifact is:
-- fully owned by SpecFact
-- partially owned by SpecFact-managed keys/blocks
-- create-only
+- fully owned generated state inside `.specfact` that SpecFact may recreate or replace deterministically
+- merge-preserve config inside `.specfact` where users may tune unrelated provider settings or metadata and expect those values to survive targeted updates
 
 Rationale:
-- Bundle authors know command intent best.
-- CI can verify helper usage but needs call-site ownership declarations to be meaningful.
+- `.specfact` is the normal home for bundle runtime state.
+- The main practical risk inside `.specfact` is accidental replacement of unrelated config, not arbitrary mutation of user-owned source files.
 
-### 4. Modules CI should add behavior fixtures rather than a second independent static scanner
+Alternative considered:
+- Treat every `.specfact` artifact as a user-owned external file requiring the full core policy. Rejected because it adds heavy machinery where deterministic managed ownership is the intended model.
 
-The static “unsafe write” rule belongs in core because it defines the helper boundary. Modules-side CI will focus on adoption tests for selected commands and package flows.
+### 3. First adopters should come from the backlog bundle, not from speculative repo-wide writers
+
+The most practical current paths are backlog config and mapping files under `.specfact`, plus sync-managed local state and explicit baseline/output paths. These paths are both real in the codebase and close to the change’s `backlog-add` and `backlog-sync` deltas.
 
 Rationale:
-- Keeps enforcement non-duplicative.
-- Core owns the API and static contract; modules own runtime usage proof.
+- They cover real current behavior rather than hypothetical future writers.
+- They let the change prove both merge-preserve config behavior and owned-state behavior.
+
+Alternative considered:
+- Start with `specfact-project` and `specfact-spec` writers broadly. Rejected because those paths mix generated files, temp artifacts, and future workflow design that is not yet bounded by a generic core API.
+
+### 4. Modules-side verification should focus on behavior tests, not a second generic unsafe-write scanner
+
+Rationale:
+- The static “unsafe write” rule belongs with the core external safe-write contract boundary.
+- This repo needs tests that prove local ownership behavior for selected bundle commands, not a second policy engine that will drift.
 
 ## Risks / Trade-offs
 
-- `[Risk]` Bundle packages may need a raised `core_compatibility` floor to consume the new helper. → Mitigation: stage versioning and compatibility updates as part of adoption tasks.
-- `[Risk]` Adoption can stall if too many commands are targeted at once. → Mitigation: identify first adopters in proposal/tasks and defer remaining paths with explicit follow-up inventory.
-- `[Risk]` Some runtime artifact types may not support structured merge yet. → Mitigation: use create-only or explicit-replace with backup semantics until a sanctioned merge strategy exists.
+- `[Risk]` The change name still reads broader than the refined scope. → Mitigation: clarify the boundary explicitly in proposal/specs/design/tasks and keep the current id only for continuity.
+- `[Risk]` `.specfact` config files can still contain user-tuned content that is easy to clobber. → Mitigation: require merge-preserve behavior for partially owned config and add regression fixtures around unrelated keys and sections.
+- `[Risk]` Future modules runtime features may need a truly generic safe-write API from core. → Mitigation: defer broad repo-wide adoption until core exposes that surface; keep this change practical and backlog-focused.
 
 ## Migration Plan
 
-1. Wait for the core helper contract to land or stabilize in the paired core change.
-2. Update selected runtime package commands to call the helper with ownership metadata.
-3. Add tests proving preservation/backup/conflict behavior for those package flows.
-4. Document adoption guidance for future bundle authors.
+1. Refresh this change’s artifacts to narrow scope to sanctioned external touchpoints and `.specfact` ownership boundaries.
+2. Implement first-adopter backlog bundle behavior around config, mapping, and sync-managed local files.
+3. Reuse core profile-04 behavior only where a modules command truly touches a user-owned path outside `.specfact`.
+4. Defer any broader generic runtime safe-write abstraction to a follow-up that is paired with an expanded core API.
 
 Rollback strategy:
-- If a specific runtime adoption proves unstable, the command should fail-safe or skip existing-file mutation instead of restoring raw overwrite behavior.
+- If a merge-preserve path proves unstable, fall back to fail-safe handling for that config mutation rather than broadening raw overwrite behavior.
 
 ## Open Questions
 
-- Which bundle commands should be first adopters in this change versus a later follow-up inventory?
-- Should bundle manifests or docs carry artifact ownership metadata, or is code-level declaration sufficient for now?
+- Should the change id eventually be renamed to better reflect artifact boundaries rather than “safe write policy,” or is clarified content sufficient?
+- Which external user-owned touchpoints outside `.specfact` still exist in modules runtime today beyond future prompt or IDE-oriented flows?

@@ -2,12 +2,19 @@
 
 ## ADDED Requirements
 
-### Requirement: Backlog sync local export paths SHALL avoid silent overwrite
+### Requirement: Backlog sync SHALL distinguish managed `.specfact` state from external output targets
 
-Any `specfact backlog sync` local export or artifact materialization path SHALL avoid silent overwrites of existing user-project artifacts.
+Any `specfact backlog sync` local artifact path SHALL distinguish between fully owned managed state under `.specfact` and explicit output targets outside `.specfact`.
 
-#### Scenario: Existing export target produces conflict or safe merge
+#### Scenario: Default managed baseline state updates deterministically
 
-- **WHEN** backlog sync would write to a local artifact path that already exists
-- **THEN** the command SHALL use the runtime safe-write contract to merge, skip, or require explicit replacement
-- **AND** SHALL surface the chosen behavior in command output
+- **WHEN** backlog sync updates its default baseline state under `.specfact`
+- **THEN** the command MAY rewrite that managed artifact deterministically
+- **AND** SHALL treat it as SpecFact-managed state rather than a user-owned external file
+
+#### Scenario: Explicit external baseline target is not silently overwritten
+
+- **WHEN** backlog sync is configured to write a baseline or comparable output path outside `.specfact`
+- **AND** the target file already exists
+- **THEN** the command SHALL fail safe, merge safely, or require explicit replacement according to the declared ownership mode
+- **AND** SHALL NOT silently overwrite the existing user-owned file

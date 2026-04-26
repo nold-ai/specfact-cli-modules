@@ -48,7 +48,7 @@ Expected status should show both providers as valid.
 specfact backlog init-config --force
 ```
 
-This creates `.nold-ai/specfact-backlog-config.yaml`.
+This creates `.specfact/backlog-config.yaml`.
 
 ## 2) Map Fields (ADO)
 
@@ -66,7 +66,7 @@ Notes:
 
 - Select the process style intentionally (`--ado-framework scrum|agile|safe|kanban|default`).
 - Mapping is written to `.specfact/templates/backlog/field_mappings/ado_custom.yaml`.
-- Provider context is updated in `.nold-ai/specfact-backlog.yaml`.
+- Provider context is updated in `.specfact/backlog-config.yaml`.
 
 Optional reset:
 
