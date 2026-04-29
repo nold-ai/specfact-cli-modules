@@ -32,7 +32,7 @@ specfact module install nold-ai/specfact-govern
 
 Bundle overview:
 
-- `nold-ai/specfact-project`: project lifecycle commands (`project`, `plan`, `import`, `sync`, `migrate`)
+- `nold-ai/specfact-project`: project lifecycle commands (`project`, `plan`, `sync`)
 - `nold-ai/specfact-backlog`: backlog and policy workflows (`backlog`, `policy`)
 - `nold-ai/specfact-codebase`: codebase analysis and validation (`analyze`, `drift`, `validate`, `repro`)
 - `nold-ai/specfact-spec`: API/spec workflows (`contract`, `api`, `sdd`, `generate`)

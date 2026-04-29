@@ -55,6 +55,7 @@
 |--------|-------|---------------|----------|------------|
 | sync | 01 | sync-01-unified-kernel | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Parent Feature: [#147](https://github.com/nold-ai/specfact-cli-modules/issues/147); preview/apply safety baseline from `specfact-cli#177` |
 | project-runtime | 01 | project-runtime-01-safe-artifact-write-policy | [#177](https://github.com/nold-ai/specfact-cli-modules/issues/177) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); paired core change [specfact-cli#490](https://github.com/nold-ai/specfact-cli/issues/490); related bug [specfact-cli#487](https://github.com/nold-ai/specfact-cli/issues/487) |
+| project-runtime | 02 | project-02-plan-root-command-fix | [#256](https://github.com/nold-ai/specfact-cli-modules/issues/256) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); blocked by #255 bug analysis context; no additional blockers |
 
 ### Cross-layer runtime follow-ups
 

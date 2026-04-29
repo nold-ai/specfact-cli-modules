@@ -1,0 +1,4 @@
+- [x] 1. Update spec delta for project command surface to require `plan` command exposure from specfact-project bundle.
+- [x] 2. Add failing test/evidence for missing plan command declaration.
+- [x] 3. Update manifest and docs, then capture passing evidence.
+- [x] 4. Run quality gates and pre-commit validation.
