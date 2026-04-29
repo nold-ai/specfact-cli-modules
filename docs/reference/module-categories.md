@@ -58,7 +58,7 @@ Category command groups:
 
 ## Bundle Contents by Category
 
-- `specfact-project`: `project`, `sync`
+- `specfact-project`: `project`, `plan`, `sync`
 - `specfact-backlog`: `backlog`, `policy`
 - `specfact-codebase`: `code import`, `code analyze`, `code drift`, `code validate`, `code repro`
 - `specfact-spec`: `spec`
