@@ -104,7 +104,7 @@ The architecture pillar remains active because `architecture-02-well-architected
 
 | Module | Order | Change folder | GitHub # | Blocked by |
 |--------|-------|---------------|----------|------------|
-| marketplace | 06 | marketplace-06-ci-module-signing | [#185](https://github.com/nold-ai/specfact-cli-modules/issues/185) | Parent Feature: [#187](https://github.com/nold-ai/specfact-cli-modules/issues/187); Parent Epic: [#186](https://github.com/nold-ai/specfact-cli-modules/issues/186); paired core [specfact-cli#500](https://github.com/nold-ai/specfact-cli/issues/500) |
+| marketplace | 06 | ✅ marketplace-06-ci-module-signing (archived 2026-04-16) | [#185](https://github.com/nold-ai/specfact-cli-modules/issues/185) | Parent Feature: [#187](https://github.com/nold-ai/specfact-cli-modules/issues/187); Parent Epic: [#186](https://github.com/nold-ai/specfact-cli-modules/issues/186); paired core [specfact-cli#500](https://github.com/nold-ai/specfact-cli/issues/500) |
 
 ### Documentation restructure
 
