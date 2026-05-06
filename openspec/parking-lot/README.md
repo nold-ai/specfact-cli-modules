@@ -32,7 +32,7 @@ A modules-side proposal can be returned to `openspec/changes/` only after:
 | `knowledge-02-module-writeback` | `knowledge-02-preflight-context-assembly` | [#225](https://github.com/nold-ai/specfact-cli-modules/issues/225) | Core knowledge-02 un-parked |
 | `review-resiliency-01-module` | `review-resiliency-01-contracts` | [#226](https://github.com/nold-ai/specfact-cli-modules/issues/226) | Core review-resiliency-01 un-parked |
 | `security-01-module-sast-sca-secret` | `security-01-unified-findings-model` | [#227](https://github.com/nold-ai/specfact-cli-modules/issues/227) | Core security-01 un-parked |
-| `security-02-module-license-compliance` | `security-02-eu-gdpr-baseline` (license aspect) | [#228](https://github.com/nold-ai/specfact-cli-modules/issues/228) | Core security-02 un-parked |
+| `security-02-module-license-compliance` | `security-01-unified-findings-model` (license findings aspect) | [#228](https://github.com/nold-ai/specfact-cli-modules/issues/228) | Core security-01 un-parked |
 | `security-03-module-pii-gdpr-eu` | `security-02-eu-gdpr-baseline` (GDPR aspect) | [#229](https://github.com/nold-ai/specfact-cli-modules/issues/229) | Core security-02 un-parked |
 
 ## Not parked here (still active)
