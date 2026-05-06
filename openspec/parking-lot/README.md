@@ -8,7 +8,7 @@ nine proposals are pinned to whatever signal un-parks the core side.
 For background and the parent triage rationale, see:
 
 - Core PR: <https://github.com/nold-ai/specfact-cli/pull/551>
-- Core parking-lot README: <https://github.com/nold-ai/specfact-cli/blob/dev/openspec/parking-lot/README.md>
+- Core parking-lot README: <https://github.com/nold-ai/specfact-cli/blob/ba944021c0b186698658cdde6ed9a7776eff05a0/openspec/parking-lot/README.md>
 
 ## Restoration policy
 
@@ -49,8 +49,11 @@ their core counterparts are still active or in the core repo's modify queue:
   `ceremony-02-requirements-aware-output`
 - `openspec-01-intent-trace` *(paired core: in modify queue, will be trimmed)*
 - All `backlog-*` and `docs-*` changes
-- `marketplace-07-pr-auto-sign-updates` *(already complete, archive pending)*
 - `codebase-import-runtime-hardening`, `project-runtime-01-safe-artifact-write-policy`
+
+## Completed / awaiting archive
+
+- `marketplace-07-pr-auto-sign-updates`
 
 The core marketplace-06 work (`marketplace-06-ci-module-signing`) was already
 archived here on 2026-04-16 — no parking action needed.
