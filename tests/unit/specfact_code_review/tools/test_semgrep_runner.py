@@ -10,6 +10,7 @@ import pytest
 from pytest import MonkeyPatch
 
 from specfact_code_review.tools.semgrep_runner import (
+    _run_semgrep_command,
     _snip_stderr_tail,
     find_semgrep_config,
     run_semgrep,
@@ -33,6 +34,30 @@ GOOD_FIXTURES = [
     "good_module_network.py",
     "good_print_in_src.py",
 ]
+
+
+def test_run_semgrep_command_creates_runtime_dirs(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    target = tmp_path / "target.py"
+    config = tmp_path / "clean_code.yaml"
+    target.write_text("print('x')\n", encoding="utf-8")
+    config.write_text("rules: []\n", encoding="utf-8")
+    captured_env: dict[str, str] = {}
+
+    def _run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        del command
+        env = kwargs["env"]
+        assert isinstance(env, dict)
+        captured_env.update({str(key): str(value) for key, value in env.items()})
+        assert Path(captured_env["XDG_CONFIG_HOME"]).is_dir()
+        assert Path(captured_env["XDG_CACHE_HOME"]).is_dir()
+        assert Path(captured_env["SEMGREP_SETTINGS_FILE"]).parent.is_dir()
+        return completed_process("semgrep", stdout='{"results": []}', returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", _run)
+
+    _run_semgrep_command([target], bundle_root=None, config_file=config)
+
+    assert captured_env["XDG_CONFIG_HOME"].endswith(".config")
 
 
 @pytest.fixture(autouse=True)

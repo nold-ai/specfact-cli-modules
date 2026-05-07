@@ -169,11 +169,15 @@ def _run_semgrep_command(
     with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
         semgrep_home = Path(temp_home)
         semgrep_log_dir = semgrep_home / ".semgrep"
+        semgrep_config_dir = semgrep_home / ".config"
+        semgrep_cache_dir = semgrep_home / ".cache"
         semgrep_log_dir.mkdir(parents=True, exist_ok=True)
+        semgrep_config_dir.mkdir(parents=True, exist_ok=True)
+        semgrep_cache_dir.mkdir(parents=True, exist_ok=True)
         env = os.environ.copy()
         env["HOME"] = str(semgrep_home)
-        env["XDG_CONFIG_HOME"] = str(semgrep_home / ".config")
-        env["XDG_CACHE_HOME"] = str(semgrep_home / ".cache")
+        env["XDG_CONFIG_HOME"] = str(semgrep_config_dir)
+        env["XDG_CACHE_HOME"] = str(semgrep_cache_dir)
         env["SEMGREP_SETTINGS_FILE"] = str(semgrep_log_dir / "settings.yml")
         env.setdefault("SEMGREP_SEND_METRICS", "off")
         return subprocess.run(
