@@ -9,10 +9,13 @@ on:
       - "**/*.md"
       - "**/*.mdc"
       - "docs/**"
+      - "packages/*/resources/prompts/**"
       - "requirements-docs-ci.txt"
       - "scripts/check-docs-commands.py"
+      - "scripts/check-prompt-commands.py"
       - "scripts/docs_site_validation.py"
       - "tests/unit/test_check_docs_commands_script.py"
+      - "tests/unit/test_check_prompt_commands_script.py"
       - "tests/unit/docs/test_docs_review.py"
       - "tests/unit/docs/test_code_review_docs_parity.py"
       - ".github/workflows/docs-review.yml"
@@ -22,10 +25,13 @@ on:
       - "**/*.md"
       - "**/*.mdc"
       - "docs/**"
+      - "packages/*/resources/prompts/**"
       - "requirements-docs-ci.txt"
       - "scripts/check-docs-commands.py"
+      - "scripts/check-prompt-commands.py"
       - "scripts/docs_site_validation.py"
       - "tests/unit/test_check_docs_commands_script.py"
+      - "tests/unit/test_check_prompt_commands_script.py"
       - "tests/unit/docs/test_docs_review.py"
       - "tests/unit/docs/test_code_review_docs_parity.py"
       - ".github/workflows/docs-review.yml"
@@ -68,6 +74,13 @@ jobs:
           mkdir -p logs/docs-review
           DOCS_COMMAND_LOG="logs/docs-review/docs-command-validation_$(date -u +%Y%m%d_%H%M%S).log"
           python scripts/check-docs-commands.py 2>&1 | tee "$DOCS_COMMAND_LOG"
+          exit "${PIPESTATUS[0]:-$?}"
+
+      - name: Validate prompt commands
+        run: |
+          mkdir -p logs/docs-review
+          PROMPT_COMMAND_LOG="logs/docs-review/prompt-command-validation_$(date -u +%Y%m%d_%H%M%S).log"
+          python scripts/check-prompt-commands.py 2>&1 | tee "$PROMPT_COMMAND_LOG"
           exit "${PIPESTATUS[0]:-$?}"
 
       - name: Upload docs review logs

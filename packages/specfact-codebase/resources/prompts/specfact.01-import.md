@@ -4,6 +4,10 @@ description: Import codebase → plan bundle. CLI extracts routes/schemas/relati
 
 # SpecFact Import Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -25,13 +29,13 @@ Import codebase → plan bundle. CLI extracts routes/schemas/relationships/contr
 
 ## Workflow
 
-1. **Execute CLI**: `specfact [GLOBAL OPTIONS] import from-code [<bundle>] --repo <path> [options]`
+1. **Execute CLI**: `specfact code import from-code [<bundle>] --repo <path> [options]`
    - CLI extracts: routes (FastAPI/Flask/Django), schemas (Pydantic), relationships, contracts (OpenAPI scaffolds), source tracking
    - Uses active plan if bundle not specified
-   - Note: `--no-interactive` is a global option and must appear before the subcommand (e.g., `specfact --no-interactive import from-code ...`).
+   - Inspect `specfact code import from-code --help` for the current non-interactive and enrichment options before running automation.
    - **Auto-enrichment enabled by default**: Automatically enhances vague acceptance criteria, incomplete requirements, and generic tasks using PlanEnricher (same logic as `plan review --auto-enrich`)
    - Use `--no-enrich-for-speckit` to disable auto-enrichment
-   - **Contract extraction**: OpenAPI contracts are extracted automatically **only** for features with `source_tracking.implementation_files` and detectable API endpoints (FastAPI/Flask patterns). For enrichment-added features or Django apps, use `specfact contract init` after enrichment (see Phase 4)
+   - **Contract extraction**: OpenAPI contracts are extracted automatically **only** for features with `source_tracking.implementation_files` and detectable API endpoints (FastAPI/Flask patterns). For enrichment-added features or Django apps, use `specfact spec contract init` after enrichment (see Phase 4)
 
 2. **LLM Enrichment** (Copilot-only, before applying `--enrichment`):
    - Read CLI artifacts: `.specfact/projects/<bundle>/enrichment_context.md`, feature YAMLs, contract scaffolds, and brownfield reports
@@ -49,7 +53,7 @@ Import codebase → plan bundle. CLI extracts routes/schemas/relationships/contr
 **Rules:**
 
 - Execute CLI first - never create artifacts directly
-- Use the global `--no-interactive` flag in CI/CD environments (must appear before the subcommand)
+- Use only the non-interactive options shown by the current command help in CI/CD environments.
 - Never modify `.specfact/` directly
 - Use CLI output as grounding for validation
 - Code generation requires LLM (only via AI IDE slash prompts, not CLI-only)
@@ -62,7 +66,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact --no-interactive import from-code [<bundle>] --repo <path>
+specfact code import from-code [<bundle>] --repo <path>
 ```
 
 **Capture**:
@@ -186,7 +190,7 @@ The enrichment parser expects a specific Markdown format. Follow this structure 
 
 ```bash
 # Use enrichment to update plan via CLI
-specfact --no-interactive import from-code [<bundle>] --repo <path> --enrichment <enrichment-report>
+specfact code import from-code [<bundle>] --repo <path> --enrichment <enrichment-report>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated enrichments
@@ -217,11 +221,11 @@ For features that need OpenAPI contracts (e.g., for sidecar validation with Cros
 
 ```bash
 # Generate contract for a single feature
-specfact --no-interactive contract init --bundle <bundle-name> --feature <FEATURE_KEY> --repo <path>
+specfact spec contract init --bundle <bundle-name> --feature <FEATURE_KEY> --repo <path>
 
 # Example: Generate contracts for all enrichment-added features
-specfact --no-interactive contract init --bundle djangogoat-validation --feature FEATURE-USER-AUTHENTICATION --repo .
-specfact --no-interactive contract init --bundle djangogoat-validation --feature FEATURE-NOTES-MANAGEMENT --repo .
+specfact spec contract init --bundle djangogoat-validation --feature FEATURE-USER-AUTHENTICATION --repo .
+specfact spec contract init --bundle djangogoat-validation --feature FEATURE-NOTES-MANAGEMENT --repo .
 # ... repeat for each feature that needs a contract
 ```
 

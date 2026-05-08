@@ -4,6 +4,10 @@ description: "Create backlog items with guided interactive flow and hierarchy ch
 
 # SpecFact Backlog Add Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text

@@ -1,5 +1,9 @@
 # SpecFact Sync Backlog Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -267,7 +271,7 @@ specfact sync bridge --adapter ado --mode export-only --repo <path> \
 **Rules:**
 
 - Execute CLI first - never create artifacts directly
-- Use `--no-interactive` flag in CI/CD environments
+- Use only the non-interactive options shown by the current command help in CI/CD environments.
 - Never modify `.specfact/` or `openspec/` directly
 - Use CLI output as grounding for validation
 - Code generation requires LLM (only via AI IDE slash prompts, not CLI-only)
