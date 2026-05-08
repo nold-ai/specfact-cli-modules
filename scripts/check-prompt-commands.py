@@ -238,10 +238,14 @@ def _resolve_command_path(command_text: str, command_paths: set[tuple[str, ...]]
     for length in range(len(command_words), 0, -1):
         candidate = tuple(command_words[:length])
         if candidate in command_paths:
-            if len(candidate) == 1 and len(candidate) < len(command_words):
+            if len(candidate) < len(command_words) and _has_subcommands(candidate, command_paths):
                 return None
             return candidate
     return None
+
+
+def _has_subcommands(path: tuple[str, ...], command_paths: set[tuple[str, ...]]) -> bool:
+    return any(len(candidate) > len(path) and candidate[: len(path)] == path for candidate in command_paths)
 
 
 def _unknown_command_finding(example: PromptCommandExample) -> ValidationFinding:

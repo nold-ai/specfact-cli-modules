@@ -85,6 +85,33 @@ specfact repro --repo .
     assert "specfact repro --repo ." in findings[0].message
 
 
+def test_validate_prompt_commands_reports_stale_nested_subcommand_path(tmp_path: Path) -> None:
+    script = _load_script()
+    prompt = _write_prompt(
+        tmp_path,
+        """
+Prompt instructions are operating guidance. Current CLI help is authoritative; if this prompt drifts, inspect `--help`.
+
+```bash
+specfact code stale-subcmd --repo .
+```
+""",
+    )
+    command_index = _script_attr(script, "CommandIndex")(
+        command_paths={("specfact",), ("specfact", "code"), ("specfact", "code", "repro")},
+        options_by_path={("specfact", "code", "repro"): {"--repo"}},
+    )
+
+    findings = _script_attr(script, "_validate_prompt_command_examples")(
+        {prompt: prompt.read_text(encoding="utf-8")},
+        command_index,
+    )
+
+    assert len(findings) == 1
+    assert findings[0].category == "command"
+    assert "specfact code stale-subcmd --repo ." in findings[0].message
+
+
 def test_main_writes_findings_to_stderr(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     script = _load_script()
     prompt = _write_prompt(

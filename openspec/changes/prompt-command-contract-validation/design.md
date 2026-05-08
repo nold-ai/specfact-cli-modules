@@ -1,4 +1,4 @@
-## Overview
+# Overview
 
 The existing docs validator already discovers mounted bundle command paths from Typer apps. This change extends that idea to shipped bundle prompts, because prompt resources are executable guidance consumed by AI IDEs and should fail fast when their command examples no longer match the installed CLI.
 
