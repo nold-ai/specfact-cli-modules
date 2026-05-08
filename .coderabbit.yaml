@@ -11,12 +11,13 @@
 language: "en-US"
 early_access: false
 tone_instructions: >-
-  Prioritize adapter boundaries between bundled modules and specfact_cli core: registry,
-  module-package.yaml, signing, and docs parity with modules.specfact.io. Flag cross-repo impact when
-  core APIs or contracts change.
+  Focus on bundle/adapter correctness, module signing integrity, docs parity, and cross-repo
+  specfact_cli impact. Comment only on material correctness, security, regression, data-loss,
+  release integrity, or major maintainability risks; skip trivial style and formatting nits covered
+  by repo gates.
 
 reviews:
-  profile: assertive
+  profile: chill
   request_changes_workflow: false
   high_level_summary: true
   high_level_summary_in_walkthrough: true
@@ -42,8 +43,10 @@ reviews:
     enabled: true
     drafts: false
     auto_incremental_review: true
+    # PRs targeting `dev` (not only the GitHub default branch, e.g. `main`) get automatic reviews.
     base_branches:
       - "^dev$"
+      - "^main$"
   path_instructions:
     - path: "packages/**/src/**/*.py"
       instructions: |
