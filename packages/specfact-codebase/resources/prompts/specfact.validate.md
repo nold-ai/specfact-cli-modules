@@ -116,9 +116,8 @@ specfact code repro --repo <path> [options]
 ### Phase 3: CLI Artifact Creation (REQUIRED)
 
 ```bash
-# Apply fixes via CLI commands, then re-validate
-specfact plan update-feature [--bundle <name>] [options]
-specfact code repro --repo <path>
+# Apply code fixes, then re-validate with CLI
+specfact code repro --repo <path> [options]
 ```
 
 **Result**: Final artifacts are CLI-generated with validated fixes

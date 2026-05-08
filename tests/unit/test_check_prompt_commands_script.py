@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tests.unit._script_test_utils import load_module_from_path
 
 
@@ -83,6 +85,28 @@ specfact repro --repo .
     assert "specfact repro --repo ." in findings[0].message
 
 
+def test_main_writes_findings_to_stderr(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    script = _load_script()
+    prompt = _write_prompt(
+        tmp_path,
+        """
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth.
+Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`,
+correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
+```bash
+specfact repro --repo .
+```
+""",
+    )
+
+    assert _script_attr(script, "_main")([str(prompt)]) == 1
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Unknown prompt command example: specfact repro --repo ." in captured.err
+
+
 def test_validate_prompt_commands_reports_stale_option(tmp_path: Path) -> None:
     script = _load_script()
     prompt = _write_prompt(
@@ -148,6 +172,29 @@ specfact code repro --repo .
     )
 
     assert not findings
+
+
+def test_build_command_index_reports_failed_mount_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    script = _load_script()
+
+    monkeypatch.setattr(script, "MODULE_APP_MOUNTS", (("missing.module", "app", ("specfact", "missing")),))
+
+    with pytest.raises(RuntimeError) as exc_info:
+        _script_attr(script, "_build_command_index")()
+
+    message = str(exc_info.value)
+    assert "missing.module:app" in message
+    assert "specfact missing" in message
+
+
+def test_module_app_mounts_include_govern_enforce_app() -> None:
+    script = _load_script()
+
+    assert (
+        "specfact_govern.enforce.commands",
+        "app",
+        ("specfact", "govern", "enforce"),
+    ) in _script_attr(script, "MODULE_APP_MOUNTS")
 
 
 def test_docs_review_workflow_runs_prompt_command_validation() -> None:

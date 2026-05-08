@@ -111,7 +111,7 @@ The recommendation helps less-experienced users make informed decisions.
 ### Behavior/Options
 
 - `--no-interactive` - Non-interactive mode (for CI/CD). Default: False (interactive mode)
-- `--answers JSON` - JSON object with question_id -> answer mappings. Default: None
+- `--answers PATH` - Path to a JSON file with question_id -> answer mappings. Default: None
 - `--auto-enrich` - Automatically enrich vague acceptance criteria using PlanEnricher (same enrichment logic as `import from-code`). Default: False (opt-in for review, but import has auto-enrichment enabled by default)
 
 **Important**: `--auto-enrich` will **NOT** resolve partial findings such as:
@@ -292,7 +292,7 @@ specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/find
 
    - LLM presents questions with answer options **IN THE CHAT**
    - User selects answers (1-5, A-E, or custom text)
-   - **After user has selected all answers**, LLM adds selected answers to `/tmp/questions.json`
+   - **After user has selected all answers**, LLM exports selected answers to `/tmp/answers.json`
 
 3. **Import answers via CLI** (after user selections are complete):
 
@@ -455,7 +455,7 @@ specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/qu
 
 4. **After user has selected all answers**:
 
-   - **THEN** add the selected answers to `/tmp/questions.json` in the `answers` object
+   - **THEN** export the selected answers to `/tmp/answers.json`
    - Map user selections (1-5) to the actual answer text from the options
    - If user selected a custom answer, use that text directly
    - **DO NOT** add answers to the file until user has selected all answers
@@ -471,16 +471,16 @@ specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/qu
 - ❌ Write to `.specfact/` folder directly (always use CLI)
 - ❌ Create temporary files in project root (always use `/tmp/`)
 
-**Output**: Updated `/tmp/questions.json` file with `answers` object populated
+**Output**: `/tmp/answers.json` file with selected answers populated
 
 ### Phase 3: CLI Artifact Creation (REQUIRED)
 
 **For partial findings (REQUIRED workflow):**
 
 ```bash
-# Import answers from /tmp/questions.json file
+# Import answers from /tmp/answers.json file
 # Use /tmp/ to avoid polluting the codebase
-specfact plan review [<bundle-name>] --answers "$(jq -c '.answers' /tmp/questions.json)"
+specfact plan review [<bundle-name>] --answers /tmp/answers.json
 ```
 
 **For non-partial findings only:**
@@ -541,7 +541,7 @@ Create one with: specfact plan init legacy-api
 /specfact.03-review --max-questions 10                 # Ask more questions per session (up to 10)
 
 # Non-interactive with answers
-/specfact.03-review --answers '{"Q001": "answer"}'     # Provide answers directly
+/specfact.03-review --answers /tmp/answers.json        # Import answers from file
 /specfact.03-review --list-questions                   # Output questions as JSON to stdout
 /specfact.03-review --list-questions --output-questions /tmp/questions.json  # Save questions to /tmp/
 

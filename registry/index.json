@@ -4,7 +4,7 @@
       "id": "nold-ai/specfact-project",
       "latest_version": "0.41.10",
       "download_url": "modules/specfact-project-0.41.10.tar.gz",
-      "checksum_sha256": "dd59b991ece73d459679ea12c574f3854678edd1a5efd969483ab47cd16b91fa",
+      "checksum_sha256": "eee055c4fecf112360f2265f05693eca8848e4db77a3b785104e31876d9f2a3f",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -32,7 +32,7 @@
       "id": "nold-ai/specfact-codebase",
       "latest_version": "0.41.10",
       "download_url": "modules/specfact-codebase-0.41.10.tar.gz",
-      "checksum_sha256": "42dffd1dc27ffd0312a039d84f19a640a971258bfdced94ef543b5dcb45fd72b",
+      "checksum_sha256": "413d65ec97f6339759f58e6279ca758e120d1143f75a747333879d0bac1967bb",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",

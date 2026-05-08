@@ -9,7 +9,7 @@ The existing docs validator already discovers mounted bundle command paths from 
 - Scan only `packages/*/resources/prompts/**/*.md`; `.github/prompts` is intentionally excluded.
 - Extract command references from fenced shell blocks, inline backticks, slash prompt examples, and parameter/option prose. Resolve placeholders such as `<path>`, `[<bundle-name>]`, `[OPTIONS]`, line continuations, and comments without executing commands.
 - Treat unknown command paths and unknown options as blocking findings with `path:line: [category] message` output.
-- Require each executable prompt to include a standard CLI reality-check/self-healing instruction. Shared companion prompt files may satisfy the requirement for prompts that include or reference them only if the prompt itself makes that include relationship clear.
+- Require each executable prompt file to include a standard CLI reality-check/self-healing instruction. The current `_validate_cli_reality_check_guidance` implementation in `scripts/check-prompt-commands.py` enforces this independently for every prompt file and does not resolve companion prompt includes; companion include resolution is deferred until the validator has explicit include tracking.
 - Add a Hatch script `validate-prompt-commands`.
 - Wire `run_prompt_command_validation_gate` into `scripts/pre-commit-quality-checks.sh` before `check_safe_change` so prompt-only Markdown edits are still validated.
 - Add CI execution to `.github/workflows/docs-review.yml` and include prompt resource paths in workflow triggers.

@@ -29,12 +29,14 @@ REQUIRED_GUIDANCE_SNIPPETS = (
     "--help",
     "ask the user",
 )
+# Keep this explicit until bundle command metadata exposes prompt-validator mounts.
 MODULE_APP_MOUNTS = (
     ("specfact_backlog.backlog.commands", "app", ("specfact", "backlog")),
     ("specfact_backlog.policy_engine.commands", "app", ("specfact", "backlog", "policy")),
     ("specfact_codebase.code.commands", "app", ("specfact", "code")),
     ("specfact_code_review.review.commands", "app", ("specfact", "code")),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
+    ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")),
     ("specfact_project.import_cmd.commands", "app", ("specfact", "import")),
     ("specfact_project.migrate.commands", "app", ("specfact", "migrate")),
     ("specfact_project.plan.commands", "app", ("specfact", "plan")),
@@ -122,9 +124,13 @@ def _build_command_index() -> CommandIndex:
         command_paths=set(CORE_COMMAND_PATHS), options_by_path={path: set() for path in CORE_COMMAND_PATHS}
     )
     for module_name, attr_name, prefix in MODULE_APP_MOUNTS:
-        module = importlib.import_module(module_name)
-        app = getattr(module, attr_name)
-        click_command = typer_get_command(app)
+        try:
+            module = importlib.import_module(module_name)
+            app = getattr(module, attr_name)
+            click_command = typer_get_command(app)
+        except Exception as exc:
+            msg = f"Failed to load CLI mount {module_name}:{attr_name} at {' '.join(prefix)}: {exc}"
+            raise RuntimeError(msg) from exc
         _collect_click_index(click_command, prefix, index)
     return index
 
@@ -214,6 +220,7 @@ def _command_tokens(command_text: str) -> list[str]:
     tokens = command_text.split()
     if not tokens:
         return []
+    # Tokens containing dots are IDE slash-command shortcuts, not CLI command paths.
     if "." in tokens[0]:
         return []
     return tokens
@@ -351,7 +358,7 @@ def _main(argv: list[str] | None = None) -> int:
         *_validate_cli_reality_check_guidance(text_by_path),
     ]
     if findings:
-        sys.stdout.write(_format_findings(findings) + "\n")
+        sys.stderr.write(_format_findings(findings) + "\n")
         return 1
     sys.stdout.write("Prompt command validation passed with no findings.\n")
     return 0
