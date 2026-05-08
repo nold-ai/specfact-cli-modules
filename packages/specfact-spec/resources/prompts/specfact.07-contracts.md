@@ -4,6 +4,10 @@ description: Analyze contract coverage, generate enhancement prompts, and apply 
 
 # SpecFact Contract Enhancement Workflow
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -42,7 +46,7 @@ Complete contract enhancement workflow: analyze coverage â†’ generate prompts â†
 **First, identify files missing contracts:**
 
 ```bash
-specfact analyze contracts --repo <repo-path> --bundle <bundle-name>
+specfact code analyze contracts --repo <repo-path> --bundle <bundle-name>
 # Uses active plan if bundle not specified
 ```
 
@@ -70,7 +74,7 @@ specfact analyze contracts --repo <repo-path> --bundle <bundle-name>
 **For each file missing contracts, generate a prompt:**
 
 ```bash
-specfact generate contracts-prompt <file-path> --apply <contract-types> --bundle <bundle-name>
+specfact spec generate contracts-prompt <file-path> --apply <contract-types> --bundle <bundle-name>
 ```
 
 **Important:**
@@ -132,7 +136,7 @@ Select files to enhance (comma-separated numbers, 'all', or 'skip'):
 **4.3: Validate enhanced code:**
 
 ```bash
-specfact generate contracts-apply enhanced_<filename>.py --original <original-file-path>
+specfact spec generate contracts-apply enhanced_<filename>.py --original <original-file-path>
 ```
 
 **Validation includes:**
@@ -198,7 +202,7 @@ Enhanced files:
 ...
 
 Next steps:
-1. Verify contract coverage: specfact analyze contracts --bundle <bundle-name>
+1. Verify contract coverage: specfact code analyze contracts --bundle <bundle-name>
 2. Run full test suite: pytest (or your project's test command)
 3. Review changes: git diff
 4. Commit enhanced code
@@ -226,7 +230,7 @@ This command **already implements** the standard validation loop pattern (see [C
 
 ```bash
 # CLI generates structured prompt
-specfact generate contracts-prompt <file-path> --apply <contract-types> --bundle <bundle-name>
+specfact spec generate contracts-prompt <file-path> --apply <contract-types> --bundle <bundle-name>
 ```
 
 **Result**: Prompt saved to `.specfact/projects/<bundle-name>/prompts/enhance-<filename>-<contracts>.md`
@@ -240,7 +244,7 @@ specfact generate contracts-prompt <file-path> --apply <contract-types> --bundle
 
 ```bash
 # CLI validates temp file with all relevant tools
-specfact generate contracts-apply enhanced_<filename>.py --original <original-file>
+specfact spec generate contracts-apply enhanced_<filename>.py --original <original-file>
 ```
 
 **Validation includes**:

@@ -4,6 +4,10 @@ description: Compare manual and auto-derived plans to detect code vs plan drift 
 
 # SpecFact Compare Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -65,7 +69,7 @@ specfact plan compare [--bundle <bundle-name>] [--manual <path>] [--auto <path>]
 **Rules:**
 
 - Execute CLI first - never create artifacts directly
-- Use `--no-interactive` flag in CI/CD environments
+- Use only the non-interactive options shown by the current command help in CI/CD environments.
 - Never modify `.specfact/` directly
 - Use CLI output as grounding for validation
 - Code generation requires LLM (only via AI IDE slash prompts, not CLI-only)
@@ -78,7 +82,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact plan compare [--bundle <name>] [options] --no-interactive
+specfact plan compare [--bundle <name>] [options]
 ```
 
 **Capture**:
@@ -111,8 +115,8 @@ specfact plan compare [--bundle <name>] [options] --no-interactive
 
 ```bash
 # Apply fixes via CLI commands, then re-compare
-specfact plan update-feature [--bundle <name>] [options] --no-interactive
-specfact plan compare [--bundle <name>] --no-interactive
+specfact plan update-feature [--bundle <name>] [options]
+specfact plan compare [--bundle <name>]
 ```
 
 **Result**: Final artifacts are CLI-generated with validated fixes

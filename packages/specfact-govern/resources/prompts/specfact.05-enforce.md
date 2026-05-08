@@ -4,6 +4,10 @@ description: Validate SDD manifest against project bundle and contracts, check c
 
 # SpecFact SDD Enforcement Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -46,7 +50,7 @@ Validate SDD manifest against project bundle and contracts. Checks hash matching
 ### Step 2: Execute CLI
 
 ```bash
-specfact enforce sdd [<bundle-name>] [--sdd <path>] [--output-format <format>] [--out <path>]
+specfact govern enforce sdd [<bundle-name>] [--sdd <path>] [--output-format <format>] [--out <path>]
 # Uses active plan if bundle not specified
 ```
 
@@ -78,7 +82,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact enforce sdd [<bundle-name>] [--sdd <path>] --no-interactive
+specfact govern enforce sdd [<bundle-name>] [--sdd <path>] --no-interactive
 ```
 
 **Capture**:
@@ -112,7 +116,7 @@ specfact enforce sdd [<bundle-name>] [--sdd <path>] --no-interactive
 ```bash
 # Apply fixes via CLI commands, then re-validate
 specfact plan update-feature [--bundle <name>] [options] --no-interactive
-specfact enforce sdd [<bundle-name>] --no-interactive
+specfact govern enforce sdd [<bundle-name>] --no-interactive
 ```
 
 **Result**: Final artifacts are CLI-generated with validated fixes

@@ -85,12 +85,33 @@ staged_docs_validation_paths() {
   done < <(staged_files)
 }
 
+staged_prompt_validation_paths() {
+  local line
+  while IFS= read -r line; do
+    [ -z "${line}" ] && continue
+    case "${line}" in
+      packages/*/resources/prompts/*.md|packages/*/src/**/commands.py|scripts/check-prompt-commands.py|tests/unit/test_check_prompt_commands_script.py)
+        printf '%s\n' "${line}"
+        ;;
+    esac
+  done < <(staged_files)
+}
+
 needs_docs_site_validation() {
   local line
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
     return 0
   done < <(staged_docs_validation_paths)
+  return 1
+}
+
+needs_prompt_command_validation() {
+  local line
+  while IFS= read -r line; do
+    [ -z "${line}" ] && continue
+    return 0
+  done < <(staged_prompt_validation_paths)
   return 1
 }
 
@@ -104,6 +125,20 @@ run_docs_site_validation_gate() {
   else
     error "❌ Docs site validation failed"
     warn "💡 Run: hatch run python scripts/check-docs-commands.py"
+    exit 1
+  fi
+}
+
+run_prompt_command_validation_gate() {
+  if ! needs_prompt_command_validation; then
+    return 0
+  fi
+  info "📄 Prompt command validation — running \`hatch run validate-prompt-commands\` (staged bundle prompts or prompt validation tooling)"
+  if hatch run validate-prompt-commands; then
+    success "✅ Prompt command validation passed"
+  else
+    error "❌ Prompt command validation failed"
+    warn "💡 Run: hatch run validate-prompt-commands"
     exit 1
   fi
 }
@@ -258,6 +293,7 @@ run_block1_lint() {
 run_block2() {
   warn "🔍 modules pre-commit — Block 2 — hook: review + contract tests"
   run_docs_site_validation_gate
+  run_prompt_command_validation_gate
   if check_safe_change; then
     success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
     info "💡 Only docs, workflow, version, or pre-commit metadata changed"
@@ -277,6 +313,7 @@ run_all() {
   run_lint_if_staged_python
   success "✅ Block 1 complete (all stages passed or skipped as expected)"
   run_docs_site_validation_gate
+  run_prompt_command_validation_gate
   if check_safe_change; then
     success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
     info "💡 Only docs, workflow, version, or pre-commit metadata changed"

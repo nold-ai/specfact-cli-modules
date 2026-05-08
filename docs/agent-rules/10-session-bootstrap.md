@@ -42,6 +42,13 @@ depends_on:
 6. If the cache is missing or stale, refresh it with `python scripts/sync_github_hierarchy_cache.py`.
 7. Load the additional rule files required by the task signal from the index.
 
+## Hatch environment bootstrap
+
+- In a fresh worktree, run the first Hatch command serially and wait for it to complete before starting any other `hatch run ...` process.
+- Do not launch parallel Hatch commands until the worktree environment has successfully run `hatch run python -m pip --version` or another Hatch command that proves the environment is fully created.
+- If Hatch reports missing `pip._internal` modules or other partial `pip` imports, treat the local `.venv` as corrupted: remove the Hatch environment, recreate it with one serial Hatch command, and retry validation only after `pip` is healthy.
+- Do not interpret Hatch environment-creation failures as code failures until the local environment has been recreated serially.
+
 ## Stop and continue behavior
 
 - If the session is on the main checkout and the user did not override, stop implementation and create or switch to a worktree.
