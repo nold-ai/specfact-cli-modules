@@ -232,7 +232,24 @@ jobs:
                   check=True,
               )
 
-          skipped_bundles: list[str] = []
+          def write_registry_signature_sidecar(bundle: str, manifest: dict, *, expected_version: str | None = None) -> None:
+              version = str(manifest.get("version") or "").strip()
+              if expected_version is not None and version != expected_version:
+                  print(
+                      f"::warning::Skipping signature sidecar for {bundle}: "
+                      f"manifest version {version or '<missing>'} does not match published version {expected_version}.",
+                      flush=True,
+                  )
+                  return
+              integrity = manifest.get("integrity")
+              signature_text = ""
+              if isinstance(integrity, dict):
+                  signature_text = str(integrity.get("signature") or "").strip()
+              if version and signature_text:
+                  signature_path = registry_signatures_dir / f"{bundle}-{version}.tar.sig"
+                  signature_path.write_text(signature_text + "\n", encoding="utf-8")
+
+          skipped_bundles: dict[str, str] = {}
           current_branch = os.environ.get("GITHUB_REF_NAME", "").strip()
           baseline_ref = determine_registry_baseline_ref(
             current_branch=current_branch,
@@ -249,6 +266,18 @@ jobs:
               text=True,
             )
             baseline_index_path.write_text(raw_baseline, encoding="utf-8")
+
+          baseline_registry = json.loads(baseline_index_path.read_text(encoding="utf-8"))
+          baseline_modules = baseline_registry.get("modules")
+          if not isinstance(baseline_modules, list):
+            raise ValueError("baseline registry/index.json must contain a 'modules' list")
+
+          def registry_latest_version(bundle: str, manifest: dict | None = None) -> str:
+              module_id = str((manifest or {}).get("name") or f"nold-ai/{bundle}").strip()
+              for item in baseline_modules:
+                  if isinstance(item, dict) and str(item.get("id") or "").strip() == module_id:
+                      return str(item.get("latest_version") or "").strip()
+              return ""
 
           for bundle in bundles:
             reasons = bundle_reasons.get(bundle, [])
@@ -277,7 +306,11 @@ jobs:
                 print(f"Skipping {bundle}: registry already at manifest version.")
                 if combined_output:
                   print(combined_output)
-                skipped_bundles.append(bundle)
+                manifest_path = repo_root / "packages" / bundle / "module-package.yaml"
+                manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+                if not isinstance(manifest, dict):
+                    raise ValueError(f"Invalid manifest content: {manifest_path}")
+                skipped_bundles[bundle] = registry_latest_version(bundle, manifest)
                 continue
               if combined_output:
                 print(combined_output)
@@ -321,7 +354,6 @@ jobs:
 
             artifact_name = f"{bundle}-{version}.tar.gz"
             artifact_path = registry_modules_dir / artifact_name
-            signature_path = registry_signatures_dir / f"{bundle}-{version}.tar.sig"
 
             with tarfile.open(artifact_path, mode="w:gz") as tar:
               for path in sorted(bundle_dir.rglob("*")):
@@ -337,11 +369,7 @@ jobs:
             digest = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
             (artifact_path.with_suffix(artifact_path.suffix + ".sha256")).write_text(f"{digest}\n", encoding="utf-8")
 
-            integrity = manifest.get("integrity")
-            if isinstance(integrity, dict):
-              signature_text = str(integrity.get("signature") or "").strip()
-              if signature_text:
-                signature_path.write_text(signature_text + "\n", encoding="utf-8")
+            write_registry_signature_sidecar(bundle, manifest)
 
             entry = next(
               (
@@ -370,13 +398,17 @@ jobs:
             print(f"Published registry artifact for {module_id} v{version}")
 
           if skipped_bundles:
-            print(f"Skipped already-published bundles: {skipped_bundles}")
+            print(f"Skipped already-published bundles: {sorted(skipped_bundles)}")
 
-          for bundle in skipped_bundles:
+          for bundle, published_version in skipped_bundles.items():
+              manifest_path = repo_root / "packages" / bundle / "module-package.yaml"
               sign_manifest_if_unsigned(
-                  repo_root / "packages" / bundle / "module-package.yaml",
+                  manifest_path,
                   reason="registry version already published; still align git manifest signature",
               )
+              manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+              if isinstance(manifest, dict):
+                  write_registry_signature_sidecar(bundle, manifest, expected_version=published_version)
 
           for manifest_path in sorted((repo_root / "packages").glob("*/module-package.yaml")):
               sign_manifest_if_unsigned(
