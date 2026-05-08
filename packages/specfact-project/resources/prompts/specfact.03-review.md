@@ -4,6 +4,10 @@ description: Review project bundle to identify ambiguities, resolve gaps, and pr
 
 # SpecFact Review Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -145,7 +149,7 @@ For these cases, use the **export-to-file → LLM reasoning → import-from-file
 ```bash
 # Export questions to file (REQUIRED for LLM enrichment workflow)
 # Use /tmp/ to avoid polluting the codebase
-specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json --no-interactive
+specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json
 # Uses active plan if bundle not specified
 ```
 
@@ -155,10 +159,10 @@ specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/qu
 # Get findings (saves to stdout - can redirect to /tmp/)
 # Use /tmp/ to avoid polluting the codebase
 # Option 1: Redirect output (includes CLI banner - not recommended)
-specfact plan review [<bundle-name>] --list-findings --findings-format json --no-interactive > /tmp/findings.json
+specfact plan review [<bundle-name>] --list-findings --findings-format json > /tmp/findings.json
 
 # Option 2: Save directly to file (recommended - clean JSON only)
-specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json --no-interactive
+specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json
 ```
 
 **Note**: The `--output-questions` option saves questions directly to a file, avoiding the need for complex JSON parsing. The ambiguity scanner now recognizes the simplified format (e.g., "Must verify X works correctly (see contract examples)") as valid and will not flag it as vague.
@@ -281,7 +285,7 @@ specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/find
 
    ```bash
    # Use /tmp/ to avoid polluting the codebase
-   specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json --no-interactive
+   specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json
    ```
 
 2. **LLM reasoning and user selection** (Step 3):
@@ -295,7 +299,7 @@ specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/find
    ```bash
    # Import answers from exported file
    # Use /tmp/ to avoid polluting the codebase
-   specfact plan review [<bundle-name>] --answers /tmp/answers.json --no-interactive
+   specfact plan review [<bundle-name>] --answers /tmp/answers.json
    ```
 
 **CRITICAL**:
@@ -371,10 +375,10 @@ When in copilot mode, follow this three-phase workflow:
 ```bash
 # Option 1: Get findings (redirect to /tmp/ to avoid polluting codebase)
 # Option 1: Save findings directly to file (recommended - clean JSON only)
-specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json --no-interactive
+specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json
 
 # Option 2: Get questions and save directly to /tmp/ (recommended - avoids JSON parsing)
-specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json --no-interactive
+specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json
 ```
 
 **Capture**:
@@ -476,17 +480,17 @@ specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/qu
 ```bash
 # Import answers from /tmp/questions.json file
 # Use /tmp/ to avoid polluting the codebase
-specfact plan review [<bundle-name>] --answers "$(jq -c '.answers' /tmp/questions.json)" --no-interactive
+specfact plan review [<bundle-name>] --answers "$(jq -c '.answers' /tmp/questions.json)"
 ```
 
 **For non-partial findings only:**
 
 ```bash
 # Use auto-enrich for simple vague criteria (not partial findings)
-specfact plan review [<bundle-name>] --auto-enrich --no-interactive
+specfact plan review [<bundle-name>] --auto-enrich
 
 # Or use batch updates for feature updates
-specfact plan update-feature [--bundle <name>] --batch-updates <updates.json> --no-interactive
+specfact plan update-feature [--bundle <name>] --batch-updates <updates.json>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated enrichments
@@ -566,13 +570,13 @@ Create one with: specfact plan init legacy-api
 1. **Export questions to file** (use `/tmp/` to avoid polluting codebase):
 
    ```bash
-   specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json --no-interactive
+   specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json
    ```
 
 2. **Get findings** (optional, for comprehensive analysis - use `/tmp/`):
 
    ```bash
-   specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json --no-interactive
+   specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json
    ```
 
 3. **LLM reasoning and user selection** (REQUIRED for partial findings):
@@ -593,7 +597,7 @@ Create one with: specfact plan init legacy-api
 
    ```bash
    # Import answers from exported file
-   specfact plan review [<bundle-name>] --answers /tmp/answers.json --no-interactive
+   specfact plan review [<bundle-name>] --answers /tmp/answers.json
    ```
 
    **CRITICAL**: Use the file path `/tmp/answers.json` (not a JSON string extracted from `/tmp/questions.json`)
@@ -619,7 +623,7 @@ After applying enrichment or review updates, check if features need OpenAPI cont
 
 - Features added via enrichment typically don't have contracts (no `source_tracking`)
 - Django applications require manual contract generation (Django URL patterns not auto-detected)
-- Use `specfact contract init --bundle <bundle> --feature <FEATURE_KEY>` to generate contracts for features that need them
+- Use `specfact spec contract init --bundle <bundle> --feature <FEATURE_KEY>` to generate contracts for features that need them
 
 **Enrichment Report Format** (for `import from-code --enrichment`):
 

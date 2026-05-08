@@ -72,6 +72,7 @@ rules:
   specs:
     - Use Given/When/Then for scenarios; tie scenarios to tests under `tests/` for bundle or registry behavior.
     - Call out new or changed Typer commands and Pydantic models with contract expectations where relevant.
+    - For changes touching `packages/*/resources/prompts`, include prompt command validation scenarios when command examples, options, or AI IDE operating guidance can drift from CLI reality.
 
   design:
     - Describe how the bundle integrates with `specfact_cli` imports and registry discovery—avoid circular or undeclared core dependencies.
@@ -89,6 +90,7 @@ rules:
       For publicly tracked changes, include explicit readiness tasks for parent linkage, labels, project assignment,
       blockers, blocked-by relationships, and `in progress` concurrency verification before implementation begins.
     - Include module signing / version-bump tasks when `module-package.yaml` or bundle payloads change (see AGENTS.md).
+    - Include `hatch run validate-prompt-commands` when bundle prompt resources under `packages/*/resources/prompts` or prompt validation tooling changes.
     - Record TDD evidence in `openspec/changes/<change-id>/TDD_EVIDENCE.md` for behavior changes.
     - |-
       SpecFact code review JSON (dogfood, required before PR): Include tasks to

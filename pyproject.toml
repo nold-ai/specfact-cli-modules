@@ -54,6 +54,7 @@ scan-all = "semgrep --config packages/specfact-code-review/.semgrep/clean_code.y
 # Modules-repo scoped parity commands
 yaml-lint = "python tools/validate_repo_manifests.py"
 validate-cli-contracts = "python tools/validate_cli_contracts.py"
+validate-prompt-commands = "python scripts/check-prompt-commands.py"
 check-bundle-imports = "python scripts/check-bundle-imports.py"
 sign-modules = "python scripts/sign-modules.py {args}"
 verify-modules-signature = "python scripts/verify-modules-signature.py {args}"
@@ -263,6 +264,7 @@ ignore = [
 "tools/**/*" = ["T20", "S101", "INP001", "PLR2004"]
 "packages/**/commands.py" = ["B008"]
 "scripts/check-docs-commands.py" = ["N999"]
+"scripts/check-prompt-commands.py" = ["N999"]
 
 [tool.ruff.lint.isort]
 force-single-line = false

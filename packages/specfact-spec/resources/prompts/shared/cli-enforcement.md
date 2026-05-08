@@ -1,5 +1,9 @@
 # CLI Usage Enforcement Rules
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## Core Principle
 
 **ALWAYS use SpecFact CLI commands. Never create artifacts directly.**
@@ -112,7 +116,7 @@ When generating or enhancing code via LLM, **ALWAYS** follow this pattern:
 - `specfact code import [<bundle-name>] --repo <path>` - Import from codebase (uses active plan if bundle not specified)
 - `specfact plan review [<bundle-name>]` - Review plan (uses active plan if bundle not specified)
 - `specfact plan harden [<bundle-name>]` - Create SDD manifest (uses active plan if bundle not specified)
-- `specfact enforce sdd [<bundle-name>]` - Validate SDD (uses active plan if bundle not specified)
+- `specfact govern enforce sdd [<bundle-name>]` - Validate SDD (uses active plan if bundle not specified)
 - `specfact sync bridge --adapter <adapter> --repo <path>` - Sync with external tools
 - See [Command Reference](../../docs/reference/commands.md) for full list
 

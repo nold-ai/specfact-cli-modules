@@ -4,6 +4,10 @@ description: Sync changes between external tool artifacts and SpecFact using bri
 
 # SpecFact Sync Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -91,7 +95,7 @@ specfact sync bridge --adapter ado --repo <path> --ado-org <org> --ado-project <
 **Rules:**
 
 - Execute CLI first - never create artifacts directly
-- Use `--no-interactive` flag in CI/CD environments
+- Use only the non-interactive options shown by the current command help in CI/CD environments.
 - Never modify `.specfact/` or `.specify/` directly
 - Use CLI output as grounding for validation
 - Code generation requires LLM (only via AI IDE slash prompts, not CLI-only)
@@ -104,7 +108,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact sync bridge --adapter <adapter> --repo <path> [options] --no-interactive
+specfact sync bridge --adapter <adapter> --repo <path> [options]
 ```
 
 **Capture**:
@@ -137,8 +141,8 @@ specfact sync bridge --adapter <adapter> --repo <path> [options] --no-interactiv
 
 ```bash
 # Apply resolutions via CLI commands, then re-sync
-specfact plan update-feature [--bundle <name>] [options] --no-interactive
-specfact sync bridge --adapter <adapter> --repo <path> --no-interactive
+specfact plan update-feature [--bundle <name>] [options]
+specfact sync bridge --adapter <adapter> --repo <path>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated resolutions

@@ -4,6 +4,10 @@ description: Manage project bundles - create, add features/stories, and update p
 
 # SpecFact Plan Management Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -91,7 +95,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact plan <operation> [--bundle <name>] [options] --no-interactive
+specfact plan <operation> [--bundle <name>] [options]
 ```
 
 **Capture**:
@@ -128,9 +132,9 @@ specfact plan <operation> [--bundle <name>] [options] --no-interactive
 
 ```bash
 # Use enrichment to update plan via CLI
-specfact plan update-feature [--bundle <name>] --key <key> [options] --no-interactive
+specfact plan update-feature [--bundle <name>] --key <key> [options]
 # Or use batch updates:
-specfact plan update-feature [--bundle <name>] --batch-updates <updates.json> --no-interactive
+specfact plan update-feature [--bundle <name>] --batch-updates <updates.json>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated enrichments

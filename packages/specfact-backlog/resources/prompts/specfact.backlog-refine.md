@@ -4,6 +4,10 @@ description: "Refine backlog items using template-driven AI assistance"
 
 # SpecFact Backlog Refinement Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -97,9 +101,9 @@ Refine backlog items from DevOps tools (GitHub Issues, Azure DevOps, etc.) into 
 
 **Export/Import Workflow**:
 
-1. Export items: `specfact backlog refine --adapter github --export-to-tmp --repo-owner OWNER --repo-name NAME`
+1. Export items: `specfact backlog refine github --export-to-tmp --repo-owner OWNER --repo-name NAME`
 2. Process with copilot: Open exported file and follow the embedded `## Copilot Instructions` and per-item template guidance (`Target Template`, `Required Sections`, `Optional Sections`). Save as `-refined.md`
-3. Import refined: `specfact backlog refine --adapter github --import-from-tmp --repo-owner OWNER --repo-name NAME --write`
+3. Import refined: `specfact backlog refine github --import-from-tmp --repo-owner OWNER --repo-name NAME --write`
 
 When refining from an exported file, treat the embedded instructions in that file as the source of truth for required structure and formatting.
 
@@ -550,7 +554,7 @@ Items updated in remote backlog:
 **Error: "Azure DevOps API token required"**
 
 - **Cause**: Missing authentication token
-- **Solution**: Provide token via `--ado-token`, `AZURE_DEVOPS_TOKEN` environment variable, or use `specfact auth azure-devops` for device code flow.
+- **Solution**: Provide token via `--ado-token`, `AZURE_DEVOPS_TOKEN` environment variable, or use `specfact backlog auth azure-devops` for device code flow.
 
 ## Context
 

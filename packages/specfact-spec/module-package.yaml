@@ -1,5 +1,5 @@
 name: nold-ai/specfact-spec
-version: 0.40.17
+version: 0.40.18
 commands:
   - spec
 tier: official
@@ -21,5 +21,4 @@ description: Official SpecFact specification bundle package.
 category: spec
 bundle_group_command: spec
 integrity:
-  checksum: sha256:c5d058196cbf7cc871f350cfb6483ca59a28a299d16e78c330d7a21705575323
-  signature: uWxT+qpVqTjF3BmO2rqdnSwII3YNQi3aA7UScZT6/PPN3Q0KvbtboVf1xLgIIp8/jjiWvks1dZFgXgyDNzozDg==
+  checksum: sha256:63731fe62322e59382430ddc27eeb372e0f4262b85e3351fce2503d658c042c9

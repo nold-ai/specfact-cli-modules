@@ -4,6 +4,10 @@ description: Run full validation suite for reproducibility and contract complian
 
 # SpecFact Validate Command
 
+## CLI Reality Check
+
+Prompt instructions are operating guidance for SpecFact CLI, not the source of truth. Current CLI help is authoritative. If a command or option fails, inspect the nearest valid `--help`, correct the invocation when the mapping is obvious, and ask the user when no safe correction is clear.
+
 ## User Input
 
 ```text
@@ -50,7 +54,7 @@ Run full validation suite for reproducibility and contract compliance. Executes 
 ### Step 2: Execute CLI
 
 ```bash
-specfact repro --repo <path> [--verbose] [--fail-fast] [--fix] [--budget <seconds>] [--out <path>]
+specfact code repro --repo <path> [--verbose] [--fail-fast] [--fix] [--budget <seconds>] [--out <path>]
 ```
 
 ### Step 3: Present Results
@@ -67,7 +71,7 @@ specfact repro --repo <path> [--verbose] [--fail-fast] [--fix] [--budget <second
 **Rules:**
 
 - Execute CLI first - never create artifacts directly
-- Use `--no-interactive` flag in CI/CD environments
+- Use only the non-interactive options shown by the current command help in CI/CD environments.
 - Never modify `.specfact/` directly
 - Use CLI output as grounding for validation results
 - Code generation requires LLM (only via AI IDE slash prompts, not CLI-only)
@@ -80,7 +84,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact repro --repo <path> [options] --no-interactive
+specfact code repro --repo <path> [options]
 ```
 
 **Capture**:
@@ -113,8 +117,8 @@ specfact repro --repo <path> [options] --no-interactive
 
 ```bash
 # Apply fixes via CLI commands, then re-validate
-specfact plan update-feature [--bundle <name>] [options] --no-interactive
-specfact repro --repo <path> --no-interactive
+specfact plan update-feature [--bundle <name>] [options]
+specfact code repro --repo <path>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated fixes
