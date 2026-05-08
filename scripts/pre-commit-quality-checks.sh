@@ -90,7 +90,7 @@ staged_prompt_validation_paths() {
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
     case "${line}" in
-      packages/*/resources/prompts/*.md|packages/*/resources/prompts/**/*.md|scripts/check-prompt-commands.py|tests/unit/test_check_prompt_commands_script.py)
+      packages/*/resources/prompts/*.md|packages/*/resources/prompts/**/*.md|packages/*/src/**/commands.py|scripts/check-prompt-commands.py|tests/unit/test_check_prompt_commands_script.py)
         printf '%s\n' "${line}"
         ;;
     esac

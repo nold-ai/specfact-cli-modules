@@ -241,3 +241,9 @@ def test_pre_commit_runs_prompt_validation_before_safe_change_skip() -> None:
     validation_index = script.index("run_prompt_command_validation_gate")
     safe_change_index = script.index("if check_safe_change; then")
     assert validation_index < safe_change_index
+
+
+def test_pre_commit_prompt_validation_covers_cli_command_implementations() -> None:
+    script = PRE_COMMIT_SCRIPT.read_text(encoding="utf-8")
+
+    assert "packages/*/src/**/commands.py" in script
