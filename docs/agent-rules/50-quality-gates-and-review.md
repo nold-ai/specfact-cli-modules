@@ -38,6 +38,8 @@ depends_on:
 
 ## Quality gate order
 
+Before running quality gates in a fresh worktree, bootstrap the Hatch environment serially. Run one Hatch command first, wait for it to finish, and only then run additional gates. Parallel `hatch run ...` commands are allowed only after the worktree environment is known healthy; otherwise concurrent environment creation can corrupt the local `.venv` and leave partial `pip._internal` imports.
+
 1. `hatch run format`
 2. `hatch run type-check`
 3. `hatch run lint`
