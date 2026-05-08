@@ -26,3 +26,14 @@ Primary tester reports show that shipped AI slash prompts can drift from the CLI
 - Affected resources: `packages/*/resources/prompts/**/*.md`.
 - Affected validation tooling: `scripts/`, `pyproject.toml`, `scripts/pre-commit-quality-checks.sh`, `.github/workflows/docs-review.yml`, and tests.
 - Bundle prompt edits may require module version/signature updates because prompt resources are signed payloads; this change does not alter `registry/index.json` unless release packaging is performed separately.
+
+## Source Tracking
+
+- GitHub Issue: [#266](https://github.com/nold-ai/specfact-cli-modules/issues/266)
+- Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163)
+- Parent Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162)
+- Pull Request: [#265](https://github.com/nold-ai/specfact-cli-modules/pull/265)
+- Project: SpecFact CLI (`Todo`)
+- Labels: `enhancement`, `openspec`, `change-proposal`
+- Blockers: none known
+- Blocked by: none known
