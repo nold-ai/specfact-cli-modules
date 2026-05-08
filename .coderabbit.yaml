@@ -11,10 +11,9 @@
 language: "en-US"
 early_access: false
 tone_instructions: >-
-  Focus on bundle/adapter correctness, module signing integrity, docs parity, and cross-repo
-  specfact_cli impact. Comment only on material correctness, security, regression, data-loss,
-  release integrity, or major maintainability risks; skip trivial style and formatting nits covered
-  by repo gates.
+  Focus on bundle/adapter correctness, module signing, docs parity, and specfact_cli impact.
+  Comment only on correctness, security, regressions, data loss, release integrity, or major
+  maintainability risks.
 
 reviews:
   profile: chill

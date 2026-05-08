@@ -20,6 +20,7 @@ PROMPT_ROOT = REPO_ROOT / "packages"
 INLINE_COMMAND_RE = re.compile(r"`(/?specfact(?:[\s.][^`\n]*)?)`")
 OPTION_RE = re.compile(r"(?<![\w-])--[A-Za-z][A-Za-z0-9-]*")
 COMMAND_STARTS = ("specfact ", "/specfact ", "specfact.", "/specfact.")
+SHELL_PROMPT_RE = re.compile(r"^(?:\$|>>>|>|[A-Za-z]:\\>|[^\s@]+@[^:]+:[^$#>]*[$#])\s*")
 IGNORED_OPTIONS = frozenset({"--help"})
 SKIP_OPTION_VALIDATION = frozenset({"[OPTIONS]", "[options]", "[ARGS]"})
 REQUIRED_GUIDANCE_SNIPPETS = (
@@ -142,8 +143,12 @@ def _strip_comment(line: str) -> str:
 
 
 def _starts_with_command(line: str) -> bool:
-    stripped = line.strip()
+    stripped = _strip_shell_prompt(line.strip())
     return stripped.startswith(COMMAND_STARTS)
+
+
+def _strip_shell_prompt(line: str) -> str:
+    return SHELL_PROMPT_RE.sub("", line, count=1).strip()
 
 
 def _normalize_prompt_command(raw: str) -> str:
@@ -175,6 +180,7 @@ def _iter_fenced_command_examples(text: str, source: Path) -> list[PromptCommand
         line = _strip_comment(stripped)
         if not line:
             continue
+        line = _strip_shell_prompt(line)
         continued = line.rstrip("\\").strip()
         if pending:
             pending = f"{pending} {continued}"

@@ -39,6 +39,7 @@ Run `/specfact.validate --repo .` when using the IDE shortcut.
 
 ```bash
 # comments are ignored
+$ specfact code repro --repo /tmp/project
 specfact code repro --repo . \\
   --budget 120
 ```
@@ -52,6 +53,7 @@ specfact code repro --repo . \\
     )
 
     assert [example.text for example in examples] == [
+        "specfact code repro --repo /tmp/project",
         "specfact code repro --repo . --budget 120",
         "specfact govern enforce sdd --no-interactive",
         "specfact.validate --repo .",
