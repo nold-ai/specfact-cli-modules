@@ -11,14 +11,14 @@
 - [ ] 2.1 Add failing semgrep-rule tests with bloated-form and simplified-form fixtures for each pattern: `ai-bloat.manual-loop-comprehension`, `ai-bloat.passthrough-lambda`, `ai-bloat.identity-try-except`, `ai-bloat.none-then-none`, `ai-bloat.single-call-wrapper`.
 - [ ] 2.2 Add failing AST-runner tests with bloated-form and simplified-form fixtures for each semantic detector: `ai-bloat.unused-optional-param`, `ai-bloat.dead-branch`, `ai-bloat.loc-vs-complexity`, `ai-bloat.redundant-intermediate`.
 - [ ] 2.3 Add a failing policy-pack contract test that asserts `ai-bloat-patterns.yaml` references only existing rule IDs and tags every rule with `principle: ai_bloat`.
-- [ ] 2.4 Add a failing integration test that runs the full review pipeline on a seeded bloat-fixture directory and asserts `category=ai_bloat` findings appear in the resulting `.specfact/code-review.json` at `advisory` severity.
+- [ ] 2.4 Add a failing integration test that runs the full review pipeline on a seeded bloat-fixture directory and asserts `category=ai_bloat` findings appear in the resulting `.specfact/code-review.json` at `severity=info` (non-blocking) and never at `warning` or `error`.
 - [ ] 2.5 Run the targeted tests to capture failing-before evidence and record commands, timestamps, and failures in `openspec/changes/code-review-ai-bloat-detection/TDD_EVIDENCE.md`.
 
 ## 3. Semgrep rule pack
 
 - [ ] 3.1 Author `packages/specfact-code-review/resources/semgrep-rules/ai-bloat.yaml` with rule definitions for the five pattern-shape detectors above.
 - [ ] 3.2 Register the new rule IDs in `SEMGREP_RULE_CATEGORY` in `packages/specfact-code-review/src/specfact_code_review/tools/semgrep_runner.py`, mapping each to category `ai_bloat`.
-- [ ] 3.3 Extend `semgrep_runner.py`'s findings emission so the `ai_bloat` category is recognised and surfaces with `severity=advisory` regardless of upstream semgrep severity.
+- [ ] 3.3 Extend `semgrep_runner.py`'s findings emission so the `ai_bloat` category is recognised and surfaces with `severity=info` (the existing non-blocking severity on `ReviewFinding`) regardless of upstream semgrep severity. The "advisory" framing is provided by the policy pack's `default_mode: advisory`, not by the finding's `severity` value.
 
 ## 4. AST runner for semantic detectors
 
@@ -31,6 +31,11 @@
 - [ ] 5.1 Author `packages/specfact-code-review/resources/policy-packs/specfact/ai-bloat-patterns.yaml` with `pack_ref: specfact/ai-bloat-patterns`, `default_mode: advisory`, and entries referencing every rule above with `principle: ai_bloat`.
 - [ ] 5.2 Update `packages/specfact-code-review/module-package.yaml`: bump patch version, declare the new semgrep-rule and policy-pack resources in the bundle payload.
 - [ ] 5.3 Update `packages/specfact-project/module-package.yaml`: bump patch version, declare the new prompt resource.
+
+## 5b. Pre-commit hook surfaces ai_bloat advisories
+
+- [ ] 5b.1 Update `scripts/pre_commit_code_review.py` so the `--level error` block-threshold filter does not strip `ai_bloat` findings from `.specfact/code-review.json`. Either narrow `--level` to apply to block/exit semantics only (not to JSON-out filtering), or invoke the review with a wider emit-level and apply the error-block decision after the JSON is written. The hook MUST exit zero when only `ai_bloat`/`info` findings are present and MUST print a stderr summary of any `ai_bloat` findings detected.
+- [ ] 5b.2 Add a failing-then-passing test for the hook covering: (a) only `ai_bloat`/`info` findings → exit 0, JSON contains them, stderr summary printed; (b) at least one `error` finding → exit non-zero, JSON contains both `ai_bloat` and `error` findings.
 
 ## 6. Slash-command prompt
 

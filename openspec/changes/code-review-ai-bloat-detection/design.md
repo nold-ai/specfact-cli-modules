@@ -2,20 +2,20 @@
 
 ## Context
 
-The code-review surface in `packages/specfact-code-review` already runs a multi-tool pipeline (semgrep, ruff, pylint, radon, basedpyright, contract-runner, AST clean-code visitor) and emits `ReviewFinding` records tagged with one of six principle categories. Findings flow through `.specfact/code-review.json` and surface in pre-commit via `scripts/pre_commit_code_review.py`, which blocks on `severity=error` only.
+The code-review surface in `packages/specfact-code-review` already runs a multi-tool pipeline (semgrep, ruff, pylint, radon, basedpyright, contract-runner, AST clean-code visitor) and emits `ReviewFinding` records tagged with a principle category drawn from `naming | kiss | yagni | dry | solid | clean_code | architecture`. Findings flow through `.specfact/code-review.json` and surface in pre-commit via `scripts/pre_commit_code_review.py`, which blocks on `severity=error` only.
 
 What the existing categories do *not* do is name AI-generated bloat as a distinct failure mode. KISS catches line-count outliers; YAGNI catches unused private helpers; DRY catches duplicate function shapes. But the specific *shapes* of AI bloat — manual loops that should be comprehensions, identity try/except, single-call wrappers, dead `Optional` plumbing — slip past these gates because each instance is individually defensible under the existing principle vocabulary.
 
-This change introduces a sixth principle category, `ai_bloat`, with its own rule pack and policy pack, and a slash-command rewrite prompt that filters findings by category. The capability spans the `specfact-code-review` runner pipeline and the `specfact-project` prompt resources, so an explicit design precedes implementation.
+This change introduces a new principle category, `ai_bloat`, with its own rule pack and policy pack, and a slash-command rewrite prompt that filters findings by category. The capability spans the `specfact-code-review` runner pipeline and the `specfact-project` prompt resources, so an explicit design precedes implementation.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Add `ai_bloat` as a sixth principle category in the existing `ReviewFinding` transport, with no schema change beyond a new accepted value.
+- Add `ai_bloat` as a new principle category in the existing `ReviewFinding` transport, with no schema change beyond a new accepted value for the `category` and `principle` fields. Findings emit at `severity=info` (the existing non-blocking severity), so `ReviewFinding.severity` keeps its current `error | warning | info` domain.
 - Detect pattern-shape AI bloat via a packaged semgrep rule pack so detectors are declarative and tunable.
 - Detect semantic AI bloat (dead `Optional` plumbing, LOC/complexity anomalies, redundant intermediates) via a sibling AST runner that mirrors the conventions of `ast_clean_code_runner.py`.
 - Drive rewrites via a slash-command prompt that walks the user through each finding with per-change confirmation in the IDE, matching the existing CLI-detects / LLM-rewrites split used by `specfact.03-review.md`.
-- Keep `ai_bloat` strictly `advisory` so pre-commit warns but never blocks.
+- Keep `ai_bloat` strictly advisory (per-finding `severity=info`, policy-pack `default_mode: advisory`) so pre-commit surfaces findings but never blocks.
 
 **Non-Goals:**
 - No autonomous `--fix` mode. Rewrites are LLM-mediated with per-change human confirmation; the CLI never rewrites source files.
@@ -26,7 +26,7 @@ This change introduces a sixth principle category, `ai_bloat`, with its own rule
 
 ## Decisions
 
-### Decision 1: Introduce `ai_bloat` as a sixth principle category, not a sub-mode of `kiss`/`yagni`
+### Decision 1: Introduce `ai_bloat` as a new principle category, not a sub-mode of `kiss`/`yagni`
 
 The detectors target a distinct failure mode with its own rewrite playbook (collapse to stdlib, remove dead plumbing, inline trivial wrappers) that does not map cleanly onto `kiss` or `yagni`. Folding it into either would dilute existing reviewer mental models and lose the ability to filter the IDE prompt by category. Adding a new principle is the minimal-cost surface change.
 
@@ -56,7 +56,7 @@ Prompt resources for the SpecFact workflow live in `specfact-project` (see `spec
 
 **Why**: Consistency with the existing prompt-resource convention; downstream `.specfact/modules/specfact-project/resources/prompts/` listings include the new command without any new wiring.
 
-### Decision 5: `advisory`-only severity, never blocking
+### Decision 5: Advisory-only, never blocking (per-finding `severity=info`, policy-pack `default_mode: advisory`)
 
 Bloat is judgment, not correctness. A 20-line manual loop is *suboptimal*, not *wrong*; a passthrough wrapper may be intentional API stability. Forcing the user to defend each finding at commit time would degrade signal-to-noise in the pre-commit gate and erode trust in the broader review surface.
 
@@ -85,7 +85,7 @@ Bloat is judgment, not correctness. A 20-line manual loop is *suboptimal*, not *
 | `ai-bloat.loc-vs-complexity` | Function LOC ≥ 40 with cyclomatic complexity ≤ 4 (long but linear) | Collapse to stdlib, comprehension, or smaller helper |
 | `ai-bloat.redundant-intermediate` | Variable assigned once, read once on the immediately next line, with no naming clarity contribution | Inline the expression |
 
-All findings emit with `category="ai_bloat"`, `principle="ai_bloat"`, `severity="advisory"`.
+All findings emit with `category="ai_bloat"`, `principle="ai_bloat"`, `severity="info"` (non-blocking). The "advisory" framing is preserved at the policy-pack layer (`default_mode: advisory` in `ai-bloat-patterns.yaml`), not by adding a new severity value to `ReviewFinding`.
 
 ## Slash-Command Prompt
 

@@ -4,12 +4,12 @@
 
 ### Requirement: The code-review runner SHALL emit findings under a new `ai_bloat` principle category
 
-The code-review pipeline SHALL recognise `ai_bloat` as a valid value of the `category` and `principle` fields on `ReviewFinding`. The new category SHALL surface in `.specfact/code-review.json` alongside the existing categories `naming | kiss | yagni | dry | solid | clean_code | architecture` without any schema migration of existing finding consumers. Findings under `ai_bloat` SHALL emit at `advisory` severity only; the runner SHALL never emit `ai_bloat` findings at `warning` or `error` severity in this iteration.
+The code-review pipeline SHALL recognise `ai_bloat` as a valid value of the `category` and `principle` fields on `ReviewFinding`. The new category SHALL surface in `.specfact/code-review.json` alongside the existing categories `naming | kiss | yagni | dry | solid | clean_code | architecture` without any schema migration of existing finding consumers. Findings under `ai_bloat` SHALL emit at `info` severity only (the non-blocking severity already accepted by `ReviewFinding`); the runner SHALL never emit `ai_bloat` findings at `warning` or `error` severity in this iteration. The `advisory` framing is carried at the policy-pack layer via `default_mode: advisory` and at the report layer via the existing `PASS_WITH_ADVISORY` verdict, not by introducing a new per-finding severity value.
 
 #### Scenario: Review run on a fixture with a manual-loop comprehension emits an ai_bloat finding
 
 - **WHEN** `specfact code review run --json --out .specfact/code-review.json --scope full` runs against a fixture file containing a `for x in xs: out.append(...)` loop whose shape matches the `ai-bloat.manual-loop-comprehension` rule
-- **THEN** the resulting JSON SHALL contain at least one finding whose `category` equals `ai_bloat`, `principle` equals `ai_bloat`, `severity` equals `advisory`, and whose rule ID is `ai-bloat.manual-loop-comprehension`
+- **THEN** the resulting JSON SHALL contain at least one finding whose `category` equals `ai_bloat`, `principle` equals `ai_bloat`, `severity` equals `info`, and whose rule ID is `ai-bloat.manual-loop-comprehension`
 - **AND** the finding SHALL reference the source file path and the starting line of the matched loop
 
 #### Scenario: Review run on the simplified equivalent emits no ai_bloat finding
@@ -19,8 +19,9 @@ The code-review pipeline SHALL recognise `ai_bloat` as a valid value of the `cat
 
 #### Scenario: Pre-commit hook does not block on ai_bloat findings
 
-- **WHEN** the pre-commit hook at `scripts/pre_commit_code_review.py` runs and the resulting JSON contains `ai_bloat` findings at `advisory` severity but no findings at `error` severity
+- **WHEN** the pre-commit hook at `scripts/pre_commit_code_review.py` runs and the resulting JSON contains `ai_bloat` findings at `info` severity but no findings at `error` severity
 - **THEN** the hook SHALL exit with status zero
+- **AND** the hook SHALL surface `ai_bloat` findings in `.specfact/code-review.json` regardless of the hook's `--level` block-threshold filter, so the JSON evidence is complete even when only `error`-severity findings would block the commit
 - **AND** the hook SHALL still print a human-readable summary of the `ai_bloat` findings to stderr so the user is aware before committing
 
 ### Requirement: A packaged semgrep rule pack SHALL detect pattern-shape AI bloat
@@ -93,4 +94,4 @@ The clean-code policy-pack documentation SHALL note that `ai-bloat-patterns.yaml
 - **WHEN** a reader consults the clean-code policy-pack documentation
 - **THEN** the documentation SHALL state explicitly that `ai-bloat-patterns.yaml` is a separate policy pack
 - **AND** SHALL state that its severity model is `advisory`-only
-- **AND** SHALL state that its principle category is `ai_bloat`, distinct from the existing six categories
+- **AND** SHALL state that its principle category is `ai_bloat`, distinct from the existing principle categories (`naming | kiss | yagni | dry | solid | clean_code | architecture`)
