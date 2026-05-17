@@ -37,15 +37,24 @@
 - [ ] 6.1 Author `packages/specfact-project/resources/prompts/specfact.08-simplify.md` mirroring the structure of `specfact.03-review.md`. The prompt MUST: read `.specfact/code-review.json`, filter by `category=ai_bloat`, group by file then rule, present each candidate with rewrite hint, drive a per-change accept/reject/skip/explain loop, apply accepted edits via the IDE, and suggest re-running review afterwards.
 - [ ] 6.2 Add the new command to the prompt-command-contract registry and any slash-command discovery surfaces.
 
-## 7. Documentation
+## 7. Reference documentation
 
 - [ ] 7.1 Add a `code-review` docs page or section on modules.specfact.io introducing the `ai_bloat` principle category, the `advisory` severity model, and how findings surface in `.specfact/code-review.json`.
 - [ ] 7.2 Cross-reference the new category from `clean-code-principles` docs so reviewers understand the distinction.
 - [ ] 7.3 Document the `/specfact.08-simplify` slash command in the project bundle docs.
 
-## 8. Passing evidence, quality gates, and review
+## 8. Headline docs and showcase
 
-- [ ] 8.1 Re-run all targeted tests from sections 2.1–2.4 and record passing evidence in `openspec/changes/code-review-ai-bloat-detection/TDD_EVIDENCE.md`.
-- [ ] 8.2 Run the required quality gates in order: `hatch run format`, `hatch run type-check`, `hatch run lint`, `hatch run yaml-lint`, `hatch run check-bundle-imports`, `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump`, `hatch run contract-test`, the relevant `hatch run smart-test`, and the relevant `hatch run test`.
-- [ ] 8.3 Run `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope full`, fix every finding on modified artifacts, rerun until the report passes, and record the command and timestamp in `TDD_EVIDENCE.md`.
-- [ ] 8.4 Commit, push, and open or update the PR to `dev` after verification is green.
+Goal: position the `ai_bloat` capability as a flagship entry point to SpecFact's review surface, framed honestly as "bloat detection tuned for the shapes AI code commonly produces" rather than as an `is-this-AI` classifier. All marketing copy MUST use this framing and MUST NOT claim the detectors identify AI authorship.
+
+- [ ] 8.1 Update the modules repo root `README.md` with a top-level feature callout introducing AI-shaped bloat detection alongside the existing review capability, including a one-paragraph rationale (AI-generated code amplifies a recognisable bloat pattern surface that conventional clean-code gates do not name as a category) and a link to the quickstart walkthrough.
+- [ ] 8.2 Add a quickstart walkthrough page under `docs/` (e.g., `docs/quickstart-ai-bloat.md` or the equivalent permalink slot per `docs/reference/documentation-url-contract.md`) that demonstrates the end-to-end flow: install bundle → run `specfact code review run` on a seeded fixture → inspect `ai_bloat` findings in `.specfact/code-review.json` → invoke `/specfact.08-simplify` in the IDE → accept / reject rewrites → re-run review to show findings cleared. Include before/after code snippets for at least two detectors (e.g., manual-loop comprehension and identity try/except).
+- [ ] 8.3 Add a homepage callout on modules.specfact.io introducing the capability with the honest framing above and linking to 8.2. Coordinate copy with any existing top-of-fold content; do not displace currently-promoted capabilities without explicit approval.
+- [ ] 8.4 Capture real before/after evidence from running the detectors on this repo (`specfact-cli-modules`) or a sibling repo (`specfact-cli`), then embed the numbers (e.g., findings count, LOC delta on accepted rewrites) into 8.1 and 8.2 so the showcase is grounded in measured outcomes rather than claims. Record the source repo, commit SHA, and command invocations in `TDD_EVIDENCE.md`.
+- [ ] 8.5 Open a follow-up tracking issue in `nold-ai/specfact-cli` (core CLI repo) for a parallel README/docs callout there, linked to this change and to issue [#269](https://github.com/nold-ai/specfact-cli-modules/issues/269). The core-side update is out of scope for this PR but in scope for the rollout; record the follow-up issue URL in `TDD_EVIDENCE.md`.
+## 9. Passing evidence, quality gates, and review
+
+- [ ] 9.1 Re-run all targeted tests from sections 2.1–2.4 and record passing evidence in `openspec/changes/code-review-ai-bloat-detection/TDD_EVIDENCE.md`.
+- [ ] 9.2 Run the required quality gates in order: `hatch run format`, `hatch run type-check`, `hatch run lint`, `hatch run yaml-lint`, `hatch run check-bundle-imports`, `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump`, `hatch run contract-test`, the relevant `hatch run smart-test`, and the relevant `hatch run test`.
+- [ ] 9.3 Run `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope full`, fix every finding on modified artifacts, rerun until the report passes, and record the command and timestamp in `TDD_EVIDENCE.md`.
+- [ ] 9.4 Commit, push, and open or update the PR to `dev` after verification is green.
