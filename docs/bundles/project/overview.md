@@ -82,6 +82,8 @@ Brownfield **code import** (`specfact code import`, `specfact import …`) lives
 
 Plan and review flows may ship **prompts or templates** with the bundle. Treat them as **bundle payload**, not core CLI sources of truth. Refresh IDE-facing resources with `specfact init ide` after upgrades so editors receive the same artifacts the CLI expects.
 
+The project prompt set includes `/specfact.08-simplify`, which reads `.specfact/code-review.json`, filters `category=ai_bloat` findings from the Code Review bundle, and walks the user through accept/reject/skip/explain choices before applying any simplification edit.
+
 ## Quick examples
 
 ```bash

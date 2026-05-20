@@ -35,6 +35,7 @@ _EXPECTED_PROMPTS: dict[str, tuple[str, ...]] = {
         "specfact.03-review.md",
         "specfact.04-sdd.md",
         "specfact.06-sync.md",
+        "specfact.08-simplify.md",
         "specfact.compare.md",
     ),
     "specfact-govern": ("specfact.05-enforce.md",),
@@ -222,6 +223,31 @@ def test_code_review_bundle_packages_clean_code_policy_pack_manifest() -> None:
         assert {rule["id"] for rule in data["rules"]} == expected_rules
 
 
+def test_code_review_bundle_packages_ai_bloat_policy_pack_manifest() -> None:
+    module_root = REPO_ROOT / "packages" / "specfact-code-review"
+    manifest_path = module_root / "resources" / "policy-packs" / "specfact" / "ai-bloat-patterns.yaml"
+    semgrep_path = module_root / "resources" / "semgrep-rules" / "ai-bloat.yaml"
+    data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    expected_rules = {
+        "ai-bloat.manual-loop-comprehension",
+        "ai-bloat.passthrough-lambda",
+        "ai-bloat.identity-try-except",
+        "ai-bloat.none-then-none",
+        "ai-bloat.single-call-wrapper",
+        "ai-bloat.unused-optional-param",
+        "ai-bloat.dead-branch",
+        "ai-bloat.loc-vs-complexity",
+        "ai-bloat.redundant-intermediate",
+    }
+
+    assert semgrep_path.is_file()
+    assert data["pack_ref"] == "specfact/ai-bloat-patterns"
+    assert data["default_mode"] == "advisory"
+    assert {rule["id"] for rule in data["rules"]} == expected_rules
+    assert {rule["category"] for rule in data["rules"]} == {"ai_bloat"}
+    assert {rule["principle"] for rule in data["rules"]} == {"ai_bloat"}
+
+
 def test_backlog_artifact_contains_prompt_payload(tmp_path: Path) -> None:
     artifact = _build_bundle_artifact("specfact-backlog", tmp_path)
     with tarfile.open(artifact, "r:gz") as archive:
@@ -238,7 +264,11 @@ def test_backlog_artifact_contains_prompt_payload(tmp_path: Path) -> None:
 def test_code_review_artifact_contains_policy_pack_payload(tmp_path: Path) -> None:
     artifact = _build_bundle_artifact("specfact-code-review", tmp_path)
     with tarfile.open(artifact, "r:gz") as archive:
-        assert "specfact-code-review/resources/policy-packs/specfact/clean-code-principles.yaml" in archive.getnames()
+        names = set(archive.getnames())
+
+    assert "specfact-code-review/resources/policy-packs/specfact/clean-code-principles.yaml" in names
+    assert "specfact-code-review/resources/policy-packs/specfact/ai-bloat-patterns.yaml" in names
+    assert "specfact-code-review/resources/semgrep-rules/ai-bloat.yaml" in names
 
 
 def test_project_artifact_contains_runtime_generator_templates(tmp_path: Path) -> None:

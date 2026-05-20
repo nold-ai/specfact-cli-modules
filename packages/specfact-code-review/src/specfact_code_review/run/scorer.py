@@ -50,6 +50,8 @@ def _bonus_points(modifiers: ReviewScoreModifiers) -> int:
 
 
 def _deduction_for_finding(finding: ReviewFinding) -> int:
+    if finding.category == "ai_bloat":
+        return 0
     if finding.severity == "error" and not finding.fixable:
         return 15
     if finding.severity == "error" and finding.fixable:

@@ -24,6 +24,7 @@ class ReviewFindingPayload(TypedDict, total=False):
         "yagni",
         "dry",
         "solid",
+        "ai_bloat",
     ]
     severity: Literal["error", "warning", "info"]
     tool: str
@@ -81,6 +82,7 @@ def test_review_finding_accepts_supported_severity_values(
         "yagni",
         "dry",
         "solid",
+        "ai_bloat",
     ],
 )
 def test_review_finding_accepts_supported_category_values(category: str) -> None:
@@ -99,6 +101,7 @@ def test_review_finding_accepts_supported_category_values(category: str) -> None
             "yagni",
             "dry",
             "solid",
+            "ai_bloat",
         ],
         category,
     )

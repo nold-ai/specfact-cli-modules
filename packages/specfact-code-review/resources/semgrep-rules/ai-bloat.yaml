@@ -1,0 +1,54 @@
+rules:
+  - id: ai-bloat.manual-loop-comprehension
+    message: Manual append loop can be collapsed to a comprehension.
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern-inside: |
+          def $FUNC(...):
+              ...
+      - pattern: |
+          $OUT = []
+          for $ITEM in $ITEMS:
+              $OUT.append($EXPR)
+
+  - id: ai-bloat.passthrough-lambda
+    message: Passthrough lambda adds no behavior; use the callable directly.
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern: "lambda $ARG: $FUNC($ARG)"
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: '^(?!Path$|int$|str$)[A-Za-z_][A-Za-z0-9_]*$'
+
+  - id: ai-bloat.identity-try-except
+    message: Handler re-raises the same exception without adding context.
+    severity: INFO
+    languages: [python]
+    pattern: |
+      try:
+          ...
+      except $EXC:
+          raise
+
+  - id: ai-bloat.none-then-none
+    message: This None branch returns the input unchanged; return the value directly.
+    severity: INFO
+    languages: [python]
+    pattern: |
+      if $VALUE is not None:
+          return $VALUE
+      return None
+
+  - id: ai-bloat.single-call-wrapper
+    message: Single-call wrapper adds no transformation or policy.
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern: |
+          def $FUNC($ARG):
+              return $CALL($ARG)
+      - metavariable-regex:
+          metavariable: $CALL
+          regex: '^(?!Path$|int$|str$)[A-Za-z_][A-Za-z0-9_]*$'

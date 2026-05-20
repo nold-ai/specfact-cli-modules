@@ -1,0 +1,32 @@
+pack_ref: specfact/ai-bloat-patterns
+version: 1
+description: Advisory AI-bloat patterns tuned for code shapes commonly produced by LLM-assisted development.
+default_mode: advisory
+rules:
+  - id: ai-bloat.manual-loop-comprehension
+    category: ai_bloat
+    principle: ai_bloat
+  - id: ai-bloat.passthrough-lambda
+    category: ai_bloat
+    principle: ai_bloat
+  - id: ai-bloat.identity-try-except
+    category: ai_bloat
+    principle: ai_bloat
+  - id: ai-bloat.none-then-none
+    category: ai_bloat
+    principle: ai_bloat
+  - id: ai-bloat.single-call-wrapper
+    category: ai_bloat
+    principle: ai_bloat
+  - id: ai-bloat.unused-optional-param
+    category: ai_bloat
+    principle: ai_bloat
+  - id: ai-bloat.dead-branch
+    category: ai_bloat
+    principle: ai_bloat
+  - id: ai-bloat.loc-vs-complexity
+    category: ai_bloat
+    principle: ai_bloat
+  - id: ai-bloat.redundant-intermediate
+    category: ai_bloat
+    principle: ai_bloat

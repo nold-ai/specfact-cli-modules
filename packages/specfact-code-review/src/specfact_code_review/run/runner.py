@@ -21,6 +21,7 @@ from icontract import ensure, require
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 from specfact_code_review.run.scorer import score_review
+from specfact_code_review.tools.ai_bloat_runner import run_ai_bloat
 from specfact_code_review.tools.ast_clean_code_runner import run_ast_clean_code
 from specfact_code_review.tools.basedpyright_runner import run_basedpyright
 from specfact_code_review.tools.contract_runner import run_contract_check
@@ -252,6 +253,7 @@ def _tool_steps(*, bug_hunt: bool) -> list[tuple[str, Callable[[list[Path]], lis
         ("Running Radon complexity checks...", run_radon),
         ("Running Semgrep rules...", run_semgrep),
         ("Running Semgrep bug rules...", run_semgrep_bugs),
+        ("Running AI-bloat AST checks...", run_ai_bloat),
         ("Running AST clean-code checks...", run_ast_clean_code),
         ("Running basedpyright type checks...", run_basedpyright),
         ("Running pylint checks...", run_pylint),

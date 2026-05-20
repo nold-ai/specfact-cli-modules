@@ -111,8 +111,6 @@ def build_review_command(files: Sequence[str]) -> list[str]:
         "code",
         "review",
         "run",
-        "--level",
-        "error",
         "--json",
         "--out",
         REVIEW_JSON_OUT,
@@ -223,6 +221,18 @@ def count_findings_by_severity(findings: list[object]) -> dict[str, int]:
     return buckets
 
 
+def _count_ai_bloat_findings(findings: list[object]) -> int:
+    """Count advisory AI-bloat findings in a ReviewReport payload."""
+    count = 0
+    for item in findings:
+        if not isinstance(item, dict):
+            continue
+        category = item.get("category")
+        if isinstance(category, str) and category == "ai_bloat":
+            count += 1
+    return count
+
+
 def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None, int | None]:
     """Parse ``REVIEW_JSON_OUT``, print counts, return ``(ok, error_count, ci_exit_code)``.
 
@@ -252,6 +262,7 @@ def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None, i
         return False, None, None
 
     counts = count_findings_by_severity(findings_raw)
+    ai_bloat_count = _count_ai_bloat_findings(findings_raw)
     total = len(findings_raw)
     verdict = data.get("overall_verdict", "?")
     ci_exit_code = data.get("ci_exit_code")
@@ -266,6 +277,8 @@ def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None, i
         parts.append(f"info={counts['info']}")
     if counts["other"]:
         parts.append(f"other={counts['other']}")
+    if ai_bloat_count:
+        parts.append(f"ai_bloat={ai_bloat_count}")
     summary = ", ".join(parts)
     sys.stderr.write(f"Code review summary: {total} finding(s) ({summary}); overall_verdict={verdict!r}.\n")
     abs_report = report_path.resolve()

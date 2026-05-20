@@ -27,12 +27,25 @@ BAD_FIXTURE_RULES = {
     "bad_module_network.py": "module-level-network",
     "bad_print_in_src.py": "print-in-src",
 }
+AI_BLOAT_BAD_FIXTURE_RULES = {
+    "bad_manual_loop_comprehension.py": "ai-bloat.manual-loop-comprehension",
+    "bad_identity_try_except.py": "ai-bloat.identity-try-except",
+    "bad_none_then_none.py": "ai-bloat.none-then-none",
+    "bad_single_call_wrapper.py": "ai-bloat.single-call-wrapper",
+}
 GOOD_FIXTURES = [
     "good_get_modify.py",
     "good_nested_access.py",
     "good_cross_layer.py",
     "good_module_network.py",
     "good_print_in_src.py",
+]
+AI_BLOAT_GOOD_FIXTURES = [
+    "good_manual_loop_comprehension.py",
+    "good_passthrough_lambda.py",
+    "good_identity_try_except.py",
+    "good_none_then_none.py",
+    "good_single_call_wrapper.py",
 ]
 
 
@@ -121,6 +134,32 @@ def test_run_semgrep_maps_naming_rule_to_naming_category(tmp_path: Path, monkeyp
     assert len(findings) == 1
     assert findings[0].category == "naming"
     assert findings[0].rule == "banned-generic-public-names"
+
+
+def test_run_semgrep_maps_ai_bloat_rules_to_info_findings(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    payload = {
+        "results": [
+            {
+                "check_id": "ai-bloat.single-call-wrapper",
+                "path": str(file_path),
+                "start": {"line": 5},
+                "extra": {"message": "Single-call wrapper adds no behavior.", "severity": "WARNING"},
+            }
+        ]
+    }
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=1)),
+    )
+
+    findings = run_semgrep([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].category == "ai_bloat"
+    assert findings[0].severity == "info"
+    assert findings[0].rule == "ai-bloat.single-call-wrapper"
 
 
 def test_run_semgrep_filters_findings_to_requested_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -308,3 +347,47 @@ def test_each_good_fixture_triggers_no_findings(fixture_name: str) -> None:
     findings = run_semgrep([FIXTURE_ROOT / fixture_name])
 
     assert not findings
+
+
+@pytest.mark.parametrize(("fixture_name", "expected_rule"), list(AI_BLOAT_BAD_FIXTURE_RULES.items()))
+def test_each_ai_bloat_bad_fixture_triggers_expected_rule(fixture_name: str, expected_rule: str) -> None:
+    if shutil.which("semgrep") is None:
+        pytest.skip("semgrep CLI is required for fixture validation")
+
+    findings = run_semgrep([FIXTURE_ROOT / fixture_name])
+
+    assert expected_rule in {finding.rule for finding in findings}
+    assert all(finding.severity == "info" for finding in findings if finding.rule == expected_rule)
+
+
+def test_ai_bloat_passthrough_lambda_rule_triggers_for_generated_fixture(tmp_path: Path) -> None:
+    if shutil.which("semgrep") is None:
+        pytest.skip("semgrep CLI is required for fixture validation")
+
+    target = tmp_path / "bad_passthrough_lambda.py"
+    target.write_text(
+        """
+def canonicalize(value: str) -> str:
+    return value.strip()
+
+
+callbacks = [lambda value: canonicalize(value)]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    findings = run_semgrep([target])
+
+    assert "ai-bloat.passthrough-lambda" in {finding.rule for finding in findings}
+    assert all(finding.severity == "info" for finding in findings if finding.rule == "ai-bloat.passthrough-lambda")
+
+
+@pytest.mark.parametrize("fixture_name", AI_BLOAT_GOOD_FIXTURES)
+def test_each_ai_bloat_good_fixture_triggers_no_ai_bloat_findings(fixture_name: str) -> None:
+    if shutil.which("semgrep") is None:
+        pytest.skip("semgrep CLI is required for fixture validation")
+
+    findings = run_semgrep([FIXTURE_ROOT / fixture_name])
+
+    assert not any(finding.category == "ai_bloat" for finding in findings)
