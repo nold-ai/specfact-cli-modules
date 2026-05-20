@@ -24,6 +24,7 @@ VALID_CATEGORIES = (
     "yagni",
     "dry",
     "solid",
+    "ai_bloat",
 )
 VALID_SEVERITIES = ("error", "warning", "info")
 PASS = "PASS"
@@ -81,6 +82,7 @@ class ReviewFinding(BaseModel):
         "yagni",
         "dry",
         "solid",
+        "ai_bloat",
     ] = Field(..., description="Governed code-review category.")
     severity: Literal["error", "warning", "info"] = Field(..., description="Finding severity.")
     tool: str = Field(..., description="Originating tool name.")

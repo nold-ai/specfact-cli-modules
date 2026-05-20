@@ -15,12 +15,12 @@ Reviewers see these one by one and may flag them under `kiss` or `yagni`, but th
 
 ## What Changes
 
-- **NEW**: Introduce `ai_bloat` as a new principle category alongside `naming | kiss | yagni | dry | solid | clean_code | architecture`, surfaced through the existing `ReviewFinding` transport and `.specfact/code-review.json` evidence file. Findings are emitted at `severity=info` (the existing non-blocking severity on `ReviewFinding`); the "advisory" framing is carried by the policy pack (`default_mode: advisory`) so they never block commits without requiring a new severity value.
+- **NEW**: Introduce `ai_bloat` as a new principle category alongside `naming | kiss | yagni | dry | solid | clean_code | architecture`, surfaced through the existing `ReviewFinding` transport and `.specfact/code-review.json` evidence file. This is an additive strict-schema update because `ReviewFinding.category` is currently a literal allow-list. Findings are emitted at `severity=info` (the existing non-blocking severity on `ReviewFinding`); the "advisory" framing is carried by the policy pack (`default_mode: advisory`) and `ai_bloat` findings do not reduce the governed review score in this iteration.
 - **NEW**: Add a packaged semgrep rule pack at `packages/specfact-code-review/resources/semgrep-rules/ai-bloat.yaml` covering pattern-shape detectors (manual-loop comprehension, passthrough lambda, identity try/except, none-then-none, single-call wrapper). Register the new rule IDs in `SEMGREP_RULE_CATEGORY` in `tools/semgrep_runner.py`.
 - **NEW**: Add an AST-based runner at `packages/specfact-code-review/src/specfact_code_review/tools/ai_bloat_runner.py` covering semantic detectors that do not lend themselves to semgrep (unused Optional params, dead branches, LOC-vs-complexity anomalies, redundant intermediates), wired into the existing runner orchestration.
 - **NEW**: Add a dedicated policy pack at `packages/specfact-code-review/resources/policy-packs/specfact/ai-bloat-patterns.yaml` registering the rules under `principle: ai_bloat`, parallel to `clean-code-principles.yaml` so the pack can be enabled or disabled independently.
 - **NEW**: Add an IDE slash-command prompt at `packages/specfact-project/resources/prompts/specfact.08-simplify.md` that reads `.specfact/code-review.json`, filters findings where `category=ai_bloat`, and walks the user through each candidate with a per-change confirmation rewrite loop driven by the LLM in the IDE.
-- **EXTEND**: Update the code-review module manifest version per semver patch rules and declare the new policy-pack and semgrep-rule resources in the bundle payload.
+- **EXTEND**: Update the code-review module manifest version per semver patch rules and add the new policy-pack and semgrep-rule resources under the package resource tree. The bundle payload and signature tooling include those resource files from the filesystem; the manifests do not declare individual resource paths.
 
 ## Capabilities
 
@@ -37,7 +37,12 @@ Reviewers see these one by one and may flag them under `kiss` or `yagni`, but th
 - **Affected code**: `packages/specfact-code-review/` (new runner, new semgrep rules, new policy pack, manifest version bump, runner orchestration wiring); `packages/specfact-project/` (new packaged prompt resource and manifest payload).
 - **Affected tests**: targeted unit tests per detector (one fixture pair per heuristic), semgrep rule fixture tests, policy-pack reference contract tests, and an integration test that exercises the end-to-end review pipeline against seeded bloat fixtures.
 - **Affected docs**: reference docs for the `ai_bloat` category, the slash command, and the `advisory`-only model under code-review and review-run on modules.specfact.io, cross-referenced from `clean-code-principles` docs; root `README.md` headline callout; a quickstart walkthrough page demonstrating the end-to-end review → simplify → re-review flow with before/after evidence captured from a real repo; a modules.specfact.io homepage callout. All marketing copy uses the framing "bloat detection tuned for the shapes AI code commonly produces" and does not claim AI-authorship classification. A parallel callout in the core `specfact-cli` README is tracked as a follow-up issue out of scope for this PR.
-- **Release impact**: patch version bumps and signature/registry updates for `specfact-code-review` (new resources) and `specfact-project` (new prompt resource); no breaking change to existing finding consumers because `ai_bloat` findings from both packages are purely additive and info-only (emitted at `severity=info`, never `warning` or `error`).
+- **Release impact**: patch version bumps and signature/registry updates for `specfact-code-review` (new resources) and `specfact-project` (new prompt resource); no breaking change to existing finding consumers that tolerate additive category values because `ai_bloat` findings are info-only (emitted at `severity=info`, never `warning` or `error`) and score-neutral.
+
+## Scope Adjustment Notes
+
+- GitHub issue [#269](https://github.com/nold-ai/specfact-cli-modules/issues/269) is currently linked to Feature [#175](https://github.com/nold-ai/specfact-cli-modules/issues/175), but that feature is closed/Done and its body originally listed only [#174](https://github.com/nold-ai/specfact-cli-modules/issues/174). Before implementation, record this as a hierarchy mismatch and either update #175 to include #269 or document that #269 broadens the closed feature as a follow-up.
+- `ai_bloat` is advisory and score-neutral for v1. The pre-commit hook must still write these findings to `.specfact/code-review.json` and print a short stderr summary even when blocking is configured at `--level error`.
 
 ---
 

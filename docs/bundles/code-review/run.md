@@ -120,6 +120,8 @@ specfact code review run --scope changed --interactive
 
 The review pipeline uses rules, skills, and policy payloads shipped with the installed Code Review bundle. Those assets are bundle-owned and should be refreshed through supported bundle and IDE setup flows rather than legacy core-owned paths.
 
+The built-in `specfact/ai-bloat-patterns` policy pack is parallel to `specfact/clean-code-principles`. It maps advisory `ai_bloat` rules to the `ai_bloat` principle, emits `severity=info`, and stays score-neutral so simplification candidates do not block commits. Omit `--level` when producing the JSON report for `/specfact.08-simplify`; `--level error` intentionally filters info-level findings out of the command report.
+
 ## Related
 
 - [Code review ledger](/bundles/code-review/ledger/)

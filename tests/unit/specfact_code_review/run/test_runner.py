@@ -39,6 +39,7 @@ def _finding(
         "yagni",
         "dry",
         "solid",
+        "ai_bloat",
     ] = "style",
 ) -> ReviewFinding:
     return ReviewFinding(
@@ -64,6 +65,7 @@ def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: _record("radon"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: _record("semgrep"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: _record("semgrep_bugs"))
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: _record("ai_bloat"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: _record("ast"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: _record("basedpyright"))
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: _record("pylint"))
@@ -87,6 +89,7 @@ def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
         "radon",
         "semgrep",
         "semgrep_bugs",
+        "ai_bloat",
         "ast",
         "basedpyright",
         "pylint",
@@ -107,6 +110,12 @@ def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -
     monkeypatch.setattr(
         "specfact_code_review.run.runner.run_semgrep_bugs",
         lambda files: [_finding(tool="semgrep", rule="specfact-bugs-eval-exec", category="security")],
+    )
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ai_bloat",
+        lambda files: [
+            _finding(tool="ast", rule="ai-bloat.redundant-intermediate", category="ai_bloat", severity="info")
+        ],
     )
     monkeypatch.setattr(
         "specfact_code_review.run.runner.run_ast_clean_code",
@@ -140,6 +149,7 @@ def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -
         "semgrep",
         "semgrep",
         "ast",
+        "ast",
         "basedpyright",
         "pylint",
         "contract_runner",
@@ -161,6 +171,7 @@ def test_run_review_skips_tdd_gate_when_no_tests_is_true(monkeypatch: MonkeyPatc
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
@@ -183,6 +194,7 @@ def test_run_review_returns_review_report(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
@@ -235,6 +247,7 @@ def test_run_review_suppresses_known_test_noise_by_default(monkeypatch: MonkeyPa
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: noisy_findings[1:2])
@@ -276,6 +289,7 @@ def test_run_review_can_include_known_test_noise(monkeypatch: MonkeyPatch) -> No
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: noisy_findings[1:])
@@ -299,6 +313,7 @@ def test_run_review_emits_advisory_checklist_finding_in_pr_mode(monkeypatch: Mon
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
@@ -322,6 +337,7 @@ def test_run_review_requires_explicit_pr_mode_token_for_clean_code_reasoning(mon
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
@@ -352,6 +368,7 @@ def test_run_review_suppresses_global_duplicate_code_noise_by_default(monkeypatc
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [duplicate_code_finding])
@@ -407,6 +424,7 @@ def test_run_review_can_include_global_duplicate_code_noise(monkeypatch: MonkeyP
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [duplicate_code_finding])

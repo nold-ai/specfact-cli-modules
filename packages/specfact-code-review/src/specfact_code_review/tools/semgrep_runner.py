@@ -24,12 +24,17 @@ SEMGREP_RULE_CATEGORY = {
     "print-in-src": "architecture",
     "banned-generic-public-names": "naming",
     "swallowed-exception-pattern": "clean_code",
+    "ai-bloat.manual-loop-comprehension": "ai_bloat",
+    "ai-bloat.passthrough-lambda": "ai_bloat",
+    "ai-bloat.identity-try-except": "ai_bloat",
+    "ai-bloat.none-then-none": "ai_bloat",
+    "ai-bloat.single-call-wrapper": "ai_bloat",
 }
 SEMGREP_TIMEOUT_SECONDS = 90
 SEMGREP_RETRY_ATTEMPTS = 2
 _SEMGREP_STDERR_SNIP_MAX = 4000
 _MAX_CONFIG_PARENT_WALK = 32
-SemgrepCategory = Literal["clean_code", "architecture", "naming"]
+SemgrepCategory = Literal["clean_code", "architecture", "naming", "ai_bloat"]
 BugSemgrepCategory = Literal["security", "clean_code"]
 
 BUG_RULE_CATEGORY: dict[str, BugSemgrepCategory] = {
@@ -163,9 +168,42 @@ def find_semgrep_bugs_config(
     return None
 
 
+@beartype
+@require(lambda bundle_root, module_file: bundle_root is None or isinstance(bundle_root, Path))
+@require(lambda bundle_root, module_file: module_file is None or isinstance(module_file, Path))
+@ensure(lambda result: result is None or isinstance(result, Path))
+def find_semgrep_ai_bloat_config(
+    *,
+    bundle_root: Path | None = None,
+    module_file: Path | None = None,
+) -> Path | None:
+    """Locate the optional AI-bloat Semgrep rule pack for this package or bundle root."""
+    rel = Path("resources") / "semgrep-rules" / "ai-bloat.yaml"
+    if bundle_root is not None:
+        candidate = bundle_root.resolve() / rel
+        return candidate if candidate.is_file() else None
+
+    here = (module_file if module_file is not None else Path(__file__)).resolve()
+    for depth, parent in enumerate([here.parent, *here.parents]):
+        if depth > _MAX_CONFIG_PARENT_WALK:
+            break
+        if parent == parent.parent:
+            break
+        candidate = parent / rel
+        if candidate.is_file():
+            return candidate
+        if _is_bundle_boundary(parent):
+            break
+        if parent.name == "site-packages":
+            break
+    return None
+
+
 def _run_semgrep_command(
-    files: list[Path], *, bundle_root: Path | None, config_file: Path
+    files: list[Path], *, bundle_root: Path | None, config_file: Path | list[Path]
 ) -> subprocess.CompletedProcess[str]:
+    config_files = config_file if isinstance(config_file, list) else [config_file]
+    config_args = [arg for path in config_files for arg in ("--config", str(path))]
     with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
         semgrep_home = Path(temp_home)
         semgrep_log_dir = semgrep_home / ".semgrep"
@@ -185,8 +223,7 @@ def _run_semgrep_command(
                 "semgrep",
                 "--disable-version-check",
                 "--quiet",
-                "--config",
-                str(config_file),
+                *config_args,
                 "--json",
                 *(str(file_path) for file_path in files),
             ],
@@ -206,7 +243,9 @@ def _snip_stderr_tail(stderr: str) -> str:
     return "…" + err_raw[-_SEMGREP_STDERR_SNIP_MAX:]
 
 
-def _load_semgrep_results(files: list[Path], *, bundle_root: Path | None, config_file: Path) -> list[object]:
+def _load_semgrep_results(
+    files: list[Path], *, bundle_root: Path | None, config_file: Path | list[Path]
+) -> list[object]:
     last_error: Exception | None = None
     for _attempt in range(SEMGREP_RETRY_ATTEMPTS):
         try:
@@ -236,7 +275,7 @@ def _parse_semgrep_results(payload: dict[str, object]) -> list[object]:
 
 def _category_for_rule(rule: str) -> SemgrepCategory | None:
     category = SEMGREP_RULE_CATEGORY.get(rule)
-    if category in {"clean_code", "architecture", "naming"}:
+    if category in {"clean_code", "architecture", "naming", "ai_bloat"}:
         return cast(SemgrepCategory, category)
     return None
 
@@ -283,7 +322,7 @@ def _finding_from_result(item: dict[str, object], *, allowed_paths: set[str]) ->
 
     return ReviewFinding(
         category=category,
-        severity="warning",
+        severity="info" if category == "ai_bloat" else "warning",
         tool="semgrep",
         rule=rule,
         file=filename,
@@ -319,7 +358,11 @@ def run_semgrep(files: list[Path], *, bundle_root: Path | None = None) -> list[R
 
     try:
         config_path = find_semgrep_config(bundle_root=bundle_root)
-        raw_results = _load_semgrep_results(files, bundle_root=bundle_root, config_file=config_path)
+        config_paths = [config_path]
+        ai_bloat_config = find_semgrep_ai_bloat_config(bundle_root=bundle_root)
+        if ai_bloat_config is not None:
+            config_paths.append(ai_bloat_config)
+        raw_results = _load_semgrep_results(files, bundle_root=bundle_root, config_file=config_paths)
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep output: {exc}")
 
@@ -327,22 +370,27 @@ def run_semgrep(files: list[Path], *, bundle_root: Path | None = None) -> list[R
     findings: list[ReviewFinding] = []
     try:
         for item in raw_results:
-            _append_semgrep_finding(findings, item, allowed_paths=allowed_paths)
+            _append_semgrep_result(findings, item, allowed_paths=allowed_paths, bug_pass=False)
     except (KeyError, TypeError, ValueError) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep finding payload: {exc}")
 
     return findings
 
 
-def _append_semgrep_finding(
+def _append_semgrep_result(
     findings: list[ReviewFinding],
     item: object,
     *,
     allowed_paths: set[str],
+    bug_pass: bool,
 ) -> None:
     if not isinstance(item, dict):
         raise ValueError("semgrep finding must be an object")
-    finding = _finding_from_result(item, allowed_paths=allowed_paths)
+    finding = (
+        _finding_from_bug_result(item, allowed_paths=allowed_paths)
+        if bug_pass
+        else _finding_from_result(item, allowed_paths=allowed_paths)
+    )
     if finding is not None:
         findings.append(finding)
 
@@ -381,19 +429,6 @@ def _finding_from_bug_result(item: dict[str, object], *, allowed_paths: set[str]
     )
 
 
-def _append_semgrep_bug_finding(
-    findings: list[ReviewFinding],
-    item: object,
-    *,
-    allowed_paths: set[str],
-) -> None:
-    if not isinstance(item, dict):
-        raise ValueError("semgrep finding must be an object")
-    finding = _finding_from_bug_result(item, allowed_paths=allowed_paths)
-    if finding is not None:
-        findings.append(finding)
-
-
 @beartype
 @require(lambda files: isinstance(files, list), "files must be a list")
 @require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
@@ -428,7 +463,7 @@ def run_semgrep_bugs(files: list[Path], *, bundle_root: Path | None = None) -> l
     findings: list[ReviewFinding] = []
     try:
         for item in raw_results:
-            _append_semgrep_bug_finding(findings, item, allowed_paths=allowed_paths)
+            _append_semgrep_result(findings, item, allowed_paths=allowed_paths, bug_pass=True)
     except (KeyError, TypeError, ValueError) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep bugs finding payload: {exc}")
 

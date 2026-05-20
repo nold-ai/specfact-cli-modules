@@ -16,6 +16,8 @@ The modules site owns all bundle-specific deep guidance. Core CLI platform docs 
 
 **New here?** Start with [Choose Your Modules]({{ '/getting-started/choose-your-modules/' | relative_url }}) — a quick guide to what each module does, which ones you need, and how they work together.
 
+**New in Code Review:** `ai_bloat` advisories flag bloated shapes common in AI-assisted code and feed `/specfact.08-simplify` for per-change confirmed cleanup. Start with the [AI bloat quickstart]({{ '/quickstart-ai-bloat/' | relative_url }}).
+
 ## Find Your Path
 
 <div class="path-cards">

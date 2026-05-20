@@ -107,6 +107,12 @@ Copy-pastable recipes for **shadow mode**, **JSON `--out`**, **`--focus`**
 test prompts live in the [Code review run](/bundles/code-review/run/) bundle
 guide (same Typer surface as this section).
 
+### AI-shaped bloat advisories
+
+The review pipeline also emits `ai_bloat` findings for code shapes commonly amplified by AI-assisted generation: manual append loops, passthrough lambdas, identity `try/except`, one-call wrappers, speculative `Optional[...] = None` parameters, duplicate terminal guards, long low-branch functions, and redundant intermediates.
+
+These findings are `severity=info`, advisory-only, and score-neutral. They are written to `.specfact/code-review.json` when the report includes all severities, and the `/specfact.08-simplify` IDE prompt can filter them by `category=ai_bloat` for per-change confirmed rewrites. They do not claim AI authorship; they identify simplification candidates.
+
 Positional `FILES...` cannot be mixed with **`--scope`** or **`--path`** (see
 **Invalid combinations** above).
 

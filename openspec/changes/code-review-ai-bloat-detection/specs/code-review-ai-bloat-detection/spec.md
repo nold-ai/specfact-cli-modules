@@ -4,13 +4,19 @@
 
 ### Requirement: The code-review runner SHALL emit findings under a new `ai_bloat` principle category
 
-The code-review pipeline SHALL recognise `ai_bloat` as a valid value of the `category` and `principle` fields on `ReviewFinding`. The new category SHALL surface in `.specfact/code-review.json` alongside the existing categories `naming | kiss | yagni | dry | solid | clean_code | architecture` without any schema migration of existing finding consumers. Findings under `ai_bloat` SHALL emit at `info` severity only (the non-blocking severity already accepted by `ReviewFinding`); the runner SHALL never emit `ai_bloat` findings at `warning` or `error` severity in this iteration. The `advisory` framing is carried at the policy-pack layer via `default_mode: advisory` and at the report layer via the existing `PASS_WITH_ADVISORY` verdict, not by introducing a new per-finding severity value.
+The code-review pipeline SHALL recognise `ai_bloat` as a valid value of the `category` field on `ReviewFinding` and as the policy-pack `principle` for all AI-bloat rules. The new category SHALL surface in `.specfact/code-review.json` alongside the existing categories `naming | kiss | yagni | dry | solid | clean_code | architecture` through an additive strict-schema update. Findings under `ai_bloat` SHALL emit at `info` severity only (the non-blocking severity already accepted by `ReviewFinding`); the runner SHALL never emit `ai_bloat` findings at `warning` or `error` severity in this iteration. The `advisory` framing is carried at the policy-pack layer via `default_mode: advisory`, not by introducing a new per-finding severity value. `ai_bloat` findings SHALL be score-neutral in v1.
 
 #### Scenario: Review run on a fixture with a manual-loop comprehension emits an ai_bloat finding
 
 - **WHEN** `specfact code review run --json --out .specfact/code-review.json --scope full` runs against a fixture file containing a `for x in xs: out.append(...)` loop whose shape matches the `ai-bloat.manual-loop-comprehension` rule
-- **THEN** the resulting JSON SHALL contain at least one finding whose `category` equals `ai_bloat`, `principle` equals `ai_bloat`, `severity` equals `info`, and whose rule ID is `ai-bloat.manual-loop-comprehension`
+- **THEN** the resulting JSON SHALL contain at least one finding whose `category` equals `ai_bloat`, `severity` equals `info`, and whose rule ID is `ai-bloat.manual-loop-comprehension`
 - **AND** the finding SHALL reference the source file path and the starting line of the matched loop
+
+#### Scenario: Review scoring ignores ai_bloat findings
+
+- **WHEN** a review report contains only `ai_bloat` findings at `info` severity
+- **THEN** those findings SHALL NOT reduce the governed review score
+- **AND** the report SHALL remain non-blocking
 
 #### Scenario: Review run on the simplified equivalent emits no ai_bloat finding
 
@@ -40,7 +46,7 @@ The `specfact-code-review` bundle SHALL ship a semgrep rule pack at `resources/s
 
 ### Requirement: A packaged AST runner SHALL detect semantic AI bloat
 
-The `specfact-code-review` bundle SHALL ship an AST runner at `src/specfact_code_review/tools/ai_bloat_runner.py` implementing detectors for `ai-bloat.unused-optional-param`, `ai-bloat.dead-branch`, `ai-bloat.loc-vs-complexity`, and `ai-bloat.redundant-intermediate`. The runner SHALL be wired into the review orchestration so its findings flow into the same `ReviewFinding` stream as the other tool runners.
+The `specfact-code-review` bundle SHALL ship an AST runner at `src/specfact_code_review/tools/ai_bloat_runner.py` implementing conservative local detectors for `ai-bloat.unused-optional-param`, `ai-bloat.dead-branch`, `ai-bloat.loc-vs-complexity`, and `ai-bloat.redundant-intermediate`. The LOC-vs-complexity detector SHALL use default thresholds of LOC >= 40 and local branch/call complexity <= 4. The runner SHALL be wired into the review orchestration so its findings flow into the same `ReviewFinding` stream as the other tool runners.
 
 #### Scenario: Unused-Optional-param detector flags a parameter that is never tested for None
 

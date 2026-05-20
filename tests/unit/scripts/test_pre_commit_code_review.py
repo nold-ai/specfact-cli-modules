@@ -86,6 +86,7 @@ def test_build_review_command_writes_json_report() -> None:
     assert command[:5] == [sys.executable, "-m", "specfact_cli.cli", "code", "review"]
     assert "--json" in command
     assert "--out" in command
+    assert "--level" not in command
     assert module.REVIEW_JSON_OUT in command
     assert command[-2:] == ["tests/test_app.py", "packages/specfact-spec/src/x.py"]
 
@@ -144,6 +145,75 @@ def test_main_warnings_only_does_not_block_despite_cli_fail_exit(
     err = capsys.readouterr().err
     assert exit_code == 0
     assert "warnings=1" in err
+
+
+def test_main_ai_bloat_only_does_not_block_and_prints_summary(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _load_script_module()
+    repo_root = tmp_path
+    payload: dict[str, object] = {
+        "overall_verdict": "PASS",
+        "ci_exit_code": 0,
+        "findings": [
+            {
+                "category": "ai_bloat",
+                "severity": "info",
+                "rule": "ai-bloat.single-call-wrapper",
+                "file": "tests/unit/test_app.py",
+                "line": 3,
+            }
+        ],
+    }
+
+    def _fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert "--level" not in cmd
+        _write_sample_review_report(repo_root, payload)
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(module, "_repo_root", lambda: repo_root)
+    monkeypatch.setattr(module, "ensure_runtime_available", lambda: (True, None))
+    monkeypatch.setattr(module.subprocess, "run", _fake_run)
+
+    assert module.main(["tests/unit/test_app.py"]) == 0
+    err = capsys.readouterr().err
+    assert "info=1" in err
+    assert "ai_bloat=1" in err
+    assert (
+        json.loads((repo_root / module.REVIEW_JSON_OUT).read_text(encoding="utf-8"))["findings"][0]["category"]
+        == "ai_bloat"
+    )
+
+
+def test_main_preserves_ai_bloat_json_when_error_blocks(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _load_script_module()
+    repo_root = tmp_path
+    payload: dict[str, object] = {
+        "overall_verdict": "FAIL",
+        "ci_exit_code": 1,
+        "findings": [
+            {"category": "ai_bloat", "severity": "info", "rule": "ai-bloat.redundant-intermediate"},
+            {"category": "security", "severity": "error", "rule": "specfact-bugs-eval-exec"},
+        ],
+    }
+
+    def _fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert "--level" not in cmd
+        _write_sample_review_report(repo_root, payload)
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="")
+
+    monkeypatch.setattr(module, "_repo_root", lambda: repo_root)
+    monkeypatch.setattr(module, "ensure_runtime_available", lambda: (True, None))
+    monkeypatch.setattr(module.subprocess, "run", _fake_run)
+
+    assert module.main(["tests/unit/test_app.py"]) == 1
+    err = capsys.readouterr().err
+    assert "errors=1" in err
+    assert "ai_bloat=1" in err
+    report = json.loads((repo_root / module.REVIEW_JSON_OUT).read_text(encoding="utf-8"))
+    assert [finding["category"] for finding in report["findings"]] == ["ai_bloat", "security"]
 
 
 def test_main_propagates_review_gate_exit_code(

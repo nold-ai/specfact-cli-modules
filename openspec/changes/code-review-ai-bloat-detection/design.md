@@ -11,11 +11,11 @@ This change introduces a new principle category, `ai_bloat`, with its own rule p
 ## Goals / Non-Goals
 
 **Goals:**
-- Add `ai_bloat` as a new principle category in the existing `ReviewFinding` transport, with no schema change beyond a new accepted value for the `category` and `principle` fields. Findings emit at `severity=info` (the existing non-blocking severity), so `ReviewFinding.severity` keeps its current `error | warning | info` domain.
+- Add `ai_bloat` as a new principle category in the existing `ReviewFinding` transport, with an additive strict-schema update to the `category` allow-list and no new severity value. Findings emit at `severity=info` (the existing non-blocking severity), so `ReviewFinding.severity` keeps its current `error | warning | info` domain.
 - Detect pattern-shape AI bloat via a packaged semgrep rule pack so detectors are declarative and tunable.
 - Detect semantic AI bloat (dead `Optional` plumbing, LOC/complexity anomalies, redundant intermediates) via a sibling AST runner that mirrors the conventions of `ast_clean_code_runner.py`.
 - Drive rewrites via a slash-command prompt that walks the user through each finding with per-change confirmation in the IDE, matching the existing CLI-detects / LLM-rewrites split used by `specfact.03-review.md`.
-- Keep `ai_bloat` strictly advisory (per-finding `severity=info`, policy-pack `default_mode: advisory`) so pre-commit surfaces findings but never blocks.
+- Keep `ai_bloat` strictly advisory and score-neutral (per-finding `severity=info`, policy-pack `default_mode: advisory`) so pre-commit surfaces findings but never blocks or degrades the governed score.
 
 **Non-Goals:**
 - No autonomous `--fix` mode. Rewrites are LLM-mediated with per-change human confirmation; the CLI never rewrites source files.
@@ -30,15 +30,15 @@ This change introduces a new principle category, `ai_bloat`, with its own rule p
 
 The detectors target a distinct failure mode with its own rewrite playbook (collapse to stdlib, remove dead plumbing, inline trivial wrappers) that does not map cleanly onto `kiss` or `yagni`. Folding it into either would dilute existing reviewer mental models and lose the ability to filter the IDE prompt by category. Adding a new principle is the minimal-cost surface change.
 
-**Why**: `principle` is already a free-text string on `ReviewFinding`; adding a value is purely additive. The IDE prompt needs a clean filter predicate, and a dedicated principle is the simplest one.
+**Why**: `principle` is already a free-text string on `ReviewFinding`, while `category` is a strict literal allow-list. Adding `ai_bloat` to that allow-list is the smallest schema change that gives the IDE prompt a clean filter predicate.
 
 **Alternative considered**: Reuse `kiss` and `yagni` and disambiguate via rule IDs. Rejected because it forces the slash-command prompt to maintain its own allow-list of rule IDs, and because reviewers reading the JSON cannot tell at a glance which `kiss` findings are AI-bloat vs. genuine LOC outliers.
 
 ### Decision 2: Split detectors between semgrep (pattern-shape) and AST runner (semantic)
 
-Five detectors are pure syntactic patterns (manual-loop comprehension, passthrough lambda, identity try/except, none-then-none, single-call wrapper) and fit semgrep's declarative model. Four detectors require semantic reasoning (unused `Optional` param, dead branch, LOC/complexity ratio, redundant intermediate) and are easier to express as AST visitors with access to radon's already-collected complexity output.
+Five detectors are pure syntactic patterns (manual-loop comprehension, passthrough lambda, identity try/except, none-then-none, single-call wrapper) and fit semgrep's declarative model. Four detectors require semantic reasoning (unused `Optional` param, dead branch, LOC/complexity ratio, redundant intermediate) and are expressed as conservative AST visitors with local, fixture-backed heuristics.
 
-**Why**: Each tool plays to its strengths. Semgrep rules are tunable without code changes and reuse the existing `semgrep_runner.py` orchestration, retry, and category mapping. AST visitors can correlate complexity, LOC, and usage signals across a function body in one pass.
+**Why**: Each tool plays to its strengths. Semgrep rules are tunable without code changes and reuse the existing `semgrep_runner.py` orchestration, retry, and category mapping. AST visitors can correlate local LOC and usage signals across a function body in one pass without adding a second radon dependency path.
 
 **Alternative considered**: Put everything in semgrep. Rejected for the semantic detectors because semgrep cannot easily express "param `x` annotated `Optional[T] = None` but never tested for `None` inside the body". Pure-AST is also rejected because the pattern-shape detectors gain nothing from AST visitors and lose the declarative-config benefit.
 
@@ -56,11 +56,17 @@ Prompt resources for the SpecFact workflow live in `specfact-project` (see `spec
 
 **Why**: Consistency with the existing prompt-resource convention; downstream `.specfact/modules/specfact-project/resources/prompts/` listings include the new command without any new wiring.
 
-### Decision 5: Advisory-only, never blocking (per-finding `severity=info`, policy-pack `default_mode: advisory`)
+### Decision 5: Advisory-only, score-neutral, never blocking (per-finding `severity=info`, policy-pack `default_mode: advisory`)
 
-Bloat is judgment, not correctness. A 20-line manual loop is *suboptimal*, not *wrong*; a passthrough wrapper may be intentional API stability. Forcing the user to defend each finding at commit time would degrade signal-to-noise in the pre-commit gate and erode trust in the broader review surface.
+Bloat is judgment, not correctness. A 20-line manual loop is *suboptimal*, not *wrong*; a passthrough wrapper may be intentional API stability. Forcing the user to defend each finding at commit time, or lowering the governed score because of advisory-only bloat findings, would degrade signal-to-noise in the pre-commit gate and erode trust in the broader review surface.
 
 **Why**: Match the lifecycle to the failure mode. The IDE slash command is the action surface; the pre-commit hook only surfaces awareness.
+
+### Decision 6: Package resources by filesystem payload, not manifest resource declarations
+
+`module-package.yaml` does not currently enumerate individual resource files. New semgrep, policy-pack, and prompt resources are added under the existing `resources/` trees and covered by tarball/signature payload tests.
+
+**Why**: This matches the existing bundle resource contract and avoids inventing a manifest schema for a resource list that no consumer reads.
 
 **Alternative considered**: High-confidence rules at `warning`, semantic rules at `advisory`. Deferred to a future iteration once detector precision in the field is known; this proposal keeps everything `advisory` to ship the first cut without false-positive risk.
 
@@ -82,10 +88,10 @@ Bloat is judgment, not correctness. A 20-line manual loop is *suboptimal*, not *
 |---------|---------|--------------|
 | `ai-bloat.unused-optional-param` | Parameter annotated `Optional[T] = None` with no `is None` branch in body | Make required or remove |
 | `ai-bloat.dead-branch` | Branch unreachable given prior guards | Remove the branch |
-| `ai-bloat.loc-vs-complexity` | Function LOC ≥ 40 with cyclomatic complexity ≤ 4 (long but linear) | Collapse to stdlib, comprehension, or smaller helper |
+| `ai-bloat.loc-vs-complexity` | Function LOC ≥ 40 with local branch/call complexity ≤ 4 (long but linear) | Collapse to stdlib, comprehension, or smaller helper |
 | `ai-bloat.redundant-intermediate` | Variable assigned once, read once on the immediately next line, with no naming clarity contribution | Inline the expression |
 
-All findings emit with `category="ai_bloat"`, `principle="ai_bloat"`, `severity="info"` (non-blocking). The "advisory" framing is preserved at the policy-pack layer (`default_mode: advisory` in `ai-bloat-patterns.yaml`), not by adding a new severity value to `ReviewFinding`.
+All findings emit with `category="ai_bloat"` and `severity="info"` (non-blocking). The "advisory" framing is preserved at the policy-pack layer (`default_mode: advisory` in `ai-bloat-patterns.yaml`), not by adding a new severity value to `ReviewFinding`. The review scorer ignores `ai_bloat` findings for v1 so high-volume advisory candidates cannot flip a commit or review from pass to fail.
 
 ## Slash-Command Prompt
 

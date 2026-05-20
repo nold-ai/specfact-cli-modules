@@ -2,6 +2,10 @@
 
 Central module registry for SpecFact CLI. This repository hosts official **nold-ai** bundles and their documentation.
 
+## Highlight: AI-shaped bloat detection
+
+The Code Review bundle now surfaces `ai_bloat` findings: advisory, score-neutral signals tuned for the bloated shapes AI-assisted code commonly produces, such as identity `try/except`, one-call wrappers, passthrough lambdas, redundant intermediates, and long linear functions. A dry run on this change's affected package sources found 144 advisory candidates and applied 0 automatic rewrites; use `specfact code review run --json --out .specfact/code-review.json`, then run `/specfact.08-simplify` in your AI IDE to review each simplification with per-change confirmation. See the [AI bloat quickstart](./docs/quickstart-ai-bloat.md).
+
 ## Repository layout
 
 | Path | Purpose |
@@ -47,7 +51,7 @@ hatch run verify-modules-signature --payload-from-filesystem --enforce-version-b
 hatch run contract-test
 hatch run smart-test
 hatch run test
-hatch run specfact code review run --level error --json --out .specfact/code-review.json
+hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json
 ```
 
 The pre-commit hooks run the same sequence automatically on every `git commit` (Blocks 1 and 2). To run them manually against all files:
@@ -61,7 +65,7 @@ pre-commit run --all-files
 - **format / lint / type-check** — Ruff, basedpyright, and pylint. `basedpyright` and `pylint` are scoped to `src/`, `tests/`, and `tools/`; Ruff runs on the full repo.
 - **check-bundle-imports** — Enforces import boundary policy (`ALLOWED_IMPORTS.md`). `TYPE_CHECKING`-only imports are excluded from the check.
 - **contract-test** — Contract-first test suite; must pass before running `smart-test` / `test`.
-- **code review gate** — Runs `specfact code review run --level error` on staged `.py`/`.pyi` files under `packages/`, `registry/`, `scripts/`, `tools/`, `tests/`, and `openspec/changes/`. The pre-commit hook blocks on **error**-severity findings only; warnings are advisory and must be remediated before merge unless a documented exception exists. Full options (`--mode`, `--focus`, `--bug-hunt`, etc.) are documented in [Code review module](./docs/modules/code-review.md).
+- **code review gate** — Runs `specfact code review run` on staged `.py`/`.pyi` files under `packages/`, `registry/`, `scripts/`, `tools/`, `tests/`, and `openspec/changes/`. The pre-commit hook blocks on the report `ci_exit_code`; warnings and `ai_bloat` info findings are advisory and must be remediated before merge unless a documented exception exists. Full options (`--mode`, `--focus`, `--bug-hunt`, etc.) are documented in [Code review module](./docs/modules/code-review.md).
 
 ## Module signatures and versioning
 

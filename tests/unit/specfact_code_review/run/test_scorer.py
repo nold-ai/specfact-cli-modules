@@ -19,6 +19,19 @@ def _finding(*, severity: Literal["error", "warning", "info"] = "warning", fixab
     )
 
 
+def _ai_bloat_finding() -> ReviewFinding:
+    return ReviewFinding(
+        category="ai_bloat",
+        severity="info",
+        tool="ast",
+        rule="ai-bloat.redundant-intermediate",
+        file="src/example.py",
+        line=10,
+        message="Inline the redundant intermediate value.",
+        fixable=False,
+    )
+
+
 def test_score_review_clean_run() -> None:
     result = score_review(findings=[])
 
@@ -48,6 +61,14 @@ def test_score_review_warning_deductions() -> None:
 
     assert result.score == 94
     assert result.reward_delta == 14
+
+
+def test_score_review_ai_bloat_findings_are_score_neutral() -> None:
+    result = score_review(findings=[_ai_bloat_finding() for _ in range(50)])
+
+    assert result.score == 100
+    assert result.overall_verdict == "PASS"
+    assert result.ci_exit_code == 0
 
 
 def test_score_review_verdict_thresholds() -> None:
