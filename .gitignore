@@ -46,6 +46,8 @@ logs/
 .vibe/skills/openspec-*/
 !.vibe/skills/openspec-workflows/
 
+.vscode/
+
 # Jekyll docs — local Bundler state and build output
 docs/.bundle/
 docs/_site/
