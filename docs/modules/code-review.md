@@ -454,11 +454,12 @@ review_mode="enforce",
 2. Radon
 3. Semgrep (clean-code ruleset)
 4. Semgrep bug rules (`.semgrep/bugs.yaml`, skipped if absent)
-5. AST clean-code checks
-6. basedpyright
-7. pylint
-8. contract runner (AST + CrossHair; optional bug-hunt timeouts)
-9. TDD gate, unless `no_tests=True`
+5. AI-bloat AST checks (`ai_bloat` advisories in `.specfact/code-review.json`)
+6. AST clean-code checks
+7. basedpyright
+8. pylint
+9. contract runner (AST + CrossHair; optional bug-hunt timeouts)
+10. TDD gate, unless `no_tests=True`
 
 When `SPECFACT_CODE_REVIEW_PR_MODE=1` is present, the runner also evaluates a
 bundle-local advisory PR checklist from `SPECFACT_CODE_REVIEW_PR_TITLE`,

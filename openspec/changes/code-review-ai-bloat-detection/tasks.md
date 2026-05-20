@@ -62,7 +62,7 @@ Goal: position the `ai_bloat` capability as a flagship entry point to SpecFact's
 
 ## 9. Passing evidence, quality gates, and review
 
- - [x] 9.1 Re-run all targeted tests from sections 2.1–2.4 and record passing evidence in `openspec/changes/code-review-ai-bloat-detection/TDD_EVIDENCE.md`.
+- [x] 9.1 Re-run all targeted tests from sections 2.1–2.4 and record passing evidence in `openspec/changes/code-review-ai-bloat-detection/TDD_EVIDENCE.md`.
 - [x] 9.2 Run the required quality gates in order: `hatch run format`, `hatch run type-check`, `hatch run lint`, `hatch run yaml-lint`, `hatch run check-bundle-imports`, `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump`, `hatch run contract-test`, the relevant `hatch run smart-test`, and the relevant `hatch run test`.
 - [x] 9.3 Run `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope full`, fix every finding on modified artifacts, rerun, and record the command/timestamp plus the documented full-repository legacy exception in `TDD_EVIDENCE.md`.
 - [x] 9.4 Commit, push, and open or update the PR to `dev` after verification is green.

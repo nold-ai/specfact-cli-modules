@@ -244,6 +244,7 @@ def test_code_review_bundle_packages_ai_bloat_policy_pack_manifest() -> None:
     assert data["pack_ref"] == "specfact/ai-bloat-patterns"
     assert data["default_mode"] == "advisory"
     assert {rule["id"] for rule in data["rules"]} == expected_rules
+    assert {rule["category"] for rule in data["rules"]} == {"ai_bloat"}
     assert {rule["principle"] for rule in data["rules"]} == {"ai_bloat"}
 
 

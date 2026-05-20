@@ -257,7 +257,7 @@ def run_ai_bloat(files: list[Path]) -> list[ReviewFinding]:
     for file_path in python_source_paths_for_tools(files):
         try:
             tree = ast.parse(file_path.read_text(encoding="utf-8"), filename=str(file_path))
-        except (OSError, SyntaxError) as exc:
+        except (OSError, SyntaxError, UnicodeDecodeError) as exc:
             findings.append(
                 tool_error(tool="ast", file_path=file_path, message=f"Unable to parse Python source: {exc}")
             )

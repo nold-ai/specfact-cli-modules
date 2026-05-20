@@ -32,7 +32,7 @@ Omit `--level` for this report. `--level error` intentionally filters info-level
 
 Look for findings where `category` is `ai_bloat`. They are `severity=info`, advisory-only, and score-neutral.
 
-In the implementation dry run for this change, the AST detector found 144 advisory `ai_bloat` candidates across `specfact-code-review` and `specfact-project` package sources. No automatic rewrites were applied, so the measured accepted-rewrite LOC delta was 0; `/specfact.08-simplify` is the human-confirmed rewrite path.
+Example output from the implementation dry run for this change: the AST detector found advisory `ai_bloat` candidates across `specfact-code-review` and `specfact-project` package sources, with no automatic rewrites applied. `/specfact.08-simplify` is the human-confirmed rewrite path.
 
 ```json
 {
