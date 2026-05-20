@@ -1,5 +1,6 @@
 """Tool runners for code-review analysis."""
 
+from specfact_code_review.tools.ai_bloat_runner import run_ai_bloat
 from specfact_code_review.tools.ast_clean_code_runner import run_ast_clean_code
 from specfact_code_review.tools.basedpyright_runner import run_basedpyright
 from specfact_code_review.tools.contract_runner import run_contract_check
@@ -11,6 +12,7 @@ from specfact_code_review.tools.semgrep_runner import find_semgrep_config, run_s
 
 __all__ = [
     "find_semgrep_config",
+    "run_ai_bloat",
     "run_ast_clean_code",
     "run_basedpyright",
     "run_contract_check",
