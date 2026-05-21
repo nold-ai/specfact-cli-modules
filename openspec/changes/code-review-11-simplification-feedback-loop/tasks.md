@@ -51,4 +51,4 @@
 - [x] 7.2 Run `openspec validate code-review-11-simplification-feedback-loop --strict`.
 - [x] 7.3 Run required gates in order: `hatch run format`, `hatch run type-check`, `hatch run lint`, `hatch run yaml-lint`, `hatch run check-bundle-imports`, `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump`, `hatch run contract-test`, relevant `hatch run smart-test`, and relevant `hatch run test`.
 - [x] 7.4 Run `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`, fix all findings or document approved exceptions, and rerun until passing.
-- [ ] 7.5 Commit, push, and open or update the PR to `dev` after verification is green.
+- [x] 7.5 Commit, push, and open or update the PR to `dev` after verification is green.
