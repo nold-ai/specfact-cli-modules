@@ -136,6 +136,19 @@ class ReviewFinding(BaseModel):
         )
 
     @beartype
+    @ensure(lambda result: isinstance(result, bool))
+    def simplification_metadata_is_deterministic(self) -> bool:
+        """Return whether simplification metadata is concrete enough for queued rewrites."""
+        return all(
+            value is not None
+            for value in (
+                self.rewrite_hint,
+                self.canonical_pattern,
+                self.intent_key,
+            )
+        )
+
+    @beartype
     @ensure(lambda self, result: result == (self.severity == "error" and not self.fixable))
     def is_blocking(self) -> bool:
         """Return whether this finding blocks a passing review verdict."""

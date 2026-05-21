@@ -215,6 +215,60 @@ def test_run_review_simplify_focus_keeps_only_simplification_queue(monkeypatch: 
     assert report.overall_verdict == "PASS"
 
 
+def test_run_review_simplify_focus_excludes_partial_metadata_clean_code_findings(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ast_clean_code",
+        lambda files: [
+            ReviewFinding(
+                category="dry",
+                severity="warning",
+                tool="ast",
+                rule="dry.duplicate-intent",
+                file="packages/specfact-code-review/src/specfact_code_review/run/scorer.py",
+                line=10,
+                message="Partial metadata must not enter simplify focus.",
+                fixable=False,
+                confidence="high",
+            ),
+        ],
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")],
+        no_tests=True,
+        focus="simplify",
+    )
+
+    assert report.findings == []
+
+
+def test_run_review_rejects_unknown_override_key() -> None:
+    try:
+        run_review([], unknown=True)
+    except TypeError as exc:
+        assert "unknown" in str(exc)
+    else:
+        raise AssertionError("run_review accepted an unknown override")
+
+
+def test_run_review_rejects_invalid_override_type() -> None:
+    try:
+        run_review([], no_tests="yes")
+    except TypeError as exc:
+        assert "no_tests" in str(exc)
+    else:
+        raise AssertionError("run_review accepted an invalid boolean override")
+
+
 def test_run_tdd_gate_reports_missing_test_file() -> None:
     findings = run_tdd_gate([Path("packages/specfact-code-review/src/specfact_code_review/rules/commands.py")])
 

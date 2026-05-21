@@ -62,3 +62,36 @@
   - Codex detection verification:
     `codex -C /tmp/specfact-skill-smoke-roots debug prompt-input "Use specfact-code-review"`
   - Result: prompt input listed `specfact-code-review: CLI-grounded SpecFact code review workflow and house rules for AI coding sessions` from `/tmp/specfact-skill-smoke-roots/.codex/skills/specfact-code-review/SKILL.md`.
+
+## Review Finding Follow-up
+
+- Timestamp: 2026-05-21T23:59:29+02:00
+- Failing-before evidence:
+  - `hatch run pytest tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_scorer.py tests/unit/specfact_code_review/run/test_runner.py -q`
+  - Result: 7 failed, 60 passed before production edits.
+  - Failed coverage: deterministic simplification metadata helper missing, partial metadata admitted to simplify queue, `dry` simplification findings score-neutral outside simplify focus, and invalid `run_review` override kwargs accepted.
+- Passing-after evidence:
+  - `hatch run pytest tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_scorer.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/review/test_commands.py tests/unit/docs/test_code_review_docs_parity.py tests/unit/test_check_prompt_commands_script.py -q`
+  - Result: 94 passed.
+  - `hatch run pytest tests/unit/specfact_code_review/review/test_commands.py --cov=specfact_code_review.review.commands --cov-report=term-missing -q`
+  - Result: 11 passed; command wrapper coverage 95.60%.
+- Validation:
+  - `openspec validate code-review-11-simplification-feedback-loop --strict`
+  - Result: valid.
+  - `hatch run validate-prompt-commands`
+  - Result: passed.
+  - `hatch run format`
+  - Result: passed.
+  - `hatch run type-check`
+  - Result: 0 errors, 0 warnings, 0 notes.
+  - `hatch run lint`
+  - Result: passed; pylint rated 10.00/10.
+  - `hatch run yaml-lint`
+  - Result: validated 6 manifests and `registry/index.json`.
+  - `hatch run check-bundle-imports`
+  - Result: import boundary check passed.
+  - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump`
+  - Result: verified 6 module manifests.
+  - `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`
+  - Result: exit code 0; report summary `Review completed with 4 findings (0 blocking).`
+  - Remaining non-blocking findings are existing Typer command wrapper shape advisories (`R0917`, `R0914`) and score-neutral `ai-bloat.loc-vs-complexity` hints for command orchestration wrappers; no pasted review finding remains unresolved.

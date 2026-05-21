@@ -88,6 +88,37 @@ def test_review_finding_accepts_simplification_metadata() -> None:
     assert finding.model_dump()["related_locations"][0]["start_line"] == 42
 
 
+def test_review_finding_marks_deterministic_simplification_metadata() -> None:
+    finding = ReviewFinding(
+        **_finding_data(
+            category="dry",
+            severity="warning",
+            rule="dry.duplicate-intent",
+            confidence="high",
+            rewrite_hint="Extract the duplicated request parsing.",
+            canonical_pattern="duplicate-request-parsing",
+            intent_key="request-parsing",
+        )
+    )
+
+    assert finding.has_simplification_metadata()
+    assert finding.simplification_metadata_is_deterministic()
+
+
+def test_review_finding_rejects_partial_simplification_metadata_as_nondeterministic() -> None:
+    finding = ReviewFinding(
+        **_finding_data(
+            category="dry",
+            severity="warning",
+            rule="dry.duplicate-intent",
+            confidence="high",
+        )
+    )
+
+    assert finding.has_simplification_metadata()
+    assert not finding.simplification_metadata_is_deterministic()
+
+
 @pytest.mark.parametrize("severity", ["error", "warning", "info"])
 def test_review_finding_accepts_supported_severity_values(
     severity: Literal["error", "warning", "info"],

@@ -99,7 +99,11 @@ def run(
     path: list[Path] = typer.Option(None, "--path"),
     include_tests: bool | None = typer.Option(None, "--include-tests"),
     exclude_tests: bool | None = typer.Option(None, "--exclude-tests"),
-    focus: list[str] | None = typer.Option(None, "--focus", help="Limit to source, tests, and/or docs (repeatable)."),
+    focus: list[str] | None = typer.Option(
+        None,
+        "--focus",
+        help="Limit to source, tests, docs, and/or simplify (repeatable).",
+    ),
     mode: Literal["shadow", "enforce"] = typer.Option("enforce", "--mode"),
     level: Literal["error", "warning"] | None = typer.Option(None, "--level"),
     bug_hunt: bool = typer.Option(False, "--bug-hunt"),

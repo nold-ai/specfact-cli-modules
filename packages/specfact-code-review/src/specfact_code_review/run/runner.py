@@ -313,7 +313,9 @@ def _belongs_to_simplification_queue(finding: ReviewFinding) -> bool:
     if finding.category == "ai_bloat":
         return True
     return (
-        finding.category in {"dry", "kiss"} and finding.confidence == "high" and finding.has_simplification_metadata()
+        finding.category in {"dry", "kiss"}
+        and finding.confidence == "high"
+        and finding.simplification_metadata_is_deterministic()
     )
 
 
@@ -511,17 +513,46 @@ def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[s
         raise TypeError("pass either options or keyword review overrides, not both")
     if options is not None:
         return options
+    allowed_keys = {
+        "no_tests",
+        "include_noise",
+        "progress_callback",
+        "bug_hunt",
+        "review_level",
+        "review_mode",
+        "focus",
+    }
+    unknown_keys = set(overrides) - allowed_keys
+    if unknown_keys:
+        unknown = ", ".join(sorted(unknown_keys))
+        raise TypeError(f"unknown review option override: {unknown}")
+    for key in ("no_tests", "include_noise", "bug_hunt"):
+        value = overrides.get(key, False)
+        if not isinstance(value, bool):
+            raise TypeError(f"{key} must be bool")
+    no_tests = cast(bool, overrides.get("no_tests", False))
+    include_noise = cast(bool, overrides.get("include_noise", False))
+    bug_hunt = cast(bool, overrides.get("bug_hunt", False))
     progress_callback = overrides.get("progress_callback")
     if progress_callback is not None and not callable(progress_callback):
         raise TypeError("progress_callback must be callable or None")
+    review_level = overrides.get("review_level")
+    if review_level not in {"error", "warning", None}:
+        raise TypeError("review_level must be one of error, warning, or None")
+    review_mode = overrides.get("review_mode", "enforce")
+    if review_mode not in {"shadow", "enforce"}:
+        raise TypeError("review_mode must be one of shadow or enforce")
+    focus = overrides.get("focus")
+    if focus not in {"simplify", None}:
+        raise TypeError("focus must be simplify or None")
     return ReviewOptions(
-        no_tests=cast(bool, overrides.get("no_tests", False)),
-        include_noise=cast(bool, overrides.get("include_noise", False)),
+        no_tests=no_tests,
+        include_noise=include_noise,
         progress_callback=cast(Callable[[str], None] | None, progress_callback),
-        bug_hunt=cast(bool, overrides.get("bug_hunt", False)),
-        review_level=cast(Literal["error", "warning"] | None, overrides.get("review_level")),
-        review_mode=cast(Literal["shadow", "enforce"], overrides.get("review_mode", "enforce")),
-        focus=cast(ReviewFocus | None, overrides.get("focus")),
+        bug_hunt=bug_hunt,
+        review_level=cast(Literal["error", "warning"] | None, review_level),
+        review_mode=cast(Literal["shadow", "enforce"], review_mode),
+        focus=cast(ReviewFocus | None, focus),
     )
 
 
@@ -592,6 +623,7 @@ def run_review(
         all_apis_have_icontract=not any(finding.rule == "MISSING_ICONTRACT" for finding in findings),
         coverage_90_plus=coverage_90_plus,
         no_new_suppressions=_has_no_suppressions(files),
+        simplification_score_neutral=review_options.focus == "simplify",
     )
     report = ReviewReport(
         run_id=f"review-{uuid4()}",

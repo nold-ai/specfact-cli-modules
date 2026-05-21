@@ -18,7 +18,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Purpose
 
-Simplify advisory `ai_bloat` and metadata-backed simplification findings from `.specfact/code-review.json` using the IDE's edit tools with explicit user confirmation for every change.
+Simplify advisory `ai_bloat` and metadata-backed simplification findings from `.specfact/code-review-simplify.json` using the IDE's edit tools with explicit user confirmation for every change.
 
 **Quick:** `/specfact.08-simplify`
 
@@ -32,7 +32,7 @@ Before reading or editing source, verify the current command surface when needed
 
 ```bash
 specfact code review run --help
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review.json
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
 If `--focus simplify` is unavailable in the installed CLI, self-heal by inspecting `specfact code review run --help`, then run the closest non-destructive JSON review command that preserves advisory findings, usually without `--level error`.
@@ -41,13 +41,13 @@ If `--focus simplify` is unavailable in the installed CLI, self-heal by inspecti
 
 ### Step 1: Confirm Review Evidence
 
-Read `.specfact/code-review.json`. If it is missing, ask the user to run:
+Read `.specfact/code-review-simplify.json`. If it is missing, ask the user to run:
 
 ```bash
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review.json
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
-If the report contains no findings where `category == "ai_bloat"` or simplification metadata such as `intent_key`, `rewrite_hint`, or `canonical_pattern` is present, report that there are no simplification candidates and stop without editing files.
+If the report contains no findings where `category == "ai_bloat"` and no findings with simplification metadata such as `intent_key`, `rewrite_hint`, or `canonical_pattern`, report that there are no simplification candidates and stop without editing files.
 
 ### Step 2: Group Candidates
 
@@ -70,7 +70,7 @@ Never apply edits automatically. Never batch multiple files into one confirmatio
 After accepted edits are applied, suggest:
 
 ```bash
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review.json
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
 Compare the new report with the prior findings and summarize which `ai_bloat` or metadata-backed simplification candidates were cleared, skipped, or still present.
@@ -80,8 +80,8 @@ Compare the new report with the prior findings and summarize which `ai_bloat` or
 Use the CLI as the verification source:
 
 ```bash
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review.json
-specfact code review run --scope changed --bug-hunt --json --out .specfact/code-review.json
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --bug-hunt --json --out .specfact/code-review-bughunt.json
 ```
 
 For module development in this repository, the expected local gates are:
