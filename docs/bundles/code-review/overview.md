@@ -25,7 +25,7 @@ Use it together with the [Codebase](/bundles/codebase/overview/) bundle (`import
 |--------|---------|
 | `run` | Execute a governed review (scope, JSON output, `--fix`, TDD gate, etc.) |
 | `ledger` | Inspect and update review reward history |
-| `rules` | Manage the house-rules skill (`show`, `init`, `update`) |
+| `rules` | Manage the bundled code-review skill (`show`, `init`, `update`) |
 
 ### `ledger` subcommands
 
@@ -46,9 +46,10 @@ Use it together with the [Codebase](/bundles/codebase/overview/) bundle (`import
 ## Bundle-owned skills and policy packs
 
 House rules and review payloads ship **inside the bundle** (for example Semgrep
-packs, the `specfact/clean-code-principles` policy-pack manifest, and skill
-metadata). They are **not** core CLI-owned resources. Install or refresh
-IDE-side assets with `specfact init ide` after upgrading the bundle.
+packs, the `specfact/clean-code-principles` policy-pack manifest, and the
+`specfact-code-review` skill). They are **not** core CLI-owned resources. Use
+`specfact code review rules init --ide codex` or the matching IDE target to
+install the reusable skill instead of copying prompt templates by hand.
 
 ## Quick examples
 

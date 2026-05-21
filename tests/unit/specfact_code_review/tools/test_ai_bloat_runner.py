@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from specfact_code_review.tools.ai_bloat_runner import run_ai_bloat
 
 
@@ -86,6 +88,111 @@ def total(values: list[int]) -> int:
     assert {finding.rule for finding in run_ai_bloat([target])} == {"ai-bloat.redundant-intermediate"}
 
 
+@pytest.mark.parametrize(
+    ("source", "expected_rule", "expected_pattern"),
+    [
+        (
+            """
+def normalize_names(names: list[str]) -> list[str]:
+    result: list[str] = []
+    for name in names:
+        result.append(name.strip().lower())
+    return result
+""",
+            "ai-bloat.manual-accumulator-loop",
+            "manual-accumulator-loop",
+        ),
+        (
+            """
+def is_allowed(role: str) -> bool:
+    if role in {"admin", "owner"}:
+        return True
+    return False
+""",
+            "ai-bloat.verbose-bool-return",
+            "verbose-bool-return",
+        ),
+        (
+            """
+def normalized_name(name: str | None) -> str | None:
+    if name is None:
+        return None
+    return name.strip()
+""",
+            "ai-bloat.redundant-none-branch",
+            "redundant-none-branch",
+        ),
+        (
+            """
+def load_customer(customer_id: str) -> dict[str, str]:
+    return fetch_customer(customer_id)
+
+
+def read_customer(customer_id: str) -> dict[str, str]:
+    return load_customer(customer_id)
+""",
+            "ai-bloat.wrapper-chain",
+            "wrapper-chain",
+        ),
+        (
+            """
+def parse_customer(raw: str) -> dict[str, str]:
+    try:
+        return parse_json(raw)
+    except Exception:
+        raise
+""",
+            "ai-bloat.pass-through-try-except",
+            "pass-through-try-except",
+        ),
+        (
+            """
+def status_label(code: str) -> str:
+    if code == "new":
+        return "New"
+    if code == "done":
+        return "Done"
+    if code == "blocked":
+        return "Blocked"
+    return "Unknown"
+""",
+            "ai-bloat.table-lookup-candidate",
+            "table-lookup-candidate",
+        ),
+        (
+            """
+def highest_score(scores: list[int]) -> int | None:
+    best = None
+    for score in scores:
+        if best is None or score > best:
+            best = score
+    return best
+""",
+            "ai-bloat.stdlib-replacement-candidate",
+            "stdlib-replacement-candidate",
+        ),
+    ],
+)
+def test_expanded_simplification_patterns_emit_metadata(
+    tmp_path: Path,
+    source: str,
+    expected_rule: str,
+    expected_pattern: str,
+) -> None:
+    target = _write(tmp_path, source)
+
+    findings = run_ai_bloat([target])
+
+    matching = [finding for finding in findings if finding.rule == expected_rule]
+    assert len(matching) == 1
+    assert matching[0].category == "ai_bloat"
+    assert matching[0].severity == "info"
+    assert matching[0].confidence == "high"
+    assert matching[0].canonical_pattern == expected_pattern
+    assert matching[0].rewrite_hint
+    assert matching[0].estimated_deletion_lines is not None
+
+
 def test_redundant_intermediate_ignores_reused_names(tmp_path: Path) -> None:
     target = _write(
         tmp_path,
@@ -94,6 +201,24 @@ def total(values: list[int]) -> tuple[int, str]:
     result = sum(values)
     label = f"total={result}"
     return result, label
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
+def test_simplification_patterns_ignore_ambiguous_domain_logic(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify_score(score: int) -> str:
+    if score > 90:
+        return "excellent"
+    if score > 70:
+        return "good"
+    if score > 50:
+        return "review"
+    return "blocked"
 """,
     )
 

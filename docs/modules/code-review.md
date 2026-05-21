@@ -395,11 +395,14 @@ specfact module init --scope project
 
 Then rerun the ledger command from the same repository checkout.
 
-## House rules skill
+## Code review skill
 
-The `specfact-code-review` bundle can derive a compact house-rules skill from the
-reward ledger and keep it small enough for AI session context injection. The
-default charter now encodes the clean-code principles directly:
+The `specfact-code-review` bundle ships a compact `SKILL.md` for Codex CLI,
+Claude, Vibe, and Cursor-compatible IDEs. Use it as the reusable alternative to
+copying prompt templates into every AI IDE: it carries the CLI-grounded review
+workflow, simplification queue guidance, self-healing `--help` behavior, and
+house rules derived from the reward ledger. The default charter encodes the
+clean-code principles directly:
 
 - Naming: use intention-revealing names instead of placeholders.
 - KISS: keep functions small, shallow, and narrow in parameters.
@@ -407,11 +410,14 @@ default charter now encodes the clean-code principles directly:
 - DRY: extract repeated function shapes once duplication appears.
 - SOLID: keep transport and persistence responsibilities separate.
 - TDD + contracts: keep test-first and icontract discipline in the baseline skill.
+- Simplification loop: use `--focus simplify` for advisory cleanup queues and
+  require explicit user approval before edits.
 
 ### Command flow
 
 ```bash
 specfact code review rules init
+specfact code review rules init --ide codex
 specfact code review rules show
 specfact code review rules update
 ```

@@ -202,6 +202,46 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
     assert recorded["files"] == [package_file, test_file]
 
 
+def test_run_command_passes_simplify_focus_after_scope_resolution(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    recorded: dict[str, object] = {}
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands._changed_files_from_git_diff",
+        lambda *, include_tests: [package_file],
+    )
+
+    def fake_run_review(files: list[Path], **kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        recorded["focus"] = kwargs.get("focus")
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--scope",
+            "changed",
+            "--path",
+            "packages/specfact-code-review",
+            "--focus",
+            "simplify",
+            "--json",
+            "--out",
+            "review-report.json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert recorded == {"files": [package_file], "focus": "simplify"}
+
+
 def test_run_command_ignores_dot_specfact_in_changed_scope(monkeypatch: Any, tmp_path: Path) -> None:
     package_file = _write_repo_file(
         tmp_path,

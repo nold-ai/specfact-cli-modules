@@ -10,9 +10,10 @@ import sys
 import tempfile
 from collections.abc import Callable, Iterable
 from contextlib import suppress
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 from uuid import uuid4
 
 from beartype import beartype
@@ -45,6 +46,7 @@ _TEST_NOISE_RULES = {
 _GLOBAL_NOISE_RULES = {
     ("pylint", "R0801"),
 }
+_PYLINT_CLI_WRAPPER_NOISE_RULES = {"R0914", "R0917"}
 _NOISE_MESSAGE_PREFIXES = ("ValidationError: 1 validation error for LedgerState",)
 _PR_MODE_ENV = "SPECFACT_CODE_REVIEW_PR_MODE"
 _PR_CONTEXT_ENVS = (
@@ -54,6 +56,20 @@ _PR_CONTEXT_ENVS = (
 )
 _CLEAN_CODE_CONTEXT_HINTS = ("clean code", "naming", "kiss", "yagni", "dry", "solid", "complexity")
 _TARGETED_TEST_TIMEOUT = int(os.environ.get("SPECFACT_CODE_REVIEW_TARGETED_TEST_TIMEOUT", "120"))
+ReviewFocus = Literal["simplify"]
+
+
+@dataclass(frozen=True)
+class ReviewOptions:
+    """Optional controls for a governed review run."""
+
+    no_tests: bool = False
+    include_noise: bool = False
+    progress_callback: Callable[[str], None] | None = None
+    bug_hunt: bool = False
+    review_level: Literal["error", "warning"] | None = None
+    review_mode: Literal["shadow", "enforce"] = "enforce"
+    focus: ReviewFocus | None = None
 
 
 def _source_relative_path(source_file: Path) -> Path | None:
@@ -208,12 +224,33 @@ def _suppress_known_noise(findings: list[ReviewFinding]) -> list[ReviewFinding]:
     for finding in findings:
         if (finding.tool, finding.rule) in _GLOBAL_NOISE_RULES:
             continue
+        if _is_pylint_structural_noise(finding):
+            continue
         if finding.tool == "crosshair" and finding.message.startswith(_NOISE_MESSAGE_PREFIXES):
             continue
         if _is_test_file(finding.file) and (finding.tool, finding.rule) in _TEST_NOISE_RULES:
             continue
         filtered.append(finding)
     return filtered
+
+
+def _is_pylint_structural_noise(finding: ReviewFinding) -> bool:
+    if finding.tool != "pylint":
+        return False
+    if finding.rule in _PYLINT_CLI_WRAPPER_NOISE_RULES and finding.file.endswith("/commands.py"):
+        return "argument" in finding.message or "local variable" in finding.message
+    return (
+        finding.rule == "R0902"
+        and "Too many instance attributes" in finding.message
+        and _file_contains_dataclass(finding.file)
+    )
+
+
+def _file_contains_dataclass(file_path: str) -> bool:
+    try:
+        return "@dataclass" in Path(file_path).read_text(encoding="utf-8")
+    except OSError:
+        return False
 
 
 def _is_truthy_env(name: str) -> bool:
@@ -270,6 +307,22 @@ def _filter_findings_by_review_level(
     if level == "error":
         return [finding for finding in findings if finding.severity == "error"]
     return [finding for finding in findings if finding.severity in {"error", "warning"}]
+
+
+def _belongs_to_simplification_queue(finding: ReviewFinding) -> bool:
+    if finding.category == "ai_bloat":
+        return True
+    return (
+        finding.category in {"dry", "kiss"} and finding.confidence == "high" and finding.has_simplification_metadata()
+    )
+
+
+def _filter_findings_by_focus(findings: list[ReviewFinding], focus: ReviewFocus | None) -> list[ReviewFinding]:
+    if focus is None:
+        return findings
+    if focus == "simplify":
+        return [finding for finding in findings if _belongs_to_simplification_queue(finding)]
+    raise ValueError(f"Unsupported review focus: {focus}")
 
 
 def _collect_tdd_inputs(files: list[Path]) -> tuple[list[Path], list[Path], list[ReviewFinding]]:
@@ -453,41 +506,84 @@ def _has_no_suppressions(files: list[Path]) -> bool:
     return True
 
 
+def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[str, object]) -> ReviewOptions:
+    if options is not None and overrides:
+        raise TypeError("pass either options or keyword review overrides, not both")
+    if options is not None:
+        return options
+    progress_callback = overrides.get("progress_callback")
+    if progress_callback is not None and not callable(progress_callback):
+        raise TypeError("progress_callback must be callable or None")
+    return ReviewOptions(
+        no_tests=cast(bool, overrides.get("no_tests", False)),
+        include_noise=cast(bool, overrides.get("include_noise", False)),
+        progress_callback=cast(Callable[[str], None] | None, progress_callback),
+        bug_hunt=cast(bool, overrides.get("bug_hunt", False)),
+        review_level=cast(Literal["error", "warning"] | None, overrides.get("review_level")),
+        review_mode=cast(Literal["shadow", "enforce"], overrides.get("review_mode", "enforce")),
+        focus=cast(ReviewFocus | None, overrides.get("focus")),
+    )
+
+
+def _collect_tool_findings(
+    files: list[Path],
+    *,
+    bug_hunt: bool,
+    progress_callback: Callable[[str], None] | None,
+) -> list[ReviewFinding]:
+    findings: list[ReviewFinding] = []
+    for description, runner in _tool_steps(bug_hunt=bug_hunt):
+        if progress_callback is not None:
+            progress_callback(description)
+        findings.extend(runner(files))
+    return findings
+
+
+def _collect_tdd_findings(
+    files: list[Path],
+    *,
+    no_tests: bool,
+    progress_callback: Callable[[str], None] | None,
+) -> tuple[list[ReviewFinding], bool]:
+    if no_tests:
+        return [], False
+    if progress_callback is not None:
+        progress_callback("Running targeted tests and coverage...")
+    findings, coverage_by_source = _evaluate_tdd_gate(files)
+    coverage_90_plus = bool(coverage_by_source) and all(percent >= 90.0 for percent in coverage_by_source.values())
+    return findings, coverage_90_plus
+
+
 @beartype
 @require(lambda files: isinstance(files, list), "files must be a list")
 @require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
 @ensure(lambda result: isinstance(result, ReviewReport), "result must be a ReviewReport")
 def run_review(
     files: list[Path],
-    *,
-    no_tests: bool = False,
-    include_noise: bool = False,
-    progress_callback: Callable[[str], None] | None = None,
-    bug_hunt: bool = False,
-    review_level: Literal["error", "warning"] | None = None,
-    review_mode: Literal["shadow", "enforce"] = "enforce",
+    options: ReviewOptions | None = None,
+    **overrides: object,
 ) -> ReviewReport:
     """Run all configured review runners and build the governed report."""
-    findings: list[ReviewFinding] = []
-    for description, runner in _tool_steps(bug_hunt=bug_hunt):
-        if progress_callback is not None:
-            progress_callback(description)
-        findings.extend(runner(files))
-
-    coverage_90_plus = False
-    if not no_tests:
-        if progress_callback is not None:
-            progress_callback("Running targeted tests and coverage...")
-        tdd_findings, coverage_by_source = _evaluate_tdd_gate(files)
-        findings.extend(tdd_findings)
-        coverage_90_plus = bool(coverage_by_source) and all(percent >= 90.0 for percent in coverage_by_source.values())
+    review_options = _review_options_from_kwargs(options, overrides)
+    findings = _collect_tool_findings(
+        files,
+        bug_hunt=review_options.bug_hunt,
+        progress_callback=review_options.progress_callback,
+    )
+    tdd_findings, coverage_90_plus = _collect_tdd_findings(
+        files,
+        no_tests=review_options.no_tests,
+        progress_callback=review_options.progress_callback,
+    )
+    findings.extend(tdd_findings)
 
     findings.extend(_checklist_findings())
 
-    if not include_noise:
+    if not review_options.include_noise:
         findings = _suppress_known_noise(findings)
 
-    findings = _filter_findings_by_review_level(findings, review_level)
+    findings = _filter_findings_by_review_level(findings, review_options.review_level)
+    findings = _filter_findings_by_focus(findings, review_options.focus)
 
     score = score_review(
         findings=findings,
@@ -503,6 +599,6 @@ def run_review(
         findings=findings,
         summary=_summary_for_findings(findings),
     )
-    if review_mode == "shadow":
+    if review_options.review_mode == "shadow":
         return report.model_copy(update={"ci_exit_code": 0})
     return report

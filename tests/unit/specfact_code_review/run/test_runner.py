@@ -54,6 +54,28 @@ def _finding(
     )
 
 
+def _simplification_finding(
+    *,
+    category: Literal["ai_bloat", "dry", "kiss"] = "ai_bloat",
+    confidence: Literal["low", "medium", "high"] = "high",
+) -> ReviewFinding:
+    return ReviewFinding(
+        category=category,
+        severity="info",
+        tool="ast",
+        rule="ai-bloat.manual-accumulator-loop",
+        file="packages/specfact-code-review/src/specfact_code_review/run/scorer.py",
+        line=10,
+        message="Manual accumulator loop can be collapsed.",
+        fixable=False,
+        confidence=confidence,
+        rewrite_hint="Replace the append loop with a list comprehension.",
+        canonical_pattern="manual-accumulator-loop",
+        intent_key="score-review",
+        estimated_deletion_lines=3,
+    )
+
+
 def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
     calls: list[str] = []
 
@@ -155,6 +177,42 @@ def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -
         "contract_runner",
         "pytest",
     ]
+
+
+def test_run_review_simplify_focus_keeps_only_simplification_queue(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [_finding(tool="ruff", rule="E501")])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ai_bloat",
+        lambda files: [_simplification_finding(category="ai_bloat")],
+    )
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ast_clean_code",
+        lambda files: [
+            _simplification_finding(category="dry"),
+            _simplification_finding(category="kiss", confidence="medium"),
+            _finding(tool="ast", rule="solid.mixed-dependency-role", category="solid"),
+        ],
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")],
+        no_tests=True,
+        focus="simplify",
+    )
+
+    assert [(finding.category, finding.confidence) for finding in report.findings] == [
+        ("ai_bloat", "high"),
+        ("dry", "high"),
+    ]
+    assert report.schema_version == "1.1"
+    assert report.overall_verdict == "PASS"
 
 
 def test_run_tdd_gate_reports_missing_test_file() -> None:

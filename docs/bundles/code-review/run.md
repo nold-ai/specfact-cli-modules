@@ -122,6 +122,14 @@ The review pipeline uses rules, skills, and policy payloads shipped with the ins
 
 The built-in `specfact/ai-bloat-patterns` policy pack is parallel to `specfact/clean-code-principles`. It maps advisory `ai_bloat` rules to the `ai_bloat` principle, emits `severity=info`, and stays score-neutral so simplification candidates do not block commits. Omit `--level` when producing the JSON report for `/specfact.08-simplify`; `--level error` intentionally filters info-level findings out of the command report.
 
+Use `--focus simplify` when producing the IDE simplification queue:
+
+```bash
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review.json
+```
+
+Simplify-focused reports keep advisory `ai_bloat` findings plus high-confidence `dry` and `kiss` findings that include deterministic simplification metadata. Metadata fields such as `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, and `related_locations` are additive; legacy consumers can keep reading the original finding fields. Simplification findings remain score-neutral and non-blocking.
+
 ## Related
 
 - [Code review ledger](/bundles/code-review/ledger/)
