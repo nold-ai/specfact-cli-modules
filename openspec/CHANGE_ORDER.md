@@ -101,6 +101,7 @@ The architecture pillar remains active because `architecture-02-well-architected
 | code-review + codebase | 01 | code-review-bug-finding-and-sidecar-venv-fix | [#174](https://github.com/nold-ai/specfact-cli-modules/issues/174) | Parent Feature: [#175](https://github.com/nold-ai/specfact-cli-modules/issues/175); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162) |
 | codebase + project-runtime | 02 | codebase-import-runtime-hardening | [#235](https://github.com/nold-ai/specfact-cli-modules/issues/235) | Parent Feature: [#234](https://github.com/nold-ai/specfact-cli-modules/issues/234); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); no known blockers |
 | code-review + project | 03 | code-review-ai-bloat-detection | [#269](https://github.com/nold-ai/specfact-cli-modules/issues/269) | Parent Feature: [#175](https://github.com/nold-ai/specfact-cli-modules/issues/175); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); no known blockers |
+| code-review + project | 04 | code-review-11-simplification-feedback-loop | [#276](https://github.com/nold-ai/specfact-cli-modules/issues/276) | Parent Feature: [#275](https://github.com/nold-ai/specfact-cli-modules/issues/275); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); blocked by `code-review-ai-bloat-detection` / [#269](https://github.com/nold-ai/specfact-cli-modules/issues/269) |
 
 ### Documentation restructure
 
