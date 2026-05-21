@@ -95,3 +95,40 @@
   - `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`
   - Result: exit code 0; report summary `Review completed with 4 findings (0 blocking).`
   - Remaining non-blocking findings are existing Typer command wrapper shape advisories (`R0917`, `R0914`) and score-neutral `ai-bloat.loc-vs-complexity` hints for command orchestration wrappers; no pasted review finding remains unresolved.
+
+## Release PR Review Follow-up
+
+- Timestamp: 2026-05-22T00:53:57+02:00
+- Fixed:
+  - Preserve `tool_error` findings in `--focus simplify` reports.
+  - Limit `pylint R0902` dataclass suppression to the actual dataclass class/decorator line.
+  - Normalize Windows-style `commands.py` paths in CLI-wrapper structural-noise suppression.
+  - Normalize direct `ReviewRunRequest(focus_facets=("simplify",), review_focus=None)` inputs before `run_review`.
+  - Align remaining simplify artifact references to `.specfact/code-review-simplify.json` in docs, spec, bundled skill, and updater template.
+  - Keep normal review scoring deductions for `dry`/`kiss`; simplify score neutrality now requires high-confidence deterministic simplification metadata.
+- Skipped as not valid:
+  - Registry `specfact-project` checksum mismatch: `registry/index.json` and `registry/modules/specfact-project-0.41.12.tar.gz.sha256` both match the tarball SHA-256 `409b050724177b90c6dba4cd3eac6e7e68c718ea3a74f37ec3d6785b69459643`; the module manifest checksum is the signed payload checksum, not the tarball checksum.
+  - Request to make `dry` simplification findings score-neutral by default: normal merge-quality review must preserve DRY/KISS deductions; only simplify-focused scoring is neutral.
+- Validation:
+  - `openspec validate code-review-11-simplification-feedback-loop --strict`
+  - Result: valid.
+  - `hatch run pytest tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/run/test_scorer.py tests/unit/specfact_code_review/review/test_commands.py tests/unit/specfact_code_review/rules/test_updater.py tests/unit/docs/test_code_review_docs_parity.py tests/unit/test_check_prompt_commands_script.py tests/unit/test_check_docs_commands_script.py tests/unit/test_bundle_resource_payloads.py -q`
+  - Result: 146 passed, 2 warnings.
+  - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py --cov=specfact_code_review.run.commands --cov-report=term-missing -q`
+  - Result: 30 passed; command module coverage 84.09%.
+  - `hatch run validate-prompt-commands`
+  - Result: passed.
+  - `hatch run format`
+  - Result: passed.
+  - `hatch run type-check`
+  - Result: 0 errors, 0 warnings, 0 notes.
+  - `hatch run lint`
+  - Result: passed; pylint rated 10.00/10.
+  - `hatch run yaml-lint`
+  - Result: validated 6 manifests and `registry/index.json`.
+  - `hatch run check-bundle-imports`
+  - Result: import boundary check passed.
+  - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump`
+  - Result: verified 6 module manifests.
+  - `SPECFACT_MODULES_ROOTS=/home/dom/git/nold-ai/specfact-cli-modules-worktrees/fix/release-280-review-comments/packages SPECFACT_ALLOW_UNSIGNED=1 hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`
+  - Result: exit code 0; report summary `Review completed with 2 findings (0 blocking).`

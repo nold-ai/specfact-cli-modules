@@ -35,10 +35,11 @@ Options (aligned with `specfact code review run --help`):
   review scope is auto-detected from `git diff`
 - `--focus`: repeatable facet filter applied after scope resolution; values are
   `source` (non-test, non-docs Python), `tests` (paths with a `tests/` segment),
-  and `docs` (Python under a `docs/` directory segment). Multiple `--focus`
-  values **union** their file sets, then intersect with the resolved scope. When
-  any `--focus` is set, **`--include-tests` and `--exclude-tests` are rejected**
-  (use focus alone to express test intent)
+  `docs` (Python under a `docs/` directory segment), and `simplify`
+  (simplification-focused findings). Multiple `--focus` values **union** their
+  file sets, then intersect with the resolved scope. When any `--focus` is set,
+  **`--include-tests` and `--exclude-tests` are rejected** (use focus alone to
+  express test intent)
 - `--mode shadow|enforce`: **enforce** (default) keeps today’s non-zero process
   exit when the governed report says the run failed; **shadow** still runs the
   full toolchain and preserves `overall_verdict` in JSON, but forces
@@ -103,7 +104,7 @@ specfact code review run --scope changed --path packages/specfact-code-review --
 ```
 
 Copy-pastable recipes for **shadow mode**, **JSON `--out`**, **`--focus`**
-(`source` / `tests` / `docs` Python only), **noise flags**, and **interactive**
+(`source` / `tests` / `docs` / `simplify`), **noise flags**, and **interactive**
 test prompts live in the [Code review run](/bundles/code-review/run/) bundle
 guide (same Typer surface as this section).
 
@@ -111,7 +112,7 @@ guide (same Typer surface as this section).
 
 The review pipeline also emits `ai_bloat` findings for code shapes commonly amplified by AI-assisted generation: manual append loops, passthrough lambdas, identity `try/except`, one-call wrappers, speculative `Optional[...] = None` parameters, duplicate terminal guards, long low-branch functions, and redundant intermediates.
 
-These findings are `severity=info`, advisory-only, and score-neutral. They are written to `.specfact/code-review.json` when the report includes all severities, and the `/specfact.08-simplify` IDE prompt can filter them by `category=ai_bloat` for per-change confirmed rewrites. They do not claim AI authorship; they identify simplification candidates.
+These findings are `severity=info`, advisory-only, and score-neutral. They are written to `.specfact/code-review.json` when the report includes all severities; for simplification queues, write `.specfact/code-review-simplify.json` with `--focus simplify` so `/specfact.08-simplify` can filter them by `category=ai_bloat` for per-change confirmed rewrites. They do not claim AI authorship; they identify simplification candidates.
 
 Positional `FILES...` cannot be mixed with **`--scope`** or **`--path`** (see
 **Invalid combinations** above).

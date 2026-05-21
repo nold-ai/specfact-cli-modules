@@ -33,7 +33,7 @@ DEFAULT_DO_RULES = (
     "- Treat `specfact code review run --help` as authoritative; self-heal stale options by checking help "
     "before changing workflow",
     "- For simplification queues, run `specfact code review run --scope changed --focus simplify --json "
-    "--out .specfact/code-review.json`",
+    "--out .specfact/code-review-simplify.json`",
     "- For merge-quality review, run `specfact code review run --scope changed --bug-hunt --json "
     "--out .specfact/code-review.json`",
     "- Verify an active OpenSpec change covers the requested scope and follow the sequence: spec delta "

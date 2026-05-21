@@ -566,6 +566,28 @@ def _validate_review_request(request: ReviewRunRequest) -> None:
         raise MissingOutForJsonError("Use --out together with --json.")
 
 
+def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
+    if request.review_focus is not None or "simplify" not in request.focus_facets:
+        return request
+    return ReviewRunRequest(
+        files=request.files,
+        include_tests=request.include_tests,
+        scope=request.scope,
+        path_filters=request.path_filters,
+        include_noise=request.include_noise,
+        json_output=request.json_output,
+        out=request.out,
+        score_only=request.score_only,
+        no_tests=request.no_tests,
+        fix=request.fix,
+        bug_hunt=request.bug_hunt,
+        review_mode=request.review_mode,
+        review_level=request.review_level,
+        focus_facets=request.focus_facets,
+        review_focus=_review_focus_from_facets(request.focus_facets),
+    )
+
+
 @beartype
 @require(
     lambda request_or_files: request_or_files is None or isinstance(request_or_files, (list, ReviewRunRequest)),
@@ -585,6 +607,7 @@ def run_command(
             kwargs,
         )
     )
+    request = _normalize_review_request(request)
     _validate_review_request(request)
 
     file_focus_facets = tuple(facet for facet in request.focus_facets if facet in {"source", "tests", "docs"})

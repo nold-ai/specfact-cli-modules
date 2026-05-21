@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -237,20 +238,37 @@ def _suppress_known_noise(findings: list[ReviewFinding]) -> list[ReviewFinding]:
 def _is_pylint_structural_noise(finding: ReviewFinding) -> bool:
     if finding.tool != "pylint":
         return False
-    if finding.rule in _PYLINT_CLI_WRAPPER_NOISE_RULES and finding.file.endswith("/commands.py"):
+    if finding.rule in _PYLINT_CLI_WRAPPER_NOISE_RULES and _path_name(finding.file) == "commands.py":
         return "argument" in finding.message or "local variable" in finding.message
     return (
         finding.rule == "R0902"
         and "Too many instance attributes" in finding.message
-        and _file_contains_dataclass(finding.file)
+        and _line_targets_dataclass(finding.file, finding.line)
     )
 
 
-def _file_contains_dataclass(file_path: str) -> bool:
+def _path_name(file_path: str) -> str:
+    return Path(file_path.replace("\\", "/")).name
+
+
+def _line_targets_dataclass(file_path: str, line: int) -> bool:
     try:
-        return "@dataclass" in Path(file_path).read_text(encoding="utf-8")
-    except OSError:
+        module = ast.parse(Path(file_path).read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
         return False
+    return any(
+        isinstance(node, ast.ClassDef)
+        and (node.lineno == line or any(decorator.lineno == line for decorator in node.decorator_list))
+        and any(_is_dataclass_decorator(decorator) for decorator in node.decorator_list)
+        for node in ast.walk(module)
+    )
+
+
+def _is_dataclass_decorator(decorator: ast.expr) -> bool:
+    target = decorator.func if isinstance(decorator, ast.Call) else decorator
+    if isinstance(target, ast.Name):
+        return target.id == "dataclass"
+    return isinstance(target, ast.Attribute) and target.attr == "dataclass"
 
 
 def _is_truthy_env(name: str) -> bool:
@@ -310,6 +328,8 @@ def _filter_findings_by_review_level(
 
 
 def _belongs_to_simplification_queue(finding: ReviewFinding) -> bool:
+    if finding.category == "tool_error":
+        return True
     if finding.category == "ai_bloat":
         return True
     return (

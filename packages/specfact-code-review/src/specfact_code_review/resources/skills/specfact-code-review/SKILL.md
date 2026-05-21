@@ -12,7 +12,7 @@ Updated: 2026-05-21 | Module: nold-ai/specfact-code-review
 
 - Use this skill when asked to run, interpret, or act on SpecFact code review in Codex CLI or another AI IDE
 - Treat `specfact code review run --help` as authoritative; self-heal stale options by checking help before changing workflow
-- For simplification queues, run `specfact code review run --scope changed --focus simplify --json --out .specfact/code-review.json`
+- For simplification queues, run `specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json`
 - For merge-quality review, run `specfact code review run --scope changed --bug-hunt --json --out .specfact/code-review.json`
 - Ask whether tests should be included before repo-wide review; default to excluding tests unless test changes are the target
 - Use intention-revealing names; avoid placeholder public names like data/process/handle

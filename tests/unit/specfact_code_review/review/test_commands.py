@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,11 @@ from specfact_code_review.review.commands import InvalidOptionCombinationError, 
 
 
 runner = CliRunner()
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _plain_output(text: str) -> str:
+    return ANSI_RE.sub("", text)
 
 
 def test_review_run_help_lists_simplify_focus() -> None:
@@ -73,7 +79,7 @@ def test_review_run_rejects_conflicting_test_flags() -> None:
     result = runner.invoke(app, ["review", "run", "--include-tests", "--exclude-tests"])
 
     assert result.exit_code != 0
-    assert "Cannot use both --include-tests and --exclude-tests" in result.output
+    assert "Cannot use both --include-tests and --exclude-tests" in _plain_output(result.output)
 
 
 def test_review_run_rejects_focus_with_test_flags() -> None:

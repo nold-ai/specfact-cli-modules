@@ -52,7 +52,12 @@ def _bonus_points(modifiers: ReviewScoreModifiers) -> int:
 def _deduction_for_finding(finding: ReviewFinding, *, simplification_score_neutral: bool) -> int:
     if finding.category == "ai_bloat":
         return 0
-    if simplification_score_neutral and finding.has_simplification_metadata() and finding.category in {"dry", "kiss"}:
+    if (
+        simplification_score_neutral
+        and finding.category in {"dry", "kiss"}
+        and finding.confidence == "high"
+        and finding.simplification_metadata_is_deterministic()
+    ):
         return 0
     if finding.severity == "error" and not finding.fixable:
         return 15

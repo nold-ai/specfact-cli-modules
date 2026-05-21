@@ -62,11 +62,11 @@ Simplification findings SHALL remain advisory, score-neutral, and non-blocking i
 
 ### Requirement: IDE simplify prompt consumes grouped evidence
 
-The `/specfact.08-simplify` prompt SHALL consume simplification metadata from `.specfact/code-review.json` and use it to guide one confirmed rewrite at a time.
+The `/specfact.08-simplify` prompt SHALL consume simplification metadata from `.specfact/code-review-simplify.json` and use it to guide one confirmed rewrite at a time.
 
 #### Scenario: Prompt groups by intent before proposing rewrites
 
-- **WHEN** `.specfact/code-review.json` contains findings with `intent_key` values
+- **WHEN** `.specfact/code-review-simplify.json` contains findings with `intent_key` values
 - **THEN** `/specfact.08-simplify` SHALL group candidates by `intent_key`, then by file or domain and rule
 - **AND** it SHALL show related locations before drafting a rewrite for a grouped candidate
 

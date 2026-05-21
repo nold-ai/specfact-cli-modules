@@ -242,6 +242,66 @@ def test_run_command_passes_simplify_focus_after_scope_resolution(monkeypatch: A
     assert recorded == {"files": [package_file], "focus": "simplify"}
 
 
+def test_run_command_normalizes_simplify_focus_on_direct_request(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    recorded: dict[str, object] = {}
+
+    def fake_run_review(files: list[Path], **kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        recorded["focus"] = kwargs.get("focus")
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    exit_code, output = run_commands.run_command(
+        run_commands.ReviewRunRequest(
+            files=[package_file],
+            json_output=True,
+            out=Path("review-report.json"),
+            focus_facets=("simplify",),
+            review_focus=None,
+        )
+    )
+
+    assert exit_code == 0
+    assert output == "review-report.json"
+    assert recorded == {"files": [package_file], "focus": "simplify"}
+
+
+def test_run_command_rejects_unknown_keyword_override() -> None:
+    with pytest.raises(run_commands.RunCommandError, match="Unexpected keyword arguments: unknown"):
+        run_commands.run_command([], unknown=True)
+
+
+def test_run_command_rejects_focus_with_no_matching_files(monkeypatch: Any, tmp_path: Path) -> None:
+    docs_file = _write_repo_file(tmp_path, "docs/helpers/example.py")
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(run_commands.NoReviewableFilesError, match="No reviewable Python files matched"):
+        run_commands.run_command(
+            run_commands.ReviewRunRequest(
+                files=[docs_file],
+                focus_facets=("source",),
+            )
+        )
+
+
+def test_filter_files_by_focus_unions_source_tests_and_docs() -> None:
+    source_file = Path("packages/specfact-code-review/src/specfact_code_review/run/commands.py")
+    test_file = Path("tests/unit/specfact_code_review/run/test_commands.py")
+    docs_file = Path("docs/tools/example.py")
+    text_file = Path("docs/readme.md")
+
+    assert run_commands._filter_files_by_focus(
+        [source_file, test_file, docs_file, text_file],
+        ("source", "tests", "docs"),
+    ) == [source_file, test_file, docs_file]
+
+
 def test_run_command_ignores_dot_specfact_in_changed_scope(monkeypatch: Any, tmp_path: Path) -> None:
     package_file = _write_repo_file(
         tmp_path,
