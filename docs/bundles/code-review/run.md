@@ -29,7 +29,7 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 | `--scope changed\|full` | Review changed files or the full repository when no positional files are provided |
 | `--path <prefix>` | Narrow auto-discovered review files to one or more repo-relative prefixes |
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
-| `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, and/or **`docs`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
+| `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
 | `--mode shadow\|enforce` | **`shadow`** surfaces findings without failing the exit code for policy violations; **`enforce`** applies normal gating (default **`enforce`**) |
 | `--level error\|warning` | Optional reporting level override before scoring: **`error`** keeps errors only (drops warnings and info); **`warning`** keeps errors and warnings (drops info only); omit to keep all severities (JSON, verdict, and `ci_exit_code` use the filtered list) |
 | `--bug-hunt` | Enable exploratory / bug-hunt style heuristics in the review pipeline |
@@ -89,12 +89,13 @@ specfact code review run --scope changed --mode shadow --json --out /tmp/review-
 
 ### `--focus` facets (repeatable)
 
-Use **`--focus`** with **`source`**, **`tests`**, and/or **`docs`** (union of facets, then intersect with scope). Do not combine **`--focus`** with **`--include-tests`** or **`--exclude-tests`**.
+Use **`--focus`** with **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (union of facets, then intersect with scope). Do not combine **`--focus`** with **`--include-tests`** or **`--exclude-tests`**. The **`simplify`** facet produces simplification-focused reports: advisory **`ai_bloat`** findings plus high-confidence **`dry`** and **`kiss`** findings that carry deterministic metadata such as **`rewrite_hint`**, **`canonical_pattern`**, **`intent_key`**, **`estimated_deletion_lines`**, and **`related_locations`**. Simplification-focused findings are score-neutral and non-blocking.
 
 ```bash
 specfact code review run --scope changed --focus tests
 specfact code review run --scope full --path packages/specfact-code-review --focus source
 specfact code review run --scope full --focus docs
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
 ### Positional files (explicit Python paths)
@@ -121,6 +122,14 @@ specfact code review run --scope changed --interactive
 The review pipeline uses rules, skills, and policy payloads shipped with the installed Code Review bundle. Those assets are bundle-owned and should be refreshed through supported bundle and IDE setup flows rather than legacy core-owned paths.
 
 The built-in `specfact/ai-bloat-patterns` policy pack is parallel to `specfact/clean-code-principles`. It maps advisory `ai_bloat` rules to the `ai_bloat` principle, emits `severity=info`, and stays score-neutral so simplification candidates do not block commits. Omit `--level` when producing the JSON report for `/specfact.08-simplify`; `--level error` intentionally filters info-level findings out of the command report.
+
+Use `--focus simplify` when producing the IDE simplification queue:
+
+```bash
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+```
+
+Simplify-focused reports keep advisory `ai_bloat` findings plus high-confidence `dry` and `kiss` findings that include deterministic simplification metadata. Metadata fields such as `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, and `related_locations` are additive; legacy consumers can keep reading the original finding fields. Simplification findings remain score-neutral and non-blocking.
 
 ## Related
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 from pathlib import Path
 
 from beartype import beartype
@@ -16,8 +17,36 @@ _LOC_FLOOR = 40
 _COMPLEXITY_CEILING = 4
 
 
+@dataclass(frozen=True)
+class _SimplificationCandidate:
+    file_path: Path
+    line: int
+    rule: str
+    message: str
+    canonical_pattern: str
+    rewrite_hint: str
+    estimated_deletion_lines: int
+
+
 def _iter_functions(tree: ast.AST) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
     return [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)]
+
+
+def _simplification_finding(candidate: _SimplificationCandidate) -> ReviewFinding:
+    return ReviewFinding(
+        category="ai_bloat",
+        severity="info",
+        tool="ast",
+        rule=candidate.rule,
+        file=str(candidate.file_path),
+        line=candidate.line,
+        message=candidate.message,
+        fixable=False,
+        confidence="high",
+        rewrite_hint=candidate.rewrite_hint,
+        canonical_pattern=candidate.canonical_pattern,
+        estimated_deletion_lines=candidate.estimated_deletion_lines,
+    )
 
 
 def _is_none_constant(node: ast.AST | None) -> bool:
@@ -191,6 +220,24 @@ def _assigned_name(stmt: ast.stmt) -> str | None:
     return None
 
 
+def _assigned_empty_collection_name(stmt: ast.stmt) -> str | None:
+    value: ast.AST | None = None
+    target: ast.AST | None = None
+    if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+        target = stmt.targets[0]
+        value = stmt.value
+    elif isinstance(stmt, ast.AnnAssign):
+        target = stmt.target
+        value = stmt.value
+    if not isinstance(target, ast.Name) or not isinstance(value, ast.List | ast.Dict | ast.Set):
+        return None
+    if isinstance(value, ast.List | ast.Set) and value.elts:
+        return None
+    if isinstance(value, ast.Dict) and value.keys:
+        return None
+    return target.id
+
+
 def _loaded_name_count(node: ast.AST, name: str) -> int:
     return sum(
         1
@@ -218,18 +265,266 @@ def _redundant_intermediate_findings(
         if later_uses != 0:
             continue
         findings.append(
-            ReviewFinding(
-                category="ai_bloat",
-                severity="info",
-                tool="ast",
-                rule="ai-bloat.redundant-intermediate",
-                file=str(file_path),
-                line=stmt.lineno,
-                message=f"Variable `{name}` is assigned once and read only on the next statement; inline it.",
-                fixable=False,
+            _simplification_finding(
+                _SimplificationCandidate(
+                    file_path=file_path,
+                    line=stmt.lineno,
+                    rule="ai-bloat.redundant-intermediate",
+                    message=f"Variable `{name}` is assigned once and read only on the next statement; inline it.",
+                    canonical_pattern="one-use-temporary",
+                    rewrite_hint="Inline the one-use temporary into the return statement.",
+                    estimated_deletion_lines=1,
+                )
             )
         )
     return findings
+
+
+def _manual_accumulator_loop_findings(
+    file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
+) -> list[ReviewFinding]:
+    findings: list[ReviewFinding] = []
+    for index, stmt in enumerate(function_node.body[:-1]):
+        accumulator = _manual_accumulator_name(function_node, index)
+        if accumulator is None:
+            continue
+        findings.append(
+            _simplification_finding(
+                _SimplificationCandidate(
+                    file_path=file_path,
+                    line=stmt.lineno,
+                    rule="ai-bloat.manual-accumulator-loop",
+                    message=f"Function `{function_node.name}` uses a manual accumulator loop that can likely collapse.",
+                    canonical_pattern="manual-accumulator-loop",
+                    rewrite_hint="Replace the accumulator loop with a comprehension or direct collection constructor.",
+                    estimated_deletion_lines=3,
+                )
+            )
+        )
+    return findings
+
+
+def _manual_accumulator_name(function_node: ast.FunctionDef | ast.AsyncFunctionDef, index: int) -> str | None:
+    accumulator = _assigned_empty_collection_name(function_node.body[index])
+    if accumulator is None:
+        return None
+    loop = function_node.body[index + 1]
+    return_stmt = function_node.body[index + 2] if index + 2 < len(function_node.body) else None
+    if not _returns_accumulator(return_stmt, accumulator):
+        return None
+    if not isinstance(loop, ast.For) or len(loop.body) != 1 or not isinstance(loop.body[0], ast.Expr):
+        return None
+    return accumulator if _loop_appends_to_accumulator(loop.body[0].value, accumulator) else None
+
+
+def _returns_accumulator(stmt: ast.stmt | None, accumulator: str) -> bool:
+    return isinstance(stmt, ast.Return) and isinstance(stmt.value, ast.Name) and stmt.value.id == accumulator
+
+
+def _loop_appends_to_accumulator(node: ast.AST, accumulator: str) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr in {"append", "add"}
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == accumulator
+    )
+
+
+def _return_constant_bool(stmt: ast.stmt) -> bool | None:
+    if isinstance(stmt, ast.Return) and isinstance(stmt.value, ast.Constant) and isinstance(stmt.value.value, bool):
+        return stmt.value.value
+    return None
+
+
+def _verbose_bool_return_findings(
+    file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
+) -> list[ReviewFinding]:
+    findings: list[ReviewFinding] = []
+    for index, stmt in enumerate(function_node.body[:-1]):
+        next_stmt = function_node.body[index + 1]
+        if not isinstance(stmt, ast.If) or len(stmt.body) != 1 or stmt.orelse:
+            continue
+        first_value = _return_constant_bool(stmt.body[0])
+        second_value = _return_constant_bool(next_stmt)
+        if first_value is None or second_value is None or first_value == second_value:
+            continue
+        findings.append(
+            _simplification_finding(
+                _SimplificationCandidate(
+                    file_path=file_path,
+                    line=stmt.lineno,
+                    rule="ai-bloat.verbose-bool-return",
+                    message=f"Function `{function_node.name}` returns explicit bool branches for one predicate.",
+                    canonical_pattern="verbose-bool-return",
+                    rewrite_hint="Return the predicate directly, negating it if needed.",
+                    estimated_deletion_lines=2,
+                )
+            )
+        )
+    return findings
+
+
+def _redundant_none_branch_findings(
+    file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
+) -> list[ReviewFinding]:
+    findings: list[ReviewFinding] = []
+    for index, stmt in enumerate(function_node.body[:-1]):
+        if not isinstance(stmt, ast.If) or len(stmt.body) != 1 or stmt.orelse:
+            continue
+        if not (isinstance(stmt.body[0], ast.Return) and _is_none_constant(stmt.body[0].value)):
+            continue
+        if not isinstance(function_node.body[index + 1], ast.Return):
+            continue
+        findings.append(
+            _simplification_finding(
+                _SimplificationCandidate(
+                    file_path=file_path,
+                    line=stmt.lineno,
+                    rule="ai-bloat.redundant-none-branch",
+                    message=f"Function `{function_node.name}` has a pass-through None branch before a single return.",
+                    canonical_pattern="redundant-none-branch",
+                    rewrite_hint="Consider collapsing the None guard into the expression or caller contract.",
+                    estimated_deletion_lines=2,
+                )
+            )
+        )
+    return findings
+
+
+def _pass_through_try_except_findings(
+    file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
+) -> list[ReviewFinding]:
+    findings: list[ReviewFinding] = []
+    for stmt in function_node.body:
+        if not isinstance(stmt, ast.Try) or stmt.orelse or stmt.finalbody or len(stmt.handlers) != 1:
+            continue
+        handler = stmt.handlers[0]
+        if len(handler.body) != 1 or not isinstance(handler.body[0], ast.Raise) or handler.body[0].exc is not None:
+            continue
+        findings.append(
+            _simplification_finding(
+                _SimplificationCandidate(
+                    file_path=file_path,
+                    line=stmt.lineno,
+                    rule="ai-bloat.pass-through-try-except",
+                    message=(
+                        f"Function `{function_node.name}` catches and immediately re-raises without adding context."
+                    ),
+                    canonical_pattern="pass-through-try-except",
+                    rewrite_hint="Remove the pass-through try/except unless it adds domain context.",
+                    estimated_deletion_lines=2,
+                )
+            )
+        )
+    return findings
+
+
+def _constant_equality_return(stmt: ast.stmt) -> str | None:
+    if not isinstance(stmt, ast.If) or len(stmt.body) != 1 or stmt.orelse:
+        return None
+    if not (isinstance(stmt.body[0], ast.Return) and isinstance(stmt.body[0].value, ast.Constant)):
+        return None
+    if not isinstance(stmt.test, ast.Compare) or len(stmt.test.ops) != 1:
+        return None
+    if not isinstance(stmt.test.ops[0], ast.Eq):
+        return None
+    if not isinstance(stmt.test.left, ast.Name) or len(stmt.test.comparators) != 1:
+        return None
+    if not isinstance(stmt.test.comparators[0], ast.Constant):
+        return None
+    return stmt.test.left.id
+
+
+def _table_lookup_match_count(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+    compared_name: str | None = None
+    matches = 0
+    for stmt in function_node.body:
+        if isinstance(stmt, ast.Return):
+            break
+        current_name = _constant_equality_return(stmt)
+        if current_name is None:
+            return 0
+        compared_name = compared_name or current_name
+        if current_name != compared_name:
+            return 0
+        matches += 1
+    return matches
+
+
+def _table_lookup_candidate_findings(
+    file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
+) -> list[ReviewFinding]:
+    matches = _table_lookup_match_count(function_node)
+    if matches < 3:
+        return []
+    return [
+        _simplification_finding(
+            _SimplificationCandidate(
+                file_path=file_path,
+                line=function_node.lineno,
+                rule="ai-bloat.table-lookup-candidate",
+                message=f"Function `{function_node.name}` maps constants through repeated equality branches.",
+                canonical_pattern="table-lookup-candidate",
+                rewrite_hint="Consider replacing repeated equality returns with a lookup table plus default.",
+                estimated_deletion_lines=max(1, matches - 1),
+            )
+        )
+    ]
+
+
+def _stdlib_replacement_candidate_findings(
+    file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
+) -> list[ReviewFinding]:
+    candidate = _stdlib_replacement_candidate(function_node)
+    if candidate is None:
+        return []
+    line, _initial_name = candidate
+    return [
+        _simplification_finding(
+            _SimplificationCandidate(
+                file_path=file_path,
+                line=line,
+                rule="ai-bloat.stdlib-replacement-candidate",
+                message=(
+                    f"Function `{function_node.name}` manually computes a value that may have a stdlib replacement."
+                ),
+                canonical_pattern="stdlib-replacement-candidate",
+                rewrite_hint="Consider a standard helper such as max, min, any, all, sum, or dict.fromkeys.",
+                estimated_deletion_lines=3,
+            )
+        )
+    ]
+
+
+def _stdlib_replacement_candidate(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[int, str] | None:
+    if len(function_node.body) < 3:
+        return None
+    first_assign = function_node.body[0]
+    initial_name = _none_initializer_name(first_assign)
+    if initial_name is None:
+        return None
+    loop = function_node.body[1]
+    terminal = function_node.body[2]
+    if not _returns_accumulator(terminal, initial_name):
+        return None
+    if _loop_updates_name(loop, initial_name):
+        return first_assign.lineno, initial_name
+    return None
+
+
+def _none_initializer_name(stmt: ast.stmt) -> str | None:
+    name = _assigned_name(stmt)
+    if name is None or not isinstance(stmt, ast.Assign) or not _is_none_constant(stmt.value):
+        return None
+    return name
+
+
+def _loop_updates_name(stmt: ast.stmt, name: str) -> bool:
+    if not isinstance(stmt, ast.For) or len(stmt.body) != 1 or not isinstance(stmt.body[0], ast.If):
+        return False
+    guard = stmt.body[0]
+    return len(guard.body) == 1 and _assigned_name(guard.body[0]) == name
 
 
 def _findings_for_function(
@@ -240,6 +535,46 @@ def _findings_for_function(
     findings.extend(_dead_branch_findings(file_path, function_node))
     findings.extend(_loc_vs_complexity_findings(file_path, function_node))
     findings.extend(_redundant_intermediate_findings(file_path, function_node))
+    findings.extend(_manual_accumulator_loop_findings(file_path, function_node))
+    findings.extend(_verbose_bool_return_findings(file_path, function_node))
+    findings.extend(_redundant_none_branch_findings(file_path, function_node))
+    findings.extend(_pass_through_try_except_findings(file_path, function_node))
+    findings.extend(_table_lookup_candidate_findings(file_path, function_node))
+    findings.extend(_stdlib_replacement_candidate_findings(file_path, function_node))
+    return findings
+
+
+def _single_call_return_name(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> str | None:
+    if len(function_node.body) != 1 or not isinstance(function_node.body[0], ast.Return):
+        return None
+    value = function_node.body[0].value
+    if isinstance(value, ast.Call) and isinstance(value.func, ast.Name):
+        return value.func.id
+    return None
+
+
+def _wrapper_chain_findings(file_path: Path, tree: ast.Module) -> list[ReviewFinding]:
+    functions = [node for node in tree.body if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)]
+    wrappers = {function_node.name: _single_call_return_name(function_node) for function_node in functions}
+    wrapper_names = {name for name, called in wrappers.items() if called is not None}
+    findings: list[ReviewFinding] = []
+    for function_node in functions:
+        called = wrappers.get(function_node.name)
+        if called is None or called not in wrapper_names:
+            continue
+        findings.append(
+            _simplification_finding(
+                _SimplificationCandidate(
+                    file_path=file_path,
+                    line=function_node.lineno,
+                    rule="ai-bloat.wrapper-chain",
+                    message=f"Function `{function_node.name}` is part of a pass-through wrapper chain.",
+                    canonical_pattern="wrapper-chain",
+                    rewrite_hint="Collapse the wrapper chain or keep only the compatibility boundary.",
+                    estimated_deletion_lines=max(1, _function_loc(function_node) - 1),
+                )
+            )
+        )
     return findings
 
 
@@ -262,6 +597,7 @@ def run_ai_bloat(files: list[Path]) -> list[ReviewFinding]:
                 tool_error(tool="ast", file_path=file_path, message=f"Unable to parse Python source: {exc}")
             )
             continue
+        findings.extend(_wrapper_chain_findings(file_path, tree))
         for function_node in _iter_functions(tree):
             findings.extend(_findings_for_function(file_path, function_node))
     return findings

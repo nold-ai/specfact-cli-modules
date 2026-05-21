@@ -11,11 +11,30 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_code_review._review_utils import python_source_paths_for_tools, tool_error
-from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.run.findings import EvidenceRef, ReviewFinding
 
 
 _REPOSITORY_ROOTS = {"repo", "repository"}
 _HTTP_ROOTS = {"client", "http_client", "requests", "session"}
+_INTENT_STOPWORDS = {
+    "build",
+    "clean",
+    "create",
+    "first",
+    "format",
+    "get",
+    "handle",
+    "load",
+    "make",
+    "normalize",
+    "prepare",
+    "process",
+    "read",
+    "second",
+    "sync",
+    "target",
+    "update",
+}
 
 
 class _ShapeNormalizer(ast.NodeTransformer):
@@ -103,6 +122,21 @@ def _duplicate_shape_id(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -
     return ast.dump(normalized, include_attributes=False)
 
 
+def _tokens(value: str) -> set[str]:
+    normalized = value.replace("-", "_").replace(".", "_")
+    return {token for token in normalized.lower().split("_") if len(token) > 2 and token not in _INTENT_STOPWORDS}
+
+
+def _intent_key(file_path: Path, duplicates: list[ast.FunctionDef | ast.AsyncFunctionDef]) -> str | None:
+    name_tokens = [_tokens(function_node.name) for function_node in duplicates]
+    common_tokens = set.intersection(*name_tokens) if name_tokens else set()
+    path_tokens = _tokens(file_path.stem)
+    intent_tokens = sorted(common_tokens | (path_tokens & set.union(*name_tokens)))
+    if len(intent_tokens) < 2:
+        return None
+    return "-".join(intent_tokens[:3])
+
+
 def _yagni_findings(file_path: Path, tree: ast.Module) -> list[ReviewFinding]:
     loaded_names = _loaded_names(tree)
     findings: list[ReviewFinding] = []
@@ -136,7 +170,13 @@ def _dry_findings(file_path: Path, tree: ast.Module) -> list[ReviewFinding]:
     for duplicates in grouped.values():
         if len(duplicates) < 2:
             continue
+        intent_key = _intent_key(file_path, duplicates)
         for duplicate in duplicates[1:]:
+            related_locations = [
+                EvidenceRef(path=str(file_path), start_line=related.lineno)
+                for related in duplicates
+                if related is not duplicate
+            ]
             findings.append(
                 ReviewFinding(
                     category="dry",
@@ -147,6 +187,16 @@ def _dry_findings(file_path: Path, tree: ast.Module) -> list[ReviewFinding]:
                     line=duplicate.lineno,
                     message=f"Function `{duplicate.name}` duplicates another function shape in this module.",
                     fixable=False,
+                    confidence="high" if intent_key is not None else None,
+                    rewrite_hint=(
+                        "Review the related locations together and extract the shared domain operation."
+                        if intent_key is not None
+                        else None
+                    ),
+                    canonical_pattern="duplicate-intent" if intent_key is not None else None,
+                    intent_key=intent_key,
+                    estimated_deletion_lines=max(1, len(duplicates) - 1) if intent_key is not None else None,
+                    related_locations=related_locations if intent_key is not None else None,
                 )
             )
     return findings

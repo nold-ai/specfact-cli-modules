@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -23,6 +24,17 @@ from specfact_code_review.run.commands import (
 
 app = typer.Typer(help="Code command extensions for structured review workflows.", no_args_is_help=True)
 review_app = typer.Typer(help="Governed code review workflows.", no_args_is_help=True)
+
+
+@dataclass(frozen=True)
+class _ReviewRunCliInputs:
+    files: list[Path] | None
+    include_tests: bool | None
+    exclude_tests: bool | None
+    focus: list[str] | None
+    include_noise: bool
+    suppress_noise: bool
+    interactive: bool
 
 
 def _friendly_run_command_error(exc: RunCommandError | ValueError | ViolationError) -> str:
@@ -49,38 +61,32 @@ def _resolve_include_tests(*, files: list[Path], include_tests: bool | None, int
     return typer.confirm("Include changed and untracked test files in this review?", default=False)
 
 
-def _resolve_review_run_flags(
-    *,
-    files: list[Path] | None,
-    include_tests: bool | None,
-    exclude_tests: bool | None,
-    focus: list[str] | None,
-    include_noise: bool,
-    suppress_noise: bool,
-    interactive: bool,
-) -> tuple[list[str], bool, bool]:
-    if include_tests is not None and exclude_tests is not None:
+def _validate_focus_flags(inputs: _ReviewRunCliInputs) -> list[str]:
+    if inputs.include_tests is not None and inputs.exclude_tests is not None:
         raise typer.BadParameter("Cannot use both --include-tests and --exclude-tests")
 
-    focus_list = list(focus) if focus else []
+    focus_list = list(inputs.focus) if inputs.focus else []
     if focus_list:
-        if include_tests is not None or exclude_tests is not None:
+        if inputs.include_tests is not None or inputs.exclude_tests is not None:
             raise typer.BadParameter("Cannot combine --focus with --include-tests or --exclude-tests")
-        unknown = [facet for facet in focus_list if facet not in {"source", "tests", "docs"}]
+        unknown = [facet for facet in focus_list if facet not in {"source", "tests", "docs", "simplify"}]
         if unknown:
-            raise typer.BadParameter(f"Invalid --focus value(s): {unknown!r}; use source, tests, or docs.")
-        resolved_include_tests = "tests" in focus_list
-    else:
-        resolved_include_tests = _resolve_include_tests(
-            files=files or [],
-            include_tests=include_tests,
-            interactive=interactive,
-        )
-        if exclude_tests is True:
-            resolved_include_tests = False
+            raise typer.BadParameter(f"Invalid --focus value(s): {unknown!r}; use source, tests, docs, or simplify.")
+    return focus_list
 
-    resolved_include_noise = include_noise and not suppress_noise
-    return focus_list, resolved_include_tests, resolved_include_noise
+
+def _resolve_review_run_flags(inputs: _ReviewRunCliInputs) -> tuple[list[str], bool, bool]:
+    focus_list = _validate_focus_flags(inputs)
+    if focus_list:
+        return focus_list, "tests" in focus_list, inputs.include_noise and not inputs.suppress_noise
+    resolved_include_tests = _resolve_include_tests(
+        files=inputs.files or [],
+        include_tests=inputs.include_tests,
+        interactive=inputs.interactive,
+    )
+    if inputs.exclude_tests is True:
+        resolved_include_tests = False
+    return focus_list, resolved_include_tests, inputs.include_noise and not inputs.suppress_noise
 
 
 @review_app.command("run")
@@ -93,7 +99,11 @@ def run(
     path: list[Path] = typer.Option(None, "--path"),
     include_tests: bool | None = typer.Option(None, "--include-tests"),
     exclude_tests: bool | None = typer.Option(None, "--exclude-tests"),
-    focus: list[str] | None = typer.Option(None, "--focus", help="Limit to source, tests, and/or docs (repeatable)."),
+    focus: list[str] | None = typer.Option(
+        None,
+        "--focus",
+        help="Limit to source, tests, docs, and/or simplify (repeatable).",
+    ),
     mode: Literal["shadow", "enforce"] = typer.Option("enforce", "--mode"),
     level: Literal["error", "warning"] | None = typer.Option(None, "--level"),
     bug_hunt: bool = typer.Option(False, "--bug-hunt"),
@@ -107,14 +117,17 @@ def run(
     interactive: bool = typer.Option(False, "--interactive"),
 ) -> None:
     """Run the full code review workflow."""
+    _ = ctx.resilient_parsing
     focus_list, resolved_include_tests, resolved_include_noise = _resolve_review_run_flags(
-        files=files,
-        include_tests=include_tests,
-        exclude_tests=exclude_tests,
-        focus=focus,
-        include_noise=include_noise,
-        suppress_noise=suppress_noise,
-        interactive=interactive,
+        _ReviewRunCliInputs(
+            files=files,
+            include_tests=include_tests,
+            exclude_tests=exclude_tests,
+            focus=focus,
+            include_noise=include_noise,
+            suppress_noise=suppress_noise,
+            interactive=interactive,
+        )
     )
 
     try:

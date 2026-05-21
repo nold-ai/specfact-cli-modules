@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.table import Table
 
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
-from specfact_code_review.run.runner import run_review
+from specfact_code_review.run.runner import ReviewFocus, run_review
 
 
 console = Console()
@@ -66,6 +66,7 @@ class ReviewRunRequest:
     review_mode: ReviewRunMode = "enforce"
     review_level: ReviewLevelFilter | None = None
     focus_facets: tuple[str, ...] = ()
+    review_focus: ReviewFocus | None = None
 
 
 @dataclass(frozen=True)
@@ -77,19 +78,17 @@ class _ReviewLoopFlags:
     bug_hunt: bool
     review_mode: ReviewRunMode
     review_level: ReviewLevelFilter | None
+    review_focus: ReviewFocus | None
 
 
 def _is_test_file(file_path: Path) -> bool:
     return "tests" in file_path.parts
 
 
-def _is_docs_tree_file(file_path: Path) -> bool:
-    return "docs" in file_path.parts
-
-
 def _filter_files_by_focus(files: list[Path], facets: tuple[str, ...]) -> list[Path]:
     """Restrict files to the union of facet selections (Python files only)."""
-    if not facets:
+    file_facets = tuple(facet for facet in facets if facet in {"source", "tests", "docs"})
+    if not file_facets:
         return files
 
     def _matches_focus(file_path: Path, facet: str) -> bool:
@@ -98,12 +97,12 @@ def _filter_files_by_focus(files: list[Path], facets: tuple[str, ...]) -> list[P
         if facet == "tests":
             return _is_test_file(file_path)
         if facet == "docs":
-            return _is_docs_tree_file(file_path)
+            return "docs" in file_path.parts
         if facet == "source":
-            return not _is_test_file(file_path) and not _is_docs_tree_file(file_path)
+            return not _is_test_file(file_path) and "docs" not in file_path.parts
         return False
 
-    return [file_path for file_path in files if any(_matches_focus(file_path, f) for f in facets)]
+    return [file_path for file_path in files if any(_matches_focus(file_path, f) for f in file_facets)]
 
 
 def _is_ignored_review_path(file_path: Path) -> bool:
@@ -337,24 +336,10 @@ def _is_interactive_terminal() -> bool:
 
 def _run_review_with_progress(
     files: list[Path],
-    *,
-    no_tests: bool,
-    include_noise: bool,
-    fix: bool,
-    bug_hunt: bool,
-    review_mode: ReviewRunMode,
-    review_level: ReviewLevelFilter | None,
+    flags: _ReviewLoopFlags,
 ) -> ReviewReport:
     if _is_interactive_terminal():
-        return _run_review_with_status(
-            files,
-            no_tests=no_tests,
-            include_noise=include_noise,
-            fix=fix,
-            bug_hunt=bug_hunt,
-            review_mode=review_mode,
-            review_level=review_level,
-        )
+        return _run_review_with_status(files, flags)
 
     def _emit_progress(description: str) -> None:
         progress_console.print(f"[dim]{description}[/dim]")
@@ -362,39 +347,35 @@ def _run_review_with_progress(
     return _run_review_once(
         files,
         _ReviewLoopFlags(
-            no_tests=no_tests,
-            include_noise=include_noise,
-            fix=fix,
+            no_tests=flags.no_tests,
+            include_noise=flags.include_noise,
+            fix=flags.fix,
             progress_callback=_emit_progress,
-            bug_hunt=bug_hunt,
-            review_mode=review_mode,
-            review_level=review_level,
+            bug_hunt=flags.bug_hunt,
+            review_mode=flags.review_mode,
+            review_level=flags.review_level,
+            review_focus=flags.review_focus,
         ),
     )
 
 
 def _run_review_with_status(
     files: list[Path],
-    *,
-    no_tests: bool,
-    include_noise: bool,
-    fix: bool,
-    bug_hunt: bool,
-    review_mode: ReviewRunMode,
-    review_level: ReviewLevelFilter | None,
+    flags: _ReviewLoopFlags,
 ) -> ReviewReport:
     with progress_console.status("Preparing code review...") as status:
         base = _ReviewLoopFlags(
-            no_tests=no_tests,
-            include_noise=include_noise,
+            no_tests=flags.no_tests,
+            include_noise=flags.include_noise,
             fix=False,
             progress_callback=status.update,
-            bug_hunt=bug_hunt,
-            review_mode=review_mode,
-            review_level=review_level,
+            bug_hunt=flags.bug_hunt,
+            review_mode=flags.review_mode,
+            review_level=flags.review_level,
+            review_focus=flags.review_focus,
         )
         report = _run_review_once(files, base)
-        if fix:
+        if flags.fix:
             status.update("Applying Ruff autofixes...")
             _apply_fixes(files)
             status.update("Re-running review after autofixes...")
@@ -411,6 +392,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
         bug_hunt=flags.bug_hunt,
         review_mode=flags.review_mode,
         review_level=flags.review_level,
+        focus=flags.review_focus,
     )
     if flags.fix:
         if flags.progress_callback is not None:
@@ -430,6 +412,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
             bug_hunt=flags.bug_hunt,
             review_mode=flags.review_mode,
             review_level=flags.review_level,
+            focus=flags.review_focus,
         )
     return report
 
@@ -479,10 +462,14 @@ def _as_focus_facets(value: object) -> tuple[str, ...]:
         return ()
     if isinstance(value, (list, tuple)) and all(isinstance(item, str) for item in value):
         for item in value:
-            if item not in ("source", "tests", "docs"):
+            if item not in ("source", "tests", "docs", "simplify"):
                 raise RunCommandError(f"Invalid focus facet: {item!r}")
         return tuple(value)
     raise RunCommandError("focus facets must be a list or tuple of strings")
+
+
+def _review_focus_from_facets(facets: tuple[str, ...]) -> ReviewFocus | None:
+    return "simplify" if "simplify" in facets else None
 
 
 def _build_review_run_request(
@@ -548,6 +535,7 @@ def _build_review_run_request(
         review_mode=_as_review_mode(request_kwargs.pop("review_mode", "enforce")),
         review_level=_as_review_level(request_kwargs.pop("review_level", None)),
         focus_facets=focus_facets,
+        review_focus=_review_focus_from_facets(focus_facets),
     )
 
     # Reject any unexpected keyword arguments
@@ -578,6 +566,28 @@ def _validate_review_request(request: ReviewRunRequest) -> None:
         raise MissingOutForJsonError("Use --out together with --json.")
 
 
+def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
+    if request.review_focus is not None or "simplify" not in request.focus_facets:
+        return request
+    return ReviewRunRequest(
+        files=request.files,
+        include_tests=request.include_tests,
+        scope=request.scope,
+        path_filters=request.path_filters,
+        include_noise=request.include_noise,
+        json_output=request.json_output,
+        out=request.out,
+        score_only=request.score_only,
+        no_tests=request.no_tests,
+        fix=request.fix,
+        bug_hunt=request.bug_hunt,
+        review_mode=request.review_mode,
+        review_level=request.review_level,
+        focus_facets=request.focus_facets,
+        review_focus=_review_focus_from_facets(request.focus_facets),
+    )
+
+
 @beartype
 @require(
     lambda request_or_files: request_or_files is None or isinstance(request_or_files, (list, ReviewRunRequest)),
@@ -597,9 +607,11 @@ def run_command(
             kwargs,
         )
     )
+    request = _normalize_review_request(request)
     _validate_review_request(request)
 
-    include_for_resolve = request.include_tests or bool(request.focus_facets)
+    file_focus_facets = tuple(facet for facet in request.focus_facets if facet in {"source", "tests", "docs"})
+    include_for_resolve = request.include_tests or bool(file_focus_facets)
     resolved_files = _resolve_files(
         request.files,
         include_tests=include_for_resolve,
@@ -616,12 +628,16 @@ def run_command(
 
     report = _run_review_with_progress(
         resolved_files,
-        no_tests=request.no_tests,
-        include_noise=request.include_noise,
-        fix=request.fix,
-        bug_hunt=request.bug_hunt,
-        review_mode=request.review_mode,
-        review_level=request.review_level,
+        _ReviewLoopFlags(
+            no_tests=request.no_tests,
+            include_noise=request.include_noise,
+            fix=request.fix,
+            progress_callback=None,
+            bug_hunt=request.bug_hunt,
+            review_mode=request.review_mode,
+            review_level=request.review_level,
+            review_focus=request.review_focus,
+        ),
     )
     return _render_review_result(report, request)
 

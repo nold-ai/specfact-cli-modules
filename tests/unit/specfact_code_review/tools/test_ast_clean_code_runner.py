@@ -53,6 +53,59 @@ def second(values: list[int]) -> list[int]:
     assert any(finding.category == "dry" and finding.rule == "dry.duplicate-function-shape" for finding in findings)
 
 
+def test_duplicate_intent_finding_includes_related_locations_and_intent_key(tmp_path: Path) -> None:
+    file_path = tmp_path / "customer_orders.py"
+    file_path.write_text(
+        """
+def normalize_customer_order(order: dict[str, object]) -> dict[str, object]:
+    cleaned: dict[str, object] = {}
+    for key, value in order.items():
+        if value is not None:
+            cleaned[key] = str(value).strip()
+    return cleaned
+
+
+def prepare_customer_order(payload: dict[str, object]) -> dict[str, object]:
+    normalized: dict[str, object] = {}
+    for name, item in payload.items():
+        if item is not None:
+            normalized[name] = str(item).strip()
+    return normalized
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    findings = run_ast_clean_code([file_path])
+    duplicate = next(finding for finding in findings if finding.rule == "dry.duplicate-function-shape")
+
+    assert duplicate.intent_key == "customer-order"
+    assert duplicate.rewrite_hint
+    assert duplicate.related_locations is not None
+    assert duplicate.related_locations[0].path == str(file_path)
+    assert duplicate.related_locations[0].start_line == 1
+
+
+def test_duplicate_intent_does_not_group_similar_names_without_matching_shape(tmp_path: Path) -> None:
+    file_path = tmp_path / "customer_orders.py"
+    file_path.write_text(
+        """
+def normalize_customer_order(order: dict[str, object]) -> dict[str, object]:
+    return {key: value for key, value in order.items() if value is not None}
+
+
+def prepare_customer_order(payload: dict[str, object]) -> list[str]:
+    return [str(item) for item in payload.values()]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    findings = run_ast_clean_code([file_path])
+
+    assert not any(finding.rule == "dry.duplicate-function-shape" for finding in findings)
+
+
 def test_run_ast_clean_code_reports_mixed_dependency_roles(tmp_path: Path) -> None:
     file_path = tmp_path / "target.py"
     file_path.write_text(

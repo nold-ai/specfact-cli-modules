@@ -11,6 +11,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "check-prompt-commands.py"
 DOCS_REVIEW_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "docs-review.yml"
 PRE_COMMIT_SCRIPT = REPO_ROOT / "scripts" / "pre-commit-quality-checks.sh"
+SIMPLIFY_PROMPT = REPO_ROOT / "packages" / "specfact-project" / "resources" / "prompts" / "specfact.08-simplify.md"
+PROJECT_REVIEW_PROMPT = REPO_ROOT / "packages" / "specfact-project" / "resources" / "prompts" / "specfact.03-review.md"
 
 
 def _load_script():
@@ -238,9 +240,35 @@ def test_docs_review_workflow_runs_prompt_command_validation() -> None:
 def test_pre_commit_runs_prompt_validation_before_safe_change_skip() -> None:
     script = PRE_COMMIT_SCRIPT.read_text(encoding="utf-8")
 
+    assert "check-prompt-commands.py" in script
     validation_index = script.index("run_prompt_command_validation_gate")
     safe_change_index = script.index("if check_safe_change; then")
     assert validation_index < safe_change_index
+
+
+def test_simplify_prompt_groups_by_simplification_metadata_before_edits() -> None:
+    prompt = SIMPLIFY_PROMPT.read_text(encoding="utf-8")
+
+    assert "intent_key" in prompt
+    assert "related locations" in prompt.lower()
+    assert "file or domain" in prompt.lower()
+    assert "accept, reject, skip, or explain" in prompt
+    assert "Apply only accepted edits" in prompt
+    assert "Guidance Character" in prompt
+    assert "specfact code review run --help" in prompt
+    assert "hatch run validate-prompt-commands" in prompt
+    assert "hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump" in prompt
+
+
+def test_project_review_prompt_has_self_healing_cli_and_verification_guidance() -> None:
+    prompt = PROJECT_REVIEW_PROMPT.read_text(encoding="utf-8")
+
+    assert "Guidance Character" in prompt
+    assert "self-heal command drift" in prompt
+    assert "specfact plan review --help" in prompt
+    assert "Do not write `.specfact/` artifacts directly" in prompt
+    assert "hatch run validate-prompt-commands" in prompt
+    assert "hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump" in prompt
 
 
 def test_pre_commit_prompt_validation_covers_cli_command_implementations() -> None:

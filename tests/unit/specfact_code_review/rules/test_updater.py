@@ -120,6 +120,8 @@ def test_load_bundled_skill_content_returns_valid_structure_when_available() -> 
     if content is None:
         pytest.skip("Bundled SKILL not found (e.g. package not installed)")
     assert "name: specfact-code-review" in content
+    assert "specfact code review run --help" in content
+    assert "--focus simplify" in content
     assert "## DO" in content
     assert "## DON'T" in content
     assert "## TOP VIOLATIONS" in content
@@ -133,6 +135,8 @@ def test_default_skill_content_stays_within_line_budget() -> None:
     assert len(skill.splitlines()) <= MAX_SKILL_LINES
     assert "name: specfact-code-review" in skill
     assert "allowed-tools: []" in skill
+    assert "Codex CLI" in skill
+    assert "--focus simplify" in skill
 
 
 def test_render_cursor_rule_uses_cursor_metadata_and_skill_body() -> None:

@@ -18,31 +18,46 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Purpose
 
-Simplify advisory `ai_bloat` findings from `.specfact/code-review.json` using the IDE's edit tools with explicit user confirmation for every change.
+Simplify advisory `ai_bloat` and metadata-backed simplification findings from `.specfact/code-review-simplify.json` using the IDE's edit tools with explicit user confirmation for every change.
 
 **Quick:** `/specfact.08-simplify`
+
+## Guidance Character
+
+Act as a conservative code-review simplification assistant. Use the Code Review bundle's deterministic findings as evidence, explain one cleanup at a time, and keep the user in control. Do not infer AI authorship, do not chase broad refactors, and do not edit without explicit confirmation.
+
+## CLI Grounding
+
+Before reading or editing source, verify the current command surface when needed:
+
+```bash
+specfact code review run --help
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+```
+
+If `--focus simplify` is unavailable in the installed CLI, self-heal by inspecting `specfact code review run --help`, then run the closest non-destructive JSON review command that preserves advisory findings, usually without `--level error`.
 
 ## Workflow
 
 ### Step 1: Confirm Review Evidence
 
-Read `.specfact/code-review.json`. If it is missing, ask the user to run:
+Read `.specfact/code-review-simplify.json`. If it is missing, ask the user to run:
 
 ```bash
-specfact code review run --json --out .specfact/code-review.json
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
-If the report contains no findings where `category == "ai_bloat"`, report that there are no ai-bloat candidates and stop without editing files.
+If the report contains no findings where `category == "ai_bloat"` and no findings with simplification metadata such as `intent_key`, `rewrite_hint`, or `canonical_pattern`, report that there are no simplification candidates and stop without editing files.
 
 ### Step 2: Group Candidates
 
-Group findings by file, then by rule. For each candidate, inspect the referenced source location and capture a small surrounding snippet before proposing a rewrite.
+Group findings by `intent_key` first when present, then by file or domain and rule. For each candidate, inspect the referenced source location, inspect any related locations from `related_locations`, and capture small surrounding snippets before proposing a rewrite.
 
 ### Step 3: Confirm Each Rewrite
 
 For each candidate:
 
-1. Show the file, line, rule, and current snippet.
+1. Show the file, line, rule, current snippet, and related locations when present.
 2. Explain the simplification in one sentence.
 3. Draft the replacement.
 4. Ask the user to choose: accept, reject, skip, or explain.
@@ -55,7 +70,23 @@ Never apply edits automatically. Never batch multiple files into one confirmatio
 After accepted edits are applied, suggest:
 
 ```bash
-specfact code review run --json --out .specfact/code-review.json
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
-Compare the new report with the prior findings and summarize which `ai_bloat` candidates were cleared, skipped, or still present.
+Compare the new report with the prior findings and summarize which `ai_bloat` or metadata-backed simplification candidates were cleared, skipped, or still present.
+
+## Verification
+
+Use the CLI as the verification source:
+
+```bash
+specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --bug-hunt --json --out .specfact/code-review-bughunt.json
+```
+
+For module development in this repository, the expected local gates are:
+
+```bash
+hatch run validate-prompt-commands
+hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump
+```

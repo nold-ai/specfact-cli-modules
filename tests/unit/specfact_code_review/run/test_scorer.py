@@ -32,6 +32,37 @@ def _ai_bloat_finding() -> ReviewFinding:
     )
 
 
+def _dry_simplification_finding() -> ReviewFinding:
+    return ReviewFinding(
+        category="dry",
+        severity="warning",
+        tool="ast",
+        rule="dry.duplicate-intent",
+        file="src/example.py",
+        line=10,
+        message="Duplicated intent can be simplified.",
+        fixable=False,
+        confidence="high",
+        rewrite_hint="Extract the repeated parsing branch.",
+        canonical_pattern="duplicate-request-parsing",
+        intent_key="request-parsing",
+    )
+
+
+def _partial_dry_simplification_finding() -> ReviewFinding:
+    return ReviewFinding(
+        category="dry",
+        severity="warning",
+        tool="ast",
+        rule="dry.duplicate-intent",
+        file="src/example.py",
+        line=10,
+        message="Partial simplification metadata should still count.",
+        fixable=False,
+        confidence="high",
+    )
+
+
 def test_score_review_clean_run() -> None:
     result = score_review(findings=[])
 
@@ -69,6 +100,24 @@ def test_score_review_ai_bloat_findings_are_score_neutral() -> None:
     assert result.score == 100
     assert result.overall_verdict == "PASS"
     assert result.ci_exit_code == 0
+
+
+def test_score_review_deducts_dry_simplification_findings_by_default() -> None:
+    result = score_review(findings=[_dry_simplification_finding()])
+
+    assert result.score == 98
+
+
+def test_score_review_can_make_simplification_findings_score_neutral() -> None:
+    result = score_review(findings=[_dry_simplification_finding()], simplification_score_neutral=True)
+
+    assert result.score == 100
+
+
+def test_score_review_only_neutralizes_deterministic_high_confidence_simplification_findings() -> None:
+    result = score_review(findings=[_partial_dry_simplification_finding()], simplification_score_neutral=True)
+
+    assert result.score == 98
 
 
 def test_score_review_verdict_thresholds() -> None:

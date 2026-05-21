@@ -6,7 +6,7 @@ from typing import Any, Literal, TypedDict, Unpack, cast
 import pytest
 from pydantic import ValidationError
 
-from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import EvidenceRef, ReviewFinding, ReviewReport
 
 
 class ReviewFindingPayload(TypedDict, total=False):
@@ -33,6 +33,12 @@ class ReviewFindingPayload(TypedDict, total=False):
     line: int
     message: str
     fixable: bool
+    confidence: Literal["low", "medium", "high"]
+    rewrite_hint: str
+    canonical_pattern: str
+    intent_key: str
+    estimated_deletion_lines: int
+    related_locations: list[EvidenceRef]
 
 
 def _finding_data(**overrides: Unpack[ReviewFindingPayload]) -> ReviewFindingPayload:
@@ -55,6 +61,62 @@ def test_review_finding_accepts_valid_values() -> None:
     assert finding.category == "security"
     assert finding.severity == "warning"
     assert finding.fixable is False
+
+
+def test_review_finding_accepts_simplification_metadata() -> None:
+    finding = ReviewFinding(
+        **_finding_data(
+            category="ai_bloat",
+            severity="info",
+            rule="ai-bloat.manual-accumulator-loop",
+            confidence="high",
+            rewrite_hint="Replace the append loop with a list comprehension.",
+            canonical_pattern="manual-accumulator-loop",
+            intent_key="customer-normalization",
+            estimated_deletion_lines=3,
+            related_locations=[EvidenceRef(path="src/customer.py", start_line=42, end_line=45)],
+        )
+    )
+
+    assert finding.confidence == "high"
+    assert finding.rewrite_hint == "Replace the append loop with a list comprehension."
+    assert finding.canonical_pattern == "manual-accumulator-loop"
+    assert finding.intent_key == "customer-normalization"
+    assert finding.estimated_deletion_lines == 3
+    assert finding.related_locations is not None
+    assert finding.related_locations[0].path == "src/customer.py"
+    assert finding.model_dump()["related_locations"][0]["start_line"] == 42
+
+
+def test_review_finding_marks_deterministic_simplification_metadata() -> None:
+    finding = ReviewFinding(
+        **_finding_data(
+            category="dry",
+            severity="warning",
+            rule="dry.duplicate-intent",
+            confidence="high",
+            rewrite_hint="Extract the duplicated request parsing.",
+            canonical_pattern="duplicate-request-parsing",
+            intent_key="request-parsing",
+        )
+    )
+
+    assert finding.has_simplification_metadata()
+    assert finding.simplification_metadata_is_deterministic()
+
+
+def test_review_finding_rejects_partial_simplification_metadata_as_nondeterministic() -> None:
+    finding = ReviewFinding(
+        **_finding_data(
+            category="dry",
+            severity="warning",
+            rule="dry.duplicate-intent",
+            confidence="high",
+        )
+    )
+
+    assert finding.has_simplification_metadata()
+    assert not finding.simplification_metadata_is_deterministic()
 
 
 @pytest.mark.parametrize("severity", ["error", "warning", "info"])
@@ -140,6 +202,31 @@ def test_review_report_maps_pass_verdict() -> None:
     assert report.overall_verdict == "PASS"
     assert report.ci_exit_code == 0
     assert report.reward_delta == 5
+
+
+def test_review_report_uses_schema_1_1_when_simplification_metadata_is_present() -> None:
+    report = ReviewReport(
+        run_id="run-simplify",
+        timestamp=datetime(2026, 3, 11, tzinfo=UTC),
+        score=85,
+        findings=[
+            ReviewFinding(
+                **_finding_data(
+                    category="ai_bloat",
+                    severity="info",
+                    confidence="high",
+                    rewrite_hint="Inline the one-use temporary.",
+                    canonical_pattern="one-use-temporary",
+                    estimated_deletion_lines=1,
+                )
+            )
+        ],
+        summary="Simplification advisories.",
+    )
+
+    assert report.schema_version == "1.1"
+    assert report.overall_verdict == "PASS"
+    assert report.ci_exit_code == 0
 
 
 def test_review_report_maps_pass_with_advisory_verdict() -> None:

@@ -49,8 +49,15 @@ def _bonus_points(modifiers: ReviewScoreModifiers) -> int:
     )
 
 
-def _deduction_for_finding(finding: ReviewFinding) -> int:
+def _deduction_for_finding(finding: ReviewFinding, *, simplification_score_neutral: bool) -> int:
     if finding.category == "ai_bloat":
+        return 0
+    if (
+        simplification_score_neutral
+        and finding.category in {"dry", "kiss"}
+        and finding.confidence == "high"
+        and finding.simplification_metadata_is_deterministic()
+    ):
         return 0
     if finding.severity == "error" and not finding.fixable:
         return 15
@@ -88,12 +95,16 @@ def score_review(
         coverage_90_plus=bool(kwargs.pop("coverage_90_plus", False)),
         no_new_suppressions=bool(kwargs.pop("no_new_suppressions", False)),
     )
+    simplification_score_neutral = bool(kwargs.pop("simplification_score_neutral", False))
     if kwargs:
         unexpected = ", ".join(sorted(kwargs))
         raise ValueError(f"Unexpected keyword arguments: {unexpected}")
 
     score = 100
-    score -= sum(_deduction_for_finding(finding) for finding in findings)
+    score -= sum(
+        _deduction_for_finding(finding, simplification_score_neutral=simplification_score_neutral)
+        for finding in findings
+    )
     score += _bonus_points(modifiers)
     score = max(0, min(120, score))
     overall_verdict, ci_exit_code = _determine_verdict(score=score, findings=findings)

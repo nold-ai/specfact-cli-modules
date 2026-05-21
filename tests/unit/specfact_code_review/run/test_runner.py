@@ -54,6 +54,28 @@ def _finding(
     )
 
 
+def _simplification_finding(
+    *,
+    category: Literal["ai_bloat", "dry", "kiss"] = "ai_bloat",
+    confidence: Literal["low", "medium", "high"] = "high",
+) -> ReviewFinding:
+    return ReviewFinding(
+        category=category,
+        severity="info",
+        tool="ast",
+        rule="ai-bloat.manual-accumulator-loop",
+        file="packages/specfact-code-review/src/specfact_code_review/run/scorer.py",
+        line=10,
+        message="Manual accumulator loop can be collapsed.",
+        fixable=False,
+        confidence=confidence,
+        rewrite_hint="Replace the append loop with a list comprehension.",
+        canonical_pattern="manual-accumulator-loop",
+        intent_key="score-review",
+        estimated_deletion_lines=3,
+    )
+
+
 def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
     calls: list[str] = []
 
@@ -155,6 +177,232 @@ def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -
         "contract_runner",
         "pytest",
     ]
+
+
+def test_run_review_simplify_focus_keeps_only_simplification_queue(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [_finding(tool="ruff", rule="E501")])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ai_bloat",
+        lambda files: [_simplification_finding(category="ai_bloat")],
+    )
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ast_clean_code",
+        lambda files: [
+            _simplification_finding(category="dry"),
+            _simplification_finding(category="kiss", confidence="medium"),
+            _finding(tool="ast", rule="solid.mixed-dependency-role", category="solid"),
+        ],
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")],
+        no_tests=True,
+        focus="simplify",
+    )
+
+    assert [(finding.category, finding.confidence) for finding in report.findings] == [
+        ("ai_bloat", "high"),
+        ("dry", "high"),
+    ]
+    assert report.schema_version == "1.1"
+    assert report.overall_verdict == "PASS"
+
+
+def test_run_review_simplify_focus_preserves_tool_errors(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ai_bloat",
+        lambda files: [
+            ReviewFinding(
+                category="tool_error",
+                severity="error",
+                tool="ast",
+                rule="tool_error",
+                file="packages/specfact-code-review/src/specfact_code_review/run/scorer.py",
+                line=1,
+                message="Unable to parse Python source.",
+                fixable=False,
+            ),
+        ],
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")],
+        no_tests=True,
+        focus="simplify",
+    )
+
+    assert [finding.category for finding in report.findings] == ["tool_error"]
+    assert report.overall_verdict == "FAIL"
+
+
+def test_run_review_simplify_focus_excludes_partial_metadata_clean_code_findings(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ast_clean_code",
+        lambda files: [
+            ReviewFinding(
+                category="dry",
+                severity="warning",
+                tool="ast",
+                rule="dry.duplicate-intent",
+                file="packages/specfact-code-review/src/specfact_code_review/run/scorer.py",
+                line=10,
+                message="Partial metadata must not enter simplify focus.",
+                fixable=False,
+                confidence="high",
+            ),
+        ],
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")],
+        no_tests=True,
+        focus="simplify",
+    )
+
+    assert report.findings == []
+
+
+def test_run_review_suppresses_cli_wrapper_noise_for_windows_style_paths(monkeypatch: MonkeyPatch) -> None:
+    finding = ReviewFinding(
+        category="style",
+        severity="warning",
+        tool="pylint",
+        rule="R0914",
+        file="packages\\specfact-code-review\\src\\specfact_code_review\\review\\commands.py",
+        line=95,
+        message="Too many local variables (24/20)",
+        fixable=False,
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [finding])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("packages/specfact-code-review/src/specfact_code_review/review/commands.py")], no_tests=True
+    )
+
+    assert report.findings == []
+
+
+def test_run_review_keeps_r0902_for_non_dataclass_in_mixed_file(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    source = tmp_path / "mixed.py"
+    source.write_text(
+        "from dataclasses import dataclass\n"
+        "\n"
+        "@dataclass\n"
+        "class Payload:\n"
+        "    value: str\n"
+        "\n"
+        "class Stateful:\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+    finding = ReviewFinding(
+        category="style",
+        severity="warning",
+        tool="pylint",
+        rule="R0902",
+        file=str(source),
+        line=7,
+        message="Too many instance attributes (9/7)",
+        fixable=False,
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [finding])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review([source], no_tests=True)
+
+    assert [finding.rule for finding in report.findings] == ["R0902"]
+
+
+def test_run_review_suppresses_r0902_for_dataclass_target(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    source = tmp_path / "payload.py"
+    source.write_text(
+        "from dataclasses import dataclass\n\n@dataclass\nclass Payload:\n    value: str\n",
+        encoding="utf-8",
+    )
+    finding = ReviewFinding(
+        category="style",
+        severity="warning",
+        tool="pylint",
+        rule="R0902",
+        file=str(source),
+        line=4,
+        message="Too many instance attributes (9/7)",
+        fixable=False,
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [finding])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review([source], no_tests=True)
+
+    assert report.findings == []
+
+
+def test_run_review_rejects_unknown_override_key() -> None:
+    try:
+        run_review([], unknown=True)
+    except TypeError as exc:
+        assert "unknown" in str(exc)
+    else:
+        raise AssertionError("run_review accepted an unknown override")
+
+
+def test_run_review_rejects_invalid_override_type() -> None:
+    try:
+        run_review([], no_tests="yes")
+    except TypeError as exc:
+        assert "no_tests" in str(exc)
+    else:
+        raise AssertionError("run_review accepted an invalid boolean override")
 
 
 def test_run_tdd_gate_reports_missing_test_file() -> None:
