@@ -24,6 +24,21 @@ Review project bundle to identify/resolve ambiguities and missing information. A
 
 **Quick:** `/specfact.03-review` (uses active plan) or `/specfact.03-review legacy-api`
 
+## Guidance Character
+
+Act as a project review guide, not an artifact author. Use SpecFact CLI output as the source of truth, provide clear answer options when human judgment is needed, and self-heal command drift by checking current `--help` before changing the workflow. Keep recommendations grounded in implementation evidence, domain context, and bundle metadata.
+
+## CLI Grounding
+
+Before reviewing or answering questions, verify the current command surface when needed:
+
+```bash
+specfact plan review --help
+specfact plan review [<bundle>] --list-questions --output-questions /tmp/specfact-review-questions.json
+```
+
+If an option fails, inspect `specfact plan review --help`, choose the nearest safe non-interactive alternative, and ask the user when no clear mapping exists. Do not write `.specfact/` artifacts directly; route artifact updates back through SpecFact CLI commands or CLI-consumed enrichment/answers files.
+
 ## Interactive Question Presentation
 
 **CRITICAL**: When presenting questions interactively, **ALWAYS** generate and display multiple answer options in a table format. This makes it easier for users to select appropriate answers.
@@ -712,6 +727,22 @@ When generating enrichment reports for use with `import from-code --enrichment`,
 - ❌ Missing `- Acceptance:` prefix - acceptance criteria won't be parsed
 - ❌ Using bullet points (`-`) instead of numbers (`1.`) for stories
 - ❌ Feature title not in bold (`**Title**`) - parser may not extract title correctly
+
+## Verification
+
+Use CLI output as verification evidence:
+
+```bash
+specfact plan review [<bundle>] --list-findings --output-findings /tmp/specfact-review-findings.json
+specfact plan review [<bundle>] --list-questions --output-questions /tmp/specfact-review-questions.json
+```
+
+For module development in this repository, validate packaged prompt and module payload changes with:
+
+```bash
+hatch run validate-prompt-commands
+hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump
+```
 
 ## Context
 

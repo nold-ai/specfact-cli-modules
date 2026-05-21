@@ -95,13 +95,58 @@ class ReviewFinding(BaseModel):
         default=None,
         description="Optional supplemental references with stable file paths, line ranges, or artifact identifiers.",
     )
+    confidence: Literal["low", "medium", "high"] | None = Field(
+        default=None,
+        description="Optional deterministic simplification confidence bucket.",
+    )
+    rewrite_hint: str | None = Field(default=None, description="Optional concise simplification guidance.")
+    canonical_pattern: str | None = Field(default=None, description="Optional normalized simplification pattern label.")
+    intent_key: str | None = Field(default=None, description="Optional stable duplicate-intent grouping key.")
+    estimated_deletion_lines: int | None = Field(
+        default=None,
+        ge=0,
+        description="Optional non-binding deletion estimate for simplification triage.",
+    )
+    related_locations: list[EvidenceRef] | None = Field(
+        default=None,
+        description="Optional related source locations for grouped simplification candidates.",
+    )
 
-    @field_validator("tool", "rule", "file", "message")
+    @field_validator("tool", "rule", "file", "message", "rewrite_hint", "canonical_pattern", "intent_key")
     @classmethod
-    def _validate_non_empty_text(cls, value: str) -> str:
-        if not value.strip():
+    def _validate_non_empty_text(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
             raise ValueError("value must not be empty")
         return value
+
+    @beartype
+    @ensure(lambda result: isinstance(result, bool))
+    def has_simplification_metadata(self) -> bool:
+        """Return whether this finding carries additive simplification metadata."""
+        return any(
+            value is not None
+            for value in (
+                self.confidence,
+                self.rewrite_hint,
+                self.canonical_pattern,
+                self.intent_key,
+                self.estimated_deletion_lines,
+                self.related_locations,
+            )
+        )
+
+    @beartype
+    @ensure(lambda result: isinstance(result, bool))
+    def simplification_metadata_is_deterministic(self) -> bool:
+        """Return whether simplification metadata is concrete enough for queued rewrites."""
+        return all(
+            value is not None
+            for value in (
+                self.rewrite_hint,
+                self.canonical_pattern,
+                self.intent_key,
+            )
+        )
 
     @beartype
     @ensure(lambda self, result: result == (self.severity == "error" and not self.fixable))
@@ -143,6 +188,8 @@ class ReviewReport(BaseModel):
 
     @model_validator(mode="after")
     def _derive_governance_fields(self) -> ReviewReport:
+        if any(finding.has_simplification_metadata() for finding in self.findings):
+            self.schema_version = "1.1"
         blocking_error_present = any(finding.is_blocking() for finding in self.findings)
         self.reward_delta = self.score - 80
         if blocking_error_present:

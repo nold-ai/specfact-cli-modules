@@ -10,7 +10,7 @@ import typer
 from typer.main import get_command as typer_get_command
 
 from specfact_code_review.review import commands as review_commands
-from specfact_code_review.review.commands import _resolve_review_run_flags
+from specfact_code_review.review.commands import _resolve_review_run_flags, _ReviewRunCliInputs
 from specfact_code_review.run.commands import (
     ConflictingScopeError,
     InvalidOptionCombinationError,
@@ -63,25 +63,29 @@ def _resolver_messages_for_docs_parity() -> list[str]:
     messages: list[str] = []
     with pytest.raises(typer.BadParameter) as exc:
         _resolve_review_run_flags(
-            files=[],
-            include_tests=True,
-            exclude_tests=True,
-            focus=None,
-            include_noise=False,
-            suppress_noise=False,
-            interactive=False,
+            _ReviewRunCliInputs(
+                files=[],
+                include_tests=True,
+                exclude_tests=True,
+                focus=None,
+                include_noise=False,
+                suppress_noise=False,
+                interactive=False,
+            )
         )
     messages.append(str(exc.value))
 
     with pytest.raises(typer.BadParameter) as exc:
         _resolve_review_run_flags(
-            files=[],
-            include_tests=True,
-            exclude_tests=None,
-            focus=["source"],
-            include_noise=False,
-            suppress_noise=False,
-            interactive=False,
+            _ReviewRunCliInputs(
+                files=[],
+                include_tests=True,
+                exclude_tests=None,
+                focus=["source"],
+                include_noise=False,
+                suppress_noise=False,
+                interactive=False,
+            )
         )
     messages.append(str(exc.value))
     return messages

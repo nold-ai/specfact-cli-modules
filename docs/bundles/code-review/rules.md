@@ -12,7 +12,11 @@ expertise_level: [intermediate, advanced]
 
 # Code review rules
 
-The rules commands manage the house-rules skill that backs the Code Review bundle’s policy guidance.
+The rules commands manage the bundled `specfact-code-review` skill. Install it
+when Codex CLI, Claude, Vibe, Cursor, or another SKILL.md-compatible AI IDE
+needs the Code Review workflow without copying slash prompt templates by hand.
+The skill includes CLI self-healing guidance, review run commands,
+simplification queue handling, and compact house rules.
 
 ## Commands
 
@@ -38,7 +42,9 @@ specfact code review rules update --ide cursor
 
 ## Bundle-owned resources
 
-The skill content is bundled with `nold-ai/specfact-code-review`. Initialize or refresh it from the installed module version instead of copying legacy core-owned files by hand.
+The skill content is bundled with `nold-ai/specfact-code-review`. Initialize or
+refresh it from the installed module version instead of copying prompt templates
+or legacy core-owned files by hand.
 
 ## Related
 
