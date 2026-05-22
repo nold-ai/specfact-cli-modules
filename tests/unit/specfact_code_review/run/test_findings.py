@@ -39,6 +39,16 @@ class ReviewFindingPayload(TypedDict, total=False):
     intent_key: str
     estimated_deletion_lines: int
     related_locations: list[EvidenceRef]
+    guidance_kind: Literal["safe_mechanical", "needs_tests", "design_judgment", "preserve"]
+    recommended_action: Literal["remove", "inline", "collapse", "deduplicate", "make_required", "keep", "inspect"]
+    clean_code_principle: Literal["kiss", "dry", "yagni", "contracts", "api_stability", "readability"]
+    rationale: str
+    safety_checks: list[str]
+    preserve_reason: str
+    action_status: Literal["recommended", "applied", "kept", "skipped", "failed"]
+    before_ref: EvidenceRef
+    after_ref: EvidenceRef
+    improvement: str
 
 
 def _finding_data(**overrides: Unpack[ReviewFindingPayload]) -> ReviewFindingPayload:
@@ -103,6 +113,45 @@ def test_review_finding_marks_deterministic_simplification_metadata() -> None:
 
     assert finding.has_simplification_metadata()
     assert finding.simplification_metadata_is_deterministic()
+
+
+def test_review_finding_accepts_guided_simplification_metadata() -> None:
+    finding = ReviewFinding(
+        **_finding_data(
+            category="ai_bloat",
+            severity="info",
+            rule="ai-bloat.redundant-intermediate",
+            confidence="high",
+            rewrite_hint="Inline the one-use temporary into the return statement.",
+            canonical_pattern="one-use-temporary",
+            estimated_deletion_lines=1,
+            guidance_kind="safe_mechanical",
+            recommended_action="inline",
+            clean_code_principle="kiss",
+            rationale="The local variable is assigned once and read only by the following return.",
+            safety_checks=["same expression is returned", "temporary has no later reads"],
+            action_status="recommended",
+        )
+    )
+
+    assert finding.has_guided_simplification_metadata()
+    assert finding.is_safe_mechanical_simplification()
+
+
+def test_review_finding_rejects_preserve_guidance_without_preserve_reason() -> None:
+    with pytest.raises(ValidationError):
+        ReviewFinding(
+            **_finding_data(
+                category="ai_bloat",
+                severity="info",
+                guidance_kind="preserve",
+                recommended_action="keep",
+                clean_code_principle="api_stability",
+                rationale="The optional argument is part of a public extension contract.",
+                safety_checks=["public compatibility boundary checked"],
+                action_status="recommended",
+            )
+        )
 
 
 def test_review_finding_rejects_partial_simplification_metadata_as_nondeterministic() -> None:
@@ -227,6 +276,39 @@ def test_review_report_uses_schema_1_1_when_simplification_metadata_is_present()
     assert report.schema_version == "1.1"
     assert report.overall_verdict == "PASS"
     assert report.ci_exit_code == 0
+
+
+def test_review_report_uses_schema_1_2_and_summary_when_guided_metadata_is_present() -> None:
+    report = ReviewReport(
+        run_id="run-guided-simplify",
+        timestamp=datetime(2026, 3, 11, tzinfo=UTC),
+        score=85,
+        findings=[
+            ReviewFinding(
+                **_finding_data(
+                    category="ai_bloat",
+                    severity="info",
+                    confidence="high",
+                    rewrite_hint="Inline the one-use temporary into the return statement.",
+                    canonical_pattern="one-use-temporary",
+                    estimated_deletion_lines=1,
+                    guidance_kind="safe_mechanical",
+                    recommended_action="inline",
+                    clean_code_principle="kiss",
+                    rationale="The local variable is assigned once and read only by the following return.",
+                    safety_checks=["same expression is returned", "temporary has no later reads"],
+                    action_status="recommended",
+                )
+            )
+        ],
+        summary="Guided simplification advisories.",
+    )
+
+    assert report.schema_version == "1.2"
+    assert report.simplification_summary is not None
+    assert report.simplification_summary.by_guidance_kind == {"safe_mechanical": 1}
+    assert report.simplification_summary.by_action_status == {"recommended": 1}
+    assert report.simplification_summary.blocking_simplification_count == 1
 
 
 def test_review_report_maps_pass_with_advisory_verdict() -> None:

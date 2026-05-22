@@ -102,9 +102,7 @@ def _relative_to(candidate: Path, source_root: Path) -> Path | None:
 
 def _expected_test_path(source_file: Path) -> Path | None:
     relative_path = _source_relative_path(source_file)
-    if relative_path is None:
-        return None
-    return Path("tests/unit") / relative_path.parent / f"test_{relative_path.name}"
+    return None if relative_path is None else Path("tests/unit") / relative_path.parent / f"test_{relative_path.name}"
 
 
 def _coverage_for_source(source_file: Path, payload: dict[str, object]) -> float | None:
@@ -653,4 +651,10 @@ def run_review(
     )
     if review_options.review_mode == "shadow":
         return report.model_copy(update={"ci_exit_code": 0})
+    if (
+        review_options.focus == "simplify"
+        and report.simplification_summary is not None
+        and report.simplification_summary.blocking_simplification_count > 0
+    ):
+        return report.model_copy(update={"overall_verdict": "FAIL", "ci_exit_code": 1})
     return report

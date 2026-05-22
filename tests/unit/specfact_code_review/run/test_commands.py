@@ -28,6 +28,37 @@ def _report(*, score: int = 85) -> ReviewReport:
     )
 
 
+def _safe_mechanical_report(file_path: Path, *, line: int, rule: str) -> ReviewReport:
+    return ReviewReport(
+        run_id="review-run-001",
+        timestamp=datetime(2026, 3, 16, tzinfo=UTC),
+        score=85,
+        findings=[
+            ReviewFinding(
+                category="ai_bloat",
+                severity="info",
+                tool="ast",
+                rule=rule,
+                file=str(file_path),
+                line=line,
+                message="Safe mechanical simplification.",
+                fixable=True,
+                confidence="high",
+                rewrite_hint="Apply the local rewrite.",
+                canonical_pattern="safe-mechanical",
+                estimated_deletion_lines=1,
+                guidance_kind="safe_mechanical",
+                recommended_action="inline" if rule == "ai-bloat.redundant-intermediate" else "collapse",
+                clean_code_principle="kiss",
+                rationale="The rewrite is local and behavior-preserving.",
+                safety_checks=["pattern shape is exact"],
+                action_status="recommended",
+            )
+        ],
+        summary="Review command test report.",
+    )
+
+
 def _write_repo_file(repo_root: Path, relative_path: str, *, content: str = "VALUE = 1\n") -> Path:
     file_path = repo_root / relative_path
     file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -270,6 +301,93 @@ def test_run_command_normalizes_simplify_focus_on_direct_request(monkeypatch: An
     assert exit_code == 0
     assert output == "review-report.json"
     assert recorded == {"files": [package_file], "focus": "simplify"}
+
+
+def test_apply_simplification_fixes_inlines_redundant_intermediate(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def total(values: list[int]) -> int:\n    result = sum(values)\n    return result\n",
+        encoding="utf-8",
+    )
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
+    )
+
+    assert applied == 1
+    assert target.read_text(encoding="utf-8") == "def total(values: list[int]) -> int:\n    return sum(values)\n"
+
+
+def test_apply_simplification_fixes_skips_non_safe_guidance(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = "def total(values: list[int]) -> int:\n    result = []\n    return result\n"
+    target.write_text(source, encoding="utf-8")
+    report = _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
+    report.findings[0].guidance_kind = "needs_tests"
+
+    applied = run_commands._apply_simplification_fixes(report)
+
+    assert applied == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
+def test_apply_simplification_fixes_collapses_verbose_bool_return(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def allowed(role: str) -> bool:\n    if role == 'admin':\n        return True\n    return False\n",
+        encoding="utf-8",
+    )
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.verbose-bool-return")
+    )
+
+    assert applied == 1
+    assert target.read_text(encoding="utf-8") == "def allowed(role: str) -> bool:\n    return role == 'admin'\n"
+
+
+def test_apply_simplification_fixes_skips_when_source_no_longer_matches(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = "def total(values: list[int]) -> int:\n    result = sum(values)\n    return result + 1\n"
+    target.write_text(source, encoding="utf-8")
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
+    )
+
+    assert applied == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
+def test_run_review_once_applies_simplification_fixes_before_rerun(monkeypatch: Any, tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def total(values: list[int]) -> int:\n    result = sum(values)\n    return result\n",
+        encoding="utf-8",
+    )
+    reports = [
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate"),
+        _report(),
+    ]
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", lambda files, **kwargs: reports.pop(0))
+    monkeypatch.setattr("specfact_code_review.run.commands._apply_fixes", lambda files: None)
+
+    report = run_commands._run_review_once(
+        [target],
+        run_commands._ReviewLoopFlags(
+            no_tests=True,
+            include_noise=False,
+            fix=True,
+            progress_callback=None,
+            bug_hunt=False,
+            review_mode="enforce",
+            review_level=None,
+            review_focus="simplify",
+        ),
+    )
+
+    assert report.findings == []
+    assert target.read_text(encoding="utf-8") == "def total(values: list[int]) -> int:\n    return sum(values)\n"
 
 
 def test_run_command_rejects_unknown_keyword_override() -> None:

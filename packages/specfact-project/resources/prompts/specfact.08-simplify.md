@@ -18,13 +18,22 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Purpose
 
-Simplify advisory `ai_bloat` and metadata-backed simplification findings from `.specfact/code-review-simplify.json` using the IDE's edit tools with explicit user confirmation for every change.
+Simplify `ai_bloat` and metadata-backed simplification findings from `.specfact/code-review-simplify.json` using the IDE's edit tools, user-level guidance, and evidence for every recommendation, applied change, and kept false positive.
 
 **Quick:** `/specfact.08-simplify`
 
 ## Guidance Character
 
-Act as a conservative code-review simplification assistant. Use the Code Review bundle's deterministic findings as evidence, explain one cleanup at a time, and keep the user in control. Do not infer AI authorship, do not chase broad refactors, and do not edit without explicit confirmation.
+Act as a conservative code-review simplification assistant. Use the Code Review bundle's deterministic findings as evidence, explain one cleanup at a time, and keep the user in control. Do not infer AI authorship and do not chase broad refactors.
+
+Before walking findings, ask for the walkthrough level unless the user already specified it:
+
+- `vibe coder`: explain why the finding matters, what to check, and what will change in plain language.
+- `junior developer`: explain the clean-code principle, the safety checks, and the exact edit.
+- `senior/pro`: keep guidance concise and focus on contract risk, blast radius, and verification.
+- `headless agent`: do not ask interactive questions; choose the safest flow from metadata and write a concise action log.
+
+Auto-adjust if the conversation makes the level obvious.
 
 ## CLI Grounding
 
@@ -47,23 +56,40 @@ Read `.specfact/code-review-simplify.json`. If it is missing, ask the user to ru
 specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
-If the report contains no findings where `category == "ai_bloat"` and no findings with simplification metadata such as `intent_key`, `rewrite_hint`, or `canonical_pattern`, report that there are no simplification candidates and stop without editing files.
+Explain that this report is the evidence file: it lists candidate cleanups, the safety checks, and the preserve reasons the assistant must use before touching code. Do not edit files until the report exists.
+
+If the report contains no findings where `category == "ai_bloat"` and no findings with simplification metadata such as `intent_key`, `rewrite_hint`, `canonical_pattern`, or `guidance_kind`, report that there are no simplification candidates and stop without editing files.
 
 ### Step 2: Group Candidates
 
 Group findings by `intent_key` first when present, then by file or domain and rule. For each candidate, inspect the referenced source location, inspect any related locations from `related_locations`, and capture small surrounding snippets before proposing a rewrite.
 
+Use `guidance_kind` as the action contract:
+
+- `safe_mechanical`: local, high-confidence cleanup; can be applied after checking the listed `safety_checks`.
+- `needs_tests`: only apply after targeted tests exist or are added for the behavior.
+- `design_judgment`: explain tradeoffs and ask before editing.
+- `preserve`: keep by default; record the `preserve_reason` as a false-positive or intentional-pattern note.
+
 ### Step 3: Confirm Each Rewrite
 
 For each candidate:
 
-1. Show the file, line, rule, current snippet, and related locations when present.
-2. Explain the simplification in one sentence.
-3. Draft the replacement.
-4. Ask the user to choose: accept, reject, skip, or explain.
-5. Apply only accepted edits with the IDE edit tool.
+1. Show file, line, rule, `guidance_kind`, `recommended_action`, clean-code principle, current snippet, and related locations.
+2. Explain the rationale and the required `safety_checks` at the selected walkthrough level.
+3. Draft the replacement or preserve decision.
+4. Ask the user to choose: accept, reject, skip, or explain; use `keep` as the reject reason for `preserve` findings. In `headless agent` mode, apply only `safe_mechanical` items whose safety checks are locally provable.
+5. Record `action_status` as one of: recommended, applied, kept, skipped, failed.
 
-Never apply edits automatically. Never batch multiple files into one confirmation.
+Never batch multiple files into one confirmation in interactive mode.
+Apply only accepted edits.
+
+In `headless agent` mode, process candidates one file at a time and write this action log:
+
+| file | line | rule | guidance_kind | recommended_action | action_status | evidence |
+| --- | ---: | --- | --- | --- | --- | --- |
+
+Use the evidence column for removed findings, required tests, skipped safety checks, or preserved contracts.
 
 ### Step 4: Re-run Review
 
@@ -73,7 +99,7 @@ After accepted edits are applied, suggest:
 specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
-Compare the new report with the prior findings and summarize which `ai_bloat` or metadata-backed simplification candidates were cleared, skipped, or still present.
+Compare the new report with the prior findings and summarize which `ai_bloat` or metadata-backed simplification candidates were recommended, applied, kept, skipped, failed, cleared, or still present. Include evidence of improvement such as removed findings, estimated deletion lines, simpler control flow, or preserved contracts.
 
 ## Verification
 
