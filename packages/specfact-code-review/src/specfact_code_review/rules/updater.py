@@ -34,6 +34,14 @@ DEFAULT_DO_RULES = (
     "before changing workflow",
     "- For simplification queues, run `specfact code review run --scope changed --focus simplify --json "
     "--out .specfact/code-review-simplify.json`",
+    "- Ask for walkthrough level when interactive: vibe coder, junior developer, senior/pro, or headless agent; "
+    "auto-adjust if obvious",
+    "- Interpret `guidance_kind`: `safe_mechanical` may apply after local safety checks, `needs_tests` requires "
+    "tests first, `design_judgment` needs human choice, `preserve` means keep and log `preserve_reason`",
+    "- Log each simplification action as recommended, applied, kept, skipped, failed, with evidence of improvement "
+    "or preserved contract",
+    "- In headless mode, process one file at a time and emit an action table: file, line, rule, guidance_kind, "
+    "recommended_action, action_status, evidence",
     "- For merge-quality review, run `specfact code review run --scope changed --bug-hunt --json "
     "--out .specfact/code-review.json`",
     "- Verify an active OpenSpec change covers the requested scope and follow the sequence: spec delta "
@@ -159,17 +167,12 @@ def default_skill_content(*, updated_on: date | None = None) -> str:
         f"description: {DEFAULT_DESCRIPTION}",
         "allowed-tools: []",
         "---",
-        "",
         f"{TITLE_PREFIX} (v1)",
-        "",
         f"Updated: {stamp} | Module: {MODULE_LABEL}",
-        "",
         "## DO",
         *DEFAULT_DO_RULES,
-        "",
         "## DON'T",
         *DEFAULT_DONT_RULES,
-        "",
         TOP_VIOLATIONS_HEADER,
         TOP_VIOLATIONS_MARKER,
     ]

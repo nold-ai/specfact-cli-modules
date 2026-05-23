@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
@@ -36,6 +37,54 @@ _SEMGREP_STDERR_SNIP_MAX = 4000
 _MAX_CONFIG_PARENT_WALK = 32
 SemgrepCategory = Literal["clean_code", "architecture", "naming", "ai_bloat"]
 BugSemgrepCategory = Literal["security", "clean_code"]
+
+
+@dataclass(frozen=True)
+class _AiBloatGuidance:
+    guidance_kind: Literal["safe_mechanical", "needs_tests", "design_judgment", "preserve"]
+    recommended_action: Literal["remove", "inline", "collapse", "deduplicate", "make_required", "keep", "inspect"]
+    clean_code_principle: Literal["kiss", "dry", "yagni", "contracts", "api_stability", "readability"]
+    rationale: str
+    safety_checks: list[str]
+
+
+AI_BLOAT_GUIDANCE: dict[str, _AiBloatGuidance] = {
+    "ai-bloat.manual-loop-comprehension": _AiBloatGuidance(
+        guidance_kind="needs_tests",
+        recommended_action="collapse",
+        clean_code_principle="kiss",
+        rationale="The loop appears structural, but iterator behavior and ordering need test coverage.",
+        safety_checks=["targeted tests cover ordering and empty input", "no side effects are hidden in the loop"],
+    ),
+    "ai-bloat.passthrough-lambda": _AiBloatGuidance(
+        guidance_kind="design_judgment",
+        recommended_action="inspect",
+        clean_code_principle="readability",
+        rationale="A pass-through lambda can be noise, but it may also document callback shape at a boundary.",
+        safety_checks=["confirm the callable signature is unchanged", "keep if the lambda documents API intent"],
+    ),
+    "ai-bloat.identity-try-except": _AiBloatGuidance(
+        guidance_kind="safe_mechanical",
+        recommended_action="remove",
+        clean_code_principle="kiss",
+        rationale="The handler immediately re-raises without adding context or cleanup.",
+        safety_checks=["handler contains only a bare raise", "try block has no else or finally body"],
+    ),
+    "ai-bloat.none-then-none": _AiBloatGuidance(
+        guidance_kind="needs_tests",
+        recommended_action="collapse",
+        clean_code_principle="kiss",
+        rationale="The None branch may be redundant, but None semantics often encode a contract boundary.",
+        safety_checks=["tests cover None input", "callers do not depend on early-return timing"],
+    ),
+    "ai-bloat.single-call-wrapper": _AiBloatGuidance(
+        guidance_kind="design_judgment",
+        recommended_action="inspect",
+        clean_code_principle="dry",
+        rationale="A single-call wrapper may be bloat or a deliberate compatibility boundary.",
+        safety_checks=["confirm whether the wrapper is public API", "keep wrappers that encode compatibility"],
+    ),
+}
 
 BUG_RULE_CATEGORY: dict[str, BugSemgrepCategory] = {
     "specfact-bugs-eval-exec": "security",
@@ -202,6 +251,7 @@ def find_semgrep_ai_bloat_config(
 def _run_semgrep_command(
     files: list[Path], *, bundle_root: Path | None, config_file: Path | list[Path]
 ) -> subprocess.CompletedProcess[str]:
+    del bundle_root
     config_files = config_file if isinstance(config_file, list) else [config_file]
     config_args = [arg for path in config_files for arg in ("--config", str(path))]
     with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
@@ -319,16 +369,42 @@ def _finding_from_result(item: dict[str, object], *, allowed_paths: set[str]) ->
     category = _category_for_rule(rule)
     if category is None:
         return None
+    if category == "ai_bloat":
+        return _ai_bloat_finding_from_result(rule=rule, filename=filename, line=line, message=message)
 
     return ReviewFinding(
         category=category,
-        severity="info" if category == "ai_bloat" else "warning",
+        severity="warning",
         tool="semgrep",
         rule=rule,
         file=filename,
         line=line,
         message=message,
         fixable=False,
+    )
+
+
+def _ai_bloat_finding_from_result(*, rule: str, filename: str, line: int, message: str) -> ReviewFinding:
+    guidance = AI_BLOAT_GUIDANCE[rule]
+    return ReviewFinding(
+        category="ai_bloat",
+        severity="info",
+        tool="semgrep",
+        rule=rule,
+        file=filename,
+        line=line,
+        message=message,
+        fixable=False,
+        confidence="high",
+        canonical_pattern=rule.removeprefix("ai-bloat."),
+        rewrite_hint=message,
+        estimated_deletion_lines=1,
+        guidance_kind=guidance.guidance_kind,
+        recommended_action=guidance.recommended_action,
+        clean_code_principle=guidance.clean_code_principle,
+        rationale=guidance.rationale,
+        safety_checks=guidance.safety_checks,
+        action_status="recommended",
     )
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import subprocess
 import sys
 from collections import defaultdict
@@ -279,6 +280,231 @@ def _apply_fixes(files: list[Path]) -> None:
         raise RuntimeError(f"Auto-fix command failed: {' '.join(command)}: {error_output}")
 
 
+def _apply_simplification_fixes(report: ReviewReport) -> int:
+    """Apply deterministic safe-mechanical simplification rewrites from a report."""
+    fixers: dict[str, Callable[[ReviewFinding], bool]] = {
+        "ai-bloat.dead-branch": _apply_dead_branch_fix,
+        "ai-bloat.pass-through-try-except": _apply_pass_through_try_except_fix,
+        "ai-bloat.redundant-intermediate": _apply_redundant_intermediate_fix,
+        "ai-bloat.verbose-bool-return": _apply_verbose_bool_return_fix,
+    }
+    applied = 0
+    for finding in _fixable_simplifications_by_stable_line_order(report.findings):
+        fixer = fixers.get(finding.rule)
+        if fixer is None:
+            continue
+        applied += int(fixer(finding))
+    return applied
+
+
+def _fixable_simplifications_by_stable_line_order(findings: list[ReviewFinding]) -> list[ReviewFinding]:
+    indexed_findings = [
+        (index, finding)
+        for index, finding in enumerate(findings)
+        if finding.is_safe_mechanical_simplification() and finding.fixable
+    ]
+    return [finding for _, finding in sorted(indexed_findings, key=lambda item: (item[1].file, -item[1].line, item[0]))]
+
+
+def _apply_dead_branch_fix(finding: ReviewFinding) -> bool:
+    parsed = _parsed_finding_source(finding)
+    if parsed is None:
+        return False
+    file_path, source, tree = parsed
+    for function_node in _iter_functions(tree):
+        prior_terminal_tests: set[str] = set()
+        for stmt in function_node.body:
+            if not isinstance(stmt, ast.If):
+                continue
+            test_key = ast.dump(stmt.test, include_attributes=False)
+            if (
+                stmt.lineno == finding.line
+                and test_key in prior_terminal_tests
+                and _terminal_return(stmt.body)
+                and not stmt.orelse
+            ):
+                return _replace_line_range(
+                    file_path,
+                    source,
+                    start_line=stmt.lineno,
+                    end_line=stmt.end_lineno or stmt.lineno,
+                    replacement=[],
+                )
+            if _terminal_return(stmt.body):
+                prior_terminal_tests.add(test_key)
+    return False
+
+
+def _apply_pass_through_try_except_fix(finding: ReviewFinding) -> bool:
+    parsed = _parsed_finding_source(finding)
+    if parsed is None:
+        return False
+    file_path, source, tree = parsed
+    for function_node in _iter_functions(tree):
+        for stmt in function_node.body:
+            if stmt.lineno != finding.line or not isinstance(stmt, ast.Try) or not _is_pass_through_try_except(stmt):
+                continue
+            replacement = _dedented_try_body_lines(source, stmt)
+            if replacement is None:
+                return False
+            return _replace_line_range(
+                file_path,
+                source,
+                start_line=stmt.lineno,
+                end_line=stmt.end_lineno or stmt.lineno,
+                replacement=replacement,
+            )
+    return False
+
+
+def _apply_redundant_intermediate_fix(finding: ReviewFinding) -> bool:
+    parsed = _parsed_finding_source(finding)
+    if parsed is None:
+        return False
+    file_path, source, tree = parsed
+    for function_node in _iter_functions(tree):
+        for index, stmt in enumerate(function_node.body[:-1]):
+            next_stmt = function_node.body[index + 1]
+            if not _matches_redundant_intermediate(stmt, next_stmt, finding.line):
+                continue
+            expression = ast.get_source_segment(source, stmt.value)
+            if expression is None:
+                return False
+            return _replace_line_range(
+                file_path,
+                source,
+                start_line=stmt.lineno,
+                end_line=next_stmt.end_lineno or next_stmt.lineno,
+                replacement=f"{_indent_for_line(source, stmt.lineno)}return {expression}",
+            )
+    return False
+
+
+def _apply_verbose_bool_return_fix(finding: ReviewFinding) -> bool:
+    parsed = _parsed_finding_source(finding)
+    if parsed is None:
+        return False
+    file_path, source, tree = parsed
+    for function_node in _iter_functions(tree):
+        for index, stmt in enumerate(function_node.body[:-1]):
+            next_stmt = function_node.body[index + 1]
+            expression = _verbose_bool_replacement_expression(source, stmt, next_stmt, finding.line)
+            if expression is None:
+                continue
+            return _replace_line_range(
+                file_path,
+                source,
+                start_line=stmt.lineno,
+                end_line=next_stmt.end_lineno or next_stmt.lineno,
+                replacement=f"{_indent_for_line(source, stmt.lineno)}return {expression}",
+            )
+    return False
+
+
+def _parsed_finding_source(finding: ReviewFinding) -> tuple[Path, str, ast.Module] | None:
+    file_path = Path(finding.file)
+    try:
+        source = file_path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(file_path))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return None
+    return file_path, source, tree
+
+
+def _matches_redundant_intermediate(stmt: ast.stmt, next_stmt: ast.stmt, line: int) -> bool:
+    if stmt.lineno != line or not isinstance(stmt, ast.Assign):
+        return False
+    if len(stmt.targets) != 1 or not isinstance(stmt.targets[0], ast.Name):
+        return False
+    return (
+        isinstance(next_stmt, ast.Return)
+        and isinstance(next_stmt.value, ast.Name)
+        and next_stmt.value.id == stmt.targets[0].id
+    )
+
+
+def _verbose_bool_replacement_expression(
+    source: str,
+    stmt: ast.stmt,
+    next_stmt: ast.stmt,
+    line: int,
+) -> str | None:
+    if stmt.lineno != line or not isinstance(stmt, ast.If):
+        return None
+    predicate = ast.get_source_segment(source, stmt.test)
+    if predicate is None or len(stmt.body) != 1 or stmt.orelse:
+        return None
+    first_value = _return_bool_constant(stmt.body[0])
+    second_value = _return_bool_constant(next_stmt)
+    return (
+        None
+        if first_value is None or second_value is None or first_value == second_value
+        else _bool_expr(predicate, first_value)
+    )
+
+
+def _is_pass_through_try_except(stmt: ast.stmt) -> bool:
+    if not isinstance(stmt, ast.Try) or stmt.orelse or stmt.finalbody or len(stmt.handlers) != 1:
+        return False
+    handler = stmt.handlers[0]
+    return len(handler.body) == 1 and isinstance(handler.body[0], ast.Raise) and handler.body[0].exc is None
+
+
+def _terminal_return(body: list[ast.stmt]) -> bool:
+    return bool(body) and isinstance(body[-1], ast.Return)
+
+
+def _dedented_try_body_lines(source: str, stmt: ast.Try) -> list[str] | None:
+    if not stmt.body:
+        return None
+    lines = source.splitlines()
+    start_line = stmt.body[0].lineno
+    end_line = stmt.handlers[0].lineno - 1
+    try_indent = _indent_for_line(source, stmt.lineno)
+    body_indent = _indent_for_line(source, start_line)
+    if len(body_indent) <= len(try_indent):
+        return None
+    body_lines = lines[start_line - 1 : end_line]
+    return [try_indent + line[len(body_indent) :] if line.startswith(body_indent) else line for line in body_lines]
+
+
+def _bool_expr(predicate: str, first_value: bool) -> str:
+    return predicate if first_value else f"not ({predicate})"
+
+
+def _iter_functions(tree: ast.AST) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+    return [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)]
+
+
+def _return_bool_constant(stmt: ast.stmt) -> bool | None:
+    if isinstance(stmt, ast.Return) and isinstance(stmt.value, ast.Constant) and isinstance(stmt.value.value, bool):
+        return stmt.value.value
+    return None
+
+
+def _indent_for_line(source: str, line_number: int) -> str:
+    line = source.splitlines()[line_number - 1]
+    return line[: len(line) - len(line.lstrip())]
+
+
+def _replace_line_range(
+    file_path: Path,
+    source: str,
+    *,
+    start_line: int,
+    end_line: int,
+    replacement: str | list[str],
+) -> bool:
+    lines = source.splitlines()
+    if start_line < 1 or end_line < start_line or end_line > len(lines):
+        return False
+    replacement_lines = [replacement] if isinstance(replacement, str) else replacement
+    lines[start_line - 1 : end_line] = replacement_lines
+    trailing_newline = "\n" if source.endswith("\n") else ""
+    file_path.write_text("\n".join(lines) + trailing_newline, encoding="utf-8")
+    return True
+
+
 def _render_report(report: ReviewReport) -> None:
     grouped: dict[str, list[ReviewFinding]] = defaultdict(list)
     for finding in report.findings:
@@ -376,6 +602,9 @@ def _run_review_with_status(
         )
         report = _run_review_once(files, base)
         if flags.fix:
+            if flags.review_focus == "simplify":
+                status.update("Applying safe mechanical simplification fixes...")
+                _apply_simplification_fixes(report)
             status.update("Applying Ruff autofixes...")
             _apply_fixes(files)
             status.update("Re-running review after autofixes...")
@@ -395,6 +624,12 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
         focus=flags.review_focus,
     )
     if flags.fix:
+        if flags.review_focus == "simplify":
+            if flags.progress_callback is not None:
+                flags.progress_callback("Applying safe mechanical simplification fixes...")
+            else:
+                progress_console.print("[dim]Applying safe mechanical simplification fixes...[/dim]")
+            _apply_simplification_fixes(report)
         if flags.progress_callback is not None:
             flags.progress_callback("Applying Ruff autofixes...")
         else:

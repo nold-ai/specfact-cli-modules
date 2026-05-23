@@ -6,10 +6,15 @@ allowed-tools: []
 
 # House Rules - AI Coding Context (v4)
 
-Updated: 2026-03-30 | Module: nold-ai/specfact-code-review
+Updated: 2026-05-22 | Module: nold-ai/specfact-code-review
 
 ## DO
 
+- For simplification queues, run `specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json`
+- Ask for walkthrough level when interactive: vibe coder, junior developer, senior/pro, or headless agent; auto-adjust if obvious
+- Interpret `guidance_kind`: `safe_mechanical` may apply after local safety checks, `needs_tests` requires tests first, `design_judgment` needs human choice, `preserve` means keep and log `preserve_reason`
+- Log each simplification action as recommended, applied, kept, skipped, failed, with evidence of improvement or preserved contract
+- In headless mode, process one file at a time and emit an action table: file, line, rule, guidance_kind, recommended_action, action_status, evidence
 - Ask whether tests should be included before repo-wide review; default to excluding tests unless test changes are the target
 - Use intention-revealing names; avoid placeholder public names like data/process/handle
 - Keep functions under 120 LOC, shallow nesting, and <= 5 parameters (KISS)

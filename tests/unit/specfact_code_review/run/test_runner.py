@@ -58,7 +58,20 @@ def _simplification_finding(
     *,
     category: Literal["ai_bloat", "dry", "kiss"] = "ai_bloat",
     confidence: Literal["low", "medium", "high"] = "high",
+    guidance_kind: Literal["safe_mechanical", "needs_tests", "design_judgment", "preserve"] | None = None,
 ) -> ReviewFinding:
+    guided_fields = (
+        {
+            "recommended_action": "collapse",
+            "clean_code_principle": "kiss",
+            "rationale": "The repeated loop shape can be expressed directly.",
+            "safety_checks": ["targeted tests cover the surrounding behavior"],
+            "action_status": "recommended",
+            "preserve_reason": "The wrapper is a compatibility boundary." if guidance_kind == "preserve" else None,
+        }
+        if guidance_kind is not None
+        else {}
+    )
     return ReviewFinding(
         category=category,
         severity="info",
@@ -73,6 +86,8 @@ def _simplification_finding(
         canonical_pattern="manual-accumulator-loop",
         intent_key="score-review",
         estimated_deletion_lines=3,
+        guidance_kind=guidance_kind,
+        **guided_fields,
     )
 
 
@@ -213,6 +228,69 @@ def test_run_review_simplify_focus_keeps_only_simplification_queue(monkeypatch: 
     ]
     assert report.schema_version == "1.1"
     assert report.overall_verdict == "PASS"
+
+
+def test_run_review_simplify_enforce_fails_only_safe_mechanical_recommendations(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ai_bloat",
+        lambda files: [
+            _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical"),
+            _simplification_finding(category="ai_bloat", guidance_kind="needs_tests"),
+            _simplification_finding(category="ai_bloat", guidance_kind="preserve"),
+        ],
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")],
+        no_tests=True,
+        focus="simplify",
+        review_mode="enforce",
+    )
+
+    assert report.schema_version == "1.2"
+    assert report.overall_verdict == "FAIL"
+    assert report.ci_exit_code == 1
+    assert report.simplification_summary is not None
+    assert report.simplification_summary.blocking_simplification_count == 1
+
+
+def test_run_review_simplify_enforce_passes_design_and_preserve_guidance(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr(
+        "specfact_code_review.run.runner.run_ai_bloat",
+        lambda files: [
+            _simplification_finding(category="ai_bloat", guidance_kind="design_judgment"),
+            _simplification_finding(category="ai_bloat", guidance_kind="preserve"),
+        ],
+    )
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review(
+        [Path("packages/specfact-code-review/src/specfact_code_review/run/scorer.py")],
+        no_tests=True,
+        focus="simplify",
+        review_mode="enforce",
+    )
+
+    assert report.overall_verdict == "PASS"
+    assert report.simplification_summary is not None
+    assert report.simplification_summary.blocking_simplification_count == 0
 
 
 def test_run_review_simplify_focus_preserves_tool_errors(monkeypatch: MonkeyPatch) -> None:

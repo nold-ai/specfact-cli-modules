@@ -137,6 +137,8 @@ def test_default_skill_content_stays_within_line_budget() -> None:
     assert "allowed-tools: []" in skill
     assert "Codex CLI" in skill
     assert "--focus simplify" in skill
+    assert "In headless mode, process one file at a time" in skill
+    assert "file, line, rule, guidance_kind, recommended_action, action_status, evidence" in skill
 
 
 def test_render_cursor_rule_uses_cursor_metadata_and_skill_body() -> None:

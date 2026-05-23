@@ -27,6 +27,8 @@ VALID_CATEGORIES = (
     "ai_bloat",
 )
 VALID_SEVERITIES = ("error", "warning", "info")
+GUIDANCE_KINDS = ("safe_mechanical", "needs_tests", "design_judgment", "preserve")
+ACTION_STATUSES = ("recommended", "applied", "kept", "skipped", "failed")
 PASS = "PASS"
 PASS_WITH_ADVISORY = "PASS_WITH_ADVISORY"
 FAIL = "FAIL"
@@ -111,13 +113,109 @@ class ReviewFinding(BaseModel):
         default=None,
         description="Optional related source locations for grouped simplification candidates.",
     )
+    guidance_kind: Literal["safe_mechanical", "needs_tests", "design_judgment", "preserve"] | None = Field(
+        default=None,
+        description="Guided simplification action class.",
+    )
+    recommended_action: (
+        Literal[
+            "remove",
+            "inline",
+            "collapse",
+            "deduplicate",
+            "make_required",
+            "keep",
+            "inspect",
+        ]
+        | None
+    ) = Field(default=None, description="Recommended simplification action.")
+    clean_code_principle: (
+        Literal[
+            "kiss",
+            "dry",
+            "yagni",
+            "contracts",
+            "api_stability",
+            "readability",
+        ]
+        | None
+    ) = Field(default=None, description="Primary clean-code principle behind the recommendation.")
+    rationale: str | None = Field(default=None, description="Why the recommendation is meaningful.")
+    safety_checks: list[str] | None = Field(
+        default=None,
+        description="Concrete checks an agent or developer must satisfy before applying the change.",
+    )
+    preserve_reason: str | None = Field(
+        default=None,
+        description="Why a preserve recommendation should be kept despite apparent bloat.",
+    )
+    action_status: Literal["recommended", "applied", "kept", "skipped", "failed"] | None = Field(
+        default=None,
+        description="Lifecycle status for recommended simplification work.",
+    )
+    before_ref: EvidenceRef | None = Field(default=None, description="Evidence reference before an applied action.")
+    after_ref: EvidenceRef | None = Field(default=None, description="Evidence reference after an applied action.")
+    improvement: str | None = Field(default=None, description="Evidence-backed improvement summary.")
 
-    @field_validator("tool", "rule", "file", "message", "rewrite_hint", "canonical_pattern", "intent_key")
+    @field_validator(
+        "tool",
+        "rule",
+        "file",
+        "message",
+        "rewrite_hint",
+        "canonical_pattern",
+        "intent_key",
+        "rationale",
+        "preserve_reason",
+        "improvement",
+    )
     @classmethod
     def _validate_non_empty_text(cls, value: str | None) -> str | None:
         if value is not None and not value.strip():
             raise ValueError("value must not be empty")
         return value
+
+    @field_validator("safety_checks")
+    @classmethod
+    def _validate_safety_checks(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return value
+        if not value:
+            raise ValueError("safety_checks must not be empty when provided")
+        if any(not item.strip() for item in value):
+            raise ValueError("safety_checks entries must not be empty")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_guided_metadata(self) -> ReviewFinding:
+        guided_fields = (
+            self.recommended_action,
+            self.clean_code_principle,
+            self.rationale,
+            self.safety_checks,
+            self.action_status,
+            self.preserve_reason,
+            self.before_ref,
+            self.after_ref,
+            self.improvement,
+        )
+        if self.guidance_kind is None:
+            if any(value is not None for value in guided_fields):
+                raise ValueError("guidance_kind is required when guided metadata fields are present")
+            return self
+        if self.recommended_action is None:
+            raise ValueError("recommended_action is required when guidance_kind is present")
+        if self.clean_code_principle is None:
+            raise ValueError("clean_code_principle is required when guidance_kind is present")
+        if self.rationale is None:
+            raise ValueError("rationale is required when guidance_kind is present")
+        if self.safety_checks is None:
+            raise ValueError("safety_checks is required when guidance_kind is present")
+        if self.action_status is None:
+            raise ValueError("action_status is required when guidance_kind is present")
+        if self.guidance_kind == "preserve" and self.preserve_reason is None:
+            raise ValueError("preserve_reason is required for preserve guidance")
+        return self
 
     @beartype
     @ensure(lambda result: isinstance(result, bool))
@@ -132,8 +230,30 @@ class ReviewFinding(BaseModel):
                 self.intent_key,
                 self.estimated_deletion_lines,
                 self.related_locations,
+                self.guidance_kind,
+                self.recommended_action,
+                self.clean_code_principle,
+                self.rationale,
+                self.safety_checks,
+                self.preserve_reason,
+                self.action_status,
+                self.before_ref,
+                self.after_ref,
+                self.improvement,
             )
         )
+
+    @beartype
+    @ensure(lambda result: isinstance(result, bool))
+    def has_guided_simplification_metadata(self) -> bool:
+        """Return whether this finding carries agent-action simplification metadata."""
+        return self.guidance_kind is not None
+
+    @beartype
+    @ensure(lambda result: isinstance(result, bool))
+    def is_safe_mechanical_simplification(self) -> bool:
+        """Return whether the finding is an unresolved safe mechanical simplification."""
+        return self.guidance_kind == "safe_mechanical" and self.action_status in {None, "recommended", "failed"}
 
     @beartype
     @ensure(lambda result: isinstance(result, bool))
@@ -155,6 +275,16 @@ class ReviewFinding(BaseModel):
         return self.severity == "error" and not self.fixable
 
 
+class SimplificationSummary(BaseModel):
+    """Aggregate evidence for guided simplification review runs."""
+
+    by_guidance_kind: dict[str, int] = Field(default_factory=dict)
+    by_action_status: dict[str, int] = Field(default_factory=dict)
+    blocking_simplification_count: int = Field(default=0, ge=0)
+    applied_count: int = Field(default=0, ge=0)
+    kept_count: int = Field(default=0, ge=0)
+
+
 class ReviewReport(BaseModel):
     """Governance-aligned evidence envelope for code review results."""
 
@@ -170,6 +300,10 @@ class ReviewReport(BaseModel):
     reward_delta: int | None = Field(default=None, description="Reward delta derived from score - 80.")
     findings: list[ReviewFinding] = Field(default_factory=list, description="Structured review findings.")
     summary: str = Field(..., description="Human-readable review summary.")
+    simplification_summary: SimplificationSummary | None = Field(
+        default=None,
+        description="Aggregate simplification guidance and action-status evidence.",
+    )
     house_rules_updates: list[str] = Field(default_factory=list, description="Suggested house-rules updates.")
 
     @field_validator("schema_version", "run_id", "summary")
@@ -188,7 +322,13 @@ class ReviewReport(BaseModel):
 
     @model_validator(mode="after")
     def _derive_governance_fields(self) -> ReviewReport:
-        if any(finding.has_simplification_metadata() for finding in self.findings):
+        if self.simplification_summary is None:
+            self.simplification_summary = _build_simplification_summary(self.findings)
+        if self.simplification_summary is not None or any(
+            finding.has_guided_simplification_metadata() for finding in self.findings
+        ):
+            self.schema_version = "1.2"
+        elif any(finding.has_simplification_metadata() for finding in self.findings):
             self.schema_version = "1.1"
         blocking_error_present = any(finding.is_blocking() for finding in self.findings)
         self.reward_delta = self.score - 80
@@ -213,3 +353,26 @@ class ReviewReport(BaseModel):
     def has_blocking_findings(self) -> bool:
         """Return whether the report contains any blocking findings."""
         return any(finding.is_blocking() for finding in self.findings)
+
+
+def _build_simplification_summary(findings: list[ReviewFinding]) -> SimplificationSummary | None:
+    guided = [finding for finding in findings if finding.has_guided_simplification_metadata()]
+    if not guided:
+        return None
+    by_guidance_kind: dict[str, int] = {}
+    by_action_status: dict[str, int] = {}
+    for finding in guided:
+        if finding.guidance_kind is not None:
+            by_guidance_kind[finding.guidance_kind] = by_guidance_kind.get(finding.guidance_kind, 0) + 1
+        if finding.action_status is not None:
+            by_action_status[finding.action_status] = by_action_status.get(finding.action_status, 0) + 1
+    return SimplificationSummary(
+        by_guidance_kind=by_guidance_kind,
+        by_action_status=by_action_status,
+        blocking_simplification_count=sum(
+            finding.is_safe_mechanical_simplification() and finding.action_status in {"recommended", "failed"}
+            for finding in guided
+        ),
+        applied_count=by_action_status.get("applied", 0),
+        kept_count=by_action_status.get("kept", 0),
+    )
