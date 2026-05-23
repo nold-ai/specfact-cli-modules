@@ -14,6 +14,10 @@
   - Result: failed as expected before follow-up PR review fixes.
   - Evidence: 4 failed.
   - Missing contract areas: dead-branch fixer skipped no-else guard and guided evidence fields required `guidance_kind`.
+- `hatch run pytest tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_duplicate_guard_after_else_path tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_impure_duplicate_guard tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_impure_duplicate_guard tests/unit/specfact_code_review/run/test_findings.py::test_review_finding_accepts_guided_metadata_without_action_status tests/unit/specfact_code_review/run/test_findings.py::test_review_report_counts_missing_status_safe_mechanical_findings_as_blocking tests/unit/specfact_code_review/tools/test_semgrep_runner.py::test_ai_bloat_guidance_matches_ai_bloat_rule_categories -q`
+  - Result: failed as expected before final PR review fixes.
+  - Evidence: 5 failed, 1 passed.
+  - Missing contract areas: duplicate guard safety after else branches, impure predicate safety, optional guided `action_status`, unresolved safe-mechanical counting without status, and Semgrep guidance parity coverage.
 
 ## Passing After
 
@@ -27,6 +31,12 @@
   - Result after final cleanup: 50 passed.
 - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/run/test_findings.py -q`
   - Result after follow-up PR review fixes: 77 passed.
+- `hatch run pytest tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_flags_duplicate_prior_return_guard tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_duplicate_guard_after_else_path tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_impure_duplicate_guard tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_removes_dead_branch tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_dead_branch_with_else tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_impure_duplicate_guard tests/unit/specfact_code_review/run/test_findings.py::test_review_finding_accepts_guided_metadata_without_action_status tests/unit/specfact_code_review/run/test_findings.py::test_review_report_counts_missing_status_safe_mechanical_findings_as_blocking tests/unit/specfact_code_review/tools/test_semgrep_runner.py::test_ai_bloat_guidance_matches_ai_bloat_rule_categories -q`
+  - Result after final PR review fixes: 9 passed.
+- `hatch run pytest tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/tools/test_semgrep_runner.py -q`
+  - Result after final PR review fixes: 172 passed.
+- `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_removes_dead_branch tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_dead_branch_with_else tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_impure_duplicate_guard -q`
+  - Result after complexity cleanup: 3 passed.
 - `hatch run contract-test`
   - Result after PR review fixes: 758 passed, 2 warnings.
 - `hatch run smart-test`
@@ -44,7 +54,7 @@
 - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev`
   - Result after PR review fixes: verified 6 module manifests.
 - `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`
-  - Result after follow-up PR review fixes: PASS, CI exit 0, score 120, 0 findings.
+  - Result after final PR review fixes: PASS, CI exit 0, score 120, 0 findings.
 - `openspec validate code-review-12-guided-simplification-enforcement --strict`
   - Result: valid.
 
@@ -72,4 +82,4 @@
 
 ## Signing Note
 
-`hatch run sign-modules --changed-only --payload-from-filesystem --bump-version patch --base-ref origin/dev` failed locally because no private signing key was available. I reran with `--allow-unsigned`, which bumped affected module versions and refreshed filesystem checksums. Cryptographic signature restoration remains an approval-time signing step.
+`hatch run verify-modules-signature --payload-from-filesystem --require-signature --enforce-version-bump --version-check-base origin/main` passed before the final source edits, verifying the existing `0.47.23` signature was a real cryptographic signature. The final local payload was then bumped to `0.47.24` and refreshed with `hatch run sign-modules --changed-only --base-ref origin/dev --bump-version patch --allow-unsigned --payload-from-filesystem`, because no private signing key is available in the local worktree. Cryptographic signature restoration remains an approval-time or post-merge signing step.

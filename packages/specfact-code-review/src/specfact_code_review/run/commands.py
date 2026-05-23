@@ -312,27 +312,42 @@ def _apply_dead_branch_fix(finding: ReviewFinding) -> bool:
         return False
     file_path, source, tree = parsed
     for function_node in _iter_functions(tree):
-        prior_terminal_tests: set[str] = set()
-        for stmt in function_node.body:
-            if not isinstance(stmt, ast.If):
-                continue
-            test_key = ast.dump(stmt.test, include_attributes=False)
-            if (
-                stmt.lineno == finding.line
-                and test_key in prior_terminal_tests
-                and _terminal_return(stmt.body)
-                and not stmt.orelse
-            ):
-                return _replace_line_range(
-                    file_path,
-                    source,
-                    start_line=stmt.lineno,
-                    end_line=stmt.end_lineno or stmt.lineno,
-                    replacement=[],
-                )
-            if _terminal_return(stmt.body):
-                prior_terminal_tests.add(test_key)
+        if _apply_duplicate_terminal_guard_fix(finding, file_path, source, function_node):
+            return True
     return False
+
+
+def _apply_duplicate_terminal_guard_fix(
+    finding: ReviewFinding,
+    file_path: Path,
+    source: str,
+    function_node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> bool:
+    prior_terminal_tests: set[str] = set()
+    for stmt in function_node.body:
+        if not isinstance(stmt, ast.If) or not _is_pure_test(stmt.test):
+            continue
+        test_key = ast.dump(stmt.test, include_attributes=False)
+        if _matches_duplicate_terminal_guard(stmt, finding.line, test_key, prior_terminal_tests):
+            return _replace_line_range(
+                file_path,
+                source,
+                start_line=stmt.lineno,
+                end_line=stmt.end_lineno or stmt.lineno,
+                replacement=[],
+            )
+        if _terminal_return(stmt.body) and not stmt.orelse:
+            prior_terminal_tests.add(test_key)
+    return False
+
+
+def _matches_duplicate_terminal_guard(
+    stmt: ast.If,
+    line: int,
+    test_key: str,
+    prior_terminal_tests: set[str],
+) -> bool:
+    return stmt.lineno == line and test_key in prior_terminal_tests and _terminal_return(stmt.body) and not stmt.orelse
 
 
 def _apply_pass_through_try_except_fix(finding: ReviewFinding) -> bool:
@@ -448,6 +463,24 @@ def _is_pass_through_try_except(stmt: ast.stmt) -> bool:
         return False
     handler = stmt.handlers[0]
     return len(handler.body) == 1 and isinstance(handler.body[0], ast.Raise) and handler.body[0].exc is None
+
+
+def _is_pure_test(test_node: ast.expr) -> bool:
+    impure_nodes = (
+        ast.Attribute,
+        ast.Await,
+        ast.Call,
+        ast.DictComp,
+        ast.GeneratorExp,
+        ast.Lambda,
+        ast.ListComp,
+        ast.NamedExpr,
+        ast.SetComp,
+        ast.Subscript,
+        ast.Yield,
+        ast.YieldFrom,
+    )
+    return not any(isinstance(node, impure_nodes) for node in ast.walk(test_node))
 
 
 def _terminal_return(body: list[ast.stmt]) -> bool:

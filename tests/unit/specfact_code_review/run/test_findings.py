@@ -138,6 +138,28 @@ def test_review_finding_accepts_guided_simplification_metadata() -> None:
     assert finding.is_safe_mechanical_simplification()
 
 
+def test_review_finding_accepts_guided_metadata_without_action_status() -> None:
+    finding = ReviewFinding(
+        **_finding_data(
+            category="ai_bloat",
+            severity="info",
+            rule="ai-bloat.redundant-intermediate",
+            confidence="high",
+            rewrite_hint="Inline the one-use temporary into the return statement.",
+            canonical_pattern="one-use-temporary",
+            estimated_deletion_lines=1,
+            guidance_kind="safe_mechanical",
+            recommended_action="inline",
+            clean_code_principle="kiss",
+            rationale="The local variable is assigned once and read only by the following return.",
+            safety_checks=["same expression is returned", "temporary has no later reads"],
+        )
+    )
+
+    assert finding.action_status is None
+    assert finding.is_safe_mechanical_simplification()
+
+
 def test_review_finding_rejects_preserve_guidance_without_preserve_reason() -> None:
     with pytest.raises(ValidationError):
         ReviewFinding(
@@ -360,6 +382,35 @@ def test_review_report_counts_failed_safe_mechanical_findings_as_blocking() -> N
                     rationale="The branch repeats an earlier terminal guard.",
                     safety_checks=["same guard expression already returned earlier"],
                     action_status="failed",
+                )
+            )
+        ],
+        summary="Guided simplification advisories.",
+    )
+
+    assert report.simplification_summary is not None
+    assert report.simplification_summary.blocking_simplification_count == 1
+
+
+def test_review_report_counts_missing_status_safe_mechanical_findings_as_blocking() -> None:
+    report = ReviewReport(
+        run_id="run-guided-simplify",
+        timestamp=datetime(2026, 3, 11, tzinfo=UTC),
+        score=85,
+        findings=[
+            ReviewFinding(
+                **_finding_data(
+                    category="ai_bloat",
+                    severity="info",
+                    confidence="high",
+                    rewrite_hint="Remove the duplicate terminal branch.",
+                    canonical_pattern="duplicate-terminal-guard",
+                    estimated_deletion_lines=1,
+                    guidance_kind="safe_mechanical",
+                    recommended_action="remove",
+                    clean_code_principle="kiss",
+                    rationale="The branch repeats an earlier terminal guard.",
+                    safety_checks=["same guard expression already returned earlier"],
                 )
             )
         ],

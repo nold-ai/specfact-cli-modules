@@ -62,7 +62,7 @@ def _simplification_finding(
 ) -> ReviewFinding:
     guided_fields = (
         {
-            "recommended_action": "collapse",
+            "recommended_action": "keep" if guidance_kind == "preserve" else "collapse",
             "clean_code_principle": "kiss",
             "rationale": "The repeated loop shape can be expressed directly.",
             "safety_checks": ["targeted tests cover the surrounding behavior"],

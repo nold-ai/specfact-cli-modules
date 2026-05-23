@@ -77,6 +77,9 @@ python scripts/sign-modules.py --allow-unsigned --payload-from-filesystem packag
 
 The pre-commit hook auto-runs this step and re-stages updated manifests on non-`main` branches.
 
+Use semantic versioning per bundle payload: patch for bug fixes and backward-compatible metadata or schema additions,
+minor for additive commands or public API capabilities, and major for breaking command, API, or schema changes.
+
 ### When signatures are required
 
 | Context | Requirement |

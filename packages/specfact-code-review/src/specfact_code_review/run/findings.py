@@ -211,8 +211,6 @@ class ReviewFinding(BaseModel):
             raise ValueError("rationale is required when guidance_kind is present")
         if self.safety_checks is None:
             raise ValueError("safety_checks is required when guidance_kind is present")
-        if self.action_status is None:
-            raise ValueError("action_status is required when guidance_kind is present")
         if self.guidance_kind == "preserve" and self.preserve_reason is None:
             raise ValueError("preserve_reason is required for preserve guidance")
         return self
@@ -369,10 +367,7 @@ def _build_simplification_summary(findings: list[ReviewFinding]) -> Simplificati
     return SimplificationSummary(
         by_guidance_kind=by_guidance_kind,
         by_action_status=by_action_status,
-        blocking_simplification_count=sum(
-            finding.is_safe_mechanical_simplification() and finding.action_status in {"recommended", "failed"}
-            for finding in guided
-        ),
+        blocking_simplification_count=sum(finding.is_safe_mechanical_simplification() for finding in guided),
         applied_count=by_action_status.get("applied", 0),
         kept_count=by_action_status.get("kept", 0),
     )

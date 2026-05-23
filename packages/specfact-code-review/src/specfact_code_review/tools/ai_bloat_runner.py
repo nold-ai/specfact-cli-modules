@@ -192,6 +192,24 @@ def _terminal_return(body: list[ast.stmt]) -> bool:
     return bool(body) and isinstance(body[-1], ast.Return)
 
 
+def _is_pure_test(test_node: ast.expr) -> bool:
+    impure_nodes = (
+        ast.Attribute,
+        ast.Await,
+        ast.Call,
+        ast.DictComp,
+        ast.GeneratorExp,
+        ast.Lambda,
+        ast.ListComp,
+        ast.NamedExpr,
+        ast.SetComp,
+        ast.Subscript,
+        ast.Yield,
+        ast.YieldFrom,
+    )
+    return not any(isinstance(node, impure_nodes) for node in ast.walk(test_node))
+
+
 def _dead_branch_findings(
     file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
 ) -> list[ReviewFinding]:
@@ -199,6 +217,8 @@ def _dead_branch_findings(
     prior_terminal_tests: set[str] = set()
     for stmt in function_node.body:
         if not isinstance(stmt, ast.If):
+            continue
+        if not _is_pure_test(stmt.test):
             continue
         test_key = ast.dump(stmt.test, include_attributes=False)
         if test_key in prior_terminal_tests:
@@ -221,13 +241,13 @@ def _dead_branch_findings(
                     clean_code_principle="kiss",
                     rationale="The branch repeats an earlier terminal guard in the same local function body.",
                     safety_checks=[
-                        "same guard expression already returned earlier",
+                        "same pure guard expression already returned earlier",
                         "duplicate branch has no side effects",
                     ],
                     action_status="recommended",
                 )
             )
-        if _terminal_return(stmt.body):
+        if _terminal_return(stmt.body) and not stmt.orelse:
             prior_terminal_tests.add(test_key)
     return findings
 

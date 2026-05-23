@@ -67,6 +67,40 @@ def classify(value: int) -> str:
     assert {finding.rule for finding in run_ai_bloat([target])} == {"ai-bloat.dead-branch"}
 
 
+def test_dead_branch_ignores_duplicate_guard_after_else_path(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: int) -> str:
+    if value > 10:
+        return "large"
+    else:
+        value += 1
+    if value > 10:
+        return "now large"
+    return "small"
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
+def test_dead_branch_ignores_impure_duplicate_guard(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: object) -> str:
+    if value.ready():
+        return "ready"
+    if value.ready():
+        return "still ready"
+    return "not ready"
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
 def test_loc_vs_complexity_flags_long_linear_function(tmp_path: Path) -> None:
     lines = ["def build_values(value: int) -> list[int]:", "    result = []"]
     for index in range(39):
