@@ -16,7 +16,7 @@ from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
 
-from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import EvidenceRef, ReviewFinding, ReviewReport
 from specfact_code_review.run.runner import ReviewFocus, run_review
 
 
@@ -280,21 +280,45 @@ def _apply_fixes(files: list[Path]) -> None:
         raise RuntimeError(f"Auto-fix command failed: {' '.join(command)}: {error_output}")
 
 
-def _apply_simplification_fixes(report: ReviewReport) -> int:
-    """Apply deterministic safe-mechanical simplification rewrites from a report."""
+def _apply_simplification_fixes(report: ReviewReport) -> list[ReviewFinding]:
+    """Apply deterministic safe-mechanical simplification rewrites and return applied evidence."""
     fixers: dict[str, Callable[[ReviewFinding], bool]] = {
         "ai-bloat.dead-branch": _apply_dead_branch_fix,
         "ai-bloat.pass-through-try-except": _apply_pass_through_try_except_fix,
         "ai-bloat.redundant-intermediate": _apply_redundant_intermediate_fix,
         "ai-bloat.verbose-bool-return": _apply_verbose_bool_return_fix,
     }
-    applied = 0
+    applied: list[ReviewFinding] = []
     for finding in _fixable_simplifications_by_stable_line_order(report.findings):
         fixer = fixers.get(finding.rule)
         if fixer is None:
             continue
-        applied += int(fixer(finding))
+        if fixer(finding):
+            applied.append(_applied_simplification_finding(finding))
     return applied
+
+
+def _applied_simplification_finding(finding: ReviewFinding) -> ReviewFinding:
+    deletion_lines = max(1, finding.estimated_deletion_lines or 1)
+    before_ref = EvidenceRef(path=finding.file, start_line=finding.line, end_line=finding.line + deletion_lines - 1)
+    after_ref = EvidenceRef(path=finding.file, start_line=finding.line, end_line=finding.line)
+    return finding.model_copy(
+        update={
+            "action_status": "applied",
+            "before_ref": before_ref,
+            "after_ref": after_ref,
+            "improvement": f"Applied safe-mechanical rewrite for {finding.rule}.",
+        }
+    )
+
+
+def _with_applied_simplification_findings(report: ReviewReport, applied_findings: list[ReviewFinding]) -> ReviewReport:
+    if not applied_findings:
+        return report
+    data = report.model_dump()
+    data["findings"] = [*report.findings, *applied_findings]
+    data["simplification_summary"] = None
+    return ReviewReport(**data)
 
 
 def _fixable_simplifications_by_stable_line_order(findings: list[ReviewFinding]) -> list[ReviewFinding]:
@@ -326,6 +350,7 @@ def _apply_duplicate_terminal_guard_fix(
     prior_terminal_tests: set[str] = set()
     for stmt in function_node.body:
         if not isinstance(stmt, ast.If) or not _is_pure_test(stmt.test):
+            prior_terminal_tests.clear()
             continue
         test_key = ast.dump(stmt.test, include_attributes=False)
         if _matches_duplicate_terminal_guard(stmt, finding.line, test_key, prior_terminal_tests):
@@ -338,6 +363,8 @@ def _apply_duplicate_terminal_guard_fix(
             )
         if _terminal_return(stmt.body) and not stmt.orelse:
             prior_terminal_tests.add(test_key)
+        else:
+            prior_terminal_tests.clear()
     return False
 
 
@@ -634,14 +661,16 @@ def _run_review_with_status(
             review_focus=flags.review_focus,
         )
         report = _run_review_once(files, base)
+        applied_simplification_findings: list[ReviewFinding] = []
         if flags.fix:
             if flags.review_focus == "simplify":
                 status.update("Applying safe mechanical simplification fixes...")
-                _apply_simplification_fixes(report)
+                applied_simplification_findings = _apply_simplification_fixes(report)
             status.update("Applying Ruff autofixes...")
             _apply_fixes(files)
             status.update("Re-running review after autofixes...")
             report = _run_review_once(files, base)
+            report = _with_applied_simplification_findings(report, applied_simplification_findings)
         return report
 
 
@@ -656,13 +685,14 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
         review_level=flags.review_level,
         focus=flags.review_focus,
     )
+    applied_simplification_findings: list[ReviewFinding] = []
     if flags.fix:
         if flags.review_focus == "simplify":
             if flags.progress_callback is not None:
                 flags.progress_callback("Applying safe mechanical simplification fixes...")
             else:
                 progress_console.print("[dim]Applying safe mechanical simplification fixes...[/dim]")
-            _apply_simplification_fixes(report)
+            applied_simplification_findings = _apply_simplification_fixes(report)
         if flags.progress_callback is not None:
             flags.progress_callback("Applying Ruff autofixes...")
         else:
@@ -682,6 +712,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
             review_level=flags.review_level,
             focus=flags.review_focus,
         )
+        report = _with_applied_simplification_findings(report, applied_simplification_findings)
     return report
 
 

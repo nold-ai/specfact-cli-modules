@@ -120,6 +120,23 @@ def classify(value: int) -> str:
     assert run_ai_bloat([target]) == []
 
 
+def test_dead_branch_ignores_duplicate_guard_after_assignment(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: int) -> str:
+    if value > 10:
+        return "large"
+    value = 12
+    if value > 10:
+        return "now large"
+    return "small"
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
 def test_dead_branch_ignores_impure_duplicate_guard(tmp_path: Path) -> None:
     target = _write(
         tmp_path,

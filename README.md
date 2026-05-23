@@ -79,6 +79,8 @@ The pre-commit hook auto-runs this step and re-stages updated manifests on non-`
 
 Use semantic versioning per bundle payload: patch for bug fixes and backward-compatible metadata or schema additions,
 minor for additive commands or public API capabilities, and major for breaking command, API, or schema changes.
+Manifest `integrity.checksum` values cover the canonical module source payload; registry
+`checksum_sha256` and `.tar.gz.sha256` files cover the published tarball artifact, so these hashes can differ.
 
 ### When signatures are required
 

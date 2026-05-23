@@ -217,8 +217,10 @@ def _dead_branch_findings(
     prior_terminal_tests: set[str] = set()
     for stmt in function_node.body:
         if not isinstance(stmt, ast.If):
+            prior_terminal_tests.clear()
             continue
         if not _is_pure_test(stmt.test):
+            prior_terminal_tests.clear()
             continue
         test_key = ast.dump(stmt.test, include_attributes=False)
         if test_key in prior_terminal_tests and _terminal_return(stmt.body) and not stmt.orelse:
@@ -249,6 +251,8 @@ def _dead_branch_findings(
             )
         if _terminal_return(stmt.body) and not stmt.orelse:
             prior_terminal_tests.add(test_key)
+        else:
+            prior_terminal_tests.clear()
     return findings
 
 

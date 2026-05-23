@@ -322,9 +322,7 @@ class ReviewReport(BaseModel):
     def _derive_governance_fields(self) -> ReviewReport:
         if self.simplification_summary is None:
             self.simplification_summary = _build_simplification_summary(self.findings)
-        if self.simplification_summary is not None or any(
-            finding.has_guided_simplification_metadata() for finding in self.findings
-        ):
+        if self.simplification_summary is not None:
             self.schema_version = "1.2"
         elif any(finding.has_simplification_metadata() for finding in self.findings):
             self.schema_version = "1.1"
