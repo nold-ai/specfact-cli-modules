@@ -25,6 +25,34 @@ from specfact_code_review.run.commands import (
 app = typer.Typer(help="Code command extensions for structured review workflows.", no_args_is_help=True)
 review_app = typer.Typer(help="Governed code review workflows.", no_args_is_help=True)
 
+_RUN_INSTRUCTIONS = """\
+SpecFact code review instructions for AI assistants
+
+Use this when the user asks to remove AI bloat, simplify code, apply clean-code patterns, reduce boilerplate, or act on SpecFact review findings.
+
+1. Generate evidence first:
+   specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+
+   If the worktree is clean on a PR branch and --scope changed finds no files, review the branch-delta Python files as explicit positional files and omit --scope. Find them with the PR base ref, for example: git diff --name-only origin/dev...HEAD -- '*.py' '*.pyi'
+
+2. Treat guidance_kind as the action contract:
+   - safe_mechanical: apply only after local safety checks pass.
+   - needs_tests: add or identify targeted tests before changing behavior.
+   - design_judgment: inspect intent evidence and ask before editing.
+   - preserve: keep by default and record preserve_reason.
+   Findings without guidance_kind are unguided advisories: summarize them separately, do not auto-apply them, and ask before using them as refactor input.
+
+3. For vibe-coder or junior users, present each finding as a decision card:
+   Finding, plain-language issue, why it might need to stay, exact patch preview or small before/after proposal, validation plan, recommended choice.
+
+4. For design_judgment findings, check API, callback, framework hook, adapter, public symbol, CLI boundary, compatibility shim, and readability intent. If intent is unclear, default to keep or skip.
+
+5. Apply one file at a time. After each accepted file or very small batch, run targeted tests or rerun:
+   specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+
+6. Log every action as recommended, applied, kept, skipped, or failed with evidence. Never batch-apply design_judgment findings just because the patch is shorter.
+"""
+
 
 @dataclass(frozen=True)
 class _ReviewRunCliInputs:
@@ -115,9 +143,17 @@ def run(
     no_tests: bool = typer.Option(False, "--no-tests"),
     fix: bool = typer.Option(False, "--fix"),
     interactive: bool = typer.Option(False, "--interactive"),
+    instructions: bool = typer.Option(
+        False,
+        "--instructions",
+        help="Print AI-facing instructions for guided simplify / clean-code review and exit.",
+    ),
 ) -> None:
     """Run the full code review workflow."""
     _ = ctx.resilient_parsing
+    if instructions:
+        typer.echo(_RUN_INSTRUCTIONS)
+        raise typer.Exit(code=0)
     focus_list, resolved_include_tests, resolved_include_noise = _resolve_review_run_flags(
         _ReviewRunCliInputs(
             files=files,

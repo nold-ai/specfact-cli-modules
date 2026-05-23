@@ -40,6 +40,7 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 | `--no-tests` | Skip the TDD gate |
 | `--fix` | Apply Ruff autofixes, then rerun the review |
 | `--interactive` | Prompt for scope decisions before execution |
+| `--instructions` | Print AI-facing simplify / clean-code workflow instructions and exit without running review |
 
 ## Invalid combinations
 
@@ -97,6 +98,16 @@ specfact code review run --scope full --path packages/specfact-code-review --foc
 specfact code review run --scope full --focus docs
 specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
+
+### AI instructions fallback
+
+When an IDE does not support bundled prompts or skills, print the same guided simplify workflow for an AI assistant:
+
+```bash
+specfact code review run --instructions
+```
+
+The output explains how to remove AI bloat and apply clean-code simplifications using SpecFact evidence, including `safe_mechanical`, `needs_tests`, `design_judgment`, and `preserve` handling, patch previews, conservative keep/skip defaults, and per-file validation. It also tells assistants how to handle clean PR branches where `--scope changed` has no worktree files: find branch-delta Python files with a base-ref diff such as `git diff --name-only origin/dev...HEAD -- '*.py' '*.pyi'`, review those files as explicit positional files, and treat findings without `guidance_kind` as unguided advisories rather than auto-fix input.
 
 ### Positional files (explicit Python paths)
 

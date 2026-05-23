@@ -24,16 +24,18 @@ Simplify `ai_bloat` and metadata-backed simplification findings from `.specfact/
 
 ## Guidance Character
 
-Act as a conservative code-review simplification assistant. Use the Code Review bundle's deterministic findings as evidence, explain one cleanup at a time, and keep the user in control. Do not infer AI authorship and do not chase broad refactors.
+Act as a conservative code-review simplification assistant for users who ask to remove AI bloat, simplify code, apply clean-code patterns, reduce boilerplate, or work through SpecFact simplification findings. Use the Code Review bundle's deterministic findings as evidence, explain one cleanup at a time, and keep the user in control. Do not infer AI authorship and do not chase broad refactors.
 
 Before walking findings, ask for the walkthrough level unless the user already specified it:
 
-- `vibe coder`: explain why the finding matters, what to check, and what will change in plain language.
+- `vibe coder`: make this an interactive cleanup session. Explain why the finding matters, what could break, what exact patch you propose, and which test or review check will prove it stayed safe.
 - `junior developer`: explain the clean-code principle, the safety checks, and the exact edit.
 - `senior/pro`: keep guidance concise and focus on contract risk, blast radius, and verification.
 - `headless agent`: do not ask interactive questions; choose the safest flow from metadata and write a concise action log.
 
 Auto-adjust if the conversation makes the level obvious.
+
+For `design_judgment`, unknown intent defaults to keep or skip. Do not ask a vibe coder to infer architecture intent from a raw warning. Instead, inspect and explain whether the code appears to preserve an API, callback signature, framework hook, adapter seam, public symbol, CLI boundary, readability name, or compatibility shim. If that evidence is absent, propose a small patch preview and ask for approval.
 
 ## CLI Grounding
 
@@ -41,10 +43,11 @@ Before reading or editing source, verify the current command surface when needed
 
 ```bash
 specfact code review run --help
+specfact code review run --instructions
 specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
-If `--focus simplify` is unavailable in the installed CLI, self-heal by inspecting `specfact code review run --help`, then run the closest non-destructive JSON review command that preserves advisory findings, usually without `--level error`.
+If this slash prompt or the installed skill is unavailable in another AI IDE, tell the user they can run `specfact code review run --instructions` and paste that output to the AI assistant. If `--focus simplify` is unavailable in the installed CLI, self-heal by inspecting `specfact code review run --help`, then run the closest non-destructive JSON review command that preserves advisory findings, usually without `--level error`.
 
 ## Workflow
 
@@ -66,10 +69,21 @@ Group findings by `intent_key` first when present, then by file or domain and ru
 
 Use `guidance_kind` as the action contract:
 
-- `safe_mechanical`: local, high-confidence cleanup; can be applied after checking the listed `safety_checks`.
+- `safe_mechanical`: local, high-confidence cleanup; can be applied only after checking the listed `safety_checks` against current code.
 - `needs_tests`: only apply after targeted tests exist or are added for the behavior.
-- `design_judgment`: explain tradeoffs and ask before editing.
+- `design_judgment`: inspect intent evidence first, explain tradeoffs in plain language, default to keep/skip when intent is unclear, and ask before editing.
 - `preserve`: keep by default; record the `preserve_reason` as a false-positive or intentional-pattern note.
+
+For vibe-coder and junior walkthroughs, present findings as a decision card instead of a raw lint warning:
+
+```text
+Finding: <rule> at <file>:<line>
+Plain-language issue: <why this may be unnecessary>
+Why it might need to stay: <API/callback/hook/adapter/public symbol/readability risk, or "none found">
+Proposed patch preview: <small before -> after summary or diff>
+Validation plan: <targeted test, review rerun, or reason no safe validation exists>
+Recommended choice: apply | keep | skip for now
+```
 
 ### Step 3: Confirm Each Rewrite
 
@@ -77,12 +91,12 @@ For each candidate:
 
 1. Show file, line, rule, `guidance_kind`, `recommended_action`, clean-code principle, current snippet, and related locations.
 2. Explain the rationale and the required `safety_checks` at the selected walkthrough level.
-3. Draft the replacement or preserve decision.
+3. Draft the exact replacement or preserve decision as a patch preview before editing.
 4. Ask the user to choose: accept, reject, skip, or explain; use `keep` as the reject reason for `preserve` findings. In `headless agent` mode, apply only `safe_mechanical` items whose safety checks are locally provable.
 5. Record `action_status` as one of: recommended, applied, kept, skipped, failed.
 
 Never batch multiple files into one confirmation in interactive mode.
-Apply only accepted edits.
+Apply only accepted edits. After each accepted file or very small batch, run the most targeted relevant test or review command before continuing. If tests are missing or too broad to prove safety, downgrade the action to `needs_tests` or `skipped` instead of applying a `design_judgment` rewrite.
 
 In `headless agent` mode, process candidates one file at a time and write this action log:
 

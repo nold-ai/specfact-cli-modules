@@ -61,6 +61,8 @@ Options (aligned with `specfact code review run --help`):
 - `--fix`: apply Ruff autofixes and re-run the review before printing results
 - `--interactive`: ask whether changed test files should be included before
   auto-detected review runs
+- `--instructions`: print AI-facing simplify / clean-code workflow instructions
+  and exit without requiring installed slash prompts or skills
 
 ### Invalid combinations
 
@@ -113,6 +115,23 @@ guide (same Typer surface as this section).
 The review pipeline also emits `ai_bloat` findings for code shapes commonly amplified by AI-assisted generation: manual append loops, passthrough lambdas, identity `try/except`, one-call wrappers, speculative `Optional[...] = None` parameters, duplicate terminal guards, long low-branch functions, and redundant intermediates.
 
 These findings are `severity=info`, advisory-only, and score-neutral. They are written to `.specfact/code-review.json` when the report includes all severities; for simplification queues, write `.specfact/code-review-simplify.json` with `--focus simplify` so `/specfact.08-simplify` can filter them by `category=ai_bloat` for per-change confirmed rewrites. They do not claim AI authorship; they identify simplification candidates.
+
+For the lowest-friction AI onboarding path, start with the built-in instruction
+printer instead of requiring a user to install IDE prompts or skills first:
+
+```bash
+specfact code review run --instructions
+```
+
+Paste that output into any AI coding assistant and ask it to simplify or remove
+AI bloat with SpecFact. The instructions explain the expected report file,
+`guidance_kind` handling, patch-preview decision cards, conservative defaults
+for `design_judgment`, and per-file validation. They also cover clean PR
+branches where `--scope changed` has no worktree files: the assistant should
+find branch-delta Python files with a base-ref diff such as
+`git diff --name-only origin/dev...HEAD -- '*.py' '*.pyi'`, review those files
+as explicit positional files, and treat findings without `guidance_kind` as
+unguided advisories, not auto-fix input.
 
 Positional `FILES...` cannot be mixed with **`--scope`** or **`--path`** (see
 **Invalid combinations** above).
@@ -399,11 +418,12 @@ Then rerun the ledger command from the same repository checkout.
 ## Code review skill
 
 The `specfact-code-review` bundle ships a compact `SKILL.md` for Codex CLI,
-Claude, Vibe, and Cursor-compatible IDEs. Use it as the reusable alternative to
-copying prompt templates into every AI IDE: it carries the CLI-grounded review
-workflow, simplification queue guidance, self-healing `--help` behavior, and
-house rules derived from the reward ledger. The default charter encodes the
-clean-code principles directly:
+Claude, Vibe, and Cursor-compatible IDEs. New users do not need to install it
+first: `specfact code review run --instructions` prints the same guided
+simplify workflow for any AI assistant. Install the skill later when the IDE
+supports automatic skill loading and you want the reusable workflow attached to
+phrases such as "remove AI bloat", "simplify", or "apply clean-code patterns".
+The default charter encodes the clean-code principles directly:
 
 - Naming: use intention-revealing names instead of placeholders.
 - KISS: keep functions small, shallow, and narrow in parameters.

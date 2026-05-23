@@ -323,7 +323,7 @@ def test_apply_simplification_fixes_inlines_redundant_intermediate(tmp_path: Pat
         _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
     )
 
-    assert applied == 1
+    assert len(applied) == 1
     assert target.read_text(encoding="utf-8") == "def total(values: list[int]) -> int:\n    return sum(values)\n"
 
 
@@ -336,7 +336,7 @@ def test_apply_simplification_fixes_skips_non_safe_guidance(tmp_path: Path) -> N
 
     applied = run_commands._apply_simplification_fixes(report)
 
-    assert applied == 0
+    assert len(applied) == 0
     assert target.read_text(encoding="utf-8") == source
 
 
@@ -351,7 +351,7 @@ def test_apply_simplification_fixes_collapses_verbose_bool_return(tmp_path: Path
         _safe_mechanical_report(target, line=2, rule="ai-bloat.verbose-bool-return")
     )
 
-    assert applied == 1
+    assert len(applied) == 1
     assert target.read_text(encoding="utf-8") == "def allowed(role: str) -> bool:\n    return role == 'admin'\n"
 
 
@@ -371,7 +371,7 @@ def test_apply_simplification_fixes_removes_dead_branch(tmp_path: Path) -> None:
         _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
     )
 
-    assert applied == 1
+    assert len(applied) == 1
     assert target.read_text(encoding="utf-8") == (
         "def classify(value: int) -> str:\n    if value > 10:\n        return 'large'\n    return 'small'\n"
     )
@@ -395,7 +395,7 @@ def test_apply_simplification_fixes_keeps_dead_branch_with_else(tmp_path: Path) 
         _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
     )
 
-    assert applied == 0
+    assert len(applied) == 0
     assert target.read_text(encoding="utf-8") == source
 
 
@@ -415,7 +415,28 @@ def test_apply_simplification_fixes_keeps_impure_duplicate_guard(tmp_path: Path)
         _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
     )
 
-    assert applied == 0
+    assert len(applied) == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
+def test_apply_simplification_fixes_keeps_dead_branch_after_assignment(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = (
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    value = 12\n"
+        "    if value > 10:\n"
+        "        return 'now large'\n"
+        "    return 'small'\n"
+    )
+    target.write_text(source, encoding="utf-8")
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=5, rule="ai-bloat.dead-branch")
+    )
+
+    assert len(applied) == 0
     assert target.read_text(encoding="utf-8") == source
 
 
@@ -434,7 +455,7 @@ def test_apply_simplification_fixes_removes_pass_through_try_except(tmp_path: Pa
         _safe_mechanical_report(target, line=2, rule="ai-bloat.pass-through-try-except")
     )
 
-    assert applied == 1
+    assert len(applied) == 1
     assert target.read_text(encoding="utf-8") == "def parse(raw: str) -> object:\n    return parse_json(raw)\n"
 
 
@@ -466,7 +487,7 @@ def test_apply_simplification_fixes_uses_bottom_up_line_order(tmp_path: Path) ->
 
     applied = run_commands._apply_simplification_fixes(report)
 
-    assert applied == 2
+    assert len(applied) == 2
     assert target.read_text(encoding="utf-8") == (
         "def total(values: list[int]) -> int:\n"
         "    return sum(values)\n"
@@ -487,7 +508,7 @@ def test_apply_simplification_fixes_skips_when_source_no_longer_matches(tmp_path
         _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
     )
 
-    assert applied == 0
+    assert len(applied) == 0
     assert target.read_text(encoding="utf-8") == source
 
 
@@ -518,7 +539,11 @@ def test_run_review_once_applies_simplification_fixes_before_rerun(monkeypatch: 
         ),
     )
 
-    assert report.findings == []
+    assert len(report.findings) == 1
+    assert report.findings[0].action_status == "applied"
+    assert report.findings[0].before_ref is not None
+    assert report.findings[0].after_ref is not None
+    assert report.findings[0].improvement is not None
     assert target.read_text(encoding="utf-8") == "def total(values: list[int]) -> int:\n    return sum(values)\n"
 
 
