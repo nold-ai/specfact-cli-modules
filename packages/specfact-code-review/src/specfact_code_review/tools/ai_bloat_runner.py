@@ -221,7 +221,7 @@ def _dead_branch_findings(
         if not _is_pure_test(stmt.test):
             continue
         test_key = ast.dump(stmt.test, include_attributes=False)
-        if test_key in prior_terminal_tests:
+        if test_key in prior_terminal_tests and _terminal_return(stmt.body) and not stmt.orelse:
             findings.append(
                 ReviewFinding(
                     category="ai_bloat",

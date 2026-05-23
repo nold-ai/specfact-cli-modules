@@ -85,6 +85,41 @@ def classify(value: int) -> str:
     assert run_ai_bloat([target]) == []
 
 
+def test_dead_branch_ignores_nonterminal_duplicate_guard(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: int) -> str:
+    label = "small"
+    if value > 10:
+        return "large"
+    if value > 10:
+        label = "still large"
+    return label
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
+def test_dead_branch_ignores_duplicate_guard_with_else(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: int) -> str:
+    if value > 10:
+        return "large"
+    if value > 10:
+        return "still large"
+    else:
+        return "fallback"
+    return "small"
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
 def test_dead_branch_ignores_impure_duplicate_guard(tmp_path: Path) -> None:
     target = _write(
         tmp_path,

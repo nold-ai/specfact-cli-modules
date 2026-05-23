@@ -18,6 +18,10 @@
   - Result: failed as expected before final PR review fixes.
   - Evidence: 5 failed, 1 passed.
   - Missing contract areas: duplicate guard safety after else branches, impure predicate safety, optional guided `action_status`, unresolved safe-mechanical counting without status, and Semgrep guidance parity coverage.
+- `hatch run pytest tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_nonterminal_duplicate_guard tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_duplicate_guard_with_else -q`
+  - Result: failed as expected before final detector tightening.
+  - Evidence: 2 failed.
+  - Missing contract areas: safe-mechanical dead-branch detection required the current duplicate guard to be terminal and have no `else`.
 
 ## Passing After
 
@@ -37,6 +41,8 @@
   - Result after final PR review fixes: 172 passed.
 - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_removes_dead_branch tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_dead_branch_with_else tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_impure_duplicate_guard -q`
   - Result after complexity cleanup: 3 passed.
+- `hatch run pytest tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_flags_duplicate_prior_return_guard tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_duplicate_guard_after_else_path tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_nonterminal_duplicate_guard tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_duplicate_guard_with_else tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_impure_duplicate_guard -q`
+  - Result after final detector tightening: 5 passed.
 - `hatch run contract-test`
   - Result after PR review fixes: 758 passed, 2 warnings.
 - `hatch run smart-test`
