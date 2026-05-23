@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from typer.testing import CliRunner
@@ -16,6 +16,13 @@ from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 runner = CliRunner()
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_FILE = REPO_ROOT / "tests/fixtures/review/clean_module.py"
+SafeMechanicalAction = Literal["remove", "inline", "collapse"]
+SAFE_MECHANICAL_ACTIONS: dict[str, SafeMechanicalAction] = {
+    "ai-bloat.dead-branch": "remove",
+    "ai-bloat.pass-through-try-except": "remove",
+    "ai-bloat.redundant-intermediate": "inline",
+    "ai-bloat.verbose-bool-return": "collapse",
+}
 
 
 def _report(*, score: int = 85) -> ReviewReport:
@@ -28,33 +35,35 @@ def _report(*, score: int = 85) -> ReviewReport:
     )
 
 
+def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:
+    return ReviewFinding(
+        category="ai_bloat",
+        severity="info",
+        tool="ast",
+        rule=rule,
+        file=str(file_path),
+        line=line,
+        message="Safe mechanical simplification.",
+        fixable=True,
+        confidence="high",
+        rewrite_hint="Apply the local rewrite.",
+        canonical_pattern="safe-mechanical",
+        estimated_deletion_lines=1,
+        guidance_kind="safe_mechanical",
+        recommended_action=SAFE_MECHANICAL_ACTIONS[rule],
+        clean_code_principle="kiss",
+        rationale="The rewrite is local and behavior-preserving.",
+        safety_checks=["pattern shape is exact"],
+        action_status="recommended",
+    )
+
+
 def _safe_mechanical_report(file_path: Path, *, line: int, rule: str) -> ReviewReport:
     return ReviewReport(
         run_id="review-run-001",
         timestamp=datetime(2026, 3, 16, tzinfo=UTC),
         score=85,
-        findings=[
-            ReviewFinding(
-                category="ai_bloat",
-                severity="info",
-                tool="ast",
-                rule=rule,
-                file=str(file_path),
-                line=line,
-                message="Safe mechanical simplification.",
-                fixable=True,
-                confidence="high",
-                rewrite_hint="Apply the local rewrite.",
-                canonical_pattern="safe-mechanical",
-                estimated_deletion_lines=1,
-                guidance_kind="safe_mechanical",
-                recommended_action="inline" if rule == "ai-bloat.redundant-intermediate" else "collapse",
-                clean_code_principle="kiss",
-                rationale="The rewrite is local and behavior-preserving.",
-                safety_checks=["pattern shape is exact"],
-                action_status="recommended",
-            )
-        ],
+        findings=[_safe_mechanical_finding(file_path, line=line, rule=rule)],
         summary="Review command test report.",
     )
 
@@ -344,6 +353,87 @@ def test_apply_simplification_fixes_collapses_verbose_bool_return(tmp_path: Path
 
     assert applied == 1
     assert target.read_text(encoding="utf-8") == "def allowed(role: str) -> bool:\n    return role == 'admin'\n"
+
+
+def test_apply_simplification_fixes_removes_dead_branch(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    if value > 10:\n"
+        "        return 'still large'\n"
+        "    return 'small'\n",
+        encoding="utf-8",
+    )
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
+    )
+
+    assert applied == 1
+    assert target.read_text(encoding="utf-8") == (
+        "def classify(value: int) -> str:\n    if value > 10:\n        return 'large'\n    return 'small'\n"
+    )
+
+
+def test_apply_simplification_fixes_removes_pass_through_try_except(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def parse(raw: str) -> object:\n"
+        "    try:\n"
+        "        return parse_json(raw)\n"
+        "    except Exception:\n"
+        "        raise\n",
+        encoding="utf-8",
+    )
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.pass-through-try-except")
+    )
+
+    assert applied == 1
+    assert target.read_text(encoding="utf-8") == "def parse(raw: str) -> object:\n    return parse_json(raw)\n"
+
+
+def test_apply_simplification_fixes_uses_bottom_up_line_order(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def total(values: list[int]) -> int:\n"
+        "    result = sum(values)\n"
+        "    return result\n"
+        "\n"
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    if value > 10:\n"
+        "        return 'still large'\n"
+        "    return 'small'\n",
+        encoding="utf-8",
+    )
+    report = ReviewReport(
+        run_id="review-run-001",
+        timestamp=datetime(2026, 3, 16, tzinfo=UTC),
+        score=85,
+        findings=[
+            _safe_mechanical_finding(target, line=2, rule="ai-bloat.redundant-intermediate"),
+            _safe_mechanical_finding(target, line=8, rule="ai-bloat.dead-branch"),
+        ],
+        summary="Review command test report.",
+    )
+
+    applied = run_commands._apply_simplification_fixes(report)
+
+    assert applied == 2
+    assert target.read_text(encoding="utf-8") == (
+        "def total(values: list[int]) -> int:\n"
+        "    return sum(values)\n"
+        "\n"
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    return 'small'\n"
+    )
 
 
 def test_apply_simplification_fixes_skips_when_source_no_longer_matches(tmp_path: Path) -> None:

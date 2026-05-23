@@ -60,6 +60,18 @@ def _simplification_finding(
     confidence: Literal["low", "medium", "high"] = "high",
     guidance_kind: Literal["safe_mechanical", "needs_tests", "design_judgment", "preserve"] | None = None,
 ) -> ReviewFinding:
+    guided_fields = (
+        {
+            "recommended_action": "collapse",
+            "clean_code_principle": "kiss",
+            "rationale": "The repeated loop shape can be expressed directly.",
+            "safety_checks": ["targeted tests cover the surrounding behavior"],
+            "action_status": "recommended",
+            "preserve_reason": "The wrapper is a compatibility boundary." if guidance_kind == "preserve" else None,
+        }
+        if guidance_kind is not None
+        else {}
+    )
     return ReviewFinding(
         category=category,
         severity="info",
@@ -75,12 +87,7 @@ def _simplification_finding(
         intent_key="score-review",
         estimated_deletion_lines=3,
         guidance_kind=guidance_kind,
-        recommended_action="collapse" if guidance_kind is not None else None,
-        clean_code_principle="kiss" if guidance_kind is not None else None,
-        rationale="The repeated loop shape can be expressed directly.",
-        safety_checks=["targeted tests cover the surrounding behavior"],
-        action_status="recommended" if guidance_kind is not None else None,
-        preserve_reason="The wrapper is a compatibility boundary." if guidance_kind == "preserve" else None,
+        **guided_fields,
     )
 
 

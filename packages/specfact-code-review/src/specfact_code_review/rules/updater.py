@@ -40,6 +40,8 @@ DEFAULT_DO_RULES = (
     "tests first, `design_judgment` needs human choice, `preserve` means keep and log `preserve_reason`",
     "- Log each simplification action as recommended, applied, kept, skipped, failed, with evidence of improvement "
     "or preserved contract",
+    "- In headless mode, process one file at a time and emit an action table: file, line, rule, guidance_kind, "
+    "recommended_action, action_status, evidence",
     "- For merge-quality review, run `specfact code review run --scope changed --bug-hunt --json "
     "--out .specfact/code-review.json`",
     "- Verify an active OpenSpec change covers the requested scope and follow the sequence: spec delta "

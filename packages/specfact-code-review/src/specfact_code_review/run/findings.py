@@ -188,7 +188,17 @@ class ReviewFinding(BaseModel):
 
     @model_validator(mode="after")
     def _validate_guided_metadata(self) -> ReviewFinding:
+        guided_fields = (
+            self.recommended_action,
+            self.clean_code_principle,
+            self.rationale,
+            self.safety_checks,
+            self.action_status,
+            self.preserve_reason,
+        )
         if self.guidance_kind is None:
+            if any(value is not None for value in guided_fields):
+                raise ValueError("guidance_kind is required when guided metadata fields are present")
             return self
         if self.recommended_action is None:
             raise ValueError("recommended_action is required when guidance_kind is present")
@@ -357,7 +367,8 @@ def _build_simplification_summary(findings: list[ReviewFinding]) -> Simplificati
         by_guidance_kind=by_guidance_kind,
         by_action_status=by_action_status,
         blocking_simplification_count=sum(
-            finding.is_safe_mechanical_simplification() and finding.action_status == "recommended" for finding in guided
+            finding.is_safe_mechanical_simplification() and finding.action_status in {"recommended", "failed"}
+            for finding in guided
         ),
         applied_count=by_action_status.get("applied", 0),
         kept_count=by_action_status.get("kept", 0),

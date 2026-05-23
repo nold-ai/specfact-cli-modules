@@ -282,15 +282,74 @@ def _apply_fixes(files: list[Path]) -> None:
 
 def _apply_simplification_fixes(report: ReviewReport) -> int:
     """Apply deterministic safe-mechanical simplification rewrites from a report."""
+    fixers: dict[str, Callable[[ReviewFinding], bool]] = {
+        "ai-bloat.dead-branch": _apply_dead_branch_fix,
+        "ai-bloat.pass-through-try-except": _apply_pass_through_try_except_fix,
+        "ai-bloat.redundant-intermediate": _apply_redundant_intermediate_fix,
+        "ai-bloat.verbose-bool-return": _apply_verbose_bool_return_fix,
+    }
     applied = 0
-    for finding in report.findings:
-        if not finding.is_safe_mechanical_simplification() or not finding.fixable:
+    for finding in _fixable_simplifications_by_stable_line_order(report.findings):
+        fixer = fixers.get(finding.rule)
+        if fixer is None:
             continue
-        if finding.rule == "ai-bloat.redundant-intermediate":
-            applied += int(_apply_redundant_intermediate_fix(finding))
-        elif finding.rule == "ai-bloat.verbose-bool-return":
-            applied += int(_apply_verbose_bool_return_fix(finding))
+        applied += int(fixer(finding))
     return applied
+
+
+def _fixable_simplifications_by_stable_line_order(findings: list[ReviewFinding]) -> list[ReviewFinding]:
+    indexed_findings = [
+        (index, finding)
+        for index, finding in enumerate(findings)
+        if finding.is_safe_mechanical_simplification() and finding.fixable
+    ]
+    return [finding for _, finding in sorted(indexed_findings, key=lambda item: (item[1].file, -item[1].line, item[0]))]
+
+
+def _apply_dead_branch_fix(finding: ReviewFinding) -> bool:
+    parsed = _parsed_finding_source(finding)
+    if parsed is None:
+        return False
+    file_path, source, tree = parsed
+    for function_node in _iter_functions(tree):
+        prior_terminal_tests: set[str] = set()
+        for stmt in function_node.body:
+            if not isinstance(stmt, ast.If):
+                continue
+            test_key = ast.dump(stmt.test, include_attributes=False)
+            if stmt.lineno == finding.line and test_key in prior_terminal_tests and _terminal_return(stmt.body):
+                return _replace_line_range(
+                    file_path,
+                    source,
+                    start_line=stmt.lineno,
+                    end_line=stmt.end_lineno or stmt.lineno,
+                    replacement=[],
+                )
+            if _terminal_return(stmt.body):
+                prior_terminal_tests.add(test_key)
+    return False
+
+
+def _apply_pass_through_try_except_fix(finding: ReviewFinding) -> bool:
+    parsed = _parsed_finding_source(finding)
+    if parsed is None:
+        return False
+    file_path, source, tree = parsed
+    for function_node in _iter_functions(tree):
+        for stmt in function_node.body:
+            if stmt.lineno != finding.line or not isinstance(stmt, ast.Try) or not _is_pass_through_try_except(stmt):
+                continue
+            replacement = _dedented_try_body_lines(source, stmt)
+            if replacement is None:
+                return False
+            return _replace_line_range(
+                file_path,
+                source,
+                start_line=stmt.lineno,
+                end_line=stmt.end_lineno or stmt.lineno,
+                replacement=replacement,
+            )
+    return False
 
 
 def _apply_redundant_intermediate_fix(finding: ReviewFinding) -> bool:
@@ -379,6 +438,31 @@ def _verbose_bool_replacement_expression(
     )
 
 
+def _is_pass_through_try_except(stmt: ast.stmt) -> bool:
+    if not isinstance(stmt, ast.Try) or stmt.orelse or stmt.finalbody or len(stmt.handlers) != 1:
+        return False
+    handler = stmt.handlers[0]
+    return len(handler.body) == 1 and isinstance(handler.body[0], ast.Raise) and handler.body[0].exc is None
+
+
+def _terminal_return(body: list[ast.stmt]) -> bool:
+    return bool(body) and isinstance(body[-1], ast.Return)
+
+
+def _dedented_try_body_lines(source: str, stmt: ast.Try) -> list[str] | None:
+    if not stmt.body:
+        return None
+    lines = source.splitlines()
+    start_line = stmt.body[0].lineno
+    end_line = stmt.handlers[0].lineno - 1
+    try_indent = _indent_for_line(source, stmt.lineno)
+    body_indent = _indent_for_line(source, start_line)
+    if len(body_indent) <= len(try_indent):
+        return None
+    body_lines = lines[start_line - 1 : end_line]
+    return [try_indent + line[len(body_indent) :] if line.startswith(body_indent) else line for line in body_lines]
+
+
 def _bool_expr(predicate: str, first_value: bool) -> str:
     return predicate if first_value else f"not ({predicate})"
 
@@ -404,12 +488,13 @@ def _replace_line_range(
     *,
     start_line: int,
     end_line: int,
-    replacement: str,
+    replacement: str | list[str],
 ) -> bool:
     lines = source.splitlines()
     if start_line < 1 or end_line < start_line or end_line > len(lines):
         return False
-    lines[start_line - 1 : end_line] = [replacement]
+    replacement_lines = [replacement] if isinstance(replacement, str) else replacement
+    lines[start_line - 1 : end_line] = replacement_lines
     trailing_newline = "\n" if source.endswith("\n") else ""
     file_path.write_text("\n".join(lines) + trailing_newline, encoding="utf-8")
     return True

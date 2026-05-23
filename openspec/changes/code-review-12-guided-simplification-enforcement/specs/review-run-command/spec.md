@@ -8,7 +8,7 @@ The `specfact code review run` command SHALL accept `--focus simplify` as a targ
 
 - **WHEN** `specfact code review run --focus simplify --json --out .specfact/code-review.json` completes
 - **THEN** the JSON report SHALL retain simplification-focused findings
-- **AND** retained findings SHOULD include guidance metadata for actionability, preservation, or design judgment
+- **AND** retained findings SHALL include guidance metadata for actionability, preservation, or design judgment
 - **AND** the report SHALL include a simplification summary when guided findings are present
 
 #### Scenario: Simplify enforce blocks only safe mechanical debt

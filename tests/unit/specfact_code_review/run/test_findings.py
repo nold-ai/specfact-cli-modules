@@ -154,6 +154,17 @@ def test_review_finding_rejects_preserve_guidance_without_preserve_reason() -> N
         )
 
 
+def test_review_finding_rejects_guided_fields_without_guidance_kind() -> None:
+    with pytest.raises(ValidationError, match="guidance_kind is required"):
+        ReviewFinding(
+            **_finding_data(
+                category="ai_bloat",
+                severity="info",
+                recommended_action="remove",
+            )
+        )
+
+
 def test_review_finding_rejects_partial_simplification_metadata_as_nondeterministic() -> None:
     finding = ReviewFinding(
         **_finding_data(
@@ -308,6 +319,36 @@ def test_review_report_uses_schema_1_2_and_summary_when_guided_metadata_is_prese
     assert report.simplification_summary is not None
     assert report.simplification_summary.by_guidance_kind == {"safe_mechanical": 1}
     assert report.simplification_summary.by_action_status == {"recommended": 1}
+    assert report.simplification_summary.blocking_simplification_count == 1
+
+
+def test_review_report_counts_failed_safe_mechanical_findings_as_blocking() -> None:
+    report = ReviewReport(
+        run_id="run-guided-simplify",
+        timestamp=datetime(2026, 3, 11, tzinfo=UTC),
+        score=85,
+        findings=[
+            ReviewFinding(
+                **_finding_data(
+                    category="ai_bloat",
+                    severity="info",
+                    confidence="high",
+                    rewrite_hint="Remove the duplicate terminal branch.",
+                    canonical_pattern="duplicate-terminal-guard",
+                    estimated_deletion_lines=1,
+                    guidance_kind="safe_mechanical",
+                    recommended_action="remove",
+                    clean_code_principle="kiss",
+                    rationale="The branch repeats an earlier terminal guard.",
+                    safety_checks=["same guard expression already returned earlier"],
+                    action_status="failed",
+                )
+            )
+        ],
+        summary="Guided simplification advisories.",
+    )
+
+    assert report.simplification_summary is not None
     assert report.simplification_summary.blocking_simplification_count == 1
 
 

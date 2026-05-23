@@ -6,15 +6,23 @@
   - Result: failed as expected before implementation.
   - Evidence: 18 failed, 64 passed.
   - Missing contract areas: guided finding fields, preserve validation, schema 1.2 summary, classifier guidance kinds, simplify enforce behavior, and prompt/skill walkthrough policy.
+- `hatch run pytest tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/rules/test_updater.py tests/unit/test_guided_simplify_resources.py -q`
+  - Result: failed as expected before PR review fixes.
+  - Evidence: 6 failed, 87 passed.
+  - Missing contract areas: orphan guided-field validation, failed safe-mechanical blocking counts, missing deterministic safe-mechanical fixers, bottom-up rewrite ordering, and headless action-table defaults.
 
 ## Passing After
 
 - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/rules/test_updater.py::test_default_skill_content_stays_within_line_budget tests/unit/specfact_code_review/rules/test_updater.py::test_load_bundled_skill_content_returns_valid_structure_when_available tests/unit/test_guided_simplify_resources.py -q`
   - Result: 116 passed.
+- `hatch run pytest tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/rules/test_updater.py tests/unit/test_guided_simplify_resources.py -q`
+  - Result after PR review fixes: 93 passed.
+- `hatch run pytest tests/unit/specfact_code_review/run/test_findings.py tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/rules/test_updater.py tests/unit/test_guided_simplify_resources.py -q`
+  - Result after strict metadata fallout fix: 125 passed.
 - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py -q`
   - Result after final cleanup: 50 passed.
 - `hatch run contract-test`
-  - Result: 742 passed, 2 warnings.
+  - Result after PR review fixes: 758 passed, 2 warnings.
 - `hatch run smart-test`
   - Result: 742 passed, 2 warnings.
 - `hatch run type-check`
@@ -28,9 +36,9 @@
 - `hatch run validate-prompt-commands`
   - Result: prompt command validation passed with no findings.
 - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev`
-  - Result: verified 6 module manifests.
+  - Result after PR review fixes: verified 6 module manifests.
 - `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`
-  - Result: PASS, CI exit 0, score 115, 0 findings.
+  - Result after PR review fixes: PASS, CI exit 0, score 115, 0 findings.
 - `openspec validate code-review-12-guided-simplification-enforcement --strict`
   - Result: valid.
 
