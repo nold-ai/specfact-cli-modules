@@ -195,6 +195,9 @@ class ReviewFinding(BaseModel):
             self.safety_checks,
             self.action_status,
             self.preserve_reason,
+            self.before_ref,
+            self.after_ref,
+            self.improvement,
         )
         if self.guidance_kind is None:
             if any(value is not None for value in guided_fields):

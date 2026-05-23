@@ -10,6 +10,10 @@
   - Result: failed as expected before PR review fixes.
   - Evidence: 6 failed, 87 passed.
   - Missing contract areas: orphan guided-field validation, failed safe-mechanical blocking counts, missing deterministic safe-mechanical fixers, bottom-up rewrite ordering, and headless action-table defaults.
+- `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_dead_branch_with_else tests/unit/specfact_code_review/run/test_findings.py::test_review_finding_rejects_guided_evidence_fields_without_guidance_kind -q`
+  - Result: failed as expected before follow-up PR review fixes.
+  - Evidence: 4 failed.
+  - Missing contract areas: dead-branch fixer skipped no-else guard and guided evidence fields required `guidance_kind`.
 
 ## Passing After
 
@@ -21,6 +25,8 @@
   - Result after strict metadata fallout fix: 125 passed.
 - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py -q`
   - Result after final cleanup: 50 passed.
+- `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/run/test_findings.py -q`
+  - Result after follow-up PR review fixes: 77 passed.
 - `hatch run contract-test`
   - Result after PR review fixes: 758 passed, 2 warnings.
 - `hatch run smart-test`
@@ -38,7 +44,7 @@
 - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev`
   - Result after PR review fixes: verified 6 module manifests.
 - `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`
-  - Result after PR review fixes: PASS, CI exit 0, score 115, 0 findings.
+  - Result after follow-up PR review fixes: PASS, CI exit 0, score 120, 0 findings.
 - `openspec validate code-review-12-guided-simplification-enforcement --strict`
   - Result: valid.
 

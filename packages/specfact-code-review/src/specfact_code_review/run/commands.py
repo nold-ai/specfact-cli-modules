@@ -317,7 +317,12 @@ def _apply_dead_branch_fix(finding: ReviewFinding) -> bool:
             if not isinstance(stmt, ast.If):
                 continue
             test_key = ast.dump(stmt.test, include_attributes=False)
-            if stmt.lineno == finding.line and test_key in prior_terminal_tests and _terminal_return(stmt.body):
+            if (
+                stmt.lineno == finding.line
+                and test_key in prior_terminal_tests
+                and _terminal_return(stmt.body)
+                and not stmt.orelse
+            ):
                 return _replace_line_range(
                     file_path,
                     source,

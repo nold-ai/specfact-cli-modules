@@ -377,6 +377,28 @@ def test_apply_simplification_fixes_removes_dead_branch(tmp_path: Path) -> None:
     )
 
 
+def test_apply_simplification_fixes_keeps_dead_branch_with_else(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = (
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    if value > 10:\n"
+        "        return 'still large'\n"
+        "    else:\n"
+        "        return 'fallback'\n"
+        "    return 'small'\n"
+    )
+    target.write_text(source, encoding="utf-8")
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
+    )
+
+    assert applied == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
 def test_apply_simplification_fixes_removes_pass_through_try_except(tmp_path: Path) -> None:
     target = tmp_path / "sample.py"
     target.write_text(

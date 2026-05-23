@@ -165,6 +165,24 @@ def test_review_finding_rejects_guided_fields_without_guidance_kind() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "field_payload",
+    [
+        cast(ReviewFindingPayload, {"before_ref": EvidenceRef(path="src/example.py", start_line=10, end_line=12)}),
+        cast(ReviewFindingPayload, {"after_ref": EvidenceRef(path="src/example.py", start_line=10, end_line=10)}),
+        cast(ReviewFindingPayload, {"improvement": "Removed one redundant branch."}),
+    ],
+)
+def test_review_finding_rejects_guided_evidence_fields_without_guidance_kind(
+    field_payload: ReviewFindingPayload,
+) -> None:
+    finding_payload = _finding_data(category="ai_bloat", severity="info")
+    finding_payload.update(field_payload)
+
+    with pytest.raises(ValidationError, match="guidance_kind is required"):
+        ReviewFinding(**finding_payload)
+
+
 def test_review_finding_rejects_partial_simplification_metadata_as_nondeterministic() -> None:
     finding = ReviewFinding(
         **_finding_data(
