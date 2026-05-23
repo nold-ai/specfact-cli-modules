@@ -35,7 +35,7 @@ The JSON report remains the source of truth. Each simplification finding can car
 - `guidance_kind`: `safe_mechanical`, `needs_tests`, `design_judgment`, or `preserve`;
 - `recommended_action`: `remove`, `inline`, `collapse`, `deduplicate`, `make_required`, `keep`, or `inspect`;
 - `clean_code_principle`: `kiss`, `dry`, `yagni`, `contracts`, `api_stability`, or `readability`;
-- `rationale`, `safety_checks`, `preserve_reason`, and `action_status`;
+- `rationale`, `safety_checks`, `preserve_reason`, and optional `action_status`;
 - optional before/after evidence and improvement metrics after an auto-applied safe fix.
 
 Existing fields such as `confidence`, `rewrite_hint`, `canonical_pattern`, `intent_key`, and `related_locations` remain valid.

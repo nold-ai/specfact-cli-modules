@@ -399,6 +399,26 @@ def test_apply_simplification_fixes_keeps_dead_branch_with_else(tmp_path: Path) 
     assert target.read_text(encoding="utf-8") == source
 
 
+def test_apply_simplification_fixes_keeps_impure_duplicate_guard(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = (
+        "def classify(value: object) -> str:\n"
+        "    if value.ready():\n"
+        "        return 'ready'\n"
+        "    if value.ready():\n"
+        "        return 'still ready'\n"
+        "    return 'not ready'\n"
+    )
+    target.write_text(source, encoding="utf-8")
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
+    )
+
+    assert applied == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
 def test_apply_simplification_fixes_removes_pass_through_try_except(tmp_path: Path) -> None:
     target = tmp_path / "sample.py"
     target.write_text(

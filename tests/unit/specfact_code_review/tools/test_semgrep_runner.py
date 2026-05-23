@@ -10,6 +10,8 @@ import pytest
 from pytest import MonkeyPatch
 
 from specfact_code_review.tools.semgrep_runner import (
+    AI_BLOAT_GUIDANCE,
+    SEMGREP_RULE_CATEGORY,
     _parse_semgrep_results,
     _run_semgrep_command,
     _snip_stderr_tail,
@@ -50,6 +52,12 @@ AI_BLOAT_GOOD_FIXTURES = [
     "good_none_then_none.py",
     "good_single_call_wrapper.py",
 ]
+
+
+def test_ai_bloat_guidance_matches_ai_bloat_rule_categories() -> None:
+    categorized_ai_bloat_rules = {rule for rule, category in SEMGREP_RULE_CATEGORY.items() if category == "ai_bloat"}
+
+    assert categorized_ai_bloat_rules == set(AI_BLOAT_GUIDANCE)
 
 
 def test_run_semgrep_command_creates_runtime_dirs(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:

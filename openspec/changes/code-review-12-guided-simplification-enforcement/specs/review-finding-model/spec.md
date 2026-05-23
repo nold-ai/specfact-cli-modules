@@ -14,5 +14,6 @@ The `ReviewFinding` model SHALL accept optional simplification metadata while pr
 
 - **WHEN** a `ReviewFinding` payload includes `guidance_kind`, `recommended_action`, `clean_code_principle`, `rationale`, `safety_checks`, `preserve_reason`, `action_status`, `before_ref`, `after_ref`, or `improvement`
 - **THEN** model validation SHALL accept the payload when the original required fields are valid
+- **AND** guided findings SHALL accept an omitted `action_status` until a recommendation lifecycle status is known
 - **AND** a finding with `guidance_kind="preserve"` SHALL require a non-empty `preserve_reason`
 - **AND** legacy finding payloads SHALL remain valid without any guided simplification fields
