@@ -49,6 +49,14 @@
   - Result after final detector tightening: 5 passed.
 - `hatch run pytest tests/unit/specfact_code_review/tools/test_ai_bloat_runner.py::test_dead_branch_ignores_duplicate_guard_after_assignment tests/unit/specfact_code_review/run/test_commands.py::test_apply_simplification_fixes_keeps_dead_branch_after_assignment tests/unit/specfact_code_review/run/test_commands.py::test_run_review_once_applies_simplification_fixes_before_rerun -q`
   - Result after PR 289 dev-branch review fixes: 3 passed.
+- `hatch run pytest tests/unit/test_guided_simplify_resources.py -q`
+  - Result after prompt/skill user-experience tightening: 2 passed.
+- `hatch run validate-prompt-commands`
+  - Result after prompt/skill user-experience tightening: prompt command validation passed with no findings.
+- `hatch run pytest tests/unit/specfact_code_review/review/test_commands.py::test_review_run_help_lists_simplify_focus tests/unit/specfact_code_review/review/test_commands.py::test_review_run_instructions_prints_ai_workflow_without_running_review tests/unit/docs/test_code_review_docs_parity.py::test_code_review_run_doc_mentions_public_ty_options tests/unit/test_guided_simplify_resources.py tests/unit/specfact_code_review/rules/test_updater.py::test_load_bundled_skill_content_returns_valid_structure_when_available -q`
+  - Result after adding the AI instructions fallback and docs: 6 passed.
+- `hatch run specfact code review run --instructions`
+  - Result after adding the AI instructions fallback: printed the guided simplify / clean-code workflow and exited successfully without running review analysis.
 - `hatch run contract-test`
   - Result after PR review fixes: 758 passed, 2 warnings.
 - `hatch run smart-test`
@@ -56,19 +64,21 @@
 - `hatch run type-check`
   - Result: 0 errors, 0 warnings, 0 notes.
 - `hatch run lint`
-  - Result: 10.00/10.
+  - Result after AI instructions fallback: 10.00/10.
 - `hatch run yaml-lint`
-  - Result: validated 6 manifests and `registry/index.json`.
+  - Result after AI instructions fallback: validated 6 manifests and `registry/index.json`.
 - `hatch run check-bundle-imports`
   - Result: import boundary check passed.
 - `hatch run validate-prompt-commands`
   - Result: prompt command validation passed with no findings.
 - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev`
-  - Result after PR review fixes: verified 6 module manifests.
+  - Result after AI instructions fallback: verified 6 module manifests.
 - `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`
   - Result after final PR review fixes: PASS, CI exit 0, score 120, 0 findings.
+- `hatch run specfact code review run --bug-hunt --include-tests --json --out .specfact/code-review.json --scope changed`
+  - Result after AI instructions fallback: PASS, CI exit 0, 0 findings.
 - `openspec validate code-review-12-guided-simplification-enforcement --strict`
-  - Result: valid.
+  - Result after AI instructions fallback: valid.
 
 ## Local Dev-Link Validation
 
@@ -94,4 +104,4 @@
 
 ## Signing Note
 
-`hatch run verify-modules-signature --payload-from-filesystem --require-signature --enforce-version-bump --version-check-base origin/main` passed before the final source edits, verifying the existing `0.47.23` signature was a real cryptographic signature. The final local payload was then bumped to `0.47.24` and refreshed with `hatch run sign-modules --changed-only --base-ref origin/dev --bump-version patch --allow-unsigned --payload-from-filesystem`, because no private signing key is available in the local worktree. Cryptographic signature restoration remains an approval-time or post-merge signing step.
+`hatch run verify-modules-signature --payload-from-filesystem --require-signature --enforce-version-bump --version-check-base origin/main` passed before the final source edits, verifying the existing `0.47.23` signature was a real cryptographic signature. The final local payload is refreshed at `0.47.25` for `specfact-code-review` and `0.41.16` for `specfact-project` with `hatch run sign-modules --changed-only --base-ref origin/dev --bump-version patch --allow-unsigned --payload-from-filesystem`, because no private signing key is available in the local worktree. Cryptographic signature restoration remains an approval-time or post-merge signing step.
