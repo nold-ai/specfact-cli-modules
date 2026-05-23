@@ -33,14 +33,17 @@ Use this when the user asks to remove AI bloat, simplify code, apply clean-code 
 1. Generate evidence first:
    specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 
+   If the worktree is clean on a PR branch and --scope changed finds no files, review the branch-delta Python files as explicit positional files and omit --scope. Find them with the PR base ref, for example: git diff --name-only origin/dev...HEAD -- '*.py' '*.pyi'
+
 2. Treat guidance_kind as the action contract:
    - safe_mechanical: apply only after local safety checks pass.
    - needs_tests: add or identify targeted tests before changing behavior.
    - design_judgment: inspect intent evidence and ask before editing.
    - preserve: keep by default and record preserve_reason.
+   Findings without guidance_kind are unguided advisories: summarize them separately, do not auto-apply them, and ask before using them as refactor input.
 
 3. For vibe-coder or junior users, present each finding as a decision card:
-   Finding, plain-language issue, why it might need to stay, exact patch preview, validation plan, recommended choice.
+   Finding, plain-language issue, why it might need to stay, exact patch preview or small before/after proposal, validation plan, recommended choice.
 
 4. For design_judgment findings, check API, callback, framework hook, adapter, public symbol, CLI boundary, compatibility shim, and readability intent. If intent is unclear, default to keep or skip.
 

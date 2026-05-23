@@ -107,7 +107,7 @@ When an IDE does not support bundled prompts or skills, print the same guided si
 specfact code review run --instructions
 ```
 
-The output explains how to remove AI bloat and apply clean-code simplifications using SpecFact evidence, including `safe_mechanical`, `needs_tests`, `design_judgment`, and `preserve` handling, patch previews, conservative keep/skip defaults, and per-file validation.
+The output explains how to remove AI bloat and apply clean-code simplifications using SpecFact evidence, including `safe_mechanical`, `needs_tests`, `design_judgment`, and `preserve` handling, patch previews, conservative keep/skip defaults, and per-file validation. It also tells assistants how to handle clean PR branches where `--scope changed` has no worktree files: find branch-delta Python files with a base-ref diff such as `git diff --name-only origin/dev...HEAD -- '*.py' '*.pyi'`, review those files as explicit positional files, and treat findings without `guidance_kind` as unguided advisories rather than auto-fix input.
 
 ### Positional files (explicit Python paths)
 

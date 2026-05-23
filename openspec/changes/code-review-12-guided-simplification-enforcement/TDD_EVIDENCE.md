@@ -57,6 +57,8 @@
   - Result after adding the AI instructions fallback and docs: 6 passed.
 - `hatch run specfact code review run --instructions`
   - Result after adding the AI instructions fallback: printed the guided simplify / clean-code workflow and exited successfully without running review analysis.
+- Subagent simulation with only `specfact code review run --instructions` guidance
+  - Result: the assistant followed the conservative decision-card workflow, treated missing `guidance_kind` findings as unguided advisories, and identified the clean-PR branch fallback as actionable after adding a base-ref diff example.
 - `hatch run contract-test`
   - Result after PR review fixes: 758 passed, 2 warnings.
 - `hatch run smart-test`

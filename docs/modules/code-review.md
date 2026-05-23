@@ -126,7 +126,12 @@ specfact code review run --instructions
 Paste that output into any AI coding assistant and ask it to simplify or remove
 AI bloat with SpecFact. The instructions explain the expected report file,
 `guidance_kind` handling, patch-preview decision cards, conservative defaults
-for `design_judgment`, and per-file validation.
+for `design_judgment`, and per-file validation. They also cover clean PR
+branches where `--scope changed` has no worktree files: the assistant should
+find branch-delta Python files with a base-ref diff such as
+`git diff --name-only origin/dev...HEAD -- '*.py' '*.pyi'`, review those files
+as explicit positional files, and treat findings without `guidance_kind` as
+unguided advisories, not auto-fix input.
 
 Positional `FILES...` cannot be mixed with **`--scope`** or **`--path`** (see
 **Invalid combinations** above).
