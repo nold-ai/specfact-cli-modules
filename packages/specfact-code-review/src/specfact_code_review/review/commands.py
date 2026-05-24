@@ -33,7 +33,7 @@ Use this when the user asks to remove AI bloat, simplify code, apply clean-code 
 1. Generate evidence first:
    specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 
-   If the worktree is clean on a PR branch and --scope changed finds no files, review the branch-delta Python files as explicit positional files and omit --scope. Find them with the PR base ref, for example: git diff --name-only origin/dev...HEAD -- '*.py' '*.pyi'
+   If the worktree is clean on a PR branch and --scope changed finds no files, review the branch-delta Python files as explicit positional files and omit --scope. Find them with the PR base ref, for example: git diff --name-only <base-ref>...HEAD -- '*.py' '*.pyi'
 
 2. Treat guidance_kind as the action contract:
    - safe_mechanical: apply only after local safety checks pass.

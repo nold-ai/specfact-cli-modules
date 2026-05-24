@@ -19,10 +19,11 @@ def _plain_output(text: str) -> str:
 
 def test_review_run_help_lists_simplify_focus() -> None:
     result = runner.invoke(app, ["review", "run", "--help"])
+    output = _plain_output(result.output)
 
     assert result.exit_code == 0
-    assert "simplify" in result.output
-    assert "--instructions" in result.output
+    assert "simplify" in output
+    assert "--instructions" in output
 
 
 def test_review_run_instructions_prints_ai_workflow_without_running_review(monkeypatch: Any) -> None:
@@ -38,7 +39,7 @@ def test_review_run_instructions_prints_ai_workflow_without_running_review(monke
     assert "safe_mechanical" in result.output
     assert "design_judgment" in result.output
     assert "branch-delta Python files" in result.output
-    assert "git diff --name-only origin/dev...HEAD" in result.output
+    assert "git diff --name-only <base-ref>...HEAD" in result.output
     assert "Findings without guidance_kind are unguided advisories" in result.output
     assert "exact patch preview" in result.output
     assert "default to keep or skip" in result.output
