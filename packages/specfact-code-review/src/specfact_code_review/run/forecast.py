@@ -79,11 +79,25 @@ def _reviewed_loc_for_files(files: list[Path]) -> ReviewedLoc:
             loc = _count_python_loc(file_path)
         except (OSError, UnicodeDecodeError):
             continue
-        if any("test" in part.lower() for part in file_path.parts):
+        if _is_test_path(file_path):
             tests += loc
         else:
             production += loc
     return ReviewedLoc(production=production, tests=tests, total=production + tests)
+
+
+def _is_test_path(file_path: Path) -> bool:
+    name = file_path.name.lower()
+    stem = file_path.stem.lower()
+    if name.startswith("test_") or stem.endswith("_test") or name.endswith((".spec.py", ".spec.pyi")):
+        return True
+    for part in file_path.parts[:-1]:
+        normalized = part.lower().replace("-", "_")
+        if normalized in {"test", "tests"}:
+            return True
+        if normalized.startswith(("test_", "tests_")) or normalized.endswith(("_test", "_tests")):
+            return True
+    return False
 
 
 def _count_python_loc(file_path: Path) -> int:

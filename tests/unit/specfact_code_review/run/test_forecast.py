@@ -67,15 +67,20 @@ def test_build_cleanup_forecast_counts_loc_and_weighted_bloat(tmp_path: Path, mo
     assert forecast.ai_bloat_index.weighted_bloat_points_per_kloc == 462.5
 
 
-def test_build_cleanup_forecast_counts_test_directory_as_tests(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+def test_build_cleanup_forecast_classifies_test_paths_without_substring_false_positive(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     test_file = Path("unit_tests/test_example.py")
     test_file.parent.mkdir()
     test_file.write_text("def test_example():\n    assert True\n", encoding="utf-8")
+    production_file = Path("src/contest/example.py")
+    production_file.parent.mkdir(parents=True)
+    production_file.write_text("def score() -> int:\n    return 1\n", encoding="utf-8")
 
-    forecast = build_cleanup_forecast([], [test_file])
+    forecast = build_cleanup_forecast([], [test_file, production_file])
 
-    assert forecast.reviewed_loc.production == 0
+    assert forecast.reviewed_loc.production == 2
     assert forecast.reviewed_loc.tests == 2
 
 
