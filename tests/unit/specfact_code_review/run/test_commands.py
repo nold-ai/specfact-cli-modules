@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,6 +24,11 @@ SAFE_MECHANICAL_ACTIONS: dict[str, SafeMechanicalAction] = {
     "ai-bloat.redundant-intermediate": "inline",
     "ai-bloat.verbose-bool-return": "collapse",
 }
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    return ANSI_RE.sub("", text)
 
 
 def _report(*, score: int = 85) -> ReviewReport:
@@ -327,7 +333,7 @@ def test_run_command_rejects_preview_fixes_with_fix() -> None:
     )
 
     assert result.exit_code == 2
-    assert "Cannot combine --preview-fixes with --fix" in result.output
+    assert "Cannot combine --preview-fixes with --fix" in _strip_ansi(result.output)
 
 
 def test_run_command_rejects_with_mutation_without_simplify_focus() -> None:
@@ -337,7 +343,7 @@ def test_run_command_rejects_with_mutation_without_simplify_focus() -> None:
     )
 
     assert result.exit_code == 2
-    assert "Use --with-mutation only with --focus simplify" in result.output
+    assert "Use --with-mutation only with --focus simplify" in _strip_ansi(result.output)
 
 
 def test_preview_fixes_adds_patch_forecast_without_mutating_tracked_file(monkeypatch: Any, tmp_path: Path) -> None:
