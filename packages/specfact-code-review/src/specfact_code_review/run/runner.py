@@ -592,7 +592,7 @@ def _is_protocol_or_abstract_member(
 
 def _is_stub_function(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     body = [statement for statement in function_node.body if not _is_docstring_statement(statement)]
-    return bool(body) and all(_is_stub_statement(statement) for statement in body)
+    return all(_is_stub_statement(statement) for statement in body)
 
 
 def _is_docstring_statement(statement: ast.stmt) -> bool:

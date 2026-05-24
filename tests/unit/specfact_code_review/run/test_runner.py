@@ -422,6 +422,25 @@ def test_preserve_detection_covers_contract_public_protocol_cli_compat_and_load_
     assert "load_bearing" in {reason.reason for reason in reasons}
 
 
+def test_preserve_detection_treats_docstring_only_protocol_method_as_stub(tmp_path: Path) -> None:
+    source = tmp_path / "api.py"
+    source_text = (
+        "from typing import Protocol\n"
+        "\n"
+        "class Handler(Protocol):\n"
+        "    def handle(self, payload: str) -> str:\n"
+        '        """Handle the payload."""\n'
+    )
+    source.write_text(source_text, encoding="utf-8")
+
+    finding = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical").model_copy(
+        update={"file": str(source), "line": 4}
+    )
+    reasons = _preserve_reasons_for_finding(finding, load_bearing=False)
+
+    assert "protocol_member" in {reason.reason for reason in reasons}
+
+
 def test_run_review_simplify_focus_preserves_tool_errors(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
     monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])

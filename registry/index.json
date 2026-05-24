@@ -78,9 +78,9 @@
     },
     {
       "id": "nold-ai/specfact-code-review",
-      "latest_version": "0.47.29",
-      "download_url": "modules/specfact-code-review-0.47.29.tar.gz",
-      "checksum_sha256": "e4856920ab47db60d58800b0662ac878ce43cb32d4cb2938cda3cd750e68cb51",
+      "latest_version": "0.47.30",
+      "download_url": "modules/specfact-code-review-0.47.30.tar.gz",
+      "checksum_sha256": "8e9db9d4659f6bd71d572e213a186f188e20ddfa1108838d18cfb4decca5761e",
       "core_compatibility": ">=0.44.0,<1.0.0",
       "tier": "official",
       "publisher": {
