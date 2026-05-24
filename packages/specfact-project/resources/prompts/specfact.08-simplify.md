@@ -56,16 +56,18 @@ If this slash prompt or the installed skill is unavailable in another AI IDE, te
 Read `.specfact/code-review-simplify.json`. If it is missing, ask the user to run:
 
 ```bash
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
 ```
 
-Explain that this report is the evidence file: it lists candidate cleanups, the safety checks, and the preserve reasons the assistant must use before touching code. Do not edit files until the report exists.
+Explain that this report is the evidence file: it lists candidate cleanups, cleanup forecast, safety checks, remediation packets, and preserve reasons the assistant must use before touching code. Do not edit files until the report exists.
+
+Inspect `cleanup_forecast` first. Use reviewed LOC, deletion estimate ranges, AI-bloat index, weighted bloat points, cleanup yield, and guidance-kind totals to decide where cleanup has the highest likely payoff. Treat estimates as forecasts, not guaranteed LOC removal.
 
 If the report contains no findings where `category == "ai_bloat"` and no findings with simplification metadata such as `intent_key`, `rewrite_hint`, `canonical_pattern`, or `guidance_kind`, report that there are no simplification candidates and stop without editing files.
 
 ### Step 2: Group Candidates
 
-Group findings by `intent_key` first when present, then by file or domain and rule. For each candidate, inspect the referenced source location, inspect any related locations from `related_locations`, and capture small surrounding snippets before proposing a rewrite.
+Group findings by `intent_key` first when present, then by file or domain and rule. For each candidate, inspect the referenced source location, inspect any related locations from `related_locations`, and capture small surrounding snippets before proposing a rewrite. When `remediation_packet` is present, treat it as authoritative for the issue, recommended action, possible keep reason, safety checks, validation plan, and `safe_to_autofix`.
 
 Use `guidance_kind` as the action contract:
 
@@ -73,6 +75,8 @@ Use `guidance_kind` as the action contract:
 - `needs_tests`: only apply after targeted tests exist or are added for the behavior.
 - `design_judgment`: inspect intent evidence first, explain tradeoffs in plain language, default to keep/skip when intent is unclear, and ask before editing.
 - `preserve`: keep by default; record the `preserve_reason` as a false-positive or intentional-pattern note.
+
+If `preserve_reasons` is present, do not autofix the finding even when a shorter patch exists.
 
 For vibe-coder and junior walkthroughs, present findings as a decision card instead of a raw lint warning:
 
@@ -120,7 +124,7 @@ Compare the new report with the prior findings and summarize which `ai_bloat` or
 Use the CLI as the verification source:
 
 ```bash
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
 specfact code review run --scope changed --bug-hunt --json --out .specfact/code-review-bughunt.json
 ```
 

@@ -6,7 +6,19 @@ from typing import Any, Literal, TypedDict, Unpack, cast
 import pytest
 from pydantic import ValidationError
 
-from specfact_code_review.run.findings import EvidenceRef, ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import (
+    AiBloatIndex,
+    CleanupForecast,
+    DeletionEstimate,
+    EvidenceRef,
+    GuidanceKindForecast,
+    PreserveReasonEvidence,
+    RemediationPacket,
+    ReviewedLoc,
+    ReviewFinding,
+    ReviewReport,
+    SignalTraceEntry,
+)
 
 
 class ReviewFindingPayload(TypedDict, total=False):
@@ -49,6 +61,9 @@ class ReviewFindingPayload(TypedDict, total=False):
     before_ref: EvidenceRef
     after_ref: EvidenceRef
     improvement: str
+    signal_trace: list[SignalTraceEntry]
+    preserve_reasons: list[PreserveReasonEvidence]
+    remediation_packet: RemediationPacket
 
 
 def _finding_data(**overrides: Unpack[ReviewFindingPayload]) -> ReviewFindingPayload:
@@ -63,6 +78,44 @@ def _finding_data(**overrides: Unpack[ReviewFindingPayload]) -> ReviewFindingPay
     }
     data.update(overrides)
     return data
+
+
+def _agent_payload_finding() -> ReviewFinding:
+    return ReviewFinding(
+        **_finding_data(
+            category="ai_bloat",
+            severity="info",
+            tool="ast",
+            rule="ai-bloat.redundant-intermediate",
+            file="src/example.py",
+            line=1,
+            message="Simplify local code.",
+            fixable=True,
+            signal_trace=[
+                SignalTraceEntry(
+                    tool="ast",
+                    source="ai-bloat.redundant-intermediate",
+                    fired=True,
+                    explanation="AST pattern matched a redundant intermediate assignment.",
+                )
+            ],
+            preserve_reasons=[
+                PreserveReasonEvidence(
+                    reason="public_api",
+                    evidence_refs=[EvidenceRef(path="src/example.py", start_line=1)],
+                    explanation="Public API boundary.",
+                )
+            ],
+            remediation_packet=RemediationPacket(
+                issue="Simplify local code.",
+                recommended_action="inspect",
+                possible_keep_reason="Public API boundary.",
+                safety_checks=["verify public behavior"],
+                validation_plan=["run targeted tests"],
+                safe_to_autofix=False,
+            ),
+        )
+    )
 
 
 def test_review_finding_accepts_valid_values() -> None:
@@ -136,6 +189,86 @@ def test_review_finding_accepts_guided_simplification_metadata() -> None:
 
     assert finding.has_guided_simplification_metadata()
     assert finding.is_safe_mechanical_simplification()
+
+
+def test_review_finding_accepts_cleanup_handoff_metadata() -> None:
+    finding = ReviewFinding(
+        **_finding_data(
+            category="ai_bloat",
+            severity="info",
+            rule="ai-bloat.redundant-intermediate",
+            confidence="high",
+            rewrite_hint="Inline the one-use temporary into the return statement.",
+            canonical_pattern="one-use-temporary",
+            estimated_deletion_lines=1,
+            guidance_kind="safe_mechanical",
+            recommended_action="inline",
+            clean_code_principle="kiss",
+            rationale="The local variable is assigned once and read only by the following return.",
+            safety_checks=["same expression is returned", "temporary has no later reads"],
+            action_status="recommended",
+            signal_trace=[
+                SignalTraceEntry(
+                    tool="ast",
+                    source="ai-bloat.redundant-intermediate",
+                    fired=True,
+                    score=1.0,
+                    value="one-use-temporary",
+                    evidence_refs=[EvidenceRef(path="src/example.py", start_line=12)],
+                    explanation="AST pattern matched a one-use temporary.",
+                )
+            ],
+            preserve_reasons=[
+                PreserveReasonEvidence(
+                    reason="public_api",
+                    evidence_refs=[EvidenceRef(path="src/example.py", start_line=12)],
+                    explanation="Exported in __all__.",
+                )
+            ],
+            remediation_packet=RemediationPacket(
+                issue="One-use temporary can be inlined.",
+                recommended_action="inline",
+                possible_keep_reason="Keep only if readability would regress.",
+                safety_checks=["same expression is returned"],
+                validation_plan=["run targeted tests", "rerun simplify review"],
+                safe_to_autofix=False,
+                patch_forecast_refs=["preview:src/example.py:12"],
+            ),
+        )
+    )
+
+    assert finding.signal_trace is not None
+    assert finding.signal_trace[0].tool == "ast"
+    assert finding.preserve_reasons is not None
+    assert finding.preserve_reasons[0].reason == "public_api"
+    assert finding.remediation_packet is not None
+    assert not finding.remediation_packet.safe_to_autofix
+    assert not finding.is_safe_mechanical_simplification()
+
+
+def test_review_finding_rejects_unknown_preserve_reason() -> None:
+    with pytest.raises(ValidationError):
+        ReviewFinding(
+            **_finding_data(
+                category="ai_bloat",
+                severity="info",
+                guidance_kind="safe_mechanical",
+                recommended_action="inline",
+                clean_code_principle="kiss",
+                rationale="The local rewrite is safe.",
+                safety_checks=["same expression is returned"],
+                preserve_reasons=cast(
+                    Any,
+                    [
+                        {
+                            "reason": "unknown_reason",
+                            "evidence_refs": [EvidenceRef(path="src/example.py", start_line=12)],
+                            "explanation": "Not in taxonomy.",
+                        }
+                    ],
+                ),
+            )
+        )
 
 
 def test_review_finding_accepts_guided_metadata_without_action_status() -> None:
@@ -360,6 +493,62 @@ def test_review_report_uses_schema_1_2_and_summary_when_guided_metadata_is_prese
     assert report.simplification_summary.by_guidance_kind == {"safe_mechanical": 1}
     assert report.simplification_summary.by_action_status == {"recommended": 1}
     assert report.simplification_summary.blocking_simplification_count == 1
+
+
+def test_review_report_uses_schema_1_3_when_cleanup_forecast_is_present() -> None:
+    report = ReviewReport(
+        run_id="run-cleanup-forecast",
+        timestamp=datetime(2026, 5, 24, tzinfo=UTC),
+        score=85,
+        findings=[],
+        summary="Cleanup forecast.",
+        cleanup_forecast=CleanupForecast(
+            reviewed_loc=ReviewedLoc(production=80, tests=20, total=100),
+            estimated_deletion_lines=DeletionEstimate(low=2, expected=5, high=8),
+            ai_bloat_index=AiBloatIndex(
+                findings_per_kloc=20.0,
+                weighted_bloat_points_per_kloc=16.0,
+                cleanup_yield_loc_per_kloc=50.0,
+            ),
+            by_guidance_kind={
+                "safe_mechanical": GuidanceKindForecast(count=2, estimated_deletion_lines=2),
+                "needs_tests": GuidanceKindForecast(count=1, estimated_deletion_lines=5),
+            },
+            by_action_status={"recommended": 3},
+        ),
+    )
+
+    assert report.schema_version == "1.3"
+    assert report.cleanup_forecast is not None
+    assert report.cleanup_forecast.ai_bloat_index.weighted_bloat_points_per_kloc == 16.0
+
+
+def test_review_report_uses_schema_1_3_when_finding_agent_payload_is_present() -> None:
+    report = ReviewReport(
+        run_id="run-cleanup-handoff",
+        timestamp=datetime(2026, 5, 24, tzinfo=UTC),
+        score=85,
+        findings=[_agent_payload_finding()],
+        summary="Cleanup agent payload.",
+    )
+
+    assert report.schema_version == "1.3"
+    assert report.findings[0].signal_trace is not None
+    assert report.findings[0].preserve_reasons is not None
+    assert report.findings[0].remediation_packet is not None
+
+
+def test_reviewed_loc_rejects_total_mismatch() -> None:
+    with pytest.raises(ValidationError, match=r"reviewed_loc.total must equal production \+ tests"):
+        ReviewedLoc(production=80, tests=20, total=90)
+
+
+def test_deletion_estimate_rejects_inverted_range() -> None:
+    with pytest.raises(ValidationError, match="estimated_deletion_lines must satisfy low <= expected <= high"):
+        DeletionEstimate(low=6, expected=5, high=10)
+
+    with pytest.raises(ValidationError, match="estimated_deletion_lines must satisfy low <= expected <= high"):
+        DeletionEstimate(low=1, expected=5, high=4)
 
 
 def test_review_report_counts_failed_safe_mechanical_findings_as_blocking() -> None:

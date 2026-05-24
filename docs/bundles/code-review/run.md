@@ -39,6 +39,8 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 | `--score-only` | Print just the reward delta integer |
 | `--no-tests` | Skip the TDD gate |
 | `--fix` | Apply Ruff autofixes, then rerun the review |
+| `--preview-fixes` | For **`--focus simplify`**, compute non-mutating patch evidence for supported safe-mechanical simplification fixers |
+| `--with-mutation` | For **`--focus simplify`**, record opt-in mutation proof evidence for cleanup candidates; unavailable tooling is inconclusive |
 | `--interactive` | Prompt for scope decisions before execution |
 | `--instructions` | Print AI-facing simplify / clean-code workflow instructions and exit without running review |
 
@@ -53,6 +55,9 @@ The Typer entrypoint validates **review flags** first: it raises **`typer.BadPar
 - **`--include-tests` with `--exclude-tests`**: pick at most one test inclusion mode. Runtime error: **`Cannot use both --include-tests and --exclude-tests`**
 - **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set. Runtime error: **`Use --out together with --json.`**
 - **`--json` with `--score-only`**: do not combine JSON report output with score-only mode (**`Use either --json or --score-only, not both.`**).
+- **`--preview-fixes` with `--fix`**: preview is non-mutating and cannot be combined with write mode. Runtime error: **`Cannot combine --preview-fixes with --fix.`**
+- **`--preview-fixes` without simplify focus**: preview evidence is scoped to cleanup findings. Runtime error: **`Use --preview-fixes only with --focus simplify.`**
+- **`--with-mutation` without simplify focus**: mutation proof is scoped to cleanup candidates. Runtime error: **`Use --with-mutation only with --focus simplify.`**
 
 **Supported targeting:** either pass **positional file paths** for a fixed review set (the pipeline still only reviews Python sources it accepts, such as **`.py`** / **`.pyi`**), or omit files and use **`--scope`** / **`--path`** (and related test flags) for auto-discovery — do not mix positional paths with **`--scope`** or **`--path`**.
 
@@ -90,14 +95,17 @@ specfact code review run --scope changed --mode shadow --json --out /tmp/review-
 
 ### `--focus` facets (repeatable)
 
-Use **`--focus`** with **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (union of facets, then intersect with scope). Do not combine **`--focus`** with **`--include-tests`** or **`--exclude-tests`**. The **`simplify`** facet produces simplification-focused reports: advisory **`ai_bloat`** findings plus high-confidence **`dry`** and **`kiss`** findings that carry deterministic metadata such as **`rewrite_hint`**, **`canonical_pattern`**, **`intent_key`**, **`estimated_deletion_lines`**, and **`related_locations`**. Simplification-focused findings are score-neutral and non-blocking.
+Use **`--focus`** with **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (union of facets, then intersect with scope). Do not combine **`--focus`** with **`--include-tests`** or **`--exclude-tests`**. The **`simplify`** facet produces simplification-focused reports: advisory **`ai_bloat`** findings plus high-confidence **`dry`** and **`kiss`** findings that carry deterministic metadata such as **`rewrite_hint`**, **`canonical_pattern`**, **`intent_key`**, **`estimated_deletion_lines`**, and **`related_locations`**. Simplification-focused JSON also includes **`cleanup_forecast`**, **`signal_trace`**, **`preserve_reasons`**, and **`remediation_packet`** fields when available.
 
 ```bash
 specfact code review run --scope changed --focus tests
 specfact code review run --scope full --path packages/specfact-code-review --focus source
 specfact code review run --scope full --focus docs
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review.json
+specfact code review run --scope changed --focus simplify --with-mutation --json --out .specfact/code-review.json
 ```
+
+Use the canonical `.specfact/code-review.json` path unless every consumer in your workflow has been updated to read a custom simplify report path.
 
 ### AI instructions fallback
 
@@ -107,7 +115,7 @@ When an IDE does not support bundled prompts or skills, print the same guided si
 specfact code review run --instructions
 ```
 
-The output explains how to remove AI bloat and apply clean-code simplifications using SpecFact evidence, including `safe_mechanical`, `needs_tests`, `design_judgment`, and `preserve` handling, patch previews, conservative keep/skip defaults, and per-file validation. It also tells assistants how to handle clean PR branches where `--scope changed` has no worktree files: find branch-delta Python files with a base-ref diff such as `git diff --name-only <base-ref>...HEAD -- '*.py' '*.pyi'`, review those files as explicit positional files, and treat findings without `guidance_kind` as unguided advisories rather than auto-fix input.
+The output explains how to remove AI bloat and apply clean-code simplifications using SpecFact evidence, including `cleanup_forecast`, `safe_mechanical`, `needs_tests`, `design_judgment`, `preserve`, `remediation_packet`, patch previews, conservative keep/skip defaults, and per-file validation. It also tells assistants how to handle clean PR branches where `--scope changed` has no worktree files: find branch-delta Python files with a base-ref diff such as `git diff --name-only <base-ref>...HEAD -- '*.py' '*.pyi'`, review those files as explicit positional files, and treat findings without `guidance_kind` as unguided advisories rather than auto-fix input. `ai_bloat` findings are cleanup signals, not proof of AI authorship.
 
 ### Positional files (explicit Python paths)
 
@@ -137,10 +145,10 @@ The built-in `specfact/ai-bloat-patterns` policy pack is parallel to `specfact/c
 Use `--focus simplify` when producing the IDE simplification queue:
 
 ```bash
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review.json
 ```
 
-Simplify-focused reports keep advisory `ai_bloat` findings plus high-confidence `dry` and `kiss` findings that include deterministic simplification metadata. Metadata fields such as `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, and `related_locations` are additive; legacy consumers can keep reading the original finding fields. Simplification findings remain score-neutral and non-blocking.
+Simplify-focused reports keep advisory `ai_bloat` findings plus high-confidence `dry` and `kiss` findings that include deterministic simplification metadata. Metadata fields such as `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, `related_locations`, `signal_trace`, `preserve_reasons`, and `remediation_packet` are additive; legacy consumers can keep reading the original finding fields. The report-level `cleanup_forecast` summarizes reviewed LOC, estimated deletion ranges, guidance-kind totals, normalized AI-bloat density, weighted bloat points, and cleanup-yield LOC per KLOC. Simplification findings remain score-neutral; enforce mode blocks only unresolved safe-mechanical cleanup candidates.
 
 ## Related
 

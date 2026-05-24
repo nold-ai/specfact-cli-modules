@@ -16,6 +16,10 @@ from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
 
+from specfact_code_review.run.cleanup_evidence import (
+    with_mutation_evidence,
+    with_previewed_simplification_findings,
+)
 from specfact_code_review.run.findings import EvidenceRef, ReviewFinding, ReviewReport
 from specfact_code_review.run.runner import ReviewFocus, run_review
 
@@ -63,6 +67,8 @@ class ReviewRunRequest:
     score_only: bool = False
     no_tests: bool = False
     fix: bool = False
+    preview_fixes: bool = False
+    with_mutation: bool = False
     bug_hunt: bool = False
     review_mode: ReviewRunMode = "enforce"
     review_level: ReviewLevelFilter | None = None
@@ -75,6 +81,8 @@ class _ReviewLoopFlags:
     no_tests: bool
     include_noise: bool
     fix: bool
+    preview_fixes: bool
+    with_mutation: bool
     progress_callback: Callable[[str], None] | None
     bug_hunt: bool
     review_mode: ReviewRunMode
@@ -319,6 +327,17 @@ def _with_applied_simplification_findings(report: ReviewReport, applied_findings
     data["findings"] = [*report.findings, *applied_findings]
     data["simplification_summary"] = None
     return ReviewReport(**data)
+
+
+def _with_simplify_enforce_verdict(report: ReviewReport, flags: _ReviewLoopFlags) -> ReviewReport:
+    if (
+        flags.review_focus == "simplify"
+        and flags.review_mode == "enforce"
+        and report.simplification_summary is not None
+        and report.simplification_summary.blocking_simplification_count > 0
+    ):
+        return report.model_copy(update={"overall_verdict": "FAIL", "ci_exit_code": 1})
+    return report
 
 
 def _fixable_simplifications_by_stable_line_order(findings: list[ReviewFinding]) -> list[ReviewFinding]:
@@ -636,6 +655,8 @@ def _run_review_with_progress(
             no_tests=flags.no_tests,
             include_noise=flags.include_noise,
             fix=flags.fix,
+            preview_fixes=flags.preview_fixes,
+            with_mutation=flags.with_mutation,
             progress_callback=_emit_progress,
             bug_hunt=flags.bug_hunt,
             review_mode=flags.review_mode,
@@ -654,6 +675,8 @@ def _run_review_with_status(
             no_tests=flags.no_tests,
             include_noise=flags.include_noise,
             fix=False,
+            preview_fixes=False,
+            with_mutation=False,
             progress_callback=status.update,
             bug_hunt=flags.bug_hunt,
             review_mode=flags.review_mode,
@@ -671,7 +694,13 @@ def _run_review_with_status(
             status.update("Re-running review after autofixes...")
             report = _run_review_once(files, base)
             report = _with_applied_simplification_findings(report, applied_simplification_findings)
-        return report
+        if flags.preview_fixes:
+            status.update("Previewing safe mechanical simplification fixes...")
+            report = with_previewed_simplification_findings(report, files, _apply_simplification_fixes)
+        if flags.with_mutation:
+            status.update("Recording mutation proof evidence...")
+            report = with_mutation_evidence(report, files)
+        return _with_simplify_enforce_verdict(report, flags)
 
 
 def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport:
@@ -713,7 +742,11 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
             focus=flags.review_focus,
         )
         report = _with_applied_simplification_findings(report, applied_simplification_findings)
-    return report
+    if flags.preview_fixes:
+        report = with_previewed_simplification_findings(report, files, _apply_simplification_fixes)
+    if flags.with_mutation:
+        report = with_mutation_evidence(report, files)
+    return _with_simplify_enforce_verdict(report, flags)
 
 
 def _as_auto_scope(value: object) -> AutoScope | None:
@@ -830,6 +863,8 @@ def _build_review_run_request(
         score_only=_get_bool_param("score_only"),
         no_tests=_get_bool_param("no_tests"),
         fix=_get_bool_param("fix"),
+        preview_fixes=_get_bool_param("preview_fixes"),
+        with_mutation=_get_bool_param("with_mutation"),
         bug_hunt=_get_bool_param("bug_hunt"),
         review_mode=_as_review_mode(request_kwargs.pop("review_mode", "enforce")),
         review_level=_as_review_level(request_kwargs.pop("review_level", None)),
@@ -863,6 +898,12 @@ def _validate_review_request(request: ReviewRunRequest) -> None:
         raise InvalidOptionCombinationError("Use either --json or --score-only, not both.")
     if not request.json_output and request.out is not None:
         raise MissingOutForJsonError("Use --out together with --json.")
+    if request.preview_fixes and request.fix:
+        raise InvalidOptionCombinationError("Cannot combine --preview-fixes with --fix.")
+    if request.preview_fixes and request.review_focus != "simplify":
+        raise InvalidOptionCombinationError("Use --preview-fixes only with --focus simplify.")
+    if request.with_mutation and request.review_focus != "simplify":
+        raise InvalidOptionCombinationError("Use --with-mutation only with --focus simplify.")
 
 
 def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
@@ -879,6 +920,8 @@ def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
         score_only=request.score_only,
         no_tests=request.no_tests,
         fix=request.fix,
+        preview_fixes=request.preview_fixes,
+        with_mutation=request.with_mutation,
         bug_hunt=request.bug_hunt,
         review_mode=request.review_mode,
         review_level=request.review_level,
@@ -931,6 +974,8 @@ def run_command(
             no_tests=request.no_tests,
             include_noise=request.include_noise,
             fix=request.fix,
+            preview_fixes=request.preview_fixes,
+            with_mutation=request.with_mutation,
             progress_callback=None,
             bug_hunt=request.bug_hunt,
             review_mode=request.review_mode,

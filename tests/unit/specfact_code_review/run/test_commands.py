@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,6 +25,11 @@ SAFE_MECHANICAL_ACTIONS: dict[str, SafeMechanicalAction] = {
     "ai-bloat.redundant-intermediate": "inline",
     "ai-bloat.verbose-bool-return": "collapse",
 }
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    return ANSI_RE.sub("", text)
 
 
 def _report(*, score: int = 85) -> ReviewReport:
@@ -312,6 +319,152 @@ def test_run_command_normalizes_simplify_focus_on_direct_request(monkeypatch: An
     assert recorded == {"files": [package_file], "focus": "simplify"}
 
 
+def test_run_command_rejects_preview_fixes_with_fix() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--focus",
+            "simplify",
+            "--preview-fixes",
+            "--fix",
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Cannot combine --preview-fixes with --fix" in _strip_ansi(result.output)
+
+
+def test_run_command_rejects_preview_fixes_without_simplify_focus() -> None:
+    result = runner.invoke(
+        app,
+        ["review", "run", "--preview-fixes", "tests/fixtures/review/clean_module.py"],
+    )
+
+    assert result.exit_code == 2
+    assert "Use --preview-fixes only with --focus simplify" in _strip_ansi(result.output)
+
+
+def test_run_command_rejects_with_mutation_without_simplify_focus() -> None:
+    result = runner.invoke(
+        app,
+        ["review", "run", "--with-mutation", "tests/fixtures/review/clean_module.py"],
+    )
+
+    assert result.exit_code == 2
+    assert "Use --with-mutation only with --focus simplify" in _strip_ansi(result.output)
+
+
+def test_preview_fixes_adds_patch_forecast_without_mutating_tracked_file(monkeypatch: Any, tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = "def total(values: list[int]) -> int:\n    result = sum(values)\n    return result\n"
+    target.write_text(source, encoding="utf-8")
+    report = _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", lambda files, **kwargs: report)
+
+    exit_code, output = run_commands.run_command(
+        run_commands.ReviewRunRequest(
+            files=[target],
+            json_output=True,
+            out=tmp_path / "review-report.json",
+            focus_facets=("simplify",),
+            preview_fixes=True,
+        )
+    )
+
+    assert exit_code == 1
+    assert output == str(tmp_path / "review-report.json")
+    assert target.read_text(encoding="utf-8") == source
+    previewed = ReviewReport.model_validate_json((tmp_path / "review-report.json").read_text(encoding="utf-8"))
+    assert previewed.cleanup_forecast is not None
+    assert previewed.cleanup_forecast.preview_evidence_count == 1
+    assert previewed.findings[0].remediation_packet is not None
+    assert previewed.findings[0].remediation_packet.patch_forecast_refs == [f"preview:{target}:2"]
+
+
+def test_with_mutation_records_inconclusive_evidence_for_missing_tool(monkeypatch: Any, tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def total(values: list[int]) -> int:\n    result = sum(values)\n    return result\n", encoding="utf-8"
+    )
+    report = _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", lambda files, **kwargs: report)
+    monkeypatch.setattr("specfact_code_review.run.cleanup_evidence._mutation_tool_available", lambda: False)
+
+    exit_code, output = run_commands.run_command(
+        run_commands.ReviewRunRequest(
+            files=[target],
+            json_output=True,
+            out=tmp_path / "review-report.json",
+            focus_facets=("simplify",),
+            with_mutation=True,
+        )
+    )
+
+    assert exit_code == 1
+    assert output == str(tmp_path / "review-report.json")
+    mutation_report = ReviewReport.model_validate_json((tmp_path / "review-report.json").read_text(encoding="utf-8"))
+    assert mutation_report.findings[0].signal_trace is not None
+    assert mutation_report.findings[0].signal_trace[-1].source == "mutation"
+    assert mutation_report.findings[0].signal_trace[-1].value == "inconclusive: mutmut unavailable"
+
+
+def _blocking_shadow_report(target: Path) -> ReviewReport:
+    return ReviewReport(
+        run_id="review-run-001",
+        timestamp=datetime(2026, 3, 16, tzinfo=UTC),
+        score=85,
+        findings=[
+            ReviewFinding(
+                category="tool_error",
+                severity="error",
+                tool="ast",
+                rule="tool_error",
+                file=str(target),
+                line=1,
+                message="Unable to parse Python source.",
+                fixable=False,
+            )
+        ],
+        summary="Shadow-mode report with blocking finding.",
+    ).model_copy(update={"ci_exit_code": 0})
+
+
+@pytest.mark.parametrize("evidence_flag", ["preview_fixes", "with_mutation"])
+def test_cleanup_evidence_preserves_shadow_mode_ci_exit(
+    monkeypatch: Any,
+    tmp_path: Path,
+    evidence_flag: str,
+) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text("def total(values: list[int]) -> int:\n    return sum(values)\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review", lambda files, **kwargs: _blocking_shadow_report(target)
+    )
+    monkeypatch.setattr("specfact_code_review.run.cleanup_evidence._mutation_tool_available", lambda: False)
+
+    request = run_commands.ReviewRunRequest(
+        files=[target],
+        json_output=True,
+        out=tmp_path / "review-report.json",
+        focus_facets=("simplify",),
+        review_mode="shadow",
+    )
+    if evidence_flag == "preview_fixes":
+        request = run_commands.ReviewRunRequest(**{**request.__dict__, "preview_fixes": True})
+    else:
+        request = run_commands.ReviewRunRequest(**{**request.__dict__, "with_mutation": True})
+
+    exit_code, output = run_commands.run_command(request)
+
+    assert exit_code == 0
+    assert output == str(tmp_path / "review-report.json")
+    report_payload = json.loads((tmp_path / "review-report.json").read_text(encoding="utf-8"))
+    assert report_payload["ci_exit_code"] == 0
+
+
 def test_apply_simplification_fixes_inlines_redundant_intermediate(tmp_path: Path) -> None:
     target = tmp_path / "sample.py"
     target.write_text(
@@ -531,6 +684,8 @@ def test_run_review_once_applies_simplification_fixes_before_rerun(monkeypatch: 
             no_tests=True,
             include_noise=False,
             fix=True,
+            preview_fixes=False,
+            with_mutation=False,
             progress_callback=None,
             bug_hunt=False,
             review_mode="enforce",
