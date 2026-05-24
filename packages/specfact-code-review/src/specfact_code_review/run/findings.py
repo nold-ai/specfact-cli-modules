@@ -187,6 +187,7 @@ class GuidanceKindForecast(BaseModel):
 
     count: int = Field(..., ge=0)
     estimated_deletion_lines: int = Field(..., ge=0)
+    weight: float = Field(default=0.0, ge=0.0)
 
 
 class CleanupForecast(BaseModel):

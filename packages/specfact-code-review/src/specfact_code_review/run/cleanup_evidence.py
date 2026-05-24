@@ -51,10 +51,12 @@ def with_mutation_evidence(report: ReviewReport, files: list[Path]) -> ReviewRep
 @require(lambda files: isinstance(files, list), "files must be a list")
 @ensure(lambda result: isinstance(result, ReviewReport), "result must be a review report")
 def with_refreshed_cleanup_forecast(report: ReviewReport, files: list[Path]) -> ReviewReport:
-    data = report.model_dump()
-    data["cleanup_forecast"] = build_cleanup_forecast(report.findings, files)
-    data["simplification_summary"] = None
-    return ReviewReport(**data)
+    return report.model_copy(
+        update={
+            "cleanup_forecast": build_cleanup_forecast(report.findings, files),
+            "schema_version": "1.3",
+        }
+    )
 
 
 def _preview_simplification_fixes(

@@ -32,7 +32,7 @@ This change turns `specfact code review run --focus simplify` into a cleanup for
 
 - **Affected bundle:** `packages/specfact-code-review`.
 - **Affected docs:** Code Review bundle/module pages and AI bloat quickstart.
-- **Affected JSON:** `.specfact/code-review-simplify.json` receives additive optional fields; existing required fields remain compatible.
+- **Affected JSON:** `.specfact/code-review.json` receives additive optional fields; existing required fields remain compatible. Custom simplify report paths are allowed only when downstream consumers have been updated to read them.
 - **Affected command surface:** `specfact code review run` gains `--preview-fixes` and `--with-mutation`.
 - **Release impact:** `specfact-code-review` version, registry entry, and signatures must be refreshed if packaged assets or manifests change.
 

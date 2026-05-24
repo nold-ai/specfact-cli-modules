@@ -44,6 +44,8 @@ def test_build_cleanup_forecast_counts_loc_and_weighted_bloat(tmp_path: Path) ->
     forecast = build_cleanup_forecast(
         [
             _finding(guidance_kind="safe_mechanical", deletion_lines=2),
+            _finding(guidance_kind="needs_tests", deletion_lines=3),
+            _finding(guidance_kind="design_judgment", deletion_lines=4),
             _finding(guidance_kind="preserve", deletion_lines=5),
         ],
         [source, test_file],
@@ -52,9 +54,25 @@ def test_build_cleanup_forecast_counts_loc_and_weighted_bloat(tmp_path: Path) ->
     assert forecast.reviewed_loc.production == 2
     assert forecast.reviewed_loc.tests == 2
     assert forecast.estimated_deletion_lines.low == 2
-    assert forecast.estimated_deletion_lines.high == 2
+    assert forecast.estimated_deletion_lines.expected == 5
+    assert forecast.estimated_deletion_lines.high == 9
+    assert forecast.by_guidance_kind["safe_mechanical"].weight == 1.0
+    assert forecast.by_guidance_kind["needs_tests"].weight == 0.6
+    assert forecast.by_guidance_kind["design_judgment"].weight == 0.25
+    assert forecast.by_guidance_kind["preserve"].weight == 0.0
     assert forecast.by_guidance_kind["preserve"].estimated_deletion_lines == 5
-    assert forecast.ai_bloat_index.weighted_bloat_points_per_kloc == 250.0
+    assert forecast.ai_bloat_index.weighted_bloat_points_per_kloc == 462.5
+
+
+def test_build_cleanup_forecast_counts_test_directory_as_tests(tmp_path: Path) -> None:
+    test_file = tmp_path / "test" / "test_example.py"
+    test_file.parent.mkdir()
+    test_file.write_text("def test_example():\n    assert True\n", encoding="utf-8")
+
+    forecast = build_cleanup_forecast([], [test_file])
+
+    assert forecast.reviewed_loc.production == 0
+    assert forecast.reviewed_loc.tests == 2
 
 
 def test_build_cleanup_forecast_skips_undecodable_python_files(tmp_path: Path) -> None:
