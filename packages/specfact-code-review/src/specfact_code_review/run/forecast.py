@@ -79,7 +79,7 @@ def _reviewed_loc_for_files(files: list[Path]) -> ReviewedLoc:
             loc = _count_python_loc(file_path)
         except (OSError, UnicodeDecodeError):
             continue
-        if any(part in {"test", "tests"} for part in file_path.parts):
+        if any("test" in part.lower() for part in file_path.parts):
             tests += loc
         else:
             production += loc

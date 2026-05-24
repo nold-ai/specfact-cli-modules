@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal, cast
 
+from pytest import MonkeyPatch
+
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.run.forecast import build_cleanup_forecast
 
@@ -33,11 +35,12 @@ def _finding(*, guidance_kind: str, deletion_lines: int) -> ReviewFinding:
     )
 
 
-def test_build_cleanup_forecast_counts_loc_and_weighted_bloat(tmp_path: Path) -> None:
-    source = tmp_path / "src" / "example.py"
+def test_build_cleanup_forecast_counts_loc_and_weighted_bloat(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    source = Path("src/example.py")
     source.parent.mkdir()
     source.write_text("# comment\n\nvalue = 1\nprint(value)\n", encoding="utf-8")
-    test_file = tmp_path / "tests" / "test_example.py"
+    test_file = Path("tests/test_example.py")
     test_file.parent.mkdir()
     test_file.write_text("def test_example():\n    assert True\n", encoding="utf-8")
 
@@ -64,8 +67,9 @@ def test_build_cleanup_forecast_counts_loc_and_weighted_bloat(tmp_path: Path) ->
     assert forecast.ai_bloat_index.weighted_bloat_points_per_kloc == 462.5
 
 
-def test_build_cleanup_forecast_counts_test_directory_as_tests(tmp_path: Path) -> None:
-    test_file = tmp_path / "test" / "test_example.py"
+def test_build_cleanup_forecast_counts_test_directory_as_tests(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    test_file = Path("unit_tests/test_example.py")
     test_file.parent.mkdir()
     test_file.write_text("def test_example():\n    assert True\n", encoding="utf-8")
 
@@ -75,8 +79,9 @@ def test_build_cleanup_forecast_counts_test_directory_as_tests(tmp_path: Path) -
     assert forecast.reviewed_loc.tests == 2
 
 
-def test_build_cleanup_forecast_skips_undecodable_python_files(tmp_path: Path) -> None:
-    source = tmp_path / "legacy.py"
+def test_build_cleanup_forecast_skips_undecodable_python_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    source = Path("legacy.py")
     source.write_bytes(b"\xff\xfe\x00")
 
     forecast = build_cleanup_forecast([_finding(guidance_kind="safe_mechanical", deletion_lines=2)], [source])

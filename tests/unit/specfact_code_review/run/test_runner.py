@@ -271,7 +271,8 @@ def test_run_review_simplify_enforce_fails_only_safe_mechanical_recommendations(
 
 
 def test_run_review_simplify_forecast_counts_loc_and_weighted_bloat(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
-    source = tmp_path / "src/example.py"
+    monkeypatch.chdir(tmp_path)
+    source = Path("src/example.py")
     source.parent.mkdir(parents=True)
     source.write_text(
         "def one() -> int:\n"
@@ -285,7 +286,7 @@ def test_run_review_simplify_forecast_counts_loc_and_weighted_bloat(monkeypatch:
         "    return False\n",
         encoding="utf-8",
     )
-    test_file = tmp_path / "tests/test_example.py"
+    test_file = Path("tests/test_example.py")
     test_file.parent.mkdir(parents=True)
     test_file.write_text("def test_example() -> None:\n    assert True\n", encoding="utf-8")
     safe = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical")
@@ -439,6 +440,29 @@ def test_preserve_detection_treats_docstring_only_protocol_method_as_stub(tmp_pa
     reasons = _preserve_reasons_for_finding(finding, load_bearing=False)
 
     assert "protocol_member" in {reason.reason for reason in reasons}
+
+
+def test_preserve_detection_reloads_source_after_file_mutation(tmp_path: Path) -> None:
+    source = tmp_path / "api.py"
+    source.write_text(
+        "from typing import Protocol\n\nclass Handler(Protocol):\n    def handle(self, payload: str) -> str: ...\n",
+        encoding="utf-8",
+    )
+    finding = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical").model_copy(
+        update={"file": str(source), "line": 4}
+    )
+    reasons = _preserve_reasons_for_finding(finding, load_bearing=False)
+    assert "protocol_member" in {reason.reason for reason in reasons}
+
+    source.write_text(
+        "def helper(payload: str) -> str:\n    result = payload.strip()\n    return result\n",
+        encoding="utf-8",
+    )
+    changed_finding = finding.model_copy(update={"line": 3})
+
+    changed_reasons = _preserve_reasons_for_finding(changed_finding, load_bearing=False)
+
+    assert "protocol_member" not in {reason.reason for reason in changed_reasons}
 
 
 def test_run_review_simplify_focus_preserves_tool_errors(monkeypatch: MonkeyPatch) -> None:
