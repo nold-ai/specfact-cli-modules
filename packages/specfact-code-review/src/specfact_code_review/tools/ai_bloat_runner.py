@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from beartype import beartype
 from icontract import ensure, require
@@ -26,6 +27,13 @@ class _SimplificationCandidate:
     canonical_pattern: str
     rewrite_hint: str
     estimated_deletion_lines: int
+    guidance_kind: Literal["safe_mechanical", "needs_tests", "design_judgment", "preserve"]
+    recommended_action: Literal["remove", "inline", "collapse", "deduplicate", "make_required", "keep", "inspect"]
+    clean_code_principle: Literal["kiss", "dry", "yagni", "contracts", "api_stability", "readability"]
+    rationale: str
+    safety_checks: tuple[str, ...]
+    preserve_reason: str | None = None
+    fixable: bool = False
 
 
 def _iter_functions(tree: ast.AST) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
@@ -41,11 +49,18 @@ def _simplification_finding(candidate: _SimplificationCandidate) -> ReviewFindin
         file=str(candidate.file_path),
         line=candidate.line,
         message=candidate.message,
-        fixable=False,
+        fixable=candidate.fixable,
         confidence="high",
         rewrite_hint=candidate.rewrite_hint,
         canonical_pattern=candidate.canonical_pattern,
         estimated_deletion_lines=candidate.estimated_deletion_lines,
+        guidance_kind=candidate.guidance_kind,
+        recommended_action=candidate.recommended_action,
+        clean_code_principle=candidate.clean_code_principle,
+        rationale=candidate.rationale,
+        safety_checks=list(candidate.safety_checks),
+        preserve_reason=candidate.preserve_reason,
+        action_status="recommended",
     )
 
 
@@ -109,6 +124,20 @@ def _has_none_branch(function_node: ast.FunctionDef | ast.AsyncFunctionDef, name
     return any(_is_none_check_for_name(node, name) for node in ast.walk(function_node))
 
 
+def _decorator_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if isinstance(node, ast.Call):
+        return _decorator_name(node.func)
+    return None
+
+
+def _has_decorator(function_node: ast.FunctionDef | ast.AsyncFunctionDef, decorator_name: str) -> bool:
+    return any(_decorator_name(decorator) == decorator_name for decorator in function_node.decorator_list)
+
+
 def _unused_optional_param_findings(
     file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
 ) -> list[ReviewFinding]:
@@ -118,6 +147,7 @@ def _unused_optional_param_findings(
             ast.Module(body=function_node.body, type_ignores=[]), arg.arg
         ):
             continue
+        preserve_signature = _has_decorator(function_node, "abstractmethod")
         findings.append(
             ReviewFinding(
                 category="ai_bloat",
@@ -131,6 +161,28 @@ def _unused_optional_param_findings(
                     "remove the default or make the parameter required."
                 ),
                 fixable=False,
+                confidence="high",
+                rewrite_hint=(
+                    "Keep the compatibility signature." if preserve_signature else "Make the parameter required."
+                ),
+                canonical_pattern="unused-optional-param",
+                estimated_deletion_lines=0 if preserve_signature else 1,
+                guidance_kind="preserve" if preserve_signature else "design_judgment",
+                recommended_action="keep" if preserve_signature else "make_required",
+                clean_code_principle="api_stability" if preserve_signature else "yagni",
+                rationale=(
+                    "Abstract signatures can define an implementation contract."
+                    if preserve_signature
+                    else "The optional default advertises a branch that the function never implements."
+                ),
+                safety_checks=[
+                    "confirm no implementation depends on the advertised optional branch",
+                    "confirm public callers are not relying on the default",
+                ],
+                preserve_reason=(
+                    "abstract method signature can be an implementation contract" if preserve_signature else None
+                ),
+                action_status="recommended",
             )
         )
     return findings
@@ -140,6 +192,24 @@ def _terminal_return(body: list[ast.stmt]) -> bool:
     return bool(body) and isinstance(body[-1], ast.Return)
 
 
+def _is_pure_test(test_node: ast.expr) -> bool:
+    impure_nodes = (
+        ast.Attribute,
+        ast.Await,
+        ast.Call,
+        ast.DictComp,
+        ast.GeneratorExp,
+        ast.Lambda,
+        ast.ListComp,
+        ast.NamedExpr,
+        ast.SetComp,
+        ast.Subscript,
+        ast.Yield,
+        ast.YieldFrom,
+    )
+    return not any(isinstance(node, impure_nodes) for node in ast.walk(test_node))
+
+
 def _dead_branch_findings(
     file_path: Path, function_node: ast.FunctionDef | ast.AsyncFunctionDef
 ) -> list[ReviewFinding]:
@@ -147,9 +217,13 @@ def _dead_branch_findings(
     prior_terminal_tests: set[str] = set()
     for stmt in function_node.body:
         if not isinstance(stmt, ast.If):
+            prior_terminal_tests.clear()
+            continue
+        if not _is_pure_test(stmt.test):
+            prior_terminal_tests.clear()
             continue
         test_key = ast.dump(stmt.test, include_attributes=False)
-        if test_key in prior_terminal_tests:
+        if test_key in prior_terminal_tests and _terminal_return(stmt.body) and not stmt.orelse:
             findings.append(
                 ReviewFinding(
                     category="ai_bloat",
@@ -159,11 +233,26 @@ def _dead_branch_findings(
                     file=str(file_path),
                     line=stmt.lineno,
                     message="Branch duplicates a prior terminal guard and is unreachable in this local flow.",
-                    fixable=False,
+                    fixable=True,
+                    confidence="high",
+                    rewrite_hint="Remove the duplicate terminal branch.",
+                    canonical_pattern="duplicate-terminal-guard",
+                    estimated_deletion_lines=max(1, (stmt.end_lineno or stmt.lineno) - stmt.lineno + 1),
+                    guidance_kind="safe_mechanical",
+                    recommended_action="remove",
+                    clean_code_principle="kiss",
+                    rationale="The branch repeats an earlier terminal guard in the same local function body.",
+                    safety_checks=[
+                        "same pure guard expression already returned earlier",
+                        "duplicate branch has no side effects",
+                    ],
+                    action_status="recommended",
                 )
             )
-        if _terminal_return(stmt.body):
+        if _terminal_return(stmt.body) and not stmt.orelse:
             prior_terminal_tests.add(test_key)
+        else:
+            prior_terminal_tests.clear()
     return findings
 
 
@@ -207,6 +296,23 @@ def _loc_vs_complexity_findings(
                 "look for a stdlib or comprehension collapse."
             ),
             fixable=False,
+            confidence="medium",
+            rewrite_hint=(
+                "Inspect for a behavior-preserving collapse; keep if the expanded form carries domain clarity."
+            ),
+            canonical_pattern="loc-vs-complexity",
+            estimated_deletion_lines=max(1, loc // 3),
+            guidance_kind="design_judgment",
+            recommended_action="inspect",
+            clean_code_principle="readability",
+            rationale=(
+                "The function is long for its local branch complexity, but the right simplification depends on intent."
+            ),
+            safety_checks=[
+                "identify the domain contract before changing shape",
+                "require tests around the collapsed behavior",
+            ],
+            action_status="recommended",
         )
     ]
 
@@ -229,13 +335,14 @@ def _assigned_empty_collection_name(stmt: ast.stmt) -> str | None:
     elif isinstance(stmt, ast.AnnAssign):
         target = stmt.target
         value = stmt.value
-    if not isinstance(target, ast.Name) or not isinstance(value, ast.List | ast.Dict | ast.Set):
-        return None
-    if isinstance(value, ast.List | ast.Set) and value.elts:
-        return None
-    if isinstance(value, ast.Dict) and value.keys:
-        return None
-    return target.id
+    collection_is_empty = (isinstance(value, ast.List | ast.Set) and not value.elts) or (
+        isinstance(value, ast.Dict) and not value.keys
+    )
+    return (
+        target.id
+        if isinstance(target, ast.Name) and isinstance(value, ast.List | ast.Dict | ast.Set) and collection_is_empty
+        else None
+    )
 
 
 def _loaded_name_count(node: ast.AST, name: str) -> int:
@@ -274,6 +381,12 @@ def _redundant_intermediate_findings(
                     canonical_pattern="one-use-temporary",
                     rewrite_hint="Inline the one-use temporary into the return statement.",
                     estimated_deletion_lines=1,
+                    guidance_kind="safe_mechanical",
+                    recommended_action="inline",
+                    clean_code_principle="kiss",
+                    rationale="The assigned name is read only by the immediately following return.",
+                    safety_checks=("same expression is returned", "temporary has no later reads"),
+                    fixable=True,
                 )
             )
         )
@@ -298,6 +411,14 @@ def _manual_accumulator_loop_findings(
                     canonical_pattern="manual-accumulator-loop",
                     rewrite_hint="Replace the accumulator loop with a comprehension or direct collection constructor.",
                     estimated_deletion_lines=3,
+                    guidance_kind="needs_tests",
+                    recommended_action="collapse",
+                    clean_code_principle="kiss",
+                    rationale="The loop appears structural, but iterator behavior and ordering need test coverage.",
+                    safety_checks=(
+                        "targeted tests cover ordering and empty input",
+                        "no side effects are hidden in the loop",
+                    ),
                 )
             )
         )
@@ -310,11 +431,15 @@ def _manual_accumulator_name(function_node: ast.FunctionDef | ast.AsyncFunctionD
         return None
     loop = function_node.body[index + 1]
     return_stmt = function_node.body[index + 2] if index + 2 < len(function_node.body) else None
-    if not _returns_accumulator(return_stmt, accumulator):
-        return None
-    if not isinstance(loop, ast.For) or len(loop.body) != 1 or not isinstance(loop.body[0], ast.Expr):
-        return None
-    return accumulator if _loop_appends_to_accumulator(loop.body[0].value, accumulator) else None
+    return (
+        accumulator
+        if _returns_accumulator(return_stmt, accumulator)
+        and isinstance(loop, ast.For)
+        and len(loop.body) == 1
+        and isinstance(loop.body[0], ast.Expr)
+        and _loop_appends_to_accumulator(loop.body[0].value, accumulator)
+        else None
+    )
 
 
 def _returns_accumulator(stmt: ast.stmt | None, accumulator: str) -> bool:
@@ -359,6 +484,15 @@ def _verbose_bool_return_findings(
                     canonical_pattern="verbose-bool-return",
                     rewrite_hint="Return the predicate directly, negating it if needed.",
                     estimated_deletion_lines=2,
+                    guidance_kind="safe_mechanical",
+                    recommended_action="collapse",
+                    clean_code_principle="kiss",
+                    rationale="Both branches return opposite boolean constants for one predicate.",
+                    safety_checks=(
+                        "branch bodies return only bool constants",
+                        "predicate expression has no duplicated side effect",
+                    ),
+                    fixable=True,
                 )
             )
         )
@@ -386,6 +520,11 @@ def _redundant_none_branch_findings(
                     canonical_pattern="redundant-none-branch",
                     rewrite_hint="Consider collapsing the None guard into the expression or caller contract.",
                     estimated_deletion_lines=2,
+                    guidance_kind="needs_tests",
+                    recommended_action="collapse",
+                    clean_code_principle="kiss",
+                    rationale="The guard may be redundant, but None semantics often encode a contract boundary.",
+                    safety_checks=("tests cover None input", "callers do not depend on early-return timing"),
                 )
             )
         )
@@ -414,6 +553,12 @@ def _pass_through_try_except_findings(
                     canonical_pattern="pass-through-try-except",
                     rewrite_hint="Remove the pass-through try/except unless it adds domain context.",
                     estimated_deletion_lines=2,
+                    guidance_kind="safe_mechanical",
+                    recommended_action="remove",
+                    clean_code_principle="kiss",
+                    rationale="The handler immediately re-raises without adding context or cleanup.",
+                    safety_checks=("handler contains only a bare raise", "try block has no else or finally body"),
+                    fixable=True,
                 )
             )
         )
@@ -429,11 +574,9 @@ def _constant_equality_return(stmt: ast.stmt) -> str | None:
         return None
     if not isinstance(stmt.test.ops[0], ast.Eq):
         return None
-    if not isinstance(stmt.test.left, ast.Name) or len(stmt.test.comparators) != 1:
-        return None
-    if not isinstance(stmt.test.comparators[0], ast.Constant):
-        return None
-    return stmt.test.left.id
+    left = stmt.test.left
+    comparator = stmt.test.comparators[0] if len(stmt.test.comparators) == 1 else None
+    return left.id if isinstance(left, ast.Name) and isinstance(comparator, ast.Constant) else None
 
 
 def _table_lookup_match_count(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
@@ -468,6 +611,11 @@ def _table_lookup_candidate_findings(
                 canonical_pattern="table-lookup-candidate",
                 rewrite_hint="Consider replacing repeated equality returns with a lookup table plus default.",
                 estimated_deletion_lines=max(1, matches - 1),
+                guidance_kind="needs_tests",
+                recommended_action="collapse",
+                clean_code_principle="dry",
+                rationale="Repeated constant equality branches often encode a data table.",
+                safety_checks=("tests cover known keys and fallback", "preserve branch order if values overlap"),
             )
         )
     ]
@@ -492,6 +640,11 @@ def _stdlib_replacement_candidate_findings(
                 canonical_pattern="stdlib-replacement-candidate",
                 rewrite_hint="Consider a standard helper such as max, min, any, all, sum, or dict.fromkeys.",
                 estimated_deletion_lines=3,
+                guidance_kind="needs_tests",
+                recommended_action="collapse",
+                clean_code_principle="kiss",
+                rationale="The loop resembles a standard aggregation helper but edge-case semantics need proof.",
+                safety_checks=("tests cover empty input", "tests cover tie or None behavior"),
             )
         )
     ]
@@ -515,9 +668,7 @@ def _stdlib_replacement_candidate(function_node: ast.FunctionDef | ast.AsyncFunc
 
 def _none_initializer_name(stmt: ast.stmt) -> str | None:
     name = _assigned_name(stmt)
-    if name is None or not isinstance(stmt, ast.Assign) or not _is_none_constant(stmt.value):
-        return None
-    return name
+    return None if name is None or not isinstance(stmt, ast.Assign) or not _is_none_constant(stmt.value) else name
 
 
 def _loop_updates_name(stmt: ast.stmt, name: str) -> bool:
@@ -572,6 +723,14 @@ def _wrapper_chain_findings(file_path: Path, tree: ast.Module) -> list[ReviewFin
                     canonical_pattern="wrapper-chain",
                     rewrite_hint="Collapse the wrapper chain or keep only the compatibility boundary.",
                     estimated_deletion_lines=max(1, _function_loc(function_node) - 1),
+                    guidance_kind="design_judgment",
+                    recommended_action="inspect",
+                    clean_code_principle="dry",
+                    rationale="Pass-through wrappers may be bloat or deliberate API compatibility boundaries.",
+                    safety_checks=(
+                        "confirm whether either function is public API",
+                        "keep wrappers that encode compatibility",
+                    ),
                 )
             )
         )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from typer.testing import CliRunner
@@ -16,6 +16,13 @@ from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 runner = CliRunner()
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_FILE = REPO_ROOT / "tests/fixtures/review/clean_module.py"
+SafeMechanicalAction = Literal["remove", "inline", "collapse"]
+SAFE_MECHANICAL_ACTIONS: dict[str, SafeMechanicalAction] = {
+    "ai-bloat.dead-branch": "remove",
+    "ai-bloat.pass-through-try-except": "remove",
+    "ai-bloat.redundant-intermediate": "inline",
+    "ai-bloat.verbose-bool-return": "collapse",
+}
 
 
 def _report(*, score: int = 85) -> ReviewReport:
@@ -24,6 +31,39 @@ def _report(*, score: int = 85) -> ReviewReport:
         timestamp=datetime(2026, 3, 16, tzinfo=UTC),
         score=score,
         findings=[],
+        summary="Review command test report.",
+    )
+
+
+def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:
+    return ReviewFinding(
+        category="ai_bloat",
+        severity="info",
+        tool="ast",
+        rule=rule,
+        file=str(file_path),
+        line=line,
+        message="Safe mechanical simplification.",
+        fixable=True,
+        confidence="high",
+        rewrite_hint="Apply the local rewrite.",
+        canonical_pattern="safe-mechanical",
+        estimated_deletion_lines=1,
+        guidance_kind="safe_mechanical",
+        recommended_action=SAFE_MECHANICAL_ACTIONS[rule],
+        clean_code_principle="kiss",
+        rationale="The rewrite is local and behavior-preserving.",
+        safety_checks=["pattern shape is exact"],
+        action_status="recommended",
+    )
+
+
+def _safe_mechanical_report(file_path: Path, *, line: int, rule: str) -> ReviewReport:
+    return ReviewReport(
+        run_id="review-run-001",
+        timestamp=datetime(2026, 3, 16, tzinfo=UTC),
+        score=85,
+        findings=[_safe_mechanical_finding(file_path, line=line, rule=rule)],
         summary="Review command test report.",
     )
 
@@ -270,6 +310,241 @@ def test_run_command_normalizes_simplify_focus_on_direct_request(monkeypatch: An
     assert exit_code == 0
     assert output == "review-report.json"
     assert recorded == {"files": [package_file], "focus": "simplify"}
+
+
+def test_apply_simplification_fixes_inlines_redundant_intermediate(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def total(values: list[int]) -> int:\n    result = sum(values)\n    return result\n",
+        encoding="utf-8",
+    )
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
+    )
+
+    assert len(applied) == 1
+    assert target.read_text(encoding="utf-8") == "def total(values: list[int]) -> int:\n    return sum(values)\n"
+
+
+def test_apply_simplification_fixes_skips_non_safe_guidance(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = "def total(values: list[int]) -> int:\n    result = []\n    return result\n"
+    target.write_text(source, encoding="utf-8")
+    report = _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
+    report.findings[0].guidance_kind = "needs_tests"
+
+    applied = run_commands._apply_simplification_fixes(report)
+
+    assert len(applied) == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
+def test_apply_simplification_fixes_collapses_verbose_bool_return(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def allowed(role: str) -> bool:\n    if role == 'admin':\n        return True\n    return False\n",
+        encoding="utf-8",
+    )
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.verbose-bool-return")
+    )
+
+    assert len(applied) == 1
+    assert target.read_text(encoding="utf-8") == "def allowed(role: str) -> bool:\n    return role == 'admin'\n"
+
+
+def test_apply_simplification_fixes_removes_dead_branch(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    if value > 10:\n"
+        "        return 'still large'\n"
+        "    return 'small'\n",
+        encoding="utf-8",
+    )
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
+    )
+
+    assert len(applied) == 1
+    assert target.read_text(encoding="utf-8") == (
+        "def classify(value: int) -> str:\n    if value > 10:\n        return 'large'\n    return 'small'\n"
+    )
+
+
+def test_apply_simplification_fixes_keeps_dead_branch_with_else(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = (
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    if value > 10:\n"
+        "        return 'still large'\n"
+        "    else:\n"
+        "        return 'fallback'\n"
+        "    return 'small'\n"
+    )
+    target.write_text(source, encoding="utf-8")
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
+    )
+
+    assert len(applied) == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
+def test_apply_simplification_fixes_keeps_impure_duplicate_guard(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = (
+        "def classify(value: object) -> str:\n"
+        "    if value.ready():\n"
+        "        return 'ready'\n"
+        "    if value.ready():\n"
+        "        return 'still ready'\n"
+        "    return 'not ready'\n"
+    )
+    target.write_text(source, encoding="utf-8")
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=4, rule="ai-bloat.dead-branch")
+    )
+
+    assert len(applied) == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
+def test_apply_simplification_fixes_keeps_dead_branch_after_assignment(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = (
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    value = 12\n"
+        "    if value > 10:\n"
+        "        return 'now large'\n"
+        "    return 'small'\n"
+    )
+    target.write_text(source, encoding="utf-8")
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=5, rule="ai-bloat.dead-branch")
+    )
+
+    assert len(applied) == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
+def test_apply_simplification_fixes_removes_pass_through_try_except(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def parse(raw: str) -> object:\n"
+        "    try:\n"
+        "        return parse_json(raw)\n"
+        "    except Exception:\n"
+        "        raise\n",
+        encoding="utf-8",
+    )
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.pass-through-try-except")
+    )
+
+    assert len(applied) == 1
+    assert target.read_text(encoding="utf-8") == "def parse(raw: str) -> object:\n    return parse_json(raw)\n"
+
+
+def test_apply_simplification_fixes_uses_bottom_up_line_order(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def total(values: list[int]) -> int:\n"
+        "    result = sum(values)\n"
+        "    return result\n"
+        "\n"
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    if value > 10:\n"
+        "        return 'still large'\n"
+        "    return 'small'\n",
+        encoding="utf-8",
+    )
+    report = ReviewReport(
+        run_id="review-run-001",
+        timestamp=datetime(2026, 3, 16, tzinfo=UTC),
+        score=85,
+        findings=[
+            _safe_mechanical_finding(target, line=2, rule="ai-bloat.redundant-intermediate"),
+            _safe_mechanical_finding(target, line=8, rule="ai-bloat.dead-branch"),
+        ],
+        summary="Review command test report.",
+    )
+
+    applied = run_commands._apply_simplification_fixes(report)
+
+    assert len(applied) == 2
+    assert target.read_text(encoding="utf-8") == (
+        "def total(values: list[int]) -> int:\n"
+        "    return sum(values)\n"
+        "\n"
+        "def classify(value: int) -> str:\n"
+        "    if value > 10:\n"
+        "        return 'large'\n"
+        "    return 'small'\n"
+    )
+
+
+def test_apply_simplification_fixes_skips_when_source_no_longer_matches(tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    source = "def total(values: list[int]) -> int:\n    result = sum(values)\n    return result + 1\n"
+    target.write_text(source, encoding="utf-8")
+
+    applied = run_commands._apply_simplification_fixes(
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate")
+    )
+
+    assert len(applied) == 0
+    assert target.read_text(encoding="utf-8") == source
+
+
+def test_run_review_once_applies_simplification_fixes_before_rerun(monkeypatch: Any, tmp_path: Path) -> None:
+    target = tmp_path / "sample.py"
+    target.write_text(
+        "def total(values: list[int]) -> int:\n    result = sum(values)\n    return result\n",
+        encoding="utf-8",
+    )
+    reports = [
+        _safe_mechanical_report(target, line=2, rule="ai-bloat.redundant-intermediate"),
+        _report(),
+    ]
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", lambda files, **kwargs: reports.pop(0))
+    monkeypatch.setattr("specfact_code_review.run.commands._apply_fixes", lambda files: None)
+
+    report = run_commands._run_review_once(
+        [target],
+        run_commands._ReviewLoopFlags(
+            no_tests=True,
+            include_noise=False,
+            fix=True,
+            progress_callback=None,
+            bug_hunt=False,
+            review_mode="enforce",
+            review_level=None,
+            review_focus="simplify",
+        ),
+    )
+
+    assert len(report.findings) == 1
+    assert report.findings[0].action_status == "applied"
+    assert report.findings[0].before_ref is not None
+    assert report.findings[0].after_ref is not None
+    assert report.findings[0].improvement is not None
+    assert target.read_text(encoding="utf-8") == "def total(values: list[int]) -> int:\n    return sum(values)\n"
 
 
 def test_run_command_rejects_unknown_keyword_override() -> None:

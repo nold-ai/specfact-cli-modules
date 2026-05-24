@@ -30,6 +30,8 @@ def greet(name: str, prefix: Optional[str] = None) -> str:
     assert {finding.rule for finding in findings} == {"ai-bloat.unused-optional-param"}
     assert findings[0].category == "ai_bloat"
     assert findings[0].severity == "info"
+    assert findings[0].guidance_kind == "design_judgment"
+    assert findings[0].recommended_action == "make_required"
 
 
 def test_optional_param_with_none_branch_is_not_flagged(tmp_path: Path) -> None:
@@ -65,6 +67,92 @@ def classify(value: int) -> str:
     assert {finding.rule for finding in run_ai_bloat([target])} == {"ai-bloat.dead-branch"}
 
 
+def test_dead_branch_ignores_duplicate_guard_after_else_path(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: int) -> str:
+    if value > 10:
+        return "large"
+    else:
+        value += 1
+    if value > 10:
+        return "now large"
+    return "small"
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
+def test_dead_branch_ignores_nonterminal_duplicate_guard(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: int) -> str:
+    label = "small"
+    if value > 10:
+        return "large"
+    if value > 10:
+        label = "still large"
+    return label
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
+def test_dead_branch_ignores_duplicate_guard_with_else(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: int) -> str:
+    if value > 10:
+        return "large"
+    if value > 10:
+        return "still large"
+    else:
+        return "fallback"
+    return "small"
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
+def test_dead_branch_ignores_duplicate_guard_after_assignment(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: int) -> str:
+    if value > 10:
+        return "large"
+    value = 12
+    if value > 10:
+        return "now large"
+    return "small"
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
+def test_dead_branch_ignores_impure_duplicate_guard(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+def classify(value: object) -> str:
+    if value.ready():
+        return "ready"
+    if value.ready():
+        return "still ready"
+    return "not ready"
+""",
+    )
+
+    assert run_ai_bloat([target]) == []
+
+
 def test_loc_vs_complexity_flags_long_linear_function(tmp_path: Path) -> None:
     lines = ["def build_values(value: int) -> list[int]:", "    result = []"]
     for index in range(39):
@@ -72,7 +160,11 @@ def test_loc_vs_complexity_flags_long_linear_function(tmp_path: Path) -> None:
     lines.append("    return result")
     target = _write(tmp_path, "\n".join(lines))
 
-    assert {finding.rule for finding in run_ai_bloat([target])} == {"ai-bloat.loc-vs-complexity"}
+    findings = run_ai_bloat([target])
+
+    assert {finding.rule for finding in findings} == {"ai-bloat.loc-vs-complexity"}
+    assert findings[0].guidance_kind == "design_judgment"
+    assert findings[0].recommended_action == "inspect"
 
 
 def test_redundant_intermediate_flags_assign_then_immediate_return(tmp_path: Path) -> None:
@@ -85,7 +177,12 @@ def total(values: list[int]) -> int:
 """,
     )
 
-    assert {finding.rule for finding in run_ai_bloat([target])} == {"ai-bloat.redundant-intermediate"}
+    findings = run_ai_bloat([target])
+
+    assert {finding.rule for finding in findings} == {"ai-bloat.redundant-intermediate"}
+    assert findings[0].guidance_kind == "safe_mechanical"
+    assert findings[0].recommended_action == "inline"
+    assert findings[0].fixable is True
 
 
 @pytest.mark.parametrize(
@@ -191,6 +288,33 @@ def test_expanded_simplification_patterns_emit_metadata(
     assert matching[0].canonical_pattern == expected_pattern
     assert matching[0].rewrite_hint
     assert matching[0].estimated_deletion_lines is not None
+    assert matching[0].guidance_kind in {"safe_mechanical", "needs_tests", "design_judgment", "preserve"}
+    assert matching[0].recommended_action is not None
+    assert matching[0].clean_code_principle is not None
+    assert matching[0].rationale
+    assert matching[0].safety_checks
+
+
+def test_abstract_optional_param_is_preserve_guidance(tmp_path: Path) -> None:
+    target = _write(
+        tmp_path,
+        """
+from abc import ABC, abstractmethod
+
+
+class Provider(ABC):
+    @abstractmethod
+    def fetch(self, key: str, timeout: int | None = None) -> str:
+        raise NotImplementedError
+""",
+    )
+
+    findings = run_ai_bloat([target])
+
+    assert {finding.rule for finding in findings} == {"ai-bloat.unused-optional-param"}
+    assert findings[0].guidance_kind == "preserve"
+    assert findings[0].recommended_action == "keep"
+    assert findings[0].preserve_reason == "abstract method signature can be an implementation contract"
 
 
 def test_redundant_intermediate_ignores_reused_names(tmp_path: Path) -> None:

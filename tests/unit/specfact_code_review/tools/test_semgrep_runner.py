@@ -10,8 +10,13 @@ import pytest
 from pytest import MonkeyPatch
 
 from specfact_code_review.tools.semgrep_runner import (
+    AI_BLOAT_GUIDANCE,
+    SEMGREP_RULE_CATEGORY,
+    _parse_semgrep_results,
     _run_semgrep_command,
     _snip_stderr_tail,
+    find_semgrep_ai_bloat_config,
+    find_semgrep_bugs_config,
     find_semgrep_config,
     run_semgrep,
     run_semgrep_bugs,
@@ -47,6 +52,12 @@ AI_BLOAT_GOOD_FIXTURES = [
     "good_none_then_none.py",
     "good_single_call_wrapper.py",
 ]
+
+
+def test_ai_bloat_guidance_matches_ai_bloat_rule_categories() -> None:
+    categorized_ai_bloat_rules = {rule for rule, category in SEMGREP_RULE_CATEGORY.items() if category == "ai_bloat"}
+
+    assert categorized_ai_bloat_rules == set(AI_BLOAT_GUIDANCE)
 
 
 def test_run_semgrep_command_creates_runtime_dirs(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -160,6 +171,11 @@ def test_run_semgrep_maps_ai_bloat_rules_to_info_findings(tmp_path: Path, monkey
     assert findings[0].category == "ai_bloat"
     assert findings[0].severity == "info"
     assert findings[0].rule == "ai-bloat.single-call-wrapper"
+    assert findings[0].guidance_kind == "design_judgment"
+    assert findings[0].recommended_action == "inspect"
+    assert findings[0].clean_code_principle == "dry"
+    assert findings[0].rationale
+    assert findings[0].safety_checks
 
 
 def test_run_semgrep_filters_findings_to_requested_files(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -260,11 +276,44 @@ def test_run_semgrep_ignores_unsupported_rules(tmp_path: Path, monkeypatch: Monk
     assert not findings
 
 
+def test_run_semgrep_returns_empty_for_no_files() -> None:
+    assert run_semgrep([]) == []
+
+
+def test_parse_semgrep_results_rejects_non_list_results() -> None:
+    with pytest.raises(ValueError, match="semgrep results must be a list"):
+        _parse_semgrep_results({"results": {}})
+
+
 def test_find_semgrep_config_with_explicit_bundle_root(tmp_path: Path) -> None:
     root = tmp_path / "bundle"
     (root / ".semgrep").mkdir(parents=True)
     (root / ".semgrep" / "clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
     assert find_semgrep_config(bundle_root=root) == root / ".semgrep" / "clean_code.yaml"
+
+
+def test_find_semgrep_config_with_explicit_bundle_root_reports_missing_config(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError):
+        find_semgrep_config(bundle_root=tmp_path)
+
+
+def test_find_semgrep_bugs_config_with_explicit_bundle_root(tmp_path: Path) -> None:
+    root = tmp_path / "bundle"
+    (root / ".semgrep").mkdir(parents=True)
+    (root / ".semgrep" / "bugs.yaml").write_text("rules: []\n", encoding="utf-8")
+
+    assert find_semgrep_bugs_config(bundle_root=root) == root / ".semgrep" / "bugs.yaml"
+    assert find_semgrep_bugs_config(bundle_root=tmp_path / "missing") is None
+
+
+def test_find_semgrep_ai_bloat_config_with_explicit_bundle_root(tmp_path: Path) -> None:
+    root = tmp_path / "bundle"
+    rules = root / "resources" / "semgrep-rules"
+    rules.mkdir(parents=True)
+    (rules / "ai-bloat.yaml").write_text("rules: []\n", encoding="utf-8")
+
+    assert find_semgrep_ai_bloat_config(bundle_root=root) == rules / "ai-bloat.yaml"
+    assert find_semgrep_ai_bloat_config(bundle_root=tmp_path / "missing") is None
 
 
 def test_snip_stderr_tail_keeps_last_chars() -> None:
@@ -299,6 +348,62 @@ def test_run_semgrep_bugs_returns_empty_when_semgrep_cli_missing(tmp_path: Path,
     monkeypatch.setattr("specfact_code_review.tools.tool_availability.shutil.which", lambda _name: None)
 
     assert run_semgrep_bugs([target], bundle_root=bundle) == []
+
+
+def test_run_semgrep_bugs_returns_empty_for_no_files() -> None:
+    assert run_semgrep_bugs([]) == []
+
+
+def test_run_semgrep_bugs_maps_security_and_clean_code_findings(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep" / "bugs.yaml").write_text("rules: []\n", encoding="utf-8")
+    file_path = tmp_path / "target.py"
+    payload = {
+        "results": [
+            {
+                "check_id": "specfact-bugs-eval-exec",
+                "path": str(file_path),
+                "start": {"line": 2},
+                "extra": {"message": "Avoid eval.", "severity": "ERROR"},
+            },
+            {
+                "check_id": "specfact-bugs-useless-comparison",
+                "path": str(file_path),
+                "start": {"line": 3},
+                "extra": {"message": "Comparison is always true."},
+            },
+        ]
+    }
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=1)),
+    )
+
+    findings = run_semgrep_bugs([file_path], bundle_root=bundle)
+
+    assert [(finding.category, finding.severity, finding.rule) for finding in findings] == [
+        ("security", "error", "specfact-bugs-eval-exec"),
+        ("clean_code", "warning", "specfact-bugs-useless-comparison"),
+    ]
+
+
+def test_run_semgrep_bugs_returns_tool_error_for_invalid_payload(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep" / "bugs.yaml").write_text("rules: []\n", encoding="utf-8")
+    file_path = tmp_path / "target.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps({"results": [{}]}), returncode=1)),
+    )
+
+    findings = run_semgrep_bugs([file_path], bundle_root=bundle)
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
 
 
 def test_run_semgrep_retries_after_transient_parse_failure(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
