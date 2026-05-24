@@ -7,11 +7,13 @@ import sys
 from pathlib import Path
 from typing import Literal
 
+import pytest
 from pytest import MonkeyPatch
 
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 from specfact_code_review.run.runner import (
     _coverage_findings,
+    _preserve_reasons_for_finding,
     _pytest_python_executable,
     _pytest_targets,
     _run_pytest_with_coverage,
@@ -226,7 +228,7 @@ def test_run_review_simplify_focus_keeps_only_simplification_queue(monkeypatch: 
         ("ai_bloat", "high"),
         ("dry", "high"),
     ]
-    assert report.schema_version == "1.1"
+    assert report.schema_version == "1.3"
     assert report.overall_verdict == "PASS"
 
 
@@ -256,11 +258,62 @@ def test_run_review_simplify_enforce_fails_only_safe_mechanical_recommendations(
         review_mode="enforce",
     )
 
-    assert report.schema_version == "1.2"
+    assert report.schema_version == "1.3"
     assert report.overall_verdict == "FAIL"
     assert report.ci_exit_code == 1
     assert report.simplification_summary is not None
     assert report.simplification_summary.blocking_simplification_count == 1
+    assert report.cleanup_forecast is not None
+    assert report.cleanup_forecast.by_guidance_kind["safe_mechanical"].count == 1
+    assert report.cleanup_forecast.by_guidance_kind["needs_tests"].count == 1
+    assert report.cleanup_forecast.by_guidance_kind["preserve"].count == 1
+    assert report.cleanup_forecast.ai_bloat_index.weighted_bloat_points_per_kloc >= 0.0
+
+
+def test_run_review_simplify_forecast_counts_loc_and_weighted_bloat(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    source = tmp_path / "src/example.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "def one() -> int:\n"
+        "    value = 1\n"
+        "    return value\n"
+        "\n"
+        "# ignored comment\n"
+        "def two() -> bool:\n"
+        "    if True:\n"
+        "        return True\n"
+        "    return False\n",
+        encoding="utf-8",
+    )
+    test_file = tmp_path / "tests/test_example.py"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text("def test_example() -> None:\n    assert True\n", encoding="utf-8")
+    safe = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical")
+    needs_tests = _simplification_finding(category="ai_bloat", guidance_kind="needs_tests")
+    design = _simplification_finding(category="ai_bloat", guidance_kind="design_judgment")
+    preserve = _simplification_finding(category="ai_bloat", guidance_kind="preserve")
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [safe, needs_tests])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [design, preserve])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+    report = run_review([source, test_file], no_tests=True, focus="simplify")
+
+    assert report.cleanup_forecast is not None
+    assert report.cleanup_forecast.reviewed_loc.production == 7
+    assert report.cleanup_forecast.reviewed_loc.tests == 2
+    assert report.cleanup_forecast.estimated_deletion_lines.low == 3
+    assert report.cleanup_forecast.estimated_deletion_lines.expected == 6
+    assert report.cleanup_forecast.estimated_deletion_lines.high == 9
+    assert report.cleanup_forecast.ai_bloat_index.findings_per_kloc == pytest.approx(444.444, abs=0.001)
+    assert report.cleanup_forecast.ai_bloat_index.weighted_bloat_points_per_kloc == pytest.approx(205.556, abs=0.001)
+    assert report.cleanup_forecast.ai_bloat_index.cleanup_yield_loc_per_kloc == pytest.approx(666.667, abs=0.001)
 
 
 def test_run_review_simplify_enforce_passes_design_and_preserve_guidance(monkeypatch: MonkeyPatch) -> None:
@@ -291,6 +344,57 @@ def test_run_review_simplify_enforce_passes_design_and_preserve_guidance(monkeyp
     assert report.overall_verdict == "PASS"
     assert report.simplification_summary is not None
     assert report.simplification_summary.blocking_simplification_count == 0
+
+
+def test_preserve_detection_covers_contract_public_protocol_cli_compat_and_load_bearing(tmp_path: Path) -> None:
+    source = tmp_path / "api.py"
+    source.write_text(
+        "from typing import Protocol\n"
+        "import typer\n"
+        "from abc import abstractmethod\n"
+        "\n"
+        "__all__ = ['exported']\n"
+        "app = typer.Typer()\n"
+        "\n"
+        "@icontract.require(lambda value: value > 0)\n"
+        "def contracted(value: int) -> int:\n"
+        "    return value\n"
+        "\n"
+        "def exported() -> None:\n"
+        "    return None\n"
+        "\n"
+        "class Handler(Protocol):\n"
+        "    def handle(self, payload: str) -> str: ...\n"
+        "\n"
+        "@app.command()\n"
+        "def cli_main() -> None:\n"
+        "    return None\n"
+        "\n"
+        "# specfact: preserve(compat)\n"
+        "def shim() -> None:\n"
+        "    return None\n",
+        encoding="utf-8",
+    )
+    finding_lines = {
+        "contract_lambda": 9,
+        "public_api": 12,
+        "protocol_member": 16,
+        "cli_callback": 19,
+        "compat_shim": 24,
+    }
+
+    for expected_reason, line in finding_lines.items():
+        finding = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical").model_copy(
+            update={"file": str(source), "line": line}
+        )
+        reasons = _preserve_reasons_for_finding(finding, load_bearing=False)
+        assert expected_reason in {reason.reason for reason in reasons}
+
+    load_bearing_finding = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical").model_copy(
+        update={"file": str(source), "line": 12}
+    )
+    reasons = _preserve_reasons_for_finding(load_bearing_finding, load_bearing=True)
+    assert "load_bearing" in {reason.reason for reason in reasons}
 
 
 def test_run_review_simplify_focus_preserves_tool_errors(monkeypatch: MonkeyPatch) -> None:

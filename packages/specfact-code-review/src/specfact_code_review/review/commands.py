@@ -31,26 +31,29 @@ SpecFact code review instructions for AI assistants
 Use this when the user asks to remove AI bloat, simplify code, apply clean-code patterns, reduce boilerplate, or act on SpecFact review findings.
 
 1. Generate evidence first:
-   specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+   specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
 
    If the worktree is clean on a PR branch and --scope changed finds no files, review the branch-delta Python files as explicit positional files and omit --scope. Find them with the PR base ref, for example: git diff --name-only <base-ref>...HEAD -- '*.py' '*.pyi'
 
-2. Treat guidance_kind as the action contract:
+2. Inspect cleanup_forecast before editing. Use reviewed_loc, estimated_deletion_lines, ai_bloat_index, and by_guidance_kind to decide where cleanup will actually pay off. These estimates are cleanup forecasts, not guarantees.
+
+3. Treat guidance_kind and remediation_packet as the action contract:
    - safe_mechanical: apply only after local safety checks pass.
    - needs_tests: add or identify targeted tests before changing behavior.
    - design_judgment: inspect intent evidence and ask before editing.
    - preserve: keep by default and record preserve_reason.
    Findings without guidance_kind are unguided advisories: summarize them separately, do not auto-apply them, and ask before using them as refactor input.
+   Prefer each finding's remediation_packet over prose instructions because the JSON report is the portable AI IDE handoff contract.
 
-3. For vibe-coder or junior users, present each finding as a decision card:
+4. For vibe-coder or junior users, present each finding as a decision card:
    Finding, plain-language issue, why it might need to stay, exact patch preview or small before/after proposal, validation plan, recommended choice.
 
-4. For design_judgment findings, check API, callback, framework hook, adapter, public symbol, CLI boundary, compatibility shim, and readability intent. If intent is unclear, default to keep or skip.
+5. For design_judgment findings, check API, callback, framework hook, adapter, public symbol, CLI boundary, compatibility shim, and readability intent. If intent is unclear, default to keep or skip.
 
-5. Apply one file at a time. After each accepted file or very small batch, run targeted tests or rerun:
+6. Apply one file at a time. After each accepted file or very small batch, run targeted tests or rerun:
    specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
 
-6. Log every action as recommended, applied, kept, skipped, or failed with evidence. Never batch-apply design_judgment findings just because the patch is shorter.
+7. Log every action as recommended, applied, kept, skipped, or failed with evidence. Never batch-apply design_judgment findings just because the patch is shorter. Never treat ai_bloat findings as proof of AI authorship; they are cleanup signals only, not proof of AI authorship.
 """
 
 
@@ -142,6 +145,16 @@ def run(
     score_only: bool = typer.Option(False, "--score-only"),
     no_tests: bool = typer.Option(False, "--no-tests"),
     fix: bool = typer.Option(False, "--fix"),
+    preview_fixes: bool = typer.Option(
+        False,
+        "--preview-fixes",
+        help="Preview supported safe-mechanical simplify fixes without editing tracked files.",
+    ),
+    with_mutation: bool = typer.Option(
+        False,
+        "--with-mutation",
+        help="Record opt-in mutation proof evidence for simplify cleanup candidates.",
+    ),
     interactive: bool = typer.Option(False, "--interactive"),
     instructions: bool = typer.Option(
         False,
@@ -182,6 +195,8 @@ def run(
             score_only=score_only,
             no_tests=no_tests,
             fix=fix,
+            preview_fixes=preview_fixes,
+            with_mutation=with_mutation,
         )
     except (ValueError, ViolationError) as exc:
         raise typer.BadParameter(_friendly_run_command_error(exc)) from exc
