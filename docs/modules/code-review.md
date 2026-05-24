@@ -129,7 +129,7 @@ AI bloat with SpecFact. The instructions explain the expected report file,
 for `design_judgment`, and per-file validation. They also cover clean PR
 branches where `--scope changed` has no worktree files: the assistant should
 find branch-delta Python files with a base-ref diff such as
-`git diff --name-only origin/dev...HEAD -- '*.py' '*.pyi'`, review those files
+`git diff --name-only <base-ref>...HEAD -- '*.py' '*.pyi'`, review those files
 as explicit positional files, and treat findings without `guidance_kind` as
 unguided advisories, not auto-fix input.
 

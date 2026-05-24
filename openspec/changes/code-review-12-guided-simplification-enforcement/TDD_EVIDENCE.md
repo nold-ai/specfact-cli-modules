@@ -81,6 +81,22 @@
   - Result after AI instructions fallback: PASS, CI exit 0, 0 findings.
 - `openspec validate code-review-12-guided-simplification-enforcement --strict`
   - Result after AI instructions fallback: valid.
+- `hatch run pytest tests/unit/specfact_code_review/review/test_commands.py::test_review_run_help_lists_simplify_focus tests/unit/specfact_code_review/review/test_commands.py::test_review_run_instructions_prints_ai_workflow_without_running_review tests/unit/docs/test_code_review_docs_parity.py::test_code_review_run_doc_mentions_public_ty_options tests/unit/test_guided_simplify_resources.py -q`
+  - Result after PR #289 follow-up fixes: 5 passed.
+- `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev`
+  - Result after PR #289 follow-up fixes: verified 6 module manifests.
+- `hatch run yaml-lint`
+  - Result after PR #289 follow-up fixes: validated 6 manifests and `registry/index.json`.
+- `openspec validate code-review-12-guided-simplification-enforcement --strict`
+  - Result after PR #289 follow-up fixes: valid.
+- `hatch run contract-test`
+  - Result after PR #289 follow-up fixes: 773 passed, 2 warnings.
+- `hatch run type-check`
+  - Result after PR #289 follow-up fixes: 0 errors, 0 warnings, 0 notes.
+- `hatch run lint`
+  - Result after PR #289 follow-up fixes: formatted check passed, basedpyright reported 0 errors/0 warnings/0 notes, pylint score 10.00/10.
+- `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json --scope changed`
+  - Result after PR #289 follow-up fixes: PASS, CI exit 0, score 120, 0 findings.
 
 ## Local Dev-Link Validation
 
@@ -106,4 +122,8 @@
 
 ## Signing Note
 
-`hatch run verify-modules-signature --payload-from-filesystem --require-signature --enforce-version-bump --version-check-base origin/main` passed before the final source edits, verifying the existing `0.47.23` signature was a real cryptographic signature. The final local payload is refreshed at `0.47.25` for `specfact-code-review` and `0.41.16` for `specfact-project` with `hatch run sign-modules --changed-only --base-ref origin/dev --bump-version patch --allow-unsigned --payload-from-filesystem`, because no private signing key is available in the local worktree. Cryptographic signature restoration remains an approval-time or post-merge signing step.
+`0.47.25` for `specfact-code-review` and `0.41.16` for `specfact-project` were intermediate local refreshes produced with `hatch run sign-modules --changed-only --base-ref origin/dev --bump-version patch --allow-unsigned --payload-from-filesystem`, because no private signing key is available in the local worktree. The reviewed PR #289 head shipped `specfact-code-review` `0.47.26` and `specfact-project` `0.41.17`; the signing/publish follow-up used the same payload mode through `python scripts/sign-modules.py --changed-only --base-ref "$MERGE_BASE" --bump-version patch --payload-from-filesystem` and the publish workflow's same-version signing path. `hatch run verify-modules-signature --payload-from-filesystem --require-signature --enforce-version-bump --version-check-base origin/main` passed for that shipped head, verifying the final module manifest checksums and signatures.
+
+This PR #289 follow-up changes the `specfact-code-review` source payload again, so the local manifest is refreshed to `0.47.27` with `hatch run sign-modules --changed-only --base-ref origin/dev --bump-version patch --allow-unsigned --payload-from-filesystem`. CI must restore the cryptographic signature with the repository private key before the follow-up lands on `main`.
+
+The `packages/specfact-code-review/module-package.yaml` `integrity.checksum` covers the canonical module source payload, while `registry/modules/specfact-code-review-0.47.26.tar.gz.sha256` covers the published tarball artifact. These digests are intentionally different; the registry sidecar matches the `0.47.26` tarball SHA256, and the manifest signature verifier validates the source-payload checksum/signature. The next publish step will produce the corresponding `0.47.27` registry artifact after signing.
