@@ -79,7 +79,7 @@ def _reviewed_loc_for_files(files: list[Path]) -> ReviewedLoc:
             loc = _count_python_loc(file_path)
         except (OSError, UnicodeDecodeError):
             continue
-        if "tests" in file_path.parts:
+        if any("test" in part.lower() for part in file_path.parts):
             tests += loc
         else:
             production += loc
@@ -104,10 +104,15 @@ def _cleanup_forecast_totals(guided: list[ReviewFinding]) -> _CleanupForecastTot
 def _add_cleanup_forecast_finding(totals: _CleanupForecastTotals, finding: ReviewFinding) -> None:
     guidance_kind = finding.guidance_kind or "design_judgment"
     deletion_lines = finding.estimated_deletion_lines or 0
-    current = totals.by_guidance_kind.get(guidance_kind, GuidanceKindForecast(count=0, estimated_deletion_lines=0))
+    weight = _CLEANUP_FORECAST_WEIGHTS.get(guidance_kind, 0.0)
+    current = totals.by_guidance_kind.get(
+        guidance_kind,
+        GuidanceKindForecast(count=0, estimated_deletion_lines=0, weight=weight),
+    )
     totals.by_guidance_kind[guidance_kind] = GuidanceKindForecast(
         count=current.count + 1,
         estimated_deletion_lines=current.estimated_deletion_lines + deletion_lines,
+        weight=weight,
     )
     if finding.action_status is not None:
         totals.by_action_status[finding.action_status] = totals.by_action_status.get(finding.action_status, 0) + 1
@@ -115,6 +120,5 @@ def _add_cleanup_forecast_finding(totals: _CleanupForecastTotals, finding: Revie
         totals.low += deletion_lines
     if guidance_kind != "preserve":
         totals.high += deletion_lines
-    weight = _CLEANUP_FORECAST_WEIGHTS.get(guidance_kind, 0.0)
     totals.expected += deletion_lines * weight
     totals.weighted_points += weight

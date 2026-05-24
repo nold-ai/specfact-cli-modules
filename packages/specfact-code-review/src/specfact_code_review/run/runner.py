@@ -12,7 +12,7 @@ import tempfile
 from collections.abc import Callable, Iterable
 from contextlib import suppress
 from dataclasses import dataclass
-from functools import partial
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Literal, cast
 from uuid import uuid4
@@ -427,12 +427,10 @@ def _preserve_reasons_for_finding(finding: ReviewFinding, *, load_bearing: bool)
                 explanation="Mutation proof indicates this code is load-bearing.",
             )
         )
-    try:
-        source = Path(finding.file).read_text(encoding="utf-8")
-        tree = ast.parse(source, filename=finding.file)
-    except (OSError, SyntaxError, UnicodeDecodeError):
+    parsed = _get_parsed_source(finding.file)
+    if parsed is None:
         return reasons
-    lines = source.splitlines()
+    tree, lines = parsed
     function_node = _function_containing_line(tree, finding.line)
     class_node = _class_containing_line(tree, finding.line)
     public_names = _module_all_names(tree)
@@ -486,6 +484,23 @@ def _preserve_reasons_for_finding(finding: ReviewFinding, *, load_bearing: bool)
             )
         )
     return _dedupe_preserve_reasons(reasons)
+
+
+def _get_parsed_source(file_path: str) -> tuple[ast.Module, list[str]] | None:
+    try:
+        source = Path(file_path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    return _parse_source(file_path, source)
+
+
+@lru_cache(maxsize=256)
+def _parse_source(file_path: str, source: str) -> tuple[ast.Module, list[str]] | None:
+    try:
+        tree = ast.parse(source, filename=file_path)
+    except SyntaxError:
+        return None
+    return tree, source.splitlines()
 
 
 def _dedupe_preserve_reasons(reasons: list[PreserveReasonEvidence]) -> list[PreserveReasonEvidence]:

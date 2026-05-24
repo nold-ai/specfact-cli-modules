@@ -101,9 +101,11 @@ Use **`--focus`** with **`source`**, **`tests`**, **`docs`**, and/or **`simplify
 specfact code review run --scope changed --focus tests
 specfact code review run --scope full --path packages/specfact-code-review --focus source
 specfact code review run --scope full --focus docs
-specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
-specfact code review run --scope changed --focus simplify --with-mutation --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review.json
+specfact code review run --scope changed --focus simplify --with-mutation --json --out .specfact/code-review.json
 ```
+
+Use the canonical `.specfact/code-review.json` path unless every consumer in your workflow has been updated to read a custom simplify report path.
 
 ### AI instructions fallback
 
@@ -143,7 +145,7 @@ The built-in `specfact/ai-bloat-patterns` policy pack is parallel to `specfact/c
 Use `--focus simplify` when producing the IDE simplification queue:
 
 ```bash
-specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review.json
 ```
 
 Simplify-focused reports keep advisory `ai_bloat` findings plus high-confidence `dry` and `kiss` findings that include deterministic simplification metadata. Metadata fields such as `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, `related_locations`, `signal_trace`, `preserve_reasons`, and `remediation_packet` are additive; legacy consumers can keep reading the original finding fields. The report-level `cleanup_forecast` summarizes reviewed LOC, estimated deletion ranges, guidance-kind totals, normalized AI-bloat density, weighted bloat points, and cleanup-yield LOC per KLOC. Simplification findings remain score-neutral; enforce mode blocks only unresolved safe-mechanical cleanup candidates.

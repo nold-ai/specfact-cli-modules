@@ -31,7 +31,9 @@ SpecFact code review instructions for AI assistants
 Use this when the user asks to remove AI bloat, simplify code, apply clean-code patterns, reduce boilerplate, or act on SpecFact review findings.
 
 1. Generate evidence first:
-   specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
+   specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review.json
+
+   Keep the canonical .specfact/code-review.json path unless every downstream consumer has been updated to read a custom simplify report path.
 
    If the worktree is clean on a PR branch and --scope changed finds no files, review the branch-delta Python files as explicit positional files and omit --scope. Find them with the PR base ref, for example: git diff --name-only <base-ref>...HEAD -- '*.py' '*.pyi'
 
@@ -51,7 +53,7 @@ Use this when the user asks to remove AI bloat, simplify code, apply clean-code 
 5. For design_judgment findings, check API, callback, framework hook, adapter, public symbol, CLI boundary, compatibility shim, and readability intent. If intent is unclear, default to keep or skip.
 
 6. Apply one file at a time. After each accepted file or very small batch, run targeted tests or rerun:
-   specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+   specfact code review run --scope changed --focus simplify --json --out .specfact/code-review.json
 
 7. Log every action as recommended, applied, kept, skipped, or failed with evidence. Never batch-apply design_judgment findings just because the patch is shorter. Never treat ai_bloat findings as proof of AI authorship; they are cleanup signals only, not proof of AI authorship.
 """

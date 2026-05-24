@@ -80,6 +80,44 @@ def _finding_data(**overrides: Unpack[ReviewFindingPayload]) -> ReviewFindingPay
     return data
 
 
+def _agent_payload_finding() -> ReviewFinding:
+    return ReviewFinding(
+        **_finding_data(
+            category="ai_bloat",
+            severity="info",
+            tool="ast",
+            rule="ai-bloat.redundant-intermediate",
+            file="src/example.py",
+            line=1,
+            message="Simplify local code.",
+            fixable=True,
+            signal_trace=[
+                SignalTraceEntry(
+                    tool="ast",
+                    source="ai-bloat.redundant-intermediate",
+                    fired=True,
+                    explanation="AST pattern matched a redundant intermediate assignment.",
+                )
+            ],
+            preserve_reasons=[
+                PreserveReasonEvidence(
+                    reason="public_api",
+                    evidence_refs=[EvidenceRef(path="src/example.py", start_line=1)],
+                    explanation="Public API boundary.",
+                )
+            ],
+            remediation_packet=RemediationPacket(
+                issue="Simplify local code.",
+                recommended_action="inspect",
+                possible_keep_reason="Public API boundary.",
+                safety_checks=["verify public behavior"],
+                validation_plan=["run targeted tests"],
+                safe_to_autofix=False,
+            ),
+        )
+    )
+
+
 def test_review_finding_accepts_valid_values() -> None:
     finding = ReviewFinding(**_finding_data())
 
@@ -483,6 +521,21 @@ def test_review_report_uses_schema_1_3_when_cleanup_forecast_is_present() -> Non
     assert report.schema_version == "1.3"
     assert report.cleanup_forecast is not None
     assert report.cleanup_forecast.ai_bloat_index.weighted_bloat_points_per_kloc == 16.0
+
+
+def test_review_report_uses_schema_1_3_when_finding_agent_payload_is_present() -> None:
+    report = ReviewReport(
+        run_id="run-cleanup-handoff",
+        timestamp=datetime(2026, 5, 24, tzinfo=UTC),
+        score=85,
+        findings=[_agent_payload_finding()],
+        summary="Cleanup agent payload.",
+    )
+
+    assert report.schema_version == "1.3"
+    assert report.findings[0].signal_trace is not None
+    assert report.findings[0].preserve_reasons is not None
+    assert report.findings[0].remediation_packet is not None
 
 
 def test_reviewed_loc_rejects_total_mismatch() -> None:
