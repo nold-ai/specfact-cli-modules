@@ -37,7 +37,7 @@ Use this when the user asks to remove AI bloat, simplify code, apply clean-code 
 
 2. Inspect cleanup_forecast before editing. Use reviewed_loc, estimated_deletion_lines, ai_bloat_index, and by_guidance_kind to decide where cleanup will actually pay off. These estimates are cleanup forecasts, not guarantees.
 
-3. Treat guidance_kind and remediation_packet as the action contract:
+3. Sort findings by guidance_kind before editing, then treat guidance_kind and remediation_packet as the action contract:
    - safe_mechanical: apply only after local safety checks pass.
    - needs_tests: add or identify targeted tests before changing behavior.
    - design_judgment: inspect intent evidence and ask before editing.

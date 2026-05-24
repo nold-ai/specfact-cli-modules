@@ -477,14 +477,12 @@ def _preserve_reasons_for_finding(finding: ReviewFinding, *, load_bearing: bool)
                     explanation="Function has an explicit spec requirement marker.",
                 )
             )
-    if class_node is not None and (
-        _has_base_named(class_node, {"Protocol", "ABC"}) or _has_abstractmethod(function_node)
-    ):
+    if class_node is not None and _is_protocol_or_abstract_member(class_node, function_node):
         reasons.append(
             PreserveReasonEvidence(
                 reason="protocol_member",
                 evidence_refs=[evidence_ref],
-                explanation="Finding is inside a Protocol, ABC, or abstract member contract.",
+                explanation="Finding is inside an abstract Protocol or ABC member contract.",
             )
         )
     return _dedupe_preserve_reasons(reasons)
@@ -578,6 +576,40 @@ def _has_abstractmethod(function_node: ast.FunctionDef | ast.AsyncFunctionDef | 
         return False
     return any(
         _decorator_full_name(decorator).split(".")[-1] == "abstractmethod" for decorator in function_node.decorator_list
+    )
+
+
+def _is_protocol_or_abstract_member(
+    class_node: ast.ClassDef,
+    function_node: ast.FunctionDef | ast.AsyncFunctionDef | None,
+) -> bool:
+    if function_node is None:
+        return False
+    if _has_abstractmethod(function_node):
+        return True
+    return _has_base_named(class_node, {"Protocol"}) and _is_stub_function(function_node)
+
+
+def _is_stub_function(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    body = [statement for statement in function_node.body if not _is_docstring_statement(statement)]
+    return bool(body) and all(_is_stub_statement(statement) for statement in body)
+
+
+def _is_docstring_statement(statement: ast.stmt) -> bool:
+    return (
+        isinstance(statement, ast.Expr)
+        and isinstance(statement.value, ast.Constant)
+        and isinstance(statement.value.value, str)
+    )
+
+
+def _is_stub_statement(statement: ast.stmt) -> bool:
+    if isinstance(statement, ast.Pass):
+        return True
+    return (
+        isinstance(statement, ast.Expr)
+        and isinstance(statement.value, ast.Constant)
+        and statement.value.value is Ellipsis
     )
 
 

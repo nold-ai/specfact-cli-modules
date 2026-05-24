@@ -348,10 +348,10 @@ def test_run_review_simplify_enforce_passes_design_and_preserve_guidance(monkeyp
 
 def test_preserve_detection_covers_contract_public_protocol_cli_compat_and_load_bearing(tmp_path: Path) -> None:
     source = tmp_path / "api.py"
-    source.write_text(
+    source_text = (
         "from typing import Protocol\n"
         "import typer\n"
-        "from abc import abstractmethod\n"
+        "from abc import ABC, abstractmethod\n"
         "\n"
         "__all__ = ['exported']\n"
         "app = typer.Typer()\n"
@@ -366,21 +366,34 @@ def test_preserve_detection_covers_contract_public_protocol_cli_compat_and_load_
         "class Handler(Protocol):\n"
         "    def handle(self, payload: str) -> str: ...\n"
         "\n"
+        "class BaseHandler(ABC):\n"
+        "    @abstractmethod\n"
+        "    def abstract_handle(self, payload: str) -> str:\n"
+        "        raise NotImplementedError\n"
+        "\n"
+        "    def concrete_helper(self, payload: str) -> str:\n"
+        "        result = payload.strip()\n"
+        "        return result\n"
+        "\n"
         "@app.command()\n"
         "def cli_main() -> None:\n"
         "    return None\n"
         "\n"
         "# specfact: preserve(compat)\n"
         "def shim() -> None:\n"
-        "    return None\n",
-        encoding="utf-8",
+        "    return None\n"
     )
+    source.write_text(source_text, encoding="utf-8")
+
+    def line_containing(text: str) -> int:
+        return next(index for index, line in enumerate(source_text.splitlines(), start=1) if text in line)
+
     finding_lines = {
-        "contract_lambda": 9,
-        "public_api": 12,
-        "protocol_member": 16,
-        "cli_callback": 19,
-        "compat_shim": 24,
+        "contract_lambda": line_containing("return value"),
+        "public_api": line_containing("return None"),
+        "protocol_member": line_containing("def handle"),
+        "cli_callback": line_containing("def cli_main"),
+        "compat_shim": line_containing("def shim"),
     }
 
     for expected_reason, line in finding_lines.items():
@@ -390,8 +403,20 @@ def test_preserve_detection_covers_contract_public_protocol_cli_compat_and_load_
         reasons = _preserve_reasons_for_finding(finding, load_bearing=False)
         assert expected_reason in {reason.reason for reason in reasons}
 
+    abstract_finding = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical").model_copy(
+        update={"file": str(source), "line": line_containing("raise NotImplementedError")}
+    )
+    abstract_reasons = _preserve_reasons_for_finding(abstract_finding, load_bearing=False)
+    assert "protocol_member" in {reason.reason for reason in abstract_reasons}
+
+    concrete_finding = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical").model_copy(
+        update={"file": str(source), "line": line_containing("return result")}
+    )
+    concrete_reasons = _preserve_reasons_for_finding(concrete_finding, load_bearing=False)
+    assert "protocol_member" not in {reason.reason for reason in concrete_reasons}
+
     load_bearing_finding = _simplification_finding(category="ai_bloat", guidance_kind="safe_mechanical").model_copy(
-        update={"file": str(source), "line": 12}
+        update={"file": str(source), "line": line_containing("def exported")}
     )
     reasons = _preserve_reasons_for_finding(load_bearing_finding, load_bearing=True)
     assert "load_bearing" in {reason.reason for reason in reasons}

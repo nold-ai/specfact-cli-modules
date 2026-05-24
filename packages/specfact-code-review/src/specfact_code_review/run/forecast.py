@@ -35,10 +35,6 @@ class _CleanupForecastTotals:
     high: int = 0
     weighted_points: float = 0.0
 
-    @property
-    def _expected_lines(self) -> int:
-        return round(self.expected)
-
 
 @beartype
 @require(lambda files: isinstance(files, list), "files must be a list")
@@ -49,13 +45,14 @@ def build_cleanup_forecast(findings: list[ReviewFinding], files: list[Path]) -> 
     guided = [finding for finding in findings if finding.guidance_kind is not None]
     totals = _cleanup_forecast_totals(guided)
     kloc = max(reviewed_loc.total / 1000.0, 0.001)
+    expected_lines = round(totals.expected)
     return CleanupForecast(
         reviewed_loc=reviewed_loc,
-        estimated_deletion_lines=DeletionEstimate(low=totals.low, expected=totals._expected_lines, high=totals.high),
+        estimated_deletion_lines=DeletionEstimate(low=totals.low, expected=expected_lines, high=totals.high),
         ai_bloat_index=AiBloatIndex(
             findings_per_kloc=round(len(guided) / kloc, 3),
             weighted_bloat_points_per_kloc=round(totals.weighted_points / kloc, 3),
-            cleanup_yield_loc_per_kloc=round(totals._expected_lines / kloc, 3),
+            cleanup_yield_loc_per_kloc=round(expected_lines / kloc, 3),
         ),
         by_guidance_kind=totals.by_guidance_kind,
         by_action_status=totals.by_action_status,
@@ -80,7 +77,7 @@ def _reviewed_loc_for_files(files: list[Path]) -> ReviewedLoc:
             continue
         try:
             loc = _count_python_loc(file_path)
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             continue
         if "tests" in file_path.parts:
             tests += loc

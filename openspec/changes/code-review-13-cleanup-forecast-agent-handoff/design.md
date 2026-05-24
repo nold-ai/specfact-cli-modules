@@ -10,7 +10,7 @@ The next layer should stay deterministic and Python-first. CPG, Joern, and polyg
 - Forecast weights are fixed in V1: `safe_mechanical=1.0`, `needs_tests=0.6`, `design_judgment=0.25`, and `preserve=0.0`.
 - `--preview-fixes` is non-mutating. It may create temporary files or in-memory diffs, but it must not edit tracked sources.
 - `--with-mutation` is explicit and valid only with `--focus simplify`. Timeouts and tool absence are inconclusive evidence, not proof that cleanup is safe.
-- Preserve reasons short-circuit automatic cleanup. The closed taxonomy covers contract, public API, protocol/ABC, CLI callback, compatibility shim, explicit marker, spec/domain wrapper, and load-bearing mutation evidence.
+- Preserve reasons short-circuit automatic cleanup. The closed taxonomy uses the emitted enum tokens `contract_lambda`, `public_api`, `protocol_member`, `cli_callback`, `compat_shim`, `spec_linked`, `domain_wrapper`, and `load_bearing`.
 - `remediation_packet` is the universal handoff surface. IDE prompts and skills may summarize it, but the JSON is authoritative.
 
 ## Data Shape

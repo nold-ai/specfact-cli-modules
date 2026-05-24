@@ -153,6 +153,12 @@ class ReviewedLoc(BaseModel):
     tests: int = Field(..., ge=0)
     total: int = Field(..., ge=0)
 
+    @model_validator(mode="after")
+    def _validate_total_matches_parts(self) -> ReviewedLoc:
+        if self.total != self.production + self.tests:
+            raise ValueError("reviewed_loc.total must equal production + tests")
+        return self
+
 
 class DeletionEstimate(BaseModel):
     """Non-binding deletion-line range."""
@@ -160,6 +166,12 @@ class DeletionEstimate(BaseModel):
     low: int = Field(..., ge=0)
     expected: int = Field(..., ge=0)
     high: int = Field(..., ge=0)
+
+    @model_validator(mode="after")
+    def _validate_ordering(self) -> DeletionEstimate:
+        if not self.low <= self.expected <= self.high:
+            raise ValueError("estimated_deletion_lines must satisfy low <= expected <= high")
+        return self
 
 
 class AiBloatIndex(BaseModel):

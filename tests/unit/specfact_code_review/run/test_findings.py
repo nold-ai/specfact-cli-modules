@@ -485,6 +485,19 @@ def test_review_report_uses_schema_1_3_when_cleanup_forecast_is_present() -> Non
     assert report.cleanup_forecast.ai_bloat_index.weighted_bloat_points_per_kloc == 16.0
 
 
+def test_reviewed_loc_rejects_total_mismatch() -> None:
+    with pytest.raises(ValidationError, match=r"reviewed_loc.total must equal production \+ tests"):
+        ReviewedLoc(production=80, tests=20, total=90)
+
+
+def test_deletion_estimate_rejects_inverted_range() -> None:
+    with pytest.raises(ValidationError, match="estimated_deletion_lines must satisfy low <= expected <= high"):
+        DeletionEstimate(low=6, expected=5, high=10)
+
+    with pytest.raises(ValidationError, match="estimated_deletion_lines must satisfy low <= expected <= high"):
+        DeletionEstimate(low=1, expected=5, high=4)
+
+
 def test_review_report_counts_failed_safe_mechanical_findings_as_blocking() -> None:
     report = ReviewReport(
         run_id="run-guided-simplify",

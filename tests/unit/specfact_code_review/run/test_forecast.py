@@ -55,3 +55,13 @@ def test_build_cleanup_forecast_counts_loc_and_weighted_bloat(tmp_path: Path) ->
     assert forecast.estimated_deletion_lines.high == 2
     assert forecast.by_guidance_kind["preserve"].estimated_deletion_lines == 5
     assert forecast.ai_bloat_index.weighted_bloat_points_per_kloc == 250.0
+
+
+def test_build_cleanup_forecast_skips_undecodable_python_files(tmp_path: Path) -> None:
+    source = tmp_path / "legacy.py"
+    source.write_bytes(b"\xff\xfe\x00")
+
+    forecast = build_cleanup_forecast([_finding(guidance_kind="safe_mechanical", deletion_lines=2)], [source])
+
+    assert forecast.reviewed_loc.total == 0
+    assert forecast.estimated_deletion_lines.expected == 2
