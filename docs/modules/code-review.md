@@ -59,6 +59,11 @@ Options (aligned with `specfact code review run --help`):
 - `--score-only`: print only the integer `reward_delta`
 - `--no-tests`: skip the targeted TDD gate
 - `--fix`: apply Ruff autofixes and re-run the review before printing results
+- `--preview-fixes`: with **`--focus simplify`**, compute non-mutating patch
+  evidence for supported safe-mechanical simplification fixers
+- `--with-mutation`: with **`--focus simplify`**, record opt-in mutation proof
+  evidence for cleanup candidates; missing mutation tooling is recorded as
+  inconclusive
 - `--interactive`: ask whether changed test files should be included before
   auto-detected review runs
 - `--instructions`: print AI-facing simplify / clean-code workflow instructions
@@ -75,6 +80,9 @@ The command rejects incompatible mixes (same rules as the bundle run guide): Typ
 - **`--include-tests` with `--exclude-tests`**: pick at most one test inclusion mode.
 - **`--out` without `--json`**: **`--out`** is accepted only when **`--json`** is also set.
 - **`--json` with `--score-only`**: pick one, not both (**`--json`** cannot be used with **`--score-only`**).
+- **`--preview-fixes` with `--fix`**: preview is non-mutating and cannot be combined with write mode.
+- **`--preview-fixes` without `--focus simplify`**: preview evidence is scoped to cleanup findings.
+- **`--with-mutation` without `--focus simplify`**: mutation proof is scoped to cleanup candidates.
 
 When `FILES` is omitted, the command falls back to:
 
@@ -114,7 +122,7 @@ guide (same Typer surface as this section).
 
 The review pipeline also emits `ai_bloat` findings for code shapes commonly amplified by AI-assisted generation: manual append loops, passthrough lambdas, identity `try/except`, one-call wrappers, speculative `Optional[...] = None` parameters, duplicate terminal guards, long low-branch functions, and redundant intermediates.
 
-These findings are `severity=info`, advisory-only, and score-neutral. They are written to `.specfact/code-review.json` when the report includes all severities; for simplification queues, write `.specfact/code-review-simplify.json` with `--focus simplify` so `/specfact.08-simplify` can filter them by `category=ai_bloat` for per-change confirmed rewrites. They do not claim AI authorship; they identify simplification candidates.
+These findings are `severity=info`, advisory-only, and score-neutral. They are written to `.specfact/code-review.json` when the report includes all severities; for simplification queues, write `.specfact/code-review-simplify.json` with `--focus simplify` so `/specfact.08-simplify` can filter them by `category=ai_bloat` for per-change confirmed rewrites. Simplify JSON now includes `cleanup_forecast` at report level plus per-finding `signal_trace`, `preserve_reasons`, and `remediation_packet` where available. They do not claim AI authorship; they identify simplification candidates.
 
 For the lowest-friction AI onboarding path, start with the built-in instruction
 printer instead of requiring a user to install IDE prompts or skills first:
@@ -125,8 +133,9 @@ specfact code review run --instructions
 
 Paste that output into any AI coding assistant and ask it to simplify or remove
 AI bloat with SpecFact. The instructions explain the expected report file,
-`guidance_kind` handling, patch-preview decision cards, conservative defaults
-for `design_judgment`, and per-file validation. They also cover clean PR
+`cleanup_forecast`, `guidance_kind`, `remediation_packet` handling,
+patch-preview decision cards, conservative defaults for `design_judgment`,
+and per-file validation. They also cover clean PR
 branches where `--scope changed` has no worktree files: the assistant should
 find branch-delta Python files with a base-ref diff such as
 `git diff --name-only <base-ref>...HEAD -- '*.py' '*.pyi'`, review those files
@@ -189,6 +198,19 @@ specfact code review run --score-only packages/specfact-code-review/src/specfact
 ```bash
 specfact code review run --fix packages/specfact-code-review/src/specfact_code_review/run/commands.py
 ```
+
+For simplify-focused cleanup, prefer a JSON-first preview loop before writing:
+
+```bash
+specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
+```
+
+Inspect `cleanup_forecast` to estimate cleanup yield and sort by
+`guidance_kind`. For each finding, use `remediation_packet` as the portable AI
+IDE contract. The preview evidence reports patch deltas without editing tracked
+files. Use `--with-mutation` only when you explicitly want candidate-scoped
+mutation evidence; missing or timed-out tooling is inconclusive, not proof that
+deletion is safe.
 
 ## Tool runners
 

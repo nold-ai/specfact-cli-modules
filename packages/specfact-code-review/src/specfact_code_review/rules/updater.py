@@ -32,8 +32,9 @@ DEFAULT_DO_RULES = (
     "- Use this skill when asked to run, interpret, or act on SpecFact code review in Codex CLI or another AI IDE",
     "- Treat `specfact code review run --help` as authoritative; self-heal stale options by checking help "
     "before changing workflow",
-    "- For simplification queues, run `specfact code review run --scope changed --focus simplify --json "
-    "--out .specfact/code-review-simplify.json`",
+    "- For simplification queues, run `specfact code review run --scope changed --focus simplify "
+    "--preview-fixes --json --out .specfact/code-review-simplify.json`",
+    "- Inspect `cleanup_forecast`, then follow each finding's `remediation_packet`; preserve reasons block autofix",
     "- Ask for walkthrough level when interactive: vibe coder, junior developer, senior/pro, or headless agent; "
     "auto-adjust if obvious",
     "- Interpret `guidance_kind`: `safe_mechanical` may apply after local safety checks, `needs_tests` requires "
@@ -61,6 +62,7 @@ DEFAULT_DONT_RULES = (
     "- Don't copy prompt templates into AI IDEs when this installed skill can carry the reusable workflow guidance",
     "- Don't treat simplification findings as AI-authorship proof or apply batch rewrites without explicit "
     "user approval",
+    "- Don't treat cleanup forecasts as guaranteed LOC removal; validate previews and tests first",
     "- Don't enable known noisy findings unless you explicitly want strict/full review output",
     "- Don't use bare except: or except Exception: pass",
     "- Don't add # noqa / # type: ignore without inline justification",

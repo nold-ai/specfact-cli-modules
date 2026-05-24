@@ -29,6 +29,16 @@ VALID_CATEGORIES = (
 VALID_SEVERITIES = ("error", "warning", "info")
 GUIDANCE_KINDS = ("safe_mechanical", "needs_tests", "design_judgment", "preserve")
 ACTION_STATUSES = ("recommended", "applied", "kept", "skipped", "failed")
+PRESERVE_REASONS = (
+    "contract_lambda",
+    "protocol_member",
+    "public_api",
+    "compat_shim",
+    "cli_callback",
+    "domain_wrapper",
+    "spec_linked",
+    "load_bearing",
+)
 PASS = "PASS"
 PASS_WITH_ADVISORY = "PASS_WITH_ADVISORY"
 FAIL = "FAIL"
@@ -65,6 +75,130 @@ class EvidenceRef(BaseModel):
             raise ValueError("end_line must be greater than or equal to start_line")
 
         return self
+
+
+class SignalTraceEntry(BaseModel):
+    """Deterministic source signal that contributed to a cleanup finding."""
+
+    tool: str = Field(..., description="Tool or analysis layer that produced the signal.")
+    source: str = Field(..., description="Stable signal or rule source identifier.")
+    fired: bool = Field(..., description="Whether the signal fired for this finding.")
+    score: float | None = Field(default=None, description="Optional normalized signal score.")
+    value: str | int | float | bool | None = Field(default=None, description="Optional raw signal value.")
+    evidence_refs: list[EvidenceRef] | None = Field(default=None, description="Evidence backing the signal.")
+    explanation: str = Field(..., description="Short explanation of the signal.")
+
+    @field_validator("tool", "source", "explanation")
+    @classmethod
+    def _validate_non_empty_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("value must not be empty")
+        return value
+
+
+class PreserveReasonEvidence(BaseModel):
+    """Closed-taxonomy reason that prevents automatic cleanup."""
+
+    reason: Literal[
+        "contract_lambda",
+        "protocol_member",
+        "public_api",
+        "compat_shim",
+        "cli_callback",
+        "domain_wrapper",
+        "spec_linked",
+        "load_bearing",
+    ] = Field(..., description="Closed preserve-reason taxonomy value.")
+    evidence_refs: list[EvidenceRef] = Field(..., min_length=1, description="Evidence for the preserve reason.")
+    explanation: str = Field(..., description="Why this context must be preserved.")
+
+    @field_validator("explanation")
+    @classmethod
+    def _validate_non_empty_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("value must not be empty")
+        return value
+
+
+class RemediationPacket(BaseModel):
+    """Portable AI IDE handoff contract for one cleanup finding."""
+
+    issue: str = Field(..., description="Plain-language issue description.")
+    recommended_action: str = Field(..., description="Recommended cleanup action.")
+    possible_keep_reason: str | None = Field(default=None, description="Why the code might need to stay.")
+    safety_checks: list[str] = Field(..., min_length=1, description="Checks required before editing.")
+    validation_plan: list[str] = Field(..., min_length=1, description="Validation steps after editing.")
+    safe_to_autofix: bool = Field(..., description="Whether an agent may apply this automatically.")
+    patch_forecast_refs: list[str] | None = Field(default=None, description="Patch preview references when present.")
+
+    @field_validator("issue", "recommended_action", "possible_keep_reason")
+    @classmethod
+    def _validate_non_empty_text(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("value must not be empty")
+        return value
+
+    @field_validator("safety_checks", "validation_plan", "patch_forecast_refs")
+    @classmethod
+    def _validate_non_empty_entries(cls, value: list[str] | None) -> list[str] | None:
+        if value is not None and any(not item.strip() for item in value):
+            raise ValueError("entries must not be empty")
+        return value
+
+
+class ReviewedLoc(BaseModel):
+    """Reviewed Python LOC split by production and tests."""
+
+    production: int = Field(..., ge=0)
+    tests: int = Field(..., ge=0)
+    total: int = Field(..., ge=0)
+
+    @model_validator(mode="after")
+    def _validate_total_matches_parts(self) -> ReviewedLoc:
+        if self.total != self.production + self.tests:
+            raise ValueError("reviewed_loc.total must equal production + tests")
+        return self
+
+
+class DeletionEstimate(BaseModel):
+    """Non-binding deletion-line range."""
+
+    low: int = Field(..., ge=0)
+    expected: int = Field(..., ge=0)
+    high: int = Field(..., ge=0)
+
+    @model_validator(mode="after")
+    def _validate_ordering(self) -> DeletionEstimate:
+        if not self.low <= self.expected <= self.high:
+            raise ValueError("estimated_deletion_lines must satisfy low <= expected <= high")
+        return self
+
+
+class AiBloatIndex(BaseModel):
+    """Normalized cleanup metrics per KLOC."""
+
+    findings_per_kloc: float = Field(..., ge=0.0)
+    weighted_bloat_points_per_kloc: float = Field(..., ge=0.0)
+    cleanup_yield_loc_per_kloc: float = Field(..., ge=0.0)
+
+
+class GuidanceKindForecast(BaseModel):
+    """Forecast aggregate for one guidance kind."""
+
+    count: int = Field(..., ge=0)
+    estimated_deletion_lines: int = Field(..., ge=0)
+
+
+class CleanupForecast(BaseModel):
+    """Aggregate cleanup impact forecast for simplify-focused reviews."""
+
+    reviewed_loc: ReviewedLoc
+    estimated_deletion_lines: DeletionEstimate
+    ai_bloat_index: AiBloatIndex
+    by_guidance_kind: dict[str, GuidanceKindForecast] = Field(default_factory=dict)
+    by_action_status: dict[str, int] = Field(default_factory=dict)
+    preview_evidence_count: int = Field(default=0, ge=0)
+    mutation_evidence_count: int = Field(default=0, ge=0)
 
 
 class ReviewFinding(BaseModel):
@@ -156,6 +290,18 @@ class ReviewFinding(BaseModel):
     before_ref: EvidenceRef | None = Field(default=None, description="Evidence reference before an applied action.")
     after_ref: EvidenceRef | None = Field(default=None, description="Evidence reference after an applied action.")
     improvement: str | None = Field(default=None, description="Evidence-backed improvement summary.")
+    signal_trace: list[SignalTraceEntry] | None = Field(
+        default=None,
+        description="Optional deterministic signal trace for cleanup findings.",
+    )
+    preserve_reasons: list[PreserveReasonEvidence] | None = Field(
+        default=None,
+        description="Optional closed-taxonomy preserve reasons that block automatic cleanup.",
+    )
+    remediation_packet: RemediationPacket | None = Field(
+        default=None,
+        description="Optional portable cleanup handoff packet for AI IDEs.",
+    )
 
     @field_validator(
         "tool",
@@ -184,6 +330,13 @@ class ReviewFinding(BaseModel):
             raise ValueError("safety_checks must not be empty when provided")
         if any(not item.strip() for item in value):
             raise ValueError("safety_checks entries must not be empty")
+        return value
+
+    @field_validator("signal_trace", "preserve_reasons")
+    @classmethod
+    def _validate_non_empty_evidence_list(cls, value: list[object] | None) -> list[object] | None:
+        if value is not None and not value:
+            raise ValueError("evidence lists must not be empty when provided")
         return value
 
     @model_validator(mode="after")
@@ -238,6 +391,9 @@ class ReviewFinding(BaseModel):
                 self.before_ref,
                 self.after_ref,
                 self.improvement,
+                self.signal_trace,
+                self.preserve_reasons,
+                self.remediation_packet,
             )
         )
 
@@ -251,7 +407,17 @@ class ReviewFinding(BaseModel):
     @ensure(lambda result: isinstance(result, bool))
     def is_safe_mechanical_simplification(self) -> bool:
         """Return whether the finding is an unresolved safe mechanical simplification."""
-        return self.guidance_kind == "safe_mechanical" and self.action_status in {None, "recommended", "failed"}
+        return (
+            self.guidance_kind == "safe_mechanical"
+            and self.action_status in {None, "recommended", "failed"}
+            and not self.preserve_reasons
+        )
+
+    @beartype
+    @ensure(lambda result: isinstance(result, bool))
+    def has_cleanup_handoff_metadata(self) -> bool:
+        """Return whether this finding carries cleanup forecast or handoff metadata."""
+        return self.signal_trace is not None or self.preserve_reasons is not None or self.remediation_packet is not None
 
     @beartype
     @ensure(lambda result: isinstance(result, bool))
@@ -302,6 +468,10 @@ class ReviewReport(BaseModel):
         default=None,
         description="Aggregate simplification guidance and action-status evidence.",
     )
+    cleanup_forecast: CleanupForecast | None = Field(
+        default=None,
+        description="Aggregate cleanup forecast for simplify-focused review runs.",
+    )
     house_rules_updates: list[str] = Field(default_factory=list, description="Suggested house-rules updates.")
 
     @field_validator("schema_version", "run_id", "summary")
@@ -322,7 +492,11 @@ class ReviewReport(BaseModel):
     def _derive_governance_fields(self) -> ReviewReport:
         if self.simplification_summary is None:
             self.simplification_summary = _build_simplification_summary(self.findings)
-        if self.simplification_summary is not None:
+        if self.cleanup_forecast is not None or any(
+            finding.has_cleanup_handoff_metadata() for finding in self.findings
+        ):
+            self.schema_version = "1.3"
+        elif self.simplification_summary is not None:
             self.schema_version = "1.2"
         elif any(finding.has_simplification_metadata() for finding in self.findings):
             self.schema_version = "1.1"

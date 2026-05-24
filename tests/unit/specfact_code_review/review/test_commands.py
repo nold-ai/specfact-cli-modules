@@ -41,9 +41,13 @@ def test_review_run_instructions_prints_ai_workflow_without_running_review(monke
     assert "branch-delta Python files" in result.output
     assert "git diff --name-only <base-ref>...HEAD" in result.output
     assert "Findings without guidance_kind are unguided advisories" in result.output
+    assert "Sort findings by guidance_kind before editing" in result.output
     assert "exact patch preview" in result.output
     assert "default to keep or skip" in result.output
     assert "specfact code review run --scope changed --focus simplify" in result.output
+    assert "cleanup_forecast" in result.output
+    assert "remediation_packet" in result.output
+    assert "not proof of AI authorship" in result.output
 
 
 def test_review_run_interactive_prompts_for_test_inclusion(monkeypatch: Any) -> None:

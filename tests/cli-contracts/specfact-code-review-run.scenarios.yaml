@@ -168,3 +168,24 @@ scenarios:
       exit_code: 2
       stderr_contains:
         - Cannot combine --focus with --include-tests or --exclude-tests
+  - name: preview-fixes-cannot-combine-with-fix
+    type: anti-pattern
+    argv:
+      - tests/fixtures/review/clean_module.py
+      - --focus
+      - simplify
+      - --preview-fixes
+      - --fix
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - Cannot combine --preview-fixes with --fix
+  - name: mutation-proof-requires-simplify-focus
+    type: anti-pattern
+    argv:
+      - tests/fixtures/review/clean_module.py
+      - --with-mutation
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - Use --with-mutation only with --focus simplify

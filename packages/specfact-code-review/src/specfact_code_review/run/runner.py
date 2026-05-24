@@ -21,7 +21,16 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
-from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import (
+    CleanupForecast,
+    EvidenceRef,
+    PreserveReasonEvidence,
+    RemediationPacket,
+    ReviewFinding,
+    ReviewReport,
+    SignalTraceEntry,
+)
+from specfact_code_review.run.forecast import build_cleanup_forecast
 from specfact_code_review.run.scorer import score_review
 from specfact_code_review.tools.ai_bloat_runner import run_ai_bloat
 from specfact_code_review.tools.ast_clean_code_runner import run_ast_clean_code
@@ -345,6 +354,290 @@ def _filter_findings_by_focus(findings: list[ReviewFinding], focus: ReviewFocus 
     raise ValueError(f"Unsupported review focus: {focus}")
 
 
+def _enrich_cleanup_findings(findings: list[ReviewFinding]) -> list[ReviewFinding]:
+    return [_enriched_cleanup_finding(finding) for finding in findings]
+
+
+def _enriched_cleanup_finding(finding: ReviewFinding) -> ReviewFinding:
+    if finding.guidance_kind is None:
+        return finding
+    preserve_reasons = list(finding.preserve_reasons or [])
+    preserve_reasons.extend(
+        reason
+        for reason in _preserve_reasons_for_finding(finding, load_bearing=False)
+        if reason not in preserve_reasons
+    )
+    updates: dict[str, object] = {
+        "signal_trace": _signal_trace_for_finding(finding),
+    }
+    if preserve_reasons:
+        updates.update(
+            {
+                "guidance_kind": "preserve",
+                "recommended_action": "keep",
+                "estimated_deletion_lines": 0,
+                "action_status": "kept",
+                "preserve_reason": "; ".join(reason.explanation for reason in preserve_reasons),
+                "preserve_reasons": preserve_reasons,
+            }
+        )
+    candidate = finding.model_copy(update=updates)
+    return candidate.model_copy(update={"remediation_packet": _remediation_packet_for_finding(candidate)})
+
+
+def _signal_trace_for_finding(finding: ReviewFinding) -> list[SignalTraceEntry]:
+    existing = list(finding.signal_trace or [])
+    if existing:
+        return existing
+    return [
+        SignalTraceEntry(
+            tool=finding.tool,
+            source=finding.rule,
+            fired=True,
+            score=1.0 if finding.confidence == "high" else None,
+            value=finding.canonical_pattern,
+            evidence_refs=[EvidenceRef(path=finding.file, start_line=finding.line)],
+            explanation=f"{finding.tool} emitted {finding.rule}.",
+        )
+    ]
+
+
+def _remediation_packet_for_finding(finding: ReviewFinding) -> RemediationPacket:
+    possible_keep_reason = finding.preserve_reason
+    if possible_keep_reason is None and finding.guidance_kind in {"design_judgment", "needs_tests"}:
+        possible_keep_reason = "Keep the current shape if tests, API compatibility, or domain readability need it."
+    return RemediationPacket(
+        issue=finding.message,
+        recommended_action=finding.recommended_action or "inspect",
+        possible_keep_reason=possible_keep_reason,
+        safety_checks=finding.safety_checks or ["inspect the surrounding behavior before editing"],
+        validation_plan=["run targeted tests for the touched file", "rerun specfact code review with --focus simplify"],
+        safe_to_autofix=finding.is_safe_mechanical_simplification() and finding.fixable,
+    )
+
+
+def _preserve_reasons_for_finding(finding: ReviewFinding, *, load_bearing: bool) -> list[PreserveReasonEvidence]:
+    reasons: list[PreserveReasonEvidence] = []
+    evidence_ref = EvidenceRef(path=finding.file, start_line=finding.line)
+    if load_bearing:
+        reasons.append(
+            PreserveReasonEvidence(
+                reason="load_bearing",
+                evidence_refs=[evidence_ref],
+                explanation="Mutation proof indicates this code is load-bearing.",
+            )
+        )
+    try:
+        source = Path(finding.file).read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=finding.file)
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return reasons
+    lines = source.splitlines()
+    function_node = _function_containing_line(tree, finding.line)
+    class_node = _class_containing_line(tree, finding.line)
+    public_names = _module_all_names(tree)
+    if function_node is not None:
+        if _has_contract_decorator(function_node):
+            reasons.append(
+                PreserveReasonEvidence(
+                    reason="contract_lambda",
+                    evidence_refs=[evidence_ref],
+                    explanation="Function is protected by an icontract-style contract decorator.",
+                )
+            )
+        if function_node.name in public_names:
+            reasons.append(
+                PreserveReasonEvidence(
+                    reason="public_api",
+                    evidence_refs=[evidence_ref],
+                    explanation="Function is exported through __all__ and is public API.",
+                )
+            )
+        if _has_cli_decorator(function_node):
+            reasons.append(
+                PreserveReasonEvidence(
+                    reason="cli_callback",
+                    evidence_refs=[evidence_ref],
+                    explanation="Function is registered as a Typer or Click callback.",
+                )
+            )
+        if _has_preserve_marker(lines, function_node.lineno):
+            reasons.append(
+                PreserveReasonEvidence(
+                    reason="compat_shim",
+                    evidence_refs=[evidence_ref],
+                    explanation="Function has an explicit specfact preserve compatibility marker.",
+                )
+            )
+        if _has_spec_marker(lines, function_node.lineno):
+            reasons.append(
+                PreserveReasonEvidence(
+                    reason="spec_linked",
+                    evidence_refs=[evidence_ref],
+                    explanation="Function has an explicit spec requirement marker.",
+                )
+            )
+    if class_node is not None and _is_protocol_or_abstract_member(class_node, function_node):
+        reasons.append(
+            PreserveReasonEvidence(
+                reason="protocol_member",
+                evidence_refs=[evidence_ref],
+                explanation="Finding is inside an abstract Protocol or ABC member contract.",
+            )
+        )
+    return _dedupe_preserve_reasons(reasons)
+
+
+def _dedupe_preserve_reasons(reasons: list[PreserveReasonEvidence]) -> list[PreserveReasonEvidence]:
+    deduped: list[PreserveReasonEvidence] = []
+    seen: set[str] = set()
+    for reason in reasons:
+        if reason.reason in seen:
+            continue
+        seen.add(reason.reason)
+        deduped.append(reason)
+    return deduped
+
+
+def _function_containing_line(tree: ast.AST, line: int) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    functions = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        and node.lineno <= line <= (node.end_lineno or node.lineno)
+    ]
+    return max(functions, key=lambda node: node.lineno, default=None)
+
+
+def _class_containing_line(tree: ast.AST, line: int) -> ast.ClassDef | None:
+    classes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ClassDef) and node.lineno <= line <= (node.end_lineno or node.lineno)
+    ]
+    return max(classes, key=lambda node: node.lineno, default=None)
+
+
+def _module_all_names(tree: ast.Module) -> set[str]:
+    names: set[str] = set()
+    for node in tree.body:
+        exported_values = _module_all_assignment_values(node)
+        if exported_values is None:
+            continue
+        for item in exported_values:
+            item_name = _string_constant_value(item)
+            if item_name is not None:
+                names.add(item_name)
+    return names
+
+
+def _module_all_assignment_values(node: ast.stmt) -> list[ast.expr] | None:
+    if not isinstance(node, ast.Assign):
+        return None
+    if not any(isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets):
+        return None
+    if isinstance(node.value, ast.List | ast.Tuple | ast.Set):
+        return list(node.value.elts)
+    return None
+
+
+def _string_constant_value(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Str) and isinstance(node.s, str):
+        return node.s
+    return None
+
+
+def _decorator_full_name(node: ast.AST) -> str:
+    target = node.func if isinstance(node, ast.Call) else node
+    if isinstance(target, ast.Name):
+        return target.id
+    if isinstance(target, ast.Attribute):
+        prefix = _decorator_full_name(target.value)
+        return f"{prefix}.{target.attr}" if prefix else target.attr
+    return ""
+
+
+def _has_contract_decorator(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    contract_names = {"require", "ensure", "invariant", "icontract.require", "icontract.ensure", "icontract.invariant"}
+    return any(_decorator_full_name(decorator) in contract_names for decorator in function_node.decorator_list)
+
+
+def _has_cli_decorator(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    return any(
+        _decorator_full_name(decorator).split(".")[-1] in {"command", "callback"}
+        for decorator in function_node.decorator_list
+    )
+
+
+def _has_abstractmethod(function_node: ast.FunctionDef | ast.AsyncFunctionDef | None) -> bool:
+    if function_node is None:
+        return False
+    return any(
+        _decorator_full_name(decorator).split(".")[-1] == "abstractmethod" for decorator in function_node.decorator_list
+    )
+
+
+def _is_protocol_or_abstract_member(
+    class_node: ast.ClassDef,
+    function_node: ast.FunctionDef | ast.AsyncFunctionDef | None,
+) -> bool:
+    if function_node is None:
+        return False
+    if _has_abstractmethod(function_node):
+        return True
+    return _has_base_named(class_node, {"Protocol"}) and _is_stub_function(function_node)
+
+
+def _is_stub_function(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    body = [statement for statement in function_node.body if not _is_docstring_statement(statement)]
+    return all(_is_stub_statement(statement) for statement in body)
+
+
+def _is_docstring_statement(statement: ast.stmt) -> bool:
+    return (
+        isinstance(statement, ast.Expr)
+        and isinstance(statement.value, ast.Constant)
+        and isinstance(statement.value.value, str)
+    )
+
+
+def _is_stub_statement(statement: ast.stmt) -> bool:
+    if isinstance(statement, ast.Pass):
+        return True
+    return (
+        isinstance(statement, ast.Expr)
+        and isinstance(statement.value, ast.Constant)
+        and statement.value.value is Ellipsis
+    )
+
+
+def _has_base_named(class_node: ast.ClassDef, names: set[str]) -> bool:
+    return any(_base_name(base).rsplit(".", maxsplit=1)[-1] in names for base in class_node.bases)
+
+
+def _base_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        prefix = _base_name(node.value)
+        return f"{prefix}.{node.attr}" if prefix else node.attr
+    if isinstance(node, ast.Subscript):
+        return _base_name(node.value)
+    return ""
+
+
+def _has_preserve_marker(lines: list[str], line: int) -> bool:
+    context = "\n".join(lines[max(0, line - 3) : line])
+    return "specfact: preserve(" in context
+
+
+def _has_spec_marker(lines: list[str], line: int) -> bool:
+    context = "\n".join(lines[max(0, line - 3) : line])
+    return "# spec:" in context or "# specfact: requirement(" in context
+
+
 def _collect_tdd_inputs(files: list[Path]) -> tuple[list[Path], list[Path], list[ReviewFinding]]:
     source_files = [file_path for file_path in files if _expected_test_path(file_path) is not None]
     findings: list[ReviewFinding] = []
@@ -633,6 +926,10 @@ def run_review(
 
     findings = _filter_findings_by_review_level(findings, review_options.review_level)
     findings = _filter_findings_by_focus(findings, review_options.focus)
+    cleanup_forecast: CleanupForecast | None = None
+    if review_options.focus == "simplify":
+        findings = _enrich_cleanup_findings(findings)
+        cleanup_forecast = build_cleanup_forecast(findings, files)
 
     score = score_review(
         findings=findings,
@@ -648,6 +945,7 @@ def run_review(
         score=score.score,
         findings=findings,
         summary=_summary_for_findings(findings),
+        cleanup_forecast=cleanup_forecast,
     )
     if review_options.review_mode == "shadow":
         return report.model_copy(update={"ci_exit_code": 0})
