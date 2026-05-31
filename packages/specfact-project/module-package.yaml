@@ -28,3 +28,4 @@ description: Official SpecFact project bundle package.
 bundle_group_command: project
 integrity:
   checksum: sha256:40b9915d457c2c3f70de3e712c7d89a6802885a59637d071b0e44e210d017aab
+  signature: yoeLWtUFIvpFFGgyAa2ABRoxhFhl6Sq6onus7y9mOC/oVLMDp8X8w061BzE2zOr27WQiL2SMgPWIKoSGMIvNDw==
