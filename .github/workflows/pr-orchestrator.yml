@@ -125,6 +125,16 @@ jobs:
       - name: Checkout
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         uses: actions/checkout@v4
+      - name: Checkout paired core CLI
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: nold-ai/specfact-cli
+          path: specfact-cli
+          ref: dev
+      - name: Export paired core CLI path
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: echo "SPECFACT_CLI_REPO=${GITHUB_WORKSPACE}/specfact-cli" >> "$GITHUB_ENV"
       - name: Setup Python
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         uses: actions/setup-python@v5
@@ -140,7 +150,18 @@ jobs:
         run: hatch env create
       - name: Install specfact-cli dependency
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
-        run: hatch run pip install "specfact-cli==0.46.2"
+        run: hatch run pip install -e ./specfact-cli
+      - name: Runtime discovery smoke across package managers
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        run: |
+          python -m pip install pipx uv "virtualenv<21"
+          cd specfact-cli
+          python scripts/runtime_discovery_smoke.py --modules-repo "${GITHUB_WORKSPACE}" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
+      - name: Validate generated command overview
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: |
+          hatch run check-command-overview
+          hatch run check-command-contract
       - name: Format
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run format
@@ -158,10 +179,10 @@ jobs:
         run: hatch run check-bundle-imports
       - name: Contract Test
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
-        run: hatch run contract-test
-      - name: Smart Test
+        run: hatch run contract-test-contracts
+      - name: Smart Test Configuration
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
-        run: hatch run smart-test
-      - name: Test
+        run: hatch run smart-test-check
+      - name: Full Test Suite
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run test

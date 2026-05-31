@@ -17,6 +17,7 @@ from typer.main import get_command as typer_get_command
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROMPT_ROOT = REPO_ROOT / "packages"
+VALIDATED_RESOURCE_SUFFIXES = frozenset({".j2", ".jinja", ".jinja2", ".json", ".md", ".py", ".txt", ".yaml", ".yml"})
 INLINE_COMMAND_RE = re.compile(r"`(/?specfact(?:[\s.][^`\n]*)?)`")
 OPTION_RE = re.compile(r"(?<![\w-])--[A-Za-z][A-Za-z0-9-]*")
 COMMAND_STARTS = ("specfact ", "/specfact ", "specfact.", "/specfact.")
@@ -38,11 +39,7 @@ MODULE_APP_MOUNTS = (
     ("specfact_code_review.review.commands", "app", ("specfact", "code")),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
     ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")),
-    ("specfact_project.import_cmd.commands", "app", ("specfact", "import")),
-    ("specfact_project.migrate.commands", "app", ("specfact", "migrate")),
-    ("specfact_project.plan.commands", "app", ("specfact", "plan")),
     ("specfact_project.project.commands", "app", ("specfact", "project")),
-    ("specfact_project.sync.commands", "app", ("specfact", "sync")),
     ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
     ("specfact_spec.sdd.commands", "app", ("specfact", "spec")),
@@ -92,8 +89,12 @@ def _ensure_package_paths() -> None:
 
 def _iter_prompt_paths(root: Path = PROMPT_ROOT) -> list[Path]:
     paths: list[Path] = []
-    for package_root in sorted(root.glob("*/resources/prompts")):
-        paths.extend(path.resolve() for path in sorted(package_root.rglob("*.md")) if path.is_file())
+    for package_root in sorted(root.glob("*/resources")):
+        paths.extend(
+            path.resolve()
+            for path in sorted(package_root.rglob("*"))
+            if path.is_file() and path.suffix.lower() in VALIDATED_RESOURCE_SUFFIXES
+        )
     return paths
 
 
@@ -152,7 +153,7 @@ def _strip_shell_prompt(line: str) -> str:
 
 
 def _normalize_prompt_command(raw: str) -> str:
-    command = raw.strip().rstrip(":,")
+    command = raw.strip().strip("\"'").rstrip(":,").strip("\"'")
     if command.startswith("/"):
         command = command[1:]
     return " ".join(command.split())
@@ -207,13 +208,39 @@ def _iter_inline_command_examples(text: str, source: Path) -> list[PromptCommand
     return examples
 
 
+def _iter_structured_value_command_examples(text: str, source: Path) -> list[PromptCommandExample]:
+    """Extract commands from YAML/JSON/template scalar values."""
+    if source.suffix.lower() == ".md":
+        return []
+    examples: list[PromptCommandExample] = []
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        stripped = _strip_comment(raw_line.strip()).lstrip("-").strip()
+        if not stripped:
+            continue
+        candidates = [stripped]
+        if ":" in stripped:
+            candidates.append(stripped.split(":", 1)[1].strip())
+        for candidate in candidates:
+            candidate = candidate.strip().strip(",").strip("\"'")
+            if not _starts_with_command(candidate):
+                continue
+            examples.append(PromptCommandExample(source, line_number, _normalize_prompt_command(candidate)))
+            break
+    return examples
+
+
 def _extract_prompt_command_examples_from_text(text: str, source: Path) -> list[PromptCommandExample]:
     seen: set[tuple[int, str]] = set()
     examples: list[PromptCommandExample] = []
     inline_examples = _iter_inline_command_examples(text, source)
     cli_inline_examples = [example for example in inline_examples if "." not in example.text.split(maxsplit=1)[0]]
     slash_inline_examples = [example for example in inline_examples if "." in example.text.split(maxsplit=1)[0]]
-    for example in [*_iter_fenced_command_examples(text, source), *cli_inline_examples, *slash_inline_examples]:
+    for example in [
+        *_iter_fenced_command_examples(text, source),
+        *_iter_structured_value_command_examples(text, source),
+        *cli_inline_examples,
+        *slash_inline_examples,
+    ]:
         key = (example.line_number, example.text)
         if key in seen:
             continue
@@ -347,7 +374,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "paths",
         nargs="*",
         type=Path,
-        help="Prompt files to validate. Defaults to packages/*/resources/prompts/**/*.md.",
+        help="Prompt/resource/source files to validate. Defaults to package resources plus packages/*/src/**/*.py.",
     )
     return parser.parse_args(argv)
 
@@ -355,7 +382,9 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 def _selected_paths(args: argparse.Namespace) -> list[Path]:
     if not args.paths:
         return _iter_prompt_paths()
-    return [path.resolve() for path in args.paths if path.suffix == ".md" and path.is_file()]
+    return [
+        path.resolve() for path in args.paths if path.suffix.lower() in VALIDATED_RESOURCE_SUFFIXES and path.is_file()
+    ]
 
 
 def _main(argv: list[str] | None = None) -> int:

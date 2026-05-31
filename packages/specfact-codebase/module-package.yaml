@@ -1,5 +1,5 @@
 name: nold-ai/specfact-codebase
-version: 0.41.10
+version: 0.41.11
 commands:
   - code
 tier: official
@@ -24,5 +24,4 @@ description: Official SpecFact codebase bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:f1a87d09b50ae91fd2e57986a04855796d658c704520b7d0889ccd4a00ad7b9a
-  signature: iVUCHYPzuJEIDOwPNmFZLEaAGmYj7E4vgLAT2N5SWwi+Jvzl5jsLgW86tbiChvKX1lwUrZtAS0sofZ2TwxVlDA==
+  checksum: sha256:21d8bc02de6e01ecc0b7d68c2ba9f736f90f97b128eb925aca721dbd02874c74

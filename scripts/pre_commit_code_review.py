@@ -149,11 +149,14 @@ def _run_review_subprocess(
     # shadow in-repo `specfact_code_review` during the pre-commit gate.
     env["SPECFACT_MODULES_REPO"] = str(repo_root.resolve())
     env["SPECFACT_CLI_MODULES_REPO"] = str(repo_root.resolve())
-    code_review_src = repo_root / "packages" / "specfact-code-review" / "src"
-    if code_review_src.is_dir():
-        prefix = str(code_review_src)
-        previous = env.get("PYTHONPATH", "").strip()
-        env["PYTHONPATH"] = f"{prefix}{os.pathsep}{previous}" if previous else prefix
+    env["SPECFACT_MODULES_ROOTS"] = str((repo_root / "packages").resolve())
+    package_src_roots = [path / "src" for path in sorted((repo_root / "packages").glob("specfact-*"))]
+    prefixes = [str(path) for path in package_src_roots if path.is_dir()]
+    previous = env.get("PYTHONPATH", "").strip()
+    if previous:
+        prefixes.extend(entry for entry in previous.split(os.pathsep) if entry)
+    if prefixes:
+        env["PYTHONPATH"] = os.pathsep.join(dict.fromkeys(prefixes))
     try:
         return subprocess.run(
             cmd,

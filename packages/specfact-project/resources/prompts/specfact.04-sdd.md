@@ -49,7 +49,7 @@ Create/update SDD manifest from project bundle. Captures WHY (intent/constraints
 ### Step 2: Execute CLI
 
 ```bash
-specfact plan harden [<bundle-name>] [--sdd <path>] [--output-format <format>]
+specfact project --help
 # Uses active plan if bundle not specified
 ```
 
@@ -78,7 +78,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact plan harden [<bundle-name>] [--sdd <path>] --no-interactive
+specfact project --help
 ```
 
 **Capture**:
@@ -111,8 +111,8 @@ specfact plan harden [<bundle-name>] [--sdd <path>] --no-interactive
 
 ```bash
 # Use enrichment to update plan via CLI, then regenerate SDD
-specfact plan update-idea [--bundle <name>] [options] --no-interactive
-specfact plan harden [<bundle-name>] --no-interactive
+specfact project --help
+specfact project --help
 ```
 
 **Result**: Final SDD is CLI-generated with validated enrichments
@@ -147,7 +147,7 @@ Contracts: 15
 
 ```text
 ✗ Project bundle 'legacy-api' not found
-Create one with: specfact plan init legacy-api
+Create one with: specfact project --help
 ```
 
 ## Common Patterns

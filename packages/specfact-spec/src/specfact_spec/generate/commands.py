@@ -1573,7 +1573,7 @@ def generate_fix_prompt(
     2. Run `specfact generate fix-prompt GAP-001` to get a fix prompt
     3. Copy the prompt to your AI IDE
     4. AI IDE provides the fix
-    5. Validate with `specfact enforce sdd --bundle <bundle>`
+    5. Validate with `specfact govern enforce sdd --bundle <bundle>`
 
     **Parameter Groups:**
     - **Target/Input**: gap_id (optional argument), --bundle
@@ -1794,7 +1794,7 @@ def generate_fix_prompt(
                         "1. **Analyze the Gap**: Understand what's missing or incorrect",
                         "2. **Implement Fix**: Apply the appropriate fix",
                         "3. **Add Tests**: Ensure the fix is covered by tests",
-                        "4. **Validate**: Run `specfact enforce sdd` to verify",
+                        "4. **Validate**: Run `specfact govern enforce sdd` to verify",
                     ]
                 )
 
@@ -1810,9 +1810,9 @@ def generate_fix_prompt(
             )
 
             if bundle:
-                prompt_parts.append(f"specfact enforce sdd --bundle {bundle}")
+                prompt_parts.append(f"specfact govern enforce sdd --bundle {bundle}")
             else:
-                prompt_parts.append("specfact enforce sdd --bundle <bundle-name>")
+                prompt_parts.append("specfact govern enforce sdd --bundle <bundle-name>")
 
             prompt_parts.extend(
                 [
@@ -1838,7 +1838,7 @@ def generate_fix_prompt(
             console.print("1. Open the prompt file in your AI IDE (Cursor, Copilot, etc.)")
             console.print("2. Copy the prompt and ask your AI to implement the fix")
             console.print("3. Review and apply the suggested changes")
-            console.print("4. Validate with `specfact enforce sdd`")
+            console.print("4. Validate with `specfact govern enforce sdd`")
 
             if is_debug_mode():
                 debug_log_operation(

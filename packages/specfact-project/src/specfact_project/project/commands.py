@@ -248,7 +248,7 @@ def _run_spec_code_alignment_check(
             args.append("--no-interactive")
         exit_code = subcommand.main(
             args=args,
-            prog_name="specfact enforce sdd",
+            prog_name="specfact govern enforce sdd",
             standalone_mode=False,
         )
         if exit_code and exit_code != 0:
@@ -313,6 +313,15 @@ def _fetch_backlog_graph(*, adapter: str, project_id: str, template: str) -> Any
     print_warning("Backlog graph functionality moved to 'backlog' command group.")
     print_info("Use: specfact backlog analyze-deps or specfact backlog graph-export")
     return None
+
+
+def _require_backlog_graph(graph: Any, *, command_name: str) -> Any:
+    """Fail with a typed diagnostic when backlog graph data is unavailable."""
+    if graph is None or not hasattr(graph, "items"):
+        print_error(f"Backlog graph data unavailable for `specfact project {command_name}`.")
+        print_info("Run `specfact backlog analyze-deps` or `specfact backlog graph-export` to inspect backlog data.")
+        raise typer.Exit(1)
+    return graph
 
 
 @beartype
@@ -634,6 +643,7 @@ def regenerate(
     bundle_obj = _load_bundle_with_progress(bundle_dir, validate_hashes=False)
     adapter, project_id, template = _resolve_linked_backlog_config(bundle_obj)
     graph = _fetch_backlog_graph(adapter=adapter, project_id=project_id, template=template)
+    graph = _require_backlog_graph(graph, command_name="regenerate")
 
     plan_view = {"items": [str(feature_key) for feature_key in bundle_obj.features if str(feature_key)]}
     backlog_view = {"items": [str(item_id) for item_id in graph.items]}

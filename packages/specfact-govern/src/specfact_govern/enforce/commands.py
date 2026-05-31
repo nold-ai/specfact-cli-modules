@@ -119,9 +119,9 @@ def stage(
     - **Advanced/Configuration**: --preset
 
     **Examples:**
-        specfact enforce stage --preset balanced
-        specfact enforce stage --preset strict
-        specfact enforce stage --preset minimal
+        specfact govern enforce stage --preset balanced
+        specfact govern enforce stage --preset strict
+        specfact govern enforce stage --preset minimal
     """
     if is_debug_mode():
         debug_log_operation("command", "enforce stage", "started", extra={"preset": preset})
@@ -253,9 +253,9 @@ def enforce_sdd(
     - **Behavior/Options**: --no-interactive
 
     **Examples:**
-        specfact enforce sdd legacy-api
-        specfact enforce sdd auth-module --output-format json --out validation-report.json
-        specfact enforce sdd legacy-api --no-interactive
+        specfact govern enforce sdd legacy-api
+        specfact govern enforce sdd auth-module --output-format json --out validation-report.json
+        specfact govern enforce sdd legacy-api --no-interactive
     """
     if is_debug_mode():
         debug_log_operation(

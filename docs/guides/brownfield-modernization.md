@@ -23,7 +23,7 @@ The IDE bootstrap matters because backlog refinement, review prompts, and other 
 ## 2. Import the legacy codebase into a project bundle
 
 ```bash
-specfact code import legacy-api --repo .
+specfact code import --repo . legacy-api
 ```
 
 This creates or refreshes the project bundle that the later workflow stages use.
@@ -39,7 +39,7 @@ Use this to identify where the codebase already has contract signals and where m
 ## 4. Sync or export project state when outside tools are involved
 
 ```bash
-specfact sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+specfact project sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
 ```
 
 Use the bridge layer when you need to exchange bundle state with GitHub, Azure DevOps, OpenSpec, or another supported adapter.

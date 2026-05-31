@@ -115,7 +115,7 @@ specfact govern enforce sdd [<bundle-name>] [--sdd <path>] --no-interactive
 
 ```bash
 # Apply fixes via CLI commands, then re-validate
-specfact plan update-feature [--bundle <name>] [options] --no-interactive
+specfact project --help
 specfact govern enforce sdd [<bundle-name>] --no-interactive
 ```
 
@@ -153,7 +153,7 @@ Issues Found:
 
    Hash changes when modifying features, stories, or product/idea/business sections.
    Note: Clarifications don't affect hash (review metadata). Hash stable across review sessions.
-   Fix: Run `specfact plan harden <bundle-name>` to update SDD manifest.
+   Fix: Run `specfact project --help` to update SDD manifest.
 ```
 
 ## Common Patterns

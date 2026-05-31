@@ -6,7 +6,6 @@ import ast
 import json
 import os
 import re
-import shutil
 import subprocess
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -392,25 +391,16 @@ class CodeAnalyzer:
         )
 
     def _check_semgrep_available(self) -> bool:
-        """Check if Semgrep is available in PATH."""
+        """Check if Semgrep is available in the active repository environment."""
         # Skip Semgrep check in test mode to avoid timeouts
         if os.environ.get("TEST_MODE") == "true":
             return False
 
-        # Fast check: use shutil.which first to avoid subprocess overhead
-        if shutil.which("semgrep") is None:
-            return False
+        from specfact_cli.utils.env_manager import check_tool_in_env, detect_env_manager
 
-        try:
-            result = subprocess.run(
-                ["semgrep", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5,  # Increased timeout to 5s (Semgrep may need time to initialize)
-            )
-            return result.returncode == 0
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            return False
+        env_info = detect_env_manager(self.repo_path)
+        available, _message = check_tool_in_env(self.repo_path, "semgrep", env_info)
+        return available
 
     def get_plugin_status(self) -> list[dict[str, Any]]:
         """
@@ -497,8 +487,11 @@ class CodeAnalyzer:
             return []
 
         try:
-            # Check if semgrep is available quickly
-            if not shutil.which("semgrep"):
+            from specfact_cli.utils.env_manager import build_tool_command, check_tool_in_env, detect_env_manager
+
+            env_info = detect_env_manager(self.repo_path)
+            semgrep_available, _message = check_tool_in_env(self.repo_path, "semgrep", env_info)
+            if not semgrep_available:
                 return []
 
             # Run feature detection
@@ -511,7 +504,7 @@ class CodeAnalyzer:
             timeout = 10
 
             result = subprocess.run(
-                ["semgrep", "--config", *configs, "--json", str(file_path)],
+                build_tool_command(env_info, ["semgrep", "--config", *configs, "--json", str(file_path)]),
                 capture_output=True,
                 text=True,
                 timeout=timeout,

@@ -43,7 +43,7 @@ Examples:
 ```bash
 specfact backlog ceremony refinement github --preview --labels feature
 specfact code review run src --scope changed --no-tests
-specfact sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+specfact project sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
 ```
 
 These commands are the source of truth. The IDE should support them, not replace them.

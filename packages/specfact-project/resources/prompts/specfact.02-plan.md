@@ -60,12 +60,12 @@ Manage project bundles: initialize, add features/stories, update metadata (idea/
 ### Step 2: Execute CLI
 
 ```bash
-specfact plan init <bundle-name> [--interactive/--no-interactive] [--scaffold/--no-scaffold]
-specfact plan add-feature [--bundle <name>] --key <key> --title <title> [--outcomes <outcomes>] [--acceptance <acceptance>]
-specfact plan add-story [--bundle <name>] --feature <feature-key> --key <story-key> --title <title> [--acceptance <acceptance>]
-specfact plan update-idea [--bundle <name>] [--title <title>] [--narrative <narrative>] [--target-users <users>] [--value-hypothesis <hypothesis>] [--constraints <constraints>]
-specfact plan update-feature [--bundle <name>] --key <key> [--title <title>] [--outcomes <outcomes>] [--acceptance <acceptance>] [--constraints <constraints>] [--confidence <score>] [--draft/--no-draft]
-specfact plan update-story [--bundle <name>] --feature <feature-key> --key <story-key> [--title <title>] [--acceptance <acceptance>] [--story-points <points>] [--value-points <points>] [--confidence <score>] [--draft/--no-draft]
+specfact project --help
+specfact project --help
+specfact project --help
+specfact project --help
+specfact project --help
+specfact project --help
 # --bundle defaults to active plan if not specified
 ```
 
@@ -95,7 +95,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact plan <operation> [--bundle <name>] [options]
+specfact project --help
 ```
 
 **Capture**:
@@ -132,9 +132,9 @@ specfact plan <operation> [--bundle <name>] [options]
 
 ```bash
 # Use enrichment to update plan via CLI
-specfact plan update-feature [--bundle <name>] --key <key> [options]
+specfact project --help
 # Or use batch updates:
-specfact plan update-feature [--bundle <name>] --batch-updates <updates.json>
+specfact project --help
 ```
 
 **Result**: Final artifacts are CLI-generated with validated enrichments
@@ -162,7 +162,7 @@ Outcomes: Secure login, Session management
 
 ```text
 ✗ Project bundle name is required (or set active plan with 'plan select')
-Usage: specfact plan <operation> [--bundle <name>] [options]
+Usage: specfact project --help
 ```
 
 ## Common Patterns

@@ -6,7 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
 
+import click
 import typer
+import yaml
 from beartype import beartype
 from rich.console import Console
 from rich.table import Table
@@ -57,6 +59,51 @@ def _empty_delta() -> dict[str, Any]:
     }
 
 
+def _load_provider_config(adapter: str) -> dict[str, Any]:
+    config_path = Path(".specfact") / "backlog-config.yaml"
+    if not config_path.exists():
+        return {}
+    loaded = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(loaded, dict):
+        return {}
+    providers = loaded.get("providers")
+    if isinstance(providers, dict) and isinstance(providers.get(adapter), dict):
+        return dict(providers[adapter])
+    direct = loaded.get(adapter)
+    if isinstance(direct, dict):
+        return dict(direct)
+    return {}
+
+
+def _resolve_project_id(
+    *,
+    adapter: str,
+    project_id: str | None,
+    repo_owner: str | None,
+    repo_name: str | None,
+) -> str | None:
+    provider_config = _load_provider_config(adapter)
+    configured_project = provider_config.get("project_id")
+    if project_id:
+        return project_id
+    if isinstance(configured_project, str) and configured_project.strip():
+        return configured_project.strip()
+    owner = repo_owner or provider_config.get("repo_owner")
+    name = repo_name or provider_config.get("repo_name")
+    if adapter == "github" and isinstance(owner, str) and isinstance(name, str) and owner and name:
+        return f"{owner}/{name}"
+    return None
+
+
+def _exit_missing_delta_context(ctx: click.Context) -> None:
+    typer.echo(ctx.get_help())
+    typer.echo(
+        "\nError: Missing backlog context. Provide --project-id, or for GitHub provide "
+        "--repo-owner and --repo-name, or configure .specfact/backlog-config.yaml."
+    )
+    raise typer.Exit(2)
+
+
 @beartype
 def _render_delta_table(delta: dict[str, Any], title: str = "Delta Status") -> None:
     table = Table(title=title)
@@ -71,10 +118,13 @@ def _render_delta_table(delta: dict[str, Any], title: str = "Delta Status") -> N
     console.print(table)
 
 
-@beartype
 def status(
-    project_id: Annotated[str, typer.Option("--project-id", help="Backlog project identifier")],
+    ctx: typer.Context,
+    adapter_arg: Annotated[str | None, typer.Argument(help="Adapter to use")] = None,
+    project_id: Annotated[str | None, typer.Option("--project-id", help="Backlog project identifier")] = None,
     adapter: Annotated[str, typer.Option("--adapter", help="Adapter to use")] = "github",
+    repo_owner: Annotated[str | None, typer.Option("--repo-owner", help="GitHub repository owner")] = None,
+    repo_name: Annotated[str | None, typer.Option("--repo-name", help="GitHub repository name")] = None,
     since: Annotated[str | None, typer.Option("--since", help="ISO timestamp filter")] = None,
     baseline_file: Annotated[Path, typer.Option("--baseline-file", help="Path to baseline graph JSON")] = Path(
         ".specfact/backlog-baseline.json"
@@ -82,8 +132,18 @@ def status(
     template: Annotated[str, typer.Option("--template", help="Template name for mapping")] = "github_projects",
 ) -> None:
     """Show backlog delta status compared to baseline."""
+    effective_adapter = adapter_arg or adapter
+    effective_project_id = _resolve_project_id(
+        adapter=effective_adapter,
+        project_id=project_id,
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+    )
+    if not effective_project_id:
+        _exit_missing_delta_context(ctx)
+    assert effective_project_id is not None
     baseline_graph = _load_baseline_graph(baseline_file)
-    current_graph = _fetch_current_graph(project_id, adapter, template)
+    current_graph = _fetch_current_graph(effective_project_id, effective_adapter, template)
     delta = compute_delta(baseline_graph, current_graph)
 
     if since is not None:

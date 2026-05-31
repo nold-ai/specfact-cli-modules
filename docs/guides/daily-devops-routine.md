@@ -36,7 +36,7 @@ Reference: [Cross-module chains](/guides/cross-module-chains/)
 
 ```bash
 specfact init ide --repo . --ide cursor
-specfact code import legacy-api --repo .
+specfact code import --repo . legacy-api
 ```
 
 Refresh IDE resources when the workflow depends on installed prompts, then import or refresh the project bundle before deeper validation.

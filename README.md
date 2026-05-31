@@ -2,6 +2,11 @@
 
 Central module registry for SpecFact CLI. This repository hosts official **nold-ai** bundles and their documentation.
 
+## Command Overview
+
+- [Generated module command overview for humans](docs/reference/commands.generated.md)
+- [AI-agent module command overview](llms.txt)
+
 ## Highlight: AI-shaped bloat detection
 
 The Code Review bundle now surfaces `ai_bloat` findings: advisory, score-neutral signals tuned for the bloated shapes AI-assisted code commonly produces, such as identity `try/except`, one-call wrappers, passthrough lambdas, redundant intermediates, and long linear functions. A dry run on this change's affected package sources found 144 advisory candidates and applied 0 automatic rewrites; use `specfact code review run --json --out .specfact/code-review.json`, then run `/specfact.08-simplify` in your AI IDE to review each simplification with per-change confirmation. See the [AI bloat quickstart](./docs/quickstart-ai-bloat.md).

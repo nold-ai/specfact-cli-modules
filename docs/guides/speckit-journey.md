@@ -56,13 +56,13 @@ SpecFact complements this flow in two common ways.
 Use this when you want SpecFact change tracking, backlog sync, or downstream governance on top of an existing Spec-Kit feature:
 
 ```bash
-specfact sync bridge --adapter speckit --repo . --mode change-proposal --feature 001-auth-sync
+specfact project sync bridge --adapter speckit --repo . --mode change-proposal --feature 001-auth-sync
 ```
 
 To convert every untracked feature in the repository:
 
 ```bash
-specfact sync bridge --adapter speckit --repo . --mode change-proposal --all
+specfact project sync bridge --adapter speckit --repo . --mode change-proposal --all
 ```
 
 ### 2. Add SpecFact enforcement after specification work

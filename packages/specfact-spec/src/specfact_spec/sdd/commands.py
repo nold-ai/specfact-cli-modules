@@ -257,7 +257,7 @@ def constitution_bootstrap(
         console.print("1. Review the generated constitution")
         console.print("2. Adjust principles and sections as needed")
         console.print("3. Run 'specfact sdd constitution validate' to check completeness")
-        console.print("4. Run 'specfact sync bridge --adapter speckit' to sync with Spec-Kit artifacts")
+        console.print("4. Run 'specfact project sync bridge --adapter speckit' to sync with Spec-Kit artifacts")
 
 
 @constitution_app.command("enrich")

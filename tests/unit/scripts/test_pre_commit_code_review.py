@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -352,6 +353,29 @@ def test_main_timeout_fails_hook(monkeypatch: pytest.MonkeyPatch, capsys: pytest
     err = capsys.readouterr().err
     assert "timed out after 300s" in err
     assert "tests/unit/test_app.py" in err
+
+
+def test_run_review_subprocess_exposes_local_module_sources(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Nested review command must load in-repo modules, not only installed user copies."""
+    module = _load_script_module()
+    repo_root = Path(__file__).resolve().parents[3]
+    captured_env: dict[str, str] = {}
+
+    def _fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        env = kwargs.get("env")
+        assert isinstance(env, dict)
+        captured_env.update(env)
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", _fake_run)
+
+    result = module._run_review_subprocess(["python", "-m", "specfact_cli.cli"], repo_root, ["tests/unit/test_app.py"])
+
+    assert result is not None
+    assert captured_env["SPECFACT_MODULES_ROOTS"] == str((repo_root / "packages").resolve())
+    pythonpath = captured_env["PYTHONPATH"].split(os.pathsep)
+    assert str(repo_root / "packages" / "specfact-codebase" / "src") in pythonpath
+    assert str(repo_root / "packages" / "specfact-code-review" / "src") in pythonpath
 
 
 def test_main_prints_actionable_setup_guidance_when_runtime_missing(

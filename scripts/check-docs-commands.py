@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import re
 import sys
 from collections.abc import Callable
@@ -56,6 +57,7 @@ LEGACY_RESOURCE_PATH_SNIPPETS = (
     "src/specfact_cli/templates",
 )
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "docs-review.yml"
+GENERATED_COMMANDS_PATH = REPO_ROOT / "docs" / "reference" / "commands.generated.json"
 MARKDOWN_CODE_RE = re.compile(r"`([^`\n]*specfact [^`\n]*)`")
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 HTML_HREF_RE = re.compile(r'href="([^"]+)"')
@@ -77,11 +79,7 @@ MODULE_APP_MOUNTS = (
     ("specfact_codebase.code.commands", "app", ("specfact", "code")),
     ("specfact_code_review.review.commands", "app", ("specfact", "code")),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
-    ("specfact_project.import_cmd.commands", "app", ("specfact", "import")),
-    ("specfact_project.migrate.commands", "app", ("specfact", "migrate")),
-    ("specfact_project.plan.commands", "app", ("specfact", "plan")),
     ("specfact_project.project.commands", "app", ("specfact", "project")),
-    ("specfact_project.sync.commands", "app", ("specfact", "sync")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
     ("specfact_spec.sdd.commands", "app", ("specfact", "spec")),
     ("specfact_spec.generate.commands", "app", ("specfact", "spec")),
@@ -168,6 +166,18 @@ def _collect_click_paths(group: click.Command, prefix: CommandPath) -> set[Comma
 
 
 def _build_valid_command_paths() -> set[CommandPath]:
+    if GENERATED_COMMANDS_PATH.is_file():
+        raw = json.loads(GENERATED_COMMANDS_PATH.read_text(encoding="utf-8"))
+        generated_paths: set[CommandPath] = set(CORE_COMMAND_PREFIXES)
+        if isinstance(raw, list):
+            for entry in raw:
+                if not isinstance(entry, dict):
+                    continue
+                command = entry.get("command")
+                if isinstance(command, str):
+                    generated_paths.add(tuple(command.split()))
+        return generated_paths
+
     _ensure_package_paths()
     paths: set[CommandPath] = set(CORE_COMMAND_PREFIXES)
     for module_name, attr_name, prefix in MODULE_APP_MOUNTS:

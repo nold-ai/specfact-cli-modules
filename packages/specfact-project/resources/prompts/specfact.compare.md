@@ -51,7 +51,7 @@ Compare two project bundles (or legacy plan bundles) to detect deviations, misma
 ### Step 2: Execute CLI
 
 ```bash
-specfact plan compare [--bundle <bundle-name>] [--manual <path>] [--auto <path>] [--code-vs-plan] [--output-format <format>] [--out <path>]
+specfact project --help
 # --bundle defaults to active plan if not specified
 ```
 
@@ -82,7 +82,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact plan compare [--bundle <name>] [options]
+specfact project --help
 ```
 
 **Capture**:
@@ -115,8 +115,8 @@ specfact plan compare [--bundle <name>] [options]
 
 ```bash
 # Apply fixes via CLI commands, then re-compare
-specfact plan update-feature [--bundle <name>] [options]
-specfact plan compare [--bundle <name>]
+specfact project --help
+specfact project --help
 ```
 
 **Result**: Final artifacts are CLI-generated with validated fixes
@@ -146,7 +146,7 @@ Missing in Auto Plan: 1 feature
 
 ```text
 ✗ Default manual plan not found: .specfact/plans/main.bundle.yaml
-Create one with: specfact plan init --interactive
+Create one with: specfact project --help
 ```
 
 ## Common Patterns

@@ -33,11 +33,11 @@ Act as a project review guide, not an artifact author. Use SpecFact CLI output a
 Before reviewing or answering questions, verify the current command surface when needed:
 
 ```bash
-specfact plan review --help
-specfact plan review [<bundle>] --list-questions --output-questions /tmp/specfact-review-questions.json
+specfact project --help
+specfact project --help
 ```
 
-If an option fails, inspect `specfact plan review --help`, choose the nearest safe non-interactive alternative, and ask the user when no clear mapping exists. Do not write `.specfact/` artifacts directly; route artifact updates back through SpecFact CLI commands or CLI-consumed enrichment/answers files.
+If an option fails, inspect `specfact project --help`, choose the nearest safe non-interactive alternative, and ask the user when no clear mapping exists. Do not write `.specfact/` artifacts directly; route artifact updates back through SpecFact CLI commands or CLI-consumed enrichment/answers files.
 
 ## Interactive Question Presentation
 
@@ -164,7 +164,7 @@ For these cases, use the **export-to-file → LLM reasoning → import-from-file
 ```bash
 # Export questions to file (REQUIRED for LLM enrichment workflow)
 # Use /tmp/ to avoid polluting the codebase
-specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json
+specfact project --help
 # Uses active plan if bundle not specified
 ```
 
@@ -174,10 +174,10 @@ specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/qu
 # Get findings (saves to stdout - can redirect to /tmp/)
 # Use /tmp/ to avoid polluting the codebase
 # Option 1: Redirect output (includes CLI banner - not recommended)
-specfact plan review [<bundle-name>] --list-findings --findings-format json > /tmp/findings.json
+specfact project --help
 
 # Option 2: Save directly to file (recommended - clean JSON only)
-specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json
+specfact project --help
 ```
 
 **Note**: The `--output-questions` option saves questions directly to a file, avoiding the need for complex JSON parsing. The ambiguity scanner now recognizes the simplified format (e.g., "Must verify X works correctly (see contract examples)") as valid and will not flag it as vague.
@@ -300,7 +300,7 @@ specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/find
 
    ```bash
    # Use /tmp/ to avoid polluting the codebase
-   specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json
+   specfact project --help
    ```
 
 2. **LLM reasoning and user selection** (Step 3):
@@ -314,7 +314,7 @@ specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/find
    ```bash
    # Import answers from exported file
    # Use /tmp/ to avoid polluting the codebase
-   specfact plan review [<bundle-name>] --answers /tmp/answers.json
+   specfact project --help
    ```
 
 **CRITICAL**:
@@ -331,7 +331,7 @@ specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/find
 Use `plan update-idea` to update idea fields from enrichment recommendations:
 
 ```bash
-specfact plan update-idea --bundle [<bundle-name>] --value-hypothesis "..." --narrative "..." --target-users "..."
+specfact project --help
 ```
 
 #### Option C: Apply enrichment via import (only if bundle needs regeneration)
@@ -390,10 +390,10 @@ When in copilot mode, follow this three-phase workflow:
 ```bash
 # Option 1: Get findings (redirect to /tmp/ to avoid polluting codebase)
 # Option 1: Save findings directly to file (recommended - clean JSON only)
-specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json
+specfact project --help
 
 # Option 2: Get questions and save directly to /tmp/ (recommended - avoids JSON parsing)
-specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json
+specfact project --help
 ```
 
 **Capture**:
@@ -422,7 +422,7 @@ specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/qu
 0. **Grounding rule**:
    - Treat CLI-exported questions as the source of truth; consult codebase/docs only to answer them (do not invent new artifacts)
    - **Feature/Story Completeness note**: Answers here are clarifications only. They do **NOT** create stories.  
-     For missing stories, use `specfact plan add-story` (or `plan update-story --batch-updates` if stories already exist).
+     For missing stories, use `specfact project --help` (or `plan update-story --batch-updates` if stories already exist).
 
 1. **Read exported questions file** (`/tmp/questions.json`):
    - Review all questions and their categories
@@ -495,17 +495,17 @@ specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/qu
 ```bash
 # Import answers from /tmp/answers.json file
 # Use /tmp/ to avoid polluting the codebase
-specfact plan review [<bundle-name>] --answers /tmp/answers.json
+specfact project --help
 ```
 
 **For non-partial findings only:**
 
 ```bash
 # Use auto-enrich for simple vague criteria (not partial findings)
-specfact plan review [<bundle-name>] --auto-enrich
+specfact project --help
 
 # Or use batch updates for feature updates
-specfact plan update-feature [--bundle <name>] --batch-updates <updates.json>
+specfact project --help
 ```
 
 **Result**: Final artifacts are CLI-generated with validated enrichments
@@ -537,7 +537,7 @@ Coverage Summary:
 
 ```text
 ✗ Project bundle 'legacy-api' not found
-Create one with: specfact plan init legacy-api
+Create one with: specfact project --help
 ```
 
 ## Common Patterns
@@ -585,13 +585,13 @@ Create one with: specfact plan init legacy-api
 1. **Export questions to file** (use `/tmp/` to avoid polluting codebase):
 
    ```bash
-   specfact plan review [<bundle-name>] --list-questions --output-questions /tmp/questions.json
+   specfact project --help
    ```
 
 2. **Get findings** (optional, for comprehensive analysis - use `/tmp/`):
 
    ```bash
-   specfact plan review [<bundle-name>] --list-findings --output-findings /tmp/findings.json
+   specfact project --help
    ```
 
 3. **LLM reasoning and user selection** (REQUIRED for partial findings):
@@ -612,7 +612,7 @@ Create one with: specfact plan init legacy-api
 
    ```bash
    # Import answers from exported file
-   specfact plan review [<bundle-name>] --answers /tmp/answers.json
+   specfact project --help
    ```
 
    **CRITICAL**: Use the file path `/tmp/answers.json` (not a JSON string extracted from `/tmp/questions.json`)
@@ -624,7 +624,7 @@ Create one with: specfact plan init legacy-api
 **For non-partial findings only:**
 
 - **During import**: Auto-enrichment happens automatically (enabled by default)
-- **After import**: Use `specfact plan review --auto-enrich` for simple vague criteria
+- **After import**: Use `specfact project --help` for simple vague criteria
 - **Note**: The scanner now recognizes simplified format (e.g., "Must verify X works correctly (see contract examples)") as valid
 
 **Alternative approaches** (for business context only):
@@ -733,8 +733,8 @@ When generating enrichment reports for use with `import from-code --enrichment`,
 Use CLI output as verification evidence:
 
 ```bash
-specfact plan review [<bundle>] --list-findings --output-findings /tmp/specfact-review-findings.json
-specfact plan review [<bundle>] --list-questions --output-questions /tmp/specfact-review-questions.json
+specfact project --help
+specfact project --help
 ```
 
 For module development in this repository, validate packaged prompt and module payload changes with:

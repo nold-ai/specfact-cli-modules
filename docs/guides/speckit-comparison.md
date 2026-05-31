@@ -216,19 +216,19 @@ expertise_level: [intermediate]
 # (Interactive slash commands in GitHub)
 
 # Step 2: Convert a Spec-Kit feature into an OpenSpec change proposal
-specfact sync bridge --adapter speckit --repo ./my-project --mode change-proposal --feature 001-auth-sync
+specfact project sync bridge --adapter speckit --repo ./my-project --mode change-proposal --feature 001-auth-sync
 
 # Step 3: Bulk-convert every untracked Spec-Kit feature into OpenSpec changes
-specfact sync bridge --adapter speckit --repo ./my-project --mode change-proposal --all
+specfact project sync bridge --adapter speckit --repo ./my-project --mode change-proposal --all
 
 # Step 4: Add runtime contracts to critical Python paths
 # (SpecFact contract decorators)
 
 # Step 5: Keep both in sync (using adapter registry pattern)
-specfact sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional
+specfact project sync bridge --adapter speckit --bundle <bundle-name> --repo . --bidirectional
 ```
 
-**Note**: SpecFact CLI uses a plugin-based adapter registry pattern. All adapters (Spec-Kit, OpenSpec, GitHub, etc.) are registered in `AdapterRegistry` and accessed via `specfact sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
+**Note**: SpecFact CLI uses a plugin-based adapter registry pattern. All adapters (Spec-Kit, OpenSpec, GitHub, etc.) are registered in `AdapterRegistry` and accessed via `specfact project sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
 
 ---
 
@@ -300,14 +300,14 @@ Use both together for best results.
 - **GitHub Issues** - Export change proposals to DevOps backlogs
 - **Future**: Linear, Jira, Azure DevOps, and more
 
-All adapters are registered in `AdapterRegistry` and accessed via `specfact sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
+All adapters are registered in `AdapterRegistry` and accessed via `specfact project sync bridge --adapter <adapter-name>`, making the architecture extensible for future tool integrations.
 
 ### Can I migrate from Spec-Kit to SpecFact?
 
 **Yes.** SpecFact can import Spec-Kit artifacts:
 
 ```bash
-specfact sync bridge --adapter speckit --repo ./my-project
+specfact project sync bridge --adapter speckit --repo ./my-project
 ```
 
 You can also keep using both tools with bidirectional sync via the adapter registry pattern.
@@ -318,7 +318,7 @@ You can also keep using both tools with bidirectional sync via the adapter regis
 
 ```bash
 # Read-only sync from OpenSpec to SpecFact
-specfact sync bridge --adapter openspec --mode read-only \
+specfact project sync bridge --adapter openspec --mode read-only \
   --bundle my-project \
   --repo /path/to/openspec-repo
 ```

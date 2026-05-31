@@ -24,7 +24,7 @@ Use the Spec bundle to validate OpenAPI or AsyncAPI contracts with Specmatic and
 
 - Validates one contract file or every contract in a selected bundle.
 - Uses Specmatic for schema checks and example validation.
-- Supports bundle-driven validation with the active plan from `specfact plan select`.
+- Supports bundle-driven validation with the active plan from `specfact project --help`.
 - Caches validation results in `.specfact/cache/specmatic-validation.json` unless you pass `--force`.
 
 ## Key options for `specfact spec validate`

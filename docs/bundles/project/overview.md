@@ -20,7 +20,7 @@ The **Project** bundle (`nold-ai/specfact-project`) manages SpecFact **project b
 
 ## Command families
 
-The project lifecycle surface loads from this bundle across **`specfact project`**, **`specfact plan`**, top-level **`specfact sync`**, and **`specfact migrate`** (see each group’s `--help` after install). The `project` group also nests a `sync` Typer; prefer the **top-level** `specfact sync …` entry when documented in the command reference.
+The project lifecycle surface loads from this bundle across **`specfact project`**, **`specfact project`**, top-level **`specfact project sync`**, and **`specfact project --help`** (see each group’s `--help` after install). The `project` group also nests a `sync` Typer; prefer the **top-level** `specfact project sync …` entry when documented in the command reference.
 
 ### `specfact project` — bundles and personas
 
@@ -39,9 +39,9 @@ The project lifecycle surface loads from this bundle across **`specfact project`
 | `merge` | Three-way merge with persona-aware conflict handling |
 | `resolve-conflict` | Resolve a specific merge conflict |
 | `version` | Subcommands for bundle versioning |
-| `sync` | Same sync Typer as top-level `specfact sync` (see below) |
+| `sync` | Same sync Typer as top-level `specfact project sync` (see below) |
 
-### `specfact plan` — plans, stories, and reviews
+### `specfact project` — plans, stories, and reviews
 
 | Command | Purpose |
 |--------|---------|
@@ -56,9 +56,9 @@ The project lifecycle surface loads from this bundle across **`specfact project`
 | `review` | Plan review workflows |
 | `harden` | Harden SDD and related artifacts |
 
-### `specfact sync` — bridges and automation
+### `specfact project sync` — bridges and automation
 
-Use the top-level group (`specfact sync --help`).
+Use the top-level group (`specfact project sync --help`).
 
 | Command | Purpose |
 |--------|---------|
@@ -66,7 +66,7 @@ Use the top-level group (`specfact sync --help`).
 | `repository` | Repository-scoped sync operations |
 | `intelligent` | Higher-level orchestrated sync |
 
-### `specfact migrate` — structure migrations
+### `specfact project --help` — structure migrations
 
 | Command | Purpose |
 |--------|---------|
@@ -76,7 +76,7 @@ Use the top-level group (`specfact sync --help`).
 
 ## Related: codebase import
 
-Brownfield **code import** (`specfact code import`, `specfact import …`) lives in the [Codebase](/bundles/codebase/overview/) bundle; it often feeds project bundles. See [Import command features](../import-migration/) for behavior that spans both bundles.
+Brownfield **code import** (`specfact code import`, `specfact code import …`) lives in the [Codebase](/bundles/codebase/overview/) bundle; it often feeds project bundles. See [Import command features](../import-migration/) for behavior that spans both bundles.
 
 ## Bundle-owned prompts and plan templates
 
@@ -88,9 +88,9 @@ The project prompt set includes `/specfact.08-simplify`, which reads `.specfact/
 
 ```bash
 specfact project link-backlog --adapter github --project-id owner/repo --bundle my-bundle --repo .
-specfact plan init --help
-specfact sync bridge --help
-specfact migrate artifacts --repo .
+specfact project --help
+specfact project sync bridge --help
+specfact project --help artifacts --repo .
 ```
 
 ## See also
