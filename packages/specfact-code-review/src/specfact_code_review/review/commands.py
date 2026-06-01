@@ -173,7 +173,18 @@ def _enforcement_was_defaulted(ctx: typer.Context) -> bool:
     return getattr(source, "name", None) == "DEFAULT"
 
 
+def _enforcement_was_explicit(ctx: typer.Context) -> bool:
+    """Return whether the caller supplied --enforcement explicitly."""
+    get_parameter_source = getattr(ctx, "get_parameter_source", None)
+    if not callable(get_parameter_source):
+        return False
+    source = get_parameter_source("enforcement")
+    return source is not None and getattr(source, "name", None) != "DEFAULT"
+
+
 def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
+    if inputs.mode is not None and _enforcement_was_explicit(inputs.ctx):
+        raise typer.BadParameter("Use only one of --mode or --enforcement; --mode is deprecated.")
     if inputs.mode is None and inputs.enforcement == "changed" and _enforcement_was_defaulted(inputs.ctx):
         typer.echo(
             "Code review enforcement default is 'changed'; use '--enforcement full' for strict CI gates "

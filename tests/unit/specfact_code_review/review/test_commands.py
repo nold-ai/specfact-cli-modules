@@ -111,6 +111,18 @@ def test_review_run_explicit_changed_enforcement_does_not_warn(monkeypatch: Any)
     assert "Code review enforcement default is 'changed'" not in result.output
 
 
+def test_review_run_rejects_legacy_mode_with_explicit_enforcement(monkeypatch: Any) -> None:
+    def _fail_run_command(_files: list[Path], **_kwargs: object) -> tuple[int, str | None]:
+        raise AssertionError("run_command should not be called with ambiguous enforcement flags")
+
+    monkeypatch.setattr("specfact_code_review.review.commands.run_command", _fail_run_command)
+
+    result = runner.invoke(app, ["review", "run", "--mode", "shadow", "--enforcement", "changed"])
+
+    assert result.exit_code != 0
+    assert "Use only one of --mode or --enforcement" in _plain_output(result.output)
+
+
 def test_review_run_focus_source_sets_include_tests_false(monkeypatch: Any) -> None:
     recorded: dict[str, Any] = {}
 

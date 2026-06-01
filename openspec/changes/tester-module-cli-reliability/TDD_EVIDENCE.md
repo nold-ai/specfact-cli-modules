@@ -200,3 +200,24 @@
   - `hatch run python scripts/check-prompt-commands.py` -> passed.
   - `hatch run lint` -> passed.
   - `openspec validate tester-module-cli-reliability --strict` -> passed.
+
+## Fifth Follow-up PR Review Fix
+
+- Re-checked the PR #307 review finding about ambiguous `specfact code review run` enforcement flags against current code.
+- Finding status: valid. `--mode shadow --enforcement changed` could bypass the existing `_resolve_cli_enforcement` conflict check because `changed` is also the default.
+- Fix:
+  - Added an early `_execute_review_run` guard that rejects deprecated `--mode` when Click reports `--enforcement` was explicitly supplied.
+  - Preserved legacy `--mode` compatibility when `--enforcement` is only defaulted.
+  - Added a regression test that confirms `run_command` is not called for the ambiguous flag combination.
+  - Added a `specfact-code-review-run` CLI contract anti-pattern scenario for `--mode shadow --enforcement changed`.
+  - Updated the existing blocking error-level report scenario to request `--enforcement full`, matching the intended `changed` default policy.
+- Validation:
+  - `hatch run pytest tests/unit/specfact_code_review/review/test_commands.py -q` -> 15 passed.
+  - `hatch run validate-cli-contracts` -> passed: `Validated 3 CLI contract scenario files.`
+  - `hatch run pytest tests/integration/specfact_code_review/test_cli_contract_review_run_reports.py -q` -> 3 passed.
+  - `hatch run sign-modules --changed-only --bump-version patch --allow-unsigned --payload-from-filesystem` -> bumped `packages/specfact-code-review/module-package.yaml` from `0.47.40` to `0.47.41` and refreshed checksum.
+  - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump` -> passed: `Verified 6 module manifest(s).`
+  - `hatch run pytest tests/unit/specfact_code_review/review/test_commands.py tests/integration/specfact_code_review/test_cli_contract_review_run_reports.py -q` -> 18 passed.
+  - `hatch run lint` -> passed.
+  - `hatch run python scripts/pre_commit_code_review.py packages/specfact-code-review/src/specfact_code_review/review/commands.py tests/unit/specfact_code_review/review/test_commands.py tests/cli-contracts/specfact-code-review-run.scenarios.yaml openspec/changes/tester-module-cli-reliability/TDD_EVIDENCE.md packages/specfact-code-review/module-package.yaml` -> passed with one info-only advisory on the pre-existing Typer `run` command length; left out of scope for this review-thread fix.
+  - `openspec validate tester-module-cli-reliability --strict` -> passed.
