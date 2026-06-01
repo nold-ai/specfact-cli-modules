@@ -140,3 +140,16 @@
     - `hatch run python scripts/check-docs-commands.py` -> passed.
     - `hatch run python scripts/check-prompt-commands.py` -> passed.
     - `hatch run pytest tests/unit/docs/test_code_review_docs_parity.py tests/unit/test_guided_simplify_resources.py tests/unit/specfact_code_review/rules/test_updater.py tests/unit/test_check_prompt_commands_script.py -q` -> 41 passed.
+
+## Second Follow-up PR CI Fixes
+
+- Re-checked paired core PR #595 after pushing modules. Fresh core CLI validation failed while importing paired modules: `specfact_backlog/backlog_core/commands/delta.py` imported `typer._click.core`, which is not available under the core CI Typer dependency range.
+- Fixed the backlog delta status callback to use public `typer.Context` instead of Typer's private vendored Click namespace.
+- Added `test_delta_command_avoids_private_typer_click_import`.
+- Follow-up verification:
+  - `hatch run pytest tests/unit/specfact_backlog/test_delta_command_contract.py -q` -> 4 passed.
+  - `rg -n "from typer\\._click|TyperClickContext" packages scripts docs` -> no matches.
+  - `hatch run check-command-overview` -> passed.
+  - `hatch run check-command-contract` -> passed: `check-command-contract: OK (86 generated module command path(s) validated)`.
+  - `hatch run lint` -> passed.
+  - `openspec validate tester-module-cli-reliability --strict` -> passed.

@@ -9,6 +9,14 @@ from typer.testing import CliRunner
 runner = CliRunner()
 
 
+def test_delta_command_avoids_private_typer_click_import() -> None:
+    source = Path("packages/specfact-backlog/src/specfact_backlog/backlog_core/commands/delta.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "typer._click" not in source
+
+
 def test_delta_status_accepts_adapter_argument_and_configured_project(tmp_path: Path, monkeypatch) -> None:
     delta_module = importlib.import_module("specfact_backlog.backlog_core.commands.delta")
     backlog_app = importlib.import_module("specfact_backlog.backlog.commands").app

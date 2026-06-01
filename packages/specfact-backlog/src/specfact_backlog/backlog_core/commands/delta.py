@@ -12,7 +12,6 @@ from beartype import beartype
 from rich.console import Console
 from rich.table import Table
 from specfact_cli.adapters.registry import AdapterRegistry
-from typer._click.core import Context as TyperClickContext
 
 from specfact_backlog.backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
 from specfact_backlog.backlog_core.analyzers.dependency import DependencyAnalyzer
@@ -98,7 +97,7 @@ def _resolve_project_id(
     return None
 
 
-def _exit_missing_delta_context(ctx: TyperClickContext) -> None:
+def _exit_missing_delta_context(ctx: typer.Context) -> None:
     typer.echo(ctx.get_help())
     typer.echo(
         "\nError: Missing backlog context. Provide --project-id, or for GitHub provide "
@@ -122,7 +121,7 @@ def _render_delta_table(delta: dict[str, Any], title: str = "Delta Status") -> N
 
 
 def status(
-    ctx: TyperClickContext,
+    ctx: typer.Context,
     adapter_arg: Annotated[str | None, typer.Argument(help="Adapter to use")] = None,
     project_id: Annotated[str | None, typer.Option("--project-id", help="Backlog project identifier")] = None,
     adapter: Annotated[str, typer.Option("--adapter", help="Adapter to use")] = "github",
