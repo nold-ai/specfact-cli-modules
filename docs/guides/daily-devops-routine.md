@@ -46,7 +46,7 @@ Reference: [AI IDE workflow](/ai-ide-workflow/)
 ## 4. Midday quality review
 
 ```bash
-specfact code review run src --scope changed --no-tests
+specfact code review run --scope changed --path src --enforcement changed --no-tests
 specfact spec validate --bundle legacy-api
 ```
 

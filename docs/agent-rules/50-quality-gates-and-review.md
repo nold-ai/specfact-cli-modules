@@ -49,7 +49,7 @@ Before running quality gates in a fresh worktree, bootstrap the Hatch environmen
 7. `hatch run contract-test`
 8. `hatch run smart-test`
 9. `hatch run test`
-10. `hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json` (always pass **`--bug-hunt`** on manual runs so CrossHair uses bug-hunt timeouts; full-repo scope when required: add **`--scope full`**; machine-readable evidence lives at `.specfact/code-review.json` and unresolved findings block merge unless an explicit exception is documented)
+10. `hatch run specfact code review run --enforcement changed --bug-hunt --json --out .specfact/code-review.json` (always pass **`--bug-hunt`** on manual runs so CrossHair uses bug-hunt timeouts; use **`--enforcement full`** when legacy blockers in reviewed files must fail the run; full-repo scope when required: add **`--scope full`**; machine-readable evidence lives at `.specfact/code-review.json` and unresolved changed-line findings block merge unless an explicit exception is documented)
 
 ## Pre-commit order
 
@@ -68,7 +68,7 @@ Run the full pipeline manually with `./scripts/pre-commit-quality-checks.sh` or 
 
 ## Clean-code review gate
 
-The repository enforces the clean-code charter through `specfact code review run`. When agents or developers invoke the review manually (outside the pre-commit helper), include **`--bug-hunt`** so the contract runner gives CrossHair the longer bug-hunt budgets documented in the code-review bundle. Zero regressions in `naming`, `kiss`, `yagni`, `dry`, and `solid` are required before merge.
+The repository enforces the clean-code charter through `specfact code review run`. When agents or developers invoke the review manually (outside the pre-commit helper), include **`--enforcement changed --bug-hunt`** so changed-line regressions block and CrossHair gets the longer bug-hunt budgets documented in the code-review bundle. Use **`--enforcement full`** only when the task explicitly requires every legacy blocker in reviewed files to fail the run. Zero regressions in `naming`, `kiss`, `yagni`, `dry`, and `solid` are required before merge.
 
 ## Module signature gate
 

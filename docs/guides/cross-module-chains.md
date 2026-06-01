@@ -55,7 +55,7 @@ Use this chain when a contract changed and you want compatibility checks, genera
 ## Chain 4. Review loop for changed files
 
 ```bash
-specfact code review run src --scope changed --no-tests
+specfact code review run --scope changed --path src --enforcement changed --no-tests
 specfact govern enforce stage --preset balanced
 specfact govern enforce sdd legacy-api --no-interactive
 ```

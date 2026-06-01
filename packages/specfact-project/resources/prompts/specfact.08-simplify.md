@@ -44,10 +44,10 @@ Before reading or editing source, verify the current command surface when needed
 ```bash
 specfact code review run --help
 specfact code review run --instructions
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
-If this slash prompt or the installed skill is unavailable in another AI IDE, tell the user they can run `specfact code review run --instructions` and paste that output to the AI assistant. If `--focus simplify` is unavailable in the installed CLI, self-heal by inspecting `specfact code review run --help`, then run the closest non-destructive JSON review command that preserves advisory findings, usually without `--level error`.
+If this slash prompt or the installed skill is unavailable in another AI IDE, tell the user they can run `specfact code review run --instructions` and paste that output to the AI assistant. If `--focus simplify` or `--enforcement shadow` is unavailable in the installed CLI, self-heal by inspecting `specfact code review run --help`, then run the closest non-destructive JSON review command that preserves advisory findings, usually without `--level error`.
 
 ## Workflow
 
@@ -56,7 +56,7 @@ If this slash prompt or the installed skill is unavailable in another AI IDE, te
 Read `.specfact/code-review-simplify.json`. If it is missing, ask the user to run:
 
 ```bash
-specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
 ```
 
 Explain that this report is the evidence file: it lists candidate cleanups, cleanup forecast, safety checks, remediation packets, and preserve reasons the assistant must use before touching code. Do not edit files until the report exists.
@@ -114,7 +114,7 @@ Use the evidence column for removed findings, required tests, skipped safety che
 After accepted edits are applied, suggest:
 
 ```bash
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
 Compare the new report with the prior findings and summarize which `ai_bloat` or metadata-backed simplification candidates were recommended, applied, kept, skipped, failed, cleared, or still present. Include evidence of improvement such as removed findings, estimated deletion lines, simpler control flow, or preserved contracts.
@@ -124,8 +124,8 @@ Compare the new report with the prior findings and summarize which `ai_bloat` or
 Use the CLI as the verification source:
 
 ```bash
-specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
-specfact code review run --scope changed --bug-hunt --json --out .specfact/code-review-bughunt.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --enforcement changed --bug-hunt --json --out .specfact/code-review-bughunt.json
 ```
 
 For module development in this repository, the expected local gates are:

@@ -51,7 +51,7 @@ hatch run contract-test
 hatch run smart-test
 hatch run test
 # manual code review: always include --bug-hunt (CrossHair longer budgets; see bundle docs)
-hatch run specfact code review run --bug-hunt --json --out .specfact/code-review.json
+hatch run specfact code review run --enforcement changed --bug-hunt --json --out .specfact/code-review.json
 ```
 
 ## Architecture

@@ -135,3 +135,8 @@
   - `hatch run python scripts/check-docs-commands.py` -> passed.
   - `hatch run python scripts/check-prompt-commands.py` -> passed.
   - `hatch run lint` -> passed.
+  - Documentation follow-up after user review:
+    - Updated broader user-facing docs, tutorials, guides, bundled skills, and `/specfact.08-simplify` prompt examples to show `--enforcement full|changed|shadow`.
+    - `hatch run python scripts/check-docs-commands.py` -> passed.
+    - `hatch run python scripts/check-prompt-commands.py` -> passed.
+    - `hatch run pytest tests/unit/docs/test_code_review_docs_parity.py tests/unit/test_guided_simplify_resources.py tests/unit/specfact_code_review/rules/test_updater.py tests/unit/test_check_prompt_commands_script.py -q` -> 41 passed.
