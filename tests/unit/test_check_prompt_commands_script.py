@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -114,6 +115,13 @@ specfact code stale-subcmd --repo .
     assert len(findings) == 1
     assert findings[0].category == "command"
     assert "specfact code stale-subcmd --repo ." in findings[0].message
+
+
+def test_command_options_tolerates_params_without_secondary_opts() -> None:
+    script = _load_script()
+    command = SimpleNamespace(params=[SimpleNamespace(opts=["--repo"])])
+
+    assert _script_attr(script, "_command_options")(command) == {"--repo"}
 
 
 def test_main_writes_findings_to_stderr(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

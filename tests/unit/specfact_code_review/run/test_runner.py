@@ -12,6 +12,7 @@ from pytest import MonkeyPatch
 
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 from specfact_code_review.run.runner import (
+    _changed_lines_from_git,
     _coverage_findings,
     _preserve_reasons_for_finding,
     _pytest_python_executable,
@@ -141,6 +142,22 @@ def test_run_review_shadow_enforcement_never_blocks(monkeypatch: MonkeyPatch) ->
     assert report.ci_exit_code == 0
     assert report.overall_verdict == "FAIL"
     assert report.enforcement_mode == "shadow"
+
+
+def test_changed_lines_from_git_skips_unreadable_untracked_files(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    untracked_file = tmp_path / "binary.py"
+    untracked_file.write_bytes(b"\xff\xfe")
+
+    def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        if command[:3] == ["git", "diff", "--unified=0"]:
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command[:3] == ["git", "ls-files", "--others"]:
+            return subprocess.CompletedProcess(command, 0, stdout=f"{untracked_file}\n", stderr="")
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    assert _changed_lines_from_git([untracked_file]) == {}
 
 
 def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:

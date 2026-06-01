@@ -11,7 +11,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
 from typer.main import get_command
@@ -68,7 +68,8 @@ def _command_options(command: click.Command) -> list[str]:
     options: set[str] = set()
     for param in command.params:
         if hasattr(param, "opts"):
-            options.update(opt for opt in [*param.opts, *param.secondary_opts] if opt.startswith("--"))
+            secondary_opts = getattr(param, "secondary_opts", ())
+            options.update(opt for opt in [*param.opts, *secondary_opts] if opt.startswith("--"))
     return sorted(options)
 
 
@@ -123,7 +124,7 @@ def _has_bare_business_parameters(command: click.Command) -> bool:
         if not hasattr(param, "opts") and hasattr(param, "human_readable_name"):
             return True
         if hasattr(param, "opts"):
-            opts = set(param.opts) | set(param.secondary_opts)
+            opts = set(param.opts) | set(getattr(param, "secondary_opts", ()))
             if opts and opts.isdisjoint(ignored_options):
                 return True
     return False
@@ -157,7 +158,8 @@ def build_records() -> list[dict[str, Any]]:
     for module_name, attr_name, prefix, module_id in MODULE_APP_MOUNTS:
         module = importlib.import_module(module_name)
         app = getattr(module, attr_name)
-        records.extend(_walk(get_command(app), prefix, f"{module_name}:{attr_name}", module_id))
+        click_command = cast(click.Command, get_command(app))
+        records.extend(_walk(click_command, prefix, f"{module_name}:{attr_name}", module_id))
     return sorted(records, key=lambda record: record["command"])
 
 
@@ -198,7 +200,8 @@ def _render_llms(markdown: str) -> str:
         [
             "# SpecFact Module Commands",
             "",
-            "Use this generated overview as the current module command contract before following older docs or prompts.",
+            "Use this generated overview as the current module command contract "
+            "before following older docs or prompts.",
             "",
             markdown,
         ]

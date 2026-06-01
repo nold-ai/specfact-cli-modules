@@ -151,6 +151,23 @@ index 1111111..2222222 100644
     assert changed_lines == {"pkg/example.py": {10, 11, 23}}
 
 
+def test_code_review_gate_does_not_treat_added_content_as_diff_header() -> None:
+    review_gate = _load_pre_commit_code_review_module()
+    diff_text = """\
+diff --git a/pkg/example.py b/pkg/example.py
+index 1111111..2222222 100644
+--- a/pkg/example.py
++++ b/pkg/example.py
+@@ -9,0 +10,2 @@
++++ not a file header
++added_two()
+"""
+
+    changed_lines = review_gate._parse_added_lines_from_cached_diff(diff_text)
+
+    assert changed_lines == {"pkg/example.py": {10, 11}}
+
+
 def test_code_review_gate_blocks_only_findings_on_staged_lines() -> None:
     review_gate = _load_pre_commit_code_review_module()
     changed_lines = {"pkg/example.py": {10, 11}}

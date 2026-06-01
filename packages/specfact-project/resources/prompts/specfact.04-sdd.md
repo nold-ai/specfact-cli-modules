@@ -28,7 +28,7 @@ Create/update SDD manifest from project bundle. Captures WHY (intent/constraints
 
 ### Target/Input
 
-- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: explicit bundle name
+- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: active plan
 - `--sdd PATH` - Output SDD manifest path. Default: bundle-specific .specfact/projects/<bundle-name>/sdd.<format> (Phase 8.5)
 
 ### Output/Results
@@ -110,8 +110,7 @@ specfact govern enforce sdd <bundle-name>
 ### Phase 3: CLI Artifact Creation (REQUIRED)
 
 ```bash
-# Use enrichment to update plan via CLI, then regenerate SDD
-specfact govern enforce sdd <bundle-name>
+# Regenerate SDD from the updated plan bundle
 specfact govern enforce sdd <bundle-name>
 ```
 

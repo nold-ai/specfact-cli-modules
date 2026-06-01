@@ -275,13 +275,19 @@ def _parse_added_lines_from_cached_diff(diff_text: str) -> dict[str, set[int]]:
     """Return staged new-line numbers by repo-relative file from a zero-context diff."""
     changed_lines: dict[str, set[int]] = {}
     current_file: str | None = None
+    previous_was_source_header = False
     for line in diff_text.splitlines():
-        if line.startswith("+++ "):
+        if line.startswith("--- "):
+            previous_was_source_header = True
+            continue
+        if previous_was_source_header and line.startswith("+++ "):
+            previous_was_source_header = False
             destination = line[4:].strip()
             current_file = None if destination == "/dev/null" else destination.removeprefix("b/")
             if current_file is not None:
                 changed_lines.setdefault(current_file, set())
             continue
+        previous_was_source_header = False
         if current_file is None or not line.startswith("@@ "):
             continue
         match = re.search(r"\+(\d+)(?:,(\d+))?", line)

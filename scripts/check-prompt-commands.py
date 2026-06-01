@@ -9,7 +9,7 @@ import re
 import sys
 from collections.abc import Iterable
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 import click
 from typer.main import get_command as typer_get_command
@@ -107,7 +107,8 @@ def _command_options(command: click.Command) -> set[str]:
     for param in command.params:
         if hasattr(param, "opts"):
             options.update(opt for opt in param.opts if opt.startswith("--"))
-            options.update(opt for opt in param.secondary_opts if opt.startswith("--"))
+            secondary_opts = getattr(param, "secondary_opts", ())
+            options.update(opt for opt in secondary_opts if opt.startswith("--"))
     return options
 
 
@@ -130,7 +131,7 @@ def _build_command_index() -> CommandIndex:
         try:
             module = importlib.import_module(module_name)
             app = getattr(module, attr_name)
-            click_command = typer_get_command(app)
+            click_command = cast(click.Command, typer_get_command(app))
         except Exception as exc:
             msg = f"Failed to load CLI mount {module_name}:{attr_name} at {' '.join(prefix)}: {exc}"
             raise RuntimeError(msg) from exc

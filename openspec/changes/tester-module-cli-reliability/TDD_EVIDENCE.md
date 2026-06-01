@@ -153,3 +153,27 @@
   - `hatch run check-command-contract` -> passed: `check-command-contract: OK (86 generated module command path(s) validated)`.
   - `hatch run lint` -> passed.
   - `openspec validate tester-module-cli-reliability --strict` -> passed.
+
+## Third Follow-up PR Review Fixes
+
+- Re-checked live PR #307 review threads after the enforcement-mode documentation updates.
+- Addressed still-valid findings:
+  - Changed enforcement now skips unreadable or non-UTF-8 untracked files instead of crashing when collecting changed-line evidence.
+  - Prompt command validation and command overview generation no longer assume every Click parameter with `opts` also exposes `secondary_opts`.
+  - Typer app conversion sites in prompt validation and command overview generation now cast the generated Click command explicitly, resolving follow-up type-safety review errors.
+  - Pre-commit changed-line parsing only treats `+++ ` as a destination-file header when it follows a `--- ` source header, so staged content lines beginning with `++ ` cannot corrupt the changed-line map.
+  - `/specfact.04-sdd` and `/specfact.07-contracts` prompt parameter docs now describe active-plan fallback consistently.
+  - `/specfact.04-sdd` no longer claims a distinct plan-update CLI command exists before SDD regeneration.
+- Reviewed and intentionally kept the `changed` default for `specfact code review run --enforcement`: this is the requested default policy for legacy-noise-tolerant gates, while `full` remains available and documented for strict CI/pre-commit enforcement.
+- Reviewed the remaining advisory code-review warnings after the final amend. Fixed the valid line-length warning. Left the generator script's `print()` and missing-contract warnings as documented exceptions: this existing CLI utility intentionally writes generated diffs/status to stdout, and adding icontract decorators to its existing script entry points is outside the review-thread fix scope.
+- Follow-up verification:
+  - `hatch run format` -> passed.
+  - `hatch run pytest tests/unit/test_pre_commit_quality_parity.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/test_check_prompt_commands_script.py -q` -> 66 passed.
+  - `hatch run pytest tests/unit/test_check_prompt_commands_script.py tests/unit/test_pre_commit_quality_parity.py -q` -> 26 passed after the final type-safety cleanup.
+  - `hatch run python scripts/check-prompt-commands.py` -> passed.
+  - `hatch run generate-command-overview` -> passed.
+  - `hatch run check-command-overview` -> passed.
+  - `hatch run check-command-contract` -> passed: `check-command-contract: OK (86 generated module command path(s) validated)`.
+  - `hatch run python scripts/check-docs-commands.py` -> passed.
+  - `hatch run lint` -> passed.
+  - `openspec validate tester-module-cli-reliability --strict` -> passed.

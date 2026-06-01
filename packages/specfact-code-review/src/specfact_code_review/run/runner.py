@@ -287,7 +287,10 @@ def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]]:
         except subprocess.SubprocessError:
             continue
         if listed.returncode == 0 and listed.stdout.strip():
-            line_count = len(file_path.read_text(encoding="utf-8").splitlines())
+            try:
+                line_count = len(file_path.read_text(encoding="utf-8").splitlines())
+            except (OSError, UnicodeDecodeError):
+                continue
             changed_lines[relative] = set(range(1, line_count + 1))
     return changed_lines
 
