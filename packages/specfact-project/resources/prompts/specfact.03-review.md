@@ -33,8 +33,8 @@ Act as a project review guide, not an artifact author. Use SpecFact CLI output a
 Before reviewing or answering questions, verify the current command surface when needed:
 
 ```bash
-specfact project --help
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 If an option fails, inspect `specfact project --help`, choose the nearest safe non-interactive alternative, and ask the user when no clear mapping exists. Do not write `.specfact/` artifacts directly; route artifact updates back through SpecFact CLI commands or CLI-consumed enrichment/answers files.
@@ -112,7 +112,7 @@ The recommendation helps less-experienced users make informed decisions.
 
 ### Target/Input
 
-- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: active plan (set via `plan select`)
+- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: explicit bundle name
 - `--category CATEGORY` - Focus on specific taxonomy category. Default: None (all categories)
 
 ### Output/Results
@@ -164,7 +164,7 @@ For these cases, use the **export-to-file → LLM reasoning → import-from-file
 ```bash
 # Export questions to file (REQUIRED for LLM enrichment workflow)
 # Use /tmp/ to avoid polluting the codebase
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 # Uses active plan if bundle not specified
 ```
 
@@ -174,10 +174,10 @@ specfact project --help
 # Get findings (saves to stdout - can redirect to /tmp/)
 # Use /tmp/ to avoid polluting the codebase
 # Option 1: Redirect output (includes CLI banner - not recommended)
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 
 # Option 2: Save directly to file (recommended - clean JSON only)
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 **Note**: The `--output-questions` option saves questions directly to a file, avoiding the need for complex JSON parsing. The ambiguity scanner now recognizes the simplified format (e.g., "Must verify X works correctly (see contract examples)") as valid and will not flag it as vague.
@@ -331,13 +331,13 @@ specfact project --help
 Use `plan update-idea` to update idea fields from enrichment recommendations:
 
 ```bash
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 #### Option C: Apply enrichment via import (only if bundle needs regeneration)
 
 ```bash
-specfact code import [<bundle-name>] --repo . --enrichment enrichment-report.md
+specfact code import from-code --repo . <bundle-name> --enrichment enrichment-report.md
 ```
 
 **Note:**
@@ -390,10 +390,10 @@ When in copilot mode, follow this three-phase workflow:
 ```bash
 # Option 1: Get findings (redirect to /tmp/ to avoid polluting codebase)
 # Option 1: Save findings directly to file (recommended - clean JSON only)
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 
 # Option 2: Get questions and save directly to /tmp/ (recommended - avoids JSON parsing)
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 **Capture**:
@@ -422,7 +422,7 @@ specfact project --help
 0. **Grounding rule**:
    - Treat CLI-exported questions as the source of truth; consult codebase/docs only to answer them (do not invent new artifacts)
    - **Feature/Story Completeness note**: Answers here are clarifications only. They do **NOT** create stories.  
-     For missing stories, use `specfact project --help` (or `plan update-story --batch-updates` if stories already exist).
+     For missing stories, use `specfact project export --repo . --bundle <bundle-name> --stdout`.
 
 1. **Read exported questions file** (`/tmp/questions.json`):
    - Review all questions and their categories
@@ -495,17 +495,17 @@ specfact project --help
 ```bash
 # Import answers from /tmp/answers.json file
 # Use /tmp/ to avoid polluting the codebase
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 **For non-partial findings only:**
 
 ```bash
 # Use auto-enrich for simple vague criteria (not partial findings)
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 
 # Or use batch updates for feature updates
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 **Result**: Final artifacts are CLI-generated with validated enrichments
@@ -537,7 +537,7 @@ Coverage Summary:
 
 ```text
 ✗ Project bundle 'legacy-api' not found
-Create one with: specfact project --help
+Create one with: specfact code import from-code --repo . <bundle-name>
 ```
 
 ## Common Patterns
@@ -624,7 +624,7 @@ Create one with: specfact project --help
 **For non-partial findings only:**
 
 - **During import**: Auto-enrichment happens automatically (enabled by default)
-- **After import**: Use `specfact project --help` for simple vague criteria
+- **After import**: Use `specfact project export --repo . --bundle <bundle-name> --stdout` to inspect simple vague criteria
 - **Note**: The scanner now recognizes simplified format (e.g., "Must verify X works correctly (see contract examples)") as valid
 
 **Alternative approaches** (for business context only):
@@ -733,8 +733,8 @@ When generating enrichment reports for use with `import from-code --enrichment`,
 Use CLI output as verification evidence:
 
 ```bash
-specfact project --help
-specfact project --help
+specfact project export --repo . --bundle <bundle-name> --stdout
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 For module development in this repository, validate packaged prompt and module payload changes with:

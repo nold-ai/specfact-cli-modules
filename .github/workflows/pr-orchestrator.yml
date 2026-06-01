@@ -149,7 +149,7 @@ jobs:
 
       - name: Checkout paired core CLI
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           repository: nold-ai/specfact-cli
           path: specfact-cli

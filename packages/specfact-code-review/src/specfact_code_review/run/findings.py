@@ -473,6 +473,14 @@ class ReviewReport(BaseModel):
         default=None,
         description="Aggregate cleanup forecast for simplify-focused review runs.",
     )
+    enforcement_mode: Literal["full", "changed", "shadow"] | None = Field(
+        default=None,
+        description="Review enforcement mode applied to the CI exit code.",
+    )
+    enforcement_summary: str | None = Field(
+        default=None,
+        description="Human-readable explanation of enforcement mode and blocking evidence.",
+    )
     house_rules_updates: list[str] = Field(default_factory=list, description="Suggested house-rules updates.")
 
     @field_validator("schema_version", "run_id", "summary")
@@ -493,7 +501,9 @@ class ReviewReport(BaseModel):
     def _derive_governance_fields(self) -> ReviewReport:
         if self.simplification_summary is None:
             self.simplification_summary = _build_simplification_summary(self.findings)
-        if self.cleanup_forecast is not None or any(
+        if self.enforcement_mode is not None:
+            self.schema_version = "1.4"
+        elif self.cleanup_forecast is not None or any(
             finding.has_cleanup_handoff_metadata() for finding in self.findings
         ):
             self.schema_version = "1.3"

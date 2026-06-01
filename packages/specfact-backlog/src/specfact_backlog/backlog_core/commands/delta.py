@@ -6,13 +6,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
 
-import click
 import typer
 import yaml
 from beartype import beartype
 from rich.console import Console
 from rich.table import Table
 from specfact_cli.adapters.registry import AdapterRegistry
+from typer._click.core import Context as TyperClickContext
 
 from specfact_backlog.backlog_core.adapters.backlog_protocol import require_backlog_graph_protocol
 from specfact_backlog.backlog_core.analyzers.dependency import DependencyAnalyzer
@@ -63,7 +63,10 @@ def _load_provider_config(adapter: str) -> dict[str, Any]:
     config_path = Path(".specfact") / "backlog-config.yaml"
     if not config_path.exists():
         return {}
-    loaded = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    try:
+        loaded = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
     if not isinstance(loaded, dict):
         return {}
     providers = loaded.get("providers")
@@ -95,7 +98,7 @@ def _resolve_project_id(
     return None
 
 
-def _exit_missing_delta_context(ctx: click.Context) -> None:
+def _exit_missing_delta_context(ctx: TyperClickContext) -> None:
     typer.echo(ctx.get_help())
     typer.echo(
         "\nError: Missing backlog context. Provide --project-id, or for GitHub provide "
@@ -119,7 +122,7 @@ def _render_delta_table(delta: dict[str, Any], title: str = "Delta Status") -> N
 
 
 def status(
-    ctx: typer.Context,
+    ctx: TyperClickContext,
     adapter_arg: Annotated[str | None, typer.Argument(help="Adapter to use")] = None,
     project_id: Annotated[str | None, typer.Option("--project-id", help="Backlog project identifier")] = None,
     adapter: Annotated[str, typer.Option("--adapter", help="Adapter to use")] = "github",

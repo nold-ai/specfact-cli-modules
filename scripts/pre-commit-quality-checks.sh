@@ -301,7 +301,8 @@ run_code_review_gate() {
     return
   fi
 
-  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s))"
+  local enforcement="${SPECFACT_CODE_REVIEW_ENFORCEMENT:-changed}"
+  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s), enforcement=${enforcement})"
   if hatch run python scripts/pre_commit_code_review.py "${review_array[@]}"; then
     success "✅ Block 2 — stage 1/2: code review gate passed"
   else

@@ -141,7 +141,7 @@ specfact project sync bridge --adapter <adapter> --repo <path> [options]
 
 ```bash
 # Apply resolutions via CLI commands, then re-sync
-specfact project --help
+specfact project sync bridge --adapter speckit --repo . --bundle <bundle-name>
 specfact project sync bridge --adapter <adapter> --repo <path>
 ```
 

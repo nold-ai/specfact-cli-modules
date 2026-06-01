@@ -56,3 +56,20 @@ def test_delta_status_missing_config_names_kebab_case_options(tmp_path: Path, mo
     assert "--repo-name" in output
     assert "repo_owner" not in output
     assert "repo_name" not in output
+
+
+def test_delta_status_malformed_config_preserves_missing_context_guidance(tmp_path: Path, monkeypatch) -> None:
+    backlog_app = importlib.import_module("specfact_backlog.backlog.commands").app
+    config_dir = tmp_path / ".specfact"
+    config_dir.mkdir()
+    (config_dir / "backlog-config.yaml").write_text("providers:\n  github: [unterminated\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(backlog_app, ["delta", "status", "github"])
+
+    assert result.exit_code != 0
+    output = result.stdout
+    assert "--project-id" in output
+    assert "--repo-owner" in output
+    assert "--repo-name" in output
+    assert "ParserError" not in output

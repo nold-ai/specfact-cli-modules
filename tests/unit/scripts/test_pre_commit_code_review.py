@@ -87,6 +87,8 @@ def test_build_review_command_writes_json_report() -> None:
     assert command[:5] == [sys.executable, "-m", "specfact_cli.cli", "code", "review"]
     assert "--json" in command
     assert "--out" in command
+    assert "--enforcement" in command
+    assert "changed" in command
     assert "--level" not in command
     assert module.REVIEW_JSON_OUT in command
     assert command[-2:] == ["tests/test_app.py", "packages/specfact-spec/src/x.py"]
@@ -208,6 +210,7 @@ def test_main_preserves_ai_bloat_json_when_error_blocks(
     monkeypatch.setattr(module, "_repo_root", lambda: repo_root)
     monkeypatch.setattr(module, "ensure_runtime_available", lambda: (True, None))
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_ENFORCEMENT", "full")
 
     assert module.main(["tests/unit/test_app.py"]) == 1
     err = capsys.readouterr().err
@@ -242,6 +245,7 @@ def test_main_propagates_review_gate_exit_code(
     monkeypatch.setattr(module, "_repo_root", _fake_root)
     monkeypatch.setattr(module, "ensure_runtime_available", _fake_ensure)
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_ENFORCEMENT", "full")
 
     exit_code = module.main(["tests/unit/test_app.py"])
 
@@ -250,6 +254,7 @@ def test_main_propagates_review_gate_exit_code(
     assert captured.out == ""
     err = captured.err
     assert "Code review summary: 2 finding(s)" in err
+    assert "Code review enforcement: full" in err
     assert "errors=1" in err
     assert "warnings=1" in err
     assert "overall_verdict='FAIL'" in err
@@ -276,8 +281,50 @@ def test_main_uses_report_ci_exit_code_for_fixable_errors(monkeypatch: pytest.Mo
     monkeypatch.setattr(module, "_repo_root", lambda: repo_root)
     monkeypatch.setattr(module, "ensure_runtime_available", lambda: (True, None))
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_ENFORCEMENT", "full")
 
     assert module.main(["tests/unit/test_app.py"]) == 0
+
+
+def test_review_enforcement_mode_defaults_to_changed() -> None:
+    module = _load_script_module()
+
+    assert module.review_enforcement_mode() == "changed"
+
+
+def test_review_enforcement_mode_rejects_invalid_value(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _load_script_module()
+
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_ENFORCEMENT", "strict")
+
+    assert module.review_enforcement_mode() == "changed"
+    assert "Invalid SPECFACT_CODE_REVIEW_ENFORCEMENT" in capsys.readouterr().err
+
+
+def test_changed_enforcement_blocks_findings_on_staged_lines(tmp_path: Path) -> None:
+    module = _load_script_module()
+    payload: dict[str, object] = {
+        "overall_verdict": "FAIL",
+        "ci_exit_code": 1,
+        "findings": [
+            {"severity": "error", "fixable": False, "file": "tests/unit/test_app.py", "line": 7},
+        ],
+    }
+    _write_sample_review_report(tmp_path, payload)
+
+    module._staged_changed_lines = lambda _repo_root: {"tests/unit/test_app.py": {7}}
+
+    assert module._print_review_findings_summary(tmp_path, enforcement="changed") == (True, 1, 1)
+
+
+def test_shadow_enforcement_reports_without_blocking(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    module = _load_script_module()
+    _write_sample_review_report(tmp_path, SAMPLE_FAIL_REVIEW_REPORT)
+
+    assert module._print_review_findings_summary(tmp_path, enforcement="shadow") == (True, 1, 0)
+    assert "shadow gate" in capsys.readouterr().err
 
 
 def _write_sample_review_report(repo_root: Path, payload: dict[str, object]) -> None:
@@ -369,10 +416,16 @@ def test_run_review_subprocess_exposes_local_module_sources(monkeypatch: pytest.
 
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
 
-    result = module._run_review_subprocess(["python", "-m", "specfact_cli.cli"], repo_root, ["tests/unit/test_app.py"])
+    result = module._run_review_subprocess(
+        ["python", "-m", "specfact_cli.cli"],
+        repo_root,
+        ["tests/unit/test_app.py"],
+        enforcement="changed",
+    )
 
     assert result is not None
     assert captured_env["SPECFACT_MODULES_ROOTS"] == str((repo_root / "packages").resolve())
+    assert captured_env["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] == "cached"
     pythonpath = captured_env["PYTHONPATH"].split(os.pathsep)
     assert str(repo_root / "packages" / "specfact-codebase" / "src") in pythonpath
     assert str(repo_root / "packages" / "specfact-code-review" / "src") in pythonpath

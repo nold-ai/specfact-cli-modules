@@ -97,3 +97,41 @@
   - `hatch run python /home/dom/git/nold-ai/specfact-cli-worktrees/feature/tester-command-reliability/scripts/runtime_discovery_smoke.py --modules-repo /home/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/tester-command-reliability --launcher pipx --launcher uv-run --launcher uvx` -> passed for all three remaining package-manager launchers.
   - `hatch run format` -> passed.
   - `hatch run lint` -> failed on an existing unrelated type mismatch in `tests/unit/specfact_backlog/conftest.py` (`typer.testing.Result` vs `click.testing.Result`); none of the follow-up edits touched that file. Focused touched-scope tests and validators above pass.
+
+## Follow-up PR Thread Fixes
+
+- Validated live PR #307 review threads and CI annotations after the previous follow-up.
+- Addressed remaining actionable findings:
+  - Paired core checkout steps in touched workflows now pin `actions/checkout` to `34e114876b0b11c390a56381ad16ebd13914f8d5` while retaining `persist-credentials: false`.
+  - `backlog delta status` falls back to missing-context guidance when `.specfact/backlog-config.yaml` is malformed YAML instead of leaking parser errors.
+  - `project snapshot` now uses the same typed backlog-graph guard as `project regenerate`.
+  - Semgrep plugin status preserves the active environment probe message returned by core `check_tool_in_env`.
+  - Generated command JSON loading in `scripts/check-docs-commands.py` fails fast on malformed JSON or malformed entries.
+  - Project, govern, and spec prompt guidance no longer uses `specfact project --help` as an executable workflow placeholder; examples now use concrete generated-contract commands such as `code import from-code`, `project health-check`, `project export`, and `govern enforce sdd`.
+  - Project overview docs were reduced to command families present in the generated project command contract.
+  - OpenSpec source tracking now includes source bug `#589`.
+- Follow-up verification:
+  - `hatch run pytest tests/unit/specfact_backlog/test_delta_command_contract.py tests/unit/specfact_project/test_regenerate_command_contract.py tests/unit/specfact_project/test_code_analyzer_semgrep_status.py tests/unit/test_check_docs_commands_script.py tests/unit/test_check_prompt_commands_script.py tests/unit/workflows/test_pr_orchestrator_signing.py tests/unit/test_pre_commit_quality_parity.py -q` -> 47 passed.
+  - `hatch run yaml-lint && hatch run check-command-overview && hatch run check-command-contract && hatch run python scripts/check-docs-commands.py && hatch run python scripts/check-prompt-commands.py && openspec validate tester-module-cli-reliability --strict` -> passed.
+  - `hatch run format` -> passed.
+
+## Follow-up Code Review Enforcement Modes
+
+- Added explicit code-review enforcement policies:
+  - `full`: strict mode; any blocking finding in reviewed files blocks the run.
+  - `changed`: default CLI/pre-commit mode; blocking findings only block when they target changed lines, while legacy blockers remain in JSON evidence.
+  - `shadow`: evidence-only mode; findings are reported but the run does not block.
+- Runtime and gate wiring:
+  - `specfact code review run --enforcement full|changed|shadow` is now the primary runtime option.
+  - Deprecated `--mode enforce|shadow` remains supported as a compatibility alias (`enforce` maps to `full`).
+  - Pre-commit/CI wrapper reads `SPECFACT_CODE_REVIEW_ENFORCEMENT`, defaults to `changed`, and uses cached staged diffs for changed-line evidence.
+  - Checked the shipped GitHub workflow Jinja template; it does not invoke code review, so no PR review template change was required.
+- Follow-up verification:
+  - `hatch run pytest tests/unit/scripts/test_pre_commit_code_review.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/review/test_commands.py tests/unit/docs/test_code_review_docs_parity.py tests/unit/test_pre_commit_quality_parity.py -q` -> included in the final combined 172-test focused suite.
+  - `hatch run pytest tests/unit/specfact_backlog/test_delta_command_contract.py tests/unit/specfact_project/test_regenerate_command_contract.py tests/unit/specfact_project/test_code_analyzer_semgrep_status.py tests/unit/test_check_docs_commands_script.py tests/unit/test_check_prompt_commands_script.py tests/unit/workflows/test_pr_orchestrator_signing.py tests/unit/test_pre_commit_quality_parity.py tests/unit/scripts/test_pre_commit_code_review.py tests/unit/specfact_code_review/run/test_runner.py tests/unit/specfact_code_review/run/test_commands.py tests/unit/specfact_code_review/review/test_commands.py tests/unit/docs/test_code_review_docs_parity.py -q` -> 172 passed.
+  - `hatch run generate-command-overview` -> passed.
+  - `hatch run check-command-overview` -> passed.
+  - `hatch run check-command-contract` -> passed: `check-command-contract: OK (86 generated module command path(s) validated)`.
+  - `hatch run python scripts/check-docs-commands.py` -> passed.
+  - `hatch run python scripts/check-prompt-commands.py` -> passed.
+  - `hatch run lint` -> passed.

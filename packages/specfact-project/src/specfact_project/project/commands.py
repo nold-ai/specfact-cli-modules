@@ -3,6 +3,10 @@ Project command - Persona workflows and bundle management.
 
 This module provides commands for persona-based editing, lock enforcement,
 and merge conflict resolution for project bundles.
+
+Operating guidance: command examples in this source are not the source of
+truth; CLI help is authoritative. Check `specfact --help` or command-specific
+`--help`, and ask the user before guessing when help output disagrees.
 """
 
 from __future__ import annotations
@@ -61,13 +65,13 @@ def _refresh_console() -> Console:
 
 
 @app.callback()
-def _project_callback() -> None:
+def _project_callback() -> None:  # pyright: ignore[reportUnusedFunction]  # Typer registers callbacks by decorator.
     """Ensure project command group always uses a fresh console for current process streams."""
     _refresh_console()
 
 
 @version_app.callback()
-def _project_version_callback() -> None:
+def _project_version_callback() -> None:  # pyright: ignore[reportUnusedFunction]  # Typer registers callbacks by decorator.
     """Ensure project version subcommands also refresh console when invoked directly."""
     _refresh_console()
 
@@ -213,7 +217,7 @@ def _collect_backlog_health_metrics(adapter: str, project_id: str, template: str
     Use 'specfact backlog analyze-deps' instead.
     """
     print_warning("Backlog health metrics functionality moved to 'backlog' command group.")
-    print_info("Use: specfact backlog analyze-deps")
+    print_info("Use: `specfact backlog analyze-deps`")
     return {"coverage": 0.0, "note": "Use 'specfact backlog analyze-deps' for backlog health metrics"}
 
 
@@ -280,7 +284,7 @@ def _run_release_readiness_check(
     Use 'specfact backlog verify-readiness' instead.
     """
     print_warning("Release readiness check moved to 'backlog' command group.")
-    print_info("Use: specfact backlog verify-readiness")
+    print_info("Use: `specfact backlog verify-readiness`")
     return {"ok": True, "summary": "Use 'specfact backlog verify-readiness' for detailed checks"}
 
 
@@ -311,15 +315,15 @@ def _fetch_backlog_graph(*, adapter: str, project_id: str, template: str) -> Any
     NOTE: This functionality has been moved to the 'backlog' command group.
     """
     print_warning("Backlog graph functionality moved to 'backlog' command group.")
-    print_info("Use: specfact backlog analyze-deps or specfact backlog graph-export")
+    print_info("Use: `specfact backlog analyze-deps`")
     return None
 
 
 def _require_backlog_graph(graph: Any, *, command_name: str) -> Any:
     """Fail with a typed diagnostic when backlog graph data is unavailable."""
     if graph is None or not hasattr(graph, "items"):
-        print_error(f"Backlog graph data unavailable for `specfact project {command_name}`.")
-        print_info("Run `specfact backlog analyze-deps` or `specfact backlog graph-export` to inspect backlog data.")
+        print_error(f"Backlog graph data unavailable for specfact project {command_name}.")
+        print_info("Run `specfact backlog analyze-deps` to inspect backlog data.")
         raise typer.Exit(1)
     return graph
 
@@ -330,10 +334,10 @@ def generate_roadmap(*, adapter: str, project_id: str, template: str) -> list[st
     """Generate roadmap milestones from dependency critical path.
 
     NOTE: This functionality has been moved to the 'backlog' command group.
-    Use 'specfact backlog analyze-deps --critical-path' for roadmap generation.
+    Use 'specfact project export-roadmap' for roadmap generation.
     """
     print_warning("Roadmap generation moved to 'backlog' command group.")
-    print_info("Use: specfact backlog analyze-deps --critical-path")
+    print_info("Use: `specfact project export-roadmap`")
     return []
 
 
@@ -546,7 +550,7 @@ def devops_flow(
 
     if normalized_stage == "develop" and normalized_action == "sync":
         print_warning("Backlog sync functionality moved to 'backlog' command group.")
-        print_info("Use: specfact backlog sync")
+        print_info("Use: `specfact backlog sync`")
         print_success("Develop/sync placeholder completed.")
         return
 
@@ -570,7 +574,7 @@ def devops_flow(
         release_target = extract_release_target(bundle_obj)
         print_info(f"Release target: {release_target}")
         print_warning("Release notes generation moved to 'backlog' command group.")
-        print_info("Use: specfact backlog generate-release-notes")
+        print_info("Use: `specfact backlog verify-readiness`")
         print_success(f"Release verification passed for target '{release_target}'.")
         return
 
@@ -604,6 +608,7 @@ def snapshot(
     bundle_obj = _load_bundle_with_progress(bundle_dir, validate_hashes=False)
     adapter, project_id, template = _resolve_linked_backlog_config(bundle_obj)
     graph = _fetch_backlog_graph(adapter=adapter, project_id=project_id, template=template)
+    graph = _require_backlog_graph(graph, command_name="snapshot")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(graph.to_json(), encoding="utf-8")
     print_success(f"Snapshot written for bundle '{bundle_name}': {output}")

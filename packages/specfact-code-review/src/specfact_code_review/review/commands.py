@@ -1,4 +1,9 @@
-"""Review subgroup wiring for the code command surface."""
+"""Review subgroup wiring for the code command surface.
+
+Operating guidance: command examples in this source are not the source of
+truth; CLI help is authoritative. Check `specfact code review run --help`,
+and ask the user before guessing when help output disagrees.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +22,7 @@ from specfact_code_review.run.commands import (
     InvalidOptionCombinationError,
     MissingOutForJsonError,
     NoReviewableFilesError,
+    ReviewRunMode,
     RunCommandError,
     run_command,
 )
@@ -31,7 +37,7 @@ SpecFact code review instructions for AI assistants
 Use this when the user asks to remove AI bloat, simplify code, apply clean-code patterns, reduce boilerplate, or act on SpecFact review findings.
 
 1. Generate evidence first:
-   specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review.json
+   specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review.json
 
    Keep the canonical .specfact/code-review.json path unless every downstream consumer has been updated to read a custom simplify report path.
 
@@ -53,7 +59,7 @@ Use this when the user asks to remove AI bloat, simplify code, apply clean-code 
 5. For design_judgment findings, check API, callback, framework hook, adapter, public symbol, CLI boundary, compatibility shim, and readability intent. If intent is unclear, default to keep or skip.
 
 6. Apply one file at a time. After each accepted file or very small batch, run targeted tests or rerun:
-   specfact code review run --scope changed --focus simplify --json --out .specfact/code-review.json
+   specfact code review run --scope changed --enforcement shadow --focus simplify --json --out .specfact/code-review.json
 
 7. Log every action as recommended, applied, kept, skipped, or failed with evidence. Never batch-apply design_judgment findings just because the patch is shorter. Never treat ai_bloat findings as proof of AI authorship; they are cleanup signals only, not proof of AI authorship.
 """
@@ -122,6 +128,17 @@ def _resolve_review_run_flags(inputs: _ReviewRunCliInputs) -> tuple[list[str], b
     return focus_list, resolved_include_tests, inputs.include_noise and not inputs.suppress_noise
 
 
+def _resolve_cli_enforcement(
+    *, enforcement: ReviewRunMode, legacy_mode: Literal["shadow", "enforce"] | None
+) -> ReviewRunMode:
+    """Resolve new enforcement policy with backward-compatible --mode support."""
+    if legacy_mode is None:
+        return enforcement
+    if enforcement != "changed":
+        raise typer.BadParameter("Use either --enforcement or deprecated --mode, not both.")
+    return "shadow" if legacy_mode == "shadow" else "full"
+
+
 @review_app.command("run")
 @require(lambda ctx: True, "run command validation")
 @ensure(lambda result: result is None, "run command does not return")
@@ -137,7 +154,16 @@ def run(
         "--focus",
         help="Limit to source, tests, docs, and/or simplify (repeatable).",
     ),
-    mode: Literal["shadow", "enforce"] = typer.Option("enforce", "--mode"),
+    enforcement: ReviewRunMode = typer.Option(
+        "changed",
+        "--enforcement",
+        help="Enforcement policy: full blocks on all blocking findings, changed blocks on changed-line blockers, shadow reports only.",
+    ),
+    mode: Literal["shadow", "enforce"] | None = typer.Option(
+        None,
+        "--mode",
+        help="Deprecated alias: enforce maps to --enforcement full; shadow maps to --enforcement shadow.",
+    ),
     level: Literal["error", "warning"] | None = typer.Option(None, "--level"),
     bug_hunt: bool = typer.Option(False, "--bug-hunt"),
     include_noise: bool = typer.Option(False, "--include-noise"),
@@ -188,7 +214,7 @@ def run(
             scope=scope,
             path_filters=path,
             focus_facets=tuple(focus_list),
-            review_mode=mode,
+            review_mode=_resolve_cli_enforcement(enforcement=enforcement, legacy_mode=mode),
             review_level=level,
             bug_hunt=bug_hunt,
             include_noise=resolved_include_noise,

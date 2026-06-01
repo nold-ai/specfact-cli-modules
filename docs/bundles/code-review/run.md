@@ -30,7 +30,8 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 | `--path <prefix>` | Narrow auto-discovered review files to one or more repo-relative prefixes |
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
 | `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
-| `--mode shadow\|enforce` | **`shadow`** surfaces findings without failing the exit code for policy violations; **`enforce`** applies normal gating (default **`enforce`**) |
+| `--enforcement full\|changed\|shadow` | **`full`** blocks on any blocking finding in reviewed files; **`changed`** blocks only blocking findings on changed lines (default **`changed`**); **`shadow`** records evidence and never blocks |
+| `--mode shadow\|enforce` | Deprecated compatibility alias: **`--mode enforce`** maps to **`--enforcement full`** and **`--mode shadow`** maps to **`--enforcement shadow`** |
 | `--level error\|warning` | Optional reporting level override before scoring: **`error`** keeps errors only (drops warnings and info); **`warning`** keeps errors and warnings (drops info only); omit to keep all severities (JSON, verdict, and `ci_exit_code` use the filtered list) |
 | `--bug-hunt` | Enable exploratory / bug-hunt style heuristics in the review pipeline |
 | `--include-noise`, `--suppress-noise` | Keep or suppress known low-signal findings |
@@ -85,12 +86,18 @@ specfact code review run --scope changed --level error
 specfact code review run --bug-hunt --json --out /tmp/review-bughunt.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
 ```
 
-### Shadow mode and JSON to a file
+### Enforcement modes and JSON to a file
 
-**`--mode shadow`** runs the full toolchain but forces process exit code **`0`** and JSON **`ci_exit_code`** **`0`** so callers can ingest reports without failing a step; **`overall_verdict`** still reflects the real outcome.
+**`--enforcement changed`** is the default for the CLI: it writes every finding to JSON, but only blocking findings on changed lines fail the process. Legacy findings elsewhere in touched files remain visible in **`findings`** plus **`enforcement_summary`** evidence.
+
+**`--enforcement full`** is the strictest mode: any blocking finding in the reviewed files fails the process, including existing issues on untouched lines.
+
+**`--enforcement shadow`** runs the full toolchain but forces process exit code **`0`** and JSON **`ci_exit_code`** **`0`** so callers can ingest reports without failing a step; **`overall_verdict`** still reflects the real outcome. The older **`--mode shadow`** form remains available as a compatibility alias.
 
 ```bash
-specfact code review run --scope changed --mode shadow --json --out /tmp/review-report.json
+specfact code review run --scope changed --enforcement changed --json --out /tmp/review-report.json
+specfact code review run --scope full --enforcement full --json --out /tmp/review-full.json
+specfact code review run --scope changed --enforcement shadow --json --out /tmp/review-shadow.json
 ```
 
 ### `--focus` facets (repeatable)

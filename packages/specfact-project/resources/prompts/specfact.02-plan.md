@@ -28,7 +28,7 @@ Manage project bundles: initialize, add features/stories, update metadata (idea/
 
 ### Target/Input
 
-- `--bundle NAME` - Project bundle name (optional, defaults to active plan set via `plan select`)
+- `--bundle NAME` - Project bundle name (optional, defaults to explicit bundle name)
 - `--key KEY` - Feature/story key (e.g., FEATURE-001, STORY-001)
 - `--feature KEY` - Parent feature key (for story operations)
 
@@ -60,12 +60,12 @@ Manage project bundles: initialize, add features/stories, update metadata (idea/
 ### Step 2: Execute CLI
 
 ```bash
-specfact project --help
-specfact project --help
-specfact project --help
-specfact project --help
-specfact project --help
-specfact project --help
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
 # --bundle defaults to active plan if not specified
 ```
 
@@ -95,7 +95,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact project --help
+specfact code import from-code --repo . <bundle-name>
 ```
 
 **Capture**:
@@ -132,9 +132,9 @@ specfact project --help
 
 ```bash
 # Use enrichment to update plan via CLI
-specfact project --help
+specfact code import from-code --repo . <bundle-name>
 # Or use batch updates:
-specfact project --help
+specfact code import from-code --repo . <bundle-name>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated enrichments
@@ -161,8 +161,8 @@ Outcomes: Secure login, Session management
 ## Error (Missing Bundle)
 
 ```text
-✗ Project bundle name is required (or set active plan with 'plan select')
-Usage: specfact project --help
+✗ Project bundle name is required (or set explicit bundle name)
+Usage: specfact code import from-code --repo . <bundle-name>
 ```
 
 ## Common Patterns

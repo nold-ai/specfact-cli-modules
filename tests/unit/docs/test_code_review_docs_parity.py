@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import click
 import pytest
@@ -28,16 +29,15 @@ RUN_DOC = MODULES_REPO_ROOT / "docs" / "bundles" / "code-review" / "run.md"
 def _review_run_click_command() -> click.Command:
     review_group = typer_get_command(review_commands.review_app)
     run_cmd = review_group.commands.get("run")
-    assert isinstance(run_cmd, click.Command)
-    return run_cmd
+    assert run_cmd is not None
+    return cast(click.Command, run_cmd)
 
 
 def _public_option_flags(command: click.Command) -> set[str]:
     flags: set[str] = set()
     for param in command.params:
-        if not isinstance(param, click.Option):
-            continue
-        for opt in param.opts:
+        opts = getattr(param, "opts", ())
+        for opt in opts:
             if opt.startswith("--"):
                 flags.add(opt)
     return flags
@@ -52,7 +52,7 @@ def test_code_review_run_doc_mentions_public_ty_options() -> None:
 
     assert "progress" in text
     assert "spinner" in text or "status" in text
-    assert "default **`enforce`**" in text
+    assert "default **`changed`**" in text
     assert "Optional reporting level override" in text
     assert "--bug-hunt" in text
     assert "exploratory" in text.lower()
@@ -99,7 +99,7 @@ def test_code_review_run_doc_describes_invalid_flag_combinations() -> None:
     assert "request validation" in text.lower()
     assert "conflicting targeting styles" in text.lower()
     assert "progress" in text
-    assert "default **`enforce`**" in text
+    assert "default **`changed`**" in text
     assert "Optional reporting level override" in text
     assert "review-report.json" in text
 

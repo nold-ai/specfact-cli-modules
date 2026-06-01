@@ -16,6 +16,7 @@ import importlib
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
@@ -47,6 +48,8 @@ apply_specfact_workspace_env = _dev_bootstrap.apply_specfact_workspace_env
 
 # Default matches dogfood / OpenSpec: machine-readable report under ignored ``.specfact/``.
 REVIEW_JSON_OUT = ".specfact/code-review.json"
+VALID_ENFORCEMENT_MODES = frozenset({"full", "changed", "shadow"})
+DEFAULT_ENFORCEMENT_MODE = "changed"
 
 
 def _is_review_gate_path(path: str) -> bool:
@@ -98,12 +101,25 @@ def _specfact_review_paths(paths: Sequence[str]) -> list[str]:
     return result
 
 
+def review_enforcement_mode() -> str:
+    """Return configured pre-commit review enforcement mode."""
+    configured = os.environ.get("SPECFACT_CODE_REVIEW_ENFORCEMENT", DEFAULT_ENFORCEMENT_MODE).strip().lower()
+    if configured in VALID_ENFORCEMENT_MODES:
+        return configured
+    sys.stderr.write(
+        "Invalid SPECFACT_CODE_REVIEW_ENFORCEMENT value "
+        f"{configured!r}; expected one of: {', '.join(sorted(VALID_ENFORCEMENT_MODES))}.\n"
+    )
+    return DEFAULT_ENFORCEMENT_MODE
+
+
 @require(lambda files: files is not None)
 @ensure(lambda result: result[:5] == [sys.executable, "-m", "specfact_cli.cli", "code", "review"])
 @ensure(lambda result: "--json" in result and "--out" in result)
 @ensure(lambda result: REVIEW_JSON_OUT in result)
-def build_review_command(files: Sequence[str]) -> list[str]:
+def build_review_command(files: Sequence[str], *, enforcement: str | None = None) -> list[str]:
     """Build ``code review run --json --out …`` so findings are written for tooling."""
+    mode = enforcement or review_enforcement_mode()
     return [
         sys.executable,
         "-m",
@@ -114,6 +130,8 @@ def build_review_command(files: Sequence[str]) -> list[str]:
         "--json",
         "--out",
         REVIEW_JSON_OUT,
+        "--enforcement",
+        mode,
         *files,
     ]
 
@@ -141,6 +159,8 @@ def _run_review_subprocess(
     cmd: list[str],
     repo_root: Path,
     files: Sequence[str],
+    *,
+    enforcement: str,
 ) -> subprocess.CompletedProcess[str] | None:
     """Run the nested SpecFact review command and handle timeout reporting."""
     env = os.environ.copy()
@@ -157,6 +177,8 @@ def _run_review_subprocess(
         prefixes.extend(entry for entry in previous.split(os.pathsep) if entry)
     if prefixes:
         env["PYTHONPATH"] = os.pathsep.join(dict.fromkeys(prefixes))
+    if enforcement == "changed":
+        env["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] = "cached"
     try:
         return subprocess.run(
             cmd,
@@ -236,41 +258,129 @@ def _count_ai_bloat_findings(findings: list[object]) -> int:
     return count
 
 
-def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None, int | None]:
-    """Parse ``REVIEW_JSON_OUT``, print counts, return ``(ok, error_count, ci_exit_code)``.
+def _repo_relative_report_path(repo_root: Path, raw_path: object) -> str | None:
+    """Normalize a finding path to a repository-relative POSIX path."""
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return None
+    path = Path(raw_path)
+    if path.is_absolute():
+        try:
+            path = path.relative_to(repo_root)
+        except ValueError:
+            return None
+    return path.as_posix()
 
-    Callers should use ``ci_exit_code`` as the hook exit code; ``error_count`` is informational only
-    because fixable error-severity findings may still yield a passing ``ci_exit_code``.
-    """
+
+def _parse_added_lines_from_cached_diff(diff_text: str) -> dict[str, set[int]]:
+    """Return staged new-line numbers by repo-relative file from a zero-context diff."""
+    changed_lines: dict[str, set[int]] = {}
+    current_file: str | None = None
+    for line in diff_text.splitlines():
+        if line.startswith("+++ "):
+            destination = line[4:].strip()
+            current_file = None if destination == "/dev/null" else destination.removeprefix("b/")
+            if current_file is not None:
+                changed_lines.setdefault(current_file, set())
+            continue
+        if current_file is None or not line.startswith("@@ "):
+            continue
+        match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+        if match is None:
+            continue
+        start = int(match.group(1))
+        count = int(match.group(2) or "1")
+        if count > 0:
+            changed_lines[current_file].update(range(start, start + count))
+    return changed_lines
+
+
+def _staged_changed_lines(repo_root: Path) -> dict[str, set[int]]:
+    """Collect staged new-line numbers so legacy file findings do not block unrelated commits."""
+    completed = subprocess.run(
+        ["git", "diff", "--cached", "--unified=0", "--no-ext-diff"],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return {}
+    return _parse_added_lines_from_cached_diff(completed.stdout)
+
+
+def _finding_is_blocking(item: object) -> bool:
+    """Return whether a raw finding has blocking review semantics."""
+    if not isinstance(item, dict):
+        return False
+    severity = item.get("severity")
+    return isinstance(severity, str) and severity.lower().strip() == "error" and item.get("fixable") is not True
+
+
+def _finding_targets_staged_line(repo_root: Path, item: object, changed_lines: dict[str, set[int]]) -> bool:
+    """Return whether a finding points at a staged changed line."""
+    if not isinstance(item, dict):
+        return False
+    relative_path = _repo_relative_report_path(repo_root, item.get("file"))
+    if relative_path is None or relative_path not in changed_lines:
+        return False
+    line_number = item.get("line")
+    if isinstance(line_number, int):
+        return line_number in changed_lines[relative_path]
+    return bool(changed_lines[relative_path])
+
+
+def _load_review_report(repo_root: Path) -> dict[str, Any] | None:
+    """Load the review report JSON object, printing a precise diagnostic on failure."""
     report_path = _report_path(repo_root)
     if not report_path.is_file():
         sys.stderr.write(f"Code review: no report file at {REVIEW_JSON_OUT} (could not print findings summary).\n")
-        return False, None, None
+        return None
     try:
         data = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as exc:
         sys.stderr.write(f"Code review: could not read {REVIEW_JSON_OUT}: {exc}\n")
-        return False, None, None
+        return None
     except json.JSONDecodeError as exc:
         sys.stderr.write(f"Code review: invalid JSON in {REVIEW_JSON_OUT}: {exc}\n")
-        return False, None, None
-
+        return None
     if not isinstance(data, dict):
         sys.stderr.write(f"Code review: expected top-level JSON object in {REVIEW_JSON_OUT}.\n")
-        return False, None, None
+        return None
+    return cast(dict[str, Any], data)
 
-    findings_raw = data.get("findings")
-    if not isinstance(findings_raw, list):
-        sys.stderr.write(f"Code review: report has no findings list in {REVIEW_JSON_OUT}.\n")
-        return False, None, None
 
-    counts = count_findings_by_severity(findings_raw)
-    ai_bloat_count = _count_ai_bloat_findings(findings_raw)
-    total = len(findings_raw)
-    verdict = data.get("overall_verdict", "?")
-    ci_exit_code = data.get("ci_exit_code")
-    if ci_exit_code not in {0, 1}:
-        ci_exit_code = 1 if verdict == "FAIL" else 0
+def _raw_ci_exit_code(report: dict[str, Any]) -> int:
+    """Read the report CI exit code, deriving it from the verdict when missing."""
+    raw = report.get("ci_exit_code")
+    if raw in {0, 1}:
+        return int(raw)
+    return 1 if report.get("overall_verdict") == "FAIL" else 0
+
+
+def _changed_line_blockers(repo_root: Path, findings_raw: list[object]) -> list[object]:
+    """Return blocking findings that point at staged changed lines."""
+    changed_lines = _staged_changed_lines(repo_root)
+    return [
+        item
+        for item in findings_raw
+        if _finding_is_blocking(item) and _finding_targets_staged_line(repo_root, item, changed_lines)
+    ]
+
+
+def _enforced_exit_code(
+    repo_root: Path, findings_raw: list[object], *, enforcement: str, raw_ci_exit_code: int
+) -> tuple[int, list[object]]:
+    """Apply configured enforcement to the raw report exit code."""
+    if enforcement == "full":
+        return raw_ci_exit_code, []
+    if enforcement == "shadow":
+        return 0, []
+    blockers = _changed_line_blockers(repo_root, findings_raw)
+    return (1 if blockers else 0), blockers
+
+
+def _finding_summary_parts(counts: dict[str, int], *, ai_bloat_count: int) -> list[str]:
+    """Format finding count buckets for concise stderr output."""
     parts = [
         f"errors={counts['error']}",
         f"warnings={counts['warning']}",
@@ -282,8 +392,63 @@ def _print_review_findings_summary(repo_root: Path) -> tuple[bool, int | None, i
         parts.append(f"other={counts['other']}")
     if ai_bloat_count:
         parts.append(f"ai_bloat={ai_bloat_count}")
-    summary = ", ".join(parts)
+    return parts
+
+
+def _print_enforcement_summary(
+    *,
+    enforcement: str,
+    raw_ci_exit_code: int,
+    ci_exit_code: int,
+    blocking_changed_findings: list[object],
+) -> None:
+    """Print the enforcement decision evidence."""
+    sys.stderr.write(f"Code review enforcement: {enforcement}.\n")
+    if enforcement == "shadow" and raw_ci_exit_code == 1:
+        sys.stderr.write("Code review shadow gate: findings are evidence-only and do not block.\n")
+    elif raw_ci_exit_code == 1 and ci_exit_code == 0:
+        sys.stderr.write(
+            "Code review changed-line gate: no blocking findings target staged lines; "
+            "legacy findings remain in the JSON report.\n"
+        )
+    elif blocking_changed_findings:
+        sys.stderr.write(
+            f"Code review changed-line gate: {len(blocking_changed_findings)} blocking finding(s) target staged lines.\n"
+        )
+
+
+def _print_review_findings_summary(repo_root: Path, *, enforcement: str) -> tuple[bool, int | None, int | None]:
+    """Parse ``REVIEW_JSON_OUT``, print counts, return ``(ok, error_count, ci_exit_code)``.
+
+    Callers should use ``ci_exit_code`` as the hook exit code; ``error_count`` is informational only
+    because fixable error-severity findings may still yield a passing ``ci_exit_code``.
+    """
+    data = _load_review_report(repo_root)
+    if data is None:
+        return False, None, None
+
+    findings_raw = data.get("findings")
+    if not isinstance(findings_raw, list):
+        sys.stderr.write(f"Code review: report has no findings list in {REVIEW_JSON_OUT}.\n")
+        return False, None, None
+
+    counts = count_findings_by_severity(findings_raw)
+    ai_bloat_count = _count_ai_bloat_findings(findings_raw)
+    total = len(findings_raw)
+    verdict = data.get("overall_verdict", "?")
+    raw_ci_exit_code = _raw_ci_exit_code(data)
+    ci_exit_code, blocking_changed_findings = _enforced_exit_code(
+        repo_root, findings_raw, enforcement=enforcement, raw_ci_exit_code=raw_ci_exit_code
+    )
+    summary = ", ".join(_finding_summary_parts(counts, ai_bloat_count=ai_bloat_count))
     sys.stderr.write(f"Code review summary: {total} finding(s) ({summary}); overall_verdict={verdict!r}.\n")
+    _print_enforcement_summary(
+        enforcement=enforcement,
+        raw_ci_exit_code=raw_ci_exit_code,
+        ci_exit_code=ci_exit_code,
+        blocking_changed_findings=blocking_changed_findings,
+    )
+    report_path = _report_path(repo_root)
     abs_report = report_path.resolve()
     sys.stderr.write(f"Code review report file: {REVIEW_JSON_OUT}\n")
     sys.stderr.write(f"  absolute path: {abs_report}\n")
@@ -344,16 +509,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     repo_root = _repo_root()
-    cmd = build_review_command(specfact_files)
+    enforcement = review_enforcement_mode()
+    cmd = build_review_command(specfact_files, enforcement=enforcement)
     report_path = _prepare_report_path(repo_root)
-    result = _run_review_subprocess(cmd, repo_root, specfact_files)
+    result = _run_review_subprocess(cmd, repo_root, specfact_files, enforcement=enforcement)
     if result is None:
         return 1
     if not report_path.is_file():
         return _missing_report_exit_code(report_path, result)
     # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners); full report
     # is in REVIEW_JSON_OUT; we print a short summary on stderr below.
-    summary_ok, _error_count, ci_exit_code = _print_review_findings_summary(repo_root)
+    summary_ok, _error_count, ci_exit_code = _print_review_findings_summary(repo_root, enforcement=enforcement)
     if not summary_ok or ci_exit_code is None:
         return 1
     return int(ci_exit_code)

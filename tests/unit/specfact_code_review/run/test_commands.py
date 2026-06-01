@@ -289,6 +289,59 @@ def test_run_command_passes_simplify_focus_after_scope_resolution(monkeypatch: A
     assert recorded == {"files": [package_file], "focus": "simplify"}
 
 
+def test_run_command_passes_enforcement_mode_to_review_runtime(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    recorded: dict[str, object] = {}
+
+    def fake_run_review(files: list[Path], **kwargs: Any) -> ReviewReport:
+        recorded["files"] = files
+        recorded["review_mode"] = kwargs.get("review_mode")
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--enforcement",
+            "shadow",
+            "--json",
+            "--out",
+            "review-report.json",
+            str(package_file),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert recorded == {"files": [package_file], "review_mode": "shadow"}
+
+
+def test_run_command_maps_legacy_enforce_mode_to_full_enforcement(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    recorded: dict[str, object] = {}
+
+    def fake_run_review(files: list[Path], **kwargs: Any) -> ReviewReport:
+        recorded["review_mode"] = kwargs.get("review_mode")
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(app, ["review", "run", "--mode", "enforce", "--json", str(package_file)])
+
+    assert result.exit_code == 0
+    assert recorded == {"review_mode": "full"}
+
+
 def test_run_command_normalizes_simplify_focus_on_direct_request(monkeypatch: Any, tmp_path: Path) -> None:
     package_file = _write_repo_file(
         tmp_path,
@@ -371,6 +424,7 @@ def test_preview_fixes_adds_patch_forecast_without_mutating_tracked_file(monkeyp
             out=tmp_path / "review-report.json",
             focus_facets=("simplify",),
             preview_fixes=True,
+            review_mode="full",
         )
     )
 
@@ -400,6 +454,7 @@ def test_with_mutation_records_inconclusive_evidence_for_missing_tool(monkeypatc
             out=tmp_path / "review-report.json",
             focus_facets=("simplify",),
             with_mutation=True,
+            review_mode="full",
         )
     )
 
@@ -688,7 +743,7 @@ def test_run_review_once_applies_simplification_fixes_before_rerun(monkeypatch: 
             with_mutation=False,
             progress_callback=None,
             bug_hunt=False,
-            review_mode="enforce",
+            review_mode="full",
             review_level=None,
             review_focus="simplify",
         ),

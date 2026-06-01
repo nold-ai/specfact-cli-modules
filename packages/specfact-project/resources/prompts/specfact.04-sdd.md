@@ -28,7 +28,7 @@ Create/update SDD manifest from project bundle. Captures WHY (intent/constraints
 
 ### Target/Input
 
-- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: active plan (set via `plan select`)
+- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: explicit bundle name
 - `--sdd PATH` - Output SDD manifest path. Default: bundle-specific .specfact/projects/<bundle-name>/sdd.<format> (Phase 8.5)
 
 ### Output/Results
@@ -49,7 +49,7 @@ Create/update SDD manifest from project bundle. Captures WHY (intent/constraints
 ### Step 2: Execute CLI
 
 ```bash
-specfact project --help
+specfact govern enforce sdd <bundle-name>
 # Uses active plan if bundle not specified
 ```
 
@@ -78,7 +78,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact project --help
+specfact govern enforce sdd <bundle-name>
 ```
 
 **Capture**:
@@ -111,8 +111,8 @@ specfact project --help
 
 ```bash
 # Use enrichment to update plan via CLI, then regenerate SDD
-specfact project --help
-specfact project --help
+specfact govern enforce sdd <bundle-name>
+specfact govern enforce sdd <bundle-name>
 ```
 
 **Result**: Final SDD is CLI-generated with validated enrichments
@@ -147,7 +147,7 @@ Contracts: 15
 
 ```text
 ✗ Project bundle 'legacy-api' not found
-Create one with: specfact project --help
+Create one with: specfact code import from-code --repo . <bundle-name>
 ```
 
 ## Common Patterns

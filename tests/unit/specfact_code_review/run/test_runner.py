@@ -93,6 +93,56 @@ def _simplification_finding(
     )
 
 
+def _stub_review_tools(monkeypatch: MonkeyPatch, findings: list[ReviewFinding]) -> None:
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ruff", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_radon", lambda files: findings)
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_semgrep_bugs", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ai_bloat", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_ast_clean_code", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_basedpyright", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_pylint", lambda files: [])
+    monkeypatch.setattr("specfact_code_review.run.runner.run_contract_check", lambda files, **_: [])
+    monkeypatch.setattr("specfact_code_review.run.runner._evaluate_tdd_gate", lambda files: ([], None))
+
+
+def test_run_review_changed_enforcement_reports_legacy_blockers_without_blocking(monkeypatch: MonkeyPatch) -> None:
+    finding = _finding(tool="radon", rule="complexity", severity="error", category="kiss")
+    _stub_review_tools(monkeypatch, [finding])
+    monkeypatch.setattr("specfact_code_review.run.runner._changed_lines_from_git", lambda files: {finding.file: {99}})
+
+    report = run_review([Path(finding.file)], no_tests=True, review_mode="changed")
+
+    assert report.ci_exit_code == 0
+    assert report.overall_verdict == "PASS_WITH_ADVISORY"
+    assert report.enforcement_mode == "changed"
+    assert "legacy blocking" in (report.enforcement_summary or "")
+
+
+def test_run_review_changed_enforcement_blocks_changed_line_findings(monkeypatch: MonkeyPatch) -> None:
+    finding = _finding(tool="radon", rule="complexity", severity="error", category="kiss")
+    _stub_review_tools(monkeypatch, [finding])
+    monkeypatch.setattr("specfact_code_review.run.runner._changed_lines_from_git", lambda files: {finding.file: {10}})
+
+    report = run_review([Path(finding.file)], no_tests=True, review_mode="changed")
+
+    assert report.ci_exit_code == 1
+    assert report.overall_verdict == "FAIL"
+    assert report.enforcement_mode == "changed"
+    assert "changed lines" in (report.enforcement_summary or "")
+
+
+def test_run_review_shadow_enforcement_never_blocks(monkeypatch: MonkeyPatch) -> None:
+    finding = _finding(tool="radon", rule="complexity", severity="error", category="kiss")
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([Path(finding.file)], no_tests=True, review_mode="shadow")
+
+    assert report.ci_exit_code == 0
+    assert report.overall_verdict == "FAIL"
+    assert report.enforcement_mode == "shadow"
+
+
 def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
     calls: list[str] = []
 

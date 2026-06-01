@@ -20,7 +20,7 @@ The **Project** bundle (`nold-ai/specfact-project`) manages SpecFact **project b
 
 ## Command families
 
-The project lifecycle surface loads from this bundle across **`specfact project`**, **`specfact project`**, top-level **`specfact project sync`**, and **`specfact project --help`** (see each group’s `--help` after install). The `project` group also nests a `sync` Typer; prefer the **top-level** `specfact project sync …` entry when documented in the command reference.
+The project lifecycle surface loads from this bundle under **`specfact project`** and **`specfact project sync`**. Use each command's `--help` output after install for option-level details.
 
 ### `specfact project` — bundles and personas
 
@@ -41,20 +41,13 @@ The project lifecycle surface loads from this bundle across **`specfact project`
 | `version` | Subcommands for bundle versioning |
 | `sync` | Same sync Typer as top-level `specfact project sync` (see below) |
 
-### `specfact project` — plans, stories, and reviews
+### `specfact project version` — bundle versions
 
 | Command | Purpose |
 |--------|---------|
-| `init` | Initialize or adopt a development plan for a bundle |
-| `add-feature` / `add-story` | Add plan items |
-| `update-idea` / `update-feature` / `update-story` | Update plan content |
-| `compare` | Compare manual vs automatic plan inputs |
-| `select` | Select active plan context |
-| `upgrade` | Upgrade plan artifacts |
-| `sync` | Sync plan artifacts with repo state |
-| `promote` | Promotion workflow for plan readiness |
-| `review` | Plan review workflows |
-| `harden` | Harden SDD and related artifacts |
+| `check` | Verify bundle version metadata |
+| `bump` | Increment bundle version metadata |
+| `set` | Set bundle version metadata explicitly |
 
 ### `specfact project sync` — bridges and automation
 
@@ -66,17 +59,9 @@ Use the top-level group (`specfact project sync --help`).
 | `repository` | Repository-scoped sync operations |
 | `intelligent` | Higher-level orchestrated sync |
 
-### `specfact project --help` — structure migrations
-
-| Command | Purpose |
-|--------|---------|
-| `cleanup-legacy` | Remove empty legacy top-level directories under `.specfact/` |
-| `to-contracts` | Migrate verbose bundles toward contract-oriented layouts |
-| `artifacts` | Migrate plan and artifact layouts |
-
 ## Related: codebase import
 
-Brownfield **code import** (`specfact code import`, `specfact code import …`) lives in the [Codebase](/bundles/codebase/overview/) bundle; it often feeds project bundles. See [Import command features](../import-migration/) for behavior that spans both bundles.
+Brownfield **code import** (`specfact code import from-code`, `specfact code import from-bridge`) lives in the [Codebase](/bundles/codebase/overview/) bundle; it often feeds project bundles. See [Import command features](../import-migration/) for behavior that spans both bundles.
 
 ## Bundle-owned prompts and plan templates
 
@@ -88,9 +73,9 @@ The project prompt set includes `/specfact.08-simplify`, which reads `.specfact/
 
 ```bash
 specfact project link-backlog --adapter github --project-id owner/repo --bundle my-bundle --repo .
-specfact project --help
+specfact project health-check --project-name my-bundle --repo .
 specfact project sync bridge --help
-specfact project --help artifacts --repo .
+specfact project version check --bundle my-bundle --repo .
 ```
 
 ## See also

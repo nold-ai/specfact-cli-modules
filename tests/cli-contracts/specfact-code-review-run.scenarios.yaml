@@ -66,6 +66,28 @@ scenarios:
       exit_code: 0
       stdout_contains:
         - review-report.json
+  - name: enforcement-shadow-dirty-exit-zero
+    type: pattern
+    argv:
+      - --json
+      - --enforcement
+      - shadow
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - review-report.json
+  - name: enforcement-full-dirty-exit-nonzero
+    type: pattern
+    argv:
+      - --json
+      - --enforcement
+      - full
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 1
+      stdout_contains:
+        - review-report.json
   - name: bug-hunt-shadow-dirty-exit-zero
     type: pattern
     argv:

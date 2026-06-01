@@ -10,7 +10,7 @@ import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, cast
 from urllib.parse import urlparse
 
 import click
@@ -167,15 +167,22 @@ def _collect_click_paths(group: click.Command, prefix: CommandPath) -> set[Comma
 
 def _build_valid_command_paths() -> set[CommandPath]:
     if GENERATED_COMMANDS_PATH.is_file():
-        raw = json.loads(GENERATED_COMMANDS_PATH.read_text(encoding="utf-8"))
+        try:
+            raw = json.loads(GENERATED_COMMANDS_PATH.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid generated commands JSON at {GENERATED_COMMANDS_PATH}: {exc}") from exc
+        if not isinstance(raw, list):
+            raise ValueError(
+                f"Unexpected generated commands schema at {GENERATED_COMMANDS_PATH}: expected a JSON list."
+            )
         generated_paths: set[CommandPath] = set(CORE_COMMAND_PREFIXES)
-        if isinstance(raw, list):
-            for entry in raw:
-                if not isinstance(entry, dict):
-                    continue
-                command = entry.get("command")
-                if isinstance(command, str):
-                    generated_paths.add(tuple(command.split()))
+        for entry in raw:
+            if not isinstance(entry, dict):
+                raise ValueError(f"Unexpected generated commands entry at {GENERATED_COMMANDS_PATH}: {entry!r}")
+            command = entry.get("command")
+            if not isinstance(command, str) or not command.strip():
+                raise ValueError(f"Unexpected generated commands entry missing 'command': {entry!r}")
+            generated_paths.add(tuple(command.split()))
         return generated_paths
 
     _ensure_package_paths()
@@ -183,7 +190,7 @@ def _build_valid_command_paths() -> set[CommandPath]:
     for module_name, attr_name, prefix in MODULE_APP_MOUNTS:
         module = importlib.import_module(module_name)
         app = getattr(module, attr_name)
-        click_group = typer_get_command(app)
+        click_group = cast(click.Command, typer_get_command(app))
         paths.add(prefix)
         paths.update(_collect_click_paths(click_group, prefix))
     return paths

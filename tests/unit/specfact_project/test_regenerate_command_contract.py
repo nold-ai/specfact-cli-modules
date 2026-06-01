@@ -54,3 +54,30 @@ def test_project_regenerate_reports_typed_null_backlog_graph(
     assert "specfact backlog analyze-deps" in result.stdout
     assert "NoneType" not in result.stdout
     assert not isinstance(result.exception, AttributeError)
+
+
+def test_project_snapshot_reports_typed_null_backlog_graph(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Snapshot should share the backlog graph guard instead of dereferencing None."""
+    monkeypatch.setattr(
+        commands, "_resolve_bundle", lambda repo, bundle: ("demo", tmp_path / ".specfact/projects/demo")
+    )
+    monkeypatch.setattr(
+        commands,
+        "_load_bundle_with_progress",
+        lambda bundle_dir, validate_hashes=False: _Bundle(_Manifest(_ProjectMetadata()), ["FEATURE-1"]),
+    )
+    monkeypatch.setattr(
+        commands, "_resolve_linked_backlog_config", lambda bundle_obj: ("github", "owner/repo", "github_projects")
+    )
+    monkeypatch.setattr(commands, "_fetch_backlog_graph", lambda **kwargs: None)
+
+    result = runner.invoke(commands.app, ["snapshot", "--repo", str(tmp_path), "--bundle", "demo"])
+
+    assert result.exit_code == 1
+    assert "Backlog graph data unavailable" in result.stdout
+    assert "specfact backlog analyze-deps" in result.stdout
+    assert "NoneType" not in result.stdout
+    assert not isinstance(result.exception, AttributeError)

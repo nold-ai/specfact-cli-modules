@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tests.unit._script_test_utils import load_module_from_path
 
 
@@ -84,6 +86,26 @@ def test_command_example_is_valid_allows_root_help_but_not_unknown_subgroups() -
     assert _script_attr(script, "_command_example_is_valid")("specfact --help", valid_paths)
     assert _script_attr(script, "_command_example_is_valid")("specfact -h", valid_paths)
     assert not _script_attr(script, "_command_example_is_valid")("specfact policy validate --repo .", valid_paths)
+
+
+def test_build_valid_command_paths_rejects_malformed_generated_json(tmp_path: Path, monkeypatch) -> None:
+    script = _load_script()
+    generated = tmp_path / "commands.generated.json"
+    generated.write_text('{"command": "specfact backlog"}\n', encoding="utf-8")
+    monkeypatch.setattr(script, "GENERATED_COMMANDS_PATH", generated)
+
+    with pytest.raises(ValueError, match="expected a JSON list"):
+        _script_attr(script, "_build_valid_command_paths")()
+
+
+def test_build_valid_command_paths_rejects_malformed_generated_entries(tmp_path: Path, monkeypatch) -> None:
+    script = _load_script()
+    generated = tmp_path / "commands.generated.json"
+    generated.write_text('[{"owner_package": "specfact-backlog"}]\n', encoding="utf-8")
+    monkeypatch.setattr(script, "GENERATED_COMMANDS_PATH", generated)
+
+    with pytest.raises(ValueError, match="missing 'command'"):
+        _script_attr(script, "_build_valid_command_paths")()
 
 
 def test_validate_legacy_resource_paths_reports_stale_core_owned_paths(tmp_path: Path) -> None:

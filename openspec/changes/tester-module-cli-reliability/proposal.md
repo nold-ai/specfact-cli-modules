@@ -36,7 +36,7 @@ Modules owns the runnable command implementations, module docs, prompt resources
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **Parent Feature**: [#305](https://github.com/nold-ai/specfact-cli-modules/issues/305), plus existing module features [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161), [#147](https://github.com/nold-ai/specfact-cli-modules/issues/147), and [#234](https://github.com/nold-ai/specfact-cli-modules/issues/234)
 - **Change User Story**: [#306](https://github.com/nold-ai/specfact-cli-modules/issues/306)
-- **Source Bugs**: [nold-ai/specfact-cli#586](https://github.com/nold-ai/specfact-cli/issues/586), [#587](https://github.com/nold-ai/specfact-cli/issues/587), [#588](https://github.com/nold-ai/specfact-cli/issues/588), [#590](https://github.com/nold-ai/specfact-cli/issues/590), [#591](https://github.com/nold-ai/specfact-cli/issues/591), [#592](https://github.com/nold-ai/specfact-cli/issues/592)
+- **Source Bugs**: [nold-ai/specfact-cli#586](https://github.com/nold-ai/specfact-cli/issues/586), [#587](https://github.com/nold-ai/specfact-cli/issues/587), [#588](https://github.com/nold-ai/specfact-cli/issues/588), [#589](https://github.com/nold-ai/specfact-cli/issues/589), [#590](https://github.com/nold-ai/specfact-cli/issues/590), [#591](https://github.com/nold-ai/specfact-cli/issues/591), [#592](https://github.com/nold-ai/specfact-cli/issues/592)
 - **Paired Core Change**: `tester-cli-reliability`, tracked by [nold-ai/specfact-cli#594](https://github.com/nold-ai/specfact-cli/issues/594)
 - **Repository**: nold-ai/specfact-cli-modules
 - **Last Synced Status**: GitHub feature and story created; project/parent fields may need project-board field sync if CLI auth lacks project scope.
