@@ -163,6 +163,19 @@ def test_docs_review_workflow_runs_docs_command_validation() -> None:
     assert "tests/unit/docs/test_code_review_docs_parity.py" in workflow
 
 
+def test_docs_review_workflow_uses_matching_core_branch_when_available() -> None:
+    workflow = (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8")
+
+    assert "id: core-ref" in workflow
+    assert "git ls-remote --exit-code --heads https://github.com/nold-ai/specfact-cli.git" in workflow
+    assert "FALLBACK_REF: ${{ github.base_ref || github.ref_name }}" in workflow
+    assert 'echo "ref=$fallback" >> "$GITHUB_OUTPUT"' in workflow
+    assert "ref: ${{ steps.core-ref.outputs.ref }}" in workflow
+    assert (
+        "ref: ${{ (github.ref == 'refs/heads/main' || github.head_ref == 'main') && 'main' || 'dev' }}" not in workflow
+    )
+
+
 def test_iter_validation_docs_paths_scans_repo_wide_docs_tree() -> None:
     script = _load_script()
 

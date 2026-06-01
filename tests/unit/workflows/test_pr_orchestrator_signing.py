@@ -39,7 +39,14 @@ def test_pr_orchestrator_installs_pinned_specfact_cli() -> None:
     workflow = _workflow_text()
     assert "actions/checkout@v4" in workflow
     assert "repository: nold-ai/specfact-cli" in workflow
+    assert "id: core-ref" in workflow
+    assert "git ls-remote --exit-code --heads https://github.com/nold-ai/specfact-cli.git" in workflow
+    assert "FALLBACK_REF: ${{ github.base_ref || github.ref_name }}" in workflow
+    assert 'echo "ref=$fallback" >> "$GITHUB_OUTPUT"' in workflow
+    assert "ref: ${{ steps.core-ref.outputs.ref }}" in workflow
+    assert "ref: dev" not in workflow
     assert "hatch run pip install -e ./specfact-cli" in workflow
+    assert "hatch run python specfact-cli/scripts/runtime_discovery_smoke.py" in workflow
 
 
 def test_pr_orchestrator_has_single_full_pytest_owner() -> None:

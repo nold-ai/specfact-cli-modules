@@ -38,6 +38,8 @@ _REQUIRED_SCRIPT_FRAGMENTS = (
     "run_docs_site_validation_gate",
     "hatch run python scripts/check-docs-commands.py",
     "needs_docs_site_validation",
+    "Command overview inputs have unstaged changes",
+    "git diff --name-only -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml",
     "usage_error",
     "show_help",
     "also: -h | --help | help",

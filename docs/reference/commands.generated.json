@@ -87,7 +87,7 @@
   },
   {
     "arguments": [],
-    "bare_invocation": "executes",
+    "bare_invocation": "requires-subcommand",
     "command": "specfact backlog auth",
     "deprecated": false,
     "hidden": false,

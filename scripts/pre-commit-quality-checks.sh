@@ -78,7 +78,7 @@ staged_docs_validation_paths() {
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
     case "${line}" in
-      docs/*|*.md|requirements-docs-ci.txt|scripts/check-docs-commands.py|scripts/check-command-contract.py|scripts/docs_site_validation.py|scripts/generate-command-overview.py|llms.txt|docs/reference/commands.generated.*)
+      docs/*|*.md|requirements-docs-ci.txt|scripts/check-docs-commands.py|scripts/check-command-contract.py|scripts/docs_site_validation.py|scripts/generate-command-overview.py|llms.txt)
         printf '%s\n' "${line}"
         ;;
     esac
@@ -162,6 +162,19 @@ run_prompt_command_validation_gate() {
 run_command_overview_validation_gate() {
   if ! needs_docs_site_validation && ! needs_prompt_command_validation; then
     return 0
+  fi
+  local unstaged_inputs
+  unstaged_inputs="$(
+    {
+      git diff --name-only -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml
+      git ls-files --others --exclude-standard -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml
+    } | sort -u
+  )"
+  if [[ -n "${unstaged_inputs}" ]]; then
+    error "❌ Command overview inputs have unstaged changes; refusing to auto-stage generated artifacts"
+    warn "Stage or stash these paths before committing:"
+    printf '%s\n' "${unstaged_inputs}" >&2
+    exit 1
   fi
   info "📄 Command overview validation — regenerating current AI command artifacts"
   if hatch run generate-command-overview; then

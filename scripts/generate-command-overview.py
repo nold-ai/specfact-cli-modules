@@ -103,11 +103,30 @@ def _command_children(command: click.Command) -> dict[str, click.Command]:
 
 def _bare_invocation(command: click.Command) -> str:
     is_group = hasattr(command, "list_commands") and hasattr(command, "get_command")
-    if is_group and bool(getattr(command, "invoke_without_command", False)):
+    if is_group and bool(getattr(command, "invoke_without_command", False)) and _has_bare_business_parameters(command):
         return "executes"
     if is_group:
         return "requires-subcommand"
     return "executes"
+
+
+def _has_bare_business_parameters(command: click.Command) -> bool:
+    ignored_options = {
+        "--help",
+        "-h",
+        "--help-advanced",
+        "-ha",
+        "--install-completion",
+        "--show-completion",
+    }
+    for param in command.params:
+        if not hasattr(param, "opts") and hasattr(param, "human_readable_name"):
+            return True
+        if hasattr(param, "opts"):
+            opts = set(param.opts) | set(param.secondary_opts)
+            if opts and opts.isdisjoint(ignored_options):
+                return True
+    return False
 
 
 def _walk(command: click.Command, path: tuple[str, ...], source: str, module_id: str) -> list[dict[str, Any]]:

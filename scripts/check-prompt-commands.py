@@ -105,7 +105,7 @@ def _load_texts(paths: Iterable[Path]) -> dict[Path, str]:
 def _command_options(command: click.Command) -> set[str]:
     options: set[str] = set()
     for param in command.params:
-        if isinstance(param, click.Option):
+        if hasattr(param, "opts"):
             options.update(opt for opt in param.opts if opt.startswith("--"))
             options.update(opt for opt in param.secondary_opts if opt.startswith("--"))
     return options
@@ -114,9 +114,10 @@ def _command_options(command: click.Command) -> set[str]:
 def _collect_click_index(command: click.Command, prefix: tuple[str, ...], index: CommandIndex) -> None:
     index.command_paths.add(prefix)
     index.options_by_path.setdefault(prefix, set()).update(_command_options(command))
-    if not isinstance(command, click.Group):
+    children = getattr(command, "commands", None)
+    if not isinstance(children, dict):
         return
-    for name, child in command.commands.items():
+    for name, child in children.items():
         _collect_click_index(child, (*prefix, name), index)
 
 

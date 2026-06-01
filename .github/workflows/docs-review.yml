@@ -58,12 +58,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Resolve paired core command sources ref
+        id: core-ref
+        shell: bash
+        env:
+          CANDIDATE_REF: ${{ github.head_ref || github.ref_name }}
+          FALLBACK_REF: ${{ github.base_ref || github.ref_name }}
+        run: |
+          candidate="${CANDIDATE_REF}"
+          if [ -n "$candidate" ] && git ls-remote --exit-code --heads https://github.com/nold-ai/specfact-cli.git "$candidate" >/dev/null 2>&1; then
+            echo "ref=$candidate" >> "$GITHUB_OUTPUT"
+          else
+            fallback="${FALLBACK_REF:-dev}"
+            case "$fallback" in
+              main|dev) ;;
+              *) fallback="dev" ;;
+            esac
+            echo "ref=$fallback" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout paired core command sources
         uses: actions/checkout@v4
         with:
           repository: nold-ai/specfact-cli
           path: specfact-cli
-          ref: ${{ (github.ref == 'refs/heads/main' || github.head_ref == 'main') && 'main' || 'dev' }}
+          ref: ${{ steps.core-ref.outputs.ref }}
+          persist-credentials: false
 
       - name: Export paired core source path
         run: echo "SPECFACT_CLI_REPO=${GITHUB_WORKSPACE}/specfact-cli" >> "$GITHUB_ENV"

@@ -282,6 +282,18 @@ def test_module_app_mounts_do_not_include_removed_flat_shims() -> None:
     assert ("specfact", "migrate") not in prefixes
 
 
+def test_build_command_index_descends_into_typer_groups() -> None:
+    script = _load_script()
+
+    index = script._build_command_index()
+
+    assert ("specfact", "backlog", "add") in index.command_paths
+    assert ("specfact", "project", "sync", "bridge") in index.command_paths
+    assert ("specfact", "code", "import") in index.command_paths
+    assert "--repo" in index.options_by_path[("specfact", "code", "import")]
+    assert "--adapter" in index.options_by_path[("specfact", "project", "sync", "bridge")]
+
+
 def test_docs_review_workflow_runs_prompt_command_validation() -> None:
     workflow = DOCS_REVIEW_WORKFLOW.read_text(encoding="utf-8")
 

@@ -80,3 +80,20 @@
 
 - Full `smart-test` was not rerun after narrowing the PR workflow, because the targeted workflow regression suite and scoped `contract-test` now verify the duplicate full-suite behavior directly.
 - Refactoring the 161 remaining legacy modules code-review blockers requires a separate broad cleanup change across `specfact-project`, `specfact-codebase`, `specfact-govern`, and `specfact-spec`; doing that inside the tester command reliability patch would change unrelated command internals with high regression risk.
+
+## Follow-up Review Fixes
+
+- Addressed follow-up CI/review findings:
+  - Docs review and PR orchestrator workflows now resolve a matching paired `specfact-cli` branch when present, falling back to the PR base branch (`main` or `dev`) and then `dev`.
+  - Touched checkout steps set `persist-credentials: false`.
+  - Runtime discovery smoke in modules CI now runs via `hatch run python specfact-cli/scripts/runtime_discovery_smoke.py` so the paired core script can import its dependencies.
+  - Generated command overview no longer marks callback-only help/error groups such as `specfact backlog auth` as executable, while preserving executable callback groups such as `specfact code import` and `specfact code repro`.
+  - Prompt command validation now indexes nested Typer groups and Typer option metadata by attribute, matching the generated command overview behavior.
+  - Pre-commit refuses to auto-stage generated command artifacts when command overview inputs have unstaged changes.
+  - `tasks.md` quality/review checklist now matches the recorded evidence and documented review exception.
+- Follow-up verification:
+  - `hatch run pytest tests/unit/test_check_prompt_commands_script.py tests/unit/workflows/test_pr_orchestrator_signing.py tests/unit/test_check_docs_commands_script.py tests/unit/test_pre_commit_quality_parity.py -q` -> 39 passed.
+  - `hatch run yaml-lint && hatch run check-command-overview && hatch run check-command-contract && hatch run python scripts/check-docs-commands.py && hatch run python scripts/check-prompt-commands.py && openspec validate tester-module-cli-reliability --strict` -> passed.
+  - `hatch run python /home/dom/git/nold-ai/specfact-cli-worktrees/feature/tester-command-reliability/scripts/runtime_discovery_smoke.py --modules-repo /home/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/tester-command-reliability --launcher pipx --launcher uv-run --launcher uvx` -> passed for all three remaining package-manager launchers.
+  - `hatch run format` -> passed.
+  - `hatch run lint` -> failed on an existing unrelated type mismatch in `tests/unit/specfact_backlog/conftest.py` (`typer.testing.Result` vs `click.testing.Result`); none of the follow-up edits touched that file. Focused touched-scope tests and validators above pass.
