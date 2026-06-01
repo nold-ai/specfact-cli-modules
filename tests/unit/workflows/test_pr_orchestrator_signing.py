@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -36,7 +37,27 @@ def test_pr_orchestrator_push_uses_github_event_before_for_version_base() -> Non
 
 def test_pr_orchestrator_installs_pinned_specfact_cli() -> None:
     workflow = _workflow_text()
-    assert 'hatch run pip install "specfact-cli==0.46.2"' in workflow
+    assert "actions/checkout@v4" in workflow
+    assert "repository: nold-ai/specfact-cli" in workflow
+    assert "id: core-ref" in workflow
+    assert "git ls-remote --exit-code --heads https://github.com/nold-ai/specfact-cli.git" in workflow
+    assert "FALLBACK_REF: ${{ github.base_ref || github.ref_name }}" in workflow
+    assert 'echo "ref=$fallback" >> "$GITHUB_OUTPUT"' in workflow
+    assert "ref: ${{ steps.core-ref.outputs.ref }}" in workflow
+    assert "ref: dev" not in workflow
+    assert "hatch run pip install -e ./specfact-cli" in workflow
+    assert "hatch run python specfact-cli/scripts/runtime_discovery_smoke.py" in workflow
+
+
+def test_pr_orchestrator_has_single_full_pytest_owner() -> None:
+    workflow = _workflow_text()
+    assert "hatch run contract-test-contracts" in workflow
+    assert "hatch run smart-test-check" in workflow
+    assert "hatch run test" in workflow
+    assert "hatch run contract-test\n" not in workflow
+    assert "hatch run smart-test\n" not in workflow
+    full_suite_runs = re.findall(r"run:\s+hatch run (test|smart-test(?:-full)?|contract-test)(?!-)\b", workflow)
+    assert full_suite_runs == ["test"]
 
 
 def test_pr_orchestrator_verify_require_signature_on_main_paths() -> None:

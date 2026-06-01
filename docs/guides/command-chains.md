@@ -26,7 +26,7 @@ Related: [AI IDE workflow](/ai-ide-workflow/)
 ## 2. Brownfield intake and contract discovery
 
 ```bash
-specfact code import legacy-api --repo .
+specfact code import --repo . legacy-api
 specfact code analyze contracts --repo . --bundle legacy-api
 specfact spec validate --bundle legacy-api --force
 ```
@@ -40,7 +40,7 @@ Related: [Brownfield modernization](/guides/brownfield-modernization/)
 ```bash
 specfact backlog ceremony refinement github --preview --labels feature
 specfact backlog verify-readiness --adapter github --project-id owner/repo --target-items 123
-specfact sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+specfact project sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
 ```
 
 Use this chain when backlog items must be standardized and readiness-checked before you export or sync them into project artifacts.
@@ -63,7 +63,7 @@ Related: [Contract testing workflow](/contract-testing-workflow/)
 
 ```bash
 specfact backlog ceremony standup github
-specfact code review run docs/guides/cross-module-chains.md --no-tests
+specfact code review run --enforcement changed docs/guides/cross-module-chains.md --no-tests
 specfact govern enforce sdd legacy-api --no-interactive
 ```
 

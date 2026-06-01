@@ -51,8 +51,8 @@ Compare two project bundles (or legacy plan bundles) to detect deviations, misma
 ### Step 2: Execute CLI
 
 ```bash
-specfact plan compare [--bundle <bundle-name>] [--manual <path>] [--auto <path>] [--code-vs-plan] [--output-format <format>] [--out <path>]
-# --bundle defaults to active plan if not specified
+specfact project health-check --repo . --project-name <bundle-name>
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 ### Step 3: Present Results
@@ -81,15 +81,16 @@ When in copilot mode, follow this three-phase workflow:
 ### Phase 1: CLI Grounding (REQUIRED)
 
 ```bash
-# Execute CLI to get structured output
-specfact plan compare [--bundle <name>] [options]
+# Execute CLI to get structured project state
+specfact project health-check --repo . --project-name <bundle-name>
+specfact project export --repo . --bundle <bundle-name> --stdout
 ```
 
 **Capture**:
 
-- CLI-generated comparison report
-- Deviation counts and severity
-- Missing features analysis
+- CLI-generated project health status
+- Exported project bundle content
+- Any missing or invalid project metadata
 
 ### Phase 2: LLM Enrichment (OPTIONAL, Copilot Only)
 
@@ -114,9 +115,9 @@ specfact plan compare [--bundle <name>] [options]
 ### Phase 3: CLI Artifact Creation (REQUIRED)
 
 ```bash
-# Apply fixes via CLI commands, then re-compare
-specfact plan update-feature [--bundle <name>] [options]
-specfact plan compare [--bundle <name>]
+# Apply fixes via CLI commands, then validate current project state
+specfact code import from-code --repo . <bundle-name>
+specfact project health-check --repo . --project-name <bundle-name>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated fixes
@@ -146,7 +147,7 @@ Missing in Auto Plan: 1 feature
 
 ```text
 ✗ Default manual plan not found: .specfact/plans/main.bundle.yaml
-Create one with: specfact plan init --interactive
+Create one with: specfact code import from-code --repo . <bundle-name>
 ```
 
 ## Common Patterns

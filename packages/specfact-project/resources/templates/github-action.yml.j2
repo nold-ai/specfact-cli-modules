@@ -24,4 +24,8 @@ jobs:
         run: pip install specfact-cli
 
       - name: Run validation
-        run: specfact validate --repo . --name "{{ repo_name }}"
+        run: |
+          # Operating guidance only, not the source of truth. CLI help is authoritative.
+          # If this command drifts, inspect `specfact project health-check --help`
+          # and ask the user if no safe correction is clear.
+          specfact project health-check --repo . --project-name "{{ repo_name }}"

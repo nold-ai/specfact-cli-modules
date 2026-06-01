@@ -67,6 +67,7 @@ _PR_CONTEXT_ENVS = (
 _CLEAN_CODE_CONTEXT_HINTS = ("clean code", "naming", "kiss", "yagni", "dry", "solid", "complexity")
 _TARGETED_TEST_TIMEOUT = int(os.environ.get("SPECFACT_CODE_REVIEW_TARGETED_TEST_TIMEOUT", "120"))
 ReviewFocus = Literal["simplify"]
+ReviewEnforcementMode = Literal["full", "changed", "shadow"]
 
 
 @dataclass(frozen=True)
@@ -78,7 +79,7 @@ class ReviewOptions:
     progress_callback: Callable[[str], None] | None = None
     bug_hunt: bool = False
     review_level: Literal["error", "warning"] | None = None
-    review_mode: Literal["shadow", "enforce"] = "enforce"
+    review_mode: ReviewEnforcementMode = "full"
     focus: ReviewFocus | None = None
 
 
@@ -225,6 +226,126 @@ def _summary_for_findings(findings: list[ReviewFinding]) -> str:
 
 def _is_test_file(file_path: str | Path) -> bool:
     return "tests" in Path(file_path).parts
+
+
+def _normalize_report_path(raw_path: str | Path) -> str:
+    path = Path(raw_path)
+    return path.as_posix()
+
+
+def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]]:
+    """Return added new-file line numbers from a zero-context git diff."""
+    changed_lines: dict[str, set[int]] = {}
+    current_file: str | None = None
+    for line in diff_text.splitlines():
+        if line.startswith("+++ "):
+            destination = line[4:].strip()
+            current_file = None if destination == "/dev/null" else destination.removeprefix("b/")
+            if current_file is not None:
+                changed_lines.setdefault(current_file, set())
+            continue
+        if current_file is None or not line.startswith("@@ "):
+            continue
+        match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+        if match is None:
+            continue
+        start = int(match.group(1))
+        count = int(match.group(2) or "1")
+        if count > 0:
+            changed_lines[current_file].update(range(start, start + count))
+    return changed_lines
+
+
+def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]]:
+    """Collect changed line numbers for changed enforcement evidence."""
+    diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
+    command = ["git", "diff", "--unified=0", "--no-ext-diff"]
+    if diff_mode == "cached":
+        command.append("--cached")
+    else:
+        command.append("HEAD")
+    if files:
+        command.extend(["--", *(str(file_path) for file_path in files)])
+    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
+    if result.returncode != 0:
+        return {}
+    changed_lines = _parse_added_lines_from_diff(result.stdout)
+    for file_path in files:
+        if not file_path.exists():
+            continue
+        relative = _normalize_report_path(file_path)
+        if relative in changed_lines:
+            continue
+        try:
+            listed = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard", "--", str(file_path)],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+        except subprocess.SubprocessError:
+            continue
+        if listed.returncode == 0 and listed.stdout.strip():
+            try:
+                line_count = len(file_path.read_text(encoding="utf-8").splitlines())
+            except (OSError, UnicodeDecodeError):
+                continue
+            changed_lines[relative] = set(range(1, line_count + 1))
+    return changed_lines
+
+
+def _finding_targets_changed_line(finding: ReviewFinding, changed_lines: dict[str, set[int]]) -> bool:
+    """Return whether a finding points at a changed line."""
+    line_numbers = changed_lines.get(_normalize_report_path(finding.file))
+    if not line_numbers:
+        return False
+    return finding.line in line_numbers
+
+
+def _with_enforcement(report: ReviewReport, *, mode: ReviewEnforcementMode, files: list[Path]) -> ReviewReport:
+    """Apply enforcement mode to report exit code while preserving all findings as evidence."""
+    if mode == "full":
+        return report.model_copy(
+            update={
+                "enforcement_mode": "full",
+                "enforcement_summary": "Full enforcement blocks on any blocking finding in the reviewed files.",
+            }
+        )
+    if mode == "shadow":
+        return report.model_copy(
+            update={
+                "ci_exit_code": 0,
+                "enforcement_mode": "shadow",
+                "enforcement_summary": "Shadow enforcement records findings as evidence and never blocks CI.",
+            }
+        )
+    changed_lines = _changed_lines_from_git(files)
+    blocking_changed = [
+        finding
+        for finding in report.findings
+        if finding.is_blocking() and _finding_targets_changed_line(finding, changed_lines)
+    ]
+    if blocking_changed:
+        summary = f"Changed enforcement blocks on {len(blocking_changed)} blocking finding(s) on changed lines."
+        return report.model_copy(
+            update={"ci_exit_code": 1, "enforcement_mode": "changed", "enforcement_summary": summary}
+        )
+    legacy_blocking = sum(finding.is_blocking() for finding in report.findings)
+    summary = (
+        "Changed enforcement found no blocking findings on changed lines."
+        if legacy_blocking == 0
+        else f"Changed enforcement found no blocking findings on changed lines; {legacy_blocking} legacy blocking finding(s) remain as evidence."
+    )
+    verdict = "PASS" if not report.findings else "PASS_WITH_ADVISORY"
+    return report.model_copy(
+        update={
+            "overall_verdict": verdict,
+            "ci_exit_code": 0,
+            "enforcement_mode": "changed",
+            "enforcement_summary": summary,
+        }
+    )
 
 
 def _suppress_known_noise(findings: list[ReviewFinding]) -> list[ReviewFinding]:
@@ -865,9 +986,11 @@ def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[s
     review_level = overrides.get("review_level")
     if review_level not in {"error", "warning", None}:
         raise TypeError("review_level must be one of error, warning, or None")
-    review_mode = overrides.get("review_mode", "enforce")
-    if review_mode not in {"shadow", "enforce"}:
-        raise TypeError("review_mode must be one of shadow or enforce")
+    review_mode = overrides.get("review_mode", "full")
+    if review_mode not in {"full", "changed", "shadow", "enforce"}:
+        raise TypeError("review_mode must be one of full, changed, shadow, or enforce")
+    if review_mode == "enforce":
+        review_mode = "full"
     focus = overrides.get("focus")
     if focus not in {"simplify", None}:
         raise TypeError("focus must be simplify or None")
@@ -877,7 +1000,7 @@ def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[s
         progress_callback=cast(Callable[[str], None] | None, progress_callback),
         bug_hunt=bug_hunt,
         review_level=cast(Literal["error", "warning"] | None, review_level),
-        review_mode=cast(Literal["shadow", "enforce"], review_mode),
+        review_mode=cast(ReviewEnforcementMode, review_mode),
         focus=cast(ReviewFocus | None, focus),
     )
 
@@ -962,10 +1085,10 @@ def run_review(
         summary=_summary_for_findings(findings),
         cleanup_forecast=cleanup_forecast,
     )
-    if review_options.review_mode == "shadow":
-        return report.model_copy(update={"ci_exit_code": 0})
+    report = _with_enforcement(report, mode=review_options.review_mode, files=files)
     if (
         review_options.focus == "simplify"
+        and review_options.review_mode == "full"
         and report.simplification_summary is not None
         and report.simplification_summary.blocking_simplification_count > 0
     ):

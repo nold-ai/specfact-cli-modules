@@ -172,7 +172,7 @@ def sync_spec_kit(
     """
     Compatibility helper for callers that previously imported `sync_spec_kit`.
 
-    Delegates to `sync bridge --adapter speckit` with concrete Python defaults,
+    Delegates to `project sync bridge --adapter speckit` with concrete Python defaults,
     avoiding direct invocation of Typer `OptionInfo` defaults.
     """
     bundle = _extract_bundle_name_from_plan_path(plan) if plan is not None else None
@@ -570,37 +570,37 @@ def sync_bridge(
 
     **Basic Examples:**
 
-        specfact sync bridge --adapter speckit --repo . --bidirectional
-        specfact sync bridge --adapter openspec --repo . --mode read-only  # OpenSpec → SpecFact (read-only)
-        specfact sync bridge --adapter openspec --repo . --external-base-path ../other-repo  # Cross-repo OpenSpec
-        specfact sync bridge --repo . --bidirectional  # Auto-detect adapter
-        specfact sync bridge --repo . --watch --interval 10
+        specfact project sync bridge --adapter speckit --repo . --bidirectional
+        specfact project sync bridge --adapter openspec --repo . --mode read-only  # OpenSpec → SpecFact (read-only)
+        specfact project sync bridge --adapter openspec --repo . --external-base-path ../other-repo  # Cross-repo OpenSpec
+        specfact project sync bridge --repo . --bidirectional  # Auto-detect adapter
+        specfact project sync bridge --repo . --watch --interval 10
 
     **GitHub Examples:**
 
-        specfact sync bridge --adapter github --bidirectional --repo-owner owner --repo-name repo  # Bidirectional sync
-        specfact sync bridge --adapter github --mode export-only --repo-owner owner --repo-name repo  # Export only
-        specfact sync bridge --adapter github --update-existing  # Update existing issues when content changes
-        specfact sync bridge --adapter github --track-code-changes  # Detect code changes and add progress comments
-        specfact sync bridge --adapter github --add-progress-comment  # Add manual progress comment
+        specfact project sync bridge --adapter github --bidirectional --repo-owner owner --repo-name repo  # Bidirectional sync
+        specfact project sync bridge --adapter github --mode export-only --repo-owner owner --repo-name repo  # Export only
+        specfact project sync bridge --adapter github --update-existing  # Update existing issues when content changes
+        specfact project sync bridge --adapter github --track-code-changes  # Detect code changes and add progress comments
+        specfact project sync bridge --adapter github --add-progress-comment  # Add manual progress comment
 
     **Azure DevOps Examples:**
 
-        specfact sync bridge --adapter ado --bidirectional --ado-org myorg --ado-project myproject  # Bidirectional sync
-        specfact sync bridge --adapter ado --mode export-only --ado-org myorg --ado-project myproject  # Export only
-        specfact sync bridge --adapter ado --mode export-only --ado-org myorg --ado-project myproject --bundle main  # Bundle export
+        specfact project sync bridge --adapter ado --bidirectional --ado-org myorg --ado-project myproject  # Bidirectional sync
+        specfact project sync bridge --adapter ado --mode export-only --ado-org myorg --ado-project myproject  # Export only
+        specfact project sync bridge --adapter ado --mode export-only --ado-org myorg --ado-project myproject --bundle main  # Bundle export
 
     **Cross-Adapter Sync Examples:**
 
         # GitHub → ADO Migration (lossless round-trip)
-        specfact sync bridge --adapter github --mode bidirectional --bundle migration --backlog-ids 123
+        specfact project sync bridge --adapter github --mode bidirectional --bundle migration --backlog-ids 123
         # Output shows: "✓ Imported GitHub issue #123 as change proposal: add-feature-x"
-        specfact sync bridge --adapter ado --mode export-only --bundle migration --change-ids add-feature-x
+        specfact project sync bridge --adapter ado --mode export-only --bundle migration --change-ids add-feature-x
 
         # Multi-Tool Workflow (public GitHub + internal ADO)
-        specfact sync bridge --adapter github --mode export-only --sanitize  # Export to public GitHub
-        specfact sync bridge --adapter github --mode bidirectional --bundle internal --backlog-ids 123  # Import to bundle
-        specfact sync bridge --adapter ado --mode export-only --bundle internal --change-ids <change-id>  # Export to ADO
+        specfact project sync bridge --adapter github --mode export-only --sanitize  # Export to public GitHub
+        specfact project sync bridge --adapter github --mode bidirectional --bundle internal --backlog-ids 123  # Import to bundle
+        specfact project sync bridge --adapter ado --mode export-only --bundle internal --change-ids <change-id>  # Export to ADO
 
     **Finding Change IDs:**
 

@@ -28,7 +28,7 @@ Manage project bundles: initialize, add features/stories, update metadata (idea/
 
 ### Target/Input
 
-- `--bundle NAME` - Project bundle name (optional, defaults to active plan set via `plan select`)
+- `--bundle NAME` - Project bundle name (optional, defaults to explicit bundle name)
 - `--key KEY` - Feature/story key (e.g., FEATURE-001, STORY-001)
 - `--feature KEY` - Parent feature key (for story operations)
 
@@ -60,12 +60,12 @@ Manage project bundles: initialize, add features/stories, update metadata (idea/
 ### Step 2: Execute CLI
 
 ```bash
-specfact plan init <bundle-name> [--interactive/--no-interactive] [--scaffold/--no-scaffold]
-specfact plan add-feature [--bundle <name>] --key <key> --title <title> [--outcomes <outcomes>] [--acceptance <acceptance>]
-specfact plan add-story [--bundle <name>] --feature <feature-key> --key <story-key> --title <title> [--acceptance <acceptance>]
-specfact plan update-idea [--bundle <name>] [--title <title>] [--narrative <narrative>] [--target-users <users>] [--value-hypothesis <hypothesis>] [--constraints <constraints>]
-specfact plan update-feature [--bundle <name>] --key <key> [--title <title>] [--outcomes <outcomes>] [--acceptance <acceptance>] [--constraints <constraints>] [--confidence <score>] [--draft/--no-draft]
-specfact plan update-story [--bundle <name>] --feature <feature-key> --key <story-key> [--title <title>] [--acceptance <acceptance>] [--story-points <points>] [--value-points <points>] [--confidence <score>] [--draft/--no-draft]
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
+specfact code import from-code --repo . <bundle-name>
 # --bundle defaults to active plan if not specified
 ```
 
@@ -95,7 +95,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact plan <operation> [--bundle <name>] [options]
+specfact code import from-code --repo . <bundle-name>
 ```
 
 **Capture**:
@@ -132,9 +132,9 @@ specfact plan <operation> [--bundle <name>] [options]
 
 ```bash
 # Use enrichment to update plan via CLI
-specfact plan update-feature [--bundle <name>] --key <key> [options]
+specfact code import from-code --repo . <bundle-name>
 # Or use batch updates:
-specfact plan update-feature [--bundle <name>] --batch-updates <updates.json>
+specfact code import from-code --repo . <bundle-name>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated enrichments
@@ -161,8 +161,8 @@ Outcomes: Secure login, Session management
 ## Error (Missing Bundle)
 
 ```text
-✗ Project bundle name is required (or set active plan with 'plan select')
-Usage: specfact plan <operation> [--bundle <name>] [options]
+✗ Project bundle name is required (or set explicit bundle name)
+Usage: specfact code import from-code --repo . <bundle-name>
 ```
 
 ## Common Patterns

@@ -64,3 +64,17 @@ def test_auth_clear_with_provider_calls_clear_token(monkeypatch) -> None:
 
     assert result.exit_code == 0
     assert captured["provider"] == "github"
+
+
+def test_auth_without_subcommand_shows_help_and_missing_subcommand() -> None:
+    backlog_app = importlib.import_module("specfact_backlog.backlog.commands").app
+
+    result = runner.invoke(backlog_app, ["auth"])
+
+    assert result.exit_code != 0
+    output = result.stdout.lower()
+    assert "usage:" in output
+    assert "azure-devops" in output
+    assert "github" in output
+    assert "status" in output
+    assert "subcommand" in output

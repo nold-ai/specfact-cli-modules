@@ -30,8 +30,22 @@ DEFAULT_GITHUB_API_URL = "https://api.github.com"
 DEFAULT_GITHUB_SCOPES = "repo read:project project"
 DEFAULT_GITHUB_CLIENT_ID = "Ov23lizkVHsbEIjZKvRD"
 
-auth_app = typer.Typer(help="Authenticate backlog providers (Azure DevOps and GitHub)")
+auth_app = typer.Typer(
+    help="Authenticate backlog providers (Azure DevOps and GitHub)",
+    invoke_without_command=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
 console = Console()
+
+
+@auth_app.callback(invoke_without_command=True)
+def auth_group(ctx: typer.Context) -> None:
+    """Authenticate backlog providers (Azure DevOps and GitHub)."""
+    if ctx.invoked_subcommand is not None:
+        return
+    typer.echo(ctx.get_help())
+    typer.echo("\nError: Missing subcommand. Choose one of: azure-devops, github, status, clear.")
+    raise typer.Exit(2)
 
 
 @beartype

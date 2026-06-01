@@ -34,7 +34,7 @@ def _pso_detect_adapter(repo: Path, adapter_type: AdapterType, console: Any) -> 
     if not adapter_instance.detect(repo, None):
         console.print(f"[bold red]✗[/bold red] Not a {adapter_type.value} repository")
         console.print(f"[dim]Expected: {adapter_type.value} structure[/dim]")
-        console.print("[dim]Tip: Use 'specfact sync bridge probe' to auto-detect tool configuration[/dim]")
+        console.print("[dim]Tip: Use 'specfact project sync bridge probe' to auto-detect tool configuration[/dim]")
         raise typer.Exit(1)
     console.print(f"[bold green]✓[/bold green] Detected {adapter_type.value} repository")
     return adapter_instance
@@ -53,7 +53,7 @@ def _pso_validate_constitution_required(
     console.print("\n[bold yellow]Next Steps:[/bold yellow]")
     console.print("1. Run 'specfact sdd constitution bootstrap --repo .' to auto-generate constitution")
     console.print("2. Or run tool-specific constitution command in your AI assistant")
-    console.print("3. Then run 'specfact sync bridge --adapter <adapter>' again")
+    console.print("3. Then run 'specfact project sync bridge --adapter <adapter>' again")
     raise typer.Exit(1)
 
 
@@ -130,7 +130,7 @@ def _pso_require_features_for_uni(
     )
     console.print("\n[bold yellow]Next Steps:[/bold yellow]")
     console.print(f"1. Create feature specifications in your {adapter_type.value} project")
-    console.print(f"2. Then run 'specfact sync bridge --adapter {adapter_type.value}' again")
+    console.print(f"2. Then run 'specfact project sync bridge --adapter {adapter_type.value}' again")
     console.print(
         f"\n[dim]Note: For bidirectional sync, {adapter_type.value} artifacts are optional if syncing from SpecFact → {adapter_type.value}[/dim]"
     )

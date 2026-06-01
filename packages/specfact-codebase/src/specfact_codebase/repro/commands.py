@@ -7,11 +7,11 @@ including linting, type checking, contract exploration, and tests.
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 import typer
 from beartype import beartype
-from click import Context as ClickContext
 from icontract import require
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
@@ -75,14 +75,9 @@ def _update_pyproject_crosshair_config(pyproject_path: Path, config: dict[str, i
 
         except ImportError:
             # Fallback: use tomllib/tomli to read, then append section manually
-            try:
-                import tomllib
-            except ImportError:
-                try:
-                    import tomli as tomllib  # noqa: F401
-                except ImportError:
-                    console.print("[red]Error:[/red] No TOML library available (need tomlkit, tomllib, or tomli)")
-                    return False
+            if importlib.util.find_spec("tomllib") is None and importlib.util.find_spec("tomli") is None:
+                console.print("[red]Error:[/red] No TOML library available (need tomlkit, tomllib, or tomli)")
+                return False
 
             # Read existing content
             existing_content = ""
@@ -135,7 +130,7 @@ def _count_python_files(path: Path) -> int:
 # CrossHair: Skip analysis for Typer-decorated functions (signature analysis limitation)
 # type: ignore[crosshair]
 def main(
-    ctx: ClickContext,
+    ctx: typer.Context,
     # Target/Input
     repo: Path = typer.Option(
         Path("."),

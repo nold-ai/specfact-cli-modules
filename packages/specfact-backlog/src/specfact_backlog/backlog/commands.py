@@ -329,13 +329,12 @@ def _invoke_optional_ceremony_delegate(
     raise typer.Exit(code=2)
 
 
-@beartype
 @ceremony_app.command(
     "standup",
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 def ceremony_standup(
-    ctx: click.Context,
+    ctx: typer.Context,
     adapter: str = typer.Argument(..., help="Backlog adapter name (github, ado, etc.)"),
     mode: str = typer.Option("scrum", "--mode", help="Ceremony mode (default: scrum)"),
 ) -> None:
@@ -344,26 +343,24 @@ def ceremony_standup(
     _invoke_backlog_subcommand("daily", [*forwarded, *ctx.args])
 
 
-@beartype
 @ceremony_app.command(
     "refinement",
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 def ceremony_refinement(
-    ctx: click.Context,
+    ctx: typer.Context,
     adapter: str = typer.Argument(..., help="Backlog adapter name (github, ado, etc.)"),
 ) -> None:
     """Ceremony alias for `backlog refine`."""
     _invoke_backlog_subcommand("refine", [adapter, *ctx.args])
 
 
-@beartype
 @ceremony_app.command(
     "planning",
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 def ceremony_planning(
-    ctx: click.Context,
+    ctx: typer.Context,
     adapter: str = typer.Argument(..., help="Backlog adapter name (github, ado, etc.)"),
     mode: str = typer.Option("scrum", "--mode", help="Ceremony mode (default: scrum)"),
 ) -> None:
@@ -373,13 +370,12 @@ def ceremony_planning(
     _invoke_optional_ceremony_delegate([delegate], [*forwarded, *ctx.args], ceremony_name="planning")
 
 
-@beartype
 @ceremony_app.command(
     "flow",
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 def ceremony_flow(
-    ctx: click.Context,
+    ctx: typer.Context,
     adapter: str = typer.Argument(..., help="Backlog adapter name (github, ado, etc.)"),
     mode: str = typer.Option("kanban", "--mode", help="Ceremony mode (default: kanban)"),
 ) -> None:
@@ -389,13 +385,12 @@ def ceremony_flow(
     _invoke_optional_ceremony_delegate([delegate], [*forwarded, *ctx.args], ceremony_name="flow")
 
 
-@beartype
 @ceremony_app.command(
     "pi-summary",
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 def ceremony_pi_summary(
-    ctx: click.Context,
+    ctx: typer.Context,
     adapter: str = typer.Argument(..., help="Backlog adapter name (github, ado, etc.)"),
     mode: str = typer.Option("safe", "--mode", help="Ceremony mode (default: safe)"),
 ) -> None:
@@ -2843,11 +2838,10 @@ def _read_refined_content_from_stdin() -> str:
 
 
 # fmt: off
-@beartype
 @app.command()
 @require(lambda adapter: isinstance(adapter, str) and len(adapter) > 0, "Adapter must be non-empty string")
 def daily(
-    ctx: click.Context,
+    ctx: typer.Context,
     adapter: str = typer.Argument(..., help="Backlog adapter name (github, ado, etc.)"),
     assignee: str | None = typer.Option(None, "--assignee",
         help="Filter by assignee (e.g. 'me' or username). Use 'any' to disable assignee filtering."),
@@ -3312,11 +3306,10 @@ app.command("verify-readiness")(verify_readiness)
 app.add_typer(_delta_app, name="delta", help="Backlog delta analysis and impact tracking")
 
 
-@beartype
 @app.command()
 @require(lambda adapter: isinstance(adapter, str) and len(adapter) > 0, "Adapter must be non-empty string")
 def refine(
-    ctx: click.Context,
+    ctx: typer.Context,
     adapter: str = typer.Argument(..., help="Backlog adapter name (github, ado, etc.)"),
     labels: list[str] | None = typer.Option(
         None, "--labels", "--tags", help="Filter by labels/tags (can specify multiple)"
@@ -4104,9 +4097,8 @@ def init_config(
 
 
 @app.command("map-fields")
-@beartype
 def map_fields(
-    ctx: click.Context,
+    ctx: typer.Context,
     ado_org: str | None = typer.Option(None, "--ado-org", help="Azure DevOps organization"),
     ado_project: str | None = typer.Option(None, "--ado-project", help="Azure DevOps project"),
     ado_token: str | None = typer.Option(None, "--ado-token", help="Azure DevOps PAT"),

@@ -40,11 +40,12 @@ Options (aligned with `specfact code review run --help`):
   file sets, then intersect with the resolved scope. When any `--focus` is set,
   **`--include-tests` and `--exclude-tests` are rejected** (use focus alone to
   express test intent)
-- `--mode shadow|enforce`: **enforce** (default) keeps today’s non-zero process
-  exit when the governed report says the run failed; **shadow** still runs the
-  full toolchain and preserves `overall_verdict` in JSON, but forces
-  `ci_exit_code` and the process exit code to `0` so CI or hooks can log signal
-  without blocking
+- `--enforcement full|changed|shadow`: **changed** is the CLI/default hook mode
+  and blocks only blocking findings on changed lines; **full** blocks on any
+  blocking finding in reviewed files; **shadow** records the full report as
+  evidence but forces `ci_exit_code` and the process exit code to `0`
+- `--mode shadow|enforce`: deprecated compatibility alias. Use
+  `--enforcement shadow` or `--enforcement full` in new docs and automation
 - `--level error|warning`: filter findings **before** scoring so JSON, tables,
   score, verdict, and `ci_exit_code` match the filtered list: **`error`**
   keeps errors only (warnings and info dropped); **`warning`** keeps errors and
@@ -122,7 +123,7 @@ guide (same Typer surface as this section).
 
 The review pipeline also emits `ai_bloat` findings for code shapes commonly amplified by AI-assisted generation: manual append loops, passthrough lambdas, identity `try/except`, one-call wrappers, speculative `Optional[...] = None` parameters, duplicate terminal guards, long low-branch functions, and redundant intermediates.
 
-These findings are `severity=info`, advisory-only, and score-neutral. They are written to `.specfact/code-review.json` when the report includes all severities; for simplification queues, write `.specfact/code-review-simplify.json` with `--focus simplify` so `/specfact.08-simplify` can filter them by `category=ai_bloat` for per-change confirmed rewrites. Simplify JSON now includes `cleanup_forecast` at report level plus per-finding `signal_trace`, `preserve_reasons`, and `remediation_packet` where available. They do not claim AI authorship; they identify simplification candidates.
+These findings are `severity=info`, advisory-only, and score-neutral. They are written to `.specfact/code-review.json` when the report includes all severities; for simplification queues, write `.specfact/code-review-simplify.json` with `--enforcement shadow --focus simplify` so `/specfact.08-simplify` can filter them by `category=ai_bloat` for per-change confirmed rewrites without blocking the evidence step. Simplify JSON now includes `cleanup_forecast` at report level plus per-finding `signal_trace`, `preserve_reasons`, and `remediation_packet` where available. They do not claim AI authorship; they identify simplification candidates.
 
 For the lowest-friction AI onboarding path, start with the built-in instruction
 printer instead of requiring a user to install IDE prompts or skills first:
@@ -155,10 +156,11 @@ findings such as:
 
 ### Exit codes
 
-- `0`: `PASS` or `PASS_WITH_ADVISORY`, or any outcome under **`--mode shadow`**
-  (shadow forces success at the process level even when `overall_verdict` is
-  `FAIL`)
-- `1`: `FAIL` under default **enforce** semantics
+- `0`: `PASS` or `PASS_WITH_ADVISORY`, any outcome under
+  **`--enforcement shadow`**, or legacy findings outside changed lines under
+  **`--enforcement changed`**
+- `1`: `FAIL` under **`--enforcement full`**, or a blocking finding on a
+  changed line under **`--enforcement changed`**
 - `2`: invalid CLI usage, such as a missing file path or incompatible options
 
 ### Output modes
@@ -202,7 +204,7 @@ specfact code review run --fix packages/specfact-code-review/src/specfact_code_r
 For simplify-focused cleanup, prefer a JSON-first preview loop before writing:
 
 ```bash
-specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
 ```
 
 Inspect `cleanup_forecast` to estimate cleanup yield and sort by

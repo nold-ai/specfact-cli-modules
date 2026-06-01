@@ -23,10 +23,10 @@ specfact init ide
 ## 2. Run simplify review with cleanup forecast evidence
 
 ```bash
-specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json
 ```
 
-Omit `--level` for this report. `--level error` intentionally filters info-level findings, including `ai_bloat`, out of the command output. `--preview-fixes` is non-mutating: it adds patch forecast evidence without editing tracked files.
+Omit `--level` for this report. `--level error` intentionally filters info-level findings, including `ai_bloat`, out of the command output. Use `--enforcement shadow` for the evidence-gathering pass so legacy blockers do not prevent the JSON handoff. `--preview-fixes` is non-mutating: it adds patch forecast evidence without editing tracked files.
 
 ## 3. Inspect the signal
 
@@ -88,7 +88,7 @@ def double(values: list[int]) -> list[int]:
 ## 5. Re-run review
 
 ```bash
-specfact code review run --scope changed --focus simplify --json --out .specfact/code-review-simplify.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --json --out .specfact/code-review-simplify.json
 ```
 
 Use the new report to confirm accepted simplifications cleared the corresponding `ai_bloat` findings. This is bloat-shape detection, not AI-authorship detection.

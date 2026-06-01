@@ -66,6 +66,39 @@ scenarios:
       exit_code: 0
       stdout_contains:
         - review-report.json
+  - name: enforcement-shadow-dirty-exit-zero
+    type: pattern
+    argv:
+      - --json
+      - --enforcement
+      - shadow
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - review-report.json
+  - name: mode-and-enforcement-are-rejected
+    type: anti-pattern
+    argv:
+      - --mode
+      - shadow
+      - --enforcement
+      - changed
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - Use only one of --mode or --enforcement
+  - name: enforcement-full-dirty-exit-nonzero
+    type: pattern
+    argv:
+      - --json
+      - --enforcement
+      - full
+      - tests/fixtures/review/dirty_module.py
+    expect:
+      exit_code: 1
+      stdout_contains:
+        - review-report.json
   - name: bug-hunt-shadow-dirty-exit-zero
     type: pattern
     argv:
@@ -150,6 +183,8 @@ scenarios:
       - --out
       - CONTRACT_TMP_REPORT.json
       - --bug-hunt
+      - --enforcement
+      - full
       - --level
       - error
       - tests/fixtures/review/dirty_module.py

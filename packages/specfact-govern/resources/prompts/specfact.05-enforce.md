@@ -28,7 +28,7 @@ Validate SDD manifest against project bundle and contracts. Checks hash matching
 
 ### Target/Input
 
-- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: active plan (set via `plan select`)
+- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: explicit bundle name
 - `--sdd PATH` - Path to SDD manifest. Default: bundle-specific .specfact/projects/<bundle-name>/sdd.<format> (Phase 8.5), with fallback to legacy .specfact/sdd/<bundle-name>.<format>
 
 ### Output/Results
@@ -115,7 +115,7 @@ specfact govern enforce sdd [<bundle-name>] [--sdd <path>] --no-interactive
 
 ```bash
 # Apply fixes via CLI commands, then re-validate
-specfact plan update-feature [--bundle <name>] [options] --no-interactive
+specfact code import from-code --repo . <bundle-name>
 specfact govern enforce sdd [<bundle-name>] --no-interactive
 ```
 
@@ -153,7 +153,7 @@ Issues Found:
 
    Hash changes when modifying features, stories, or product/idea/business sections.
    Note: Clarifications don't affect hash (review metadata). Hash stable across review sessions.
-   Fix: Run `specfact plan harden <bundle-name>` to update SDD manifest.
+   Fix: Run `specfact code import from-code --repo . <bundle-name>` to update SDD manifest.
 ```
 
 ## Common Patterns

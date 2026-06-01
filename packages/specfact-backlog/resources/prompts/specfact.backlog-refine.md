@@ -524,12 +524,12 @@ Items updated in remote backlog:
 # Cross-adapter sync workflow: Refine GitHub → Sync to ADO (with state preservation)
 /specfact.backlog-refine --adapter github --repo-owner nold-ai --repo-name specfact-cli --write --labels feature
 # Then sync to ADO (state will be automatically mapped: open → New, closed → Closed)
-# specfact sync bridge --adapter ado --ado-org my-org --ado-project my-project --mode bidirectional
+# specfact project sync bridge --adapter ado --ado-org my-org --ado-project my-project --mode bidirectional
 
 # Cross-adapter sync workflow: Refine ADO → Sync to GitHub (with state preservation)
 /specfact.backlog-refine --adapter ado --ado-org my-org --ado-project my-project --write --state Active
 # Then sync to GitHub (state will be automatically mapped: New → open, Closed → closed)
-# specfact sync bridge --adapter github --repo-owner my-org --repo-name my-repo --mode bidirectional
+# specfact project sync bridge --adapter github --repo-owner my-org --repo-name my-repo --mode bidirectional
 ```
 
 ## Troubleshooting

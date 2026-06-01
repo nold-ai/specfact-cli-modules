@@ -70,13 +70,13 @@ Synchronize artifacts from external tools (Spec-Kit, Linear, Jira) with SpecFact
 
 ```bash
 # Spec-Kit adapter (default)
-specfact sync bridge --adapter speckit --repo <path> [--bidirectional] [--bundle <name>] [--overwrite] [--watch] [--interval <seconds>]
+specfact project sync bridge --adapter speckit --repo <path> [--bidirectional] [--bundle <name>] [--overwrite] [--watch] [--interval <seconds>]
 
 # GitHub adapter (for backlog sync)
-specfact sync bridge --adapter github --repo <path> --repo-owner <owner> --repo-name <name> [--bidirectional] [--bundle <name>] [--github-token <token>] [--use-gh-cli]
+specfact project sync bridge --adapter github --repo <path> --repo-owner <owner> --repo-name <name> [--bidirectional] [--bundle <name>] [--github-token <token>] [--use-gh-cli]
 
 # Azure DevOps adapter (for backlog sync)
-specfact sync bridge --adapter ado --repo <path> --ado-org <org> --ado-project <project> [--bidirectional] [--bundle <name>] [--ado-token <token>] [--ado-base-url <url>]
+specfact project sync bridge --adapter ado --repo <path> --ado-org <org> --ado-project <project> [--bidirectional] [--bundle <name>] [--ado-token <token>] [--ado-base-url <url>]
 
 # --bundle defaults to active plan if not specified
 ```
@@ -108,7 +108,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact sync bridge --adapter <adapter> --repo <path> [options]
+specfact project sync bridge --adapter <adapter> --repo <path> [options]
 ```
 
 **Capture**:
@@ -141,8 +141,8 @@ specfact sync bridge --adapter <adapter> --repo <path> [options]
 
 ```bash
 # Apply resolutions via CLI commands, then re-sync
-specfact plan update-feature [--bundle <name>] [options]
-specfact sync bridge --adapter <adapter> --repo <path>
+specfact project sync bridge --adapter speckit --repo . --bundle <bundle-name>
+specfact project sync bridge --adapter <adapter> --repo <path>
 ```
 
 **Result**: Final artifacts are CLI-generated with validated resolutions
@@ -177,12 +177,12 @@ Supported adapters: speckit, generic-markdown, openspec, github, ado
 
 ```text
 ✗ GitHub adapter requires both --repo-owner and --repo-name options
-Example: specfact sync bridge --adapter github --repo-owner 'nold-ai' --repo-name 'specfact-cli' --bidirectional
+Example: specfact project sync bridge --adapter github --repo-owner 'nold-ai' --repo-name 'specfact-cli' --bidirectional
 ```
 
 ```text
 ✗ Azure DevOps adapter requires both --ado-org and --ado-project options
-Example: specfact sync bridge --adapter ado --ado-org 'my-org' --ado-project 'my-project' --bidirectional
+Example: specfact project sync bridge --adapter ado --ado-org 'my-org' --ado-project 'my-project' --bidirectional
 ```
 
 ## Common Patterns

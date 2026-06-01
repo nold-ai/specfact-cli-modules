@@ -111,13 +111,11 @@ When generating or enhancing code via LLM, **ALWAYS** follow this pattern:
 
 ## Available CLI Commands
 
-- `specfact plan init <bundle-name>` - Initialize project bundle
-- `specfact plan select <bundle-name>` - Set active plan (used as default for other commands)
-- `specfact code import [<bundle-name>] --repo <path>` - Import from codebase (uses active plan if bundle not specified)
-- `specfact plan review [<bundle-name>]` - Review plan (uses active plan if bundle not specified)
-- `specfact plan harden [<bundle-name>]` - Create SDD manifest (uses active plan if bundle not specified)
-- `specfact govern enforce sdd [<bundle-name>]` - Validate SDD (uses active plan if bundle not specified)
-- `specfact sync bridge --adapter <adapter> --repo <path>` - Sync with external tools
+- `specfact code import from-code --repo <path> <bundle-name>` - Create or refresh a project bundle from code
+- `specfact project health-check --repo <path> --project-name <bundle-name>` - Verify project bundle health
+- `specfact project export --repo <path> --bundle <bundle-name> --stdout` - Review project bundle content
+- `specfact govern enforce sdd <bundle-name>` - Validate SDD for a project bundle
+- `specfact project sync bridge --adapter <adapter> --repo <path>` - Sync with external tools
 - See [Command Reference](../../docs/reference/commands.md) for full list
 
-**Note**: Most commands now support active plan fallback. If `--bundle` is not specified, commands automatically use the active plan set via `plan select`. This improves workflow efficiency in AI IDE environments.
+**Note**: Most commands now support project bundle fallback. If `--bundle` is not specified, inspect the current `specfact project --help` output and use the command-specific bundle or project-name option shown there.

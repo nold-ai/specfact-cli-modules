@@ -30,7 +30,8 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 | `--path <prefix>` | Narrow auto-discovered review files to one or more repo-relative prefixes |
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
 | `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
-| `--mode shadow\|enforce` | **`shadow`** surfaces findings without failing the exit code for policy violations; **`enforce`** applies normal gating (default **`enforce`**) |
+| `--enforcement full\|changed\|shadow` | **`full`** blocks on any blocking finding in reviewed files; **`changed`** blocks only blocking findings on changed lines (default **`changed`**); **`shadow`** records evidence and never blocks |
+| `--mode shadow\|enforce` | Deprecated compatibility alias: **`--mode enforce`** maps to **`--enforcement full`** and **`--mode shadow`** maps to **`--enforcement shadow`** |
 | `--level error\|warning` | Optional reporting level override before scoring: **`error`** keeps errors only (drops warnings and info); **`warning`** keeps errors and warnings (drops info only); omit to keep all severities (JSON, verdict, and `ci_exit_code` use the filtered list) |
 | `--bug-hunt` | Enable exploratory / bug-hunt style heuristics in the review pipeline |
 | `--include-noise`, `--suppress-noise` | Keep or suppress known low-signal findings |
@@ -70,7 +71,7 @@ The Typer entrypoint validates **review flags** first: it raises **`typer.BadPar
 specfact code review run --scope changed
 
 # Same, with bug-hunt heuristics on the discovered file set
-specfact code review run --scope changed --bug-hunt
+specfact code review run --scope changed --enforcement changed --bug-hunt
 
 # Full index, limited to one package (repeat --path for more repo-relative prefixes)
 specfact code review run --scope full --path packages/specfact-code-review
@@ -82,15 +83,21 @@ specfact code review run --scope full --path packages/specfact-code-review --pat
 specfact code review run --scope changed --level error
 
 # Longer CrossHair budgets for exploratory bug-hunt pass (with explicit files)
-specfact code review run --bug-hunt --json --out /tmp/review-bughunt.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review run --enforcement changed --bug-hunt --json --out /tmp/review-bughunt.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
 ```
 
-### Shadow mode and JSON to a file
+### Enforcement modes and JSON to a file
 
-**`--mode shadow`** runs the full toolchain but forces process exit code **`0`** and JSON **`ci_exit_code`** **`0`** so callers can ingest reports without failing a step; **`overall_verdict`** still reflects the real outcome.
+**`--enforcement changed`** is the default for the CLI: it writes every finding to JSON, but only blocking findings on changed lines fail the process. Legacy findings elsewhere in touched files remain visible in **`findings`** plus **`enforcement_summary`** evidence.
+
+**`--enforcement full`** is the strictest mode: any blocking finding in the reviewed files fails the process, including existing issues on untouched lines.
+
+**`--enforcement shadow`** runs the full toolchain but forces process exit code **`0`** and JSON **`ci_exit_code`** **`0`** so callers can ingest reports without failing a step; **`overall_verdict`** still reflects the real outcome. The older **`--mode shadow`** form remains available as a compatibility alias.
 
 ```bash
-specfact code review run --scope changed --mode shadow --json --out /tmp/review-report.json
+specfact code review run --scope changed --enforcement changed --json --out /tmp/review-report.json
+specfact code review run --scope full --enforcement full --json --out /tmp/review-full.json
+specfact code review run --scope changed --enforcement shadow --json --out /tmp/review-shadow.json
 ```
 
 ### `--focus` facets (repeatable)
@@ -101,8 +108,8 @@ Use **`--focus`** with **`source`**, **`tests`**, **`docs`**, and/or **`simplify
 specfact code review run --scope changed --focus tests
 specfact code review run --scope full --path packages/specfact-code-review --focus source
 specfact code review run --scope full --focus docs
-specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review.json
-specfact code review run --scope changed --focus simplify --with-mutation --json --out .specfact/code-review.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --with-mutation --json --out .specfact/code-review.json
 ```
 
 Use the canonical `.specfact/code-review.json` path unless every consumer in your workflow has been updated to read a custom simplify report path.
@@ -145,7 +152,7 @@ The built-in `specfact/ai-bloat-patterns` policy pack is parallel to `specfact/c
 Use `--focus simplify` when producing the IDE simplification queue:
 
 ```bash
-specfact code review run --scope changed --focus simplify --preview-fixes --json --out .specfact/code-review.json
+specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review.json
 ```
 
 Simplify-focused reports keep advisory `ai_bloat` findings plus high-confidence `dry` and `kiss` findings that include deterministic simplification metadata. Metadata fields such as `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, `related_locations`, `signal_trace`, `preserve_reasons`, and `remediation_packet` are additive; legacy consumers can keep reading the original finding fields. The report-level `cleanup_forecast` summarizes reviewed LOC, estimated deletion ranges, guidance-kind totals, normalized AI-bloat density, weighted bloat points, and cleanup-yield LOC per KLOC. Simplification findings remain score-neutral; enforce mode blocks only unresolved safe-mechanical cleanup candidates.
