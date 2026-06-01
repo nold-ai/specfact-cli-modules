@@ -79,7 +79,9 @@ MODULE_APP_MOUNTS = (
     ("specfact_codebase.code.commands", "app", ("specfact", "code")),
     ("specfact_code_review.review.commands", "app", ("specfact", "code")),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
+    ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")),
     ("specfact_project.project.commands", "app", ("specfact", "project")),
+    ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
     ("specfact_spec.sdd.commands", "app", ("specfact", "spec")),
     ("specfact_spec.generate.commands", "app", ("specfact", "spec")),
@@ -263,12 +265,7 @@ def _normalize_core_docs_route(url: str) -> str | None:
 
 
 def _iter_core_docs_urls_from_text(text: str) -> list[str]:
-    urls: list[str] = []
-    for link in MARKDOWN_LINK_RE.findall(text):
-        urls.append(link)
-    for link in HTML_HREF_RE.findall(text):
-        urls.append(link)
-    return urls
+    return [*MARKDOWN_LINK_RE.findall(text), *HTML_HREF_RE.findall(text)]
 
 
 def _core_docs_link_findings_for_line(path: Path, line_number: int, raw_line: str) -> list[ValidationFinding]:

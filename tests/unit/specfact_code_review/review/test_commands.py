@@ -35,19 +35,22 @@ def test_review_run_instructions_prints_ai_workflow_without_running_review(monke
     result = runner.invoke(app, ["review", "run", "--instructions"])
 
     assert result.exit_code == 0
-    assert "remove AI bloat" in result.output
-    assert "safe_mechanical" in result.output
-    assert "design_judgment" in result.output
-    assert "branch-delta Python files" in result.output
-    assert "git diff --name-only <base-ref>...HEAD" in result.output
-    assert "Findings without guidance_kind are unguided advisories" in result.output
-    assert "Sort findings by guidance_kind before editing" in result.output
-    assert "exact patch preview" in result.output
-    assert "default to keep or skip" in result.output
-    assert "specfact code review run --scope changed --enforcement shadow --focus simplify" in result.output
-    assert "cleanup_forecast" in result.output
-    assert "remediation_packet" in result.output
-    assert "not proof of AI authorship" in result.output
+    expected_snippets = (
+        "remove AI bloat",
+        "safe_mechanical",
+        "design_judgment",
+        "branch-delta Python files",
+        "git diff --name-only <base-ref>...HEAD",
+        "Findings without guidance_kind are unguided advisories",
+        "Sort findings by guidance_kind before editing",
+        "exact patch preview",
+        "default to keep or skip",
+        "specfact code review run --scope changed --enforcement shadow --focus simplify",
+        "cleanup_forecast",
+        "remediation_packet",
+        "not proof of AI authorship",
+    )
+    assert all(snippet in result.output for snippet in expected_snippets)
 
 
 def test_review_run_interactive_prompts_for_test_inclusion(monkeypatch: Any) -> None:
@@ -81,6 +84,31 @@ def test_review_run_non_interactive_defaults_to_excluding_tests(monkeypatch: Any
 
     assert result.exit_code == 0
     assert recorded["kwargs"]["include_tests"] is False
+
+
+def test_review_run_warns_when_enforcement_defaults_to_changed(monkeypatch: Any) -> None:
+    def _fake_run_command(_files: list[Path], **_kwargs: object) -> tuple[int, str | None]:
+        return 0, None
+
+    monkeypatch.setattr("specfact_code_review.review.commands.run_command", _fake_run_command)
+
+    result = runner.invoke(app, ["review", "run"])
+
+    assert result.exit_code == 0
+    assert "Code review enforcement default is 'changed'" in result.output
+    assert "--enforcement full" in result.output
+
+
+def test_review_run_explicit_changed_enforcement_does_not_warn(monkeypatch: Any) -> None:
+    def _fake_run_command(_files: list[Path], **_kwargs: object) -> tuple[int, str | None]:
+        return 0, None
+
+    monkeypatch.setattr("specfact_code_review.review.commands.run_command", _fake_run_command)
+
+    result = runner.invoke(app, ["review", "run", "--enforcement", "changed"])
+
+    assert result.exit_code == 0
+    assert "Code review enforcement default is 'changed'" not in result.output
 
 
 def test_review_run_focus_source_sets_include_tests_false(monkeypatch: Any) -> None:

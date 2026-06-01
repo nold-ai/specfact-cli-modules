@@ -76,6 +76,31 @@ class _ReviewRunCliInputs:
     interactive: bool
 
 
+@dataclass(frozen=True)
+class _ReviewRunCommandInputs:
+    ctx: typer.Context
+    files: list[Path] | None
+    scope: Literal["changed", "full"] | None
+    path: list[Path] | None
+    include_tests: bool | None
+    exclude_tests: bool | None
+    focus: list[str] | None
+    enforcement: ReviewRunMode
+    mode: Literal["shadow", "enforce"] | None
+    level: Literal["error", "warning"] | None
+    bug_hunt: bool
+    include_noise: bool
+    suppress_noise: bool
+    json_output: bool
+    out: Path | None
+    score_only: bool
+    no_tests: bool
+    fix: bool
+    preview_fixes: bool
+    with_mutation: bool
+    interactive: bool
+
+
 def _friendly_run_command_error(exc: RunCommandError | ValueError | ViolationError) -> str:
     if isinstance(
         exc,
@@ -139,6 +164,60 @@ def _resolve_cli_enforcement(
     return "shadow" if legacy_mode == "shadow" else "full"
 
 
+def _enforcement_was_defaulted(ctx: typer.Context) -> bool:
+    """Return whether Click supplied the default --enforcement value."""
+    get_parameter_source = getattr(ctx, "get_parameter_source", None)
+    if not callable(get_parameter_source):
+        return False
+    source = get_parameter_source("enforcement")
+    return getattr(source, "name", None) == "DEFAULT"
+
+
+def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
+    if inputs.mode is None and inputs.enforcement == "changed" and _enforcement_was_defaulted(inputs.ctx):
+        typer.echo(
+            "Code review enforcement default is 'changed'; use '--enforcement full' for strict CI gates "
+            "or '--enforcement shadow' for evidence-only runs.",
+            err=True,
+        )
+    focus_list, resolved_include_tests, resolved_include_noise = _resolve_review_run_flags(
+        _ReviewRunCliInputs(
+            files=inputs.files,
+            include_tests=inputs.include_tests,
+            exclude_tests=inputs.exclude_tests,
+            focus=inputs.focus,
+            include_noise=inputs.include_noise,
+            suppress_noise=inputs.suppress_noise,
+            interactive=inputs.interactive,
+        )
+    )
+
+    try:
+        exit_code, output = run_command(
+            inputs.files or [],
+            include_tests=resolved_include_tests,
+            scope=inputs.scope,
+            path_filters=inputs.path,
+            focus_facets=tuple(focus_list),
+            review_mode=_resolve_cli_enforcement(enforcement=inputs.enforcement, legacy_mode=inputs.mode),
+            review_level=inputs.level,
+            bug_hunt=inputs.bug_hunt,
+            include_noise=resolved_include_noise,
+            json_output=inputs.json_output,
+            out=inputs.out,
+            score_only=inputs.score_only,
+            no_tests=inputs.no_tests,
+            fix=inputs.fix,
+            preview_fixes=inputs.preview_fixes,
+            with_mutation=inputs.with_mutation,
+        )
+    except (ValueError, ViolationError) as exc:
+        raise typer.BadParameter(_friendly_run_command_error(exc)) from exc
+    if output is not None:
+        typer.echo(output)
+    raise typer.Exit(code=exit_code)
+
+
 @review_app.command("run")
 @require(lambda ctx: True, "run command validation")
 @ensure(lambda result: result is None, "run command does not return")
@@ -157,7 +236,7 @@ def run(
     enforcement: ReviewRunMode = typer.Option(
         "changed",
         "--enforcement",
-        help="Enforcement policy: full blocks on all blocking findings, changed blocks on changed-line blockers, shadow reports only.",
+        help="Enforcement policy: full blocks all findings; changed blocks changed-line findings; shadow reports only.",
     ),
     mode: Literal["shadow", "enforce"] | None = typer.Option(
         None,
@@ -195,29 +274,21 @@ def run(
     if instructions:
         typer.echo(_RUN_INSTRUCTIONS)
         raise typer.Exit(code=0)
-    focus_list, resolved_include_tests, resolved_include_noise = _resolve_review_run_flags(
-        _ReviewRunCliInputs(
+    _execute_review_run(
+        _ReviewRunCommandInputs(
+            ctx=ctx,
             files=files,
+            scope=scope,
+            path=path,
             include_tests=include_tests,
             exclude_tests=exclude_tests,
             focus=focus,
+            enforcement=enforcement,
+            mode=mode,
+            level=level,
+            bug_hunt=bug_hunt,
             include_noise=include_noise,
             suppress_noise=suppress_noise,
-            interactive=interactive,
-        )
-    )
-
-    try:
-        exit_code, output = run_command(
-            files or [],
-            include_tests=resolved_include_tests,
-            scope=scope,
-            path_filters=path,
-            focus_facets=tuple(focus_list),
-            review_mode=_resolve_cli_enforcement(enforcement=enforcement, legacy_mode=mode),
-            review_level=level,
-            bug_hunt=bug_hunt,
-            include_noise=resolved_include_noise,
             json_output=json_output,
             out=out,
             score_only=score_only,
@@ -225,12 +296,9 @@ def run(
             fix=fix,
             preview_fixes=preview_fixes,
             with_mutation=with_mutation,
+            interactive=interactive,
         )
-    except (ValueError, ViolationError) as exc:
-        raise typer.BadParameter(_friendly_run_command_error(exc)) from exc
-    if output is not None:
-        typer.echo(output)
-    raise typer.Exit(code=exit_code)
+    )
 
 
 review_app.add_typer(ledger_app, name="ledger")

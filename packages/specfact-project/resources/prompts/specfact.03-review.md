@@ -300,7 +300,7 @@ specfact project export --repo . --bundle <bundle-name> --stdout
 
    ```bash
    # Use /tmp/ to avoid polluting the codebase
-   specfact project --help
+   /specfact.03-review <bundle-name> --list-questions --output-questions /tmp/questions.json
    ```
 
 2. **LLM reasoning and user selection** (Step 3):
@@ -314,7 +314,7 @@ specfact project export --repo . --bundle <bundle-name> --stdout
    ```bash
    # Import answers from exported file
    # Use /tmp/ to avoid polluting the codebase
-   specfact project --help
+   /specfact.03-review <bundle-name> --answers /tmp/answers.json
    ```
 
 **CRITICAL**:
@@ -585,13 +585,13 @@ Create one with: specfact code import from-code --repo . <bundle-name>
 1. **Export questions to file** (use `/tmp/` to avoid polluting codebase):
 
    ```bash
-   specfact project --help
+   /specfact.03-review <bundle-name> --list-questions --output-questions /tmp/questions.json
    ```
 
 2. **Get findings** (optional, for comprehensive analysis - use `/tmp/`):
 
    ```bash
-   specfact project --help
+   /specfact.03-review <bundle-name> --list-findings --output-findings /tmp/findings.json
    ```
 
 3. **LLM reasoning and user selection** (REQUIRED for partial findings):
@@ -612,7 +612,7 @@ Create one with: specfact code import from-code --repo . <bundle-name>
 
    ```bash
    # Import answers from exported file
-   specfact project --help
+   /specfact.03-review <bundle-name> --answers /tmp/answers.json
    ```
 
    **CRITICAL**: Use the file path `/tmp/answers.json` (not a JSON string extracted from `/tmp/questions.json`)

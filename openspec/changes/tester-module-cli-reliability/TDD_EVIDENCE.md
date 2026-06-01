@@ -177,3 +177,26 @@
   - `hatch run python scripts/check-docs-commands.py` -> passed.
   - `hatch run lint` -> passed.
   - `openspec validate tester-module-cli-reliability --strict` -> passed.
+
+## Fourth Follow-up PR Review Fixes
+
+- Re-checked the seven PR #307 CodeRabbit findings against current code:
+  - Kept `changed` as the default enforcement mode because it is the requested default policy, and added an explicit runtime notice that `--enforcement full` is required for strict CI gates.
+  - Confirmed unreadable untracked files are skipped safely when collecting changed-line evidence.
+  - Confirmed `/specfact.04-sdd` and `/specfact.07-contracts` active-plan/default prompt text is corrected.
+  - Confirmed `_command_options` guards `secondary_opts`.
+  - Confirmed staged diff parsing only recognizes `+++ ` headers after `--- ` source headers.
+  - Confirmed the duplicate SDD command placeholder was removed instead of replaced with a nonexistent plan-update command.
+- Addressed still-valid outside-diff findings:
+  - Replaced `specfact project --help` placeholders in `/specfact.03-review` with the current bundled `/specfact.03-review --list-questions`, `--list-findings`, and `--answers` prompt command surface. Local runtime confirms `specfact plan` is not mounted and `specfact project` has no review subcommand in this module contract.
+  - Added `specfact_govern.enforce.commands` and `specfact_spec.contract.commands` to docs command validation mounts, without reintroducing removed flat shims such as `specfact plan`.
+- Validation:
+  - `hatch run format` -> passed.
+  - `hatch run generate-command-overview` -> passed.
+  - `hatch run pytest tests/unit/specfact_code_review/review/test_commands.py tests/unit/test_check_docs_commands_script.py tests/unit/test_check_prompt_commands_script.py -q` -> 48 passed.
+  - `hatch run check-command-overview` -> passed.
+  - `hatch run check-command-contract` -> passed: `check-command-contract: OK (86 generated module command path(s) validated)`.
+  - `hatch run python scripts/check-docs-commands.py` -> passed.
+  - `hatch run python scripts/check-prompt-commands.py` -> passed.
+  - `hatch run lint` -> passed.
+  - `openspec validate tester-module-cli-reliability --strict` -> passed.

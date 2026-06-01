@@ -19,6 +19,14 @@ def _script_attr(script, name: str):
     return getattr(script, name)
 
 
+def test_docs_command_mounts_include_nested_prompt_validator_mounts() -> None:
+    script = _load_script()
+    mounts = set(_script_attr(script, "MODULE_APP_MOUNTS"))
+
+    assert ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")) in mounts
+    assert ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")) in mounts
+
+
 def test_extract_command_examples_reads_bash_and_inline_examples(tmp_path: Path) -> None:
     script = _load_script()
     doc_path = tmp_path / "example.md"
