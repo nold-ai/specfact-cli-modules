@@ -35,7 +35,8 @@ def _patch_clirunner() -> None:
     # pylint: disable=import-outside-toplevel
     from collections.abc import Callable
 
-    from typer.testing import CliRunner, Result
+    from click.testing import Result
+    from typer.testing import CliRunner
 
     original_invoke: Callable[..., Result] = CliRunner.invoke
 

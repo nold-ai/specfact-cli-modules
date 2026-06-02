@@ -230,6 +230,11 @@ def _is_test_file(file_path: str | Path) -> bool:
 
 def _normalize_report_path(raw_path: str | Path) -> str:
     path = Path(raw_path)
+    if path.is_absolute():
+        try:
+            return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+        except ValueError:
+            return path.as_posix()
     return path.as_posix()
 
 

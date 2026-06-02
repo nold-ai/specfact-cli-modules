@@ -121,6 +121,7 @@ jobs:
           mkdir -p logs/docs-review
           PROMPT_COMMAND_LOG="logs/docs-review/prompt-command-validation_$(date -u +%Y%m%d_%H%M%S).log"
           python scripts/check-prompt-commands.py 2>&1 | tee "$PROMPT_COMMAND_LOG"
+          exit "${PIPESTATUS[0]:-$?}"
 
       - name: Validate generated command overview
         run: |

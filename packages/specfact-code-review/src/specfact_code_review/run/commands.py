@@ -33,7 +33,6 @@ console = Console()
 progress_console = Console(stderr=True)
 AutoScope = Literal["changed", "full"]
 ReviewRunMode = Literal["full", "changed", "shadow"]
-LegacyReviewRunMode = Literal["shadow", "enforce"]
 ReviewLevelFilter = Literal["error", "warning"]
 
 

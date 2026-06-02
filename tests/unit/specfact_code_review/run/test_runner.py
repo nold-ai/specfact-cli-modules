@@ -133,6 +133,21 @@ def test_run_review_changed_enforcement_blocks_changed_line_findings(monkeypatch
     assert "changed lines" in (report.enforcement_summary or "")
 
 
+def test_run_review_changed_enforcement_normalizes_absolute_finding_paths(monkeypatch: MonkeyPatch) -> None:
+    relative = "packages/specfact-code-review/src/specfact_code_review/run/scorer.py"
+    finding = _finding(tool="radon", rule="complexity", severity="error", category="kiss")
+    finding = finding.model_copy(update={"file": str(Path.cwd() / relative)})
+    _stub_review_tools(monkeypatch, [finding])
+    monkeypatch.setattr("specfact_code_review.run.runner._changed_lines_from_git", lambda files: {relative: {10}})
+
+    report = run_review([Path(finding.file)], no_tests=True, review_mode="changed")
+
+    assert report.ci_exit_code == 1
+    assert report.overall_verdict == "FAIL"
+    assert report.enforcement_mode == "changed"
+    assert "changed lines" in (report.enforcement_summary or "")
+
+
 def test_run_review_shadow_enforcement_never_blocks(monkeypatch: MonkeyPatch) -> None:
     finding = _finding(tool="radon", rule="complexity", severity="error", category="kiss")
     _stub_review_tools(monkeypatch, [finding])

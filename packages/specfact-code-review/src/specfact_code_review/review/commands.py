@@ -185,7 +185,13 @@ def _enforcement_was_explicit(ctx: typer.Context) -> bool:
 def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
     if inputs.mode is not None and _enforcement_was_explicit(inputs.ctx):
         raise typer.BadParameter("Use only one of --mode or --enforcement; --mode is deprecated.")
-    if inputs.mode is None and inputs.enforcement == "changed" and _enforcement_was_defaulted(inputs.ctx):
+    if (
+        inputs.mode is None
+        and inputs.enforcement == "changed"
+        and _enforcement_was_defaulted(inputs.ctx)
+        and not inputs.json_output
+        and not inputs.score_only
+    ):
         typer.echo(
             "Code review enforcement default is 'changed'; use '--enforcement full' for strict CI gates "
             "or '--enforcement shadow' for evidence-only runs.",

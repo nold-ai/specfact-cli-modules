@@ -200,8 +200,7 @@ def _render_llms(markdown: str) -> str:
         [
             "# SpecFact Module Commands",
             "",
-            "Use this generated overview as the current module command contract "
-            "before following older docs or prompts.",
+            "Use this generated overview as the current module command contract before following older docs or prompts.",
             "",
             markdown,
         ]
