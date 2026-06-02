@@ -38,7 +38,7 @@ print_block2_overview() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
   echo "  modules pre-commit — Block 2: code review + contract tests (2 stages)" >&2
   echo "    1/2  code review gate (staged paths under packages/, registry/, scripts/, tools/, tests/, openspec/changes/)" >&2
-  echo "    2/2  contract-first tests (contract-test-status → hatch run contract-test)" >&2
+  echo "    2/2  contract-first tests (contract-test-status → hatch run contract-test-contracts)" >&2
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
   echo "" >&2
 }
@@ -78,7 +78,7 @@ staged_docs_validation_paths() {
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
     case "${line}" in
-      docs/*|*.md|requirements-docs-ci.txt|scripts/check-docs-commands.py|scripts/docs_site_validation.py)
+      docs/*|*.md|requirements-docs-ci.txt|scripts/check-docs-commands.py|scripts/check-command-contract.py|scripts/docs_site_validation.py|scripts/generate-command-overview.py|llms.txt)
         printf '%s\n' "${line}"
         ;;
     esac
@@ -90,7 +90,7 @@ staged_prompt_validation_paths() {
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
     case "${line}" in
-      packages/*/resources/prompts/*.md|packages/*/src/**/commands.py|scripts/check-prompt-commands.py|tests/unit/test_check_prompt_commands_script.py)
+      packages/*/resources/**|packages/*/src/**/commands.py|scripts/check-prompt-commands.py|tests/unit/test_check_prompt_commands_script.py)
         printf '%s\n' "${line}"
         ;;
     esac
@@ -133,12 +133,71 @@ run_prompt_command_validation_gate() {
   if ! needs_prompt_command_validation; then
     return 0
   fi
-  info "📄 Prompt command validation — running \`hatch run validate-prompt-commands\` (staged bundle prompts or prompt validation tooling)"
-  if hatch run validate-prompt-commands; then
+  local validation_paths=()
+  local full_scan=0
+  while IFS= read -r line; do
+    [ -z "${line}" ] && continue
+    case "${line}" in
+      scripts/check-prompt-commands.py|tests/unit/test_check_prompt_commands_script.py)
+        full_scan=1
+        ;;
+      *)
+        validation_paths+=("${line}")
+        ;;
+    esac
+  done < <(staged_prompt_validation_paths)
+  info "📄 Prompt command validation — running command-reference validation for staged prompts/resources/source guidance"
+  if [[ "${full_scan}" -eq 1 ]]; then
+    validation_paths=()
+  fi
+  if hatch run python scripts/check-prompt-commands.py "${validation_paths[@]}"; then
     success "✅ Prompt command validation passed"
   else
     error "❌ Prompt command validation failed"
-    warn "💡 Run: hatch run validate-prompt-commands"
+    warn "💡 Run: hatch run python scripts/check-prompt-commands.py <changed prompt/resource/source paths>"
+    exit 1
+  fi
+}
+
+run_command_overview_validation_gate() {
+  if ! needs_docs_site_validation && ! needs_prompt_command_validation; then
+    return 0
+  fi
+  local unstaged_inputs
+  unstaged_inputs="$(
+    {
+      git diff --name-only -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml
+      git ls-files --others --exclude-standard -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml
+    } | sort -u
+  )"
+  if [[ -n "${unstaged_inputs}" ]]; then
+    error "❌ Command overview inputs have unstaged changes; refusing to auto-stage generated artifacts"
+    warn "Stage or stash these paths before committing:"
+    printf '%s\n' "${unstaged_inputs}" >&2
+    exit 1
+  fi
+  info "📄 Command overview validation — regenerating current AI command artifacts"
+  if hatch run generate-command-overview; then
+    git add -- llms.txt docs/reference/commands.generated.json docs/reference/commands.generated.md
+    success "✅ Command overview artifacts regenerated and staged"
+  else
+    error "❌ Command overview generation failed"
+    exit 1
+  fi
+  info "📄 Command overview validation — running \`hatch run check-command-overview\`"
+  if hatch run check-command-overview; then
+    success "✅ Command overview validation passed"
+  else
+    error "❌ Command overview validation failed"
+    warn "💡 Run: hatch run generate-command-overview"
+    exit 1
+  fi
+  info "📄 Command contract validation — running \`hatch run check-command-contract\`"
+  if hatch run check-command-contract; then
+    success "✅ Generated command contract validation passed"
+  else
+    error "❌ Generated command contract validation failed"
+    warn "💡 Run: hatch run check-command-contract"
     exit 1
   fi
 }
@@ -242,7 +301,8 @@ run_code_review_gate() {
     return
   fi
 
-  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s))"
+  local enforcement="${SPECFACT_CODE_REVIEW_ENFORCEMENT:-changed}"
+  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s), enforcement=${enforcement})"
   if hatch run python scripts/pre_commit_code_review.py "${review_array[@]}"; then
     success "✅ Block 2 — stage 1/2: code review gate passed"
   else
@@ -257,13 +317,13 @@ run_contract_tests_visible() {
   if hatch run contract-test-status > /dev/null 2>&1; then
     success "✅ Block 2 — stage 2/2: contract tests — skipped (contract-test-status: no input changes)"
   else
-    info "📦 Block 2 — stage 2/2: contract tests — running \`hatch run contract-test\`"
-    if hatch run contract-test; then
+    info "📦 Block 2 — stage 2/2: contract tests — running \`hatch run contract-test-contracts\`"
+    if hatch run contract-test-contracts; then
       success "✅ Block 2 — stage 2/2: contract-first tests passed"
       warn "💡 CI may still run the full quality matrix"
     else
       error "❌ Block 2 — stage 2/2: contract-first tests failed"
-      warn "💡 Run: hatch run contract-test-status"
+      warn "💡 Run: hatch run contract-test-contracts"
       exit 1
     fi
   fi
@@ -292,6 +352,7 @@ run_block1_lint() {
 
 run_block2() {
   warn "🔍 modules pre-commit — Block 2 — hook: review + contract tests"
+  run_command_overview_validation_gate
   run_docs_site_validation_gate
   run_prompt_command_validation_gate
   if check_safe_change; then
@@ -312,6 +373,7 @@ run_all() {
   run_bundle_import_checks
   run_lint_if_staged_python
   success "✅ Block 1 complete (all stages passed or skipped as expected)"
+  run_command_overview_validation_gate
   run_docs_site_validation_gate
   run_prompt_command_validation_gate
   if check_safe_change; then

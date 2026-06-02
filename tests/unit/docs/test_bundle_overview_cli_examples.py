@@ -36,6 +36,17 @@ _OVERVIEW_LINE_TO_TOKENS_AFTER_SPECFACT: dict[str, list[str]] = {
         "link-backlog",
         "--help",
     ],
+    "specfact project health-check --project-name my-bundle --repo .": [
+        "project",
+        "health-check",
+        "--help",
+    ],
+    "specfact project version check --bundle my-bundle --repo .": [
+        "project",
+        "version",
+        "check",
+        "--help",
+    ],
     "specfact migrate artifacts --repo .": ["migrate", "artifacts", "--help"],
     "specfact backlog refine github --preview --labels feature": [
         "backlog",
@@ -79,9 +90,7 @@ def _tokens_for_specfact_line(line: str) -> list[str] | None:
         tokens = shlex.split(s)
     except ValueError:
         return None
-    if not tokens or tokens[0] != "specfact":
-        return None
-    return tokens
+    return tokens if tokens and tokens[0] == "specfact" else None
 
 
 def _route_backlog(t: list[str]) -> tuple[Any, list[str]] | None:

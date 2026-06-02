@@ -2525,7 +2525,7 @@ def sync(
     """
     Sync shared plans between Spec-Kit and SpecFact (bidirectional sync).
 
-    This is a convenience wrapper around `specfact sync bridge --adapter speckit --bidirectional`
+    This is a convenience wrapper around `specfact project sync bridge --adapter speckit --bidirectional`
     that enables team collaboration through shared structured plans. The bidirectional
     sync keeps Spec-Kit artifacts and SpecFact plans synchronized automatically.
 
@@ -2555,7 +2555,7 @@ def sync(
         if not shared:
             print_error("This command requires --shared flag")
             print_info("Use 'specfact plan sync --shared' to enable shared plans sync")
-            print_info("Or use 'specfact sync bridge --adapter speckit --bidirectional' for direct sync")
+            print_info("Or use 'specfact project sync bridge --adapter speckit --bidirectional' for direct sync")
             raise typer.Exit(1)
 
         # Use default repo if not specified
@@ -2733,7 +2733,7 @@ def promote(
                         print_warning(
                             f"SDD has {sdd_report.medium_count} medium and {sdd_report.low_count} low severity deviation(s)"
                         )
-                        console.print("[dim]Run 'specfact enforce sdd' for detailed report[/dim]")
+                        console.print("[dim]Run 'specfact govern enforce sdd' for detailed report[/dim]")
                         if not force and not prompt_confirm(
                             "Continue with promotion despite coverage threshold warnings?", default=False
                         ):
@@ -3609,7 +3609,7 @@ def _prepare_review_bundle(
                 console.print(f"  [bold yellow]⚠[/bold yellow] {deviation.description}")
             else:
                 console.print(f"  [dim]ℹ[/dim] {deviation.description}")
-        console.print("\n[dim]Run 'specfact enforce sdd' for detailed validation report[/dim]")
+        console.print("\n[dim]Run 'specfact govern enforce sdd' for detailed validation report[/dim]")
     else:
         print_success("SDD manifest validated successfully")
 
@@ -3634,7 +3634,7 @@ def _prepare_review_bundle(
 
         if sdd_report.total_deviations > 0:
             console.print(f"\n[dim]Found {sdd_report.total_deviations} coverage threshold warning(s)[/dim]")
-            console.print("[dim]Run 'specfact enforce sdd' for detailed report[/dim]")
+            console.print("[dim]Run 'specfact govern enforce sdd' for detailed report[/dim]")
 
     # Initialize clarifications if needed
     from specfact_cli.models.plan import Clarifications

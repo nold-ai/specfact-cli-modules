@@ -28,7 +28,7 @@ Create/update SDD manifest from project bundle. Captures WHY (intent/constraints
 
 ### Target/Input
 
-- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: active plan (set via `plan select`)
+- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: active plan
 - `--sdd PATH` - Output SDD manifest path. Default: bundle-specific .specfact/projects/<bundle-name>/sdd.<format> (Phase 8.5)
 
 ### Output/Results
@@ -49,7 +49,7 @@ Create/update SDD manifest from project bundle. Captures WHY (intent/constraints
 ### Step 2: Execute CLI
 
 ```bash
-specfact plan harden [<bundle-name>] [--sdd <path>] [--output-format <format>]
+specfact govern enforce sdd <bundle-name>
 # Uses active plan if bundle not specified
 ```
 
@@ -78,7 +78,7 @@ When in copilot mode, follow this three-phase workflow:
 
 ```bash
 # Execute CLI to get structured output
-specfact plan harden [<bundle-name>] [--sdd <path>] --no-interactive
+specfact govern enforce sdd <bundle-name>
 ```
 
 **Capture**:
@@ -110,9 +110,8 @@ specfact plan harden [<bundle-name>] [--sdd <path>] --no-interactive
 ### Phase 3: CLI Artifact Creation (REQUIRED)
 
 ```bash
-# Use enrichment to update plan via CLI, then regenerate SDD
-specfact plan update-idea [--bundle <name>] [options] --no-interactive
-specfact plan harden [<bundle-name>] --no-interactive
+# Regenerate SDD from the updated plan bundle
+specfact govern enforce sdd <bundle-name>
 ```
 
 **Result**: Final SDD is CLI-generated with validated enrichments
@@ -147,7 +146,7 @@ Contracts: 15
 
 ```text
 ✗ Project bundle 'legacy-api' not found
-Create one with: specfact plan init legacy-api
+Create one with: specfact code import from-code --repo . <bundle-name>
 ```
 
 ## Common Patterns

@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, cast
 from urllib.parse import urlparse
 
 import click
@@ -56,6 +57,7 @@ LEGACY_RESOURCE_PATH_SNIPPETS = (
     "src/specfact_cli/templates",
 )
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "docs-review.yml"
+GENERATED_COMMANDS_PATH = REPO_ROOT / "docs" / "reference" / "commands.generated.json"
 MARKDOWN_CODE_RE = re.compile(r"`([^`\n]*specfact [^`\n]*)`")
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 HTML_HREF_RE = re.compile(r'href="([^"]+)"')
@@ -77,11 +79,9 @@ MODULE_APP_MOUNTS = (
     ("specfact_codebase.code.commands", "app", ("specfact", "code")),
     ("specfact_code_review.review.commands", "app", ("specfact", "code")),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
-    ("specfact_project.import_cmd.commands", "app", ("specfact", "import")),
-    ("specfact_project.migrate.commands", "app", ("specfact", "migrate")),
-    ("specfact_project.plan.commands", "app", ("specfact", "plan")),
+    ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")),
     ("specfact_project.project.commands", "app", ("specfact", "project")),
-    ("specfact_project.sync.commands", "app", ("specfact", "sync")),
+    ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
     ("specfact_spec.sdd.commands", "app", ("specfact", "spec")),
     ("specfact_spec.generate.commands", "app", ("specfact", "spec")),
@@ -168,12 +168,31 @@ def _collect_click_paths(group: click.Command, prefix: CommandPath) -> set[Comma
 
 
 def _build_valid_command_paths() -> set[CommandPath]:
+    if GENERATED_COMMANDS_PATH.is_file():
+        try:
+            raw = json.loads(GENERATED_COMMANDS_PATH.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid generated commands JSON at {GENERATED_COMMANDS_PATH}: {exc}") from exc
+        if not isinstance(raw, list):
+            raise ValueError(
+                f"Unexpected generated commands schema at {GENERATED_COMMANDS_PATH}: expected a JSON list."
+            )
+        generated_paths: set[CommandPath] = set(CORE_COMMAND_PREFIXES)
+        for entry in raw:
+            if not isinstance(entry, dict):
+                raise ValueError(f"Unexpected generated commands entry at {GENERATED_COMMANDS_PATH}: {entry!r}")
+            command = entry.get("command")
+            if not isinstance(command, str) or not command.strip():
+                raise ValueError(f"Unexpected generated commands entry missing 'command': {entry!r}")
+            generated_paths.add(tuple(command.split()))
+        return generated_paths
+
     _ensure_package_paths()
     paths: set[CommandPath] = set(CORE_COMMAND_PREFIXES)
     for module_name, attr_name, prefix in MODULE_APP_MOUNTS:
         module = importlib.import_module(module_name)
         app = getattr(module, attr_name)
-        click_group = typer_get_command(app)
+        click_group = cast(click.Command, typer_get_command(app))
         paths.add(prefix)
         paths.update(_collect_click_paths(click_group, prefix))
     return paths
@@ -246,12 +265,7 @@ def _normalize_core_docs_route(url: str) -> str | None:
 
 
 def _iter_core_docs_urls_from_text(text: str) -> list[str]:
-    urls: list[str] = []
-    for link in MARKDOWN_LINK_RE.findall(text):
-        urls.append(link)
-    for link in HTML_HREF_RE.findall(text):
-        urls.append(link)
-    return urls
+    return [*MARKDOWN_LINK_RE.findall(text), *HTML_HREF_RE.findall(text)]
 
 
 def _core_docs_link_findings_for_line(path: Path, line_number: int, raw_line: str) -> list[ValidationFinding]:

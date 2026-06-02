@@ -62,7 +62,7 @@ GitHub Actions also runs:
 ## 3. Add scoped workflow checks while developing
 
 ```bash
-specfact code review run docs/guides/cross-module-chains.md --no-tests
+specfact code review run --enforcement changed docs/guides/cross-module-chains.md --no-tests
 specfact govern enforce sdd legacy-api --no-interactive
 ```
 

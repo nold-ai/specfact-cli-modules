@@ -1670,7 +1670,7 @@ def _suggest_next_steps(repo: Path, bundle: str, plan_bundle: PlanBundle | None)
         console.print("     [dim]Detect deviations between plan and code[/dim]\n")
 
         console.print("  [yellow]→[/yellow] [bold]Validate SDD:[/bold]")
-        console.print(f"     specfact enforce sdd {bundle}")
+        console.print(f"     specfact govern enforce sdd {bundle}")
         console.print("     [dim]Check for violations and coverage thresholds[/dim]\n")
     else:
         console.print("  [yellow]→[/yellow] [bold]Review changes:[/bold]")
@@ -1718,7 +1718,7 @@ def _suggest_constitution_bootstrap(repo: Path) -> None:
                     console.print("[bold green]✓[/bold green] Bootstrap constitution generated")
                     console.print(f"[dim]Review and adjust: {constitution_path}[/dim]")
                     console.print(
-                        "[dim]Then run 'specfact sync bridge --adapter <tool>' to sync with external tool artifacts[/dim]"
+                        "[dim]Then run 'specfact project sync bridge --adapter <tool>' to sync with external tool artifacts[/dim]"
                     )
             else:
                 console.print()
@@ -1949,7 +1949,7 @@ def from_bridge(
     - openspec: OpenSpec integration (openspec/) - read-only sync (Phase 1)
     - generic-markdown: Generic markdown-based specifications - import & sync
 
-    Note: For backlog synchronization (GitHub Issues, ADO, Linear, Jira), use 'specfact sync bridge' instead.
+    Note: For backlog synchronization (GitHub Issues, ADO, Linear, Jira), use 'specfact project sync bridge' instead.
 
     **Parameter Groups:**
     - **Target/Input**: --repo
@@ -2023,7 +2023,7 @@ def from_bridge(
     if not adapter_instance.detect(repo, bridge_config):
         console.print(f"[bold red]✗[/bold red] Not a {adapter_lower} repository")
         console.print(f"[dim]Expected: {adapter_lower} structure[/dim]")
-        console.print("[dim]Tip: Use 'specfact sync bridge probe' to auto-detect tool configuration[/dim]")
+        console.print("[dim]Tip: Use 'specfact project sync bridge probe' to auto-detect tool configuration[/dim]")
         raise typer.Exit(1)
 
         console.print(f"[bold green]✓[/bold green] Detected {adapter_lower} repository")
@@ -2048,7 +2048,7 @@ def from_bridge(
                 f"[bold yellow]⚠[/bold yellow] '{adapter_lower}' is a backlog adapter, not a code/spec adapter"
             )
             console.print(
-                f"[dim]Use 'specfact sync bridge --adapter {adapter_lower}' for backlog synchronization[/dim]"
+                f"[dim]Use 'specfact project sync bridge --adapter {adapter_lower}' for backlog synchronization[/dim]"
             )
             console.print(
                 "[dim]The 'import from-bridge' command is for importing code/spec projects (Spec-Kit, OpenSpec, generic-markdown)[/dim]"
@@ -2090,7 +2090,9 @@ def from_bridge(
             if not features:
                 console.print(f"[bold red]✗[/bold red] No features found in {adapter_lower} repository")
                 console.print("[dim]Expected: specs/*/spec.md files (or bridge-configured paths)[/dim]")
-                console.print("[dim]Tip: Use 'specfact sync bridge probe' to validate bridge configuration[/dim]")
+                console.print(
+                    "[dim]Tip: Use 'specfact project sync bridge probe' to validate bridge configuration[/dim]"
+                )
                 raise typer.Exit(1)
             progress.update(task, description=f"✓ Discovered {len(features)} features")
 
@@ -2489,12 +2491,12 @@ def from_code(
     - **Advanced/Configuration**: --confidence, --key-format
 
     **Examples:**
-        specfact code import legacy-api --repo .
-        specfact code import auth-module --repo . --enrichment enrichment-report.md
-        specfact code import my-project --repo . --confidence 0.7 --shadow-only
-        specfact code import my-project --repo . --force  # Force full regeneration
-        specfact code import my-project --repo .  # Test files excluded by default
-        specfact code import my-project --repo . --include-tests  # Include test files in dependency graph
+        specfact code import --repo . legacy-api
+        specfact code import --repo . auth-module --enrichment enrichment-report.md
+        specfact code import --repo . my-project --confidence 0.7 --shadow-only
+        specfact code import --repo . my-project --force  # Force full regeneration
+        specfact code import --repo . my-project  # Test files excluded by default
+        specfact code import --repo . my-project --include-tests  # Include test files in dependency graph
     """
     from specfact_cli.cli import get_current_mode
     from specfact_cli.modes import get_router

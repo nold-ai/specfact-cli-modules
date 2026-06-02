@@ -20,7 +20,7 @@ SpecFact ships as six independent modules. Each solves a distinct problem in you
 | I need to... | Install this | Command surface |
 |---|---|---|
 | Manage my backlog with template-driven refinement, standups, and sprint planning | **Backlog** | `specfact backlog` |
-| Structure my project, link plans to code, and manage dev lifecycle | **Project** | `specfact project`, `specfact plan`, `specfact sync` |
+| Structure my project, link plans to code, and manage dev lifecycle | **Project** | `specfact project`, `specfact project`, `specfact project sync` |
 | Import a legacy codebase, detect features, and track spec drift | **Codebase** | `specfact code import`, `specfact code drift` |
 | Run governed code reviews with quality scoring and house rules | **Code Review** | `specfact code review` |
 | Validate OpenAPI/AsyncAPI contracts and generate test suites | **Spec** | `specfact spec validate`, `specfact spec mock` |
@@ -250,7 +250,7 @@ For intermediate and advanced users — each module provides configuration hooks
 
 | What | How | Use case |
 |---|---|---|
-| **Sync bridges** | `specfact sync bridge` config | Connect to GitHub, Linear, Jira, OpenSpec, Spec-Kit |
+| **Sync bridges** | `specfact project sync bridge` config | Connect to GitHub, Linear, Jira, OpenSpec, Spec-Kit |
 | **Personas** | `specfact project init-personas` | Map team roles to project bundle access |
 | **Import entry points** | `specfact code import --entry-point` | Specify monorepo roots for brownfield analysis |
 | **DevOps stages** | Stage action configuration | Customize the plan → develop → review → release flow |

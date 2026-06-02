@@ -28,7 +28,7 @@ Complete contract enhancement workflow: analyze coverage â†’ generate prompts â†
 
 ### Target/Input
 
-- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: active plan (set via `plan select`)
+- `bundle NAME` (optional argument) - Project bundle name (e.g., legacy-api, auth-module). Default: active plan from repository config
 - `--repo PATH` - Repository path. Default: current directory (.)
 - `--apply CONTRACTS` - Contract types to apply: 'all-contracts', 'beartype', 'icontract', 'crosshair', or comma-separated list. Default: 'all-contracts'
 - `--min-priority PRIORITY` - Minimum priority for files to process: 'high', 'medium', 'low'. Default: 'low' (process all files missing contracts)

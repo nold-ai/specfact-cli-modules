@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import itertools
 from pathlib import Path
 
@@ -37,7 +38,11 @@ _REQUIRED_SCRIPT_FRAGMENTS = (
     "run_block2",
     "run_docs_site_validation_gate",
     "hatch run python scripts/check-docs-commands.py",
+    "SPECFACT_CODE_REVIEW_ENFORCEMENT",
+    "enforcement=${enforcement}",
     "needs_docs_site_validation",
+    "Command overview inputs have unstaged changes",
+    "git diff --name-only -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml",
     "usage_error",
     "show_help",
     "also: -h | --help | help",
@@ -47,6 +52,18 @@ _REQUIRED_SCRIPT_FRAGMENTS = (
 def _load_pre_commit_config() -> dict[str, object]:
     loaded = yaml.safe_load((REPO_ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
     return loaded if isinstance(loaded, dict) else {}
+
+
+def _load_pre_commit_code_review_module() -> object:
+    spec = importlib.util.spec_from_file_location(
+        "pre_commit_code_review_for_tests",
+        REPO_ROOT / "scripts" / "pre_commit_code_review.py",
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _collect_ordered_hook_ids(repos: object) -> tuple[set[str], list[str]]:
@@ -112,3 +129,56 @@ def test_modules_pre_commit_script_enforces_required_quality_commands() -> None:
     script_text = script_path.read_text(encoding="utf-8")
     for fragment in _REQUIRED_SCRIPT_FRAGMENTS:
         assert fragment in script_text
+
+
+def test_code_review_gate_parses_staged_added_lines() -> None:
+    review_gate = _load_pre_commit_code_review_module()
+    diff_text = """\
+diff --git a/pkg/example.py b/pkg/example.py
+index 1111111..2222222 100644
+--- a/pkg/example.py
++++ b/pkg/example.py
+@@ -9,0 +10,2 @@
++added_one()
++added_two()
+@@ -20 +23 @@
+-old()
++new()
+"""
+
+    changed_lines = review_gate._parse_added_lines_from_cached_diff(diff_text)
+
+    assert changed_lines == {"pkg/example.py": {10, 11, 23}}
+
+
+def test_code_review_gate_does_not_treat_added_content_as_diff_header() -> None:
+    review_gate = _load_pre_commit_code_review_module()
+    diff_text = """\
+diff --git a/pkg/example.py b/pkg/example.py
+index 1111111..2222222 100644
+--- a/pkg/example.py
++++ b/pkg/example.py
+@@ -9,0 +10,2 @@
++++ not a file header
++added_two()
+"""
+
+    changed_lines = review_gate._parse_added_lines_from_cached_diff(diff_text)
+
+    assert changed_lines == {"pkg/example.py": {10, 11}}
+
+
+def test_code_review_gate_blocks_only_findings_on_staged_lines() -> None:
+    review_gate = _load_pre_commit_code_review_module()
+    changed_lines = {"pkg/example.py": {10, 11}}
+
+    assert review_gate._finding_targets_staged_line(
+        REPO_ROOT,
+        {"file": "pkg/example.py", "line": 10},
+        changed_lines,
+    )
+    assert not review_gate._finding_targets_staged_line(
+        REPO_ROOT,
+        {"file": "pkg/example.py", "line": 9},
+        changed_lines,
+    )

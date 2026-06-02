@@ -71,12 +71,12 @@ cd your-project/
 specfact code review run
 ```
 
-This analyzes your code with Ruff, Semgrep, Pylint, BasedPyright, Radon, and CrossHair, then produces a quality score. No configuration needed.
+This analyzes your code with Ruff, Semgrep, Pylint, BasedPyright, Radon, and CrossHair, then produces a quality score. The default CLI enforcement is **changed**: blocking findings on changed lines fail the run, while older findings elsewhere stay in the report as evidence. Use `--enforcement full` for strict whole-file blocking or `--enforcement shadow` for evidence-only reports.
 
 To review only changed files:
 
 ```bash
-specfact code review run --scope changed
+specfact code review run --scope changed --enforcement changed
 ```
 
 Check your quality ledger over time:

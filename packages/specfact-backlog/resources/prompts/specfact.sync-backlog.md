@@ -156,7 +156,7 @@ Sanitized proposal description text.
 
 ```bash
 # GitHub adapter
-specfact sync bridge --adapter github --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter github --mode export-only --repo <openspec-path> \
   --no-sanitize --change-ids <id1,id2> \
   [--code-repo <source-code-path>] \
   [--track-code-changes] [--add-progress-comment] \
@@ -164,7 +164,7 @@ specfact sync bridge --adapter github --mode export-only --repo <openspec-path> 
   [--github-token <token>] [--use-gh-cli]
 
 # Azure DevOps adapter
-specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter ado --mode export-only --repo <openspec-path> \
   --no-sanitize --change-ids <id1,id2> \
   [--code-repo <source-code-path>] \
   [--track-code-changes] [--add-progress-comment] \
@@ -176,7 +176,7 @@ specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
 
 ```bash
 # Step 3a: Export to temporary file for LLM review (GitHub)
-specfact sync bridge --adapter github --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter github --mode export-only --repo <openspec-path> \
   --sanitize --change-ids <id1,id2> \
   [--code-repo <source-code-path>] \
   --export-to-tmp --tmp-file /tmp/specfact-proposal-<change-id>.md \
@@ -184,7 +184,7 @@ specfact sync bridge --adapter github --mode export-only --repo <openspec-path> 
   [--github-token <token>] [--use-gh-cli]
 
 # Step 3a: Export to temporary file for LLM review (ADO)
-specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter ado --mode export-only --repo <openspec-path> \
   --sanitize --change-ids <id1,id2> \
   [--code-repo <source-code-path>] \
   --export-to-tmp --tmp-file /tmp/specfact-proposal-<change-id>.md \
@@ -232,14 +232,14 @@ specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
 
 ```bash
 # Step 5a: Import sanitized content from temporary file (GitHub)
-specfact sync bridge --adapter github --mode export-only --repo <path> \
+specfact project sync bridge --adapter github --mode export-only --repo <path> \
   --import-from-tmp --tmp-file /tmp/specfact-proposal-<change-id>-sanitized.md \
   --change-ids <id1,id2> \
   [--target-repo <owner/repo>] [--repo-owner <owner>] [--repo-name <name>] \
   [--github-token <token>] [--use-gh-cli]
 
 # Step 5a: Import sanitized content from temporary file (ADO)
-specfact sync bridge --adapter ado --mode export-only --repo <path> \
+specfact project sync bridge --adapter ado --mode export-only --repo <path> \
   --import-from-tmp --tmp-file /tmp/specfact-proposal-<change-id>-sanitized.md \
   --change-ids <id1,id2> \
   --ado-org <org> --ado-project <project> \
@@ -310,13 +310,13 @@ When in copilot mode, follow this workflow:
 
 ```bash
 # For each sanitized proposal, export to temp file (GitHub)
-specfact sync bridge --adapter github --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter github --mode export-only --repo <openspec-path> \
   --change-ids <change-id> --export-to-tmp --tmp-file /tmp/specfact-proposal-<change-id>.md \
   [--code-repo <source-code-path>] \
   [--repo-owner <owner>] [--repo-name <name>] [--github-token <token>] [--use-gh-cli]
 
 # For each sanitized proposal, export to temp file (ADO)
-specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter ado --mode export-only --repo <openspec-path> \
   --change-ids <change-id> --export-to-tmp --tmp-file /tmp/specfact-proposal-<change-id>.md \
   [--code-repo <source-code-path>] \
   --ado-org <org> --ado-project <project> [--ado-token <token>] [--ado-base-url <url>]
@@ -387,14 +387,14 @@ specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
 
 ```bash
 # Export non-sanitized proposals directly (GitHub)
-specfact sync bridge --adapter github --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter github --mode export-only --repo <openspec-path> \
   --change-ids <id1,id2> --no-sanitize \
   [--code-repo <source-code-path>] \
   [--track-code-changes] [--add-progress-comment] \
   [--repo-owner <owner>] [--repo-name <name>] [--github-token <token>] [--use-gh-cli]
 
 # Export non-sanitized proposals directly (ADO)
-specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter ado --mode export-only --repo <openspec-path> \
   --change-ids <id1,id2> --no-sanitize \
   [--code-repo <source-code-path>] \
   [--track-code-changes] [--add-progress-comment] \
@@ -413,14 +413,14 @@ specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
 
 ```bash
 # For each approved sanitized proposal, import from temp file and create issue (GitHub)
-specfact sync bridge --adapter github --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter github --mode export-only --repo <openspec-path> \
   --change-ids <change-id> --import-from-tmp --tmp-file /tmp/specfact-proposal-<change-id>-sanitized.md \
   [--code-repo <source-code-path>] \
   [--track-code-changes] [--add-progress-comment] \
   [--repo-owner <owner>] [--repo-name <name>] [--github-token <token>] [--use-gh-cli]
 
 # For each approved sanitized proposal, import from temp file and create work item (ADO)
-specfact sync bridge --adapter ado --mode export-only --repo <openspec-path> \
+specfact project sync bridge --adapter ado --mode export-only --repo <openspec-path> \
   --change-ids <change-id> --import-from-tmp --tmp-file /tmp/specfact-proposal-<change-id>-sanitized.md \
   [--code-repo <source-code-path>] \
   [--track-code-changes] [--add-progress-comment] \

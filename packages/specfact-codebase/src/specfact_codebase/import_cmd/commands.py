@@ -4,11 +4,58 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import click
 import typer
-from beartype import beartype
 from icontract import require
+from typer.core import TyperGroup
 
 from specfact_project.import_cmd.commands import from_bridge as legacy_from_bridge, from_code as legacy_from_code
+
+
+class _ImportCommandGroup(TyperGroup):
+    """Detect common legacy callback ordering and print a migration-quality hint."""
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        if args and args[0] in self.commands:
+            if any(arg in ("--help", "-h", "--help-advanced", "-ha") for arg in args[1:]):
+                command = self.commands[args[0]]
+                try:
+                    command.main(
+                        args=args[1:],
+                        prog_name=f"{ctx.command_path} {args[0]}",
+                        standalone_mode=False,
+                    )
+                except click.exceptions.Exit as exc:
+                    ctx.exit(exc.exit_code)
+                ctx.exit(0)
+            return self._parse_explicit_subcommand_args(ctx, args)
+        if args and args[0] not in self.commands and any(arg.startswith("-") for arg in args[1:]):
+            self._raise_legacy_order_error(ctx)
+        return super().parse_args(ctx, args)
+
+    def resolve_command(
+        self, ctx: click.Context, args: list[str]
+    ) -> tuple[str | None, click.Command | None, list[str]]:
+        if args and args[0] not in self.commands and any(arg.startswith("-") for arg in args[1:]):
+            self._raise_legacy_order_error(ctx)
+        return super().resolve_command(ctx, args)
+
+    def _raise_legacy_order_error(self, ctx: click.Context) -> None:
+        click.echo(ctx.get_help())
+        click.echo(
+            "\nError: Invalid option order for `specfact code import`.\n"
+            "Use the canonical form: specfact code import --repo . <bundle>\n"
+            "Or use the explicit command: specfact code import from-code <bundle> --repo ."
+        )
+        raise click.UsageError("Invalid option order for specfact code import")
+
+    def _parse_explicit_subcommand_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        original_params = self.params
+        self.params = [param for param in self.params if not isinstance(param, click.Argument)]
+        try:
+            return super().parse_args(ctx, args)
+        finally:
+            self.params = original_params
 
 
 app = typer.Typer(
@@ -16,6 +63,7 @@ app = typer.Typer(
     context_settings={"help_option_names": ["-h", "--help", "--help-advanced", "-ha"]},
     invoke_without_command=True,
     no_args_is_help=False,
+    cls=_ImportCommandGroup,
 )
 
 
@@ -26,8 +74,8 @@ app = typer.Typer(
     "Bundle name must be None or non-empty string",
 )
 @require(lambda confidence: 0.0 <= confidence <= 1.0, "Confidence must be 0.0-1.0")
-@beartype
 def import_codebase(
+    ctx: typer.Context,
     bundle: str | None = typer.Argument(
         None,
         help="Project bundle name (e.g., legacy-api, auth-module). Default: active plan from 'specfact plan select'.",
@@ -99,6 +147,8 @@ def import_codebase(
     ),
 ) -> None:
     """Import a codebase into a SpecFact project bundle."""
+    if ctx.invoked_subcommand is not None:
+        return
     legacy_from_code(
         bundle=bundle,
         repo=repo,
@@ -115,7 +165,7 @@ def import_codebase(
     )
 
 
-app.command("from-code", hidden=True)(legacy_from_code)
+app.command("from-code")(legacy_from_code)
 app.command("from-bridge")(legacy_from_bridge)
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -116,6 +117,13 @@ specfact code stale-subcmd --repo .
     assert "specfact code stale-subcmd --repo ." in findings[0].message
 
 
+def test_command_options_tolerates_params_without_secondary_opts() -> None:
+    script = _load_script()
+    command = SimpleNamespace(params=[SimpleNamespace(opts=["--repo"])])
+
+    assert _script_attr(script, "_command_options")(command) == {"--repo"}
+
+
 def test_main_writes_findings_to_stderr(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     script = _load_script()
     prompt = _write_prompt(
@@ -161,6 +169,49 @@ Prompt instructions are operating guidance. Current CLI help is authoritative; i
     assert len(findings) == 1
     assert findings[0].category == "option"
     assert "--missing-option" in findings[0].message
+
+
+def test_iter_prompt_paths_includes_resource_templates(tmp_path: Path) -> None:
+    script = _load_script()
+    prompt = _write_prompt(tmp_path, "# Prompt\n")
+    template = tmp_path / "packages" / "specfact-project" / "resources" / "templates" / "protocol.yaml.j2"
+    template.parent.mkdir(parents=True)
+    template.write_text('command: "specfact project sync bridge --help"\n', encoding="utf-8")
+
+    paths = _script_attr(script, "_iter_prompt_paths")(tmp_path / "packages")
+
+    assert prompt.resolve() in paths
+    assert template.resolve() in paths
+
+
+def test_selected_paths_accepts_changed_python_command_sources(tmp_path: Path) -> None:
+    script = _load_script()
+    command_source = tmp_path / "packages" / "specfact-codebase" / "src" / "specfact_codebase" / "repro" / "commands.py"
+    command_source.parent.mkdir(parents=True)
+    command_source.write_text('HELP = "specfact code repro --help"\n', encoding="utf-8")
+    args = script._parse_args([str(command_source)])
+
+    assert _script_attr(script, "_selected_paths")(args) == [command_source.resolve()]
+
+
+def test_validate_prompt_commands_reports_stale_command_in_resource_template(tmp_path: Path) -> None:
+    script = _load_script()
+    template = tmp_path / "packages" / "specfact-project" / "resources" / "templates" / "protocol.yaml.j2"
+    template.parent.mkdir(parents=True)
+    template.write_text('command: "specfact sync bridge --help"\n', encoding="utf-8")
+    command_index = _script_attr(script, "CommandIndex")(
+        command_paths={("specfact",), ("specfact", "project"), ("specfact", "project", "sync")},
+        options_by_path={("specfact", "project", "sync"): {"--help"}},
+    )
+
+    findings = _script_attr(script, "_validate_prompt_command_examples")(
+        {template: template.read_text(encoding="utf-8")},
+        command_index,
+    )
+
+    assert len(findings) == 1
+    assert findings[0].category == "command"
+    assert "specfact sync bridge --help" in findings[0].message
 
 
 def test_validate_prompt_guidance_requires_cli_reality_check(tmp_path: Path) -> None:
@@ -228,10 +279,33 @@ def test_module_app_mounts_include_govern_enforce_app() -> None:
     ) in _script_attr(script, "MODULE_APP_MOUNTS")
 
 
+def test_module_app_mounts_do_not_include_removed_flat_shims() -> None:
+    script = _load_script()
+
+    prefixes = {mount[2] for mount in _script_attr(script, "MODULE_APP_MOUNTS")}
+
+    assert ("specfact", "sync") not in prefixes
+    assert ("specfact", "import") not in prefixes
+    assert ("specfact", "plan") not in prefixes
+    assert ("specfact", "migrate") not in prefixes
+
+
+def test_build_command_index_descends_into_typer_groups() -> None:
+    script = _load_script()
+
+    index = script._build_command_index()
+
+    assert ("specfact", "backlog", "add") in index.command_paths
+    assert ("specfact", "project", "sync", "bridge") in index.command_paths
+    assert ("specfact", "code", "import") in index.command_paths
+    assert "--repo" in index.options_by_path[("specfact", "code", "import")]
+    assert "--adapter" in index.options_by_path[("specfact", "project", "sync", "bridge")]
+
+
 def test_docs_review_workflow_runs_prompt_command_validation() -> None:
     workflow = DOCS_REVIEW_WORKFLOW.read_text(encoding="utf-8")
 
-    assert "packages/*/resources/prompts/**" in workflow
+    assert "packages/*/resources/**" in workflow
     assert "python scripts/check-prompt-commands.py" in workflow
     assert "scripts/check-prompt-commands.py" in workflow
     assert "tests/unit/test_check_prompt_commands_script.py" in workflow
@@ -241,6 +315,7 @@ def test_pre_commit_runs_prompt_validation_before_safe_change_skip() -> None:
     script = PRE_COMMIT_SCRIPT.read_text(encoding="utf-8")
 
     assert "check-prompt-commands.py" in script
+    assert 'hatch run python scripts/check-prompt-commands.py "${validation_paths[@]}"' in script
     validation_index = script.index("run_prompt_command_validation_gate")
     safe_change_index = script.index("if check_safe_change; then")
     assert validation_index < safe_change_index
@@ -265,7 +340,7 @@ def test_project_review_prompt_has_self_healing_cli_and_verification_guidance() 
 
     assert "Guidance Character" in prompt
     assert "self-heal command drift" in prompt
-    assert "specfact plan review --help" in prompt
+    assert "specfact project --help" in prompt
     assert "Do not write `.specfact/` artifacts directly" in prompt
     assert "hatch run validate-prompt-commands" in prompt
     assert "hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump" in prompt
@@ -274,4 +349,5 @@ def test_project_review_prompt_has_self_healing_cli_and_verification_guidance() 
 def test_pre_commit_prompt_validation_covers_cli_command_implementations() -> None:
     script = PRE_COMMIT_SCRIPT.read_text(encoding="utf-8")
 
+    assert "packages/*/resources/**" in script
     assert "packages/*/src/**/commands.py" in script

@@ -26,7 +26,7 @@ def run_review(
     progress_callback: Callable[[str], None] | None = None,
     bug_hunt: bool = False,
     review_level: Literal["error", "warning"] | None = None,
-    review_mode: Literal["shadow", "enforce"] = "enforce",
+    review_mode: Literal["full", "changed", "shadow", "enforce"] = "full",
 ) -> ReviewReport:
     """Lazily import the orchestrator to avoid package import cycles."""
     run_review_impl = import_module("specfact_code_review.run.runner").run_review

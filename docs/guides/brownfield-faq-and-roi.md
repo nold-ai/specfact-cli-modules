@@ -18,7 +18,7 @@ Start with a project bundle plus IDE resource bootstrap:
 ```bash
 specfact init --profile solo-developer
 specfact init ide --repo . --ide cursor
-specfact code import legacy-api --repo .
+specfact code import --repo . legacy-api
 ```
 
 That gives you a repeatable baseline without needing to modernize the whole codebase at once.

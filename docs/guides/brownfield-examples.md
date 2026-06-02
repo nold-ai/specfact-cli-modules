@@ -16,7 +16,7 @@ These examples give you three concrete modernization patterns you can adapt with
 Use this when an undocumented repository needs a bundle baseline before any release work:
 
 ```bash
-specfact code import legacy-api --repo .
+specfact code import --repo . legacy-api
 specfact code analyze contracts --repo . --bundle legacy-api
 specfact spec validate --bundle legacy-api
 ```
@@ -30,7 +30,7 @@ Use this when backlog items must be refined before the modernization work is syn
 ```bash
 specfact backlog ceremony refinement github --preview --labels feature
 specfact backlog verify-readiness --adapter github --project-id owner/repo --target-items 123
-specfact sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
+specfact project sync bridge --adapter github --mode export-only --repo . --bundle legacy-api
 ```
 
 Outcome: backlog items are standardized before they drive bundle changes.

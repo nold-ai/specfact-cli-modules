@@ -1,4 +1,9 @@
-"""Command implementation for `specfact code review run`."""
+"""Command implementation for `specfact code review run`.
+
+Operating guidance: command examples in this source are not the source of
+truth; CLI help is authoritative. Check `specfact code review run --help`,
+and ask the user before guessing when help output disagrees.
+"""
 
 from __future__ import annotations
 
@@ -27,7 +32,7 @@ from specfact_code_review.run.runner import ReviewFocus, run_review
 console = Console()
 progress_console = Console(stderr=True)
 AutoScope = Literal["changed", "full"]
-ReviewRunMode = Literal["shadow", "enforce"]
+ReviewRunMode = Literal["full", "changed", "shadow"]
 ReviewLevelFilter = Literal["error", "warning"]
 
 
@@ -70,7 +75,7 @@ class ReviewRunRequest:
     preview_fixes: bool = False
     with_mutation: bool = False
     bug_hunt: bool = False
-    review_mode: ReviewRunMode = "enforce"
+    review_mode: ReviewRunMode = "changed"
     review_level: ReviewLevelFilter | None = None
     focus_facets: tuple[str, ...] = ()
     review_focus: ReviewFocus | None = None
@@ -332,7 +337,7 @@ def _with_applied_simplification_findings(report: ReviewReport, applied_findings
 def _with_simplify_enforce_verdict(report: ReviewReport, flags: _ReviewLoopFlags) -> ReviewReport:
     if (
         flags.review_focus == "simplify"
-        and flags.review_mode == "enforce"
+        and flags.review_mode == "full"
         and report.simplification_summary is not None
         and report.simplification_summary.blocking_simplification_count > 0
     ):
@@ -774,10 +779,12 @@ def _as_optional_path(value: object) -> Path | None:
 
 
 def _as_review_mode(value: object) -> ReviewRunMode:
-    if value is None or value == "enforce":
-        return "enforce"
-    if value == "shadow":
-        return "shadow"
+    if value is None:
+        return "changed"
+    if value == "enforce":
+        return "full"
+    if value in ("full", "changed", "shadow"):
+        return cast(ReviewRunMode, value)
     raise RunCommandError(f"Invalid review mode: {value!r}")
 
 
@@ -866,7 +873,7 @@ def _build_review_run_request(
         preview_fixes=_get_bool_param("preview_fixes"),
         with_mutation=_get_bool_param("with_mutation"),
         bug_hunt=_get_bool_param("bug_hunt"),
-        review_mode=_as_review_mode(request_kwargs.pop("review_mode", "enforce")),
+        review_mode=_as_review_mode(request_kwargs.pop("review_mode", "changed")),
         review_level=_as_review_level(request_kwargs.pop("review_level", None)),
         focus_facets=focus_facets,
         review_focus=_review_focus_from_facets(focus_facets),

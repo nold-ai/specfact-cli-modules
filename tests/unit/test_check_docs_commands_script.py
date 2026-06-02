@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tests.unit._script_test_utils import load_module_from_path
 
 
@@ -15,6 +17,14 @@ def _load_script():
 
 def _script_attr(script, name: str):
     return getattr(script, name)
+
+
+def test_docs_command_mounts_include_nested_prompt_validator_mounts() -> None:
+    script = _load_script()
+    mounts = set(_script_attr(script, "MODULE_APP_MOUNTS"))
+
+    assert ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")) in mounts
+    assert ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")) in mounts
 
 
 def test_extract_command_examples_reads_bash_and_inline_examples(tmp_path: Path) -> None:
@@ -84,6 +94,26 @@ def test_command_example_is_valid_allows_root_help_but_not_unknown_subgroups() -
     assert _script_attr(script, "_command_example_is_valid")("specfact --help", valid_paths)
     assert _script_attr(script, "_command_example_is_valid")("specfact -h", valid_paths)
     assert not _script_attr(script, "_command_example_is_valid")("specfact policy validate --repo .", valid_paths)
+
+
+def test_build_valid_command_paths_rejects_malformed_generated_json(tmp_path: Path, monkeypatch) -> None:
+    script = _load_script()
+    generated = tmp_path / "commands.generated.json"
+    generated.write_text('{"command": "specfact backlog"}\n', encoding="utf-8")
+    monkeypatch.setattr(script, "GENERATED_COMMANDS_PATH", generated)
+
+    with pytest.raises(ValueError, match="expected a JSON list"):
+        _script_attr(script, "_build_valid_command_paths")()
+
+
+def test_build_valid_command_paths_rejects_malformed_generated_entries(tmp_path: Path, monkeypatch) -> None:
+    script = _load_script()
+    generated = tmp_path / "commands.generated.json"
+    generated.write_text('[{"owner_package": "specfact-backlog"}]\n', encoding="utf-8")
+    monkeypatch.setattr(script, "GENERATED_COMMANDS_PATH", generated)
+
+    with pytest.raises(ValueError, match="missing 'command'"):
+        _script_attr(script, "_build_valid_command_paths")()
 
 
 def test_validate_legacy_resource_paths_reports_stale_core_owned_paths(tmp_path: Path) -> None:
@@ -161,6 +191,19 @@ def test_docs_review_workflow_runs_docs_command_validation() -> None:
     assert "scripts/check-docs-commands.py" in workflow
     assert "tests/unit/test_check_docs_commands_script.py" in workflow
     assert "tests/unit/docs/test_code_review_docs_parity.py" in workflow
+
+
+def test_docs_review_workflow_uses_matching_core_branch_when_available() -> None:
+    workflow = (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8")
+
+    assert "id: core-ref" in workflow
+    assert "git ls-remote --exit-code --heads https://github.com/nold-ai/specfact-cli.git" in workflow
+    assert "FALLBACK_REF: ${{ github.base_ref || github.ref_name }}" in workflow
+    assert 'echo "ref=$fallback" >> "$GITHUB_OUTPUT"' in workflow
+    assert "ref: ${{ steps.core-ref.outputs.ref }}" in workflow
+    assert (
+        "ref: ${{ (github.ref == 'refs/heads/main' || github.head_ref == 'main') && 'main' || 'dev' }}" not in workflow
+    )
 
 
 def test_iter_validation_docs_paths_scans_repo_wide_docs_tree() -> None:

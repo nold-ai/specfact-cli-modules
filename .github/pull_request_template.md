@@ -35,8 +35,9 @@ Paste command output snippets or link workflow runs.
 - [ ] `hatch run lint`
 - [ ] `hatch run yaml-lint`
 - [ ] `hatch run check-bundle-imports`
-- [ ] `hatch run contract-test`
-- [ ] `hatch run smart-test` (or `hatch run test`)
+- [ ] `hatch run contract-test-contracts`
+- [ ] `hatch run smart-test-check`
+- [ ] `hatch run test`
 
 ### Signature + version integrity (required)
 

@@ -143,11 +143,11 @@ def init(
 
     **Example:**
     ```bash
-    specfact validate sidecar init legacy-api /path/to/repo
+    specfact code validate sidecar init legacy-api /path/to/repo
     ```
 
     **Next steps:**
-    After initialization, run `specfact validate sidecar run` to execute validation.
+    After initialization, run `specfact code validate sidecar run` to execute validation.
     """
     if is_debug_mode():
         debug_log_operation(
@@ -211,13 +211,13 @@ def run(
     **Example:**
     ```bash
     # Run full validation (CrossHair + Specmatic)
-    specfact validate sidecar run legacy-api /path/to/repo
+    specfact code validate sidecar run legacy-api /path/to/repo
 
     # Run only CrossHair analysis
-    specfact validate sidecar run legacy-api /path/to/repo --no-run-specmatic
+    specfact code validate sidecar run legacy-api /path/to/repo --no-run-specmatic
 
     # Run only Specmatic validation
-    specfact validate sidecar run legacy-api /path/to/repo --no-run-crosshair
+    specfact code validate sidecar run legacy-api /path/to/repo --no-run-crosshair
     ```
 
     **Output:**

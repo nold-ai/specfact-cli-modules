@@ -45,7 +45,7 @@ SpecFact CLI integrations fall into four main categories:
 - ✅ Rapid prototyping workflow: constitution → specify → clarify → plan → tasks → analyze → implement
 - ✅ Constitution and planning for new features
 - ✅ IDE integration with GitHub Copilot chat and other supported agents
-- ✅ Bridge export from Spec-Kit feature folders into OpenSpec change proposals with `specfact sync bridge --adapter speckit --mode change-proposal`
+- ✅ Bridge export from Spec-Kit feature folders into OpenSpec change proposals with `specfact project sync bridge --adapter speckit --mode change-proposal`
 
 **When to use**:
 
@@ -60,10 +60,10 @@ SpecFact CLI integrations fall into four main categories:
 
 ```bash
 # Convert one Spec-Kit feature into an OpenSpec change proposal
-specfact sync bridge --adapter speckit --repo . --mode change-proposal --feature 001-auth-sync
+specfact project sync bridge --adapter speckit --repo . --mode change-proposal --feature 001-auth-sync
 
 # Convert every untracked Spec-Kit feature into OpenSpec changes
-specfact sync bridge --adapter speckit --repo . --mode change-proposal --all
+specfact project sync bridge --adapter speckit --repo . --mode change-proposal --all
 ```
 
 **See also**: [Spec-Kit Journey Guide](./speckit-journey.md)

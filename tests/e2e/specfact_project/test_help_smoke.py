@@ -18,3 +18,12 @@ def test_project_sync_bridge_help_smoke() -> None:
     project_app = importlib.import_module("specfact_project.project.commands").app
     result = runner.invoke(project_app, ["sync", "bridge", "--help"])
     assert result.exit_code == 0
+
+
+def test_project_sync_bridge_help_uses_canonical_command_path() -> None:
+    project_app = importlib.import_module("specfact_project.project.commands").app
+    result = runner.invoke(project_app, ["sync", "bridge", "--help"])
+
+    assert result.exit_code == 0
+    assert "specfact project sync bridge" in result.stdout
+    assert "specfact sync bridge" not in result.stdout
