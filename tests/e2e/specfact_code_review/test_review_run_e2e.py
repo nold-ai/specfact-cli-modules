@@ -43,7 +43,16 @@ def test_review_run_dirty_fixture_fails(tmp_path: Path) -> None:
 
     result = runner.invoke(
         app,
-        ["review", "run", "--json", "--out", str(out), str(FIXTURE_ROOT / "dirty_module.py")],
+        [
+            "review",
+            "run",
+            "--enforcement",
+            "full",
+            "--json",
+            "--out",
+            str(out),
+            str(FIXTURE_ROOT / "dirty_module.py"),
+        ],
     )
 
     assert result.exit_code == 1
