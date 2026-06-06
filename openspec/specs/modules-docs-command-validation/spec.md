@@ -66,3 +66,92 @@ The docs validation script SHALL verify that every URL in `_data/nav.yml` corres
 - **THEN** every URL in the nav file matches an existing page's permalink
 - **AND** the check passes
 
+### Requirement: Module docs command examples are validated
+
+Module documentation command examples SHALL be validated against the generated module command overview.
+
+#### Scenario: Legacy flat sync command fails validation
+
+- **GIVEN** module docs, help examples, prompts, Jinja2 templates, YAML/JSON resources, or text guidance contain `specfact sync bridge`
+- **WHEN** docs command validation runs
+- **THEN** validation fails unless the reference is explicitly marked as historical migration material
+- **AND** the finding identifies `specfact project sync bridge` as the canonical command when appropriate.
+
+#### Scenario: Prompt validators do not whitelist removed flat mounts
+
+- **GIVEN** a validator scans module prompt resources
+- **WHEN** it builds the command contract
+- **THEN** it uses generated module command overview data
+- **AND** it does not accept removed flat mounts such as `specfact import`, `specfact sync`, `specfact plan`, or `specfact migrate` as canonical command groups.
+
+#### Scenario: Invalid option ordering fails validation
+
+- **GIVEN** docs or prompts contain `specfact code import <bundle> --repo .`
+- **WHEN** validation runs
+- **THEN** the validator rejects the example if the command contract does not support that order
+- **AND** the finding includes the canonical supported command form.
+
+### Requirement: Docs validation SHALL validate published-route body links
+
+The modules docs validation command SHALL validate internal links in authored page bodies using the page's published permalink route as the URL base, and SHALL fail when a link resolves to a route that is not backed by a published page or an accepted redirect route.
+
+#### Scenario: Overview relative link fails under published route semantics
+
+- **WHEN** a page with permalink `/bundles/code-review/overview/` contains a body link `run/`
+- **THEN** docs validation resolves the link as `/bundles/code-review/overview/run/`
+- **AND** docs validation reports a `published-link` finding when that route is not published or redirected
+- **AND** the validation command exits non-zero
+
+#### Scenario: Published-route-safe link passes
+
+- **WHEN** a page with permalink `/bundles/code-review/overview/` links to `/bundles/code-review/run/`
+- **THEN** docs validation resolves the link to the published Code Review run page
+- **AND** no `published-link` finding is emitted for that link
+
+### Requirement: Docs validation SHALL reject incomplete published page front matter
+
+The modules docs validation command SHALL reject published Markdown pages whose front matter is missing required route and display metadata, including `layout`, `title`, and `permalink`, unless the page has an explicit documented exemption recognized by the validator.
+
+#### Scenario: Redirect page missing title fails
+
+- **WHEN** a published Markdown redirect page has `layout` and `permalink` but no `title`
+- **THEN** docs validation reports a `frontmatter` finding for the missing `title`
+- **AND** the validation command exits non-zero
+
+#### Scenario: Complete published page passes front matter validation
+
+- **WHEN** a published Markdown page defines `layout`, `title`, and `permalink`
+- **THEN** docs validation accepts the page front matter
+- **AND** no `frontmatter` finding is emitted for that page
+
+### Requirement: Docs validation SHALL expose stable finding categories
+
+The modules docs validation command SHALL emit stable category names for each class of documentation defect so CI logs, pre-commit output, and tests can assert category coverage without matching brittle prose.
+
+#### Scenario: Multiple docs defect categories are reported together
+
+- **WHEN** docs validation finds an unknown command example, a broken published route link, and incomplete front matter
+- **THEN** the output includes `command`, `published-link`, and `frontmatter` categories
+- **AND** the validation command exits non-zero after reporting all discovered docs findings
+
+### Requirement: Docs validation SHALL detect docs build dependency drift
+
+The modules docs validation workflow SHALL include a docs build dependency health check that fails when the checked-in Jekyll dependency lock cannot be installed for the docs site.
+
+#### Scenario: Stale Gemfile lock fails docs dependency validation
+
+- **WHEN** the docs dependency install command cannot resolve a locked gem version from the configured sources
+- **THEN** the docs workflow reports a `docs-build-dependency` failure
+- **AND** Pages publication does not proceed as healthy
+
+### Requirement: Bundle permalink pages SHALL validate parent-segment links against browser routes
+
+For pages whose canonical published route is under `/bundles/`, docs validation SHALL treat Markdown links whose path contains parent-directory segments (`..`) as unsafe unless the filesystem-resolved target file matches the target resolved from the page permalink using browser URL rules.
+
+#### Scenario: Deep bundle overview rejects filesystem-only match for `../../` links
+
+- **WHEN** a bundle overview page is published under `/bundles/<bundle>/overview/` (or another deep `/bundles/` permalink)
+- **AND** its body uses a `../` or `../../` link that reaches a markdown file on disk but resolves to a different or missing public route
+- **THEN** docs validation reports a `published-link` finding (missing route or route mismatch)
+- **AND** the validation command exits non-zero
+

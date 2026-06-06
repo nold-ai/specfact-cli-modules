@@ -1,7 +1,10 @@
 # modules-docs-publishing Specification
 
 ## Purpose
-TBD - created by archiving change docs-01-modules-docs-canonical-site. Update Purpose after archive.
+This specification governs the modules documentation publishing contract,
+including deterministic site inputs, generated navigation, and published-link
+validation for changed docs.
+
 ## Requirements
 ### Requirement: Modules docs site is the canonical home for official bundle documentation
 
@@ -49,3 +52,28 @@ The modules documentation site SHALL maintain a published reference page that ex
 - **WHEN** a guide is moved under `bundles/`, `integrations/`, or `authoring/` with a new canonical `permalink`
 - **THEN** the page includes `jekyll-redirect-from` entries for the previous modules URL (as required by the IA restructure change)
 
+### Requirement: Docs publishing SHALL validate generated-site readiness before deploy
+
+The docs publishing workflow SHALL run docs dependency installation, Jekyll build, and generated-site validation before uploading or deploying the Pages artifact.
+
+#### Scenario: Dependency install failure blocks Pages artifact
+
+- **WHEN** `bundle install` fails for the docs site
+- **THEN** the docs publishing workflow fails before `jekyll build`
+- **AND** no Pages artifact is uploaded from that run
+
+#### Scenario: Generated site contains broken internal link
+
+- **WHEN** the generated `_site` HTML contains an internal `modules.specfact.io` link whose route is not present in the generated site or redirect set
+- **THEN** generated-site validation reports the broken route
+- **AND** the docs publishing workflow fails before deployment
+
+### Requirement: Docs review CI SHALL run the same deterministic docs validators as local checks
+
+The docs review workflow SHALL run the deterministic docs validators used by local pre-commit, plus the docs unit tests, so PR and local validation enforce the same defect categories.
+
+#### Scenario: Docs-only pull request has broken published link
+
+- **WHEN** a pull request changes only Markdown files under `docs/`
+- **THEN** the docs review workflow runs `published-link` validation
+- **AND** the workflow fails when the changed docs introduce a broken `published-link`

@@ -1,59 +1,59 @@
 # Parking Lot (modules side)
 
-These module-runtime change proposals are **paused, not abandoned**, because
-their core-side counterparts in `nold-ai/specfact-cli` have been parked. A
-module runtime cannot land before the core contracts it implements, so these
-nine proposals are pinned to whatever signal un-parks the core side.
+These module-runtime change proposals are paused, not abandoned. They are not
+active implementation scope until a concrete validation need or customer signal
+justifies bringing them back.
 
-For background and the parent triage rationale, see:
+## Why this directory exists
 
-- Core PR: <https://github.com/nold-ai/specfact-cli/pull/551>
-- Core parking-lot README: <https://github.com/nold-ai/specfact-cli/blob/ba944021c0b186698658cdde6ed9a7776eff05a0/openspec/parking-lot/README.md>
+The modules roadmap is now centered on SpecFact as the validation and AI-bloat
+defense CLI. Work that mainly expands upstream ceremonies, enterprise platforms,
+FinOps, knowledge systems, or security suites stays here unless it directly
+strengthens validation evidence for real users.
 
-## Restoration policy
+## Restoration Policy
 
-A modules-side proposal can be returned to `openspec/changes/` only after:
+A modules-side proposal can return to `openspec/changes/` only after:
 
-1. The core counterpart has itself been un-parked (i.e. moved back into
-   `nold-ai/specfact-cli/openspec/changes/`).
-2. The current core API surface has been re-validated against this module's
-   proposal — six months of drift may have invalidated assumptions.
-3. The directory is moved back under `openspec/changes/` here, and
-   `openspec validate <change-id>` passes.
+1. A concrete trigger is documented in an issue or implementation plan.
+2. The paired core contract, if any, is active and validated.
+3. The proposal is rechecked against current module command topology and shipped
+   specs.
+4. `openspec validate <change-id> --strict` passes after the move.
 
-## Contents and un-park triggers
+## Contents and Un-Park Triggers
 
 | Modules change | Paired core change | GH issue | Un-park trigger |
 |---|---|---|---|
-| `enterprise-01-module-policy-client` | `enterprise-01-policy-resolution-extension` | [#231](https://github.com/nold-ai/specfact-cli-modules/issues/231) | Core enterprise-01 un-parked |
-| `enterprise-02-module-audit-client` | `enterprise-02-rbac-and-audit-trail` | [#232](https://github.com/nold-ai/specfact-cli-modules/issues/232) | Core enterprise-02 un-parked |
-| `finops-01-module-cost-outcome` | `finops-01-telemetry-and-outcomes` | [#223](https://github.com/nold-ai/specfact-cli-modules/issues/223) | Core finops-01 un-parked |
-| `knowledge-01-module-memory-runtime` | `knowledge-01-distillation-engine` | [#224](https://github.com/nold-ai/specfact-cli-modules/issues/224) | Core knowledge-01 un-parked |
-| `knowledge-02-module-writeback` | `knowledge-02-preflight-context-assembly` | [#225](https://github.com/nold-ai/specfact-cli-modules/issues/225) | Core knowledge-02 un-parked |
-| `review-resiliency-01-module` | `review-resiliency-01-contracts` | [#226](https://github.com/nold-ai/specfact-cli-modules/issues/226) | Core review-resiliency-01 un-parked |
-| `security-01-module-sast-sca-secret` | `security-01-unified-findings-model` | [#227](https://github.com/nold-ai/specfact-cli-modules/issues/227) | Core security-01 un-parked |
-| `security-02-module-license-compliance` | `security-01-unified-findings-model` (license findings aspect) | [#228](https://github.com/nold-ai/specfact-cli-modules/issues/228) | Core security-01 un-parked |
-| `security-03-module-pii-gdpr-eu` | `security-02-eu-gdpr-baseline` (GDPR aspect) | [#229](https://github.com/nold-ai/specfact-cli-modules/issues/229) | Core security-02 un-parked |
+| `enterprise-01-module-policy-client` | `enterprise-01-policy-resolution-extension` | [#231](https://github.com/nold-ai/specfact-cli-modules/issues/231) | Core enterprise-01 un-parked and paying enterprise policy pull exists |
+| `enterprise-02-module-audit-client` | `enterprise-02-rbac-and-audit-trail` | [#232](https://github.com/nold-ai/specfact-cli-modules/issues/232) | Core enterprise-02 un-parked and audit/RBAC pull exists |
+| `finops-01-module-cost-outcome` | `finops-01-telemetry-and-outcomes` | [#223](https://github.com/nold-ai/specfact-cli-modules/issues/223) | Heavy in-product LLM workloads or customer spend-evidence pull |
+| `knowledge-01-module-memory-runtime` | `knowledge-01-distillation-engine` | [#224](https://github.com/nold-ai/specfact-cli-modules/issues/224) | Large evidence corpus with proven rule-mining value |
+| `knowledge-02-module-writeback` | `knowledge-02-preflight-context-assembly` | [#225](https://github.com/nold-ai/specfact-cli-modules/issues/225) | knowledge-01 ships useful validation rules in practice |
+| `review-resiliency-01-module` | `review-resiliency-01-contracts` | [#226](https://github.com/nold-ai/specfact-cli-modules/issues/226) | Code-review users report a real resiliency evidence gap |
+| `security-01-module-sast-sca-secret` | `security-01-unified-findings-model` | [#227](https://github.com/nold-ai/specfact-cli-modules/issues/227) | Customer asks for unified security finding output inside validation evidence |
+| `security-02-module-license-compliance` | `security-01-unified-findings-model` | [#228](https://github.com/nold-ai/specfact-cli-modules/issues/228) | Customer asks for license findings inside validation evidence |
+| `security-03-module-pii-gdpr-eu` | `security-02-eu-gdpr-baseline` | [#229](https://github.com/nold-ai/specfact-cli-modules/issues/229) | Regulated customer asks for GDPR evidence gates |
+| `backlog-scrum-02-sprint-planning` | none active | [#160](https://github.com/nold-ai/specfact-cli-modules/issues/160) | Validation evidence requires sprint-planning data, not ceremony expansion |
+| `backlog-scrum-03-story-complexity` | none active | [#153](https://github.com/nold-ai/specfact-cli-modules/issues/153) | Validation evidence requires complexity signals from real users |
+| `backlog-scrum-04-definition-of-done` | none active | [#152](https://github.com/nold-ai/specfact-cli-modules/issues/152) | Validation evidence requires DoD fields as gate inputs |
+| `backlog-kanban-01-flow-metrics` | none active | [#155](https://github.com/nold-ai/specfact-cli-modules/issues/155) | Validation evidence requires flow metrics for a real delivery gate |
+| `backlog-safe-01-pi-planning` | none active | [#154](https://github.com/nold-ai/specfact-cli-modules/issues/154) | Paying customer needs PI-planning data as validation input |
+| `backlog-safe-02-risk-rollups` | none active | [#156](https://github.com/nold-ai/specfact-cli-modules/issues/156) | Paying customer needs risk rollups as validation input |
+| `ceremony-02-requirements-aware-output` | none active | [#159](https://github.com/nold-ai/specfact-cli-modules/issues/159) | Validation evidence needs ceremony output fields from a real workflow |
 
-## Not parked here (still active)
+## Still Active
 
-The following modules-side proposals remain in `openspec/changes/` because
-their core counterparts are still active or in the core repo's modify queue:
+The following remain active because they support validation evidence, runtime
+trust, or optional upstream context adapters:
 
-- `architecture-01-solution-layer` *(paired core: active)*
-- `architecture-02-module-well-architected` *(paired core: gated, not parked)*
-- `requirements-02-module-commands`, `requirements-03-backlog-sync`
-- `traceability-01-index-and-orphans`, `validation-02-full-chain-engine`
+- `policy-02-packs-and-modes`
 - `governance-01-evidence-output`, `governance-02-exception-management`
-- `policy-02-packs-and-modes`, `sync-01-unified-kernel`,
-  `ceremony-02-requirements-aware-output`
-- `openspec-01-intent-trace` *(paired core: in modify queue, will be trimmed)*
-- All `backlog-*` and `docs-*` changes
-- `codebase-import-runtime-hardening`, `project-runtime-01-safe-artifact-write-policy`
+- `validation-02-full-chain-engine`, `traceability-01-index-and-orphans`
+- `requirements-02-module-commands`, `requirements-03-backlog-sync`
+- `architecture-01-solution-layer`, `architecture-02-module-well-architected`
+- `openspec-01-intent-trace`
+- `sync-01-unified-kernel`
+- `docs-14-module-release-history`
 
-## Completed / awaiting archive
-
-- `marketplace-07-pr-auto-sign-updates`
-
-The core marketplace-06 work (`marketplace-06-ci-module-signing`) was already
-archived here on 2026-04-16 — no parking action needed.
+Completed validation and AI-bloat changes are archived, not parked.

@@ -1,7 +1,10 @@
 # ci-integration Specification
 
 ## Purpose
-TBD - created by archiving change marketplace-06-ci-module-signing. Update Purpose after archive.
+This specification governs module-signature behavior in CI, including when PR
+workflows repair same-repo package manifests and when verification requires
+cryptographic signatures.
+
 ## Requirements
 ### Requirement: pr-orchestrator skips signature requirement for dev-targeting events
 
@@ -23,9 +26,10 @@ for pull requests or pushes targeting `dev`; it SHALL enforce `--require-signatu
 - **WHEN** a same-repo pull request targets `dev` or `main`
 - **AND** a later `pull_request` `synchronize` event adds review-fix commits that change module
   payloads
-- **THEN** the CI signing workflow SHALL re-sign the changed manifests on the PR head branch
+- **THEN** `.github/workflows/sign-modules.yml` SHALL re-sign the changed manifests on the PR head branch
 - **AND** SHALL commit `chore(modules): ci sign changed modules` only when the manifests changed
 - **AND** the workflow SHALL skip this remediation for its own bot-authored signing commit
+- **AND** `.github/workflows/sign-modules-on-approval.yml` SHALL remain limited to trusted approval review events rather than `synchronize` events
 
 #### Scenario: Fork PR remains verify-only
 
@@ -44,7 +48,7 @@ for pull requests or pushes targeting `dev`; it SHALL enforce `--require-signatu
 #### Scenario: Dev-to-main PR after CI signing commit
 
 - **WHEN** a pull request targets `main`
-- **AND** the CI `sign-modules-on-approval` workflow has committed signed manifests to the PR branch
+- **AND** the CI signing workflow has committed signed manifests to the PR branch
 - **THEN** the `verify-module-signatures` job SHALL pass with `--require-signature`
 - **AND** the PR SHALL be unblocked (subject to other required checks)
 
