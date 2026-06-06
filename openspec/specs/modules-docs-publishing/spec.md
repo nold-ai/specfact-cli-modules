@@ -1,7 +1,10 @@
 # modules-docs-publishing Specification
 
 ## Purpose
-TBD - created by archiving change docs-01-modules-docs-canonical-site. Update Purpose after archive.
+This specification governs the modules documentation publishing contract,
+including deterministic site inputs, generated navigation, and published-link
+validation for changed docs.
+
 ## Requirements
 ### Requirement: Modules docs site is the canonical home for official bundle documentation
 
@@ -72,6 +75,5 @@ The docs review workflow SHALL run the deterministic docs validators used by loc
 #### Scenario: Docs-only pull request has broken published link
 
 - **WHEN** a pull request changes only Markdown files under `docs/`
-- **THEN** the docs review workflow runs published-route link validation
-- **AND** the workflow fails when the changed docs introduce a broken published-route link
-
+- **THEN** the docs review workflow runs `published-link` validation
+- **AND** the workflow fails when the changed docs introduce a broken `published-link`

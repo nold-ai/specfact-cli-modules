@@ -1,7 +1,10 @@
 # ci-module-signing-on-approval Specification
 
 ## Purpose
-TBD - created by archiving change marketplace-06-ci-module-signing. Update Purpose after archive.
+This specification defines the approval-triggered module signing workflow for
+same-repo pull requests, including reviewer trust, changed-manifest discovery,
+idempotent output, and fork safety.
+
 ## Requirements
 ### Requirement: Sign packages manifests on PR approval
 
@@ -9,12 +12,17 @@ The system SHALL automatically sign changed `packages/*/module-package.yaml` man
 secrets when a same-repo pull request targeting `dev` or `main` receives a trusted approval review,
 and SHALL commit the signed manifests back to the PR branch.
 
+A trusted reviewer SHALL be a repository collaborator whose approval review is
+accepted by GitHub branch protection for the target branch and whose identity is
+not the workflow automation actor committing signatures.
+
 #### Scenario: PR to dev approved with package module changes
 
 - **WHEN** a pull request targeting `dev` is approved by a trusted reviewer
 - **AND** the PR contains changes to one or more files under `packages/`
 - **THEN** the CI signing workflow SHALL discover all `packages/*/module-package.yaml` manifests
-  whose payload changed on the PR branch since the merge-base with `origin/dev`
+  whose payload changed on the PR branch since the merge-base commit with `origin/dev`
+- **AND** discovery SHALL compare against that merge-base snapshot rather than a moving `origin/dev` tip
 - **AND** SHALL sign them using `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and
   `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE`
 - **AND** SHALL commit the updated manifests back to the PR branch
@@ -70,4 +78,3 @@ from `src/specfact_cli/modules/` or `modules/` (which do not exist in this repos
 - **WHEN** the signing workflow runs twice on the same package payload
 - **THEN** the resulting `integrity:` block SHALL be byte-for-byte identical
 - **AND** the second run SHALL produce no git diff and SHALL skip the commit
-

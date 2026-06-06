@@ -9,7 +9,7 @@ reporting, and the IDE simplification prompt input model.
 ## Requirements
 ### Requirement: The code-review runner SHALL emit findings under a new `ai_bloat` principle category
 
-The code-review pipeline SHALL recognise `ai_bloat` as a valid value of the `category` field on `ReviewFinding` and as the policy-pack `principle` for all AI-bloat rules. The new category SHALL surface in `.specfact/code-review.json` alongside the existing categories `naming | kiss | yagni | dry | solid | clean_code | architecture` through an additive strict-schema update. Findings under `ai_bloat` SHALL emit at `info` severity only (the non-blocking severity already accepted by `ReviewFinding`); the runner SHALL never emit `ai_bloat` findings at `warning` or `error` severity in this iteration. The `advisory` framing is carried at the policy-pack layer via `default_mode: advisory`, not by introducing a new per-finding severity value. `ai_bloat` findings SHALL be score-neutral in v1.
+The code-review pipeline SHALL recognise `ai_bloat` as a valid value of the `category` field on `ReviewFinding` and as the policy-pack `principle` for all AI-bloat rules. The category enumeration SHALL include `ai_bloat` with the governed categories `naming | kiss | yagni | dry | solid | clean_code | architecture | ai_bloat` through an additive strict-schema update. Findings under `ai_bloat` SHALL emit at `info` severity only (the non-blocking severity already accepted by `ReviewFinding`); the runner SHALL never emit `ai_bloat` findings at `warning` or `error` severity in this iteration. The `advisory` framing is carried at the policy-pack layer via `default_mode: advisory`, not by introducing a new per-finding severity value. `ai_bloat` findings SHALL be score-neutral in v1.
 
 #### Scenario: Review run on a fixture with a manual-loop comprehension emits an ai_bloat finding
 
@@ -103,4 +103,4 @@ The clean-code policy-pack documentation SHALL note that `ai-bloat-patterns.yaml
 - **WHEN** a reader consults the clean-code policy-pack documentation
 - **THEN** the documentation SHALL state explicitly that `ai-bloat-patterns.yaml` is a separate policy pack
 - **AND** SHALL state that its severity model is `advisory`-only
-- **AND** SHALL state that its principle category is `ai_bloat`, distinct from the existing principle categories (`naming | kiss | yagni | dry | solid | clean_code | architecture`)
+- **AND** SHALL state that its principle category is `ai_bloat`, distinct from the clean-code principle categories (`naming | kiss | yagni | dry | solid | clean_code | architecture`)

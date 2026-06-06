@@ -1,7 +1,10 @@
 # ai-ide-remediation-handoff Specification
 
 ## Purpose
-TBD - created by archiving change code-review-13-cleanup-forecast-agent-handoff. Update Purpose after archive.
+This specification defines the portable remediation-packet contract that lets
+AI IDEs consume SpecFact review evidence, prioritize cleanup work, and rerun
+validation without relying on vendor-specific prompt prose.
+
 ## Requirements
 ### Requirement: Review JSON is the portable AI IDE handoff contract
 
@@ -20,4 +23,3 @@ The Code Review bundle SHALL expose cleanup guidance through machine-readable JS
 - **THEN** the instructions SHALL tell assistants to generate simplify evidence first
 - **AND** they SHALL tell assistants to sort findings by `guidance_kind`, inspect `cleanup_forecast`, and follow remediation packets before editing
 - **AND** they SHALL prohibit treating `ai_bloat` findings as proof of AI authorship
-

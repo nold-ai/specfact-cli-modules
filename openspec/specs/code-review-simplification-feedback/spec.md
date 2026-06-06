@@ -1,7 +1,10 @@
 # code-review-simplification-feedback Specification
 
 ## Purpose
-TBD - created by archiving change code-review-11-simplification-feedback-loop. Update Purpose after archive.
+This specification defines advisory simplification feedback for code review:
+deterministic overengineering detectors, additive finding metadata, duplicate
+intent grouping, and IDE prompt consumption.
+
 ## Requirements
 ### Requirement: Review findings carry optional simplification metadata
 
@@ -12,6 +15,7 @@ The code-review report SHALL support optional simplification metadata on each fi
 - **WHEN** a simplification-capable detector emits a finding
 - **THEN** the finding MAY include `confidence`, `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, and `related_locations`
 - **AND** each included metadata field SHALL be serializable in `.specfact/code-review.json`
+- **AND** each included metadata field SHALL conform to the canonical optional simplification fields defined by the `review-finding-model` specification
 - **AND** existing required fields such as `category`, `severity`, `tool`, `rule`, `file`, `line`, `message`, and `fixable` SHALL remain present
 
 #### Scenario: Consumer ignores simplification metadata
@@ -78,4 +82,3 @@ The `/specfact.08-simplify` prompt SHALL consume simplification metadata from `.
 - **WHEN** `/specfact.08-simplify` presents a simplification candidate
 - **THEN** it SHALL ask the user to accept, reject, skip, or request explanation before applying any edit
 - **AND** it SHALL apply only edits the user accepts
-

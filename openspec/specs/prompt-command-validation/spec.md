@@ -1,7 +1,10 @@
 # prompt-command-validation Specification
 
 ## Purpose
-TBD - created by archiving change prompt-command-contract-validation. Update Purpose after archive.
+This specification defines validation for CLI command references embedded in
+bundle-owned prompt resources, so prompt guidance stays aligned with the
+mounted SpecFact command tree and can self-heal when prose is stale.
+
 ## Requirements
 ### Requirement: Bundle prompt command references SHALL match mounted CLI contracts
 
@@ -68,4 +71,3 @@ Prompt command validation SHALL be available as a Hatch command and SHALL run au
 - **WHEN** the docs review workflow runs
 - **THEN** prompt command validation runs with logs
 - **AND** stale command references fail the workflow
-

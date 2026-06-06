@@ -1,7 +1,10 @@
 # module-command-overview Specification
 
 ## Purpose
-TBD - created by archiving change tester-module-cli-reliability. Update Purpose after archive.
+This specification defines deterministic module command overview artifacts and
+the docs validation checks that keep published module command references aligned
+with the actual command tree.
+
 ## Requirements
 ### Requirement: Modules Publish Generated Command Overview Artifacts
 
@@ -27,4 +30,3 @@ The modules repository SHALL generate deterministic command overview artifacts f
 - **WHEN** the command overview freshness check runs
 - **THEN** it fails if generated artifacts are stale
 - **AND** it reports the command needed to regenerate them.
-

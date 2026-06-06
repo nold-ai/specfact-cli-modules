@@ -1,7 +1,10 @@
 # guided-simplification-review Specification
 
 ## Purpose
-TBD - created by archiving change code-review-12-guided-simplification-enforcement. Update Purpose after archive.
+This specification defines how simplify-focused review findings classify cleanup
+safety, preserve meaningful code, summarize outcomes, and guide AI assistants
+without turning advisory cleanup into default blocking behavior.
+
 ## Requirements
 ### Requirement: Simplification findings classify cleanup safety
 
@@ -18,7 +21,7 @@ Simplify-focused review findings SHALL classify each simplification candidate in
 
 - **WHEN** a candidate occurs in a meaningful contract, interface, public compatibility, CLI boundary, or domain predicate context
 - **THEN** the finding SHALL use `guidance_kind="preserve"` or `guidance_kind="design_judgment"`
-- **AND** `preserve` findings SHALL include a `preserve_reason`
+- **AND** `preserve` findings SHALL include `preserve_reasons` from the closed taxonomy defined by the `review-finding-model` specification
 - **AND** the finding SHALL NOT be eligible for automatic cleanup
 
 ### Requirement: Guided simplification reports summarize recommendations and outcomes
@@ -64,4 +67,3 @@ The `specfact-code-review` skill SHALL guide LLMs to interpret simplify-focused 
 - **WHEN** an LLM uses the `specfact-code-review` skill to act on simplify findings
 - **THEN** the skill SHALL instruct it to apply `safe_mechanical`, test `needs_tests`, inspect `design_judgment`, and keep `preserve`
 - **AND** it SHALL prohibit treating AI-bloat findings as proof of AI authorship
-
