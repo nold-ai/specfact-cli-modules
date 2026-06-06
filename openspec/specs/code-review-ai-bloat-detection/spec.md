@@ -1,7 +1,11 @@
 # code-review-ai-bloat-detection Specification
 
 ## Purpose
-TBD - created by archiving change code-review-ai-bloat-detection. Update Purpose after archive.
+
+This spec defines the advisory AI-bloat detection contract for SpecFact code
+review, including finding categories, policy-pack registration, score-neutral
+reporting, and the IDE simplification prompt input model.
+
 ## Requirements
 ### Requirement: The code-review runner SHALL emit findings under a new `ai_bloat` principle category
 
@@ -76,16 +80,16 @@ The `specfact-code-review` bundle SHALL ship a policy pack at `resources/policy-
 
 ### Requirement: An IDE slash-command prompt SHALL drive targeted rewrites
 
-The `specfact-project` bundle SHALL ship a prompt resource at `resources/prompts/specfact.08-simplify.md` that drives an LLM-assisted rewrite workflow in the user's IDE. The prompt SHALL: read `.specfact/code-review.json`, filter findings where `category=ai_bloat`, group by file and then by rule ID, present each candidate with a rewrite hint, drive a per-change accept/reject/skip/explain loop, apply accepted edits via the IDE's edit tool, and suggest re-running the review afterwards. The prompt SHALL NOT edit files autonomously and SHALL NOT skip the per-change confirmation step.
+The `specfact-project` bundle SHALL ship a prompt resource at `resources/prompts/specfact.08-simplify.md` that drives an LLM-assisted rewrite workflow in the user's IDE. The prompt SHALL read `.specfact/code-review-simplify.json` as the primary simplify input, filter findings where `category=ai_bloat`, group by file and then by rule ID, present each candidate with a rewrite hint, drive a per-change accept/reject/skip/explain loop, apply accepted edits via the IDE's edit tool, and suggest re-running the review afterward. If `.specfact/code-review-simplify.json` is missing, the prompt MAY fall back to `.specfact/code-review.json` in legacy mode only after normalizing AI-bloat findings into the simplify input model. The prompt SHALL NOT edit files autonomously and SHALL NOT skip the per-change confirmation step.
 
 #### Scenario: Slash command runs with no ai_bloat findings present
 
-- **WHEN** the user invokes `/specfact.08-simplify` in an IDE session whose `.specfact/code-review.json` contains no findings with `category=ai_bloat`
+- **WHEN** the user invokes `/specfact.08-simplify` in an IDE session whose `.specfact/code-review-simplify.json` contains no findings with `category=ai_bloat`
 - **THEN** the prompt SHALL report that there are no ai-bloat candidates and exit without modifying any files
 
 #### Scenario: Slash command walks the user through findings with confirmation
 
-- **WHEN** the user invokes `/specfact.08-simplify` and the JSON contains one or more `ai_bloat` findings
+- **WHEN** the user invokes `/specfact.08-simplify` and the simplify JSON contains one or more `ai_bloat` findings
 - **THEN** the prompt SHALL present each finding in turn with its source snippet, rule ID, and rewrite hint
 - **AND** the prompt SHALL ask the user to accept, reject, skip, or request explanation before applying any edit
 - **AND** the prompt SHALL apply only the edits the user accepts
@@ -100,4 +104,3 @@ The clean-code policy-pack documentation SHALL note that `ai-bloat-patterns.yaml
 - **THEN** the documentation SHALL state explicitly that `ai-bloat-patterns.yaml` is a separate policy pack
 - **AND** SHALL state that its severity model is `advisory`-only
 - **AND** SHALL state that its principle category is `ai_bloat`, distinct from the existing principle categories (`naming | kiss | yagni | dry | solid | clean_code | architecture`)
-

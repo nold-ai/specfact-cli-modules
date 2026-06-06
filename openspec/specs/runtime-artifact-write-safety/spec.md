@@ -1,7 +1,13 @@
 # runtime-artifact-write-safety Specification
 
 ## Purpose
-TBD - created by archiving change project-runtime-01-safe-artifact-write-policy. Update Purpose after archive.
+
+This spec defines safe runtime artifact writes for bundle commands, preserving
+user-owned files while allowing deterministic updates to SpecFact-managed
+artifacts. It carries the archived project-runtime safe-artifact-write policy
+into a baseline contract that implementers must use for ownership decisions,
+merge behavior, recovery expectations, and fail-safe outcomes.
+
 ## Requirements
 ### Requirement: Bundle runtime commands SHALL distinguish sanctioned external artifacts from SpecFact-managed artifacts
 
@@ -31,4 +37,3 @@ Bundle commands that update partially owned config files under `.specfact` SHALL
 - **WHEN** a bundle command encounters an existing `.specfact` config shape that it cannot reconcile safely
 - **THEN** the command SHALL fail with actionable guidance
 - **AND** SHALL leave the existing file unchanged by default
-

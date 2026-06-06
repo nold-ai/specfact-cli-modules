@@ -1,7 +1,13 @@
 # module-cli-error-contract Specification
 
 ## Purpose
-TBD - created by archiving change tester-module-cli-reliability. Update Purpose after archive.
+
+This spec defines the shared CLI error contract for module commands that was
+proven by the archived tester-module-cli-reliability work. It is the
+self-contained contract for module implementers, docs authors, and test suites
+covering missing subcommands, missing inputs, legacy invocation boundaries, and
+typed diagnostics so module CLIs stay actionable and consistent.
+
 ## Requirements
 ### Requirement: Module Commands Follow Shared CLI Error Contract
 
@@ -38,4 +44,3 @@ Module command groups and leaf commands SHALL render actionable help for missing
 - **WHEN** `specfact project regenerate` runs
 - **THEN** the command reports a typed validation or bundle-data diagnostic
 - **AND** it does not crash with a raw `NoneType` attribute error.
-

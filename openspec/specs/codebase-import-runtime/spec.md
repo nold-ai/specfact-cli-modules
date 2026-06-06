@@ -1,7 +1,12 @@
 # codebase-import-runtime Specification
 
 ## Purpose
-TBD - created by archiving change codebase-import-runtime-hardening. Update Purpose after archive.
+
+This spec defines validation-runtime behavior for `specfact code import` so
+repository discovery remains deterministic, bounded, and honest about ignored
+or heavyweight artifacts. It governs traversal pruning, warning diagnostics, and
+safe import inputs for downstream codebase validation.
+
 ## Requirements
 ### Requirement: Import runtime SHALL prune hidden and heavyweight trees before discovery
 
@@ -56,4 +61,3 @@ Long-running import phases SHALL derive percentage and remaining-time feedback f
 - **WHEN** the command has discovered part of the repository and has processed a subset of that discovered work
 - **THEN** the remaining-time display SHALL be derived from processed-versus-discovered work at the current runtime rate
 - **AND** any early estimate before full discovery SHALL be labeled as provisional rather than a fixed promise
-

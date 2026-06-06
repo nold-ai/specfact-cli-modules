@@ -59,18 +59,18 @@ AI IDE, rerun, and compare improved evidence.
 | 1 | `policy-02-packs-and-modes` | [#158](https://github.com/nold-ai/specfact-cli-modules/issues/158) | Validation severity, rollout modes, and policy-pack execution | core profile/policy semantics |
 | 2 | `governance-01-evidence-output` | [#169](https://github.com/nold-ai/specfact-cli-modules/issues/169) | Runtime evidence emitters for JSON/CI/AI handoff | core `governance-01` |
 | 3 | `governance-02-exception-management` | [#167](https://github.com/nold-ai/specfact-cli-modules/issues/167) | Runtime exception handling and waiver evidence | governance-01, policy-02 |
-| 4 | `validation-02-full-chain-engine` | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Validation evidence graph runtime, not lifecycle orchestration | governance-01, traceability-01 |
-| 5 | `traceability-01-index-and-orphans` | [#170](https://github.com/nold-ai/specfact-cli-modules/issues/170) | Artifact drift and orphan detection runtime | validation input contracts |
-| 6 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
+| 4 | `traceability-01-index-and-orphans` | [#170](https://github.com/nold-ai/specfact-cli-modules/issues/170) | Artifact drift and orphan detection runtime | validation input contracts |
+| 5 | `validation-02-full-chain-engine` | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Validation evidence graph runtime, not lifecycle orchestration | governance-01, traceability-01 |
 
 ### Track B - Upstream Context Adapters
 
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
 | 1 | `requirements-02-module-commands` | [#165](https://github.com/nold-ai/specfact-cli-modules/issues/165) | Import/normalize requirement context for evidence | core requirements input model |
-| 2 | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path | requirements-02, sync-01 |
-| 3 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
-| 4 | `openspec-01-intent-trace` | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Optional OpenSpec and Spec Kit evidence import adapter | requirements input contracts |
+| 2 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
+| 3 | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path | requirements-02, sync-01 |
+| 4 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
+| 5 | `openspec-01-intent-trace` | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Optional OpenSpec and Spec Kit evidence import adapter | requirements input contracts |
 | Gated | `architecture-02-module-well-architected` | [#230](https://github.com/nold-ai/specfact-cli-modules/issues/230) | Architecture-boundary review findings | architecture-01 shipped plus one usage cycle |
 
 ### Track C - Supporting Docs
@@ -113,18 +113,22 @@ ceremony rather than validation evidence:
 - Park upstream ceremony expansions.
 - Update active proposals and wiki mirrors to validation positioning.
 - Recheck GitHub Project metadata with a token that has project-field access.
+- Required blocking gate: review all paired public change artifacts in
+  `nold-ai/specfact-cli` before scoped implementation or shared
+  workflow-semantic changes proceed.
 
 ### Wave 2 - Validation Evidence Runtime
 
 - `policy-02-packs-and-modes`
 - `governance-01-evidence-output`
 - `governance-02-exception-management`
-- `validation-02-full-chain-engine`
 - `traceability-01-index-and-orphans`
+- `validation-02-full-chain-engine`
 
 ### Wave 3 - Context Adapters
 
 - `requirements-02-module-commands`
+- `sync-01-unified-kernel`
 - `requirements-03-backlog-sync`
 - `architecture-01-solution-layer`
 - `openspec-01-intent-trace`
@@ -132,7 +136,6 @@ ceremony rather than validation evidence:
 ### Wave 4 - Gated Extensions
 
 - `architecture-02-module-well-architected`
-- `sync-01-unified-kernel` only where adapter safety requires it
 - `docs-14-module-release-history`
 
 ## Parent Issues And Epic Framing

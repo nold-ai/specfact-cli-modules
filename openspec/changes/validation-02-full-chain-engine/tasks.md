@@ -2,9 +2,11 @@
 
 ## 1. Branch and dependency guardrails
 
-- [ ] 1.1 Create dedicated worktree branch `feature/validation-02-full-chain-engine` from `dev` before implementation work: `scripts/worktree.sh create feature/validation-02-full-chain-engine`.
-- [ ] 1.2 Verify prerequisite changes are implemented or explicitly accepted as parallel work.
-- [ ] 1.3 Reconfirm scope against the validation evidence graph positioning and this proposal.
+- [ ] 1.1 Recheck GitHub Project metadata using a token with project-field access before scoped implementation starts.
+- [ ] 1.2 Review paired `specfact-cli` public-artifact changes before widening shared workflow semantics.
+- [ ] 1.3 Create dedicated worktree branch `feature/validation-02-full-chain-engine` from `dev` before implementation work: `scripts/worktree.sh create feature/validation-02-full-chain-engine`.
+- [ ] 1.4 Verify prerequisite changes are implemented or explicitly accepted as parallel work.
+- [ ] 1.5 Reconfirm scope against the validation evidence graph positioning and this proposal.
 
 ## 2. Spec-first and test-first preparation
 
