@@ -3,9 +3,7 @@
 ## Purpose
 
 TBD - created by archiving change backlog-02-migrate-core-commands. Update Purpose after archive.
-
 ## Requirements
-
 ### Requirement: Restore backlog sync command functionality
 
 The system SHALL provide `specfact backlog sync` command for bidirectional backlog synchronization, and related governance workflows SHALL resolve current Epic and Feature planning metadata from **`.specfact/backlog/github_hierarchy_cache.md`**, with deterministic sync state in **`.specfact/backlog/github_hierarchy_cache_state.json`**, before performing manual GitHub lookups. Tools that participate in backlog or OpenSpec workflows MUST read and write those exact paths (or invoke `python scripts/sync_github_hierarchy_cache.py`, which uses them by default) and MUST fall back to live GitHub lookup only when the files are missing, unreadable, or stale per governance rules.
@@ -59,3 +57,21 @@ The backlog sync system SHALL check for existing issue mappings from external to
 - **WHEN** `specfact backlog sync` runs
 - **THEN** the sync creates issues for all tasks as before (no behavior change)
 - **AND** no spec-kit extension detection is attempted
+
+### Requirement: Backlog sync SHALL distinguish managed `.specfact` state from external output targets
+
+Any `specfact backlog sync` local artifact path SHALL distinguish between fully owned managed state under `.specfact` and explicit output targets outside `.specfact`.
+
+#### Scenario: Default managed baseline state updates deterministically
+
+- **WHEN** backlog sync updates its default baseline state under `.specfact`
+- **THEN** the command MAY rewrite that managed artifact deterministically
+- **AND** SHALL treat it as SpecFact-managed state rather than a user-owned external file
+
+#### Scenario: Explicit external baseline target is not silently overwritten
+
+- **WHEN** backlog sync is configured to write a baseline or comparable output path outside `.specfact`
+- **AND** the target file already exists
+- **THEN** the command SHALL fail safe, merge safely, or require explicit replacement according to the declared ownership mode
+- **AND** SHALL NOT silently overwrite the existing user-owned file
+

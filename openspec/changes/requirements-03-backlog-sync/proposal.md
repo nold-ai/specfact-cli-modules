@@ -1,54 +1,48 @@
-# Change: Requirements ↔ Backlog Bidirectional Sync
+# Change: Backlog Requirement Drift Runtime
 
 ## Why
 
+Backlog items and local validation inputs drift. The useful SpecFact runtime
+value is read-first import, conflict preview, and drift evidence before code
+merges, not bidirectional product-management sync.
 
+## Ownership Alignment (2026-06-06)
 
-
-When backlog items change, requirements aren't updated. When requirements change, backlog items aren't updated. The two drift apart silently, creating a traceability gap that grows with every sprint. Teams discover the drift only during audits or after building the wrong thing. A bidirectional sync between backlog items and `.specfact/requirements/` using the sync kernel makes requirements and backlog items a single source of truth — with drift detection as the safety net.
-
-## Ownership Alignment (2026-04-08)
-
-- Repository assignment: `nold-ai/specfact-cli-modules`
-- Modules-owned scope retained here: runtime synchronization orchestration, backlog/project command delivery, and bundle-side adapter behavior for requirements-backlog flows.
-- Core counterpart retained in `nold-ai/specfact-cli` issue [#244](https://github.com/nold-ai/specfact-cli/issues/244)
-- Target hierarchy: modules Epic [#144](https://github.com/nold-ai/specfact-cli-modules/issues/144) -> Feature [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161) -> Story [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166)
-- Shared schemas, contracts, and cross-change semantics remain owned by the core counterpart and MUST NOT be redefined here.
-- Package and command examples below describe the runtime follow-up only and must be adapted to the canonical grouped bundle surface during implementation.
+- Modules-owned scope retained here: backlog adapter runtime, read-first drift
+  detection, preview safety, and evidence emission.
+- Core-owned scope remains drift evidence contracts and duplicate-creation
+  safeguards.
+- Write-back remains preview-only and outside the validation critical path.
 
 ## What Changes
 
-
-
-
-- **NEW**: `specfact requirements sync --from-backlog <adapter> --project <org/repo> --preview` — pull structured requirements from backlog AC text, update `.specfact/requirements/`
-- **NEW**: `specfact requirements sync --to-backlog <adapter> --project <org/repo> --preview` — push requirement-derived fields back to backlog items (missing AC, business value gaps, architectural constraints)
-- **NEW**: `specfact requirements drift --from-backlog <adapter> --project <org/repo>` — detect divergence between local requirements and backlog items without making changes
-- **NEW**: Sync operations use the sync kernel (sync-01) for session management, conflict detection, and patch preview
-- **NEW**: Backlog adapter extension: adapters provide `extract_requirements_fields()` and `update_requirements_fields()` methods for bidirectional sync
-- **EXTEND**: Requirements module (requirements-02) extended with sync commands
-- **DESIGN DECISION**: v1 starts with pull-first (backlog → requirements) as primary direction; push (requirements → backlog) is preview-only and requires explicit `--write` confirmation via patch-mode
-- **EXTEND**: Spec-Kit backlog extension awareness — before creating issues during push (requirements → backlog), the sync SHALL query `ToolCapabilities.extension_commands` (from speckit-02) to detect active spec-kit backlog extensions (Jira, ADO, Linear, GitHub Projects, Trello). When a spec-kit backlog extension is active, the sync SHALL scan spec-kit feature `tasks.md` files for existing issue references (e.g., `PROJ-123`, `AB#456`) and import them as pre-existing mappings. Issue creation is skipped for tasks that already have spec-kit extension mappings, preventing duplicate issues. This detection is implemented in `speckit-03-change-proposal-bridge` (specfact-cli-modules) and consumed here via the adapter interface.
+- **NEW**: Read-first import from backlog systems into normalized validation
+  inputs.
+- **NEW**: Drift categories for missing acceptance criteria, stale local records,
+  changed issue status, missing source links, and ambiguous mappings.
+- **NEW**: Preview-only write-back MAY exist later behind explicit confirmation.
+- **EXTEND**: Spec Kit backlog-extension awareness prevents duplicate issue
+  creation when upstream artifacts already contain tracker mappings.
 
 ## Capabilities
+
 ### New Capabilities
 
-- `requirements-backlog-sync`: Bidirectional sync between `.specfact/requirements/` and backlog items (GitHub, ADO, Jira, Linear) via sync kernel. Includes pull (extract from backlog), push (update backlog), and drift detection.
+- `backlog-requirement-drift-runtime`: Runtime detection of drift between backlog
+  items and normalized validation inputs.
 
 ### Modified Capabilities
 
-- `backlog-adapter`: Extended with requirements field extraction and update methods for bidirectional sync; extended with spec-kit backlog extension issue mapping import
-- `requirements-module`: Extended with sync and drift commands; extended with spec-kit duplicate issue prevention
-
+- `backlog-adapter`: Extended with source-attributed import and drift hooks.
+- `requirements-validation-runtime`: Extended with backlog drift evidence.
 
 ---
 
 ## Source Tracking
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
-- **Core Counterpart Issue**: nold-ai/specfact-cli#244
 - **GitHub Issue**: #166
 - **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/166>
-- **Repository**: nold-ai/specfact-cli-modules
+- **Core Counterpart**: nold-ai/specfact-cli#244
 - **Last Synced Status**: proposed
 - **Sanitized**: false

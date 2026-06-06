@@ -5,55 +5,28 @@ TBD - created by archiving change code-review-08-review-run-integration. Update 
 ## Requirements
 ### Requirement: End-to-End `specfact code review run` in modules repo
 
-The `specfact-code-review` bundle SHALL provide a fully wired
-`specfact code review run` command that orchestrates the existing tool runners
-and emits a governed `ReviewReport` with correct exit codes.
+The `specfact-code-review` bundle SHALL provide a fully wired `specfact code review run` command that orchestrates the existing tool runners, supports scoped file selection, emits governed review reports, and provides simplify-specific cleanup forecast and handoff controls.
 
-#### Scenario: Representative modules-repo source can be reviewed without command failure
-- **GIVEN** a real Python source file from this repository
-- **WHEN** `specfact code review run --json <file>` is executed in the modules repo
-- **THEN** the command writes a `ReviewReport` JSON file
-- **AND** the command does not fail because of command wiring, path handling, or tool invocation bugs in the bundle
+#### Scenario: Run command previews simplify fixes without mutating files
 
-#### Scenario: JSON output uses file-based routing
-- **GIVEN** `specfact code review run --json`
-- **WHEN** the command executes successfully
-- **THEN** it writes the governed `ReviewReport` JSON payload to a file path
-- **AND** `--out` overrides the default JSON output path
+- **WHEN** `specfact code review run --focus simplify --preview-fixes --json --out <path>` is executed
+- **THEN** the command SHALL compute preview evidence for supported safe-mechanical simplification fixers
+- **AND** it SHALL write the forecast evidence to the JSON report
+- **AND** it SHALL NOT edit tracked source files
 
-#### Scenario: Interactive runs ask whether to include test files
-- **GIVEN** `specfact code review run` executes in interactive mode
-- **WHEN** test-file inclusion has not been specified explicitly
-- **THEN** the CLI asks whether test files should be included in the review scope
-- **AND** the answer controls whether changed files under `tests/` are reviewed
+#### Scenario: Run command rejects preview and fix together
 
-#### Scenario: Auto-detected review scope includes untracked Python files
-- **GIVEN** Python files exist in the workspace that are not yet tracked by Git
-- **WHEN** `specfact code review run` auto-detects review scope
-- **THEN** those untracked Python files are included in review scope
-- **AND** test-file inclusion rules still apply to untracked files under `tests/`
+- **WHEN** `specfact code review run --focus simplify --preview-fixes --fix` is executed
+- **THEN** the command SHALL fail before review execution with a clear invalid-combination error
 
-#### Scenario: Known low-signal findings are suppressible by default
-- **GIVEN** a review run includes test files or other paths that can emit
-  known low-signal findings
-- **WHEN** noise suppression is enabled
-- **THEN** the report omits those known low-signal findings
-- **AND** a command option allows users to include the suppressed findings for a
-  strict/full review
+#### Scenario: Run command scopes mutation proof to simplify focus
 
-#### Scenario: Bundled skill instructs whether to include tests
-- **GIVEN** the bundled `specfact-code-review` skill is installed
-- **WHEN** it guides a review workflow
-- **THEN** it instructs the reviewer to decide whether tests should be included
-  before running the review
+- **WHEN** `specfact code review run --with-mutation` is executed without `--focus simplify`
+- **THEN** the command SHALL fail before review execution with a clear invalid-combination error
 
-#### Scenario: Long-running review runs surface progress
-- **GIVEN** a review run executes multiple tool steps that can take noticeable
-  time
-- **WHEN** the command is running
-- **THEN** the CLI shows which review step is currently executing
-- **AND** progress feedback does not replace the primary stdout contract such as
-  the final JSON output path
+- **WHEN** `specfact code review run --focus simplify --with-mutation` is executed
+- **THEN** the command SHALL run mutation proof only for candidate cleanup findings
+- **AND** it SHALL record mutation outcomes in the report without making mutation proof part of the default review path
 
 ### Requirement: Developer runtime validation helper for local modules
 
@@ -185,4 +158,54 @@ The command SHALL accept `--level error` or `--level warning` to filter findings
 
 - **WHEN** `specfact code review run --json` runs without `--level`
 - **THEN** all severities appear in output as they do today
+
+### Requirement: Code Review run docs SHALL cover the public option surface
+
+The Code Review run documentation SHALL describe every supported public `specfact code review run` option that affects targeting, output, exit behavior, analysis depth, or filtering.
+
+#### Scenario: Newly added review options are documented
+
+- **WHEN** the `specfact code review run` Typer command exposes `--bug-hunt`, `--mode`, `--focus`, and `--level`
+- **THEN** the Code Review run guide documents those options in its key option table or equivalent option section
+- **AND** docs validation fails if any of those public options are missing from the run guide
+
+#### Scenario: Invalid option combinations are documented
+
+- **WHEN** the command rejects combinations such as positional files with `--scope` or `--path`, or `--focus` with `--include-tests`
+- **THEN** the Code Review docs describe the invalid combination behavior
+- **AND** the docs include a user-facing alternative for the supported targeting style aligned with the public **`run`** signature (**`files: list[Path]`**): pass explicit **positional files** (file paths) for a fixed review set, or use **`--scope`** / **`--path`** (without positional files) to auto-discover targets from the repo
+
+### Requirement: Code Review docs SHALL stay aligned with review behavior
+
+The Code Review docs SHALL describe current review run behavior for JSON output, shadow/enforce mode, progress output, focus filtering, severity filtering, bug-hunt budgets, and test inclusion semantics.
+
+#### Scenario: Docs parity check detects missing behavior section
+
+- **WHEN** the command implementation includes a public behavior that affects output, exit code, target selection, or analysis cost
+- **THEN** docs parity validation checks that the behavior is represented in the Code Review run docs
+- **AND** the validation fails when the behavior is absent from the docs
+
+### Requirement: Review run supports simplify focus
+
+The `specfact code review run` command SHALL accept `--focus simplify` as a targeted review focus for simplification feedback. The focus SHALL retain findings that belong in the simplification queue and SHALL classify them with actionable guidance.
+
+#### Scenario: Simplify focus emits guided simplification queue
+
+- **WHEN** `specfact code review run --focus simplify --json --out .specfact/code-review.json` completes
+- **THEN** the JSON report SHALL retain simplification-focused findings
+- **AND** retained findings SHALL include guidance metadata for actionability, preservation, or design judgment
+- **AND** the report SHALL include a simplification summary when guided findings are present
+
+#### Scenario: Simplify enforce blocks only safe mechanical debt
+
+- **WHEN** `specfact code review run --focus simplify --mode enforce` runs
+- **THEN** the process SHALL fail only when unresolved findings with `guidance_kind="safe_mechanical"` remain
+- **AND** findings classified as `needs_tests`, `design_judgment`, or `preserve` SHALL NOT make the run fail
+
+#### Scenario: Simplify fix applies only safe mechanical rewrites
+
+- **WHEN** `specfact code review run --focus simplify --fix` runs
+- **THEN** automatic rewrites SHALL be limited to deterministic safe-mechanical findings
+- **AND** the command SHALL rerun review after applying rewrites
+- **AND** the JSON report SHALL record applied, failed, and still-recommended outcomes
 
