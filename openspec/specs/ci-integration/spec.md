@@ -44,7 +44,7 @@ for pull requests or pushes targeting `dev`; it SHALL enforce `--require-signatu
 #### Scenario: Dev-to-main PR after CI signing commit
 
 - **WHEN** a pull request targets `main`
-- **AND** the CI `sign-modules-on-approval` workflow has committed signed manifests to the PR branch
+- **AND** the CI signing workflow has committed signed manifests to the PR branch
 - **THEN** the `verify-module-signatures` job SHALL pass with `--require-signature`
 - **AND** the PR SHALL be unblocked (subject to other required checks)
 
@@ -70,3 +70,4 @@ The repository pre-commit hook that runs `verify-modules-signature.py` SHALL app
 - **WHEN** a developer commits on branch `main`
 - **AND** any `packages/*/module-package.yaml` lacks a valid signature under `--require-signature`
 - **THEN** the pre-commit signature hook SHALL fail
+

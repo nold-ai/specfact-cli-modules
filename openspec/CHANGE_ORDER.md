@@ -1,125 +1,155 @@
-# OpenSpec change order by module and dependency
+# OpenSpec Change Order
 
-## Implemented (archived)
+This document is the modules-side source of truth for active OpenSpec work. It
+must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
-| Change | Status / Date |
-|--------|---------------|
-| ✅ backlog-02-migrate-core-commands | archived 2026-03-10 |
-| ✅ backlog-bundle-local-source-alignment | archived 2026-03-10 |
-| ✅ bugfix-backlog-html-export-validation | archived 2026-03-10 |
-| ✅ modules-pre-commit-quality-parity | archived 2026-03-10 |
-| ✅ registry-republish-outdated-bundles | archived 2026-03-10 |
-| ✅ fix-issue-49-ado-provider-field-type-coercion | archived 2026-03-11 |
-| ✅ code-review-02-ruff-radon-runners | archived 2026-03-17 |
-| ✅ code-review-04-contract-test-runners | archived 2026-03-17 |
-| ✅ code-review-07-house-rules-skill | archived 2026-03-17 |
-| ✅ code-review-08-review-run-integration | archived 2026-03-17 |
-| ✅ code-review-10-review-scope-modes | archived 2026-03-17 |
-| ✅ docs-01-modules-docs-canonical-site | archived 2026-03-17 |
-| ✅ fix-backlog-add-ado-custom-field-payload | archived 2026-03-17 |
-| ✅ fix-backlog-add-work-item-type-mapping | archived 2026-03-17 |
-| ✅ fix-backlog-provider-required-field-mappings | archived 2026-03-17 |
-| ✅ review-run-dogfood-followup | archived 2026-03-17 |
-| ✅ docs-cli-command-alignment | archived 2026-03-20 |
-| ✅ docs-06-modules-site-ia-restructure | archived 2026-04-05 |
-| ✅ docs-08-bundle-overview-pages | archived 2026-04-05 |
-| ✅ docs-09-missing-command-docs | archived 2026-04-05 |
-| ✅ docs-10-workflow-consolidation | archived 2026-04-05 |
-| ✅ docs-11-team-enterprise-tier | archived 2026-04-05 |
-| ✅ docs-12-docs-validation-ci | archived 2026-04-05 |
-| ✅ clean-code-02-expanded-review-module | archived 2026-04-05 |
-| ✅ docs-13-nav-search-theme-roles | archived 2026-04-05 |
-| ✅ speckit-03-change-proposal-bridge | archived 2026-04-05 |
-| ✅ packaging-01-bundle-resource-payloads | archived 2026-04-05 |
-| ✅ module-bundle-deps-auto-install | archived 2026-04-05 |
-| ✅ governance-03-github-hierarchy-cache | archived 2026-04-09 |
-| ✅ marketplace-06-ci-module-signing | archived 2026-04-16; [#185](https://github.com/nold-ai/specfact-cli-modules/issues/185); paired core [specfact-cli#500](https://github.com/nold-ai/specfact-cli/issues/500) |
+## Status Snapshot
 
-## Pending
+| Bucket | Count | Location |
+|---|---:|---|
+| **Active** | 12 | [`openspec/changes/`](changes/) |
+| **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
+| **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
 
-### Backlog bundle runtime changes
+`openspec list` reflects the active set only. Completed changes are archived
+with date-prefixed folders. Parked changes are preserved for later customer pull
+but are not implementation-ready.
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| backlog-core | 00 | tester-module-cli-reliability | [#306](https://github.com/nold-ai/specfact-cli-modules/issues/306); source bugs [specfact-cli#586](https://github.com/nold-ai/specfact-cli/issues/586), [#587](https://github.com/nold-ai/specfact-cli/issues/587), [#588](https://github.com/nold-ai/specfact-cli/issues/588), [#590](https://github.com/nold-ai/specfact-cli/issues/590), [#591](https://github.com/nold-ai/specfact-cli/issues/591), [#592](https://github.com/nold-ai/specfact-cli/issues/592) | paired core `tester-cli-reliability`; Parent Feature: [#305](https://github.com/nold-ai/specfact-cli-modules/issues/305) |
-| backlog-scrum | 02 | backlog-scrum-02-sprint-planning | [#160](https://github.com/nold-ai/specfact-cli-modules/issues/160) | Parent Feature: [#151](https://github.com/nold-ai/specfact-cli-modules/issues/151); shared backlog baseline from `specfact-cli#116` |
-| backlog-scrum | 03 | backlog-scrum-03-story-complexity | [#153](https://github.com/nold-ai/specfact-cli-modules/issues/153) | Parent Feature: [#151](https://github.com/nold-ai/specfact-cli-modules/issues/151); shared backlog baseline from `specfact-cli#116` |
-| backlog-scrum | 04 | backlog-scrum-04-definition-of-done | [#152](https://github.com/nold-ai/specfact-cli-modules/issues/152) | Parent Feature: [#151](https://github.com/nold-ai/specfact-cli-modules/issues/151); shared backlog baseline from `specfact-cli#116`; optional ceremony alias baseline `specfact-cli#185` |
-| backlog-kanban | 01 | backlog-kanban-01-flow-metrics | [#155](https://github.com/nold-ai/specfact-cli-modules/issues/155) | Parent Feature: [#149](https://github.com/nold-ai/specfact-cli-modules/issues/149); shared backlog baseline from `specfact-cli#116` |
-| backlog-safe | 01 | backlog-safe-01-pi-planning | [#154](https://github.com/nold-ai/specfact-cli-modules/issues/154) | Parent Feature: [#146](https://github.com/nold-ai/specfact-cli-modules/issues/146); shared backlog baseline from `specfact-cli#116` |
-| backlog-safe | 02 | backlog-safe-02-risk-rollups | [#156](https://github.com/nold-ai/specfact-cli-modules/issues/156) | Parent Feature: [#146](https://github.com/nold-ai/specfact-cli-modules/issues/146); `#154`; integrates with `#160`, `#153`, and `#155` |
-| policy | 02 | policy-02-packs-and-modes | [#158](https://github.com/nold-ai/specfact-cli-modules/issues/158) | Parent Feature: [#148](https://github.com/nold-ai/specfact-cli-modules/issues/148); shared policy/profile semantics from `specfact-cli#176` and `specfact-cli#237` |
-| ceremony | 02 | ceremony-02-requirements-aware-output | [#159](https://github.com/nold-ai/specfact-cli-modules/issues/159) | Parent Feature: [#150](https://github.com/nold-ai/specfact-cli-modules/issues/150); requirements contracts from `specfact-cli#239`; ceremony alias baseline `specfact-cli#185` |
+## Product Thesis
 
-### Project bundle runtime changes
+The modules repo should make SpecFact feel like **the validation and AI-bloat
+defense tool**. The flagship runtime path is `specfact code review run`,
+AI-bloat detection, simplification guidance, cleanup forecasts, remediation
+handoff, sidecar/codebase hardening, docs guardrails, and deterministic evidence.
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| sync | 01 | sync-01-unified-kernel | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Parent Feature: [#147](https://github.com/nold-ai/specfact-cli-modules/issues/147); preview/apply safety baseline from `specfact-cli#177` |
-| project-runtime | 01 | project-runtime-01-safe-artifact-write-policy | [#177](https://github.com/nold-ai/specfact-cli-modules/issues/177) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); paired core change [specfact-cli#490](https://github.com/nold-ai/specfact-cli/issues/490); related bug [specfact-cli#487](https://github.com/nold-ai/specfact-cli/issues/487) |
-| project-runtime | 02 | project-02-plan-root-command-fix | [#256](https://github.com/nold-ai/specfact-cli-modules/issues/256) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); blocked by #255 bug analysis context; no additional blockers |
+Backlog, Scrum, Kanban, SAFe, ceremony, enterprise, FinOps, and knowledge work
+stay parked unless they directly improve validation evidence for a real user.
+Spec Kit, OpenSpec, backlog systems, ADRs, specs, contracts, tests, and code are
+upstream inputs to validation, not workflows this repo should replace.
 
-### Cross-layer runtime follow-ups
+## Recently Archived Validation Work
 
-These changes are the modules-side runtime companions to split core changes. Shared schemas, contracts, and cross-change semantics remain in `specfact-cli`.
+The following active changes were already complete or tied to closed GitHub
+issues and are now archived:
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| architecture | 01 | architecture-01-solution-layer | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); core counterpart `specfact-cli#240`; shared models from `specfact-cli#238` and `specfact-cli#239` |
-| requirements | 02 | requirements-02-module-commands | [#165](https://github.com/nold-ai/specfact-cli-modules/issues/165) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); core counterpart `specfact-cli#239`; data model baseline `specfact-cli#238` |
-| requirements | 03 | requirements-03-backlog-sync | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); core counterpart `specfact-cli#244`; runtime sync `#157`; requirements runtime `#165` |
-| openspec | 01 | openspec-01-intent-trace | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); core counterpart `specfact-cli#350`; requirements contracts from `specfact-cli#238` and `specfact-cli#239` |
-| traceability | 01 | traceability-01-index-and-orphans | [#170](https://github.com/nold-ai/specfact-cli-modules/issues/170) | Parent Feature: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161); core counterpart `specfact-cli#242`; runtime inputs from `#164` and `#165` |
+| Change | Archive status |
+|---|---|
+| `tester-module-cli-reliability` | archived 2026-06-06 |
+| `project-runtime-01-safe-artifact-write-policy` | archived 2026-06-06 |
+| `prompt-command-contract-validation` | archived 2026-06-06 |
+| `project-02-plan-root-command-fix` | archived 2026-06-06 |
+| `marketplace-07-pr-auto-sign-updates` | archived 2026-06-06 |
+| `docs-15-code-review-validation-guardrails` | archived 2026-06-06 |
+| `codebase-import-runtime-hardening` | archived 2026-06-06 |
+| `code-review-ai-bloat-detection` | archived 2026-06-06 |
+| `code-review-11-simplification-feedback-loop` | archived 2026-06-06 |
+| `code-review-12-guided-simplification-enforcement` | archived 2026-06-06 |
+| `code-review-13-cleanup-forecast-agent-handoff` | archived 2026-06-06 |
 
-### Validation and governance runtime follow-ups
+These archived specs are now the shipped basis for the flagship demo: run review,
+produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
+AI IDE, rerun, and compare improved evidence.
 
-These changes are the modules-side runtime companions to split core governance and validation changes. Core remains authoritative for schemas and CI/evidence contracts.
+## Active Tracks
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| governance | 01 | governance-01-evidence-output | [#169](https://github.com/nold-ai/specfact-cli-modules/issues/169) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#247`; validation runtime `#171` |
-| governance | 02 | governance-02-exception-management | [#167](https://github.com/nold-ai/specfact-cli-modules/issues/167) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#248`; policy runtime `#158` |
-| governance | 04 | governance-04-deterministic-agent-governance-loading | [#181](https://github.com/nold-ai/specfact-cli-modules/issues/181) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); paired core [specfact-cli#494](https://github.com/nold-ai/specfact-cli/issues/494); baseline [#178](https://github.com/nold-ai/specfact-cli-modules/issues/178) (implements archived `governance-03-github-hierarchy-cache`, paired core [specfact-cli#491](https://github.com/nold-ai/specfact-cli/issues/491)) |
-| validation | 02 | validation-02-full-chain-engine | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); core counterpart `specfact-cli#241`; runtime inputs from `#164` and `#165`; policy semantics from `#158` |
-| docs + validation | 15 | docs-15-code-review-validation-guardrails | [#202](https://github.com/nold-ai/specfact-cli-modules/issues/202) | Parent Feature: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163); Parent Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); no known blockers |
+### Track A - Validation Runtime Spine
 
-### Five-pillar governance and enterprise runtime companions
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `policy-02-packs-and-modes` | [#158](https://github.com/nold-ai/specfact-cli-modules/issues/158) | Validation severity, rollout modes, and policy-pack execution | core profile/policy semantics |
+| 2 | `governance-01-evidence-output` | [#169](https://github.com/nold-ai/specfact-cli-modules/issues/169) | Runtime evidence emitters for JSON/CI/AI handoff | core `governance-01` |
+| 3 | `governance-02-exception-management` | [#167](https://github.com/nold-ai/specfact-cli-modules/issues/167) | Runtime exception handling and waiver evidence | governance-01, policy-02 |
+| 4 | `validation-02-full-chain-engine` | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Validation evidence graph runtime, not lifecycle orchestration | governance-01, traceability-01 |
+| 5 | `traceability-01-index-and-orphans` | [#170](https://github.com/nold-ai/specfact-cli-modules/issues/170) | Artifact drift and orphan detection runtime | validation input contracts |
+| 6 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
 
-These changes are the modules-side runtime companions to the five-pillar governance wave in `specfact-cli`. Core remains authoritative for schemas, scoring, resolution semantics, and shared report contracts; this repo owns the runnable bundle packages, manifests, and packaged tool integrations.
+### Track B - Upstream Context Adapters
 
-**Most of this wave is paused.** The core counterparts for FinOps, knowledge, review-resiliency, security, and enterprise have been parked in `specfact-cli` (see [core PR #551](https://github.com/nold-ai/specfact-cli/pull/551)). The corresponding nine modules-side proposals have been moved to [`openspec/parking-lot/`](parking-lot/) until their core contracts are un-parked. See [`parking-lot/README.md`](parking-lot/README.md) for the full mapping and un-park triggers.
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `requirements-02-module-commands` | [#165](https://github.com/nold-ai/specfact-cli-modules/issues/165) | Import/normalize requirement context for evidence | core requirements input model |
+| 2 | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path | requirements-02, sync-01 |
+| 3 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
+| 4 | `openspec-01-intent-trace` | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Optional OpenSpec and Spec Kit evidence import adapter | requirements input contracts |
+| Gated | `architecture-02-module-well-architected` | [#230](https://github.com/nold-ai/specfact-cli-modules/issues/230) | Architecture-boundary review findings | architecture-01 shipped plus one usage cycle |
 
-The architecture pillar remains active because `architecture-02-well-architected-review` in core is gated (waiting on `architecture-01` to ship and be used for one cycle), not parked.
+### Track C - Supporting Docs
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| architecture | 03 | architecture-02-module-well-architected | [#230](https://github.com/nold-ai/specfact-cli-modules/issues/230) | Parent Epic: [#216](https://github.com/nold-ai/specfact-cli-modules/issues/216); Parent Feature: [#219](https://github.com/nold-ai/specfact-cli-modules/issues/219); core umbrella [specfact-cli#511](https://github.com/nold-ai/specfact-cli/issues/511); paired core change `architecture-02-well-architected-review` (gated on `architecture-01-solution-layer` shipping + 1 usage cycle); boundary rules align with `ALLOWED_IMPORTS.md` |
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `docs-14-module-release-history` | [#124](https://github.com/nold-ai/specfact-cli-modules/issues/124) | Release-history documentation for shipped modules | docs-13, publish workflow |
 
-### Code review and sidecar validation improvements
+## Modify Queue Before Implementation
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| code-review + codebase | 01 | code-review-bug-finding-and-sidecar-venv-fix | [#174](https://github.com/nold-ai/specfact-cli-modules/issues/174) | Parent Feature: [#175](https://github.com/nold-ai/specfact-cli-modules/issues/175); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162) |
-| codebase + project-runtime | 02 | codebase-import-runtime-hardening | [#235](https://github.com/nold-ai/specfact-cli-modules/issues/235) | Parent Feature: [#234](https://github.com/nold-ai/specfact-cli-modules/issues/234); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); no known blockers |
-| code-review + project | 03 | code-review-ai-bloat-detection | [#269](https://github.com/nold-ai/specfact-cli-modules/issues/269) | Parent Feature: [#175](https://github.com/nold-ai/specfact-cli-modules/issues/175); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); no known blockers |
-| code-review + project | 04 | code-review-11-simplification-feedback-loop | [#276](https://github.com/nold-ai/specfact-cli-modules/issues/276) | Parent Feature: [#275](https://github.com/nold-ai/specfact-cli-modules/issues/275); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); blocked by `code-review-ai-bloat-detection` / [#269](https://github.com/nold-ai/specfact-cli-modules/issues/269) |
-| code-review + project | 05 | code-review-12-guided-simplification-enforcement | [#286](https://github.com/nold-ai/specfact-cli-modules/issues/286) | Parent Feature: [#275](https://github.com/nold-ai/specfact-cli-modules/issues/275); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); blocked by `code-review-11-simplification-feedback-loop` / [#276](https://github.com/nold-ai/specfact-cli-modules/issues/276) |
-| code-review + project | 06 | code-review-13-cleanup-forecast-agent-handoff | [#297](https://github.com/nold-ai/specfact-cli-modules/issues/297) | Parent Feature: [#275](https://github.com/nold-ai/specfact-cli-modules/issues/275); Epic: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162); blocked by `code-review-12-guided-simplification-enforcement` / [#286](https://github.com/nold-ai/specfact-cli-modules/issues/286) |
+| Change | Required adjustment |
+|---|---|
+| `validation-02-full-chain-engine` | Rewrite runtime language around validation evidence graph outputs. Do not implement upstream requirements-to-code lifecycle orchestration. |
+| `traceability-01-index-and-orphans` | Keep artifact drift, orphan, and linkage evidence. Drop ceremony/dashboard positioning. |
+| `requirements-02-module-commands` | Drop requirement authoring as a flagship workflow. Keep import, normalization, validation, and coverage inspection. |
+| `requirements-03-backlog-sync` | Keep read-first drift evidence. Write-back remains preview-only and outside the validation critical path. |
+| `architecture-01-solution-layer` | Keep architecture-boundary input and validation hooks. Drop architecture generation. |
+| `openspec-01-intent-trace` | Reframe as optional OpenSpec/Spec Kit adapter consuming upstream artifacts. |
+| `architecture-02-module-well-architected` | Keep gated until architecture-01 ships and is used for one complete cycle. |
+| `sync-01-unified-kernel` | Keep only as safety infrastructure for validation/context adapters. |
 
-### Documentation restructure
+## Parked By This Repositioning
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| docs | 14 | docs-14-module-release-history | [#124](https://github.com/nold-ai/specfact-cli-modules/issues/124) | docs-13 ✅; publish-modules workflow |
+Moved to [`openspec/parking-lot/`](parking-lot/) because they expand upstream
+ceremony rather than validation evidence:
 
-### Packaging and bundle payloads
+- `backlog-scrum-02-sprint-planning`
+- `backlog-scrum-03-story-complexity`
+- `backlog-scrum-04-definition-of-done`
+- `backlog-kanban-01-flow-metrics`
+- `backlog-safe-01-pi-planning`
+- `backlog-safe-02-risk-rollups`
+- `ceremony-02-requirements-aware-output`
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| packaging | 01 | ✅ packaging-01-bundle-resource-payloads (archived 2026-04-05) | [#101](https://github.com/nold-ai/specfact-cli-modules/issues/101) | — |
+## Implementation Waves
 
-### Module bundle peer dependencies
+### Wave 1 - Cleanup and Scope Alignment
 
-| Module | Order | Change folder | GitHub # | Blocked by |
-|--------|-------|---------------|----------|------------|
-| peer-deps | 01 | ✅ module-bundle-deps-auto-install (archived 2026-04-05) | [#135](https://github.com/nold-ai/specfact-cli-modules/issues/135) | — |
+- Archive completed/closed changes.
+- Park upstream ceremony expansions.
+- Update active proposals and wiki mirrors to validation positioning.
+- Recheck GitHub Project metadata with a token that has project-field access.
+
+### Wave 2 - Validation Evidence Runtime
+
+- `policy-02-packs-and-modes`
+- `governance-01-evidence-output`
+- `governance-02-exception-management`
+- `validation-02-full-chain-engine`
+- `traceability-01-index-and-orphans`
+
+### Wave 3 - Context Adapters
+
+- `requirements-02-module-commands`
+- `requirements-03-backlog-sync`
+- `architecture-01-solution-layer`
+- `openspec-01-intent-trace`
+
+### Wave 4 - Gated Extensions
+
+- `architecture-02-module-well-architected`
+- `sync-01-unified-kernel` only where adapter safety requires it
+- `docs-14-module-release-history`
+
+## Parent Issues And Epic Framing
+
+| Issue | Desired framing |
+|---|---|
+| [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162) | Flagship specfact code / AI-bloat defense epic |
+| [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163) | Validation evidence and governance runtime |
+| [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161) | Context adapters for validation evidence |
+
+Project-board metadata was not available with the current token in the core
+review, so final issue governance must recheck project fields before scoped
+implementation starts.
+
+## Archive Policy
+
+After a change ships and merges, run `openspec archive <change-id>` from the repo
+root. Do not manually move completed changes into `openspec/changes/archive/`.
+Parking-lot moves are allowed for paused proposals that are explicitly not active
+scope.
