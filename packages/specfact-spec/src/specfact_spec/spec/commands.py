@@ -4,6 +4,10 @@ Spec command - Specmatic integration for API contract testing.
 This module provides commands for validating OpenAPI/AsyncAPI specifications,
 checking backward compatibility, generating test suites, and running mock servers
 using Specmatic.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
 """
 
 from __future__ import annotations
@@ -58,7 +62,7 @@ def validate(
     bundle: str | None = typer.Option(
         None,
         "--bundle",
-        help="Project bundle name (e.g., legacy-api). If provided, validates all contracts in bundle. Default: active plan from 'specfact plan select'",
+        help="Project bundle name (e.g., legacy-api). If provided, validates all contracts in bundle. Default: active project bundle configuration",
     ),
     # Advanced
     previous_version: Path | None = typer.Option(
@@ -89,7 +93,7 @@ def validate(
     - Backward compatibility check (if previous version provided)
 
     Can validate a single contract file or all contracts in a project bundle.
-    Uses active plan (from 'specfact plan select') as default if --bundle not provided.
+    Uses the active project bundle configuration as default if --bundle is not provided.
 
     **Caching:**
     Validation results are cached in `.specfact/cache/specmatic-validation.json` based on
@@ -214,7 +218,7 @@ def validate(
         console.print("\n[bold]Options:[/bold]")
         console.print("  1. Provide a spec file: specfact spec validate api/openapi.yaml")
         console.print("  2. Use --bundle option: specfact spec validate --bundle legacy-api")
-        console.print("  3. Set active plan first: specfact plan select")
+        console.print("  3. Pass --bundle or configure an active project bundle")
         raise typer.Exit(1)
 
     if not spec_paths:
@@ -715,7 +719,7 @@ def mock(
     bundle: str | None = typer.Option(
         None,
         "--bundle",
-        help="Project bundle name (e.g., legacy-api). If provided, selects contract from bundle. Default: active plan from 'specfact plan select'",
+        help="Project bundle name (e.g., legacy-api). If provided, selects contract from bundle. Default: active project bundle configuration",
     ),
     # Behavior/Options
     port: int = typer.Option(9000, "--port", help="Port number for mock server (default: 9000)"),
@@ -851,7 +855,7 @@ def mock(
             console.print("\n[bold]Options:[/bold]")
             console.print("  1. Provide a spec file: specfact spec mock --spec api/openapi.yaml")
             console.print("  2. Use --bundle option: specfact spec mock --bundle legacy-api")
-            console.print("  3. Set active plan first: specfact plan select")
+            console.print("  3. Pass --bundle or configure an active project bundle")
             console.print("\n[bold]Common locations for auto-detection:[/bold]")
             console.print("  - openapi.yaml")
             console.print("  - api/openapi.yaml")

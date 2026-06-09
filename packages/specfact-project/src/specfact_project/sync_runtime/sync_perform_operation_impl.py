@@ -102,7 +102,7 @@ def _pso_ensure_specfact(repo: Path, console: Any) -> bool:
     specfact_exists = (repo / SpecFactStructure.ROOT).exists()
     if not specfact_exists:
         console.print("[yellow]⚠[/yellow] SpecFact structure not found")
-        console.print(f"[dim]Initialize with: specfact plan init --scaffold --repo {repo}[/dim]")
+        console.print(f"[dim]Initialize project bundle artifacts before syncing repo {repo}[/dim]")
         SpecFactStructure.ensure_structure(repo)
         console.print("[bold green]✓[/bold green] Created SpecFact structure")
     else:
