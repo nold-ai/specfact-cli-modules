@@ -3,6 +3,10 @@ Repro command - Run full validation suite for reproducibility.
 
 This module provides commands for running comprehensive validation
 including linting, type checking, contract exploration, and tests.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
 """
 
 from __future__ import annotations
@@ -210,10 +214,10 @@ def main(
     Works on external repositories without requiring SpecFact CLI adoption.
 
     Example:
-        specfact repro --verbose --budget 120
-        specfact repro --repo /path/to/external/repo --verbose
-        specfact repro --fix --budget 120
-        specfact repro --sidecar --sidecar-bundle legacy-api --repo /path/to/repo
+        specfact code repro --verbose --budget 120
+        specfact code repro --repo /path/to/external/repo --verbose
+        specfact code repro --fix --budget 120
+        specfact code repro --sidecar --sidecar-bundle legacy-api --repo /path/to/repo
     """
     # If a subcommand was invoked, don't run the main validation
     if ctx.invoked_subcommand is not None:
@@ -467,9 +471,9 @@ def setup(
     - Provides guidance on next steps
 
     Example:
-        specfact repro setup
-        specfact repro setup --repo /path/to/repo
-        specfact repro setup --install-crosshair
+        specfact code repro setup
+        specfact code repro setup --repo /path/to/repo
+        specfact code repro setup --install-crosshair
     """
     console.print("[bold cyan]Setting up CrossHair configuration...[/bold cyan]")
     console.print(f"[dim]Repository: {repo}[/dim]\n")
@@ -559,7 +563,7 @@ def setup(
     # Summary
     console.print("\n[bold green]✓[/bold green] Setup complete!")
     console.print("\n[bold]Next steps:[/bold]")
-    console.print("  1. Run [cyan]specfact repro[/cyan] to execute validation checks")
+    console.print("  1. Run [cyan]specfact code repro[/cyan] to execute validation checks")
     if not crosshair_available:
         console.print("  2. Install crosshair-tool to enable contract exploration:")
         if env_info.manager == "hatch":

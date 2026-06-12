@@ -4,6 +4,10 @@ Sync command - Bidirectional synchronization for external tools and repositories
 This module provides commands for synchronizing changes between external tool artifacts
 (e.g., Spec-Kit, Linear, Jira), repository changes, and SpecFact plans using the
 bridge architecture.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
 """
 
 # pylint: disable=too-many-lines,import-outside-toplevel,line-too-long,broad-exception-caught,too-many-nested-blocks,too-many-arguments,too-many-locals,reimported,redefined-outer-name,logging-fstring-interpolation,unused-argument,protected-access,too-many-positional-arguments,consider-using-in,unused-import,redefined-argument-from-local,using-constant-test,too-many-boolean-expressions,too-many-return-statements,use-implicit-booleaness-not-comparison,too-many-branches,too-many-statements
@@ -708,7 +712,7 @@ def sync_repository(
     features/stories, and tracks deviations from manual plans.
 
     Example:
-        specfact sync repository --repo . --confidence 0.5
+        specfact project sync repository --repo . --confidence 0.5
     """
     if is_debug_mode():
         debug_log_operation(
@@ -789,7 +793,7 @@ def sync_repository(
             console.print(f"[bold cyan]Plan Updates:[/bold cyan] {len(result.plan_updates)}")
         if result.deviations:
             console.print(f"[yellow]⚠[/yellow] Found {len(result.deviations)} deviations from manual plan")
-            console.print("[dim]Run 'specfact plan compare' for detailed deviation report[/dim]")
+            console.print("[dim]Review the generated deviation report for details[/dim]")
         else:
             console.print("[bold green]✓[/bold green] No deviations detected")
         console.print("[bold green]✓[/bold green] Repository sync complete!")
@@ -808,7 +812,7 @@ def sync_repository(
 def sync_intelligent(
     # Target/Input
     bundle: str | None = typer.Argument(
-        None, help="Project bundle name (e.g., legacy-api). Default: active plan from 'specfact plan select'"
+        None, help="Project bundle name (e.g., legacy-api). Default: active project bundle configuration"
     ),
     repo: Path = typer.Option(
         Path("."),
@@ -853,9 +857,9 @@ def sync_intelligent(
     - **Behavior/Options**: --watch, --code-to-spec, --spec-to-code, --tests
 
     **Examples:**
-        specfact sync intelligent legacy-api --repo .
-        specfact sync intelligent my-bundle --repo . --watch
-        specfact sync intelligent my-bundle --repo . --code-to-spec auto --spec-to-code llm-prompt --tests specmatic
+        specfact project sync intelligent legacy-api --repo .
+        specfact project sync intelligent my-bundle --repo . --watch
+        specfact project sync intelligent my-bundle --repo . --code-to-spec auto --spec-to-code llm-prompt --tests specmatic
     """
     if is_debug_mode():
         debug_log_operation(
@@ -875,7 +879,7 @@ def sync_intelligent(
         bundle = SpecFactStructure.get_active_bundle_name(repo)
         if bundle is None:
             console.print("[bold red]✗[/bold red] Bundle name required")
-            console.print("[yellow]→[/yellow] Use --bundle option or run 'specfact plan select' to set active plan")
+            console.print("[yellow]→[/yellow] Pass the bundle name argument or configure an active project bundle")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
 

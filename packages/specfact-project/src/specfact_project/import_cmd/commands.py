@@ -4,6 +4,10 @@ Import command - Import codebases and external tool projects to contract-driven 
 This module provides commands for importing existing codebases (brownfield) and
 external tool projects (e.g., Spec-Kit, OpenSpec, generic-markdown) and converting them to
 SpecFact contract-driven format using the bridge architecture.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
 """
 
 from __future__ import annotations
@@ -1662,11 +1666,11 @@ def _suggest_next_steps(repo: Path, bundle: str, plan_bundle: PlanBundle | None)
 
     if is_first_run:
         console.print("  [yellow]→[/yellow] [bold]Review your plan:[/bold]")
-        console.print(f"     specfact plan review {bundle}")
+        console.print(f"     Review generated project artifacts for {bundle}")
         console.print("     [dim]Review and refine the generated plan bundle[/dim]\n")
 
         console.print("  [yellow]→[/yellow] [bold]Compare with code:[/bold]")
-        console.print(f"     specfact plan compare --bundle {bundle}")
+        console.print(f"     Review deviations for {bundle}")
         console.print("     [dim]Detect deviations between plan and code[/dim]\n")
 
         console.print("  [yellow]→[/yellow] [bold]Validate SDD:[/bold]")
@@ -1674,11 +1678,11 @@ def _suggest_next_steps(repo: Path, bundle: str, plan_bundle: PlanBundle | None)
         console.print("     [dim]Check for violations and coverage thresholds[/dim]\n")
     else:
         console.print("  [yellow]→[/yellow] [bold]Review changes:[/bold]")
-        console.print(f"     specfact plan review {bundle}")
+        console.print(f"     Review generated project artifacts for {bundle}")
         console.print("     [dim]Review updates to your plan bundle[/dim]\n")
 
         console.print("  [yellow]→[/yellow] [bold]Check deviations:[/bold]")
-        console.print(f"     specfact plan compare --bundle {bundle}")
+        console.print(f"     Review deviations for {bundle}")
         console.print("     [dim]See what changed since last import[/dim]\n")
 
 
@@ -1723,7 +1727,7 @@ def _suggest_constitution_bootstrap(repo: Path) -> None:
             else:
                 console.print()
                 console.print(
-                    "[dim]💡 Tip: Run 'specfact sdd constitution bootstrap --repo .' to generate constitution[/dim]"
+                    "[dim]💡 Tip: Run 'specfact spec sdd constitution bootstrap --repo .' to generate constitution[/dim]"
                 )
 
 
@@ -1958,9 +1962,9 @@ def from_bridge(
     - **Advanced/Configuration**: --adapter
 
     **Examples:**
-        specfact import from-bridge --repo ./my-project --adapter speckit --write
-        specfact import from-bridge --repo ./my-project --write  # Auto-detect adapter
-        specfact import from-bridge --repo ./my-project --dry-run  # Preview changes
+        specfact code import from-bridge --repo ./my-project --adapter speckit --write
+        specfact code import from-bridge --repo ./my-project --write  # Auto-detect adapter
+        specfact code import from-bridge --repo ./my-project --dry-run  # Preview changes
     """
     from specfact_cli.utils.structure import SpecFactStructure
 
@@ -2403,7 +2407,7 @@ def from_code(
     # Target/Input
     bundle: str | None = typer.Argument(
         None,
-        help="Project bundle name (e.g., legacy-api, auth-module). Default: active plan from 'specfact plan select'",
+        help="Project bundle name (e.g., legacy-api, auth-module). Default: active project bundle configuration",
     ),
     repo: Path = typer.Option(
         Path("."),
@@ -2528,7 +2532,7 @@ def from_code(
                     extra={"reason": "no_bundle"},
                 )
             console.print("[bold red]✗[/bold red] Bundle name required")
-            console.print("[yellow]→[/yellow] Use --bundle option or run 'specfact plan select' to set active plan")
+            console.print("[yellow]→[/yellow] Use --bundle option or configure an active project bundle")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
 

@@ -3,6 +3,10 @@ Drift command - Detect misalignment between code and specifications.
 
 This module provides commands for detecting drift between actual code/tests
 and specifications.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
 """
 
 from __future__ import annotations
@@ -41,7 +45,7 @@ validate_bundle = module_io_shim.validate_bundle
 def detect_drift(
     # Target/Input
     bundle: str | None = typer.Argument(
-        None, help="Project bundle name (e.g., legacy-api). Default: active plan from 'specfact plan select'"
+        None, help="Project bundle name (e.g., legacy-api). Default: active project bundle configuration"
     ),
     repo: Path = typer.Option(
         Path("."),
@@ -79,8 +83,8 @@ def detect_drift(
     - **Output**: --format, --out
 
     **Examples:**
-        specfact drift detect legacy-api --repo .
-        specfact drift detect my-bundle --repo . --format json --out drift-report.json
+        specfact code drift detect legacy-api --repo .
+        specfact code drift detect my-bundle --repo . --format json --out drift-report.json
     """
     if is_debug_mode():
         debug_log_operation(
@@ -101,7 +105,7 @@ def detect_drift(
                     "command", "drift detect", "failed", error="Bundle name required", extra={"reason": "no_bundle"}
                 )
             console.print("[bold red]✗[/bold red] Bundle name required")
-            console.print("[yellow]→[/yellow] Use --bundle option or run 'specfact plan select' to set active plan")
+            console.print("[yellow]→[/yellow] Use --bundle option or configure an active project bundle")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
     from specfact_codebase.sync.drift_detector import DriftDetector

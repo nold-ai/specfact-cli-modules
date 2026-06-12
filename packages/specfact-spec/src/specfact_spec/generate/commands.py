@@ -2,6 +2,10 @@
 
 This module provides commands for generating contract stubs, CrossHair harnesses,
 and other artifacts from SDD manifests and plan bundles.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
 """
 
 from __future__ import annotations
@@ -108,10 +112,10 @@ def _show_apply_help() -> None:
     console.print("  - icontract     (pre/post condition decorators)")
     console.print("  - crosshair     (property-based test functions)")
     console.print("\n[yellow]Examples:[/yellow]")
-    console.print("  specfact generate contracts-prompt src/file.py --apply all-contracts")
-    console.print("  specfact generate contracts-prompt src/file.py --apply beartype,icontract")
-    console.print("  specfact generate contracts-prompt --bundle my-bundle --apply all-contracts")
-    console.print("\n[dim]Use 'specfact generate contracts-prompt --help' for full documentation.[/dim]")
+    console.print("  specfact spec generate contracts-prompt src/file.py --apply all-contracts")
+    console.print("  specfact spec generate contracts-prompt src/file.py --apply beartype,icontract")
+    console.print("  specfact spec generate contracts-prompt --bundle my-bundle --apply all-contracts")
+    console.print("\n[dim]Use 'specfact spec generate contracts-prompt --help' for full documentation.[/dim]")
 
 
 @app.command("contracts")
@@ -164,8 +168,8 @@ def generate_contracts(
     - **Behavior/Options**: --no-interactive
 
     **Examples:**
-        specfact generate contracts --bundle legacy-api
-        specfact generate contracts --bundle legacy-api --no-interactive
+        specfact spec generate contracts --bundle legacy-api
+        specfact spec generate contracts --bundle legacy-api --no-interactive
     """
 
     telemetry_metadata = {
@@ -206,7 +210,7 @@ def generate_contracts(
                             extra={"reason": "bundle_not_found", "bundle": bundle},
                         )
                     print_error(f"Project bundle not found: {bundle_dir}")
-                    print_info(f"Create one with: specfact plan init {bundle}")
+                    print_info(f"Create or configure project bundle '{bundle}' before rerunning.")
                     raise typer.Exit(1)
 
                 plan_path = bundle_dir
@@ -225,7 +229,7 @@ def generate_contracts(
                             extra={"reason": "no_plan_or_bundle"},
                         )
                     print_error("Bundle or plan path is required")
-                    print_info("Run 'specfact plan init <bundle-name>' then rerun with --bundle <name>")
+                    print_info("Create or configure the project bundle, then rerun with --bundle <name>")
                     raise typer.Exit(1)
                 plan_path = Path(plan).resolve()
 
@@ -249,7 +253,7 @@ def generate_contracts(
                     format_type, _ = detect_bundle_format(plan_path)
                     if format_type != BundleFormat.MODULAR:
                         print_error("Legacy monolithic bundles are not supported by this command.")
-                        print_info("Migrate to the new structure with: specfact migrate artifacts --repo .")
+                        print_info("Migrate legacy artifacts before rerunning, then pass --bundle <name>.")
                         raise typer.Exit(1)
 
                     if plan_path.is_dir():
@@ -286,7 +290,7 @@ def generate_contracts(
                             extra={"reason": "sdd_not_found"},
                         )
                     print_error(f"SDD manifest not found: {sdd_path}")
-                    print_info("Run 'specfact plan harden' to create SDD manifest")
+                    print_info("Create the SDD manifest for the active bundle before rerunning")
                     raise typer.Exit(1)
 
             # Load SDD manifest
@@ -337,7 +341,7 @@ def generate_contracts(
             # Verify hash match (SDD uses plan_bundle_hash field)
             if sdd_manifest.plan_bundle_hash != plan_hash:
                 print_error("SDD manifest hash does not match plan bundle hash")
-                print_info("Run 'specfact plan harden' to update SDD manifest")
+                print_info("Update the SDD manifest for the active bundle before rerunning")
                 raise typer.Exit(1)
 
             # Determine contracts directory based on bundle
@@ -470,7 +474,7 @@ def generate_contracts_prompt(
     bundle: str | None = typer.Option(
         None,
         "--bundle",
-        help="Project bundle name (e.g., legacy-api). If provided, selects files from bundle. Default: active plan from 'specfact plan select'",
+        help="Project bundle name (e.g., legacy-api). If provided, selects files from bundle. Default: active project bundle configuration",
     ),
     apply: str = typer.Option(
         ...,
@@ -519,22 +523,22 @@ def generate_contracts_prompt(
     - **Output**: --output (currently unused, prompt is saved to .specfact/prompts/)
 
     **Examples:**
-        specfact generate contracts-prompt src/auth/login.py --apply beartype,icontract
-        specfact generate contracts-prompt --bundle legacy-api --apply beartype
-        specfact generate contracts-prompt --bundle legacy-api --apply beartype,icontract  # Interactive selection
-        specfact generate contracts-prompt --bundle legacy-api --apply beartype --no-interactive  # Process all files in bundle
+        specfact spec generate contracts-prompt src/auth/login.py --apply beartype,icontract
+        specfact spec generate contracts-prompt --bundle legacy-api --apply beartype
+        specfact spec generate contracts-prompt --bundle legacy-api --apply beartype,icontract  # Interactive selection
+        specfact spec generate contracts-prompt --bundle legacy-api --apply beartype --no-interactive  # Process all files in bundle
 
     **Complete Workflow:**
-        1. Generate prompt: specfact generate contracts-prompt --bundle legacy-api --apply all-contracts
+        1. Generate prompt: specfact spec generate contracts-prompt --bundle legacy-api --apply all-contracts
         2. Select file(s) from interactive list (if multiple)
         3. Open prompt file: .specfact/prompts/enhance-<filename>-beartype-icontract-crosshair.md
         4. Copy prompt to your AI IDE (Cursor, CoPilot, etc.)
         5. AI IDE reads the file and provides enhanced code (does NOT modify file directly)
         6. AI IDE writes enhanced code to temporary file: enhanced_<filename>.py
-        7. AI IDE runs validation: specfact generate contracts-apply enhanced_<filename>.py --original <original-file>
+        7. AI IDE runs validation: specfact spec generate contracts-apply enhanced_<filename>.py --original <original-file>
         8. If validation fails, AI IDE fixes issues and re-validates (up to 3 attempts)
         9. If validation succeeds, CLI applies changes automatically
-        10. Verify contract coverage: specfact analyze contracts --bundle legacy-api
+        10. Verify contract coverage: specfact code analyze contracts --bundle legacy-api
         11. Run your test suite: pytest (or your project's test command)
         12. Commit the enhanced code
     """
@@ -554,10 +558,10 @@ def generate_contracts_prompt(
         console.print("  - icontract     (pre/post condition decorators)")
         console.print("  - crosshair     (property-based test functions)")
         console.print("\n[yellow]Examples:[/yellow]")
-        console.print("  specfact generate contracts-prompt src/file.py --apply all-contracts")
-        console.print("  specfact generate contracts-prompt src/file.py --apply beartype,icontract")
-        console.print("  specfact generate contracts-prompt --bundle my-bundle --apply all-contracts")
-        console.print("\n[dim]Use 'specfact generate contracts-prompt --help' for full documentation.[/dim]")
+        console.print("  specfact spec generate contracts-prompt src/file.py --apply all-contracts")
+        console.print("  specfact spec generate contracts-prompt src/file.py --apply beartype,icontract")
+        console.print("  specfact spec generate contracts-prompt --bundle my-bundle --apply all-contracts")
+        console.print("\n[dim]Use 'specfact spec generate contracts-prompt --help' for full documentation.[/dim]")
         raise typer.Exit(1)
 
     if not file and not bundle:
@@ -743,7 +747,7 @@ def generate_contracts_prompt(
                     "   ```",
                     "   ❌ SpecFact CLI is required but not available or outdated.",
                     "   Please install/upgrade: pip install -U specfact-cli",
-                    "   Then verify: specfact --version",
+                    "   Then verify: specfact --help",
                     "   This task cannot proceed without SpecFact CLI.",
                     "   ```",
                     "5. **END THE CONVERSATION** - Do not continue until SpecFact CLI is working",
@@ -752,13 +756,13 @@ def generate_contracts_prompt(
                     "",
                     "1. Check if `specfact` command is available:",
                     "   ```bash",
-                    "   specfact --version",
+                    "   specfact --help",
                     "   ```",
                     "   - **If this fails**: STOP and inform user (see message above)",
                     "",
                     "2. Verify the required command exists:",
                     "   ```bash",
-                    "   specfact generate contracts-apply --help",
+                    "   specfact spec generate contracts-apply --help",
                     "   ```",
                     "   - **If this fails**: STOP and inform user (see message above)",
                     "",
@@ -855,11 +859,11 @@ def generate_contracts_prompt(
                         "2. Ensure the file is properly formatted and complete",
                         "",
                         "### Step 4: Validate with CLI",
-                        "**CRITICAL**: If `specfact generate contracts-apply` command is not available or fails, DO NOT proceed. STOP and inform the user that SpecFact CLI must be installed/upgraded first.",
+                        "**CRITICAL**: If `specfact spec generate contracts-apply` command is not available or fails, DO NOT proceed. STOP and inform the user that SpecFact CLI must be installed/upgraded first.",
                         "",
                         "1. Run the validation command:",
                         "   ```bash",
-                        f"   specfact generate contracts-apply enhanced_{file_path.stem}.py --original {file_path_relative}",
+                        f"   specfact spec generate contracts-apply enhanced_{file_path.stem}.py --original {file_path_relative}",
                         "   ```",
                         "",
                         "   - **If command not found**: STOP immediately and inform user (see mandatory pre-check message)",
@@ -879,7 +883,7 @@ def generate_contracts_prompt(
                         "- Run the validation command again",
                         "- Repeat until validation passes (maximum 3 attempts)",
                         "",
-                        "**CRITICAL**: If `specfact generate contracts-apply` command is not available or fails with 'command not found', DO NOT manually apply changes to the original file. STOP and inform the user that SpecFact CLI must be installed/upgraded first.",
+                        "**CRITICAL**: If `specfact spec generate contracts-apply` command is not available or fails with 'command not found', DO NOT manually apply changes to the original file. STOP and inform the user that SpecFact CLI must be installed/upgraded first.",
                         "",
                         "### Common Validation Errors and Fixes",
                         "",
@@ -913,7 +917,7 @@ def generate_contracts_prompt(
                         "",
                         f"- **Target File:** `{file_path_relative}`",
                         f"- **Enhanced File:** `enhanced_{file_path.stem}.py`",
-                        f"- **Validation Command:** `specfact generate contracts-apply enhanced_{file_path.stem}.py --original {file_path_relative}`",
+                        f"- **Validation Command:** `specfact spec generate contracts-apply enhanced_{file_path.stem}.py --original {file_path_relative}`",
                         "- **Contracts:** " + ", ".join(contracts_to_apply),
                         "",
                         "**BEFORE STARTING**: Complete the mandatory SpecFact CLI verification at the top of this prompt. Do NOT proceed with file reading or code generation until SpecFact CLI is verified.",
@@ -949,7 +953,7 @@ def generate_contracts_prompt(
             console.print("4. Save enhanced code from AI IDE to a file (e.g., enhanced_<filename>.py)")
             console.print("5. AI IDE should run validation command (iterative workflow):")
             console.print("   ```bash")
-            console.print("   specfact generate contracts-apply enhanced_<filename>.py --original <original-file>")
+            console.print("   specfact spec generate contracts-apply enhanced_<filename>.py --original <original-file>")
             console.print("   ```")
             console.print("6. If validation fails:")
             console.print("   - CLI will show specific error messages")
@@ -959,9 +963,9 @@ def generate_contracts_prompt(
             console.print("   - CLI will automatically apply the changes")
             console.print("   - Verify contract coverage:")
             if bundle:
-                console.print(f"     - specfact analyze contracts --bundle {bundle}")
+                console.print(f"     - specfact code analyze contracts --bundle {bundle}")
             else:
-                console.print("     - specfact analyze contracts --bundle <bundle>")
+                console.print("     - specfact code analyze contracts --bundle <bundle>")
             console.print("   - Run your test suite: pytest (or your project's test command)")
             console.print("   - Commit the enhanced code")
             if bundle_dir:
@@ -1045,10 +1049,10 @@ def apply_enhanced_contracts(
     - **Behavior/Options**: --yes, --dry-run
 
     **Examples:**
-        specfact generate contracts-apply enhanced_telemetry.py
-        specfact generate contracts-apply enhanced_telemetry.py --original src/telemetry.py
-        specfact generate contracts-apply enhanced_telemetry.py --dry-run  # Preview only
-        specfact generate contracts-apply enhanced_telemetry.py --yes  # Auto-apply
+        specfact spec generate contracts-apply enhanced_telemetry.py
+        specfact spec generate contracts-apply enhanced_telemetry.py --original src/telemetry.py
+        specfact spec generate contracts-apply enhanced_telemetry.py --dry-run  # Preview only
+        specfact spec generate contracts-apply enhanced_telemetry.py --yes  # Auto-apply
     """
     import difflib
     import subprocess
@@ -1339,7 +1343,7 @@ def apply_enhanced_contracts(
     test_output = ""
 
     # For single-file validation, we scope tests to the specific file only (not full repo)
-    # This is much faster than running specfact repro on the entire repository
+    # This is much faster than running specfact code repro on the entire repository
     try:
         # Find the original file path to determine test file location
         original_file_rel = original_file.relative_to(repo_path) if original_file else None
@@ -1503,8 +1507,8 @@ def apply_enhanced_contracts(
         print_success(f"Enhanced code applied to: {original_file.relative_to(repo_path)}")
         console.print("\n[bold green]✓ All validations passed and changes applied successfully![/bold green]")
         console.print("\n[bold]Next Steps:[/bold]")
-        console.print("1. Verify contract coverage: specfact analyze contracts --bundle <bundle>")
-        console.print("2. Run full test suite: specfact repro (or pytest)")
+        console.print("1. Verify contract coverage: specfact code analyze contracts --bundle <bundle>")
+        console.print("2. Run full test suite with specfact code repro, or use pytest")
         console.print("3. Commit the enhanced code")
     except Exception as e:
         if is_debug_mode():
@@ -1541,7 +1545,7 @@ def generate_fix_prompt(
     bundle: str | None = typer.Option(
         None,
         "--bundle",
-        help="Project bundle name. Default: active plan from 'specfact plan select'",
+        help="Project bundle name. Default: active project bundle configuration",
     ),
     # Output
     output: Path | None = typer.Option(
@@ -1569,11 +1573,11 @@ def generate_fix_prompt(
     to fix identified gaps in your codebase. This is the recommended workflow for v0.17+.
 
     **Workflow:**
-    1. Run `specfact analyze gaps --bundle <bundle>` to identify gaps
-    2. Run `specfact generate fix-prompt GAP-001` to get a fix prompt
+    1. Provide a generated gap report at `.specfact/reports/gaps.json` to identify gaps
+    2. Run `specfact spec generate fix-prompt GAP-001` to get a fix prompt
     3. Copy the prompt to your AI IDE
     4. AI IDE provides the fix
-    5. Validate with `specfact govern enforce sdd --bundle <bundle>`
+    5. Validate with `specfact govern enforce sdd <bundle>`
 
     **Parameter Groups:**
     - **Target/Input**: gap_id (optional argument), --bundle
@@ -1581,10 +1585,10 @@ def generate_fix_prompt(
     - **Behavior/Options**: --top, --no-interactive
 
     **Examples:**
-        specfact generate fix-prompt                     # List available gaps
-        specfact generate fix-prompt GAP-001             # Generate fix prompt for GAP-001
-        specfact generate fix-prompt --bundle legacy-api # List gaps for specific bundle
-        specfact generate fix-prompt GAP-001 --output fix.md  # Save to specific file
+        specfact spec generate fix-prompt                     # List available gaps
+        specfact spec generate fix-prompt GAP-001             # Generate fix prompt for GAP-001
+        specfact spec generate fix-prompt --bundle legacy-api # List gaps for specific bundle
+        specfact spec generate fix-prompt GAP-001 --output fix.md  # Save to specific file
     """
     from rich.table import Table
     from specfact_cli.utils.structure import SpecFactStructure
@@ -1620,7 +1624,7 @@ def generate_fix_prompt(
                 bundle_dir = SpecFactStructure.project_dir(base_path=repo_path, bundle_name=bundle)
                 if not bundle_dir.exists():
                     print_error(f"Project bundle not found: {bundle_dir}")
-                    print_info(f"Create one with: specfact plan init {bundle}")
+                    print_info(f"Create or configure project bundle '{bundle}' before rerunning.")
                     raise typer.Exit(1)
 
             # Look for gap report
@@ -1634,9 +1638,9 @@ def generate_fix_prompt(
                 print_warning("No gap report found.")
                 console.print("\n[bold]To generate a gap report, run:[/bold]")
                 if bundle:
-                    console.print(f"  specfact analyze gaps --bundle {bundle} --output json")
+                    console.print("  Create .specfact/reports/gaps.json, then rerun this command")
                 else:
-                    console.print("  specfact analyze gaps --bundle <bundle-name> --output json")
+                    console.print("  Create .specfact/reports/gaps.json, then rerun this command")
                 raise typer.Exit(1)
 
             # Load gap report
@@ -1684,10 +1688,10 @@ def generate_fix_prompt(
                     console.print(f"\n[dim]... and {len(gaps) - top} more gaps. Use --top to see more.[/dim]")
 
                 console.print("\n[bold]To generate a fix prompt:[/bold]")
-                console.print("  specfact generate fix-prompt <GAP-ID>")
+                console.print("  specfact spec generate fix-prompt <GAP-ID>")
                 console.print("\n[bold]Example:[/bold]")
                 if gaps:
-                    console.print(f"  specfact generate fix-prompt {gaps[0].get('id', 'GAP-001')}")
+                    console.print(f"  specfact spec generate fix-prompt {gaps[0].get('id', 'GAP-001')}")
 
                 record({"action": "list_gaps", "gap_count": len(gaps)})
                 raise typer.Exit(0)
@@ -1785,7 +1789,7 @@ def generate_fix_prompt(
                         "1. **Check OpenAPI Spec**: Review the OpenAPI contract",
                         "2. **Update Implementation**: Align the code with the spec",
                         "3. **Or Update Spec**: If the implementation is correct, update the spec",
-                        "4. **Run Drift Check**: Verify with `specfact analyze drift`",
+                        "4. **Run Drift Check**: Verify with `specfact code drift detect`",
                     ]
                 )
             else:
@@ -1880,7 +1884,7 @@ def generate_test_prompt(
     bundle: str | None = typer.Option(
         None,
         "--bundle",
-        help="Project bundle name. Default: active plan from 'specfact plan select'",
+        help="Project bundle name. Default: active project bundle configuration",
     ),
     # Output
     output: Path | None = typer.Option(
@@ -1908,7 +1912,7 @@ def generate_test_prompt(
     to generate comprehensive tests for your code. This is the recommended workflow for v0.17+.
 
     **Workflow:**
-    1. Run `specfact generate test-prompt src/module.py` to get a test prompt
+    1. Run `specfact spec generate test-prompt src/module.py` to get a test prompt
     2. Copy the prompt to your AI IDE
     3. AI IDE generates tests
     4. Save tests to appropriate location
@@ -1920,9 +1924,9 @@ def generate_test_prompt(
     - **Behavior/Options**: --type, --no-interactive
 
     **Examples:**
-        specfact generate test-prompt src/auth/login.py              # Generate test prompt
-        specfact generate test-prompt src/api.py --type integration  # Integration tests
-        specfact generate test-prompt --bundle legacy-api            # List files needing tests
+        specfact spec generate test-prompt src/auth/login.py              # Generate test prompt
+        specfact spec generate test-prompt src/api.py --type integration  # Integration tests
+        specfact spec generate test-prompt --bundle legacy-api            # List files needing tests
     """
     from rich.table import Table
     from specfact_cli.utils.structure import SpecFactStructure
@@ -1959,7 +1963,7 @@ def generate_test_prompt(
                 bundle_dir = SpecFactStructure.project_dir(base_path=repo_path, bundle_name=bundle)
                 if not bundle_dir.exists():
                     print_error(f"Project bundle not found: {bundle_dir}")
-                    print_info(f"Create one with: specfact plan init {bundle}")
+                    print_info(f"Create or configure project bundle '{bundle}' before rerunning.")
                     raise typer.Exit(1)
 
             # If no file provided, show files that might need tests
@@ -2011,9 +2015,9 @@ def generate_test_prompt(
                         console.print(f"\n[dim]... and {len(files_without_tests) - 15} more files[/dim]")
 
                     console.print("\n[bold]To generate test prompt:[/bold]")
-                    console.print("  specfact generate test-prompt <file-path>")
+                    console.print("  specfact spec generate test-prompt <file-path>")
                     console.print("\n[bold]Example:[/bold]")
-                    console.print(f"  specfact generate test-prompt {files_without_tests[0][1]}")
+                    console.print(f"  specfact spec generate test-prompt {files_without_tests[0][1]}")
                 else:
                     print_success("All source files appear to have tests!")
 

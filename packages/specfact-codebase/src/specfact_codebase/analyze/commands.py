@@ -3,6 +3,10 @@ Analyze command - Analyze codebase for contract coverage and quality.
 
 This module provides commands for analyzing codebases to determine
 contract coverage, code quality metrics, and enhancement opportunities.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
 """
 
 from __future__ import annotations
@@ -55,7 +59,7 @@ def analyze_contracts(
     bundle: str | None = typer.Option(
         None,
         "--bundle",
-        help="Project bundle name (e.g., legacy-api). Default: active plan from 'specfact plan select'",
+        help="Project bundle name (e.g., legacy-api). Default: active project bundle configuration",
     ),
 ) -> None:
     """
@@ -68,7 +72,7 @@ def analyze_contracts(
     - **Target/Input**: --repo, --bundle (required)
 
     **Examples:**
-        specfact analyze contracts --repo . --bundle legacy-api
+        specfact code analyze contracts --repo . --bundle legacy-api
     """
     if is_debug_mode():
         debug_log_operation("command", "analyze contracts", "started", extra={"repo": str(repo), "bundle": bundle})
@@ -88,7 +92,7 @@ def analyze_contracts(
                     extra={"reason": "no_bundle"},
                 )
             console.print("[bold red]✗[/bold red] Bundle name required")
-            console.print("[yellow]→[/yellow] Use --bundle option or run 'specfact plan select' to set active plan")
+            console.print("[yellow]→[/yellow] Use --bundle option or configure an active project bundle")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
 

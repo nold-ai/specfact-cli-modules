@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from beartype import beartype
 from specfact_cli.models.plan import Feature, Product, Story
 from specfact_cli.models.project import BundleManifest, ProjectBundle
 from specfact_cli.models.source_tracking import SourceTracking
@@ -22,7 +21,6 @@ from specfact_project.sync_runtime.drift_detector import DriftDetector, DriftRep
 class TestDriftDetector:
     """Test suite for DriftDetector class."""
 
-    @beartype
     def test_scan_no_bundle(self, tmp_path: Path) -> None:
         """Test scan when bundle doesn't exist."""
         detector = DriftDetector("nonexistent", tmp_path)
@@ -36,7 +34,6 @@ class TestDriftDetector:
         assert len(report.test_coverage_gaps) == 0
         assert len(report.contract_violations) == 0
 
-    @beartype
     def test_scan_added_code(self, tmp_path: Path) -> None:
         """Test detection of added code files (no spec)."""
         from specfact_cli.utils.bundle_loader import save_project_bundle
@@ -95,7 +92,6 @@ class TestDriftDetector:
         assert len(report.added_code) > 0
         assert any("untracked.py" in file for file in report.added_code)
 
-    @beartype
     def test_scan_removed_code(self, tmp_path: Path) -> None:
         """Test detection of removed code files (spec exists but file deleted)."""
         from specfact_cli.utils.bundle_loader import save_project_bundle
@@ -136,7 +132,6 @@ class TestDriftDetector:
         assert len(report.removed_code) > 0
         assert any("deleted.py" in file for file in report.removed_code)
 
-    @beartype
     def test_scan_modified_code(self, tmp_path: Path) -> None:
         """Test detection of modified code files (hash changed)."""
         from specfact_cli.utils.bundle_loader import save_project_bundle
@@ -186,7 +181,6 @@ class TestDriftDetector:
         assert len(report.modified_code) > 0
         assert any("modified.py" in file for file in report.modified_code)
 
-    @beartype
     def test_scan_orphaned_specs(self, tmp_path: Path) -> None:
         """Test detection of orphaned specs (no source tracking)."""
         from specfact_cli.utils.bundle_loader import save_project_bundle
@@ -223,7 +217,6 @@ class TestDriftDetector:
         assert len(report.orphaned_specs) > 0
         assert "FEATURE-ORPHAN" in report.orphaned_specs
 
-    @beartype
     def test_scan_test_coverage_gaps(self, tmp_path: Path) -> None:
         """Test detection of test coverage gaps (stories without tests)."""
         from specfact_cli.utils.bundle_loader import save_project_bundle
@@ -282,7 +275,6 @@ class TestDriftDetector:
             for feature_key, story_key in report.test_coverage_gaps
         )
 
-    @beartype
     def test_scan_no_test_coverage_gaps_when_tests_exist(self, tmp_path: Path) -> None:
         """Test that stories with tests don't show up as coverage gaps."""
         from specfact_cli.utils.bundle_loader import save_project_bundle
@@ -341,7 +333,6 @@ class TestDriftDetector:
             for feature_key, story_key in report.test_coverage_gaps
         )
 
-    @beartype
     def test_is_implementation_file(self, tmp_path: Path) -> None:
         """Test _is_implementation_file method."""
         detector = DriftDetector("test", tmp_path)
@@ -358,7 +349,6 @@ class TestDriftDetector:
         assert detector._is_implementation_file(tmp_path / "__pycache__" / "module.pyc") is False
         assert detector._is_implementation_file(tmp_path / ".specfact" / "bundle.yaml") is False
 
-    @beartype
     def test_scan_no_drift_when_in_sync(self, tmp_path: Path) -> None:
         """Test that no drift is detected when code and specs are in sync."""
         from specfact_cli.utils.bundle_loader import save_project_bundle
