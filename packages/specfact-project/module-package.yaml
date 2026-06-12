@@ -1,5 +1,5 @@
 name: nold-ai/specfact-project
-version: 0.41.26
+version: 0.41.27
 commands:
   - project
   - plan
@@ -27,5 +27,5 @@ core_compatibility: '>=0.40.0,<1.0.0'
 description: Official SpecFact project bundle package.
 bundle_group_command: project
 integrity:
-  checksum: sha256:d3021a5396b83aac05dc30e496130f299055b27009c5b73d08b924cc9d2ff220
-  signature: xaAGs5EKxpPSDYnJfm+AtofA/r05SPNvg7tz3p5w3pJIsBcnnxH3+ZI7xAaf8n981/dbnpRarJdZocE5ix8uDA==
+  checksum: sha256:46f4a3f8f43ed79a22021c233579708b9cdeac28ffb9235a17137f6dd73e843f
+  signature: 7cweFoJP3xw+w/2llmLBttkCNCx+9FiTfNPuEk81wjABSNKU7Hu3LUAUS9plUkqSWQMr5fz3/tDH1oMMaZS7Aw==
