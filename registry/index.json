@@ -2,9 +2,9 @@
   "modules": [
     {
       "id": "nold-ai/specfact-project",
-      "latest_version": "0.41.25",
-      "download_url": "modules/specfact-project-0.41.25.tar.gz",
-      "checksum_sha256": "55265ed3396f9725806046fa3dd2f564484291a3f0a6812b7d328d2edc430a9c",
+      "latest_version": "0.41.26",
+      "download_url": "modules/specfact-project-0.41.26.tar.gz",
+      "checksum_sha256": "95d19cb9ecb61d963b7bce8ca2108c0f2a194dde704e0a72cbd7a28653ac0ba5",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -16,9 +16,9 @@
     },
     {
       "id": "nold-ai/specfact-backlog",
-      "latest_version": "0.41.30",
-      "download_url": "modules/specfact-backlog-0.41.30.tar.gz",
-      "checksum_sha256": "4ff69b8caf7d68980d24de44c2a2583f2c20758f6b663c7ecd9f122a2d4e51e6",
+      "latest_version": "0.41.31",
+      "download_url": "modules/specfact-backlog-0.41.31.tar.gz",
+      "checksum_sha256": "ca79507083313d4b91efeff77f6ab39333039eca45473553661519f1ca16e80f",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -30,9 +30,9 @@
     },
     {
       "id": "nold-ai/specfact-codebase",
-      "latest_version": "0.41.13",
-      "download_url": "modules/specfact-codebase-0.41.13.tar.gz",
-      "checksum_sha256": "5b8917e836be6b0318cf9714a23fd07bbebc1dd65fee88ea6e883152c5837de8",
+      "latest_version": "0.41.14",
+      "download_url": "modules/specfact-codebase-0.41.14.tar.gz",
+      "checksum_sha256": "8dee3f1e47b13bcf2f8a136c0559363a266864e34b0827e9b348ff0ceecde567",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -46,9 +46,9 @@
     },
     {
       "id": "nold-ai/specfact-spec",
-      "latest_version": "0.40.23",
-      "download_url": "modules/specfact-spec-0.40.23.tar.gz",
-      "checksum_sha256": "9b34db4fe3bfcacb3357ebaa1de8f66145cef7d21b54632d006fe99379c51080",
+      "latest_version": "0.40.24",
+      "download_url": "modules/specfact-spec-0.40.24.tar.gz",
+      "checksum_sha256": "5b728cc07190ad49aca09d0368ca576e33958e661b4b63f5933de3198c0c9957",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -62,9 +62,9 @@
     },
     {
       "id": "nold-ai/specfact-govern",
-      "latest_version": "0.40.25",
-      "download_url": "modules/specfact-govern-0.40.25.tar.gz",
-      "checksum_sha256": "c6b159640ac467e944bb5ce81ee3e391ff618e7df7d22fca8db806c55eff96ae",
+      "latest_version": "0.40.26",
+      "download_url": "modules/specfact-govern-0.40.26.tar.gz",
+      "checksum_sha256": "a46550c7621a4f63052eb5d80d48bba597976a8e482aed0d601ff8fe3db1d2cc",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
@@ -78,9 +78,9 @@
     },
     {
       "id": "nold-ai/specfact-code-review",
-      "latest_version": "0.47.46",
-      "download_url": "modules/specfact-code-review-0.47.46.tar.gz",
-      "checksum_sha256": "4a5f8a2b48b59904886891ca701a8e0a59805fe7d8c6911917bc9866b5db6d6e",
+      "latest_version": "0.47.47",
+      "download_url": "modules/specfact-code-review-0.47.47.tar.gz",
+      "checksum_sha256": "bd79260121b90ad3f9c8fe6174c4923eff66965c4a20910aba663187c484357c",
       "core_compatibility": ">=0.44.0,<1.0.0",
       "tier": "official",
       "publisher": {
