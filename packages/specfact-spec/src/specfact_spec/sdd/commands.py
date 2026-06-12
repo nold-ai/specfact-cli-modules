@@ -81,8 +81,8 @@ def sdd_list(
     - **Target/Input**: --repo
 
     **Examples:**
-        specfact spec list
-        specfact spec list --repo /path/to/repo
+        specfact spec sdd list
+        specfact spec sdd list --repo /path/to/repo
     """
     if is_debug_mode():
         debug_log_operation("command", "sdd list", "started", extra={"repo": str(repo)})
@@ -224,9 +224,9 @@ def constitution_bootstrap(
     - **Behavior/Options**: --overwrite
 
     **Examples:**
-        specfact spec constitution bootstrap --repo .
-        specfact spec constitution bootstrap --repo . --out custom-constitution.md
-        specfact spec constitution bootstrap --repo . --overwrite
+        specfact spec sdd constitution bootstrap --repo .
+        specfact spec sdd constitution bootstrap --repo . --out custom-constitution.md
+        specfact spec sdd constitution bootstrap --repo . --overwrite
     """
     from specfact_cli.telemetry import telemetry
 
@@ -260,7 +260,7 @@ def constitution_bootstrap(
         console.print("\n[bold]Next Steps:[/bold]")
         console.print("1. Review the generated constitution")
         console.print("2. Adjust principles and sections as needed")
-        console.print("3. Run 'specfact spec constitution validate' to check completeness")
+        console.print("3. Run 'specfact spec sdd constitution validate' to check completeness")
         console.print("4. Run 'specfact project sync bridge --adapter speckit' to sync with Spec-Kit artifacts")
 
 
@@ -297,7 +297,7 @@ def constitution_enrich(
     additional principles and details extracted from repository context.
 
     Example:
-        specfact spec constitution enrich --repo .
+        specfact spec sdd constitution enrich --repo .
     """
     from specfact_cli.telemetry import telemetry
 
@@ -308,7 +308,7 @@ def constitution_enrich(
 
         if not constitution.exists():
             console.print(f"[bold red]✗[/bold red] Constitution not found: {constitution}")
-            console.print("[dim]Run 'specfact spec constitution bootstrap' first[/dim]")
+            console.print("[dim]Run 'specfact spec sdd constitution bootstrap' first[/dim]")
             raise typer.Exit(1)
 
         console.print(f"[bold cyan]Enriching constitution:[/bold cyan] {constitution}")
@@ -359,7 +359,7 @@ def constitution_enrich(
         console.print("\n[bold]Next Steps:[/bold]")
         console.print("1. Review the enriched constitution")
         console.print("2. Adjust as needed")
-        console.print("3. Run 'specfact spec constitution validate' to check completeness")
+        console.print("3. Run 'specfact spec sdd constitution validate' to check completeness")
 
 
 @constitution_app.command("validate")
@@ -387,8 +387,8 @@ def constitution_validate(
     has governance section, etc.).
 
     Example:
-        specfact spec constitution validate
-        specfact spec constitution validate --constitution custom-constitution.md
+        specfact spec sdd constitution validate
+        specfact spec sdd constitution validate --constitution custom-constitution.md
     """
     from specfact_cli.telemetry import telemetry
 
@@ -407,8 +407,8 @@ def constitution_validate(
                 console.print(f"  - {issue}")
 
             console.print("\n[bold]Next Steps:[/bold]")
-            console.print("1. Run 'specfact spec constitution bootstrap' to generate a complete constitution")
-            console.print("2. Or run 'specfact spec constitution enrich' to enrich existing constitution")
+            console.print("1. Run 'specfact spec sdd constitution bootstrap' to generate a complete constitution")
+            console.print("2. Or run 'specfact spec sdd constitution enrich' to enrich existing constitution")
             raise typer.Exit(1)
 
 

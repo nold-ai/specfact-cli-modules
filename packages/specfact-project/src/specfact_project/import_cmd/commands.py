@@ -1727,7 +1727,7 @@ def _suggest_constitution_bootstrap(repo: Path) -> None:
             else:
                 console.print()
                 console.print(
-                    "[dim]💡 Tip: Run 'specfact spec constitution bootstrap --repo .' to generate constitution[/dim]"
+                    "[dim]💡 Tip: Run 'specfact spec sdd constitution bootstrap --repo .' to generate constitution[/dim]"
                 )
 
 

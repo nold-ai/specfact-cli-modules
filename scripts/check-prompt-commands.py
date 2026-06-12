@@ -42,7 +42,7 @@ MODULE_APP_MOUNTS = (
     ("specfact_project.project.commands", "app", ("specfact", "project")),
     ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
-    ("specfact_spec.sdd.commands", "app", ("specfact", "spec")),
+    ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd")),
     ("specfact_spec.generate.commands", "app", ("specfact", "spec", "generate")),
 )
 CORE_COMMAND_PATHS = frozenset(

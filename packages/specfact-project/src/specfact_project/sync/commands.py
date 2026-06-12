@@ -879,7 +879,7 @@ def sync_intelligent(
         bundle = SpecFactStructure.get_active_bundle_name(repo)
         if bundle is None:
             console.print("[bold red]✗[/bold red] Bundle name required")
-            console.print("[yellow]→[/yellow] Use --bundle option or configure an active project bundle")
+            console.print("[yellow]→[/yellow] Pass the bundle name argument or configure an active project bundle")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
 

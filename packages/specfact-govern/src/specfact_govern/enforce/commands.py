@@ -282,7 +282,7 @@ def enforce_sdd(
                     "command", "enforce sdd", "failed", error="Bundle name required", extra={"reason": "no_bundle"}
                 )
             console.print("[bold red]✗[/bold red] Bundle name required")
-            console.print("[yellow]→[/yellow] Use --bundle option or configure an active project bundle")
+            console.print("[yellow]→[/yellow] Pass the bundle name argument or configure an active project bundle")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
 
