@@ -407,8 +407,8 @@ def constitution_validate(
                 console.print(f"  - {issue}")
 
             console.print("\n[bold]Next Steps:[/bold]")
-            console.print("1. Run 'specfact sdd constitution bootstrap' to generate a complete constitution")
-            console.print("2. Or run 'specfact sdd constitution enrich' to enrich existing constitution")
+            console.print("1. Run 'specfact spec constitution bootstrap' to generate a complete constitution")
+            console.print("2. Or run 'specfact spec constitution enrich' to enrich existing constitution")
             raise typer.Exit(1)
 
 

@@ -558,10 +558,10 @@ def generate_contracts_prompt(
         console.print("  - icontract     (pre/post condition decorators)")
         console.print("  - crosshair     (property-based test functions)")
         console.print("\n[yellow]Examples:[/yellow]")
-        console.print("  specfact generate contracts-prompt src/file.py --apply all-contracts")
-        console.print("  specfact generate contracts-prompt src/file.py --apply beartype,icontract")
-        console.print("  specfact generate contracts-prompt --bundle my-bundle --apply all-contracts")
-        console.print("\n[dim]Use 'specfact generate contracts-prompt --help' for full documentation.[/dim]")
+        console.print("  specfact spec generate contracts-prompt src/file.py --apply all-contracts")
+        console.print("  specfact spec generate contracts-prompt src/file.py --apply beartype,icontract")
+        console.print("  specfact spec generate contracts-prompt --bundle my-bundle --apply all-contracts")
+        console.print("\n[dim]Use 'specfact spec generate contracts-prompt --help' for full documentation.[/dim]")
         raise typer.Exit(1)
 
     if not file and not bundle:
@@ -953,7 +953,7 @@ def generate_contracts_prompt(
             console.print("4. Save enhanced code from AI IDE to a file (e.g., enhanced_<filename>.py)")
             console.print("5. AI IDE should run validation command (iterative workflow):")
             console.print("   ```bash")
-            console.print("   specfact generate contracts-apply enhanced_<filename>.py --original <original-file>")
+            console.print("   specfact spec generate contracts-apply enhanced_<filename>.py --original <original-file>")
             console.print("   ```")
             console.print("6. If validation fails:")
             console.print("   - CLI will show specific error messages")
@@ -1688,10 +1688,10 @@ def generate_fix_prompt(
                     console.print(f"\n[dim]... and {len(gaps) - top} more gaps. Use --top to see more.[/dim]")
 
                 console.print("\n[bold]To generate a fix prompt:[/bold]")
-                console.print("  specfact generate fix-prompt <GAP-ID>")
+                console.print("  specfact spec generate fix-prompt <GAP-ID>")
                 console.print("\n[bold]Example:[/bold]")
                 if gaps:
-                    console.print(f"  specfact generate fix-prompt {gaps[0].get('id', 'GAP-001')}")
+                    console.print(f"  specfact spec generate fix-prompt {gaps[0].get('id', 'GAP-001')}")
 
                 record({"action": "list_gaps", "gap_count": len(gaps)})
                 raise typer.Exit(0)
@@ -2015,9 +2015,9 @@ def generate_test_prompt(
                         console.print(f"\n[dim]... and {len(files_without_tests) - 15} more files[/dim]")
 
                     console.print("\n[bold]To generate test prompt:[/bold]")
-                    console.print("  specfact generate test-prompt <file-path>")
+                    console.print("  specfact spec generate test-prompt <file-path>")
                     console.print("\n[bold]Example:[/bold]")
-                    console.print(f"  specfact generate test-prompt {files_without_tests[0][1]}")
+                    console.print(f"  specfact spec generate test-prompt {files_without_tests[0][1]}")
                 else:
                     print_success("All source files appear to have tests!")
 

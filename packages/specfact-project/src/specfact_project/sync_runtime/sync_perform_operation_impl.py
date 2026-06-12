@@ -51,7 +51,7 @@ def _pso_validate_constitution_required(
     console.print("[bold red]✗[/bold red] Constitution required")
     console.print("[red]Constitution file not found or is empty[/red]")
     console.print("\n[bold yellow]Next Steps:[/bold yellow]")
-    console.print("1. Run 'specfact sdd constitution bootstrap --repo .' to auto-generate constitution")
+    console.print("1. Run 'specfact spec constitution bootstrap --repo .' to auto-generate constitution")
     console.print("2. Or run tool-specific constitution command in your AI assistant")
     console.print("3. Then run 'specfact project sync bridge --adapter <adapter>' again")
     raise typer.Exit(1)
@@ -92,10 +92,12 @@ def _pso_maybe_bootstrap_constitution(repo: Path, adapter_type: AdapterType, con
             console.print("[bold green]✓[/bold green] Bootstrap constitution generated")
             console.print("[dim]Review and adjust as needed before syncing[/dim]")
         else:
-            console.print("[dim]Skipping bootstrap. Run 'specfact sdd constitution bootstrap' manually if needed[/dim]")
+            console.print(
+                "[dim]Skipping bootstrap. Run 'specfact spec constitution bootstrap' manually if needed[/dim]"
+            )
         return
     console.print("[yellow]⚠[/yellow] Constitution is minimal (essentially empty)")
-    console.print("[dim]Run 'specfact sdd constitution bootstrap --repo .' to generate constitution[/dim]")
+    console.print("[dim]Run 'specfact spec constitution bootstrap --repo .' to generate constitution[/dim]")
 
 
 def _pso_ensure_specfact(repo: Path, console: Any) -> bool:
