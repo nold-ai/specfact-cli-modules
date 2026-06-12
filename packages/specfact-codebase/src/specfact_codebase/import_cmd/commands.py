@@ -1,4 +1,9 @@
-"""Code-owned import command surface for brownfield workflows."""
+"""Code-owned import command surface for brownfield workflows.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
+"""
 
 from __future__ import annotations
 
@@ -78,7 +83,7 @@ def import_codebase(
     ctx: typer.Context,
     bundle: str | None = typer.Argument(
         None,
-        help="Project bundle name (e.g., legacy-api, auth-module). Default: active plan from 'specfact plan select'.",
+        help="Project bundle name (e.g., legacy-api, auth-module). Default: active project bundle configuration.",
     ),
     repo: Path = typer.Option(
         Path("."),

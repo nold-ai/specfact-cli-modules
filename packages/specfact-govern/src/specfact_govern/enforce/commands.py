@@ -3,6 +3,10 @@ Enforce command - Configure contract validation quality gates.
 
 This module provides commands for configuring enforcement modes
 and validation policies.
+
+Operating guidance: embedded command examples are not the source of truth;
+CLI help is authoritative, so run the relevant --help command and ask the user
+before acting when examples and runtime behavior diverge.
 """
 
 from __future__ import annotations
@@ -213,7 +217,7 @@ def enforce_sdd(
     # Target/Input
     bundle: str | None = typer.Argument(
         None,
-        help="Project bundle name (e.g., legacy-api, auth-module). Default: active plan from 'specfact plan select'",
+        help="Project bundle name (e.g., legacy-api, auth-module). Default: active project bundle configuration",
     ),
     sdd: Path | None = typer.Option(
         None,
@@ -278,7 +282,7 @@ def enforce_sdd(
                     "command", "enforce sdd", "failed", error="Bundle name required", extra={"reason": "no_bundle"}
                 )
             console.print("[bold red]✗[/bold red] Bundle name required")
-            console.print("[yellow]→[/yellow] Use --bundle option or run 'specfact plan select' to set active plan")
+            console.print("[yellow]→[/yellow] Use --bundle option or configure an active project bundle")
             raise typer.Exit(1)
         console.print(f"[dim]Using active plan: {bundle}[/dim]")
 
@@ -309,7 +313,7 @@ def enforce_sdd(
                     extra={"reason": "bundle_missing"},
                 )
             console.print(f"[bold red]✗[/bold red] Project bundle not found: {bundle_dir}")
-            console.print(f"[dim]Create one with: specfact plan init {bundle}[/dim]")
+            console.print(f"[dim]Create or configure project bundle '{bundle}' before rerunning.[/dim]")
             raise typer.Exit(1)
 
         # Find SDD manifest path using discovery utility
@@ -328,7 +332,7 @@ def enforce_sdd(
                 )
             console.print("[bold red]✗[/bold red] SDD manifest not found")
             console.print(f"[dim]Searched for: .specfact/projects/{bundle}/sdd.yaml (bundle-specific)[/dim]")
-            console.print(f"[dim]Create one with: specfact plan harden {bundle}[/dim]")
+            console.print(f"[dim]Update the SDD manifest for '{bundle}' before rerunning.[/dim]")
             raise typer.Exit(1)
 
         sdd = discovered_sdd
@@ -378,7 +382,7 @@ def enforce_sdd(
                     severity=DeviationSeverity.HIGH,
                     description=f"SDD bundle hash mismatch: expected {project_hash[:16]}..., got {sdd_manifest.plan_bundle_hash[:16]}...",
                     location=str(sdd),
-                    fix_hint=f"Run 'specfact plan harden {bundle}' to update SDD manifest with current bundle hash",
+                    fix_hint=f"Update SDD manifest for {bundle} with current bundle hash",
                 )
                 report.add_deviation(deviation)
                 console.print("[bold red]✗[/bold red] Hash mismatch detected")
@@ -559,9 +563,7 @@ def enforce_sdd(
                     console.print("   - Features (add/remove/update)")
                     console.print("   - Stories (add/remove/update)")
                     console.print("   - Product, idea, business, or clarifications")
-                    console.print(
-                        f"\n   [bold]Fix:[/bold] Run [cyan]specfact plan harden {bundle}[/cyan] to update the SDD manifest"
-                    )
+                    console.print(f"\n   [bold]Fix:[/bold] Update the SDD manifest for {bundle}")
                     console.print(
                         "   [dim]This updates the SDD with the current bundle hash and regenerates HOW sections[/dim]"
                     )
@@ -576,11 +578,11 @@ def enforce_sdd(
                         f"   - Invariants/feature: {metrics.invariants_per_feature:.2f} (required: {thresholds.invariants_per_feature})"
                     )
                     console.print("\n   [bold]Fix:[/bold] Add more contracts to stories and invariants to features")
-                    console.print("   [dim]Tip: Use 'specfact plan review' to identify areas needing contracts[/dim]")
+                    console.print("   [dim]Tip: review project bundle contract coverage before rerunning[/dim]")
 
                 console.print("\n[bold cyan]Next Steps:[/bold cyan]")
                 if hash_mismatches:
-                    console.print(f"   1. Update SDD: [cyan]specfact plan harden {bundle}[/cyan]")
+                    console.print(f"   1. Update the SDD manifest for {bundle}")
                 if coverage_issues:
                     console.print("   2. Add contracts: Review features and add @icontract decorators")
                     console.print("   3. Re-validate: Run this command again after fixes")

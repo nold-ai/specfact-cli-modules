@@ -8,7 +8,6 @@ import hashlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from beartype import beartype
 from specfact_cli.adapters.registry import AdapterRegistry
 from specfact_cli.models.bridge import AdapterType, ArtifactMapping, BridgeConfig
 from specfact_cli.models.project import ProjectBundle
@@ -656,7 +655,6 @@ class TestSyncResult:
 class TestBridgeSyncDevOpsFeatures:
     """Test DevOps-specific features in BridgeSync."""
 
-    @beartype
     def test_content_hash_calculation(self, tmp_path: Path) -> None:
         """Test content hash calculation for change detection."""
         bridge_config = BridgeConfig.preset_github()
@@ -679,7 +677,6 @@ class TestBridgeSyncDevOpsFeatures:
         assert hash_result == expected_hash
         assert len(hash_result) == 16  # First 16 chars of SHA-256
 
-    @beartype
     def test_content_change_detection(self, tmp_path: Path) -> None:
         """Test content change detection logic."""
         bridge_config = BridgeConfig.preset_github()
@@ -717,7 +714,6 @@ class TestBridgeSyncDevOpsFeatures:
             assert current_hash == "new_hash_789abc"
             assert stored_hash == "old_hash_123456"
 
-    @beartype
     def test_content_change_detection_no_change(self, tmp_path: Path) -> None:
         """Test content change detection when hash matches."""
         bridge_config = BridgeConfig.preset_github()
@@ -749,7 +745,6 @@ class TestBridgeSyncDevOpsFeatures:
             assert current_hash == stored_hash
             assert current_hash == "same_hash_123456"
 
-    @beartype
     def test_change_filtering_by_ids(self, tmp_path: Path) -> None:
         """Test filtering change proposals by change IDs."""
         bridge_config = BridgeConfig.preset_github()
@@ -801,7 +796,6 @@ class TestBridgeSyncDevOpsFeatures:
             # (adapter should be called twice, once for each filtered proposal)
             assert mock_adapter.export_artifact.call_count == 2
 
-    @beartype
     def test_change_filtering_all_proposals(self, tmp_path: Path) -> None:
         """Test that all proposals are exported when no filter specified."""
         bridge_config = BridgeConfig.preset_github()
@@ -846,7 +840,6 @@ class TestBridgeSyncDevOpsFeatures:
             # Verify all proposals were processed
             assert mock_adapter.export_artifact.call_count == 2
 
-    @beartype
     def test_temporary_file_export(self, tmp_path: Path) -> None:
         """Test exporting proposal content to temporary file."""
         bridge_config = BridgeConfig.preset_github()
@@ -883,7 +876,6 @@ class TestBridgeSyncDevOpsFeatures:
             assert "Test Change" in content or "test-change" in content
             assert "Test rationale" in content or "Test description" in content
 
-    @beartype
     def test_temporary_file_import(self, tmp_path: Path) -> None:
         """Test importing sanitized content from temporary file."""
         bridge_config = BridgeConfig.preset_github()
@@ -942,7 +934,6 @@ Sanitized description
             assert artifact_data["rationale"] == "Sanitized rationale"
             assert artifact_data["description"] == "Sanitized description"
 
-    @beartype
     def test_temporary_file_import_missing_file(self, tmp_path: Path) -> None:
         """Test error handling when sanitized file doesn't exist."""
         bridge_config = BridgeConfig.preset_github()
@@ -974,7 +965,6 @@ Sanitized description
             assert len(result.errors) > 0
             assert any("not found" in error.lower() for error in result.errors)
 
-    @beartype
     def test_source_tracking_formatting(self, tmp_path: Path) -> None:
         """Test Source Tracking markdown formatting."""
         bridge_config = BridgeConfig.preset_github()
@@ -1032,7 +1022,6 @@ Test description
         separator_count = saved_content.count("---")
         assert separator_count >= 1  # At least one separator
 
-    @beartype
     def test_update_existing_flag_enabled(self, tmp_path: Path) -> None:
         """Test that update_existing flag triggers issue body update."""
         from unittest.mock import MagicMock, patch
@@ -1091,7 +1080,6 @@ Test description
             ]
             assert len(update_calls) == 1
 
-    @beartype
     def test_update_existing_flag_disabled(self, tmp_path: Path) -> None:
         """Test that update_existing=False skips issue body update."""
         from unittest.mock import MagicMock, patch
@@ -1146,7 +1134,6 @@ Test description
             ]
             assert len(update_calls) == 0
 
-    @beartype
     def test_multi_repository_source_tracking(self, tmp_path: Path) -> None:
         """Test that source_tracking supports multiple repository entries."""
         from unittest.mock import MagicMock, patch
@@ -1214,7 +1201,6 @@ Test description
             assert isinstance(proposal["source_tracking"], list)
             assert len(proposal["source_tracking"]) == 2
 
-    @beartype
     def test_multi_repository_entry_matching(self, tmp_path: Path) -> None:
         """Test that entries are matched by source_repo."""
         from unittest.mock import MagicMock, patch
@@ -1275,7 +1261,6 @@ Test description
             assert internal_entry is not None
             assert internal_entry.get("source_id") == "14"
 
-    @beartype
     def test_multi_repository_content_hash_independence(self, tmp_path: Path) -> None:
         """Test that content hash is tracked per repository independently."""
         from unittest.mock import MagicMock, patch

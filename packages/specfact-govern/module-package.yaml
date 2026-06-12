@@ -1,5 +1,5 @@
 name: nold-ai/specfact-govern
-version: 0.40.23
+version: 0.40.25
 commands:
   - govern
 tier: official
@@ -19,5 +19,5 @@ description: Official SpecFact governance bundle package.
 category: govern
 bundle_group_command: govern
 integrity:
-  checksum: sha256:b08213f3b3dfe4dee712646272a204b2f28cd57cf6145edd8d851abacd3635c5
-  signature: HY3pzZz8ryiohpLlG0eVcQIda5/Ls6EMAOwDxQZNKbld8Zmg6kZD0pQtMQ86e2i774D963G6lZvaGs/QE3LYBA==
+  checksum: sha256:e9d5fe437db8a01693a2558b61294605bda1a54322debfdc9cb216c29254a654
+  signature: JUL2blqZMy6aEGK18+MM0DIHnai5FtPPrJktnrabJPEsCKnRVcVxC+wYe7dH958qYbE5fhuPbpNv8v0JtbOFCg==
