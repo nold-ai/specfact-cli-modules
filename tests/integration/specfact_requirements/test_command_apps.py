@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -50,6 +53,32 @@ def _source_file(tmp_path: Path) -> Path:
 def test_command_module_exposes_typer_app() -> None:
     assert app is not None
     assert hasattr(app, "registered_commands")
+
+
+@pytest.mark.integration
+def test_command_module_import_does_not_require_core_requirements_context() -> None:
+    code = """
+import builtins
+
+real_import = builtins.__import__
+
+def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if name.startswith("specfact_cli.requirements"):
+        raise ModuleNotFoundError("blocked specfact_cli.requirements import")
+    return real_import(name, globals, locals, fromlist, level)
+
+builtins.__import__ = guarded_import
+
+from specfact_requirements.requirements.commands import app
+
+assert app is not None
+"""
+    source_path = Path(__file__).resolve().parents[3] / "packages" / "specfact-requirements" / "src"
+    env = os.environ | {"PYTHONPATH": os.pathsep.join([source_path.as_posix(), os.environ.get("PYTHONPATH", "")])}
+
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, check=False, text=True, env=env)
+
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.integration

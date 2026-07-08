@@ -5,14 +5,14 @@ from __future__ import annotations
 import json
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 import typer
 from beartype import beartype
 from icontract import ensure, require
-from specfact_cli.requirements.context import KNOWN_REQUIREMENT_CONTEXT_PROFILES, RequirementContextValidationProfile
 
 from specfact_requirements.requirements.runtime import (
+    KNOWN_REQUIREMENT_CONTEXT_PROFILES,
     import_requirements_file_to_bundle,
     inspect_requirements_bundle_coverage,
     list_requirements_with_coverage,
@@ -98,7 +98,7 @@ def validate_command(
     output_format: Annotated[OutputFormat, typer.Option("--format", help="Output format.")] = OutputFormat.TEXT,
 ) -> None:
     """Validate requirement context evidence usefulness."""
-    report = validate_requirements_bundle(bundle, profile=cast(RequirementContextValidationProfile, profile))
+    report = validate_requirements_bundle(bundle, profile=profile)
     _emit_payload(report.model_dump(mode="json"), output_format)
     if report.status == "failed":
         raise typer.Exit(1)
