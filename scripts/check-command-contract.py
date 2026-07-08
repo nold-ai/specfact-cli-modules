@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import typer
+from beartype import beartype
+from icontract import ensure
 from typer.testing import CliRunner
 
 
@@ -24,6 +26,7 @@ APP_MOUNTS = (
     ("specfact_code_review.review.commands", "app", ("specfact", "code", "review")),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
     ("specfact_project.project.commands", "app", ("specfact", "project")),
+    ("specfact_requirements.requirements.commands", "app", ("specfact", "requirements")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
 )
 MISSING_MARKERS = (
@@ -95,9 +98,7 @@ def _select_app(apps: dict[tuple[str, ...], object], command_parts: list[str]) -
             continue
         if best_prefix is None or len(prefix) > len(best_prefix):
             best_prefix = prefix
-    if best_prefix is None:
-        return None
-    return apps[best_prefix], command_parts[len(best_prefix) :]
+    return None if best_prefix is None else (apps[best_prefix], command_parts[len(best_prefix) :])
 
 
 def _invoke(
@@ -131,6 +132,20 @@ def _has_required_argument(record: dict[str, Any]) -> bool:
     return any(isinstance(argument, dict) and argument.get("required") for argument in arguments)
 
 
+def _usage_lines(output: str) -> list[str]:
+    usage_lines: list[str] = []
+    capture_usage = False
+    for line in output.splitlines():
+        if "Usage:" in line:
+            capture_usage = True
+        if not capture_usage:
+            continue
+        if not line.strip():
+            break
+        usage_lines.append(line.lower())
+    return usage_lines
+
+
 def _check_help(runner: CliRunner, apps: dict[tuple[str, ...], object], record: dict[str, Any]) -> list[str]:
     command_parts = _command_parts(record)
     exit_code, output = _invoke(runner, apps, command_parts, ["--help"])
@@ -142,15 +157,7 @@ def _check_help(runner: CliRunner, apps: dict[tuple[str, ...], object], record: 
     selected_args = selected[1] if selected is not None else []
     if not _is_group(record) and selected_args:
         command_parts = _command_parts(record)
-        usage_lines = []
-        capture_usage = False
-        for line in output.splitlines():
-            if "Usage:" in line:
-                capture_usage = True
-            if capture_usage:
-                if not line.strip():
-                    break
-                usage_lines.append(line.lower())
+        usage_lines = _usage_lines(output)
         if command_parts and command_parts[-1].lower() not in " ".join(usage_lines):
             return [f"{record.get('command')}: --help rendered parent usage instead of leaf usage\n{output}"]
     return []
@@ -204,6 +211,8 @@ def _check_missing_required_argument(
     return failures
 
 
+@beartype
+@ensure(lambda result: result in {0, 1})
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=0, help="Validate only the first N generated commands")
@@ -222,10 +231,11 @@ def main(argv: list[str] | None = None) -> int:
         failures.extend(_check_missing_required_argument(runner, apps, record))
 
     if failures:
-        print("Generated module command contract validation failed:")
-        print("\n\n".join(failures))
+        sys.stdout.write("Generated module command contract validation failed:\n")
+        sys.stdout.write("\n\n".join(failures))
+        sys.stdout.write("\n")
         return 1
-    print(f"check-command-contract: OK ({len(records)} generated module command path(s) validated)")
+    sys.stdout.write(f"check-command-contract: OK ({len(records)} generated module command path(s) validated)\n")
     return 0
 
 

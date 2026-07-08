@@ -55,6 +55,26 @@ _OVERVIEW_LINE_TO_TOKENS_AFTER_SPECFACT: dict[str, list[str]] = {
         "--help",
     ],
     "specfact backlog daily github --state open --limit 20": ["backlog", "daily", "--help"],
+    "specfact requirements import --from-file requirements.json --bundle .specfact/projects/shop --format json": [
+        "requirements",
+        "import",
+        "--help",
+    ],
+    "specfact requirements list --bundle .specfact/projects/shop --show-coverage --format json": [
+        "requirements",
+        "list",
+        "--help",
+    ],
+    "specfact requirements validate --bundle .specfact/projects/shop --profile enterprise --format json": [
+        "requirements",
+        "validate",
+        "--help",
+    ],
+    "specfact requirements coverage --bundle .specfact/projects/shop --format json": [
+        "requirements",
+        "coverage",
+        "--help",
+    ],
     "specfact spec sdd list --repo .": ["spec", "sdd", "list", "--help"],
 }
 
@@ -109,6 +129,7 @@ _TOP_LEVEL_MODULE_BY_PREFIX: dict[str, str] = {
     "plan": "specfact_project.plan.commands",
     "sync": "specfact_project.sync.commands",
     "migrate": "specfact_project.migrate.commands",
+    "requirements": "specfact_requirements.requirements.commands",
 }
 
 

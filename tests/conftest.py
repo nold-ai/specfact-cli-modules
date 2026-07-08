@@ -27,6 +27,7 @@ LOCAL_BUNDLE_PACKAGES = (
     "specfact_codebase",
     "specfact_spec",
     "specfact_govern",
+    "specfact_requirements",
 )
 
 

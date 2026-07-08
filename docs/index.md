@@ -69,6 +69,7 @@ The modules site owns all bundle-specific deep guidance. Core CLI platform docs 
 |--------|----------|------------|
 | Backlog | [Overview](bundles/backlog/overview/) | [Refinement](bundles/backlog/refinement/), [Delta](bundles/backlog/delta/), [Policy Engine](bundles/backlog/policy-engine/), [Dependency Analysis](bundles/backlog/dependency-analysis/) |
 | Project | [Overview](bundles/project/overview/) | [DevOps Flow](bundles/project/devops-flow/), [Import & Migration](bundles/project/import-migration/) |
+| Requirements | [Overview](bundles/requirements/overview/) | Import, validate, list, coverage |
 | Codebase | [Overview](bundles/codebase/overview/) | [Sidecar Validation](bundles/codebase/sidecar-validation/), [Analyze](bundles/codebase/analyze/), [Drift](bundles/codebase/drift/), [Repro](bundles/codebase/repro/) |
 | Spec | [Overview](bundles/spec/overview/) | [Validate](bundles/spec/validate/), [Generate Tests](bundles/spec/generate-tests/), [Mock](bundles/spec/mock/) |
 | Govern | [Overview](bundles/govern/overview/) | [Enforce](bundles/govern/enforce/), [Patch](bundles/govern/patch/) |

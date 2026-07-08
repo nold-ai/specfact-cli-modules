@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import click
+from beartype import beartype
+from icontract import ensure
 from typer.main import get_command
 
 
@@ -28,6 +30,12 @@ MODULE_APP_MOUNTS = (
     ("specfact_code_review.review.commands", "app", ("specfact", "code", "review"), "nold-ai/specfact-code-review"),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern"), "nold-ai/specfact-govern"),
     ("specfact_project.project.commands", "app", ("specfact", "project"), "nold-ai/specfact-project"),
+    (
+        "specfact_requirements.requirements.commands",
+        "app",
+        ("specfact", "requirements"),
+        "nold-ai/specfact-requirements",
+    ),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec"), "nold-ai/specfact-spec"),
 )
 
@@ -152,6 +160,8 @@ def _walk(command: click.Command, path: tuple[str, ...], source: str, module_id:
     return records
 
 
+@beartype
+@ensure(lambda result: all("command" in record for record in result))
 def build_records() -> list[dict[str, Any]]:
     _ensure_package_paths()
     records: list[dict[str, Any]] = []
@@ -200,7 +210,10 @@ def _render_llms(markdown: str) -> str:
         [
             "# SpecFact Module Commands",
             "",
-            "Use this generated overview as the current module command contract before following older docs or prompts.",
+            (
+                "Use this generated overview as the current module command contract "
+                "before following older docs or prompts."
+            ),
             "",
             markdown,
         ]
@@ -223,7 +236,7 @@ def _check(outputs: dict[Path, str]) -> int:
         actual = path.read_text(encoding="utf-8") if path.exists() else ""
         if actual != expected:
             failures.append(path)
-            print(
+            sys.stdout.write(
                 "\n".join(
                     difflib.unified_diff(
                         actual.splitlines(),
@@ -233,13 +246,18 @@ def _check(outputs: dict[Path, str]) -> int:
                         lineterm="",
                     )
                 )
+                + "\n"
             )
     if failures:
-        print("Module command overview artifacts are stale. Run: python scripts/generate-command-overview.py --write")
+        sys.stdout.write(
+            "Module command overview artifacts are stale. Run: python scripts/generate-command-overview.py --write\n"
+        )
         return 1
     return 0
 
 
+@beartype
+@ensure(lambda result: result in {0, 1})
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="Write generated artifacts")

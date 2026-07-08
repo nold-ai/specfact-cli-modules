@@ -9,6 +9,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from beartype import beartype
+from icontract import ensure
+
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -18,6 +21,7 @@ PACKAGE_DIRS: dict[str, Path] = {
     "specfact_codebase": ROOT / "packages/specfact-codebase/src/specfact_codebase",
     "specfact_spec": ROOT / "packages/specfact-spec/src/specfact_spec",
     "specfact_govern": ROOT / "packages/specfact-govern/src/specfact_govern",
+    "specfact_requirements": ROOT / "packages/specfact-requirements/src/specfact_requirements",
 }
 
 ALLOWED_SPECFACT_CLI_EXACT: set[str] = {
@@ -32,6 +36,7 @@ ALLOWED_SPECFACT_CLI_PREFIXES: tuple[str, ...] = (
     "specfact_cli.contracts.module_interface",
     "specfact_cli.integrations.specmatic",
     "specfact_cli.models",
+    "specfact_cli.requirements",
     "specfact_cli.modes",
     "specfact_cli.modules",
     "specfact_cli.registry.registry",
@@ -60,6 +65,7 @@ ALLOWED_CROSS_BUNDLE_IMPORTS: dict[str, set[str]] = {
     "specfact_codebase": {"specfact_project"},
     "specfact_spec": {"specfact_project"},
     "specfact_govern": {"specfact_project"},
+    "specfact_requirements": set(),
 }
 
 
@@ -111,6 +117,17 @@ def _extract_imported_modules(tree: ast.AST) -> list[tuple[int, str]]:
     return imports
 
 
+def _cross_bundle_violation(bundle_name: str, module_name: str) -> str | None:
+    for other_bundle in PACKAGE_DIRS:
+        if other_bundle == bundle_name:
+            continue
+        if module_name == other_bundle or module_name.startswith(other_bundle + "."):
+            if other_bundle not in ALLOWED_CROSS_BUNDLE_IMPORTS.get(bundle_name, set()):
+                return other_bundle
+            return None
+    return None
+
+
 def _scan_python_file(bundle_name: str, file_path: Path) -> list[Violation]:
     violations: list[Violation] = []
     try:
@@ -140,24 +157,22 @@ def _scan_python_file(bundle_name: str, file_path: Path) -> list[Violation]:
             )
             continue
 
-        for other_bundle in PACKAGE_DIRS:
-            if other_bundle == bundle_name:
-                continue
-            if module_name == other_bundle or module_name.startswith(other_bundle + "."):
-                if other_bundle not in ALLOWED_CROSS_BUNDLE_IMPORTS.get(bundle_name, set()):
-                    violations.append(
-                        Violation(
-                            file_path=file_path,
-                            line=line,
-                            import_name=module_name,
-                            message=f"Forbidden cross-bundle import: {bundle_name} -> {other_bundle}",
-                        )
-                    )
-                break
+        other_bundle = _cross_bundle_violation(bundle_name, module_name)
+        if other_bundle is not None:
+            violations.append(
+                Violation(
+                    file_path=file_path,
+                    line=line,
+                    import_name=module_name,
+                    message=f"Forbidden cross-bundle import: {bundle_name} -> {other_bundle}",
+                )
+            )
 
     return violations
 
 
+@beartype
+@ensure(lambda result: result in {0, 1})
 def main() -> int:
     violations: list[Violation] = []
 
@@ -168,13 +183,13 @@ def main() -> int:
             violations.extend(_scan_python_file(bundle_name, file_path))
 
     if not violations:
-        print("Import boundary check passed.")
+        sys.stdout.write("Import boundary check passed.\n")
         return 0
 
-    print("Import boundary violations found:")
+    sys.stdout.write("Import boundary violations found:\n")
     for violation in sorted(violations, key=lambda v: (str(v.file_path), v.line, v.import_name)):
         rel_path = violation.file_path.relative_to(ROOT)
-        print(f"- {rel_path}:{violation.line} [{violation.import_name}] {violation.message}")
+        sys.stdout.write(f"- {rel_path}:{violation.line} [{violation.import_name}] {violation.message}\n")
     return 1
 
 
