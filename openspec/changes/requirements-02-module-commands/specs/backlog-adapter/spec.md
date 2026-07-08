@@ -5,7 +5,7 @@
 The system SHALL expose source-attributed backlog requirement snippets to
 requirements import workflows.
 
-#### Scenario: Adapter returns acceptance criteria payload for extraction
+#### Scenario: Adapter returns acceptance criteria payload for import
 
 - **GIVEN** a backlog item selected for requirement context import
 - **WHEN** requirements import receives adapter source fields

@@ -12,11 +12,10 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_requirements.requirements.runtime import (
-    KNOWN_REQUIREMENT_CONTEXT_PROFILES,
     import_requirements_file_to_bundle,
     inspect_requirements_bundle_coverage,
+    is_requirement_context_profile_supported,
     list_requirements_with_coverage,
-    normalize_requirement_context_profile,
     validate_requirements_bundle,
 )
 
@@ -37,10 +36,6 @@ app = typer.Typer(
 
 def _format_supported(output_format: OutputFormat) -> bool:
     return output_format in {OutputFormat.JSON, OutputFormat.TEXT}
-
-
-def _profile_supported(profile: str) -> bool:
-    return normalize_requirement_context_profile(profile) in KNOWN_REQUIREMENT_CONTEXT_PROFILES
 
 
 @beartype
@@ -87,7 +82,7 @@ def import_command(
 @app.command("validate", help="Validate requirement context evidence usefulness.")
 @beartype
 @require(lambda bundle: bundle.is_dir(), "bundle must exist")
-@require(_profile_supported, "profile must be a known requirement context profile")
+@require(is_requirement_context_profile_supported, "profile must be a known requirement context profile")
 @require(_format_supported, "output format must be supported")
 @ensure(lambda result: result is None)
 def validate_command(

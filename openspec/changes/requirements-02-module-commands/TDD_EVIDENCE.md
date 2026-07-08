@@ -31,7 +31,7 @@
   - `hatch run check-bundle-imports`
   - `hatch run check-command-overview`
   - `hatch run check-command-contract`
-  - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump --public-key-file /Users/dom/git/nold-ai/specfact-cli-worktrees/feature/requirements-02-module-commands/resources/keys/module-signing-public.pem`
+  - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump --public-key-file resources/keys/module-signing-public.pem`
   - `hatch run contract-test`
   - `hatch run smart-test`
   - `hatch run test`

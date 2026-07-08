@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from importlib import import_module
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, get_args
 
 import yaml
 from beartype import beartype
@@ -20,21 +20,6 @@ _REQUIREMENTS_INPUTS_FILE = "inputs.yaml"
 _REQUIREMENTS_INPUTS_DIR = "requirements"
 _REQUIREMENTS_MODELS_MODULE = "specfact_cli.models.requirements"
 _REQUIREMENTS_CONTEXT_MODULE = "specfact_cli.requirements.context"
-KNOWN_REQUIREMENT_CONTEXT_PROFILES: frozenset[str] = frozenset(
-    {
-        "api-first-team",
-        "solo",
-        "solo-developer",
-        "startup",
-        "team",
-        "enterprise",
-        "enterprise-full-stack",
-        "strict",
-        "solo_developer",
-        "api_first_team",
-        "enterprise_full_stack",
-    }
-)
 
 
 class RequirementsCoreUnavailableError(RuntimeError):
@@ -64,8 +49,20 @@ def _has_attributes(result: Any, *attributes: str) -> bool:
     return all(hasattr(result, attribute) for attribute in attributes)
 
 
-def _profile_is_supported(profile: str) -> bool:
-    return profile in KNOWN_REQUIREMENT_CONTEXT_PROFILES
+def _profile_aliases(profiles: frozenset[str]) -> frozenset[str]:
+    aliases = set(profiles)
+    aliases.update(profile.replace("_", "-") for profile in profiles)
+    aliases.update(profile.replace("-", "_") for profile in profiles)
+    return frozenset(aliases)
+
+
+def _known_requirement_context_profiles() -> frozenset[str]:
+    context_helpers = _load_requirements_module(_REQUIREMENTS_CONTEXT_MODULE, "requirements context helpers")
+    known_profiles = getattr(context_helpers, "KNOWN_REQUIREMENT_CONTEXT_PROFILES", None)
+    if known_profiles is None:
+        profile_type = context_helpers.RequirementContextValidationProfile
+        known_profiles = get_args(profile_type)
+    return _profile_aliases(frozenset(str(profile) for profile in known_profiles))
 
 
 @beartype
@@ -74,6 +71,17 @@ def _profile_is_supported(profile: str) -> bool:
 def normalize_requirement_context_profile(profile: str) -> str:
     """Return the core validator spelling for documented profile aliases."""
     return profile.replace("-", "_")
+
+
+@beartype
+@require(lambda profile: bool(profile.strip()), "profile must be non-empty")
+@ensure(lambda result: isinstance(result, bool))
+def is_requirement_context_profile_supported(profile: str) -> bool:
+    """Return whether the paired core validator exposes this profile."""
+    normalized = normalize_requirement_context_profile(profile)
+    return normalized in {
+        normalize_requirement_context_profile(candidate) for candidate in _known_requirement_context_profiles()
+    }
 
 
 def _requirements_sidecar_path(bundle_dir: Path) -> Path:
@@ -112,7 +120,13 @@ def _write_requirements_sidecar(bundle_dir: Path, records: Sequence[Any]) -> Non
     payload = model_helpers.requirements_input_extension_payload(list(records))
     sidecar = _requirements_sidecar_path(bundle_dir)
     sidecar.parent.mkdir(parents=True, exist_ok=True)
-    sidecar.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    temporary_sidecar = sidecar.with_name(f".{sidecar.name}.tmp")
+    try:
+        temporary_sidecar.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        temporary_sidecar.replace(sidecar)
+    finally:
+        if temporary_sidecar.exists():
+            temporary_sidecar.unlink()
 
 
 @beartype
@@ -171,7 +185,7 @@ def import_requirements_file_to_bundle(source_file: Path, bundle_dir: Path) -> A
 
 @beartype
 @require(lambda bundle_dir: bundle_dir.is_dir(), "bundle_dir must exist")
-@require(_profile_is_supported, "profile must be a known requirement context profile")
+@require(is_requirement_context_profile_supported, "profile must be a known requirement context profile")
 @ensure(lambda result: isinstance(result, ValidationReport))
 def validate_requirements_bundle(bundle_dir: Path, *, profile: str = "startup") -> ValidationReport:
     """Validate requirement context evidence usefulness for a bundle."""
