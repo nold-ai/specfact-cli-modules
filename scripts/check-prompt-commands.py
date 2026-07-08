@@ -40,6 +40,7 @@ MODULE_APP_MOUNTS = (
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
     ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")),
     ("specfact_project.project.commands", "app", ("specfact", "project")),
+    ("specfact_requirements.requirements.commands", "app", ("specfact", "requirements")),
     ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
     ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd")),

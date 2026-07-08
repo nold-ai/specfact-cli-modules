@@ -1698,6 +1698,99 @@
   {
     "arguments": [],
     "bare_invocation": "requires-subcommand",
+    "command": "specfact requirements",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
+    "owner_package": "nold-ai/specfact-requirements",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_requirements.requirements.commands:app",
+    "subcommands": [
+      "coverage",
+      "import",
+      "list",
+      "validate"
+    ]
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "executes",
+    "command": "specfact requirements coverage",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
+    "options": [
+      "--bundle",
+      "--format"
+    ],
+    "owner_package": "nold-ai/specfact-requirements",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_requirements.requirements.commands:app",
+    "subcommands": []
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "executes",
+    "command": "specfact requirements import",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
+    "options": [
+      "--bundle",
+      "--format",
+      "--from-file"
+    ],
+    "owner_package": "nold-ai/specfact-requirements",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_requirements.requirements.commands:app",
+    "subcommands": []
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "executes",
+    "command": "specfact requirements list",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
+    "options": [
+      "--bundle",
+      "--format",
+      "--show-coverage"
+    ],
+    "owner_package": "nold-ai/specfact-requirements",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_requirements.requirements.commands:app",
+    "subcommands": []
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "executes",
+    "command": "specfact requirements validate",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
+    "options": [
+      "--bundle",
+      "--format",
+      "--profile"
+    ],
+    "owner_package": "nold-ai/specfact-requirements",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_requirements.requirements.commands:app",
+    "subcommands": []
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "requires-subcommand",
     "command": "specfact spec",
     "deprecated": false,
     "hidden": false,

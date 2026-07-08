@@ -1,0 +1,22 @@
+name: nold-ai/specfact-requirements
+version: 0.1.0
+commands:
+  - requirements
+tier: official
+publisher:
+  name: nold-ai
+  email: hello@noldai.com
+bundle_dependencies:
+  - nold-ai/specfact-project
+pip_dependencies:
+  - beartype
+  - icontract
+  - pydantic
+  - pyyaml
+  - typer
+core_compatibility: '>=0.50.0,<1.0.0'
+description: Official SpecFact requirements evidence runtime bundle package.
+category: project
+bundle_group_command: requirements
+integrity:
+  checksum: sha256:5395e8553d98d4569dc7b690bc3326415105dfe78e86313b637d296cb6d08ab8
