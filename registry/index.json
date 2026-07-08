@@ -91,6 +91,21 @@
         "nold-ai/specfact-codebase"
       ],
       "description": "Official SpecFact code review bundle package."
+    },
+    {
+      "id": "nold-ai/specfact-requirements",
+      "latest_version": "0.1.1",
+      "download_url": "modules/specfact-requirements-0.1.1.tar.gz",
+      "checksum_sha256": "67f0b4e94f78f7d826541229a201fb1add6c1716debac418b5635b30cfdd35de",
+      "tier": "official",
+      "publisher": {
+        "name": "nold-ai",
+        "email": "hello@noldai.com"
+      },
+      "bundle_dependencies": [
+        "nold-ai/specfact-project"
+      ],
+      "description": "Official SpecFact requirements evidence runtime bundle package."
     }
   ]
 }
