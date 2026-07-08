@@ -97,6 +97,7 @@ extraPaths = [
     "packages/specfact-code-review/src",
     "packages/specfact-spec/src",
     "packages/specfact-govern/src",
+    "packages/specfact-requirements/src",
 ]
 reportMissingImports = true
 reportMissingTypeStubs = false
@@ -119,6 +120,7 @@ executionEnvironments = [
     { root = "packages/specfact-code-review/src", reportMissingImports = false, reportAttributeAccessIssue = false },
     { root = "packages/specfact-spec/src", reportMissingImports = false, reportAttributeAccessIssue = false },
     { root = "packages/specfact-govern/src", reportMissingImports = false, reportAttributeAccessIssue = false },
+    { root = "packages/specfact-requirements/src", reportMissingImports = false, reportAttributeAccessIssue = false },
 ]
 reportAttributeAccessIssue = false
 
@@ -133,6 +135,7 @@ pythonpath = [
     "packages/specfact-code-review/src",
     "packages/specfact-spec/src",
     "packages/specfact-govern/src",
+    "packages/specfact-requirements/src",
 ]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
@@ -282,6 +285,7 @@ known-first-party = [
     "specfact_code_review",
     "specfact_spec",
     "specfact_govern",
+    "specfact_requirements",
     "specfact_cli_modules",
 ]
 

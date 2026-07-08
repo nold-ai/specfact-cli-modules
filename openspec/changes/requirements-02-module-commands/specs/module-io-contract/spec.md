@@ -1,16 +1,20 @@
 ## MODIFIED Requirements
 
 ### Requirement: Module Io Contract
-The requirements module SHALL implement all `ModuleIOContract` operations.
+
+The requirements module SHALL consume core requirements context adapter helpers
+through the existing `ModuleIOContract` boundary.
 
 #### Scenario: Import operation maps backlog items to requirements
-- **GIVEN** backlog input for import
-- **WHEN** `import_to_bundle` runs
-- **THEN** requirements are added to the bundle with stable IDs
-- **AND** parse diagnostics are included for partial failures.
+
+- **GIVEN** source-attributed requirement records imported by a module command
+- **WHEN** the runtime stores normalized requirements on a `ProjectBundle`
+- **THEN** requirements are added under the `requirements.inputs` extension with stable IDs
+- **AND** parse diagnostics remain available to the module runtime for partial failures.
 
 #### Scenario: Validate operation enforces profile schema
-- **GIVEN** requirements bundle and active profile schema
-- **WHEN** `validate_bundle` runs
-- **THEN** missing required fields are reported
-- **AND** validation severity respects active policy mode.
+
+- **GIVEN** a requirements bundle and active validation profile
+- **WHEN** the runtime delegates to core requirements context validation
+- **THEN** missing evidence links and weak context are reported
+- **AND** validation severity respects the selected evidence strictness profile.

@@ -55,6 +55,11 @@
         - title: Import & Migration
           url: /bundles/project/import-migration/
           expertise: [intermediate, advanced]
+    - name: Requirements
+      items:
+        - title: Overview
+          url: /bundles/requirements/overview/
+          expertise: [beginner, intermediate]
     - name: Codebase
       items:
         - title: Overview
