@@ -16,6 +16,7 @@ from specfact_requirements.requirements.runtime import (
     import_requirements_file_to_bundle,
     inspect_requirements_bundle_coverage,
     list_requirements_with_coverage,
+    normalize_requirement_context_profile,
     validate_requirements_bundle,
 )
 
@@ -39,7 +40,7 @@ def _format_supported(output_format: OutputFormat) -> bool:
 
 
 def _profile_supported(profile: str) -> bool:
-    return profile in KNOWN_REQUIREMENT_CONTEXT_PROFILES
+    return normalize_requirement_context_profile(profile) in KNOWN_REQUIREMENT_CONTEXT_PROFILES
 
 
 @beartype

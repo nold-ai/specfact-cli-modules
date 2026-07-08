@@ -103,7 +103,7 @@ def test_requirements_import_list_and_validate_commands_emit_json(tmp_path: Path
 
     validate_result = runner.invoke(
         app,
-        ["validate", "--bundle", str(bundle_dir), "--profile", "enterprise", "--format", "json"],
+        ["validate", "--bundle", str(bundle_dir), "--profile", "enterprise-full-stack", "--format", "json"],
     )
 
     assert validate_result.exit_code == 1

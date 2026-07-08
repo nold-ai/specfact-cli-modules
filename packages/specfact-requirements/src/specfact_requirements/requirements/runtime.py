@@ -15,15 +15,20 @@ from specfact_cli.models.validation import ValidationReport
 from specfact_cli.utils.bundle_loader import load_project_bundle, save_project_bundle
 
 
-_REQUIREMENTS_INPUTS_FILE = "requirements.inputs.yaml"
+_LEGACY_REQUIREMENTS_INPUTS_FILE = "requirements.inputs.yaml"
+_REQUIREMENTS_INPUTS_FILE = "inputs.yaml"
+_REQUIREMENTS_INPUTS_DIR = "requirements"
 _REQUIREMENTS_MODELS_MODULE = "specfact_cli.models.requirements"
 _REQUIREMENTS_CONTEXT_MODULE = "specfact_cli.requirements.context"
 KNOWN_REQUIREMENT_CONTEXT_PROFILES: frozenset[str] = frozenset(
     {
+        "api-first-team",
         "solo",
+        "solo-developer",
         "startup",
         "team",
         "enterprise",
+        "enterprise-full-stack",
         "strict",
         "solo_developer",
         "api_first_team",
@@ -63,14 +68,33 @@ def _profile_is_supported(profile: str) -> bool:
     return profile in KNOWN_REQUIREMENT_CONTEXT_PROFILES
 
 
+@beartype
+@require(lambda profile: bool(profile.strip()), "profile must be non-empty")
+@ensure(lambda result: bool(result.strip()))
+def normalize_requirement_context_profile(profile: str) -> str:
+    """Return the core validator spelling for documented profile aliases."""
+    return profile.replace("-", "_")
+
+
 def _requirements_sidecar_path(bundle_dir: Path) -> Path:
-    return bundle_dir / _REQUIREMENTS_INPUTS_FILE
+    return bundle_dir / "reports" / _REQUIREMENTS_INPUTS_DIR / _REQUIREMENTS_INPUTS_FILE
+
+
+def _legacy_requirements_sidecar_path(bundle_dir: Path) -> Path:
+    return bundle_dir / _LEGACY_REQUIREMENTS_INPUTS_FILE
+
+
+def _existing_requirements_sidecar_path(bundle_dir: Path) -> Path | None:
+    for candidate in (_requirements_sidecar_path(bundle_dir), _legacy_requirements_sidecar_path(bundle_dir)):
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _load_bundle_with_requirements(bundle_dir: Path) -> ProjectBundle:
     bundle = load_project_bundle(bundle_dir)
-    sidecar = _requirements_sidecar_path(bundle_dir)
-    if not sidecar.exists():
+    sidecar = _existing_requirements_sidecar_path(bundle_dir)
+    if sidecar is None:
         return bundle
     payload = yaml.safe_load(sidecar.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -86,7 +110,9 @@ def _load_bundle_with_requirements(bundle_dir: Path) -> ProjectBundle:
 def _write_requirements_sidecar(bundle_dir: Path, records: Sequence[Any]) -> None:
     model_helpers = _load_requirements_module(_REQUIREMENTS_MODELS_MODULE, "requirements models")
     payload = model_helpers.requirements_input_extension_payload(list(records))
-    _requirements_sidecar_path(bundle_dir).write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    sidecar = _requirements_sidecar_path(bundle_dir)
+    sidecar.parent.mkdir(parents=True, exist_ok=True)
+    sidecar.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
 
 @beartype
@@ -151,7 +177,7 @@ def validate_requirements_bundle(bundle_dir: Path, *, profile: str = "startup") 
     """Validate requirement context evidence usefulness for a bundle."""
     bundle = _load_bundle_with_requirements(bundle_dir)
     context_helpers = _load_requirements_module(_REQUIREMENTS_CONTEXT_MODULE, "requirements context helpers")
-    return context_helpers.validate_requirement_context(bundle, profile=profile)
+    return context_helpers.validate_requirement_context(bundle, profile=normalize_requirement_context_profile(profile))
 
 
 @beartype

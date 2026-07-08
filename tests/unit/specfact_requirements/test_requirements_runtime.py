@@ -75,6 +75,35 @@ def test_validate_requirements_bundle_uses_profile_aware_core_validation(tmp_pat
     assert report.violations[0]["location"] == "requirements.inputs[REQ-165].evidence_links"
 
 
+def test_validate_requirements_bundle_accepts_hyphenated_profile_alias(tmp_path: Path) -> None:
+    source = tmp_path / "requirements.json"
+    source.write_text(json.dumps([_requirement_record()]), encoding="utf-8")
+    bundle_dir = _bundle_dir(tmp_path)
+    import_requirements_file_to_bundle(source, bundle_dir)
+
+    report = validate_requirements_bundle(bundle_dir, profile="enterprise-full-stack")
+
+    assert report.status == "failed"
+    assert report.violations[0]["location"] == "requirements.inputs[REQ-165].evidence_links"
+
+
+def test_imported_requirements_survive_later_atomic_bundle_save(tmp_path: Path) -> None:
+    source = tmp_path / "requirements.json"
+    source.write_text(json.dumps([_requirement_record("REQ-PRESERVE", with_evidence=True)]), encoding="utf-8")
+    bundle_dir = _bundle_dir(tmp_path)
+    import_requirements_file_to_bundle(source, bundle_dir)
+
+    assert (bundle_dir / "reports" / "requirements" / "inputs.yaml").is_file()
+    assert not (bundle_dir / "requirements.inputs.yaml").exists()
+
+    bundle = create_empty_project_bundle("bundle")
+    save_project_bundle(bundle, bundle_dir, atomic=True)
+
+    listing = list_requirements_with_coverage(bundle_dir)
+
+    assert [record["requirement_id"] for record in listing["requirements"]] == ["REQ-PRESERVE"]
+
+
 def test_list_requirements_with_coverage_is_machine_readable(tmp_path: Path) -> None:
     source = tmp_path / "requirements.json"
     source.write_text(json.dumps([_requirement_record("REQ-COVERED", with_evidence=True)]), encoding="utf-8")
