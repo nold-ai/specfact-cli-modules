@@ -33,4 +33,4 @@
 ## 5. Delivery
 
 - [x] 5.1 Update `openspec/CHANGE_ORDER.md` status/dependency notes if implementation sequencing changed.
-- [ ] 5.2 Open a PR from `feature/requirements-02-module-commands` to `dev` with spec/test/code/docs evidence.
+- [x] 5.2 Open a PR from `feature/requirements-02-module-commands` to `dev` with spec/test/code/docs evidence: https://github.com/nold-ai/specfact-cli-modules/pull/326
