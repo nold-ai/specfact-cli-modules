@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -85,9 +87,9 @@ def test_run_accountability_propagates_core_checker_failure(tmp_path: Path, monk
     class _Result:
         returncode = 7
 
-    def fake_run(command: list[str], check: bool) -> _Result:
+    def fake_run(command: list[str], **kwargs: object) -> _Result:
         calls.append(command)
-        assert check is False
+        assert kwargs == {"check": False, "timeout": 120}
         return _Result()
 
     monkeypatch.setattr(script.subprocess, "run", fake_run)
@@ -101,3 +103,27 @@ def test_run_accountability_propagates_core_checker_failure(tmp_path: Path, monk
             str(modules_root.resolve()),
         ]
     ]
+
+
+def test_run_accountability_fails_closed_when_core_checker_times_out(tmp_path: Path, monkeypatch, capsys) -> None:
+    script = _load_script()
+    core_root = _core_checkout(tmp_path / "core")
+    modules_root = tmp_path / "modules"
+    modules_root.mkdir()
+
+    def fake_run(command: list[str], **_kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(command, timeout=3)
+
+    monkeypatch.setattr(script.subprocess, "run", fake_run)
+
+    assert script.run_accountability(core_root, modules_root, timeout_seconds=3) == 1
+    assert "timed out after 3 seconds" in capsys.readouterr().err
+
+
+def test_hatch_accountability_command_bootstraps_core_dependency() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    command = pyproject["tool"]["hatch"]["envs"]["default"]["scripts"]["check-core-documentation-accountability"]
+
+    assert (
+        command == "python tools/ensure_core_dependency.py && python scripts/check-core-documentation-accountability.py"
+    )

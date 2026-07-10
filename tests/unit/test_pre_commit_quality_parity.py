@@ -139,7 +139,8 @@ def test_pre_commit_treats_all_module_and_registry_changes_as_docs_relevant() ->
 
     assert "packages/**|registry/**" in script_text
     assert "docs/reference/commands.generated.*" not in script_text
-    assert script_text.index("run_core_documentation_accountability_gate") < script_text.index("check_safe_change")
+    run_block2 = script_text.split("run_block2() {", 1)[1].split("\n}\n\nrun_all()", 1)[0]
+    assert run_block2.index("run_core_documentation_accountability_gate") < run_block2.index("check_safe_change")
 
 
 def test_code_review_gate_parses_staged_added_lines() -> None:

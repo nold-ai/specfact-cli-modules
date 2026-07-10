@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import pytest
+import yaml
 
 from tests.unit._script_test_utils import load_module_from_path
 
@@ -205,20 +207,50 @@ def test_docs_review_workflow_uses_matching_core_branch_when_available() -> None
     )
 
 
+def _docs_review_workflow() -> dict[str, object]:
+    workflow = yaml.load(
+        (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    assert isinstance(workflow, dict)
+    return workflow
+
+
+def _docs_review_steps(workflow: dict[str, object]) -> list[dict[str, str]]:
+    jobs = cast(dict[str, dict[str, list[dict[str, str]]]], workflow["jobs"])
+    return jobs["docs-review"]["steps"]
+
+
+def _step_named(steps: list[dict[str, str]], name: str) -> tuple[int, dict[str, str]]:
+    return next((index, step) for index, step in enumerate(steps) if step.get("name") == name)
+
+
 def test_docs_review_checks_module_inventory_and_core_accountability() -> None:
-    workflow = (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8")
+    workflow = _docs_review_workflow()
+    triggers = cast(dict[str, dict[str, list[str]]], workflow["on"])
 
     for path in (
-        '"packages/**"',
-        '"registry/**"',
-        '"scripts/check-core-documentation-accountability.py"',
-        '"tests/unit/test_core_documentation_accountability.py"',
+        "packages/**",
+        "registry/**",
+        "scripts/check-core-documentation-accountability.py",
+        "tests/unit/test_core_documentation_accountability.py",
     ):
-        assert path in workflow
-    assert "hatch run check-core-documentation-accountability" in workflow
-    assert workflow.index("hatch run check-core-documentation-accountability") < workflow.index(
-        "Upload docs review logs"
-    )
+        assert path in triggers["pull_request"]["paths"]
+        assert path in triggers["push"]["paths"]
+
+    steps = _docs_review_steps(workflow)
+    _review_index, review_step = _step_named(steps, "Run docs review suite")
+    for test_path in (
+        "tests/unit/test_core_documentation_accountability.py",
+        "tests/unit/test_pre_commit_quality_parity.py",
+        "tests/unit/docs/test_llms_overview_freshness.py",
+    ):
+        assert test_path in review_step["run"]
+    accountability_index, accountability_step = _step_named(steps, "Validate core documentation accountability")
+    upload_index, _upload_step = _step_named(steps, "Upload docs review logs")
+    assert accountability_step["run"] == "hatch run check-core-documentation-accountability"
+    assert accountability_step.get("continue-on-error") not in {True, "true"}
+    assert accountability_index < upload_index
 
 
 def test_iter_validation_docs_paths_scans_repo_wide_docs_tree() -> None:

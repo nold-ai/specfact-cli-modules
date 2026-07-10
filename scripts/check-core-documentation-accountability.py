@@ -16,6 +16,7 @@ from icontract import ensure, require
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CORE_CHECKER_RELATIVE_PATH = Path("scripts") / "check-documentation-accountability.py"
+DEFAULT_CHECKER_TIMEOUT_SECONDS = 120
 
 
 def _paired_worktree_checkout() -> Path | None:
@@ -68,8 +69,14 @@ def resolve_core_checkout(explicit_path: str | None = None) -> Path:
 
 @beartype
 @require(lambda core_root, modules_root: core_root.is_dir() and modules_root.is_dir())
+@require(lambda timeout_seconds: timeout_seconds > 0, "timeout must be positive")
 @ensure(lambda result: isinstance(result, int))
-def run_accountability(core_root: Path, modules_root: Path) -> int:
+def run_accountability(
+    core_root: Path,
+    modules_root: Path,
+    *,
+    timeout_seconds: int = DEFAULT_CHECKER_TIMEOUT_SECONDS,
+) -> int:
     """Delegate validation to the core-owned checker without copying its rules."""
     command = [
         sys.executable,
@@ -77,7 +84,24 @@ def run_accountability(core_root: Path, modules_root: Path) -> int:
         "--modules-repo",
         str(modules_root.resolve()),
     ]
-    return subprocess.run(command, check=False).returncode
+    try:
+        return subprocess.run(command, check=False, timeout=timeout_seconds).returncode
+    except subprocess.TimeoutExpired:
+        sys.stderr.write(f"core-documentation-accountability: checker timed out after {timeout_seconds} seconds\n")
+        return 1
+
+
+def _checker_timeout_seconds() -> int:
+    configured = os.environ.get("SPECFACT_CORE_ACCOUNTABILITY_TIMEOUT_SECONDS", "").strip()
+    if not configured:
+        return DEFAULT_CHECKER_TIMEOUT_SECONDS
+    try:
+        timeout_seconds = int(configured)
+    except ValueError as exc:
+        raise ValueError("SPECFACT_CORE_ACCOUNTABILITY_TIMEOUT_SECONDS must be a positive integer") from exc
+    if timeout_seconds <= 0:
+        raise ValueError("SPECFACT_CORE_ACCOUNTABILITY_TIMEOUT_SECONDS must be a positive integer")
+    return timeout_seconds
 
 
 @beartype
@@ -88,10 +112,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         core_root = resolve_core_checkout(args.core_repo)
+        timeout_seconds = _checker_timeout_seconds()
     except ValueError as exc:
         sys.stderr.write(f"core-documentation-accountability: {exc}\n")
         return 1
-    return run_accountability(core_root, REPO_ROOT)
+    return run_accountability(core_root, REPO_ROOT, timeout_seconds=timeout_seconds)
 
 
 if __name__ == "__main__":

@@ -124,7 +124,13 @@ jobs:
         run: |
           mkdir -p logs/docs-review
           DOCS_REVIEW_LOG="logs/docs-review/docs-review_$(date -u +%Y%m%d_%H%M%S).log"
-          python -m pytest tests/unit/docs/test_docs_review.py tests/unit/docs/test_code_review_docs_parity.py -q 2>&1 | tee "$DOCS_REVIEW_LOG"
+          python -m pytest \
+            tests/unit/docs/test_docs_review.py \
+            tests/unit/docs/test_code_review_docs_parity.py \
+            tests/unit/test_core_documentation_accountability.py \
+            tests/unit/test_pre_commit_quality_parity.py \
+            tests/unit/docs/test_llms_overview_freshness.py \
+            -q 2>&1 | tee "$DOCS_REVIEW_LOG"
           exit "${PIPESTATUS[0]:-$?}"
 
       - name: Validate docs commands and cross-site links

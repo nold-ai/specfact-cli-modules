@@ -1,6 +1,6 @@
 # Change Validation: docs-16-core-accountability-sync
 
-- **Validated on:** 2026-07-10 Europe/Berlin
+- **Validated on:** 2026-07-11 Europe/Berlin
 - **Workflow:** proposal-readiness review and strict OpenSpec validation
 - **Strict command:** `openspec validate docs-16-core-accountability-sync --strict`
 - **Result:** PASS (0 issues)
@@ -57,7 +57,7 @@ the recorded evidence follows the required `spec -> tests -> failing evidence
 
 ## Final Code-Review Evidence
 
-At 2026-07-10 23:40 Europe/Berlin, `hatch run specfact code review run` with
+At 2026-07-11 Europe/Berlin, `hatch run specfact code review run` with
 `--enforcement changed --bug-hunt --json` reported zero errors and zero
 warnings. Two informational advisory notes remain: the signer CLI argument
 parser is long with low branch complexity, and the no-dependency `icontract`

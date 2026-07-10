@@ -153,3 +153,14 @@ Outside that sandbox, `semgrep --version && semgrep scan --config tools/semgrep
 --quiet tests/fixtures/semgrep/good_print_in_src.py` exits successfully. This
 is host-sandbox access to macOS certificate anchors, not a repository rule,
 source, or terminal configuration defect.
+
+## PR #341 Review Follow-up
+
+### 2026-07-11 Europe/Berlin
+
+Failing-before evidence covered a delegated-checker timeout, Git inspection
+failures, staged-only signing with differing staged and unstaged module content,
+and workflow step/coverage assertions. Passing-after evidence: 37 focused
+tests, shell syntax validation, strict OpenSpec validation, accountability and
+generated-artifact gates, contract tests, and changed-file review with zero
+errors and warnings.

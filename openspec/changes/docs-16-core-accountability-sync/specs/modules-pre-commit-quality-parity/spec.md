@@ -31,7 +31,9 @@ version policy without rewriting manifests solely because an existing optional
 signature cannot be verified locally. If checksum/version remediation is
 needed, it SHALL target only module payloads staged for the pending commit.
 Unchanged, unstaged, or unrelated failed manifests SHALL not be passed as
-explicit repair inputs.
+explicit repair inputs. Staged-only payload checksums and manifest/version
+inputs SHALL be derived from the staged Git index, not unstaged working-tree
+content.
 
 #### Scenario: Docs-only commit has no module manifest mutation
 
@@ -49,3 +51,11 @@ explicit repair inputs.
 - **THEN** automatic checksum/version repair may update only that staged
   module's manifest
 - **AND** the hook re-verifies without repairing unrelated manifests.
+
+#### Scenario: Staged repair ignores unstaged payload edits
+
+- **WHEN** a module has staged payload changes and different unstaged edits in
+  the same module
+- **THEN** staged-only repair computes the integrity checksum from the staged
+  snapshot
+- **AND** it fails rather than overwriting an unstaged manifest edit.

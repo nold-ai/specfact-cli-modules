@@ -65,11 +65,7 @@ case "${sig_policy}" in
   omit)
     echo "🔐 Verifying module manifests (formal: payload checksum + version bump; signatures not required on this branch — see docs/reference/module-security.md)" >&2
     _omit_base=("${_base[@]}" --allow-missing-public-key)
-    set +e
-    _verify_out="$("${_omit_base[@]}" 2>&1)"
-    _verify_rc=$?
-    set -e
-    if ((_verify_rc == 0)); then
+    if _verify_out="$("${_omit_base[@]}" 2>&1)"; then
       exit 0
     fi
     printf '%s\n' "${_verify_out}" >&2
@@ -103,11 +99,7 @@ case "${sig_policy}" in
 
     _stage_manifests_from_sign_output <"${_sign_log}"
     echo "🔐 Re-verifying after auto-remediation..." >&2
-    set +e
-    _verify2_out="$("${_omit_base[@]}" 2>&1)"
-    _verify2_rc=$?
-    set -e
-    if ((_verify2_rc != 0)); then
+    if ! _verify2_out="$("${_omit_base[@]}" 2>&1)"; then
       printf '%s\n' "${_verify2_out}" >&2
       echo "❌ Module verify still failing after staged-only remediation; no unrelated manifest will be rewritten." >&2
       exit 1

@@ -8,7 +8,8 @@ modules-side integration SHALL resolve the core checkout from
 `SPECFACT_CLI_REPO`, then the matching paired worktree, then the documented
 sibling checkout, and SHALL fail closed with setup guidance when none supplies
 the required checker. It SHALL NOT duplicate official-module inventory or core
-catalogue validation rules.
+catalogue validation rules. The delegated checker SHALL have a configurable,
+positive execution timeout and SHALL fail closed when that timeout expires.
 
 #### Scenario: Module inventory change exposes stale core documentation
 
@@ -27,6 +28,13 @@ catalogue validation rules.
 - **THEN** it exits non-zero with instructions to configure or create a paired
   core checkout
 - **AND** it does not skip or substitute a duplicated local checker.
+
+#### Scenario: Core checker exceeds its timeout
+
+- **WHEN** the delegated core checker does not finish before the configured
+  positive timeout
+- **THEN** the modules gate exits non-zero with timeout guidance
+- **AND** it does not continue to downstream documentation or safe-bypass work.
 
 ### Requirement: Core accountability SHALL block matching local and PR gates
 

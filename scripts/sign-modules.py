@@ -96,6 +96,13 @@ def _sorted_hashable_files(paths: list[Path], *, module_dir: Path, ignored_dirs:
     )
 
 
+def _sorted_index_files(paths: list[Path], *, module_dir: Path, ignored_dirs: set[str]) -> list[Path]:
+    return sorted(
+        (path for path in paths if _is_hashable_module_file(path, module_dir=module_dir, ignored_dirs=ignored_dirs)),
+        key=lambda path: path.resolve().relative_to(module_dir).as_posix(),
+    )
+
+
 def _git_module_files(module_dir: Path, *, ignored_dirs: set[str]) -> list[Path]:
     listed = subprocess.run(
         ["git", "ls-files", module_dir.as_posix()],
@@ -107,8 +114,25 @@ def _git_module_files(module_dir: Path, *, ignored_dirs: set[str]) -> list[Path]
     return _sorted_hashable_files(files, module_dir=module_dir, ignored_dirs=ignored_dirs)
 
 
-def _module_files(module_dir: Path, *, payload_from_filesystem: bool) -> list[Path]:
+def _index_module_files(module_dir: Path, *, ignored_dirs: set[str]) -> list[Path]:
+    repo_root = Path.cwd().resolve()
+    try:
+        relative_module_dir = module_dir.resolve().relative_to(repo_root).as_posix()
+        listed = subprocess.run(
+            ["git", "ls-files", "--cached", "-z", "--", relative_module_dir],
+            check=True,
+            capture_output=True,
+        ).stdout.split(b"\0")
+    except (subprocess.CalledProcessError, OSError, ValueError) as exc:
+        raise ValueError(f"Unable to read staged module payload for {module_dir}: {exc}") from exc
+    files = [repo_root / path.decode("utf-8") for path in listed if path]
+    return _sorted_index_files(files, module_dir=module_dir, ignored_dirs=ignored_dirs)
+
+
+def _module_files(module_dir: Path, *, payload_from_filesystem: bool, staged_snapshot: bool) -> list[Path]:
     ignored_dirs = _PAYLOAD_FROM_FS_IGNORED_DIRS if payload_from_filesystem else _IGNORED_MODULE_DIR_NAMES
+    if staged_snapshot:
+        return _index_module_files(module_dir, ignored_dirs=ignored_dirs)
     if payload_from_filesystem:
         return _sorted_hashable_files(list(module_dir.rglob("*")), module_dir=module_dir, ignored_dirs=ignored_dirs)
     try:
@@ -117,24 +141,48 @@ def _module_files(module_dir: Path, *, payload_from_filesystem: bool) -> list[Pa
         return _sorted_hashable_files(list(module_dir.rglob("*")), module_dir=module_dir, ignored_dirs=ignored_dirs)
 
 
-def _payload_file_data(path: Path, *, module_dir: Path) -> bytes:
+def _index_file_bytes(path: Path) -> bytes:
+    try:
+        relative_path = path.resolve().relative_to(Path.cwd().resolve()).as_posix()
+        return subprocess.run(
+            ["git", "show", f":{relative_path}"],
+            check=True,
+            capture_output=True,
+        ).stdout
+    except (subprocess.CalledProcessError, OSError, ValueError) as exc:
+        raise ValueError(f"Unable to read staged file {path}: {exc}") from exc
+
+
+def _payload_file_data(path: Path, *, module_dir: Path, staged_snapshot: bool) -> bytes:
     rel = path.resolve().relative_to(module_dir).as_posix()
     if rel not in {"module-package.yaml", "metadata.yaml"}:
-        return path.read_bytes()
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        return _index_file_bytes(path) if staged_snapshot else path.read_bytes()
+    content = _index_file_bytes(path) if staged_snapshot else path.read_bytes()
+    raw = yaml.safe_load(content)
     if not isinstance(raw, dict):
         raise ValueError(f"Invalid manifest YAML: {path}")
     return _canonical_payload(raw)
 
 
-def _module_payload(module_dir: Path, payload_from_filesystem: bool = False) -> bytes:
+def _module_payload(
+    module_dir: Path,
+    payload_from_filesystem: bool = False,
+    *,
+    staged_snapshot: bool = False,
+) -> bytes:
     if not module_dir.is_dir():
         raise ValueError(f"Module directory not found: {module_dir}")
     resolved_module_dir = module_dir.resolve()
     entries = []
-    for path in _module_files(resolved_module_dir, payload_from_filesystem=payload_from_filesystem):
+    for path in _module_files(
+        resolved_module_dir,
+        payload_from_filesystem=payload_from_filesystem,
+        staged_snapshot=staged_snapshot,
+    ):
         relative_path = path.resolve().relative_to(resolved_module_dir).as_posix()
-        digest = hashlib.sha256(_payload_file_data(path, module_dir=resolved_module_dir)).hexdigest()
+        digest = hashlib.sha256(
+            _payload_file_data(path, module_dir=resolved_module_dir, staged_snapshot=staged_snapshot)
+        ).hexdigest()
         entries.append(f"{relative_path}:{digest}")
     return "\n".join(entries).encode("utf-8")
 
@@ -233,10 +281,16 @@ def _resolve_passphrase(args: argparse.Namespace) -> str | None:
     return None
 
 
-def _read_manifest_version(path: Path) -> str | None:
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+def _manifest_data(path: Path, *, staged_snapshot: bool) -> dict[str, Any]:
+    content = _index_file_bytes(path) if staged_snapshot else path.read_bytes()
+    raw = yaml.safe_load(content)
     if not isinstance(raw, dict):
-        return None
+        raise ValueError(f"Invalid manifest YAML: {path}")
+    return raw
+
+
+def _read_manifest_version(path: Path, *, staged_snapshot: bool = False) -> str | None:
+    raw = _manifest_data(path, staged_snapshot=staged_snapshot)
     value = raw.get("version")
     if value is None:
         return None
@@ -305,9 +359,22 @@ def _module_has_git_changes_since(module_dir: Path, git_ref: str) -> bool:
             capture_output=True,
             text=True,
         ).stdout.strip()
-    except (subprocess.CalledProcessError, OSError):
-        return False
+    except (subprocess.CalledProcessError, OSError) as exc:
+        raise ValueError(f"Unable to inspect module changes since {git_ref}: {exc}") from exc
     return bool(changed or untracked)
+
+
+def _module_has_index_changes_since(module_dir: Path, git_ref: str) -> bool:
+    try:
+        changed = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", git_ref, "--", module_dir.as_posix()],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, OSError) as exc:
+        raise ValueError(f"Unable to inspect staged module changes since {git_ref}: {exc}") from exc
+    return bool(changed)
 
 
 def _module_has_staged_changes(module_dir: Path) -> bool:
@@ -318,8 +385,8 @@ def _module_has_staged_changes(module_dir: Path) -> bool:
             capture_output=True,
             text=True,
         ).stdout.strip()
-    except (subprocess.CalledProcessError, OSError):
-        return False
+    except (subprocess.CalledProcessError, OSError) as exc:
+        raise ValueError(f"Unable to inspect staged module changes for {module_dir}: {exc}") from exc
     return bool(changed)
 
 
@@ -355,12 +422,31 @@ def _write_manifest(path: Path, data: dict[str, Any]) -> None:
     )
 
 
+def _has_unstaged_manifest_changes(manifest_path: Path) -> bool:
+    try:
+        changed = subprocess.run(
+            ["git", "diff", "--name-only", "--", manifest_path.as_posix()],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, OSError) as exc:
+        raise ValueError(f"Unable to inspect unstaged manifest changes for {manifest_path}: {exc}") from exc
+    return bool(changed)
+
+
 def _report(message: str) -> None:
     sys.stdout.write(f"{message}\n")
 
 
-def _auto_bump_manifest_version(manifest_path: Path, *, base_ref: str, bump_type: str) -> bool:
-    current_version = _read_manifest_version(manifest_path)
+def _auto_bump_manifest_version(
+    manifest_path: Path,
+    *,
+    base_ref: str,
+    bump_type: str,
+    staged_snapshot: bool,
+) -> bool:
+    current_version = _read_manifest_version(manifest_path, staged_snapshot=staged_snapshot)
     if not current_version:
         raise ValueError(f"Manifest missing version: {manifest_path}")
 
@@ -368,9 +454,7 @@ def _auto_bump_manifest_version(manifest_path: Path, *, base_ref: str, bump_type
     if previous_version is None or current_version != previous_version:
         return False
 
-    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(raw, dict):
-        raise ValueError(f"Invalid manifest YAML: {manifest_path}")
+    raw = _manifest_data(manifest_path, staged_snapshot=staged_snapshot)
     bumped = _bump_semver(current_version, bump_type)
     raw["version"] = bumped
     _write_manifest(manifest_path, raw)
@@ -379,12 +463,16 @@ def _auto_bump_manifest_version(manifest_path: Path, *, base_ref: str, bump_type
 
 
 def _enforce_version_bump_before_signing(
-    manifest_path: Path, *, allow_same_version: bool, comparison_ref: str = "HEAD"
+    manifest_path: Path,
+    *,
+    allow_same_version: bool,
+    comparison_ref: str = "HEAD",
+    staged_snapshot: bool,
 ) -> None:
     if allow_same_version:
         return
 
-    current_version = _read_manifest_version(manifest_path)
+    current_version = _read_manifest_version(manifest_path, staged_snapshot=staged_snapshot)
     if not current_version:
         raise ValueError(f"Manifest missing version: {manifest_path}")
 
@@ -395,7 +483,12 @@ def _enforce_version_bump_before_signing(
         return
 
     module_dir = manifest_path.parent
-    if not _module_has_git_changes_since(module_dir, comparison_ref):
+    has_changes = (
+        _module_has_index_changes_since(module_dir, comparison_ref)
+        if staged_snapshot
+        else _module_has_git_changes_since(module_dir, comparison_ref)
+    )
+    if not has_changes:
         return
 
     raise ValueError(
@@ -419,13 +512,22 @@ def _sign_payload(payload: bytes, private_key: Any) -> str:
 
 @require(lambda manifest_path: manifest_path.is_file(), "manifest_path must be a file")
 @ensure(lambda result: result is None, "sign_manifest returns None")
-def sign_manifest(manifest_path: Path, private_key: Any | None, *, payload_from_filesystem: bool = False) -> None:
-    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(raw, dict):
-        msg = f"Invalid manifest YAML: {manifest_path}"
-        raise ValueError(msg)
+def sign_manifest(
+    manifest_path: Path,
+    private_key: Any | None,
+    *,
+    payload_from_filesystem: bool = False,
+    staged_snapshot: bool = False,
+) -> None:
+    if staged_snapshot and _has_unstaged_manifest_changes(manifest_path):
+        raise ValueError(f"Refusing to overwrite unstaged manifest changes: {manifest_path}")
+    raw = _manifest_data(manifest_path, staged_snapshot=staged_snapshot)
 
-    payload = _module_payload(manifest_path.parent, payload_from_filesystem=payload_from_filesystem)
+    payload = _module_payload(
+        manifest_path.parent,
+        payload_from_filesystem=payload_from_filesystem,
+        staged_snapshot=staged_snapshot,
+    )
     checksum = f"sha256:{hashlib.sha256(payload).hexdigest()}"
     integrity: dict[str, str] = {"checksum": checksum}
 
@@ -544,13 +646,20 @@ def _sign_selected_manifests(
                     manifest_path,
                     base_ref=args.base_ref,
                     bump_type=args.bump_version,
+                    staged_snapshot=args.staged_only,
                 )
             _enforce_version_bump_before_signing(
                 manifest_path,
                 allow_same_version=args.allow_same_version,
                 comparison_ref=args.base_ref if args.changed_only else "HEAD",
+                staged_snapshot=args.staged_only,
             )
-            sign_manifest(manifest_path, private_key, payload_from_filesystem=args.payload_from_filesystem)
+            sign_manifest(
+                manifest_path,
+                private_key,
+                payload_from_filesystem=args.payload_from_filesystem,
+                staged_snapshot=args.staged_only,
+            )
         except ValueError as exc:
             parser.error(str(exc))
 
@@ -576,7 +685,10 @@ def main() -> int:
             "For local testing only, re-run with --allow-unsigned."
         )
 
-    manifests = _select_manifests(args, parser)
+    try:
+        manifests = _select_manifests(args, parser)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if (args.changed_only or args.staged_only) and not manifests:
         scope = f"since {args.base_ref}" if args.changed_only else "in the staged index"
