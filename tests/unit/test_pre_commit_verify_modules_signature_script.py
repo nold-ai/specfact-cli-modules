@@ -162,3 +162,49 @@ def test_staged_only_signing_hashes_the_index_not_unstaged_module_content(tmp_pa
         written_manifest["integrity"]["checksum"]
         == f"sha256:{hashlib.sha256(_index_payload(tmp_path, module_relative)).hexdigest()}"
     )
+
+
+def test_staged_only_auto_bump_signs_the_staged_snapshot(tmp_path: Path) -> None:
+    module_relative = Path("packages/specfact-example")
+    module_dir = tmp_path / module_relative
+    module_dir.mkdir(parents=True)
+    manifest_path = module_dir / "module-package.yaml"
+    manifest_path.write_text("name: nold-ai/specfact-example\nversion: 0.1.0\n", encoding="utf-8")
+    source_path = module_dir / "src.py"
+    source_path.write_text("VALUE = 'base'\n", encoding="utf-8")
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "tests@example.invalid")
+    _git(tmp_path, "config", "user.name", "SpecFact tests")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "baseline")
+
+    source_path.write_text("VALUE = 'staged'\n", encoding="utf-8")
+    _git(tmp_path, "add", source_path.relative_to(tmp_path).as_posix())
+    source_path.write_text("VALUE = 'unstaged'\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SIGN_SCRIPT_PATH),
+            "--staged-only",
+            "--bump-version",
+            "patch",
+            "--allow-unsigned",
+            "--payload-from-filesystem",
+        ],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    written_manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    staged_manifest = yaml.safe_load(_git(tmp_path, "show", f":{manifest_path.relative_to(tmp_path)}").stdout)
+    assert isinstance(written_manifest, dict)
+    assert isinstance(staged_manifest, dict)
+    assert written_manifest["version"] == staged_manifest["version"] == "0.1.1"
+    assert (
+        written_manifest["integrity"]["checksum"]
+        == f"sha256:{hashlib.sha256(_index_payload(tmp_path, module_relative)).hexdigest()}"
+    )

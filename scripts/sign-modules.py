@@ -435,6 +435,18 @@ def _has_unstaged_manifest_changes(manifest_path: Path) -> bool:
     return bool(changed)
 
 
+def _stage_manifest(manifest_path: Path) -> None:
+    try:
+        subprocess.run(
+            ["git", "add", "--", manifest_path.as_posix()],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, OSError) as exc:
+        raise ValueError(f"Unable to stage updated manifest {manifest_path}: {exc}") from exc
+
+
 def _report(message: str) -> None:
     sys.stdout.write(f"{message}\n")
 
@@ -446,6 +458,8 @@ def _auto_bump_manifest_version(
     bump_type: str,
     staged_snapshot: bool,
 ) -> bool:
+    if staged_snapshot and _has_unstaged_manifest_changes(manifest_path):
+        raise ValueError(f"Refusing to overwrite unstaged manifest changes: {manifest_path}")
     current_version = _read_manifest_version(manifest_path, staged_snapshot=staged_snapshot)
     if not current_version:
         raise ValueError(f"Manifest missing version: {manifest_path}")
@@ -458,6 +472,8 @@ def _auto_bump_manifest_version(
     bumped = _bump_semver(current_version, bump_type)
     raw["version"] = bumped
     _write_manifest(manifest_path, raw)
+    if staged_snapshot:
+        _stage_manifest(manifest_path)
     _report(f"{manifest_path}: version {current_version} -> {bumped}")
     return True
 
