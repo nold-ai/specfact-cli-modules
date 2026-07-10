@@ -176,6 +176,25 @@ def _checksum_matches(module_dir: Path, *, algo: str, digest: str, payload_from_
     return actual == digest
 
 
+def _verify_present_signature(
+    payload: bytes,
+    signature: str,
+    *,
+    require_signature: bool,
+    public_key_pem: str,
+    allow_missing_public_key: bool,
+) -> None:
+    if not signature:
+        if require_signature:
+            raise ValueError("missing integrity.signature")
+        return
+    if not public_key_pem:
+        if require_signature or not allow_missing_public_key:
+            raise ValueError("public key required to verify signature")
+        return
+    _verify_signature(payload, signature, public_key_pem)
+
+
 def _cryptography_backend_available() -> bool:
     return all(
         dependency is not None for dependency in (InvalidSignature, hashes, serialization, ed25519, padding, rsa)
@@ -353,6 +372,7 @@ def verify_manifest(
     require_signature: bool,
     public_key_pem: str,
     payload_from_filesystem: bool = False,
+    allow_missing_public_key: bool = False,
 ) -> str:
     raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
@@ -380,13 +400,13 @@ def verify_manifest(
         else:
             raise ValueError("checksum mismatch")
 
-    signature = str(integrity.get("signature", "")).strip()
-    if require_signature and not signature:
-        raise ValueError("missing integrity.signature")
-    if signature:
-        if not public_key_pem:
-            raise ValueError("public key required to verify signature")
-        _verify_signature(payload, signature, public_key_pem)
+    _verify_present_signature(
+        payload,
+        str(integrity.get("signature", "")).strip(),
+        require_signature=require_signature,
+        public_key_pem=public_key_pem,
+        allow_missing_public_key=allow_missing_public_key,
+    )
     return verification_mode
 
 
@@ -447,6 +467,14 @@ def _parse_verify_cli_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--allow-missing-public-key",
+        action="store_true",
+        help=(
+            "Permit checksum verification when an optional existing signature "
+            "cannot be verified because no local public key is available."
+        ),
+    )
+    parser.add_argument(
         "--metadata-only",
         action="store_true",
         help=(
@@ -475,6 +503,7 @@ def _verify_manifests_for_cli(args: argparse.Namespace, public_key_pem: str, man
                     require_signature=args.require_signature,
                     public_key_pem=public_key_pem,
                     payload_from_filesystem=args.payload_from_filesystem,
+                    allow_missing_public_key=args.allow_missing_public_key,
                 )
                 suffix = (
                     " (filesystem payload)"

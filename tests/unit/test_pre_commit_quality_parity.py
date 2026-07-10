@@ -37,12 +37,15 @@ _REQUIRED_SCRIPT_FRAGMENTS = (
     "block1-yaml",
     "run_block2",
     "run_docs_site_validation_gate",
+    "run_core_documentation_accountability_gate",
     "hatch run python scripts/check-docs-commands.py",
+    "hatch run check-core-documentation-accountability",
     "SPECFACT_CODE_REVIEW_ENFORCEMENT",
     "enforcement=${enforcement}",
     "needs_docs_site_validation",
     "Command overview inputs have unstaged changes",
-    "git diff --name-only -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml",
+    "git diff --name-only -- packages registry scripts/generate-command-overview.py "
+    "scripts/check-command-contract.py pyproject.toml",
     "usage_error",
     "show_help",
     "also: -h | --help | help",
@@ -129,6 +132,14 @@ def test_modules_pre_commit_script_enforces_required_quality_commands() -> None:
     script_text = script_path.read_text(encoding="utf-8")
     for fragment in _REQUIRED_SCRIPT_FRAGMENTS:
         assert fragment in script_text
+
+
+def test_pre_commit_treats_all_module_and_registry_changes_as_docs_relevant() -> None:
+    script_text = (REPO_ROOT / "scripts" / "pre-commit-quality-checks.sh").read_text(encoding="utf-8")
+
+    assert "packages/**|registry/**" in script_text
+    assert "docs/reference/commands.generated.*" not in script_text
+    assert script_text.index("run_core_documentation_accountability_gate") < script_text.index("check_safe_change")
 
 
 def test_code_review_gate_parses_staged_added_lines() -> None:

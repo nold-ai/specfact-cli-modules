@@ -10,10 +10,12 @@ import importlib
 import json
 import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
 import click
+import yaml
 from beartype import beartype
 from icontract import ensure
 from typer.main import get_command
@@ -70,6 +72,83 @@ def _ensure_package_paths() -> None:
         src = str(src_path)
         if src not in sys.path:
             sys.path.insert(0, src)
+
+
+def _is_official_nold_module(data: Mapping[str, object]) -> bool:
+    publisher = data.get("publisher")
+    return data.get("tier") == "official" and isinstance(publisher, Mapping) and publisher.get("name") == "nold-ai"
+
+
+def _official_manifest_inventory() -> dict[str, str]:
+    inventory: dict[str, str] = {}
+    for manifest_path in sorted((REPO_ROOT / "packages").glob("*/module-package.yaml")):
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or not _is_official_nold_module(data):
+            continue
+        package_id = data.get("name")
+        grouped_root = data.get("bundle_group_command")
+        if not isinstance(package_id, str) or not isinstance(grouped_root, str) or not grouped_root:
+            raise ValueError(f"Invalid official module manifest: {manifest_path}")
+        if package_id in inventory:
+            raise ValueError(f"Duplicate official module manifest: {package_id}")
+        inventory[package_id] = grouped_root
+    if not inventory:
+        raise ValueError(f"No official module manifests found under {REPO_ROOT / 'packages'}")
+    return inventory
+
+
+def _official_registry_inventory() -> set[str]:
+    registry_path = REPO_ROOT / "registry" / "index.json"
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    if not isinstance(registry, dict) or not isinstance(registry.get("modules"), list):
+        raise ValueError(f"Invalid marketplace registry: {registry_path}")
+    package_ids: set[str] = set()
+    for entry in registry["modules"]:
+        if not isinstance(entry, dict) or not _is_official_nold_module(entry):
+            continue
+        package_id = entry.get("id")
+        if not isinstance(package_id, str):
+            raise ValueError(f"Invalid official registry entry: {registry_path}")
+        if package_id in package_ids:
+            raise ValueError(f"Duplicate official registry entry: {package_id} ({registry_path})")
+        package_ids.add(package_id)
+    return package_ids
+
+
+@beartype
+@ensure(lambda result: result is None)
+def validate_official_mount_inventory() -> None:
+    """Reject official package records that cannot appear in generated output."""
+    manifests = _official_manifest_inventory()
+    registry_ids = _official_registry_inventory()
+    if set(manifests) != registry_ids:
+        raise ValueError(
+            "Official manifests and marketplace registry disagree: "
+            f"manifests={sorted(manifests)}, registry={sorted(registry_ids)}"
+        )
+
+    mount_roots: dict[str, set[str]] = {}
+    for _, _, prefix, package_id in MODULE_APP_MOUNTS:
+        if len(prefix) < 2 or prefix[0] != "specfact":
+            raise ValueError(f"Invalid command mount for {package_id}: {prefix}")
+        mount_roots.setdefault(package_id, set()).add(prefix[1])
+
+    missing = sorted(set(manifests) - set(mount_roots))
+    unexpected = sorted(set(mount_roots) - set(manifests))
+    mismatched_roots = [
+        f"{package_id} (expected {root}, mounts {sorted(mount_roots[package_id])})"
+        for package_id, root in sorted(manifests.items())
+        if package_id in mount_roots and root not in mount_roots[package_id]
+    ]
+    findings: list[str] = []
+    if missing:
+        findings.append(f"missing command mounts for {missing}")
+    if unexpected:
+        findings.append(f"command mounts without official manifests for {unexpected}")
+    if mismatched_roots:
+        findings.append(f"grouped root mismatch for {mismatched_roots}")
+    if findings:
+        raise ValueError("Official module command inventory is inconsistent: " + "; ".join(findings))
 
 
 def _command_options(command: click.Command) -> list[str]:
@@ -164,6 +243,7 @@ def _walk(command: click.Command, path: tuple[str, ...], source: str, module_id:
 @ensure(lambda result: all("command" in record for record in result))
 def build_records() -> list[dict[str, Any]]:
     _ensure_package_paths()
+    validate_official_mount_inventory()
     records: list[dict[str, Any]] = []
     for module_name, attr_name, prefix, module_id in MODULE_APP_MOUNTS:
         module = importlib.import_module(module_name)

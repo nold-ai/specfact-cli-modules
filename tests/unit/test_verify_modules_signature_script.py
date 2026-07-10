@@ -70,6 +70,43 @@ def test_verify_manifest_falls_back_to_filesystem_payload_when_checksum_matches(
     assert verification_mode == "filesystem"
 
 
+def test_verify_manifest_allows_unverified_optional_signature_without_public_key(tmp_path: Path) -> None:
+    verify_script = _load_verify_script()
+    module_dir = tmp_path / "packages" / "specfact-example"
+    module_dir.mkdir(parents=True)
+    (module_dir / "src.py").write_text("VALUE = 1\n", encoding="utf-8")
+    manifest_path = module_dir / "module-package.yaml"
+    manifest_path.write_text(
+        yaml.safe_dump({"name": "nold-ai/specfact-example", "version": "0.1.0"}, sort_keys=False),
+        encoding="utf-8",
+    )
+    payload = verify_script._module_payload(module_dir, payload_from_filesystem=True)  # pylint: disable=protected-access
+    manifest_path.write_text(
+        yaml.safe_dump(
+            {
+                "name": "nold-ai/specfact-example",
+                "version": "0.1.0",
+                "integrity": {
+                    "checksum": f"sha256:{verify_script.hashlib.sha256(payload).hexdigest()}",
+                    "signature": "a" * 44,
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    verification_mode = verify_script.verify_manifest(
+        manifest_path,
+        require_signature=False,
+        public_key_pem="",
+        payload_from_filesystem=True,
+        allow_missing_public_key=True,
+    )
+
+    assert verification_mode == "filesystem"
+
+
 def test_verify_manifest_integrity_shape_only_accepts_checksum_only_manifest(tmp_path: Path) -> None:
     verify_script = _load_verify_script()
     module_dir = tmp_path / "packages" / "specfact-example"
