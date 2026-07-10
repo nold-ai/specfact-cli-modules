@@ -109,6 +109,8 @@ def _official_registry_inventory() -> set[str]:
         package_id = entry.get("id")
         if not isinstance(package_id, str):
             raise ValueError(f"Invalid official registry entry: {registry_path}")
+        if package_id in package_ids:
+            raise ValueError(f"Duplicate official registry entry: {package_id} ({registry_path})")
         package_ids.add(package_id)
     return package_ids
 

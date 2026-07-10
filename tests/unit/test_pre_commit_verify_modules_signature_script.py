@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.unit._script_test_utils import load_module_from_path
+from tests.unit._script_test_utils import block_contract_imports, load_module_from_path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -49,6 +49,16 @@ def test_pre_commit_verify_modules_signature_script_omit_branch_remediation_shap
     assert "git diff --cached" in text
     assert "HEAD~1" not in omit_block
     assert "_failed_manifests" not in omit_block
+
+
+def test_sign_modules_loads_without_icontract(monkeypatch) -> None:
+    block_contract_imports(monkeypatch)
+
+    sign_script = load_module_from_path("sign_modules_without_icontract", SIGN_SCRIPT_PATH)
+
+    assert callable(sign_script.main)
+    assert callable(sign_script.ensure)
+    assert callable(sign_script.require)
 
 
 def test_sign_modules_staged_change_detection_reads_only_the_index(monkeypatch) -> None:

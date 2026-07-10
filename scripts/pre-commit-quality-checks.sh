@@ -78,7 +78,7 @@ staged_docs_validation_paths() {
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
     case "${line}" in
-      packages/**|registry/**|docs/*|*.md|*.mdc|requirements-docs-ci.txt|pyproject.toml|.pre-commit-config.yaml|scripts/pre-commit-quality-checks.sh|scripts/check-core-documentation-accountability.py|scripts/check-docs-commands.py|scripts/check-prompt-commands.py|scripts/check-command-contract.py|scripts/docs_site_validation.py|scripts/generate-command-overview.py|docs/reference/commands.generated.*|llms.txt|.github/workflows/docs-review.yml|tests/unit/test_core_documentation_accountability.py|tests/unit/test_pre_commit_quality_parity.py|tests/unit/test_check_docs_commands_script.py|tests/unit/test_check_prompt_commands_script.py|tests/unit/docs/test_docs_review.py|tests/unit/docs/test_code_review_docs_parity.py|tests/unit/docs/test_llms_overview_freshness.py)
+      packages/**|registry/**|docs/*|*.md|*.mdc|requirements-docs-ci.txt|pyproject.toml|.pre-commit-config.yaml|scripts/pre-commit-quality-checks.sh|scripts/check-core-documentation-accountability.py|scripts/check-docs-commands.py|scripts/check-prompt-commands.py|scripts/check-command-contract.py|scripts/docs_site_validation.py|scripts/generate-command-overview.py|llms.txt|.github/workflows/docs-review.yml|tests/unit/test_core_documentation_accountability.py|tests/unit/test_pre_commit_quality_parity.py|tests/unit/test_check_docs_commands_script.py|tests/unit/test_check_prompt_commands_script.py|tests/unit/docs/test_docs_review.py|tests/unit/docs/test_code_review_docs_parity.py|tests/unit/docs/test_llms_overview_freshness.py)
         printf '%s\n' "${line}"
         ;;
     esac

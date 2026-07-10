@@ -11,11 +11,41 @@ import hashlib
 import os
 import subprocess
 import sys
+from collections.abc import Callable
+from functools import wraps
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import yaml
-from icontract import ensure, require
+
+
+_FuncT = TypeVar("_FuncT", bound=Callable[..., Any])
+
+if TYPE_CHECKING:
+    from icontract import ensure, require
+else:
+    try:
+        from icontract import ensure, require
+    except ImportError:  # pragma: no cover - exercised in plain-python signing environments
+
+        def require(
+            _condition: Callable[..., bool],
+            _description: str | None = None,
+        ) -> Callable[[_FuncT], _FuncT]:
+            def decorator(func: _FuncT) -> _FuncT:
+                @wraps(func)
+                def wrapper(*args: Any, **kwargs: Any) -> Any:
+                    return func(*args, **kwargs)
+
+                return cast(_FuncT, wrapper)
+
+            return decorator
+
+        def ensure(
+            _condition: Callable[..., bool],
+            _description: str | None = None,
+        ) -> Callable[[_FuncT], _FuncT]:
+            return require(_condition, _description)
 
 
 try:

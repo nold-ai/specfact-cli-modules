@@ -16,8 +16,8 @@ official records fail rather than pass with unchanged generated output.
 ## Decisions
 
 1. **Use a subprocess wrapper, not a copied checker.** The wrapper resolves
-   `SPECFACT_CLI_REPO`, then a sibling `specfact-cli` checkout, then the mapped
-   paired worktree. It invokes the core checker with the current modules root.
+   `SPECFACT_CLI_REPO`, then the matching paired worktree, then a sibling
+   `specfact-cli` checkout. It invokes the core checker with the current modules root.
    Missing checkout or checker is a non-zero, actionable setup failure.
 2. **Keep CI branch pairing deterministic.** Docs Review first uses a matching
    core branch name; if unavailable, it uses only `dev` or `main` from the PR

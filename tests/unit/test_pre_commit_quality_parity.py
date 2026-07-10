@@ -138,6 +138,7 @@ def test_pre_commit_treats_all_module_and_registry_changes_as_docs_relevant() ->
     script_text = (REPO_ROOT / "scripts" / "pre-commit-quality-checks.sh").read_text(encoding="utf-8")
 
     assert "packages/**|registry/**" in script_text
+    assert "docs/reference/commands.generated.*" not in script_text
     assert script_text.index("run_core_documentation_accountability_gate") < script_text.index("check_safe_change")
 
 

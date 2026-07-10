@@ -136,6 +136,7 @@ ceremony rather than validation evidence:
 
 ### Wave 4 - Gated Extensions
 
+- `docs-16-core-accountability-sync`
 - `architecture-02-module-well-architected`
 - `docs-14-module-release-history`
 

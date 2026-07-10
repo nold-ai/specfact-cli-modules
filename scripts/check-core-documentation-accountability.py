@@ -33,15 +33,16 @@ def _core_candidates(explicit_path: str | None) -> list[Path]:
     configured = explicit_path or os.environ.get("SPECFACT_CLI_REPO", "").strip()
     if configured:
         candidates.append(Path(configured).expanduser())
+
+    paired_checkout = _paired_worktree_checkout()
+    if paired_checkout is not None:
+        candidates.append(paired_checkout)
     candidates.append(REPO_ROOT.parent / "specfact-cli")
 
     marker = "specfact-cli-modules-worktrees"
     if marker in REPO_ROOT.parts:
         marker_index = REPO_ROOT.parts.index(marker)
         candidates.append(Path(*REPO_ROOT.parts[:marker_index]) / "specfact-cli")
-    paired_checkout = _paired_worktree_checkout()
-    if paired_checkout is not None:
-        candidates.append(paired_checkout)
     return candidates
 
 

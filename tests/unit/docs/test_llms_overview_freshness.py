@@ -82,3 +82,23 @@ def test_command_overview_rejects_unrepresented_official_inventory(tmp_path: Pat
 
     with pytest.raises(ValueError, match="missing command mounts"):
         generator.validate_official_mount_inventory()
+
+
+def test_command_overview_rejects_duplicate_official_registry_entries(tmp_path: Path, monkeypatch) -> None:
+    generator = load_module_from_path("generate_command_overview_duplicate_registry", GENERATOR)
+    registry = tmp_path / "registry" / "index.json"
+    registry.parent.mkdir()
+    registry.write_text(
+        """{
+  "modules": [
+    {"id": "nold-ai/specfact-example", "tier": "official", "publisher": {"name": "nold-ai"}},
+    {"id": "nold-ai/specfact-example", "tier": "official", "publisher": {"name": "nold-ai"}}
+  ]
+}
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
+
+    with pytest.raises(ValueError, match="Duplicate official registry entry: nold-ai/specfact-example"):
+        generator._official_registry_inventory()  # pylint: disable=protected-access

@@ -28,9 +28,9 @@
 ## Validation Outcome
 
 `openspec validate docs-16-core-accountability-sync --strict` passed with zero
-issues. Production behavior remains intentionally unimplemented; the unchecked
-task list preserves the required `spec -> tests -> failing evidence -> code ->
-passing evidence` sequence.
+issues. Production behavior is implemented, every change task is complete, and
+the recorded evidence follows the required `spec -> tests -> failing evidence
+-> code -> passing evidence` sequence.
 
 ## Proposal Quality Evidence
 
@@ -57,11 +57,9 @@ passing evidence` sequence.
 
 ## Final Code-Review Evidence
 
-At 2026-07-10 23:05 Europe/Berlin, `hatch run specfact code review run` with
+At 2026-07-10 23:40 Europe/Berlin, `hatch run specfact code review run` with
 `--enforcement changed --bug-hunt --json` reported zero errors and zero
-warnings. Four informational advisory notes remain: the two CLI argument
-parser helpers are long with low branch complexity, the no-dependency
-`icontract` fallback has an intentionally optional description parameter, and
-one pre-existing verification test is long with low branch complexity. They
-are recorded as non-blocking design observations, not unresolved review
-findings.
+warnings. Two informational advisory notes remain: the signer CLI argument
+parser is long with low branch complexity, and the no-dependency `icontract`
+fallback has an intentionally optional description parameter. They are recorded
+as non-blocking design observations, not unresolved review findings.

@@ -38,7 +38,7 @@ hatch run pytest tests/unit/test_core_documentation_accountability.py \
 
 Result: passed (50 passed).
 
-- The modules wrapper resolves explicit, sibling, and paired-worktree core
+- The modules wrapper resolves explicit, paired-worktree, and sibling core
   checkouts, fails closed with setup guidance, and delegates to the core-owned
   checker.
 - The command overview rejects an official manifest/registry record with no
@@ -83,7 +83,10 @@ review and contract stages without changing the real staging area.
 - `openspec validate docs-16-core-accountability-sync --strict` passed.
 - `hatch run specfact code review run --enforcement changed --bug-hunt --json
   --out .specfact/code-review.json` reported zero errors and zero warnings.
-  Its four remaining entries are informational design advisories only.
+  Its two remaining entries are informational design advisories only.
+- Follow-up review regressions passed: 22 tests covering paired-worktree
+  precedence, duplicate official registry entries, optional signer contracts,
+  and pre-commit matcher routing.
 - The initial `hatch run test` run completed 842 passing tests but could not
   complete cleanly in this environment: Semgrep failed to initialize its system
   CA trust store, producing 17 unrelated fixture failures. A docs-workflow path

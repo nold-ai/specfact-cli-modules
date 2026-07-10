@@ -5,8 +5,8 @@
 The modules repository SHALL invoke the authoritative core
 documentation-accountability checker against the current modules checkout. The
 modules-side integration SHALL resolve the core checkout from
-`SPECFACT_CLI_REPO`, then the documented sibling checkout, then the matching
-paired worktree, and SHALL fail closed with setup guidance when none supplies
+`SPECFACT_CLI_REPO`, then the matching paired worktree, then the documented
+sibling checkout, and SHALL fail closed with setup guidance when none supplies
 the required checker. It SHALL NOT duplicate official-module inventory or core
 catalogue validation rules.
 
@@ -21,7 +21,7 @@ catalogue validation rules.
 
 #### Scenario: Paired core checkout is unavailable
 
-- **GIVEN** `SPECFACT_CLI_REPO`, the sibling checkout, and the paired worktree
+- **GIVEN** `SPECFACT_CLI_REPO`, the paired worktree, and the sibling checkout
   do not provide the core checker
 - **WHEN** the modules local gate runs
 - **THEN** it exits non-zero with instructions to configure or create a paired

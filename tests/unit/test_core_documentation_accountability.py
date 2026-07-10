@@ -53,6 +53,19 @@ def test_resolve_core_checkout_uses_documented_local_fallbacks(
     assert script.resolve_core_checkout() == core_root.resolve()
 
 
+def test_resolve_core_checkout_prefers_matching_paired_worktree_over_sibling(tmp_path: Path, monkeypatch) -> None:
+    script = _load_script()
+    modules_root = tmp_path / "specfact-cli-modules-worktrees" / "feature" / "docs-16"
+    modules_root.mkdir(parents=True)
+    sibling_core = _core_checkout(tmp_path / "specfact-cli")
+    paired_core = _core_checkout(tmp_path / "specfact-cli-worktrees" / "feature" / "docs-16")
+    monkeypatch.delenv("SPECFACT_CLI_REPO", raising=False)
+    monkeypatch.setattr(script, "REPO_ROOT", modules_root)
+
+    assert sibling_core.is_dir()
+    assert script.resolve_core_checkout() == paired_core.resolve()
+
+
 def test_resolve_core_checkout_fails_closed_with_setup_guidance(tmp_path: Path, monkeypatch) -> None:
     script = _load_script()
     monkeypatch.setenv("SPECFACT_CLI_REPO", str(tmp_path / "missing"))
