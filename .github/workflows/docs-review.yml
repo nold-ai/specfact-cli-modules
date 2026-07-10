@@ -9,8 +9,14 @@ on:
       - "**/*.md"
       - "**/*.mdc"
       - "docs/**"
+      - "packages/**"
       - "packages/*/resources/**"
+      - "registry/**"
       - "requirements-docs-ci.txt"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
+      - "scripts/pre-commit-quality-checks.sh"
+      - "scripts/check-core-documentation-accountability.py"
       - "scripts/check-docs-commands.py"
       - "scripts/check-prompt-commands.py"
       - "scripts/check-command-contract.py"
@@ -20,8 +26,11 @@ on:
       - "scripts/docs_site_validation.py"
       - "tests/unit/test_check_docs_commands_script.py"
       - "tests/unit/test_check_prompt_commands_script.py"
+      - "tests/unit/test_core_documentation_accountability.py"
+      - "tests/unit/test_pre_commit_quality_parity.py"
       - "tests/unit/docs/test_docs_review.py"
       - "tests/unit/docs/test_code_review_docs_parity.py"
+      - "tests/unit/docs/test_llms_overview_freshness.py"
       - ".github/workflows/docs-review.yml"
   push:
     branches: [main, dev]
@@ -29,8 +38,14 @@ on:
       - "**/*.md"
       - "**/*.mdc"
       - "docs/**"
+      - "packages/**"
       - "packages/*/resources/**"
+      - "registry/**"
       - "requirements-docs-ci.txt"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
+      - "scripts/pre-commit-quality-checks.sh"
+      - "scripts/check-core-documentation-accountability.py"
       - "scripts/check-docs-commands.py"
       - "scripts/check-prompt-commands.py"
       - "scripts/check-command-contract.py"
@@ -40,8 +55,11 @@ on:
       - "scripts/docs_site_validation.py"
       - "tests/unit/test_check_docs_commands_script.py"
       - "tests/unit/test_check_prompt_commands_script.py"
+      - "tests/unit/test_core_documentation_accountability.py"
+      - "tests/unit/test_pre_commit_quality_parity.py"
       - "tests/unit/docs/test_docs_review.py"
       - "tests/unit/docs/test_code_review_docs_parity.py"
+      - "tests/unit/docs/test_llms_overview_freshness.py"
       - ".github/workflows/docs-review.yml"
   workflow_dispatch:
 
@@ -106,7 +124,13 @@ jobs:
         run: |
           mkdir -p logs/docs-review
           DOCS_REVIEW_LOG="logs/docs-review/docs-review_$(date -u +%Y%m%d_%H%M%S).log"
-          python -m pytest tests/unit/docs/test_docs_review.py tests/unit/docs/test_code_review_docs_parity.py -q 2>&1 | tee "$DOCS_REVIEW_LOG"
+          python -m pytest \
+            tests/unit/docs/test_docs_review.py \
+            tests/unit/docs/test_code_review_docs_parity.py \
+            tests/unit/test_core_documentation_accountability.py \
+            tests/unit/test_pre_commit_quality_parity.py \
+            tests/unit/docs/test_llms_overview_freshness.py \
+            -q 2>&1 | tee "$DOCS_REVIEW_LOG"
           exit "${PIPESTATUS[0]:-$?}"
 
       - name: Validate docs commands and cross-site links
@@ -128,6 +152,9 @@ jobs:
           hatch run check-command-overview
           hatch run check-command-contract
           exit "${PIPESTATUS[0]:-$?}"
+
+      - name: Validate core documentation accountability
+        run: hatch run check-core-documentation-accountability
 
       - name: Upload docs review logs
         if: always()

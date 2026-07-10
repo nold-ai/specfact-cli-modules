@@ -78,7 +78,7 @@ staged_docs_validation_paths() {
   while IFS= read -r line; do
     [ -z "${line}" ] && continue
     case "${line}" in
-      docs/*|*.md|requirements-docs-ci.txt|scripts/check-docs-commands.py|scripts/check-command-contract.py|scripts/docs_site_validation.py|scripts/generate-command-overview.py|llms.txt)
+      packages/**|registry/**|docs/*|*.md|*.mdc|requirements-docs-ci.txt|pyproject.toml|.pre-commit-config.yaml|scripts/pre-commit-quality-checks.sh|scripts/check-core-documentation-accountability.py|scripts/check-docs-commands.py|scripts/check-prompt-commands.py|scripts/check-command-contract.py|scripts/docs_site_validation.py|scripts/generate-command-overview.py|llms.txt|.github/workflows/docs-review.yml|tests/unit/test_core_documentation_accountability.py|tests/unit/test_pre_commit_quality_parity.py|tests/unit/test_check_docs_commands_script.py|tests/unit/test_check_prompt_commands_script.py|tests/unit/docs/test_docs_review.py|tests/unit/docs/test_code_review_docs_parity.py|tests/unit/docs/test_llms_overview_freshness.py)
         printf '%s\n' "${line}"
         ;;
     esac
@@ -166,8 +166,8 @@ run_command_overview_validation_gate() {
   local unstaged_inputs
   unstaged_inputs="$(
     {
-      git diff --name-only -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml
-      git ls-files --others --exclude-standard -- packages scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml
+      git diff --name-only -- packages registry scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml
+      git ls-files --others --exclude-standard -- packages registry scripts/generate-command-overview.py scripts/check-command-contract.py pyproject.toml
     } | sort -u
   )"
   if [[ -n "${unstaged_inputs}" ]]; then
@@ -198,6 +198,20 @@ run_command_overview_validation_gate() {
   else
     error "❌ Generated command contract validation failed"
     warn "💡 Run: hatch run check-command-contract"
+    exit 1
+  fi
+}
+
+run_core_documentation_accountability_gate() {
+  if ! needs_docs_site_validation; then
+    return 0
+  fi
+  info "📄 Core documentation accountability — running \`hatch run check-core-documentation-accountability\`"
+  if hatch run check-core-documentation-accountability; then
+    success "✅ Core documentation accountability passed"
+  else
+    error "❌ Core documentation accountability failed"
+    warn "💡 Set SPECFACT_CLI_REPO to the paired core checkout and synchronize its catalogue documentation"
     exit 1
   fi
 }
@@ -353,6 +367,7 @@ run_block1_lint() {
 run_block2() {
   warn "🔍 modules pre-commit — Block 2 — hook: review + contract tests"
   run_command_overview_validation_gate
+  run_core_documentation_accountability_gate
   run_docs_site_validation_gate
   run_prompt_command_validation_gate
   if check_safe_change; then
@@ -374,6 +389,7 @@ run_all() {
   run_lint_if_staged_python
   success "✅ Block 1 complete (all stages passed or skipped as expected)"
   run_command_overview_validation_gate
+  run_core_documentation_accountability_gate
   run_docs_site_validation_gate
   run_prompt_command_validation_gate
   if check_safe_change; then

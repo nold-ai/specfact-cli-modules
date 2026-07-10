@@ -7,7 +7,7 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 12 | [`openspec/changes/`](changes/) |
+| **Active** | 13 | [`openspec/changes/`](changes/) |
 | **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
 
@@ -77,7 +77,8 @@ AI IDE, rerun, and compare improved evidence.
 
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
-| 1 | `docs-14-module-release-history` | [#124](https://github.com/nold-ai/specfact-cli-modules/issues/124) | Release-history documentation for shipped modules | docs-13, publish workflow |
+| 1 | `docs-16-core-accountability-sync` | [#339](https://github.com/nold-ai/specfact-cli-modules/issues/339) | Fail-closed reciprocal core-documentation accountability and generated module-command freshness | core #643 shipped |
+| 2 | `docs-14-module-release-history` | [#124](https://github.com/nold-ai/specfact-cli-modules/issues/124) | Release-history documentation for shipped modules | docs-13, publish workflow |
 
 ## Modify Queue Before Implementation
 
@@ -135,6 +136,7 @@ ceremony rather than validation evidence:
 
 ### Wave 4 - Gated Extensions
 
+- `docs-16-core-accountability-sync`
 - `architecture-02-module-well-architected`
 - `docs-14-module-release-history`
 

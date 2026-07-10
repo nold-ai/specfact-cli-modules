@@ -9,9 +9,9 @@
 # checksums with `scripts/sign-modules.py
 # --allow-unsigned --payload-from-filesystem` when they lack a release signing key.
 #
-# On the `omit` policy, if verify fails, the hook runs `sign-modules.py --changed-only` against
-# `HEAD` (staged + unstaged changes) with `--bump-version patch --allow-unsigned`, re-stages only
-# manifests that script reports updating, then re-runs verify so commits self-heal formal drift.
+# On the `omit` policy, checksum/version repair is limited to module payloads staged for the
+# pending commit. Existing optional signatures without a locally available public key do not
+# trigger repair. The hook never rewrites unrelated manifests.
 # Registry rows and published tarballs are intentionally left to CI (`publish-modules`); do not
 # rewrite registry/index.json or registry/modules from pre-commit.
 set -euo pipefail
@@ -29,6 +29,21 @@ sig_policy="${sig_policy//$'\r'/}"
 sig_policy="${sig_policy//$'\n'/}"
 
 _base=(hatch run ./scripts/verify-modules-signature.py --payload-from-filesystem --enforce-version-bump)
+
+_staged_module_manifests() {
+  local path bundle manifest
+  while IFS= read -r path; do
+    [[ -n "${path}" ]] || continue
+    case "${path}" in
+      packages/*/*)
+        bundle="${path#packages/}"
+        bundle="${bundle%%/*}"
+        manifest="packages/${bundle}/module-package.yaml"
+        [[ -f "${manifest}" ]] && printf '%s\n' "${manifest}"
+        ;;
+    esac
+  done < <(git diff --cached --name-only -- packages) | sort -u
+}
 
 _stage_manifests_from_sign_output() {
   # sign-modules prints lines like "packages/<bundle>/module-package.yaml: checksum" or ": version a -> b"
@@ -49,25 +64,26 @@ case "${sig_policy}" in
     ;;
   omit)
     echo "🔐 Verifying module manifests (formal: payload checksum + version bump; signatures not required on this branch — see docs/reference/module-security.md)" >&2
-    set +e
-    _verify_out="$("${_base[@]}" 2>&1)"
-    _verify_rc=$?
-    set -e
-    if ((_verify_rc == 0)); then
+    _omit_base=("${_base[@]}" --allow-missing-public-key)
+    if _verify_out="$("${_omit_base[@]}" 2>&1)"; then
       exit 0
     fi
     printf '%s\n' "${_verify_out}" >&2
 
-    _failed_manifests=()
+    _staged_manifests=()
     while IFS= read -r mf; do
-      [[ -n "${mf}" ]] && _failed_manifests+=("${mf}")
-    done < <(printf '%s\n' "${_verify_out}" | grep '^FAIL packages/' | sed -n 's/^FAIL \(packages\/[^[:space:]]*\/module-package\.yaml\):.*/\1/p' | sort -u)
+      [[ -n "${mf}" ]] && _staged_manifests+=("${mf}")
+    done < <(_staged_module_manifests)
+    if ((${#_staged_manifests[@]} == 0)); then
+      echo "❌ Module verification failed, but no module payload is staged; refusing to rewrite unrelated manifests." >&2
+      exit 1
+    fi
 
-    echo "⚠️  Module verify failed; auto-remediating checksums and patch bumps for changed modules..." >&2
+    echo "⚠️  Module verify failed; auto-remediating staged module checksums and patch bumps..." >&2
     _sign_log="$(mktemp "${TMPDIR:-/tmp}/specfact-sign-modules.XXXXXX")"
     trap 'rm -f "${_sign_log}"' EXIT
     if ! hatch run ./scripts/sign-modules.py \
-      --changed-only \
+      --staged-only \
       --base-ref HEAD \
       --bump-version patch \
       --allow-unsigned \
@@ -83,38 +99,9 @@ case "${sig_policy}" in
 
     _stage_manifests_from_sign_output <"${_sign_log}"
     echo "🔐 Re-verifying after auto-remediation..." >&2
-    set +e
-    _verify2_out="$("${_base[@]}" 2>&1)"
-    _verify2_rc=$?
-    set -e
-    if ((_verify2_rc != 0)) && ((${#_failed_manifests[@]} > 0)); then
-      # Covers committed manifest drift (no diff vs HEAD) or partial first-pass fixes.
+    if ! _verify2_out="$("${_omit_base[@]}" 2>&1)"; then
       printf '%s\n' "${_verify2_out}" >&2
-      echo "⚠️  Retrying sign for failing manifests (compare base HEAD~1)..." >&2
-      if ! hatch run ./scripts/sign-modules.py \
-        --changed-only \
-        --base-ref HEAD~1 \
-        --bump-version patch \
-        --allow-unsigned \
-        --payload-from-filesystem \
-        "${_failed_manifests[@]}" >>"${_sign_log}" 2>&1
-      then
-        cat "${_sign_log}" >&2
-        echo "❌ sign-modules fallback remediation failed." >&2
-        exit 1
-      fi
-      _stage_manifests_from_sign_output <"${_sign_log}"
-      echo "🔐 Re-verifying after fallback remediation..." >&2
-      if ! "${_base[@]}"; then
-        echo "❌ Module verify still failing after remediation (manual fix or signing key may be required)." >&2
-        exit 1
-      fi
-      echo "✅ Module manifests updated and staged; continuing the commit." >&2
-      exit 0
-    fi
-    if ((_verify2_rc != 0)); then
-      printf '%s\n' "${_verify2_out}" >&2
-      echo "❌ Module verify still failing after remediation (manual fix or signing key may be required)." >&2
+      echo "❌ Module verify still failing after staged-only remediation; no unrelated manifest will be rewritten." >&2
       exit 1
     fi
     echo "✅ Module manifests updated and staged; continuing the commit." >&2
