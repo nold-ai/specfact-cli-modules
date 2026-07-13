@@ -67,10 +67,10 @@ AI IDE, rerun, and compare improved evidence.
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
 | 1 | `requirements-02-module-commands` | [#165](https://github.com/nold-ai/specfact-cli-modules/issues/165) | Import/normalize requirement context for evidence | core requirements input model |
-| 2 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
-| 3 | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path | requirements-02, sync-01 |
-| 4 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
-| 5 | `openspec-01-intent-trace` | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Optional OpenSpec and Spec Kit evidence import adapter | requirements input contracts |
+| 2 | `openspec-01-intent-trace` | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Import-first OpenSpec and Spec Kit requirement evidence runtime with gate surfacing (rescoped 2026-07-13) | requirements-02 runtime; core nold-ai/specfact-cli#350 contracts |
+| 3 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
+| 4 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
+| Parked | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path. Deprioritized 2026-07-13 behind openspec-01 | requirements-02, sync-01 |
 | Gated | `architecture-02-module-well-architected` | [#230](https://github.com/nold-ai/specfact-cli-modules/issues/230) | Architecture-boundary review findings | architecture-01 shipped plus one usage cycle |
 
 ### Track C - Supporting Docs
@@ -89,7 +89,7 @@ AI IDE, rerun, and compare improved evidence.
 | `requirements-02-module-commands` | Drop requirement authoring as a flagship workflow. Keep import, normalization, validation, and coverage inspection. |
 | `requirements-03-backlog-sync` | Keep read-first drift evidence. Write-back remains preview-only and outside the validation critical path. |
 | `architecture-01-solution-layer` | Keep architecture-boundary input and validation hooks. Drop architecture generation. |
-| `openspec-01-intent-trace` | Reframe as optional OpenSpec/Spec Kit adapter consuming upstream artifacts. |
+| `openspec-01-intent-trace` | Done 2026-07-13: rescoped to import-first runtime for native OpenSpec/Spec Kit artifacts with deterministic gate surfacing. |
 | `architecture-02-module-well-architected` | Keep gated until architecture-01 ships and is used for one complete cycle. |
 | `sync-01-unified-kernel` | Keep only as safety infrastructure for validation/context adapters. |
 
@@ -129,10 +129,10 @@ ceremony rather than validation evidence:
 ### Wave 3 - Context Adapters
 
 - `requirements-02-module-commands`
-- `sync-01-unified-kernel`
-- `requirements-03-backlog-sync`
+- `openspec-01-intent-trace` (pulled forward 2026-07-13, import-first rescope)
 - `architecture-01-solution-layer`
-- `openspec-01-intent-trace`
+- `sync-01-unified-kernel`
+- `requirements-03-backlog-sync` (parked 2026-07-13)
 
 ### Wave 4 - Gated Extensions
 
