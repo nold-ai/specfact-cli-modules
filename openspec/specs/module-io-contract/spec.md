@@ -1,5 +1,8 @@
-## MODIFIED Requirements
+# module-io-contract Specification
 
+## Purpose
+TBD - created by archiving change requirements-02-module-commands. Update Purpose after archive.
+## Requirements
 ### Requirement: Module Io Contract
 
 The requirements module SHALL consume core requirements context adapter helpers
@@ -18,3 +21,4 @@ through the existing `ModuleIOContract` boundary.
 - **WHEN** the runtime delegates to core requirements context validation
 - **THEN** missing evidence links and weak context are reported
 - **AND** validation severity respects the selected evidence strictness profile.
+

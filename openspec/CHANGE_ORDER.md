@@ -66,7 +66,7 @@ AI IDE, rerun, and compare improved evidence.
 
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
-| 1 | `requirements-02-module-commands` | [#165](https://github.com/nold-ai/specfact-cli-modules/issues/165) | Import/normalize requirement context for evidence | core requirements input model |
+| 1 | `requirements-02-module-commands` | [#165](https://github.com/nold-ai/specfact-cli-modules/issues/165) | Import/normalize requirement context for evidence (shipped via PR #326, archived 2026-07-13) | core requirements input model |
 | 2 | `openspec-01-intent-trace` | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Import-first OpenSpec and Spec Kit requirement evidence runtime with gate surfacing (rescoped 2026-07-13) | requirements-02 runtime; core nold-ai/specfact-cli#350 contracts |
 | 3 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
 | 4 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |

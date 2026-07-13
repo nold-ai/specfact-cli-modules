@@ -1,5 +1,8 @@
-## MODIFIED Requirements
+# backlog-adapter Specification
 
+## Purpose
+TBD - created by archiving change requirements-02-module-commands. Update Purpose after archive.
+## Requirements
 ### Requirement: Backlog Adapter
 
 The system SHALL expose source-attributed backlog requirement snippets to
@@ -18,3 +21,4 @@ requirements import workflows.
 - **WHEN** normalization runs
 - **THEN** the item is reported as incomplete input
 - **AND** command output includes the backlog item identifier.
+
