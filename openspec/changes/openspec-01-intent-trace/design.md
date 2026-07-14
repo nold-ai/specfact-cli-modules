@@ -48,10 +48,11 @@ error instead of an ImportError traceback.
 
 ### D3: Auto-detection stays conservative
 
-**Decision**: When the source path is omitted, detect only conventional
-layouts (`openspec/changes/` for OpenSpec; Spec Kit `specs/` feature folders)
-relative to the current project root. Ambiguity or absence is a clear error
-naming the expected layouts, never a guess.
+**Decision**: When the source path is omitted, detect only conventional active
+layouts (`openspec/changes/`, excluding its `archive/` directory, for OpenSpec;
+Spec Kit `specs/` feature folders) relative to the current project root.
+Ambiguity or absence is a clear error naming the expected layouts, never a
+guess.
 **Rationale**: Deterministic behavior over convenience heuristics; misdetected
 sources would poison evidence.
 

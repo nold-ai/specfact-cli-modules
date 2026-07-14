@@ -15,6 +15,7 @@ from specfact_cli.utils.bundle_loader import save_project_bundle
 from specfact_requirements.requirements import runtime as requirements_runtime
 from specfact_requirements.requirements.runtime import (
     RequirementsCoreUnavailableError,
+    auto_detect_openspec_change,
     import_native_requirements_to_bundle,
     import_requirements_file_to_bundle,
     list_requirements_with_coverage,
@@ -237,6 +238,16 @@ def test_import_speckit_feature_persists_core_records(tmp_path: Path) -> None:
 
     assert [record.requirement_id for record in result.requirements] == ["speckit:001-widget-rendering:render-a-widget"]
     assert result.diagnostics == []
+
+
+def test_auto_detect_openspec_change_ignores_archive_directory(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    change_dir = _openspec_change(project_root)
+    (project_root / "openspec" / "changes" / "archive" / "2026-07-14-widget-evidence").mkdir(parents=True)
+
+    detected = auto_detect_openspec_change(project_root)
+
+    assert detected == change_dir
 
 
 def test_import_rejected_by_core_does_not_persist_partial_sidecar(tmp_path: Path) -> None:

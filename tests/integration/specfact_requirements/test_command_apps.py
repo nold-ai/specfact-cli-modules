@@ -71,6 +71,31 @@ The system SHALL render a widget.
     return change_dir
 
 
+def _speckit_feature(project_root: Path) -> Path:
+    feature_dir = project_root / "specs" / "001-widget-rendering"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text(
+        """# Feature Specification: Widget rendering
+
+## User Scenarios & Testing
+
+### User Story 1 - Render widgets (Priority: P1)
+
+As a user, I want widgets rendered so that I can see them.
+
+**Acceptance Scenarios**:
+
+1. **Given** a valid widget request, **When** rendering runs, **Then** the widget is returned
+
+## Requirements
+
+- **FR-001**: System MUST render a widget
+""",
+        encoding="utf-8",
+    )
+    return feature_dir
+
+
 @pytest.mark.integration
 def test_command_module_exposes_typer_app() -> None:
     assert app is not None
@@ -144,6 +169,14 @@ def test_requirements_help_exposes_no_author_command() -> None:
 
 
 @pytest.mark.integration
+def test_requirements_import_help_exposes_optional_native_source_path() -> None:
+    result = runner.invoke(app, ["import", "--help"])
+
+    assert result.exit_code == 0
+    assert "[SOURCE_PATH]" in result.output
+
+
+@pytest.mark.integration
 def test_requirements_import_openspec_accepts_explicit_and_auto_detected_sources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -160,6 +193,7 @@ def test_requirements_import_openspec_accepts_explicit_and_auto_detected_sources
     assert json.loads(explicit_result.output)["imported"] == 1
 
     auto_bundle = _bundle_dir(tmp_path / "auto")
+    (project_root / "openspec" / "changes" / "archive" / "2026-07-14-widget-evidence").mkdir(parents=True)
     monkeypatch.chdir(project_root)
     auto_result = runner.invoke(
         app,
@@ -168,6 +202,36 @@ def test_requirements_import_openspec_accepts_explicit_and_auto_detected_sources
 
     assert auto_result.exit_code == 0, auto_result.output
     assert json.loads(auto_result.output)["imported"] == 1
+
+
+@pytest.mark.integration
+def test_requirements_import_speckit_accepts_explicit_source(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    feature_dir = _speckit_feature(project_root)
+    bundle_dir = _bundle_dir(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["import", "--from-speckit", str(feature_dir), "--bundle", str(bundle_dir), "--format", "json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["imported"] == 1
+
+
+@pytest.mark.integration
+def test_requirements_import_rejects_non_directory_native_source_path(tmp_path: Path) -> None:
+    bundle_dir = _bundle_dir(tmp_path)
+    source_file = tmp_path / "source.md"
+    source_file.write_text("not a source directory\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["import", "--from-openspec", str(source_file), "--bundle", str(bundle_dir), "--format", "json"],
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid value" in result.output
 
 
 @pytest.mark.integration

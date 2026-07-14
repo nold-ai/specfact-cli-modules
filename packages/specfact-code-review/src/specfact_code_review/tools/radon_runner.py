@@ -167,12 +167,6 @@ def _kiss_nesting_findings(
 
 def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path) -> bool:
     """Typer command callbacks legitimately take many injected options; skip parameter-count KISS on them."""
-    args0 = function_node.args.args
-    if not args0:
-        return False
-    first = args0[0]
-    if first.arg != "ctx":
-        return False
     normalized = str(file_path).replace("\\", "/")
     # Stable path suffix: matches in-repo and user-scoped installs (~/.specfact/modules/.../src/...).
     # Typer CLI handler `run(ctx: Context, ...)` in review.commands injects many option parameters by
@@ -180,16 +174,7 @@ def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunct
     # elsewhere still get complexity checks.
     if function_node.name == "run" and normalized.endswith("specfact_code_review/review/commands.py"):
         return True
-    if not _has_typer_command_decorator(function_node):
-        return False
-    ann = first.annotation
-    if ann is None:
-        return False
-    try:
-        rendered = ast.unparse(ann)
-    except AttributeError:
-        return False
-    return rendered.endswith("Context")
+    return _has_typer_command_decorator(function_node)
 
 
 def _decorator_name_parts(decorator: ast.expr) -> tuple[str, ...]:

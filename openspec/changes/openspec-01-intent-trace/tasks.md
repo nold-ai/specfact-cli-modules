@@ -23,11 +23,11 @@ evidence in `TDD_EVIDENCE.md`.
 
 ## 3. Implementation
 
-- [ ] 3.1 Extend `packages/specfact-requirements/.../commands.py` import command with `--from-openspec [PATH]` and `--from-speckit [PATH]` options.
-- [ ] 3.2 Extend `runtime.py` with thin delegation to the new core normalizers via the existing `_load_requirements_module` pattern, including `RequirementsCoreUnavailableError` messaging.
-- [ ] 3.3 Surface gate findings in `validate` output and gate-relevant counts in `list`/`coverage`.
-- [ ] 3.3b Change the `validate` command's profile default from hardcoded `startup` to core layered-config resolution when the flag is omitted, and render core required-field advisories unchanged (delegated to the core helper; no config parsing or metadata enrichment in the module).
-- [ ] 3.3c Surface core `unsupported-source-schema` results without fallback parsing or partial persistence.
+- [x] 3.1 Extend `packages/specfact-requirements/.../commands.py` import command with `--from-openspec [PATH]` and `--from-speckit [PATH]` options.
+- [x] 3.2 Extend `runtime.py` with thin delegation to the new core normalizers via the existing `_load_requirements_module` pattern, including `RequirementsCoreUnavailableError` messaging.
+- [x] 3.3 Surface gate findings in `validate` output and gate-relevant counts in `list`/`coverage`.
+- [x] 3.3b Change the `validate` command's profile default from hardcoded `startup` to core layered-config resolution when the flag is omitted, and render core required-field advisories unchanged (delegated to the core helper; no config parsing or metadata enrichment in the module).
+- [x] 3.3c Surface core `unsupported-source-schema` results without fallback parsing or partial persistence.
 - [ ] 3.4 Contract decorators (`@beartype`, `@require`, `@ensure`) on all new public APIs.
 
 ## 4. Validation and documentation

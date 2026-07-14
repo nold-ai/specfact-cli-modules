@@ -17,7 +17,7 @@ def test_run_radon_returns_empty_when_only_non_python_paths(tmp_path: Path, monk
     run_mock = Mock()
     monkeypatch.setattr(subprocess, "run", run_mock)
 
-    assert run_radon([manifest]) == []
+    assert not run_radon([manifest])
 
     run_mock.assert_not_called()
 
@@ -60,7 +60,7 @@ def test_run_radon_returns_no_findings_for_complexity_twelve_or_below(tmp_path: 
 
     findings = run_radon([file_path])
 
-    assert findings == []
+    assert not findings
 
 
 def test_run_radon_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -131,12 +131,12 @@ def callback(ctx: typer.Context, a: str, b: str, c: str, d: str, e: str) -> None
     assert "kiss.parameter-count.warning" in {finding.rule for finding in findings}
 
 
-def test_run_radon_exempts_typer_command_context_parameters(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+def test_run_radon_exempts_typer_command_parameters_without_context(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "commands.py"
     file_path.write_text(
         """
 @app.command("run")
-def callback(ctx: typer.Context, a: str, b: str, c: str, d: str, e: str) -> None:
+def callback(a: str, b: str, c: str, d: str, e: str, f: str) -> None:
     return None
 """,
         encoding="utf-8",

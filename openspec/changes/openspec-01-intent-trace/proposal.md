@@ -37,8 +37,8 @@ proposal (nold-ai/specfact-cli#350) for contract details.
   and Spec Kit `specs/`) relative to the project root.
 - **EXTEND**: `requirements validate` surfaces the core gate findings
   (`scenario-unverified`, `stale-import`, `source-missing`,
-  `ambiguous-mapping`, `unsupported-source-schema`) with profile-driven severity and non-zero exit on
-  failure; `list`/`coverage` output includes gate-relevant counts.
+  `ambiguous-mapping`) with profile-driven severity and non-zero exit on failure;
+  `list`/`coverage` output includes gate-relevant counts.
 - **EXTEND**: When `--profile` is omitted, the effective profile resolves from
   the layered configuration shipped by `profile-01-config-layering` instead of
   a hardcoded `startup` default; an explicit flag always wins.

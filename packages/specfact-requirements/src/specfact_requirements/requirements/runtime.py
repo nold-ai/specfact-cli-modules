@@ -245,7 +245,11 @@ def _sole_source(candidates: list[Path], expected_layout: str) -> Path:
 def auto_detect_openspec_change(project_root: Path) -> Path:
     """Return the single conventional OpenSpec change source below a project root."""
     changes_dir = project_root / "openspec" / "changes"
-    candidates = [path for path in sorted(changes_dir.iterdir()) if path.is_dir()] if changes_dir.is_dir() else []
+    candidates = (
+        [path for path in sorted(changes_dir.iterdir()) if path.is_dir() and path.name != "archive"]
+        if changes_dir.is_dir()
+        else []
+    )
     return _sole_source(candidates, "openspec/changes/")
 
 

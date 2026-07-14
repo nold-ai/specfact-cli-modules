@@ -23,11 +23,13 @@ logic of its own and SHALL never write into upstream artifact directories.
 - **THEN** the core adapter normalizes the artifacts into requirement records
 - **AND** merged records persist to the bundle requirements sidecar.
 
-#### Scenario: Omitted source paths auto-detect conventional layouts
+#### Scenario: Omitted source paths auto-detect active conventional layouts
 
-- **GIVEN** a project root containing an `openspec/changes/` directory
+- **GIVEN** a project root containing one active OpenSpec change and an
+  `openspec/changes/archive/` directory
 - **WHEN** `specfact requirements import --from-openspec` runs without an explicit path
-- **THEN** the conventional layout is detected and imported
+- **THEN** the active conventional change layout is detected and imported
+- **AND** the archive directory is not considered an import source
 - **AND** a clear error names the expected layouts when detection finds no source.
 
 #### Scenario: Validate surfaces gate findings with CI-usable exit codes

@@ -18,7 +18,7 @@ planning or product-management system.
 
 ## Prerequisites
 
-- SpecFact CLI 0.52.0 or later
+- SpecFact CLI `>=0.52.0,<1.0.0`
 - Bundle installed: `specfact module install nold-ai/specfact-requirements`
 - A project bundle directory, usually created by the [Project](/bundles/project/overview/) bundle
 - Local JSON or YAML requirement records with source attribution

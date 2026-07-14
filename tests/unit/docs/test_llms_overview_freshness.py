@@ -13,6 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import click
 import pytest
 
 from tests.unit._script_test_utils import load_module_from_path
@@ -50,6 +51,15 @@ def test_llms_and_command_overview_are_current() -> None:
         "Regenerate with 'hatch run generate-command-overview' and commit the result.\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
+
+
+def test_command_overview_records_optional_click_arguments() -> None:
+    generator = load_module_from_path("generate_command_overview_arguments", GENERATOR)
+    command = click.Command("import", params=[click.Argument(["source_path"], required=False)])
+
+    assert generator._command_arguments(command) == [  # pylint: disable=protected-access
+        {"name": "SOURCE_PATH", "required": False, "nargs": 1}
+    ]
 
 
 def test_command_overview_rejects_unrepresented_official_inventory(tmp_path: Path, monkeypatch) -> None:
