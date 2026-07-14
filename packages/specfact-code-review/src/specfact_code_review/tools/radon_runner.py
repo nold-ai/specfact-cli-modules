@@ -106,13 +106,14 @@ def _kiss_metric_findings(file_path: Path) -> list[ReviewFinding]:
     except (OSError, SyntaxError) as exc:
         return _tool_error(file_path, f"Unable to parse source for KISS metrics: {exc}")
 
+    typer_command_targets = _typer_command_targets(tree)
     findings: list[ReviewFinding] = []
     for function_node in ast.walk(tree):
         if not isinstance(function_node, ast.FunctionDef | ast.AsyncFunctionDef):
             continue
         findings.extend(_kiss_loc_findings(function_node, file_path))
         findings.extend(_kiss_nesting_findings(function_node, file_path))
-        findings.extend(_kiss_parameter_findings(function_node, file_path))
+        findings.extend(_kiss_parameter_findings(function_node, file_path, typer_command_targets))
     return findings
 
 
@@ -165,14 +166,10 @@ def _kiss_nesting_findings(
     return findings
 
 
-def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path) -> bool:
+def _typer_cli_entrypoint_exempt(
+    function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path, typer_command_targets: set[str]
+) -> bool:
     """Typer command callbacks legitimately take many injected options; skip parameter-count KISS on them."""
-    args0 = function_node.args.args
-    if not args0:
-        return False
-    first = args0[0]
-    if first.arg != "ctx":
-        return False
     normalized = str(file_path).replace("\\", "/")
     # Stable path suffix: matches in-repo and user-scoped installs (~/.specfact/modules/.../src/...).
     # Typer CLI handler `run(ctx: Context, ...)` in review.commands injects many option parameters by
@@ -180,16 +177,7 @@ def _typer_cli_entrypoint_exempt(function_node: ast.FunctionDef | ast.AsyncFunct
     # elsewhere still get complexity checks.
     if function_node.name == "run" and normalized.endswith("specfact_code_review/review/commands.py"):
         return True
-    if not _has_typer_command_decorator(function_node):
-        return False
-    ann = first.annotation
-    if ann is None:
-        return False
-    try:
-        rendered = ast.unparse(ann)
-    except AttributeError:
-        return False
-    return rendered.endswith("Context")
+    return _has_typer_command_decorator(function_node, typer_command_targets)
 
 
 def _decorator_name_parts(decorator: ast.expr) -> tuple[str, ...]:
@@ -202,21 +190,82 @@ def _decorator_name_parts(decorator: ast.expr) -> tuple[str, ...]:
     return ()
 
 
-def _has_typer_command_decorator(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+def _typer_command_targets(tree: ast.Module) -> set[str]:
+    """Return names that own Typer command or callback decorators in a module."""
+    typer_module_names = _typer_module_names(tree)
+    typer_constructor_names = _typer_constructor_names(tree)
+    return typer_module_names | _typer_application_names(tree, typer_module_names, typer_constructor_names)
+
+
+def _typer_module_names(tree: ast.Module) -> set[str]:
+    names: set[str] = set()
+    for node in tree.body:
+        if not isinstance(node, ast.Import):
+            continue
+        for alias in node.names:
+            if alias.name == "typer":
+                names.add(alias.asname or alias.name)
+    return names
+
+
+def _typer_constructor_names(tree: ast.Module) -> set[str]:
+    names: set[str] = set()
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom) or node.module != "typer":
+            continue
+        for alias in node.names:
+            if alias.name == "Typer":
+                names.add(alias.asname or alias.name)
+    return names
+
+
+def _typer_application_names(
+    tree: ast.Module, typer_module_names: set[str], typer_constructor_names: set[str]
+) -> set[str]:
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Assign | ast.AnnAssign) and _is_typer_constructor(
+            node.value, typer_module_names, typer_constructor_names
+        ):
+            names.update(_assignment_target_names(node))
+    return names
+
+
+def _is_typer_constructor(
+    value: ast.expr | None, typer_module_names: set[str], typer_constructor_names: set[str]
+) -> bool:
+    if not isinstance(value, ast.Call):
+        return False
+    if isinstance(value.func, ast.Name):
+        return value.func.id in typer_constructor_names
+    return (
+        isinstance(value.func, ast.Attribute)
+        and isinstance(value.func.value, ast.Name)
+        and value.func.value.id in typer_module_names
+        and value.func.attr == "Typer"
+    )
+
+
+def _assignment_target_names(node: ast.Assign | ast.AnnAssign) -> set[str]:
+    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+    return {target.id for target in targets if isinstance(target, ast.Name)}
+
+
+def _has_typer_command_decorator(
+    function_node: ast.FunctionDef | ast.AsyncFunctionDef, typer_command_targets: set[str]
+) -> bool:
     for decorator in function_node.decorator_list:
         parts = _decorator_name_parts(decorator)
-        if parts == ("command",) or parts[-1:] == ("command",):
-            return True
-        if parts[-1:] == ("callback",):
+        if len(parts) == 2 and parts[0] in typer_command_targets and parts[1] in {"command", "callback"}:
             return True
     return False
 
 
 def _kiss_parameter_findings(
-    function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path
+    function_node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path, typer_command_targets: set[str]
 ) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
-    if _typer_cli_entrypoint_exempt(function_node, file_path):
+    if _typer_cli_entrypoint_exempt(function_node, file_path, typer_command_targets):
         return findings
     parameter_count = len(function_node.args.posonlyargs)
     parameter_count += len(function_node.args.args)

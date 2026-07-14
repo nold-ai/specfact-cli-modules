@@ -5,10 +5,22 @@ import subprocess
 from pathlib import Path
 from unittest.mock import Mock
 
+import pytest
 from pytest import MonkeyPatch
 
 from specfact_code_review.tools.radon_runner import run_radon
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
+
+
+def _parameter_count_rules(tmp_path: Path, monkeypatch: MonkeyPatch, source: str) -> set[str]:
+    file_path = tmp_path / "commands.py"
+    file_path.write_text(source, encoding="utf-8")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+    )
+    return {finding.rule for finding in run_radon([file_path])}
 
 
 def test_run_radon_returns_empty_when_only_non_python_paths(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -17,7 +29,10 @@ def test_run_radon_returns_empty_when_only_non_python_paths(tmp_path: Path, monk
     run_mock = Mock()
     monkeypatch.setattr(subprocess, "run", run_mock)
 
-    assert run_radon([manifest]) == []
+    result = run_radon([manifest])
+
+    assert isinstance(result, list)
+    assert not result
 
     run_mock.assert_not_called()
 
@@ -60,7 +75,8 @@ def test_run_radon_returns_no_findings_for_complexity_twelve_or_below(tmp_path: 
 
     findings = run_radon([file_path])
 
-    assert findings == []
+    assert isinstance(findings, list)
+    assert not findings
 
 
 def test_run_radon_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -109,44 +125,45 @@ def test_run_radon_uses_dedicated_tool_identifier_for_kiss_findings(tmp_path: Pa
     assert {finding.tool for finding in kiss_findings} == {"radon-kiss"}
 
 
-def test_run_radon_requires_typer_decorator_for_context_parameter_exemption(
-    tmp_path: Path, monkeypatch: MonkeyPatch
-) -> None:
-    file_path = tmp_path / "commands.py"
-    file_path.write_text(
-        """
+@pytest.mark.parametrize(
+    ("source", "expects_parameter_count_warning"),
+    [
+        (
+            """
 def callback(ctx: typer.Context, a: str, b: str, c: str, d: str, e: str) -> None:
     return None
 """,
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
-    )
+            True,
+        ),
+        (
+            """
+import typer
 
-    findings = run_radon([file_path])
+app = typer.Typer()
 
-    assert "kiss.parameter-count.warning" in {finding.rule for finding in findings}
-
-
-def test_run_radon_exempts_typer_command_context_parameters(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
-    file_path = tmp_path / "commands.py"
-    file_path.write_text(
-        """
 @app.command("run")
-def callback(ctx: typer.Context, a: str, b: str, c: str, d: str, e: str) -> None:
+def callback(a: str, b: str, c: str, d: str, e: str, f: str) -> None:
     return None
 """,
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        Mock(return_value=completed_process("radon", stdout=json.dumps({str(file_path): []}))),
+            False,
+        ),
+        (
+            """
+@custom.command("run")
+def callback(a: str, b: str, c: str, d: str, e: str, f: str) -> None:
+    return None
+""",
+            True,
+        ),
+    ],
+)
+def test_run_radon_applies_parameter_count_rule_to_cli_decorators(
+    tmp_path: Path, monkeypatch: MonkeyPatch, source: str, expects_parameter_count_warning: bool
+) -> None:
+    findings = _parameter_count_rules(
+        tmp_path,
+        monkeypatch,
+        source,
     )
 
-    findings = run_radon([file_path])
-
-    assert "kiss.parameter-count.warning" not in {finding.rule for finding in findings}
+    assert ("kiss.parameter-count.warning" in findings) is expects_parameter_count_warning

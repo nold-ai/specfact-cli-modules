@@ -37,11 +37,18 @@ proposal (nold-ai/specfact-cli#350) for contract details.
   and Spec Kit `specs/`) relative to the project root.
 - **EXTEND**: `requirements validate` surfaces the core gate findings
   (`scenario-unverified`, `stale-import`, `source-missing`,
-  `ambiguous-mapping`) with profile-driven severity and non-zero exit on
-  failure; `list`/`coverage` output includes gate-relevant counts.
+  `ambiguous-mapping`) with profile-driven severity and non-zero exit on failure;
+  `list`/`coverage` output includes gate-relevant counts.
 - **EXTEND**: When `--profile` is omitted, the effective profile resolves from
   the layered configuration shipped by `profile-01-config-layering` instead of
   a hardcoded `startup` default; an explicit flag always wins.
+- **EXTEND**: Preserve the core adapter's evidence-compatible required-field
+  mapping (`id`, `title`, `acceptance`, and `trace_links`) and surface its
+  `unsupported-profile-field` advisories unchanged. The module does not add
+  owner, risk, or exception metadata to imported records.
+- **EXTEND**: Surface core `unsupported-source-schema` errors unchanged and do
+  not persist any partial import when core rejects an untested OpenSpec schema
+  or a customized Spec Kit template profile.
 - **UNCHANGED**: `--from-file` remains for generic records; existing sidecar
   persistence and merge semantics are reused as-is.
 
@@ -60,5 +67,5 @@ proposal (nold-ai/specfact-cli#350) for contract details.
 - **GitHub Issue**: #168
 - **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/168>
 - **Core Counterpart**: nold-ai/specfact-cli#350
-- **Last Synced Status**: proposed
+- **Last Synced Status**: open / Todo (aligned 2026-07-13)
 - **Sanitized**: false

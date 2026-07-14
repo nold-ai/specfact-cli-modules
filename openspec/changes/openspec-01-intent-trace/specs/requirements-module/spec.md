@@ -23,11 +23,13 @@ logic of its own and SHALL never write into upstream artifact directories.
 - **THEN** the core adapter normalizes the artifacts into requirement records
 - **AND** merged records persist to the bundle requirements sidecar.
 
-#### Scenario: Omitted source paths auto-detect conventional layouts
+#### Scenario: Omitted source paths auto-detect active conventional layouts
 
-- **GIVEN** a project root containing an `openspec/changes/` directory
+- **GIVEN** a project root containing one active OpenSpec change and an
+  `openspec/changes/archive/` directory
 - **WHEN** `specfact requirements import --from-openspec` runs without an explicit path
-- **THEN** the conventional layout is detected and imported
+- **THEN** the active conventional change layout is detected and imported
+- **AND** the archive directory is not considered an import source
 - **AND** a clear error names the expected layouts when detection finds no source.
 
 #### Scenario: Validate surfaces gate findings with CI-usable exit codes
@@ -37,6 +39,25 @@ logic of its own and SHALL never write into upstream artifact directories.
 - **WHEN** `specfact requirements validate --bundle <bundle> --profile <profile>` runs
 - **THEN** the report lists each gate finding with its category and affected requirement IDs
 - **AND** the command exits non-zero when the profile treats any finding as an error.
+
+#### Scenario: Runtime preserves core required-field advisories
+
+- **GIVEN** core validation returns an `unsupported-profile-field` advisory
+  for a profile field not represented by `RequirementInput`
+- **WHEN** `specfact requirements validate` renders the validation report
+- **THEN** the advisory is present in the machine-readable and human-readable
+  output unchanged
+- **AND** the module does not add owner, risk, or exception metadata to the
+  imported record.
+
+#### Scenario: Runtime blocks unsupported source profiles
+
+- **GIVEN** an OpenSpec schema or Spec Kit template profile rejected by the
+  core adapter with `unsupported-source-schema`
+- **WHEN** an import command delegates to core
+- **THEN** the command surfaces that diagnostic unchanged
+- **AND** it does not create or persist partial requirement records
+- **AND** it does not attempt version detection or fallback parsing.
 
 #### Scenario: Runtime never writes upstream
 

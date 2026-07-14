@@ -49,6 +49,53 @@ def _source_file(tmp_path: Path) -> Path:
     return source
 
 
+def _openspec_change(project_root: Path) -> Path:
+    change_dir = project_root / "openspec" / "changes" / "widget-evidence"
+    spec_path = change_dir / "specs" / "widgets" / "spec.md"
+    spec_path.parent.mkdir(parents=True)
+    spec_path.write_text(
+        """## ADDED Requirements
+
+### Requirement: Widget rendering
+
+The system SHALL render a widget.
+
+#### Scenario: Render a valid widget
+
+- **GIVEN** a valid widget request
+- **WHEN** rendering runs
+- **THEN** the widget is returned
+""",
+        encoding="utf-8",
+    )
+    return change_dir
+
+
+def _speckit_feature(project_root: Path) -> Path:
+    feature_dir = project_root / "specs" / "001-widget-rendering"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text(
+        """# Feature Specification: Widget rendering
+
+## User Scenarios & Testing
+
+### User Story 1 - Render widgets (Priority: P1)
+
+As a user, I want widgets rendered so that I can see them.
+
+**Acceptance Scenarios**:
+
+1. **Given** a valid widget request, **When** rendering runs, **Then** the widget is returned
+
+## Requirements
+
+- **FR-001**: System MUST render a widget
+""",
+        encoding="utf-8",
+    )
+    return feature_dir
+
+
 @pytest.mark.integration
 def test_command_module_exposes_typer_app() -> None:
     assert app is not None
@@ -119,3 +166,86 @@ def test_requirements_help_exposes_no_author_command() -> None:
     assert "validate" in result.output
     assert "coverage" in result.output
     assert "author" not in result.output
+
+
+@pytest.mark.integration
+def test_requirements_import_help_exposes_optional_native_source_path() -> None:
+    result = runner.invoke(app, ["import", "--help"])
+
+    assert result.exit_code == 0
+    assert "[SOURCE_PATH]" in result.output
+
+
+@pytest.mark.integration
+def test_requirements_import_openspec_accepts_explicit_and_auto_detected_sources(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project_root = tmp_path / "project"
+    change_dir = _openspec_change(project_root)
+    explicit_bundle = _bundle_dir(tmp_path / "explicit")
+
+    explicit_result = runner.invoke(
+        app,
+        ["import", "--from-openspec", str(change_dir), "--bundle", str(explicit_bundle), "--format", "json"],
+    )
+
+    assert explicit_result.exit_code == 0, explicit_result.output
+    assert json.loads(explicit_result.output)["imported"] == 1
+
+    auto_bundle = _bundle_dir(tmp_path / "auto")
+    (project_root / "openspec" / "changes" / "archive" / "2026-07-14-widget-evidence").mkdir(parents=True)
+    monkeypatch.chdir(project_root)
+    auto_result = runner.invoke(
+        app,
+        ["import", "--from-openspec", "--bundle", str(auto_bundle), "--format", "json"],
+    )
+
+    assert auto_result.exit_code == 0, auto_result.output
+    assert json.loads(auto_result.output)["imported"] == 1
+
+
+@pytest.mark.integration
+def test_requirements_import_speckit_accepts_explicit_source(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    feature_dir = _speckit_feature(project_root)
+    bundle_dir = _bundle_dir(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["import", "--from-speckit", str(feature_dir), "--bundle", str(bundle_dir), "--format", "json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["imported"] == 1
+
+
+@pytest.mark.integration
+def test_requirements_import_rejects_non_directory_native_source_path(tmp_path: Path) -> None:
+    bundle_dir = _bundle_dir(tmp_path)
+    source_file = tmp_path / "source.md"
+    source_file.write_text("not a source directory\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["import", "--from-openspec", str(source_file), "--bundle", str(bundle_dir), "--format", "json"],
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid value" in result.output
+
+
+@pytest.mark.integration
+def test_requirements_import_surfaces_core_schema_rejection_without_persistence(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    change_dir = _openspec_change(project_root)
+    (project_root / "openspec" / "config.yaml").write_text("schema: company-custom\n", encoding="utf-8")
+    bundle_dir = _bundle_dir(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["import", "--from-openspec", str(change_dir), "--bundle", str(bundle_dir), "--format", "json"],
+    )
+
+    assert result.exit_code == 1
+    assert json.loads(result.output)["diagnostics"][0]["code"] == "unsupported-source-schema"
+    assert not (bundle_dir / "reports" / "requirements" / "inputs.yaml").exists()
