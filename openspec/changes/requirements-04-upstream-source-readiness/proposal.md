@@ -38,9 +38,9 @@ None.
 
 ## Impact
 
-- Paired core dependency: a new `specfact-cli` follow-up to #350 must own
-  native readiness evaluation, the OpenSpec CLI adapter/policy, and diagnostic
-  contracts. This modules change is blocked until that contract ships.
+- Paired core dependency: `nold-ai/specfact-cli#648` owns native readiness
+  evaluation, the OpenSpec CLI adapter/policy, and diagnostic contracts. This
+  modules change is blocked until that contract ships.
 - Affected modules code: `packages/specfact-requirements` import command and
   thin runtime delegation.
 - Affected tests: Requirements module command/runtime integration coverage and
@@ -59,6 +59,6 @@ None.
 - **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/346>
 - **Parent Feature**: #161 Context Adapters For Validation Evidence
 - **Follow-up To**: #168
-- **Core Counterpart**: required follow-up to nold-ai/specfact-cli#350 (not yet created)
+- **Core Counterpart**: nold-ai/specfact-cli#648
 - **Last Synced Status**: open / Todo (aligned 2026-07-14)
 - **Sanitized**: false

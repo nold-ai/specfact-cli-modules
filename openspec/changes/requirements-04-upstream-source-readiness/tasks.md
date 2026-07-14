@@ -5,8 +5,8 @@
   assignment.
 - [x] 1.2 Record the completed #168 follow-up relationship and the observed
   official Spec Kit 0.12.15 scaffold behavior in the proposal and design.
-- [ ] 1.3 Create and link the paired `specfact-cli` core follow-up to #350;
-  record its release version as this change's blocker and blocked-by relation.
+- [x] 1.3 Link paired core issue nold-ai/specfact-cli#648 (follow-up to #350);
+  record its release version as this change's blocker before implementation.
 - [ ] 1.4 Recheck current GitHub issue state, parent, labels, project assignment,
   blockers, and active-work concurrency before implementation starts.
 
