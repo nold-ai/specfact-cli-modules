@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-07-14
+goal: Protect import-first requirement evidence from draft templates and invalid
+  upstream artifacts while keeping completed native imports read-only and
+  portable.

@@ -7,7 +7,7 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 13 | [`openspec/changes/`](changes/) |
+| **Active** | 14 | [`openspec/changes/`](changes/) |
 | **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
 
@@ -68,8 +68,9 @@ AI IDE, rerun, and compare improved evidence.
 |---:|---|---|---|---|
 | 1 | `requirements-02-module-commands` | [#165](https://github.com/nold-ai/specfact-cli-modules/issues/165) | Import/normalize requirement context for evidence (shipped via PR #326, archived 2026-07-13) | core requirements input model |
 | 2 | `openspec-01-intent-trace` | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Import-first OpenSpec and Spec Kit requirement evidence runtime with gate surfacing (rescoped 2026-07-13) | requirements-02 runtime; core nold-ai/specfact-cli#350 contracts |
-| 3 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
-| 4 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
+| 3 | `requirements-04-upstream-source-readiness` | [#346](https://github.com/nold-ai/specfact-cli-modules/issues/346) | Reject incomplete or policy-invalid native OpenSpec and Spec Kit sources before requirement evidence persistence | paired core follow-up to #350 (not yet created) |
+| 4 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
+| 5 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
 | Parked | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path. Deprioritized 2026-07-13 behind openspec-01 | requirements-02, sync-01 |
 | Gated | `architecture-02-module-well-architected` | [#230](https://github.com/nold-ai/specfact-cli-modules/issues/230) | Architecture-boundary review findings | architecture-01 shipped plus one usage cycle |
 
@@ -88,6 +89,7 @@ AI IDE, rerun, and compare improved evidence.
 | `traceability-01-index-and-orphans` | Keep artifact drift, orphan, and linkage evidence. Drop ceremony/dashboard positioning. |
 | `requirements-02-module-commands` | Drop requirement authoring as a flagship workflow. Keep import, normalization, validation, and coverage inspection. |
 | `requirements-03-backlog-sync` | Keep read-first drift evidence. Write-back remains preview-only and outside the validation critical path. |
+| `requirements-04-upstream-source-readiness` | Keep source readiness core-owned; reject incomplete native sources atomically and do not require the OpenSpec CLI outside explicit or strict/enterprise policy. |
 | `architecture-01-solution-layer` | Keep architecture-boundary input and validation hooks. Drop architecture generation. |
 | `openspec-01-intent-trace` | Done 2026-07-13: rescoped to import-first runtime for native OpenSpec/Spec Kit artifacts with deterministic gate surfacing. |
 | `architecture-02-module-well-architected` | Keep gated until architecture-01 ships and is used for one complete cycle. |
@@ -130,6 +132,7 @@ ceremony rather than validation evidence:
 
 - `requirements-02-module-commands`
 - `openspec-01-intent-trace` (pulled forward 2026-07-13, import-first rescope)
+- `requirements-04-upstream-source-readiness` (blocked on paired core source-readiness contract)
 - `architecture-01-solution-layer`
 - `sync-01-unified-kernel`
 - `requirements-03-backlog-sync` (parked 2026-07-13)
