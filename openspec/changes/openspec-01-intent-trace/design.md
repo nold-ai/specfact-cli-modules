@@ -1,82 +1,92 @@
-# Design: OpenSpec Intent Trace — Bridge Adapter Integration
+# Design: OpenSpec and Spec Kit Import Runtime for Requirement Evidence
 
 ## Context
 
-SpecFact's OpenSpec bridge adapter (`specfact sync bridge --adapter openspec`) reads proposal and task files from an OpenSpec change directory and imports them into SpecFact's project bundle. Currently it reads: title, description, tasks list, and spec references. It does not read any business intent context. This change adds an optional `## Intent Trace` YAML block to the OpenSpec proposal format and teaches the bridge adapter to import it into the `.specfact/requirements/` storage hierarchy used by requirements-01-data-model.
-
-The principle is: **"OpenSpec owns the intent. SpecFact owns the evidence."** OpenSpec authors write intent in a human-readable YAML block; SpecFact validates conformance and generates evidence. This separation keeps the intent format tool-agnostic.
+The `specfact-requirements` module (`packages/specfact-requirements/`) already
+wires `requirements import|validate|list|coverage` to core helpers via lazy
+imports (`runtime.py` loads `specfact_cli.models.requirements` and
+`specfact_cli.requirements.context`). Import currently accepts only
+`--from-file`. The core counterpart change (nold-ai/specfact-cli#350) adds
+OpenSpec and Spec Kit import normalizers and gate evaluation to core; this
+change adds the command-surface runtime.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Define the `## Intent Trace` section YAML schema and JSON Schema validator
-- Extend the OpenSpec bridge adapter to parse and import intent artifacts when the section is present
-- Keep the `## Intent Trace` section strictly optional — existing proposals without it are unaffected
-- Validate the section against the JSON Schema during `openspec validate --strict`
-- Produce `.specfact/requirements/{id}.req.yaml` artifacts from imported intent data
+
+- Add `--from-openspec [PATH]` and `--from-speckit [PATH]` to
+  `requirements import`, delegating all parsing/normalization/hashing to core.
+- Auto-detect conventional source layouts when the path is omitted.
+- Surface core gate findings in `validate` output with non-zero exit when a
+  profile treats a finding as an error; expose gate-relevant counts in
+  `list`/`coverage`.
 
 **Non-Goals:**
-- Forcing all existing OpenSpec proposals to add an `## Intent Trace` section
-- Building a new proposal authoring tool — the section is hand-authored YAML in Markdown
-- Replacing requirements-01/02 commands — the bridge adapter imports intent; the requirements module validates and traces it
+
+- Any parsing, hashing, or gate logic in the module (core-owned).
+- Writes into upstream OpenSpec or Spec Kit directories.
+- Backlog import (deprioritized `requirements-03-backlog-sync` scope).
 
 ## Decisions
 
-### D1: YAML fenced block vs structured Markdown headings for Intent Trace
+### D1: Flags on `requirements import` vs a new subcommand
 
-**Decision**: YAML fenced block under `## Intent Trace` heading
-```yaml
-intent_trace:
-  business_outcomes:
-    - id: "BO-001"
-      description: "..."
-      persona: "..."
-  business_rules:
-    - id: "BR-001"
-      outcome_ref: "BO-001"
-      given: "..."
-      when: "..."
-      then: "..."
-```
-**Rationale**: YAML is machine-parseable with a single `yaml.safe_load()` call and maps directly to Pydantic models. Structured Markdown headings require custom parsing logic that is brittle and hard to validate with JSON Schema. YAML fenced blocks are already used in GitHub Actions, Docker Compose, and Kubernetes manifests — authors are familiar with the pattern.
-**Alternative rejected**: Structured `### Business Outcomes / ### Business Rules` Markdown sub-sections — readable but not JSON Schema validatable.
+**Decision**: Extend the existing `import` command with mutually compatible
+source flags (`--from-file`, `--from-openspec`, `--from-speckit`).
+**Rationale**: One import surface, one sidecar persistence path, one merge
+semantics (`merge_requirement_inputs`). A new subcommand would duplicate the
+bundle/sidecar handling for no user benefit.
 
-### D2: JSON Schema stored in SpecFact vs in OpenSpec format repo
+### D2: Lazy core-helper loading, same pattern as requirements-02
 
-**Decision**: JSON Schema at `openspec/schemas/intent-trace.schema.json` within SpecFact's own repo
-**Rationale**: SpecFact is the authority for validation. The schema living in SpecFact's repo means the bridge adapter always validates against the version it was built with. When OpenSpec is an external tool (not this repo), the schema reference is still resolvable locally.
-**Alternative rejected**: Hosting schema at `openspec.dev/schemas/intent-trace` — external HTTP dependency violates offline-first constraint.
+**Decision**: Load the new core import normalizers via the existing
+`_load_requirements_module` lazy-import pattern and raise
+`RequirementsCoreUnavailableError` with the paired core change named when the
+helpers are missing.
+**Rationale**: Keeps the module installable against older cores with a clear
+error instead of an ImportError traceback.
 
-### D3: `--import-intent` flag vs automatic intent import
+### D3: Auto-detection stays conservative
 
-**Decision**: `specfact sync bridge --adapter openspec --import-intent` — opt-in flag
-**Rationale**: Not every team using the OpenSpec bridge wants `.specfact/requirements/` files created from every proposal import. The opt-in flag gives teams control. When `## Intent Trace` is present but `--import-intent` is not passed, the bridge still validates the section on `openspec validate --strict` but does not write requirements artifacts.
-**Alternative rejected**: Automatic import when section is present — surprising side effect; could overwrite existing requirement files.
+**Decision**: When the source path is omitted, detect only conventional active
+layouts (`openspec/changes/`, excluding its `archive/` directory, for OpenSpec;
+Spec Kit `specs/` feature folders) relative to the current project root.
+Ambiguity or absence is a clear error naming the expected layouts, never a
+guess.
+**Rationale**: Deterministic behavior over convenience heuristics; misdetected
+sources would poison evidence.
 
-### D4: `requirement_refs` in tasks.md — free-form vs validated IDs
+### D4: Preserve core required-field findings unchanged
 
-**Decision**: Free-form string list (`["BR-001", "AC-002"]`) with advisory validation
-**Rationale**: Task-level requirement refs are metadata for traceability, not for enforcement. Advisory-mode validation warns if a ref ID does not match any known `BusinessRule` or `ArchitecturalConstraint` in `.specfact/requirements/` but does not block import. Hard enforcement would break workflows where requirements are not yet captured.
+**Decision**: The runtime delegates profile resolution and completeness
+evaluation to core, including the evidence-compatible aliases (`id`, `title`,
+`acceptance`, and `trace_links`) and `unsupported-profile-field` advisories.
+It renders those findings without translating, filtering, or supplementing
+them with module-owned metadata.
+**Rationale**: The module must remain a thin command adapter. Adding owner,
+risk, or exception fields here would make the module an authoring surface and
+break the core import-first contract.
 
-### D5: `evidence` field in archived changes
+### D5: Preserve core compatibility failures unchanged
 
-**Decision**: Optional string field in change archive metadata: `evidence: ".specfact/evidence/{timestamp}_{run_id}_evidence.json"`
-**Rationale**: Minimal — just a file path reference. The evidence file itself is owned by governance-01-evidence-output. The archive metadata is a pointer, not a copy. This keeps the archive lightweight while enabling audit trail navigation.
+**Decision**: The runtime surfaces `unsupported-source-schema` returned by the
+core adapter and does not persist records from that import result.
+**Rationale**: Source-profile detection, version policy, fallback parsing, and
+partial-import prevention belong to core #350. Reimplementing any of them in
+the module would create divergent compatibility behavior.
 
 ## Risks / Trade-offs
 
-- **[Risk] YAML indentation errors in proposals** — Authors writing `## Intent Trace` blocks manually may introduce YAML syntax errors. Mitigation: `openspec validate --strict` catches YAML parse errors before import; error message shows the line number and suggests a fix.
-- **[Risk] ID collision between imported BusinessOutcome IDs and existing requirements** — If a team runs `--import-intent` twice with the same proposal, duplicate `.req.yaml` files may result. Mitigation: bridge adapter checks for existing file with same ID before writing; uses `--overwrite` flag to allow update.
-- **[Trade-off] Schema evolution** — As requirements-01-data-model evolves (new fields), the `intent-trace.schema.json` must stay in sync. Mitigation: schema versioning (`schema_version: "1.0"` in the YAML block); bridge adapter rejects unknown schema versions with a clear error.
+- **[Risk] Core/module version skew** — flags exist but core helpers are old.
+  Mitigation: D2 error contract; documented minimum core version in
+  `module-package.yaml` dependency metadata.
+- **[Trade-off] Auto-detection scope** — monorepos with multiple Spec Kit
+  roots need explicit paths. Accepted; explicit path flag covers it.
 
 ## Migration Plan
 
-1. Land requirements-01-data-model (#238) — `BusinessOutcome` and `BusinessRule` Pydantic models must exist.
-2. Define `intent-trace.schema.json` using the Pydantic model fields from requirements-01 as source of truth.
-3. Extend bridge adapter parser to detect `## Intent Trace` section and extract the YAML block.
-4. Implement `--import-intent` flag and requirements artifact writer.
-5. Extend `openspec validate --strict` to call JSON Schema validator on intent trace section.
-6. Update existing SpecFact dogfood proposals (this repo's `openspec/changes/`) with `## Intent Trace` sections as the team adopts the format.
+1. No data migration; sidecar format unchanged.
+2. Docs update the requirements module page with import-first examples.
 
 ## Open Questions
 

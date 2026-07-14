@@ -18,7 +18,7 @@ planning or product-management system.
 
 ## Prerequisites
 
-- SpecFact CLI with core requirements context helpers
+- SpecFact CLI `>=0.52.0,<1.0.0`
 - Bundle installed: `specfact module install nold-ai/specfact-requirements`
 - A project bundle directory, usually created by the [Project](/bundles/project/overview/) bundle
 - Local JSON or YAML requirement records with source attribution
@@ -30,10 +30,10 @@ group.
 
 | Command | Purpose |
 |--------|---------|
-| `import` | Import local JSON/YAML requirement records into a project bundle |
-| `validate` | Validate attached requirement context against a profile |
-| `list` | List attached requirement records, optionally with coverage |
-| `coverage` | Print coverage counts for downstream evidence links |
+| `import` | Import local records or native OpenSpec/Spec Kit evidence into a project bundle |
+| `validate` | Validate attached requirement context against the selected or layered profile |
+| `list` | List attached requirement records with optional coverage and core gate counts |
+| `coverage` | Print coverage and core gate-finding counts |
 
 ## Input shape
 
@@ -69,10 +69,31 @@ Each record follows the core `RequirementInput` model and must include
 
 ```bash
 specfact requirements import --from-file requirements.json --bundle .specfact/projects/shop --format json
+specfact requirements import --from-openspec openspec/changes/widget-evidence --bundle .specfact/projects/shop --format json
+specfact requirements import --from-speckit specs/001-widget-rendering --bundle .specfact/projects/shop --format json
 specfact requirements list --bundle .specfact/projects/shop --show-coverage --format json
 specfact requirements validate --bundle .specfact/projects/shop --profile enterprise --format json
 specfact requirements coverage --bundle .specfact/projects/shop --format json
 ```
+
+For native imports, a source path is optional. `--from-openspec` discovers a
+single conventional change below `openspec/changes/`; `--from-speckit`
+discovers a single feature below `specs/`. Multiple or missing candidates are a
+clear error so the command never guesses. Pass a path whenever the project has
+more than one candidate.
+
+Native imports are read-only and supported only for core's default,
+fixture-backed OpenSpec and Spec Kit Markdown profiles. A core
+`unsupported-source-schema` diagnostic is returned unchanged, and no partial
+requirements sidecar is written. The bundle does not infer upstream tool
+versions, fall back to another parser, or add upstream metadata.
+
+When `--profile` is omitted, validation uses the effective layered core
+configuration. Explicit `--profile` still wins. Core findings such as
+`scenario-unverified`, `stale-import`, `source-missing`,
+`ambiguous-mapping`, and `unsupported-profile-field` remain machine-readable;
+the list and coverage commands include their counts without re-evaluating the
+gates.
 
 ## Storage
 
@@ -87,6 +108,7 @@ The bundle is read-first and evidence-focused.
 
 - It imports and normalizes source-attributed requirement context.
 - It reports validation findings and coverage gaps.
+- It delegates parsing, hashing, compatibility, and gate evaluation to core.
 - It does not expose authoring templates.
 - It does not perform bidirectional backlog sync or ceremony automation.
 

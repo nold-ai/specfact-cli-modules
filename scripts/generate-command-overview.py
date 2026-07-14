@@ -154,8 +154,8 @@ def validate_official_mount_inventory() -> None:
 def _command_options(command: click.Command) -> list[str]:
     options: set[str] = set()
     for param in command.params:
-        if hasattr(param, "opts"):
-            secondary_opts = getattr(param, "secondary_opts", ())
+        if isinstance(param, click.Option):
+            secondary_opts = param.secondary_opts
             options.update(opt for opt in [*param.opts, *secondary_opts] if opt.startswith("--"))
     return sorted(options)
 
@@ -163,7 +163,7 @@ def _command_options(command: click.Command) -> list[str]:
 def _command_arguments(command: click.Command) -> list[dict[str, Any]]:
     arguments: list[dict[str, Any]] = []
     for param in command.params:
-        if not hasattr(param, "opts") and hasattr(param, "human_readable_name"):
+        if isinstance(param, click.Argument):
             arguments.append(
                 {
                     "name": param.human_readable_name,
@@ -208,10 +208,10 @@ def _has_bare_business_parameters(command: click.Command) -> bool:
         "--show-completion",
     }
     for param in command.params:
-        if not hasattr(param, "opts") and hasattr(param, "human_readable_name"):
+        if isinstance(param, click.Argument):
             return True
-        if hasattr(param, "opts"):
-            opts = set(param.opts) | set(getattr(param, "secondary_opts", ()))
+        if isinstance(param, click.Option):
+            opts = set(param.opts) | set(param.secondary_opts)
             if opts and opts.isdisjoint(ignored_options):
                 return True
     return False
