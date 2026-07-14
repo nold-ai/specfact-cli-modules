@@ -60,6 +60,22 @@ _OVERVIEW_LINE_TO_TOKENS_AFTER_SPECFACT: dict[str, list[str]] = {
         "import",
         "--help",
     ],
+    (
+        "specfact requirements import --from-openspec openspec/changes/widget-evidence "
+        "--bundle .specfact/projects/shop --format json"
+    ): [
+        "requirements",
+        "import",
+        "--help",
+    ],
+    (
+        "specfact requirements import --from-speckit specs/001-widget-rendering "
+        "--bundle .specfact/projects/shop --format json"
+    ): [
+        "requirements",
+        "import",
+        "--help",
+    ],
     "specfact requirements list --bundle .specfact/projects/shop --show-coverage --format json": [
         "requirements",
         "list",

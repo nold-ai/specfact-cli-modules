@@ -55,6 +55,25 @@ naming the expected layouts, never a guess.
 **Rationale**: Deterministic behavior over convenience heuristics; misdetected
 sources would poison evidence.
 
+### D4: Preserve core required-field findings unchanged
+
+**Decision**: The runtime delegates profile resolution and completeness
+evaluation to core, including the evidence-compatible aliases (`id`, `title`,
+`acceptance`, and `trace_links`) and `unsupported-profile-field` advisories.
+It renders those findings without translating, filtering, or supplementing
+them with module-owned metadata.
+**Rationale**: The module must remain a thin command adapter. Adding owner,
+risk, or exception fields here would make the module an authoring surface and
+break the core import-first contract.
+
+### D5: Preserve core compatibility failures unchanged
+
+**Decision**: The runtime surfaces `unsupported-source-schema` returned by the
+core adapter and does not persist records from that import result.
+**Rationale**: Source-profile detection, version policy, fallback parsing, and
+partial-import prevention belong to core #350. Reimplementing any of them in
+the module would create divergent compatibility behavior.
+
 ## Risks / Trade-offs
 
 - **[Risk] Core/module version skew** — flags exist but core helpers are old.

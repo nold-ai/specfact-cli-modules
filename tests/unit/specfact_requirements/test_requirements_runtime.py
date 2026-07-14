@@ -15,8 +15,10 @@ from specfact_cli.utils.bundle_loader import save_project_bundle
 from specfact_requirements.requirements import runtime as requirements_runtime
 from specfact_requirements.requirements.runtime import (
     RequirementsCoreUnavailableError,
+    import_native_requirements_to_bundle,
     import_requirements_file_to_bundle,
     list_requirements_with_coverage,
+    requirements_gate_finding_counts,
     validate_requirements_bundle,
 )
 
@@ -44,6 +46,55 @@ def _bundle_dir(tmp_path: Path) -> Path:
     bundle = create_empty_project_bundle("bundle")
     save_project_bundle(bundle, bundle_dir, atomic=False)
     return bundle_dir
+
+
+def _openspec_change(project_root: Path) -> Path:
+    change_dir = project_root / "openspec" / "changes" / "widget-evidence"
+    spec_path = change_dir / "specs" / "widgets" / "spec.md"
+    spec_path.parent.mkdir(parents=True)
+    (change_dir / "proposal.md").write_text("# Change: Widget evidence\n", encoding="utf-8")
+    (change_dir / "tasks.md").write_text("# Tasks: Widget evidence\n", encoding="utf-8")
+    spec_path.write_text(
+        """## ADDED Requirements
+
+### Requirement: Widget rendering
+
+The system SHALL render a widget.
+
+#### Scenario: Render a valid widget
+
+- **GIVEN** a valid widget request
+- **WHEN** rendering runs
+- **THEN** the widget is returned
+""",
+        encoding="utf-8",
+    )
+    return change_dir
+
+
+def _speckit_feature(project_root: Path) -> Path:
+    feature_dir = project_root / "specs" / "001-widget-rendering"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text(
+        """# Feature Specification: Widget rendering
+
+## User Scenarios & Testing
+
+### User Story 1 - Render widgets (Priority: P1)
+
+As a user, I want widgets rendered so that I can see them.
+
+**Acceptance Scenarios**:
+
+1. **Given** a valid widget request, **When** rendering runs, **Then** the widget is returned
+
+## Requirements
+
+- **FR-001**: System MUST render a widget
+""",
+        encoding="utf-8",
+    )
+    return feature_dir
 
 
 def _block_runtime_import(module_name: str) -> Callable[[str], ModuleType]:
@@ -156,3 +207,65 @@ def test_list_requirements_with_coverage_is_machine_readable(tmp_path: Path) -> 
     assert listing["requirements"][0]["title"] == "Requirement context is imported as validation evidence"
     assert listing["coverage"]["total_requirements"] == 1
     assert listing["coverage"]["with_test_links"] == 1
+
+
+def test_import_openspec_change_persists_core_records_without_mutating_source(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    change_dir = _openspec_change(project_root)
+    before = {path.relative_to(change_dir): path.read_bytes() for path in change_dir.rglob("*") if path.is_file()}
+    bundle_dir = _bundle_dir(project_root)
+
+    result = import_native_requirements_to_bundle("openspec", change_dir, bundle_dir)
+
+    assert [record.requirement_id for record in result.requirements] == [
+        "openspec:widget-evidence:widgets:widget-rendering"
+    ]
+    assert result.diagnostics == []
+    assert list_requirements_with_coverage(bundle_dir)["requirements"][0]["requirement_id"] == (
+        "openspec:widget-evidence:widgets:widget-rendering"
+    )
+    after = {path.relative_to(change_dir): path.read_bytes() for path in change_dir.rglob("*") if path.is_file()}
+    assert after == before
+
+
+def test_import_speckit_feature_persists_core_records(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    feature_dir = _speckit_feature(project_root)
+    bundle_dir = _bundle_dir(project_root)
+
+    result = import_native_requirements_to_bundle("speckit", feature_dir, bundle_dir)
+
+    assert [record.requirement_id for record in result.requirements] == ["speckit:001-widget-rendering:render-a-widget"]
+    assert result.diagnostics == []
+
+
+def test_import_rejected_by_core_does_not_persist_partial_sidecar(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    change_dir = _openspec_change(project_root)
+    (project_root / "openspec" / "config.yaml").write_text("schema: company-custom\n", encoding="utf-8")
+    bundle_dir = _bundle_dir(project_root)
+
+    result = import_native_requirements_to_bundle("openspec", change_dir, bundle_dir)
+
+    assert result.requirements == []
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["unsupported-source-schema"]
+    assert not (bundle_dir / "reports" / "requirements" / "inputs.yaml").exists()
+
+
+def test_profile_resolution_and_gate_counts_delegate_to_core(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project_root = tmp_path / "project"
+    change_dir = _openspec_change(project_root)
+    bundle_dir = _bundle_dir(project_root)
+    import_native_requirements_to_bundle("openspec", change_dir, bundle_dir)
+    config_dir = project_root / ".specfact"
+    config_dir.mkdir()
+    (config_dir / "config.yaml").write_text("profile: enterprise\n", encoding="utf-8")
+    monkeypatch.chdir(project_root)
+
+    configured_report = validate_requirements_bundle(bundle_dir)
+    explicit_report = validate_requirements_bundle(bundle_dir, profile="solo")
+    gate_counts = requirements_gate_finding_counts(bundle_dir)
+
+    assert configured_report.status == "failed"
+    assert explicit_report.status == "warnings"
+    assert gate_counts["scenario-unverified"] == 1

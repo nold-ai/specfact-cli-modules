@@ -38,6 +38,25 @@ logic of its own and SHALL never write into upstream artifact directories.
 - **THEN** the report lists each gate finding with its category and affected requirement IDs
 - **AND** the command exits non-zero when the profile treats any finding as an error.
 
+#### Scenario: Runtime preserves core required-field advisories
+
+- **GIVEN** core validation returns an `unsupported-profile-field` advisory
+  for a profile field not represented by `RequirementInput`
+- **WHEN** `specfact requirements validate` renders the validation report
+- **THEN** the advisory is present in the machine-readable and human-readable
+  output unchanged
+- **AND** the module does not add owner, risk, or exception metadata to the
+  imported record.
+
+#### Scenario: Runtime blocks unsupported source profiles
+
+- **GIVEN** an OpenSpec schema or Spec Kit template profile rejected by the
+  core adapter with `unsupported-source-schema`
+- **WHEN** an import command delegates to core
+- **THEN** the command surfaces that diagnostic unchanged
+- **AND** it does not create or persist partial requirement records
+- **AND** it does not attempt version detection or fallback parsing.
+
 #### Scenario: Runtime never writes upstream
 
 - **GIVEN** import and validation runs against OpenSpec and Spec Kit sources

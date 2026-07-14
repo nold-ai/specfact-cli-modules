@@ -95,7 +95,7 @@ This file is generated from the current module command trees. Do not edit by han
 | `specfact project version set` | nold-ai/specfact-project | `specfact module install nold-ai/specfact-project` | --bundle, --repo, --version; args: - | - |  |
 | `specfact requirements` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --install-completion, --show-completion; args: - | coverage, import, list, validate |  |
 | `specfact requirements coverage` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format; args: - | - |  |
-| `specfact requirements import` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format, --from-file; args: - | - |  |
+| `specfact requirements import` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format, --from-file, --from-openspec, --from-speckit; args: - | - |  |
 | `specfact requirements list` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format, --show-coverage; args: - | - |  |
 | `specfact requirements validate` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format, --profile; args: - | - |  |
 | `specfact spec` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --install-completion, --show-completion; args: - | backward-compat, generate-tests, mock, validate |  |
