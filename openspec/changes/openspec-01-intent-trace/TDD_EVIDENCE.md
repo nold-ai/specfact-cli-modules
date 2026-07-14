@@ -60,8 +60,9 @@ auto-detected OpenSpec sources.
 
 - Failing-before result: `1 failed, 7 passed`; a Typer command without a
   `ctx` parameter still produced `kiss.parameter-count.warning`.
-- Passing-after result: `8 passed`; decorated Typer commands are exempt from
-  the parameter-count rule regardless of whether they accept a context.
+- Passing-after result: `9 passed`; commands are exempt only when their
+  decorator is owned by a statically identified Typer application, regardless
+  of whether they accept a context.
 
 ## Final quality gates
 
@@ -71,7 +72,7 @@ auto-detected OpenSpec sources.
 - `hatch run check-bundle-imports` — passed.
 - `hatch run verify-modules-signature --payload-from-filesystem --enforce-version-bump --allow-missing-public-key` — passed for all manifests.
 - `hatch run contract-test` — passed (28 tests).
-- `hatch run smart-test` — passed (883 tests).
-- `hatch run test` — passed (883 tests, 2 third-party deprecation warnings).
+- `hatch run smart-test` — passed (884 tests).
+- `hatch run test` — passed (884 tests, 2 third-party deprecation warnings).
 - `openspec validate openspec-01-intent-trace --strict` — passed.
 - `hatch run specfact code review run --enforcement changed --bug-hunt --json --out /private/tmp/specfact-code-review-final.json` — passed with no findings.
