@@ -94,9 +94,9 @@
     },
     {
       "id": "nold-ai/specfact-requirements",
-      "latest_version": "0.2.4",
-      "download_url": "modules/specfact-requirements-0.2.4.tar.gz",
-      "checksum_sha256": "3d8751f3b15624262c24079900056d681b0668f24d5f69f9041c5b8096d370b3",
+      "latest_version": "0.2.5",
+      "download_url": "modules/specfact-requirements-0.2.5.tar.gz",
+      "checksum_sha256": "80030d0921356ac61f15d075cdb3e629abd95e3af7918212ff6ba8dcb8dc3338",
       "tier": "official",
       "publisher": {
         "name": "nold-ai",
