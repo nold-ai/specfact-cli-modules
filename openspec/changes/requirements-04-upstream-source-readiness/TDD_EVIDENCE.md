@@ -42,10 +42,12 @@
 - Result: passed. The GitHub PR signing workflow will apply the release
   signature.
 - 2026-07-21 (Europe/Berlin):
-  `hatch run sync-registry-from-package --bundle specfact-requirements` and
   `hatch run verify-modules-signature --payload-from-filesystem
   --enforce-version-bump --allow-missing-public-key`.
-- Result: passed. Registry artifacts now represent version `0.2.5`.
+- Result: passed for the unsigned pre-PR payload checksum. No `0.2.5` registry
+  artifacts are committed: GitHub signing/publish automation signs the manifest
+  and then rebuilds the tarball, checksum, and registry index from the signed
+  manifest bytes.
 - 2026-07-21 (Europe/Berlin):
   `hatch run python scripts/publish_module.py --bundle specfact-requirements
   --registry-index-path /Users/dom/git/nold-ai/specfact-cli-modules/registry/index.json`.

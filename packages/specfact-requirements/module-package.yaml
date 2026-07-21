@@ -19,5 +19,4 @@ description: Official SpecFact requirements evidence runtime bundle package.
 category: project
 bundle_group_command: requirements
 integrity:
-  checksum: sha256:600a9794d801be6475a032da7f0617cc5b5fa714e1ffb5e085c4962768ad4e5e
-  signature: CM/ittd0EPFUU+ZJ2G3cGuZ9aSxFhakgKzEfvSBIq0fwIOQXfc4kWLbpN0ZuGlE28+jdC6x+fW+GpUJlJpqqDw==
+  checksum: sha256:c69f087b96a2da4a12ba3567de6fea561f3e22ba39a8746d6447de2df09430eb

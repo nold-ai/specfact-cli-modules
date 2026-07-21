@@ -44,9 +44,10 @@
 - [x] 4.1 Update Requirements module documentation with source-readiness
   diagnostics, portable versus required upstream validation, and remediation
   guidance for unfinished sources.
-- [x] 4.2 Bump the Requirements module patch version, regenerate payload
+- [ ] 4.2 Bump the Requirements module patch version, regenerate payload
   checksum/signature, and update registry artifacts only after behavior tests
-  pass.
+  pass. GitHub signing/publish automation performs the signed-artifact and
+  registry update after this PR is accepted.
 - [x] 4.3 Run formatting, lint, type, YAML, signature, contract, smart-test,
   and targeted test gates.
 - [x] 4.4 Run a fresh SpecFact code review JSON report after the last proposal,

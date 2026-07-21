@@ -84,8 +84,8 @@ more than one candidate.
 
 Native imports are read-only and supported only for core's default,
 fixture-backed OpenSpec and Spec Kit Markdown profiles. Core readiness
-diagnostics are returned unchanged, and any error writes no requirements
-sidecar. Incomplete Spec Kit scaffolds report `incomplete-source-template` or
+diagnostics are returned unchanged, and any error leaves the requirements
+sidecar uncreated or unchanged. Incomplete Spec Kit scaffolds report `incomplete-source-template` or
 `source-incomplete`. If the source repository's policy requires native OpenSpec
 validation, a failed validator reports `source-invalid`; an unavailable required
 validator reports `upstream-validator-unavailable`. Basic OpenSpec imports stay
@@ -104,7 +104,8 @@ gates.
 The command runtime rehydrates the core `requirements.inputs` extension before
 delegating to validation helpers. Because current project bundle serialization
 does not persist arbitrary extensions directly, the module also writes
-`requirements.inputs.yaml` in the bundle root as the local persistence sidecar.
+`reports/requirements/inputs.yaml` in the bundle directory as the local
+persistence sidecar.
 
 ## Scope boundaries
 
