@@ -7,9 +7,11 @@ from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
 from types import ModuleType
+from typing import NoReturn
 
 import pytest
 from specfact_cli.common.bundle_factory import create_empty_project_bundle
+from specfact_cli.requirements import importers as core_requirements_importers
 from specfact_cli.utils.bundle_loader import save_project_bundle
 
 from specfact_requirements.requirements import runtime as requirements_runtime
@@ -105,6 +107,10 @@ def _block_runtime_import(module_name: str) -> Callable[[str], ModuleType]:
         return import_module(name)
 
     return blocked_import
+
+
+def _unavailable_native_validator(*_args: object, **_kwargs: object) -> NoReturn:
+    raise FileNotFoundError
 
 
 def test_import_requirements_file_to_bundle_preserves_valid_records_and_diagnostics(tmp_path: Path) -> None:
@@ -225,6 +231,13 @@ def test_import_openspec_change_persists_core_records_without_mutating_source(tm
     assert list_requirements_with_coverage(bundle_dir)["requirements"][0]["requirement_id"] == (
         "openspec:widget-evidence:widgets:widget-rendering"
     )
+    repeated_result = import_native_requirements_to_bundle("openspec", change_dir, bundle_dir)
+    assert [record.requirement_id for record in repeated_result.requirements] == [
+        "openspec:widget-evidence:widgets:widget-rendering"
+    ]
+    assert [record["requirement_id"] for record in list_requirements_with_coverage(bundle_dir)["requirements"]] == [
+        "openspec:widget-evidence:widgets:widget-rendering"
+    ]
     after = {path.relative_to(change_dir): path.read_bytes() for path in change_dir.rglob("*") if path.is_file()}
     assert after == before
 
@@ -260,6 +273,29 @@ def test_import_rejected_by_core_does_not_persist_partial_sidecar(tmp_path: Path
 
     assert result.requirements == []
     assert [diagnostic.code for diagnostic in result.diagnostics] == ["unsupported-source-schema"]
+    assert not (bundle_dir / "reports" / "requirements" / "inputs.yaml").exists()
+
+
+def test_import_openspec_uses_source_repository_native_validation_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project_root = tmp_path / "source-project"
+    change_dir = _openspec_change(project_root)
+    config_dir = project_root / ".specfact"
+    config_dir.mkdir()
+    (config_dir / "config.yaml").write_text(
+        "validation:\n  openspec:\n    require_native_validation: true\n",
+        encoding="utf-8",
+    )
+    bundle_dir = _bundle_dir(tmp_path / "bundle-project")
+    linked_change_dir = tmp_path / "linked-widget-evidence"
+    linked_change_dir.symlink_to(change_dir, target_is_directory=True)
+    monkeypatch.setattr(core_requirements_importers.subprocess, "run", _unavailable_native_validator)
+
+    result = import_native_requirements_to_bundle("openspec", linked_change_dir, bundle_dir)
+
+    assert result.requirements == []
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["upstream-validator-unavailable"]
     assert not (bundle_dir / "reports" / "requirements" / "inputs.yaml").exists()
 
 
