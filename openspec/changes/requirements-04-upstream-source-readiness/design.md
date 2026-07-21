@@ -95,8 +95,8 @@ requirements sidecar for a rejected source.
 ## Migration Plan
 
 1. Land the paired core readiness contract and its compatibility tests.
-2. Raise `specfact-requirements` `core_compatibility` to the released core
-   version and delegate the new result unchanged.
+2. Raise `specfact-requirements` `core_compatibility` to `>=0.53.1,<1.0.0`
+   and delegate the new result unchanged.
 3. Add module command tests, docs, signatures, registry publication, and a patch
    release.
 4. Roll back by restoring the previous module version; no upstream source files
@@ -104,7 +104,5 @@ requirements sidecar for a rejected source.
 
 ## Open Questions
 
-- Which exact core release/version will expose the readiness result and policy
-  configuration contract?
 - Should strict/enterprise policy require OpenSpec native validation by default,
   or should repository configuration opt in explicitly for those profiles?
