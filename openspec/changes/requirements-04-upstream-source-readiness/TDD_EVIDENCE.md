@@ -47,8 +47,20 @@
 - Result: passed for the unsigned pre-PR payload checksum. No `0.2.5` registry
   artifacts are committed: GitHub signing/publish automation signs the manifest
   and then rebuilds the tarball, checksum, and registry index from the signed
-  manifest bytes.
+  manifest bytes. The manifest checksum covers the filesystem payload, while
+  the registry checksum covers the generated `.tar.gz` artifact, so their
+  values intentionally differ.
 - 2026-07-21 (Europe/Berlin):
   `hatch run python scripts/publish_module.py --bundle specfact-requirements
-  --registry-index-path /Users/dom/git/nold-ai/specfact-cli-modules/registry/index.json`.
+  --registry-index-path registry/index.json`.
 - Result: passed against the `dev` registry baseline.
+
+## Post-merge publication
+
+- 2026-07-21 (Europe/Berlin): GitHub Actions `Module Signature Hardening`
+  completed successfully for the published 0.2.5 release, and
+  `publish-modules` completed successfully from the same `dev` release flow.
+- Result: the workflow signed the manifest before packaging, regenerated the
+  `.tar.gz` artifact and its registry checksum, and committed the published
+  registry metadata. The release is therefore gated by workflow success rather
+  than the checksum-only local pre-PR check.

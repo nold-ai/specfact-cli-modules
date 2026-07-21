@@ -12,17 +12,20 @@
 
 ## 2. Core contract and source-readiness tests
 
-- [ ] 2.1 In the paired core change, specify the structured source-readiness
+Completed in paired core issue [nold-ai/specfact-cli#648](https://github.com/nold-ai/specfact-cli/issues/648),
+released in SpecFact CLI 0.53.1; these tasks remain here as integration traceability.
+
+- [x] 2.1 In the paired core change, specify the structured source-readiness
   result and diagnostics: `incomplete-source-template`, `source-incomplete`,
   `source-invalid`, and `upstream-validator-unavailable`.
-- [ ] 2.2 Add a pinned fixture for the official Spec Kit scaffold and tests that
+- [x] 2.2 Add a pinned fixture for the official Spec Kit scaffold and tests that
   reject its unresolved placeholders and `NEEDS CLARIFICATION` markers with
   zero normalized records.
-- [ ] 2.3 Add core tests that accept a completed native Spec Kit feature with
+- [x] 2.3 Add core tests that accept a completed native Spec Kit feature with
   stable IDs, source hash provenance, given/when/then rules, and idempotency.
-- [ ] 2.4 Add core tests for strict OpenSpec validator failure, required
+- [x] 2.4 Add core tests for strict OpenSpec validator failure, required
   validator absence, and portable import when policy does not require the CLI.
-- [ ] 2.5 Add byte-identical upstream-source tests and capture failing-first
+- [x] 2.5 Add byte-identical upstream-source tests and capture failing-first
   evidence before any production change.
 
 ## 3. Modules integration and regression tests
@@ -44,7 +47,7 @@
 - [x] 4.1 Update Requirements module documentation with source-readiness
   diagnostics, portable versus required upstream validation, and remediation
   guidance for unfinished sources.
-- [ ] 4.2 Bump the Requirements module patch version, regenerate payload
+- [x] 4.2 Bump the Requirements module patch version, regenerate payload
   checksum/signature, and update registry artifacts only after behavior tests
   pass. GitHub signing/publish automation performs the signed-artifact and
   registry update after this PR is accepted.
