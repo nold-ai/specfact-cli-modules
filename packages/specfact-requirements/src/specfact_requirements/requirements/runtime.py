@@ -78,6 +78,15 @@ def _core_import_helper(helper_name: str) -> Any:
     raise RequirementsCoreUnavailableError(msg)
 
 
+def _openspec_project_root(change_dir: Path) -> Path | None:
+    """Return the repository root for a conventionally located OpenSpec change."""
+    changes_dir = change_dir.parent
+    openspec_dir = changes_dir.parent
+    if changes_dir.name == "changes" and openspec_dir.name == "openspec":
+        return openspec_dir.parent
+    return None
+
+
 def _profile_aliases(profiles: frozenset[str]) -> frozenset[str]:
     aliases = set(profiles)
     aliases.update(profile.replace("_", "-") for profile in profiles)
@@ -224,7 +233,9 @@ def import_requirements_file_to_bundle(source_file: Path, bundle_dir: Path) -> A
 @ensure(lambda result: _has_attributes(result, "requirements", "diagnostics"))
 def import_native_requirements_to_bundle(source_kind: str, source_dir: Path, bundle_dir: Path) -> Any:
     """Delegate a native source import to core and persist only valid records."""
-    result = _core_import_helper(_NATIVE_IMPORT_HELPERS[source_kind])(source_dir)
+    import_helper = _core_import_helper(_NATIVE_IMPORT_HELPERS[source_kind])
+    project_root = _openspec_project_root(source_dir) if source_kind == "openspec" else None
+    result = import_helper(source_dir, project_root=project_root) if project_root else import_helper(source_dir)
     if not import_result_has_errors(result):
         _persist_imported_requirements(bundle_dir, result.requirements)
     return result

@@ -225,6 +225,13 @@ def test_import_openspec_change_persists_core_records_without_mutating_source(tm
     assert list_requirements_with_coverage(bundle_dir)["requirements"][0]["requirement_id"] == (
         "openspec:widget-evidence:widgets:widget-rendering"
     )
+    repeated_result = import_native_requirements_to_bundle("openspec", change_dir, bundle_dir)
+    assert [record.requirement_id for record in repeated_result.requirements] == [
+        "openspec:widget-evidence:widgets:widget-rendering"
+    ]
+    assert [record["requirement_id"] for record in list_requirements_with_coverage(bundle_dir)["requirements"]] == [
+        "openspec:widget-evidence:widgets:widget-rendering"
+    ]
     after = {path.relative_to(change_dir): path.read_bytes() for path in change_dir.rglob("*") if path.is_file()}
     assert after == before
 
@@ -260,6 +267,33 @@ def test_import_rejected_by_core_does_not_persist_partial_sidecar(tmp_path: Path
 
     assert result.requirements == []
     assert [diagnostic.code for diagnostic in result.diagnostics] == ["unsupported-source-schema"]
+    assert not (bundle_dir / "reports" / "requirements" / "inputs.yaml").exists()
+
+
+def test_import_openspec_uses_source_repository_native_validation_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project_root = tmp_path / "source-project"
+    change_dir = _openspec_change(project_root)
+    config_dir = project_root / ".specfact"
+    config_dir.mkdir()
+    (config_dir / "config.yaml").write_text(
+        "validation:\n  openspec:\n    require_native_validation: true\n",
+        encoding="utf-8",
+    )
+    bundle_dir = _bundle_dir(tmp_path / "bundle-project")
+    runner_dir = tmp_path / "runner"
+    runner_dir.mkdir()
+    monkeypatch.chdir(runner_dir)
+    monkeypatch.setenv("PATH", "")
+
+    result = import_native_requirements_to_bundle("openspec", change_dir, bundle_dir)
+
+    assert result.requirements == []
+    assert [diagnostic.code for diagnostic in result.diagnostics] in (
+        ["source-invalid"],
+        ["upstream-validator-unavailable"],
+    )
     assert not (bundle_dir / "reports" / "requirements" / "inputs.yaml").exists()
 
 

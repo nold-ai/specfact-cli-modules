@@ -18,7 +18,7 @@ planning or product-management system.
 
 ## Prerequisites
 
-- SpecFact CLI `>=0.52.0,<1.0.0`
+- SpecFact CLI `>=0.53.1,<1.0.0`
 - Bundle installed: `specfact module install nold-ai/specfact-requirements`
 - A project bundle directory, usually created by the [Project](/bundles/project/overview/) bundle
 - Local JSON or YAML requirement records with source attribution
@@ -83,10 +83,14 @@ clear error so the command never guesses. Pass a path whenever the project has
 more than one candidate.
 
 Native imports are read-only and supported only for core's default,
-fixture-backed OpenSpec and Spec Kit Markdown profiles. A core
-`unsupported-source-schema` diagnostic is returned unchanged, and no partial
-requirements sidecar is written. The bundle does not infer upstream tool
-versions, fall back to another parser, or add upstream metadata.
+fixture-backed OpenSpec and Spec Kit Markdown profiles. Core readiness
+diagnostics are returned unchanged, and any error writes no requirements
+sidecar. Incomplete Spec Kit scaffolds report `incomplete-source-template` or
+`source-incomplete`. If the source repository's policy requires native OpenSpec
+validation, a failed validator reports `source-invalid`; an unavailable required
+validator reports `upstream-validator-unavailable`. Basic OpenSpec imports stay
+portable when that policy is not required. The bundle does not infer upstream
+tool versions, fall back to another parser, or add upstream metadata.
 
 When `--profile` is omitted, validation uses the effective layered core
 configuration. Explicit `--profile` still wins. Core findings such as

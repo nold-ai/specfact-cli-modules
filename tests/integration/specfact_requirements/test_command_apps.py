@@ -71,11 +71,10 @@ The system SHALL render a widget.
     return change_dir
 
 
-def _speckit_feature(project_root: Path) -> Path:
+def _speckit_feature(project_root: Path, *, incomplete: bool = False) -> Path:
     feature_dir = project_root / "specs" / "001-widget-rendering"
     feature_dir.mkdir(parents=True)
-    (feature_dir / "spec.md").write_text(
-        """# Feature Specification: Widget rendering
+    content = """# Feature Specification: Widget rendering
 
 ## User Scenarios & Testing
 
@@ -90,7 +89,11 @@ As a user, I want widgets rendered so that I can see them.
 ## Requirements
 
 - **FR-001**: System MUST render a widget
-""",
+"""
+    if incomplete:
+        content += "\n**Feature Branch**: `[###-feature-name]`\n"
+    (feature_dir / "spec.md").write_text(
+        content,
         encoding="utf-8",
     )
     return feature_dir
@@ -217,6 +220,34 @@ def test_requirements_import_speckit_accepts_explicit_source(tmp_path: Path) -> 
 
     assert result.exit_code == 0, result.output
     assert json.loads(result.output)["imported"] == 1
+
+
+@pytest.mark.integration
+def test_requirements_import_rejects_incomplete_speckit_source_without_persistence(tmp_path: Path) -> None:
+    feature_dir = _speckit_feature(tmp_path / "project", incomplete=True)
+    source_before = (feature_dir / "spec.md").read_bytes()
+    bundle_dir = _bundle_dir(tmp_path / "bundle")
+
+    result = runner.invoke(
+        app,
+        ["import", "--from-speckit", str(feature_dir), "--bundle", str(bundle_dir), "--format", "json"],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["imported"] == 0
+    assert payload["diagnostics"] == [
+        {
+            "code": "incomplete-source-template",
+            "message": "Spec Kit source still contains a supported official scaffold placeholder.",
+            "record_index": None,
+            "requirement_id": None,
+            "severity": "error",
+            "source_locator": (feature_dir / "spec.md").as_posix(),
+        }
+    ]
+    assert not (bundle_dir / "reports" / "requirements" / "inputs.yaml").exists()
+    assert (feature_dir / "spec.md").read_bytes() == source_before
 
 
 @pytest.mark.integration

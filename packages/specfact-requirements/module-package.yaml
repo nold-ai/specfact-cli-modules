@@ -1,5 +1,5 @@
 name: nold-ai/specfact-requirements
-version: 0.2.4
+version: 0.2.5
 commands:
   - requirements
 tier: official
@@ -14,10 +14,9 @@ pip_dependencies:
   - pydantic
   - pyyaml
   - typer
-core_compatibility: '>=0.52.0,<1.0.0'
+core_compatibility: '>=0.53.1,<1.0.0'
 description: Official SpecFact requirements evidence runtime bundle package.
 category: project
 bundle_group_command: requirements
 integrity:
-  checksum: sha256:ed53370ebcfb4a0667e5fc7e0af097d0dd4896fc70b583965664ccc833d1e8b3
-  signature: piqKk1AXxSRms2k+hGRn8IHFQE4g60M14qU/rDdChn++sq/HBCj7S9fNq1LfhyKD0TfendIbz01Is+dIoB1cDw==
+  checksum: sha256:600a9794d801be6475a032da7f0617cc5b5fa714e1ffb5e085c4962768ad4e5e

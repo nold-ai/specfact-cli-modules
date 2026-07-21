@@ -7,7 +7,7 @@
   official Spec Kit 0.12.15 scaffold behavior in the proposal and design.
 - [x] 1.3 Link paired core issue nold-ai/specfact-cli#648 (follow-up to #350);
   record its release version as this change's blocker before implementation.
-- [ ] 1.4 Recheck current GitHub issue state, parent, labels, project assignment,
+- [x] 1.4 Recheck current GitHub issue state, parent, labels, project assignment,
   blockers, and active-work concurrency before implementation starts.
 
 ## 2. Core contract and source-readiness tests
@@ -27,29 +27,29 @@
 
 ## 3. Modules integration and regression tests
 
-- [ ] 3.1 Raise `specfact-requirements` core compatibility only after the paired
-  core release exposes the readiness contract.
-- [ ] 3.2 Add failing module command tests proving rejected OpenSpec and Spec Kit
+- [x] 3.1 Raise `specfact-requirements` core compatibility to `>=0.53.1,<1.0.0`
+  after the paired core readiness contract is available on core `dev`.
+- [x] 3.2 Add failing module command tests proving rejected OpenSpec and Spec Kit
   sources report core diagnostics unchanged, exit non-zero, and do not create a
   requirements sidecar.
-- [ ] 3.3 Add module command tests proving completed sources retain current
+- [x] 3.3 Add module command tests proving completed sources retain current
   import counts, stable records, read-only behavior, and re-import idempotency.
-- [ ] 3.4 Implement thin runtime delegation and command rendering without local
+- [x] 3.4 Implement thin runtime delegation and command rendering without local
   parsing, placeholder detection, hashing, or upstream-validator policy logic.
-- [ ] 3.5 Run targeted tests and record failing-before and passing-after output
+- [x] 3.5 Run targeted tests and record failing-before and passing-after output
   in `TDD_EVIDENCE.md`.
 
 ## 4. Documentation and release preparation
 
-- [ ] 4.1 Update Requirements module documentation with source-readiness
+- [x] 4.1 Update Requirements module documentation with source-readiness
   diagnostics, portable versus required upstream validation, and remediation
   guidance for unfinished sources.
-- [ ] 4.2 Bump the Requirements module patch version, regenerate payload
+- [x] 4.2 Bump the Requirements module patch version, regenerate payload
   checksum/signature, and update registry artifacts only after behavior tests
   pass.
-- [ ] 4.3 Run formatting, lint, type, YAML, signature, contract, smart-test,
+- [x] 4.3 Run formatting, lint, type, YAML, signature, contract, smart-test,
   and targeted test gates.
-- [ ] 4.4 Run a fresh SpecFact code review JSON report after the last proposal,
+- [x] 4.4 Run a fresh SpecFact code review JSON report after the last proposal,
   test, implementation, or documentation edit; resolve every finding and record
   the command and result in `TDD_EVIDENCE.md`.
 
