@@ -99,6 +99,39 @@ configuration. Explicit `--profile` still wins. Core findings such as
 the list and coverage commands include their counts without re-evaluating the
 gates.
 
+## CI dogfooding evidence
+
+This repository's `requirements-evidence` pull-request check dogfoods the
+native OpenSpec import path. It discovers changed active OpenSpec changes,
+imports each one into an isolated temporary project bundle, and writes
+`requirements-evidence.json` with one of these verdicts:
+
+- `passed`: source import, validation, test-link coverage, and Requirements
+  gate findings are all acceptable.
+- `failed`: the artifact lists each deterministic cause, including import
+  diagnostics, zero imported requirements, failed validation, incomplete
+  test-link coverage, or error-level gate findings. Informational findings stay
+  visible in the JSON but do not make the verdict red.
+- `skipped`: no active OpenSpec source changed. This is not a claim that
+  requirements are met.
+
+GitHub Actions always retains the JSON artifact, including for a red verdict,
+and shows a compact summary in the job output. The gate validates requirement
+source quality and traceability only. It does **not** prove that linked tests
+executed or that product behavior satisfies the requirement; that needs a
+future test-result evidence adapter with stable requirement-to-test-result
+mapping.
+
+To reproduce the committed-branch check locally:
+
+```bash
+hatch run python scripts/requirements_evidence_gate.py \
+  --repo-root . \
+  --base-ref origin/dev \
+  --output artifacts/requirements-evidence/requirements-evidence.json \
+  --summary artifacts/requirements-evidence/requirements-evidence.md
+```
+
 ## Storage
 
 The command runtime rehydrates the core `requirements.inputs` extension before

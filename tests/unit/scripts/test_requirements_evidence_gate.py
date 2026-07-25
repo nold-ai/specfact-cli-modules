@@ -1,0 +1,270 @@
+"""Contract tests for the requirements dogfooding evidence adapter."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
+
+from scripts import requirements_evidence_gate as evidence_gate
+
+
+def _import_result(*, imported: int, diagnostics: list[dict[str, str]]) -> SimpleNamespace:
+    return SimpleNamespace(
+        requirements=[SimpleNamespace(requirement_id=f"REQ-{index}") for index in range(imported)],
+        diagnostics=[SimpleNamespace(model_dump=lambda *_args, item=item, **_kwargs: item) for item in diagnostics],
+    )
+
+
+def _validation(status: str, violations: list[dict[str, str]] | None = None) -> SimpleNamespace:
+    return SimpleNamespace(
+        status=status,
+        model_dump=lambda *_args, **_kwargs: {"status": status, "violations": violations or []},
+    )
+
+
+def _coverage(*, total: int, with_test_links: int) -> SimpleNamespace:
+    return SimpleNamespace(
+        model_dump=lambda *_args, **_kwargs: {"total_requirements": total, "with_test_links": with_test_links},
+    )
+
+
+def _mapped_requirement(requirement_id: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        requirement_id=requirement_id,
+        model_dump=lambda *_args, **_kwargs: {
+            "schema_version": "1",
+            "requirement_id": requirement_id,
+            "title": "Mapped requirement",
+            "sources": [{"source_type": "openspec_change", "locator": "openspec/changes/mapped"}],
+            "evidence_links": [],
+        },
+    )
+
+
+def _mapped_source(tmp_path: Path) -> tuple[Path, Path, bytes]:
+    source = tmp_path / "openspec" / "changes" / "mapped-evidence"
+    source.mkdir(parents=True)
+    test_target = tmp_path / "tests" / "unit" / "test_evidence.py"
+    test_target.parent.mkdir(parents=True)
+    test_target.write_text("def test_evidence() -> None:\n    pass\n", encoding="utf-8")
+    sidecar = source / "requirements-evidence.yaml"
+    sidecar.write_text(
+        "requirements:\n  REQ-1:\n    test_links:\n      - tests/unit/test_evidence.py::test_evidence\n",
+        encoding="utf-8",
+    )
+    return source, sidecar, sidecar.read_bytes()
+
+
+def test_evaluate_sources_emits_passed_verdict_with_preserved_evidence(monkeypatch, tmp_path: Path) -> None:
+    source = tmp_path / "openspec" / "changes" / "widget-evidence"
+    source.mkdir(parents=True)
+    monkeypatch.setattr(
+        evidence_gate,
+        "import_native_requirements_to_bundle",
+        lambda *_args: _import_result(imported=1, diagnostics=[]),
+    )
+    monkeypatch.setattr(
+        evidence_gate,
+        "validate_requirements_bundle",
+        lambda *_args, **_kwargs: _validation("warnings"),
+    )
+    monkeypatch.setattr(
+        evidence_gate,
+        "inspect_requirements_bundle_coverage",
+        lambda *_args: _coverage(total=1, with_test_links=1),
+    )
+    monkeypatch.setattr(evidence_gate, "requirements_gate_finding_counts", lambda *_args: {})
+
+    report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
+
+    assert report["verdict"] == "passed"
+    assert report["execution_proof"] == "not-included"
+    assert report["summary"] == {"failed_sources": 0, "passed_sources": 1, "skipped_sources": 0, "total_sources": 1}
+    source_report = report["sources"][0]
+    assert source_report["import"] == {"diagnostics": [], "imported": 1}
+    assert source_report["validation"]["status"] == "warnings"
+    assert source_report["coverage"] == {"total_requirements": 1, "with_test_links": 1}
+    assert source_report["gate_finding_counts"] == {}
+
+
+def test_evaluate_sources_emits_failed_reasons_for_import_and_traceability(monkeypatch, tmp_path: Path) -> None:
+    source = tmp_path / "openspec" / "changes" / "incomplete-evidence"
+    source.mkdir(parents=True)
+    monkeypatch.setattr(
+        evidence_gate,
+        "import_native_requirements_to_bundle",
+        lambda *_args: _import_result(
+            imported=0,
+            diagnostics=[{"code": "source-incomplete", "severity": "error"}],
+        ),
+    )
+
+    report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
+
+    assert report["verdict"] == "failed"
+    source_report = report["sources"][0]
+    assert source_report["verdict"] == "failed"
+    assert source_report["reasons"] == ["import-error:source-incomplete", "no-requirements-imported"]
+    assert source_report["validation"] is None
+    assert source_report["coverage"] is None
+
+
+def test_evaluate_sources_fails_for_missing_test_links_and_gate_findings(monkeypatch, tmp_path: Path) -> None:
+    source = tmp_path / "openspec" / "changes" / "partial-evidence"
+    source.mkdir(parents=True)
+    monkeypatch.setattr(
+        evidence_gate,
+        "import_native_requirements_to_bundle",
+        lambda *_args: _import_result(imported=2, diagnostics=[]),
+    )
+    monkeypatch.setattr(
+        evidence_gate,
+        "validate_requirements_bundle",
+        lambda *_args, **_kwargs: _validation("failed", [{"code": "scenario-unverified", "severity": "error"}]),
+    )
+    monkeypatch.setattr(
+        evidence_gate,
+        "inspect_requirements_bundle_coverage",
+        lambda *_args: _coverage(total=2, with_test_links=1),
+    )
+    monkeypatch.setattr(evidence_gate, "requirements_gate_finding_counts", lambda *_args: {"scenario-unverified": 1})
+
+    report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
+
+    assert report["verdict"] == "failed"
+    assert report["sources"][0]["reasons"] == [
+        "validation-failed",
+        "test-link-coverage-incomplete:1/2",
+        "gate-finding:scenario-unverified=1",
+    ]
+
+
+def test_evaluate_sources_retains_informational_gate_counts_without_blocking(monkeypatch, tmp_path: Path) -> None:
+    source = tmp_path / "openspec" / "changes" / "information-only"
+    source.mkdir(parents=True)
+    monkeypatch.setattr(
+        evidence_gate,
+        "import_native_requirements_to_bundle",
+        lambda *_args: _import_result(imported=1, diagnostics=[]),
+    )
+    monkeypatch.setattr(evidence_gate, "validate_requirements_bundle", lambda *_args, **_kwargs: _validation("passed"))
+    monkeypatch.setattr(
+        evidence_gate,
+        "inspect_requirements_bundle_coverage",
+        lambda *_args: _coverage(total=1, with_test_links=1),
+    )
+    monkeypatch.setattr(
+        evidence_gate, "requirements_gate_finding_counts", lambda *_args: {"unsupported-profile-field": 1}
+    )
+
+    report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
+
+    assert report["verdict"] == "passed"
+    assert report["sources"][0]["gate_finding_counts"] == {"unsupported-profile-field": 1}
+
+
+def test_evaluate_sources_overlays_valid_sidecar_test_links_without_mutating_source(
+    monkeypatch, tmp_path: Path
+) -> None:
+    source, sidecar, source_before = _mapped_source(tmp_path)
+    monkeypatch.setattr(
+        evidence_gate,
+        "import_native_requirements_to_bundle",
+        lambda *_args: SimpleNamespace(requirements=[_mapped_requirement("REQ-1")], diagnostics=[]),
+    )
+    captured_overlay: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        evidence_gate,
+        "import_requirements_file_to_bundle",
+        lambda overlay_path, _bundle_dir: captured_overlay.append(json.loads(overlay_path.read_text(encoding="utf-8"))),
+    )
+    monkeypatch.setattr(
+        evidence_gate, "validate_requirements_bundle", lambda *_args, **_kwargs: _validation("warnings")
+    )
+    monkeypatch.setattr(
+        evidence_gate,
+        "inspect_requirements_bundle_coverage",
+        lambda *_args: _coverage(total=1, with_test_links=1),
+    )
+    monkeypatch.setattr(evidence_gate, "requirements_gate_finding_counts", lambda *_args: {})
+
+    report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
+
+    assert report["verdict"] == "passed"
+    overlay_requirements = cast(list[dict[str, object]], captured_overlay[0]["requirements"])
+    assert overlay_requirements[0]["evidence_links"] == [
+        {"link_type": "test", "target": "tests/unit/test_evidence.py::test_evidence"}
+    ]
+    assert sidecar.read_bytes() == source_before
+
+
+def test_load_evidence_sidecar_rejects_unknown_requirements_and_missing_tests(tmp_path: Path) -> None:
+    source = tmp_path / "openspec" / "changes" / "invalid-evidence"
+    source.mkdir(parents=True)
+    (source / "requirements-evidence.yaml").write_text(
+        "requirements:\n  REQ-UNKNOWN:\n    test_links:\n      - tests/missing_test.py\n",
+        encoding="utf-8",
+    )
+
+    _, reasons = evidence_gate._load_evidence_sidecar(source, tmp_path, {"REQ-1"})
+
+    assert reasons == [
+        "evidence-sidecar-unknown-requirement:REQ-UNKNOWN",
+        "evidence-sidecar-missing-test:tests/missing_test.py",
+    ]
+
+
+def test_evaluate_sources_skips_without_sources(tmp_path: Path) -> None:
+    report = evidence_gate._evaluate_sources([], bundle_parent=tmp_path)
+
+    assert report["verdict"] == "skipped"
+    assert not report["sources"]
+    assert report["summary"] == {"failed_sources": 0, "passed_sources": 0, "skipped_sources": 1, "total_sources": 0}
+
+
+def test_discover_changed_openspec_sources_excludes_archived_and_missing_paths(monkeypatch, tmp_path: Path) -> None:
+    active = tmp_path / "openspec" / "changes" / "widget-evidence"
+    archived = tmp_path / "openspec" / "changes" / "archive" / "widget-evidence"
+    active.mkdir(parents=True)
+    archived.mkdir(parents=True)
+    changed_paths = "\n".join(
+        [
+            "openspec/changes/widget-evidence/specs/widgets/spec.md",
+            "openspec/changes/archive/widget-evidence/spec.md",
+            "openspec/changes/deleted-evidence/spec.md",
+            "docs/overview.md",
+        ]
+    )
+    monkeypatch.setattr(
+        evidence_gate.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(args=[], returncode=0, stdout=changed_paths),
+    )
+
+    discovered = evidence_gate._discover_changed_openspec_sources(tmp_path, "origin/dev")
+
+    assert discovered == [active]
+
+
+def test_run_evidence_gate_writes_failed_report_before_returning_nonzero(monkeypatch, tmp_path: Path) -> None:
+    output_path = tmp_path / "requirements-evidence.json"
+    monkeypatch.setattr(evidence_gate, "_discover_changed_openspec_sources", lambda *_args: [])
+    monkeypatch.setattr(
+        evidence_gate,
+        "_evaluate_sources",
+        lambda *_args, **_kwargs: {
+            "schema_version": "1",
+            "verdict": "failed",
+            "execution_proof": "not-included",
+            "sources": [],
+            "summary": {"failed_sources": 1, "passed_sources": 0, "skipped_sources": 0, "total_sources": 1},
+        },
+    )
+
+    exit_code = evidence_gate._run_evidence_gate(tmp_path, "origin/dev", output_path)
+
+    assert exit_code == 1
+    assert '"verdict": "failed"' in output_path.read_text(encoding="utf-8")
