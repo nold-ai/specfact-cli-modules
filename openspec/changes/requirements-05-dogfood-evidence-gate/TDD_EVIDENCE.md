@@ -105,8 +105,9 @@
   Hatch command-overview check installed the paired core (CLI 0.53.5 and Typer
   0.27.0). The two runtimes produced incompatible generated command metadata.
 - Remediation: Docs Review now installs the checked-out paired core editable
-  before its pinned test tooling, so its test suite and later Hatch checks use
-  one CLI surface. The independent tooling pins now match the paired core's
+  in both the runner environment for its direct Python test suite and Hatch's
+  default environment for later command-overview checks, so each uses the same
+  paired core revision. The independent tooling pins now match the paired core's
   Click, Typer, and Rich dependency versions; regenerated
   `docs/reference/commands.generated.{json,md}` and `llms.txt` using that
   shared runtime. Direct `--check` and the 25 focused Docs Review tests pass;
@@ -148,3 +149,15 @@
   39 passed; `scripts/check-command-contract.py` validated all 91 generated
   module command paths; and the repository type check reported 0 errors.
 - The final staged changed-line SpecFact review completed with 0 findings.
+
+## Follow-up review remediation
+
+- 2026-07-25 (Europe/Berlin): a new Docs Review workflow assertion first
+  failed because the paired core was installed only in the runner interpreter,
+  while command-overview checks run through Hatch. The workflow now installs
+  the paired core in both environments; focused docs/workflow and CLI error
+  contract tests reported 37 passed, with manifest validation and generated
+  command checks passing.
+- The shared CLI error contract now accepts either the explicit
+  `missing subcommand` diagnostic or Typer's concrete
+  `COMMAND [ARGS]...` usage form, rather than a generic command-list heading.

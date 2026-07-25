@@ -20,7 +20,7 @@ def test_module_group_without_subcommand_uses_shared_missing_subcommand_contract
     assert "codebase quality" in output
     assert "import" in output
     assert "analyze" in output
-    assert "missing subcommand" in output or "commands" in output
+    assert "missing subcommand" in output or "command [args]" in output
 
 
 def test_module_leaf_missing_argument_uses_shared_missing_parameter_contract() -> None:
