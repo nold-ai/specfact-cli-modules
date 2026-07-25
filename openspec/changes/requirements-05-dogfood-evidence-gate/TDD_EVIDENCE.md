@@ -96,3 +96,19 @@
   succeeded.
 - The changed-line SpecFact code review was rerun after the remediation and
   completed with 0 findings.
+
+## CI artifact remediation
+
+- 2026-07-25 (Europe/Berlin): Docs Review and quality Python 3.11–3.13
+  failed only because the checked-in command overview was stale for the paired
+  core runtime. The failure named
+  `python scripts/generate-command-overview.py --write` as the remediation.
+- Passing evidence: installed the current paired core `dev` checkout
+  (SpecFact CLI 0.53.5 with Typer 0.27) into the local environment and ran
+  `scripts/generate-command-overview.py --write`, followed by the same script
+  with `--check`. The check passed and updated
+  `docs/reference/commands.generated.{json,md}` and `llms.txt`.
+- Limitation: the normal local Hatch wrapper re-installs the older sibling core
+  checkout (0.52.3), so it cannot validate these current paired-core artifacts
+  without reverting them. The direct paired-core command above reproduces the
+  CI dependency contract; the pushed GitHub checks remain the final proof.
