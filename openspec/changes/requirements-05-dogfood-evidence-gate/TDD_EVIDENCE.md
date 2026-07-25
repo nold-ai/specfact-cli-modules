@@ -100,12 +100,14 @@
 ## CI artifact remediation
 
 - 2026-07-25 (Europe/Berlin): Docs Review reported stale command artifacts.
-  The workflow actually runs the generator with the versions pinned in
-  `requirements-docs-ci.txt`: SpecFact CLI 0.46.2 and Typer 0.23.1. A temporary
-  local checkout at 0.53.5 generated empty option lists, but that checkout is
-  not installed into the Docs Review test interpreter.
-- Remediation: restored `docs/reference/commands.generated.{json,md}` and
-  `llms.txt` to the option-complete state. Direct verification with the exact
-  pinned CLI, Typer, Click, and Rich versions passed the generator `--check`
-  and 25 focused Docs Review tests. The GitHub Docs Review rerun is the final
-  verification.
+  Investigation showed its test suite used the old pins in
+  `requirements-docs-ci.txt` (CLI 0.46.2 and Typer 0.23.1), while the later
+  Hatch command-overview check installed the paired core (CLI 0.53.5 and Typer
+  0.27.0). The two runtimes produced incompatible generated command metadata.
+- Remediation: Docs Review now installs the checked-out paired core editable
+  before its pinned test tooling, so its test suite and later Hatch checks use
+  one CLI surface. The independent tooling pins now match the paired core's
+  Click, Typer, and Rich dependency versions; regenerated
+  `docs/reference/commands.generated.{json,md}` and `llms.txt` using that
+  shared runtime. Direct `--check` and the 25 focused Docs Review tests pass;
+  the GitHub rerun remains the final proof.
