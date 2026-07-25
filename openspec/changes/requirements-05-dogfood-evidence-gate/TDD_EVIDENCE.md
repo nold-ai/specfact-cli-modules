@@ -161,3 +161,15 @@
 - The shared CLI error contract now accepts either the explicit
   `missing subcommand` diagnostic or Typer's concrete
   `COMMAND [ARGS]...` usage form, rather than a generic command-list heading.
+
+## Main-release review remediation
+
+- 2026-07-26 (Europe/Berlin): new P1 regressions first failed because the
+  requirements-evidence workflow installed only the paired core CLI, and source
+  discovery excluded deleted paths with `--diff-filter=ACMR`. The focused
+  workflow and adapter suite reported 2 failures.
+- Remediation: the Hatch environment now installs
+  `packages/specfact-requirements` before the adapter runs; discovery uses
+  `--diff-filter=ACMRD` but still evaluates only active change directories
+  present in the checkout. Passing evidence: the focused suite reported 15
+  passed, and manifest validation passed.

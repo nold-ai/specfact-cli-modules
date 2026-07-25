@@ -20,6 +20,7 @@ def test_requirements_evidence_workflow_runs_adapter_with_paired_core() -> None:
     assert "branches: [main, dev]" in workflow
     assert "repository: nold-ai/specfact-cli" in workflow
     assert "hatch run pip install -e ./specfact-cli" in workflow
+    assert "hatch run pip install -e ./packages/specfact-requirements" in workflow
     assert "scripts/requirements_evidence_gate.py" in workflow
     assert "--base-ref" in workflow
     assert "--output artifacts/requirements-evidence/requirements-evidence.json" in workflow

@@ -65,6 +65,7 @@ jobs:
           python -m pip install hatch
           hatch env create
           hatch run pip install -e ./specfact-cli
+          hatch run pip install -e ./packages/specfact-requirements
 
       - name: Run requirements evidence gate
         id: run-evidence

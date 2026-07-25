@@ -231,7 +231,7 @@ def _discover_changed_openspec_sources(repo_root: Path, base_ref: str) -> list[P
             "git",
             "diff",
             "--name-only",
-            "--diff-filter=ACMR",
+            "--diff-filter=ACMRD",
             f"{base_ref}...HEAD",
             "--",
             "openspec/changes",

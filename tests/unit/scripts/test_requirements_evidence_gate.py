@@ -278,7 +278,7 @@ def test_evaluate_sources_skips_without_sources(tmp_path: Path) -> None:
     assert report["summary"] == {"failed_sources": 0, "passed_sources": 0, "skipped_sources": 1, "total_sources": 0}
 
 
-def test_discover_changed_openspec_sources_excludes_archived_and_missing_paths(monkeypatch, tmp_path: Path) -> None:
+def test_discover_changed_openspec_sources_includes_deleted_active_files(monkeypatch, tmp_path: Path) -> None:
     active = tmp_path / "openspec" / "changes" / "widget-evidence"
     archived = tmp_path / "openspec" / "changes" / "archive" / "widget-evidence"
     active.mkdir(parents=True)
@@ -286,20 +286,28 @@ def test_discover_changed_openspec_sources_excludes_archived_and_missing_paths(m
     changed_paths = "\n".join(
         [
             "openspec/changes/widget-evidence/specs/widgets/spec.md",
+            "openspec/changes/widget-evidence/requirements-evidence.yaml",
             "openspec/changes/archive/widget-evidence/spec.md",
             "openspec/changes/deleted-evidence/spec.md",
             "docs/overview.md",
         ]
     )
+    commands: list[list[str]] = []
+
+    def _diff_command(args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        commands.append(args)
+        return subprocess.CompletedProcess(args=[], returncode=0, stdout=changed_paths)
+
     monkeypatch.setattr(
         evidence_gate.subprocess,
         "run",
-        lambda *_args, **_kwargs: subprocess.CompletedProcess(args=[], returncode=0, stdout=changed_paths),
+        _diff_command,
     )
 
     discovered = evidence_gate._discover_changed_openspec_sources(tmp_path, "origin/dev")
 
     assert discovered == [active]
+    assert "--diff-filter=ACMRD" in commands[0]
 
 
 def test_discover_changed_openspec_sources_rejects_option_like_base_refs(tmp_path: Path) -> None:
