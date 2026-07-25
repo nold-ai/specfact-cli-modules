@@ -40,6 +40,12 @@ MODULE_APP_MOUNTS = (
     ),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec"), "nold-ai/specfact-spec"),
 )
+RUNTIME_VALIDATED_GROUPS = frozenset(
+    {
+        "specfact code import",
+        "specfact code repro",
+    }
+)
 
 
 def _paired_worktree_repo(source_marker: str, target_marker: str) -> Path | None:
@@ -189,7 +195,9 @@ def _command_children(command: click.Command) -> dict[str, click.Command]:
         return children
 
 
-def _bare_invocation(command: click.Command) -> str:
+def _bare_invocation(command: click.Command, path: tuple[str, ...]) -> str:
+    if " ".join(path) in RUNTIME_VALIDATED_GROUPS:
+        return "executes"
     is_group = hasattr(command, "list_commands") and hasattr(command, "get_command")
     if is_group and bool(getattr(command, "invoke_without_command", False)) and _has_bare_business_parameters(command):
         return "executes"
@@ -226,7 +234,7 @@ def _walk(command: click.Command, path: tuple[str, ...], source: str, module_id:
         "install_prerequisite": f"specfact module install {module_id}",
         "short_help": (command.short_help or "").strip(),
         "arguments": _command_arguments(command),
-        "bare_invocation": _bare_invocation(command),
+        "bare_invocation": _bare_invocation(command, path),
         "options": _command_options(command),
         "subcommands": sorted(children),
         "source": source,

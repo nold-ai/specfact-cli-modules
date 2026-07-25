@@ -188,6 +188,7 @@ def test_docs_review_workflow_runs_docs_command_validation() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "docs-review.yml").read_text(encoding="utf-8")
 
     assert "python -m pip install -r requirements-docs-ci.txt" in workflow
+    assert 'hatch run python -m pip install -e "${SPECFACT_CLI_REPO}"' in workflow
     assert "python scripts/check-docs-commands.py" in workflow
     assert "scripts/check-docs-commands.py" in workflow
     assert "tests/unit/test_check_docs_commands_script.py" in workflow

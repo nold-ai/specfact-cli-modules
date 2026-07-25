@@ -9,7 +9,6 @@ from typing import Annotated, Any
 
 import typer
 from beartype import beartype
-from click import Context
 from icontract import ensure, require
 
 from specfact_requirements.requirements.runtime import (
@@ -71,12 +70,11 @@ def _selected_import_source(from_file: Path | None, from_openspec: bool, from_sp
 
 
 @app.command("import", help="Import local, OpenSpec, or Spec Kit requirement evidence into a project bundle.")
-@beartype
 @require(lambda bundle: bundle.is_dir(), "bundle must exist")
 @require(_format_supported, "output format must be supported")
 @ensure(lambda result: result is None)
 def import_command(
-    ctx: Context,
+    ctx: typer.Context,
     bundle: Annotated[
         Path,
         typer.Option("--bundle", exists=True, file_okay=False, dir_okay=True, readable=True, writable=True),
