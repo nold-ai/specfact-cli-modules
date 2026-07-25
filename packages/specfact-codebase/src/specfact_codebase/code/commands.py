@@ -14,7 +14,7 @@ from specfact_codebase.validate.commands import app as validate_app
 
 app = typer.Typer(
     help="Codebase quality and brownfield import commands: import, analyze, drift, validate, repro.",
-    no_args_is_help=True,
+    no_args_is_help=False,
 )
 
 app.add_typer(import_app, name="import")

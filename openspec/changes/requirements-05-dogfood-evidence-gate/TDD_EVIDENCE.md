@@ -173,3 +173,15 @@
   `--diff-filter=ACMRD` but still evaluates only active change directories
   present in the checkout. Passing evidence: the focused suite reported 15
   passed, and manifest validation passed.
+
+## Missing-subcommand contract remediation
+
+- 2026-07-26 (Europe/Berlin): the tightened global CLI contract first failed
+  because bare `specfact code` displayed help without an explicit missing
+  subcommand diagnostic.
+- Remediation: the aggregate code command now uses Typer's explicit
+  no-subcommand error behavior. The test reads combined CLI output so it
+  verifies the error emitted on stderr, and the generated command checker
+  accepts both stable explicit diagnostics (`missing subcommand` and
+  `missing command`). Passing evidence: the focused global CLI tests passed
+  and `check-command-contract` validated all 91 generated command paths.
