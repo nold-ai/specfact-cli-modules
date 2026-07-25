@@ -6,7 +6,7 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 # Calculate repository root
@@ -38,7 +38,7 @@ def _patch_clirunner() -> None:
     from click.testing import Result
     from typer.testing import CliRunner
 
-    original_invoke: Callable[..., Result] = CliRunner.invoke
+    original_invoke: Callable[..., object] = CliRunner.invoke
 
     def patched_invoke(
         self: Any,
@@ -55,7 +55,7 @@ def _patch_clirunner() -> None:
         if "PYTHONPATH" not in merged_env:
             merged_env["PYTHONPATH"] = _new_pythonpath
         # Pass merged env to original invoke
-        return original_invoke(self, cli, args=args, env=merged_env, **kwargs)
+        return cast(Result, original_invoke(self, cli, args=args, env=merged_env, **kwargs))
 
     # Use Any to bypass type checking for monkey-patch
     CliRunner.invoke = patched_invoke  # type: ignore[method-assign]

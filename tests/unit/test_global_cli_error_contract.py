@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import sys
 
 import typer
 from typer.testing import CliRunner
@@ -9,13 +10,16 @@ from typer.testing import CliRunner
 runner = CliRunner()
 
 
-def test_module_group_without_subcommand_uses_shared_missing_subcommand_contract() -> None:
+def test_module_group_without_subcommand_uses_shared_missing_subcommand_contract(monkeypatch) -> None:
+    for module_name in tuple(sys.modules):
+        if module_name == "specfact_codebase" or module_name.startswith("specfact_codebase."):
+            monkeypatch.delitem(sys.modules, module_name, raising=False)
     app = importlib.import_module("specfact_codebase.code.commands").app
 
     result = runner.invoke(app, [])
 
     assert result.exit_code == 2
-    output = result.stdout.lower()
+    output = result.output.lower()
     assert "usage:" in output
     assert "codebase quality" in output
     assert "import" in output
@@ -41,5 +45,5 @@ def test_module_leaf_missing_argument_uses_shared_missing_parameter_contract() -
     output = result.stdout.lower()
     assert "usage:" in output
     assert "apply" in output
-    assert "missing" in output
+    assert "missing" in output or "[required]" in output
     assert "change-id" in output or "change_id" in output

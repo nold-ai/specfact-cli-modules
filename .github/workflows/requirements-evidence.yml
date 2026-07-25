@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: requirements-evidence
+
+on:
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  requirements-evidence:
+    name: requirements-evidence
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.base.ref != 'main' ||
+      github.event.pull_request.head.ref != 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve paired core CLI ref
+        id: core-ref
+        shell: bash
+        env:
+          CANDIDATE_REF: ${{ github.head_ref || github.ref_name }}
+          FALLBACK_REF: ${{ github.base_ref || github.ref_name }}
+        run: |
+          candidate="${CANDIDATE_REF}"
+          if [ -n "$candidate" ] && git ls-remote --exit-code --heads https://github.com/nold-ai/specfact-cli.git "$candidate" >/dev/null 2>&1; then
+            echo "ref=$candidate" >> "$GITHUB_OUTPUT"
+          else
+            fallback="${FALLBACK_REF:-dev}"
+            case "$fallback" in
+              main|dev) ;;
+              *) fallback="dev" ;;
+            esac
+            echo "ref=$fallback" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout paired core CLI
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          path: specfact-cli
+          ref: ${{ steps.core-ref.outputs.ref }}
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Hatch and paired core CLI
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install hatch
+          hatch env create
+          hatch run pip install -e ./specfact-cli
+          hatch run pip install -e ./packages/specfact-requirements
+
+      - name: Run requirements evidence gate
+        id: run-evidence
+        continue-on-error: true
+        env:
+          BASE_REF: origin/${{ github.event.pull_request.base.ref || 'dev' }}
+        run: |
+          mkdir -p artifacts/requirements-evidence
+          hatch run python scripts/requirements_evidence_gate.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --base-ref "$BASE_REF" \
+            --output artifacts/requirements-evidence/requirements-evidence.json \
+            --summary artifacts/requirements-evidence/requirements-evidence.md
+
+      - name: Publish requirements evidence summary
+        if: always()
+        run: cat artifacts/requirements-evidence/requirements-evidence.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload requirements evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirements-evidence
+          path: artifacts/requirements-evidence/requirements-evidence.json
+          if-no-files-found: warn
+
+      - name: Enforce requirements evidence verdict
+        if: steps.run-evidence.outcome == 'failure'
+        run: exit 1

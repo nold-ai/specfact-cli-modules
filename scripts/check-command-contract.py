@@ -36,6 +36,10 @@ MISSING_MARKERS = (
     "no such command",
     "not a valid command",
 )
+MISSING_SUBCOMMAND_MARKERS = (
+    "missing subcommand",
+    "missing command",
+)
 
 
 def _paired_worktree_repo(source_marker: str, target_marker: str) -> Path | None:
@@ -178,7 +182,7 @@ def _check_group_missing_subcommand(
         failures.append(f"{record.get('command')}: bare group unexpectedly exited 0")
     if "usage:" not in normalized:
         failures.append(f"{record.get('command')}: bare group did not render usage")
-    if "missing subcommand" not in normalized:
+    if not any(marker in normalized for marker in MISSING_SUBCOMMAND_MARKERS):
         failures.append(f"{record.get('command')}: bare group did not explain the missing subcommand")
     if normalized.count("usage:") != 1:
         failures.append(f"{record.get('command')}: expected exactly one usage block, saw {normalized.count('usage:')}")

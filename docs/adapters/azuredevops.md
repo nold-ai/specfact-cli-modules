@@ -166,6 +166,7 @@ adapter = AdoAdapter(
 
 # Or use environment variable
 import os
+
 os.environ["AZURE_DEVOPS_TOKEN"] = "your_pat_token"
 adapter = AdoAdapter(org="your-org", project="your-project")
 
@@ -241,9 +242,7 @@ work_item_data = {
         "System.WorkItemType": "User Story",
         "System.CreatedDate": "2025-01-01T10:00:00Z",
     },
-    "_links": {
-        "html": {"href": "https://dev.azure.com/your-org/your-project/_workitems/edit/123"}
-    },
+    "_links": {"html": {"href": "https://dev.azure.com/your-org/your-project/_workitems/edit/123"}},
 }
 
 # Mock project bundle
