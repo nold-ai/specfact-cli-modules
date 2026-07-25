@@ -25,7 +25,7 @@
 
 ## 4. Verification and delivery
 
-- [ ] 4.1 Run targeted tests, strict OpenSpec validation, and required quality
+- [x] 4.1 Run targeted tests, strict OpenSpec validation, and required quality
   gates; record passing evidence.
-- [ ] 4.2 Run the changed-line SpecFact code review and resolve all findings.
-- [ ] 4.3 Open a PR to `dev` with the JSON evidence contract and its limits.
+- [x] 4.2 Run the changed-line SpecFact code review and resolve all findings.
+- [x] 4.3 Open a PR to `dev` with the JSON evidence contract and its limits.

@@ -8,6 +8,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
 
+import pytest
+
 from scripts import requirements_evidence_gate as evidence_gate
 
 
@@ -76,7 +78,7 @@ def test_evaluate_sources_emits_passed_verdict_with_preserved_evidence(monkeypat
         "inspect_requirements_bundle_coverage",
         lambda *_args: _coverage(total=1, with_test_links=1),
     )
-    monkeypatch.setattr(evidence_gate, "requirements_gate_finding_counts", lambda *_args: {})
+    monkeypatch.setattr(evidence_gate, "requirements_gate_finding_counts", lambda *_args, **_kwargs: {})
 
     report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
 
@@ -130,7 +132,9 @@ def test_evaluate_sources_fails_for_missing_test_links_and_gate_findings(monkeyp
         "inspect_requirements_bundle_coverage",
         lambda *_args: _coverage(total=2, with_test_links=1),
     )
-    monkeypatch.setattr(evidence_gate, "requirements_gate_finding_counts", lambda *_args: {"scenario-unverified": 1})
+    monkeypatch.setattr(
+        evidence_gate, "requirements_gate_finding_counts", lambda *_args, **_kwargs: {"scenario-unverified": 1}
+    )
 
     report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
 
@@ -157,7 +161,7 @@ def test_evaluate_sources_retains_informational_gate_counts_without_blocking(mon
         lambda *_args: _coverage(total=1, with_test_links=1),
     )
     monkeypatch.setattr(
-        evidence_gate, "requirements_gate_finding_counts", lambda *_args: {"unsupported-profile-field": 1}
+        evidence_gate, "requirements_gate_finding_counts", lambda *_args, **_kwargs: {"unsupported-profile-field": 1}
     )
 
     report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
@@ -189,7 +193,7 @@ def test_evaluate_sources_overlays_valid_sidecar_test_links_without_mutating_sou
         "inspect_requirements_bundle_coverage",
         lambda *_args: _coverage(total=1, with_test_links=1),
     )
-    monkeypatch.setattr(evidence_gate, "requirements_gate_finding_counts", lambda *_args: {})
+    monkeypatch.setattr(evidence_gate, "requirements_gate_finding_counts", lambda *_args, **_kwargs: {})
 
     report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
 
@@ -215,6 +219,55 @@ def test_load_evidence_sidecar_rejects_unknown_requirements_and_missing_tests(tm
         "evidence-sidecar-unknown-requirement:REQ-UNKNOWN",
         "evidence-sidecar-missing-test:tests/missing_test.py",
     ]
+
+
+def test_load_evidence_sidecar_rejects_targets_outside_the_repository(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    source = repo_root / "openspec" / "changes" / "invalid-evidence"
+    source.mkdir(parents=True)
+    outside_target = tmp_path / "outside_test.py"
+    outside_target.write_text("def test_outside() -> None:\n    pass\n", encoding="utf-8")
+    link_target = repo_root / "tests" / "linked_outside_test.py"
+    link_target.parent.mkdir()
+    link_target.symlink_to(outside_target)
+    (source / "requirements-evidence.yaml").write_text(
+        "requirements:\n  REQ-1:\n    test_links:\n      - ../outside_test.py\n      - tests/linked_outside_test.py\n",
+        encoding="utf-8",
+    )
+
+    _, reasons = evidence_gate._load_evidence_sidecar(source, repo_root, {"REQ-1"})
+
+    assert reasons == [
+        "evidence-sidecar-missing-test:../outside_test.py",
+        "evidence-sidecar-missing-test:tests/linked_outside_test.py",
+    ]
+
+
+def test_evaluate_sources_counts_findings_with_the_validation_profile(monkeypatch, tmp_path: Path) -> None:
+    source = tmp_path / "openspec" / "changes" / "profile-evidence"
+    source.mkdir(parents=True)
+    monkeypatch.setattr(
+        evidence_gate,
+        "import_native_requirements_to_bundle",
+        lambda *_args: _import_result(imported=1, diagnostics=[]),
+    )
+    monkeypatch.setattr(evidence_gate, "validate_requirements_bundle", lambda *_args, **_kwargs: _validation("passed"))
+    monkeypatch.setattr(
+        evidence_gate,
+        "inspect_requirements_bundle_coverage",
+        lambda *_args: _coverage(total=1, with_test_links=1),
+    )
+    profiles: list[str | None] = []
+    monkeypatch.setattr(
+        evidence_gate,
+        "requirements_gate_finding_counts",
+        lambda *_args, profile=None: profiles.append(profile) or {},
+    )
+
+    report = evidence_gate._evaluate_sources([source], bundle_parent=tmp_path)
+
+    assert report["verdict"] == "passed"
+    assert profiles == ["enterprise"]
 
 
 def test_evaluate_sources_skips_without_sources(tmp_path: Path) -> None:
@@ -249,6 +302,11 @@ def test_discover_changed_openspec_sources_excludes_archived_and_missing_paths(m
     assert discovered == [active]
 
 
+def test_discover_changed_openspec_sources_rejects_option_like_base_refs(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="base ref"):
+        evidence_gate._discover_changed_openspec_sources(tmp_path, "--output=/tmp/untrusted")
+
+
 def test_run_evidence_gate_writes_failed_report_before_returning_nonzero(monkeypatch, tmp_path: Path) -> None:
     output_path = tmp_path / "requirements-evidence.json"
     monkeypatch.setattr(evidence_gate, "_discover_changed_openspec_sources", lambda *_args: [])
@@ -268,3 +326,21 @@ def test_run_evidence_gate_writes_failed_report_before_returning_nonzero(monkeyp
 
     assert exit_code == 1
     assert '"verdict": "failed"' in output_path.read_text(encoding="utf-8")
+
+
+def test_run_evidence_gate_writes_failed_report_when_discovery_raises(monkeypatch, tmp_path: Path) -> None:
+    output_path = tmp_path / "requirements-evidence.json"
+    summary_path = tmp_path / "requirements-evidence.md"
+    monkeypatch.setattr(
+        evidence_gate,
+        "_discover_changed_openspec_sources",
+        lambda *_args: (_ for _ in ()).throw(subprocess.CalledProcessError(128, ["git", "diff"])),
+    )
+
+    exit_code = evidence_gate._run_evidence_gate(tmp_path, "missing-base", output_path, summary_path)
+
+    report = json.loads(output_path.read_text(encoding="utf-8"))
+    assert exit_code == 1
+    assert report["verdict"] == "failed"
+    assert report["sources"][0]["reasons"] == ["gate-exception:CalledProcessError"]
+    assert "**failed**" in summary_path.read_text(encoding="utf-8")

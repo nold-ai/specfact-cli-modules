@@ -11,7 +11,7 @@ SHALL emit a machine-readable aggregate verdict without modifying the source.
 - **GIVEN** a changed active OpenSpec source imports one or more requirements
   without error diagnostics
 - **AND** validation does not fail, every imported requirement has a test link,
-  and gate-finding counts are zero
+  and there are no error-level gate findings
 - **WHEN** the requirements evidence adapter runs
 - **THEN** it writes `requirements-evidence.json` with aggregate verdict
   `passed`

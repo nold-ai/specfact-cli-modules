@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import tempfile
 from collections.abc import Sequence
@@ -34,10 +35,12 @@ def _model_payload(value: Any) -> dict[str, Any]:
 
 
 def _diagnostic_payloads(diagnostics: Sequence[Any]) -> list[dict[str, Any]]:
+    """Serialize importer diagnostics for the evidence report."""
     return [_model_payload(diagnostic) for diagnostic in diagnostics]
 
 
 def _import_reasons(imported: int, diagnostics: Sequence[dict[str, Any]]) -> list[str]:
+    """Return deterministic reasons for import-stage failures."""
     errors = [
         f"import-error:{diagnostic.get('code', 'unknown')}"
         for diagnostic in diagnostics
@@ -47,10 +50,12 @@ def _import_reasons(imported: int, diagnostics: Sequence[dict[str, Any]]) -> lis
 
 
 def _validation_reasons(validation: dict[str, Any] | None) -> list[str]:
+    """Return the failure marker for a failed validation report."""
     return ["validation-failed"] if validation is not None and validation.get("status") == "failed" else []
 
 
 def _coverage_reasons(coverage: dict[str, Any] | None) -> list[str]:
+    """Return the failure marker for incomplete test-link coverage."""
     if coverage is None:
         return []
     total = int(coverage.get("total_requirements", 0))
@@ -59,6 +64,7 @@ def _coverage_reasons(coverage: dict[str, Any] | None) -> list[str]:
 
 
 def _error_gate_reasons(validation: dict[str, Any] | None, finding_counts: dict[str, int]) -> list[str]:
+    """Return only gate counts corresponding to error-level violations."""
     violations = validation.get("violations", []) if validation is not None else []
     error_codes = {
         str(violation.get("code"))
@@ -89,6 +95,7 @@ def _source_reasons(
 
 
 def _summary(source_reports: Sequence[dict[str, Any]]) -> dict[str, int]:
+    """Count source verdicts for the aggregate evidence report."""
     failed_sources = sum(source["verdict"] == "failed" for source in source_reports)
     passed_sources = sum(source["verdict"] == "passed" for source in source_reports)
     return {
@@ -109,7 +116,20 @@ def _test_target_path(repo_root: Path, target: str) -> Path:
     return repo_root / target.split("::", maxsplit=1)[0]
 
 
+def _is_repository_test_target(repo_root: Path, target: str) -> bool:
+    """Return whether a relative test target resolves to a file inside ``repo_root``."""
+    if Path(target).is_absolute():
+        return False
+    try:
+        resolved_root = repo_root.resolve()
+        resolved_target = _test_target_path(repo_root, target).resolve()
+    except OSError:
+        return False
+    return resolved_target.is_relative_to(resolved_root) and resolved_target.is_file()
+
+
 def _read_sidecar_requirements(sidecar_path: Path) -> dict[str, Any] | None:
+    """Read the optional sidecar's requirement-to-test mapping."""
     try:
         payload = yaml.safe_load(sidecar_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, yaml.YAMLError):
@@ -120,17 +140,14 @@ def _read_sidecar_requirements(sidecar_path: Path) -> dict[str, Any] | None:
 
 
 def _valid_test_targets(repo_root: Path, test_links: Any) -> tuple[list[str], list[str]]:
+    """Separate repository-contained test targets from deterministic failures."""
     if (
         not isinstance(test_links, list)
         or not test_links
         or not all(isinstance(target, str) and target for target in test_links)
     ):
         return [], ["invalid"]
-    valid_links = [
-        target
-        for target in test_links
-        if not Path(target).is_absolute() and _test_target_path(repo_root, target).is_file()
-    ]
+    valid_links = [target for target in test_links if _is_repository_test_target(repo_root, target)]
     missing_targets = [target for target in test_links if target not in valid_links]
     return valid_links, [f"evidence-sidecar-missing-test:{target}" for target in missing_targets]
 
@@ -141,6 +158,7 @@ def _sidecar_entry(
     repo_root: Path,
     imported_requirement_ids: set[str],
 ) -> tuple[str | None, list[str], list[str]]:
+    """Validate one sidecar requirement mapping and return its usable links."""
     if not isinstance(requirement_id, str) or not isinstance(entry, dict):
         return None, [], ["evidence-sidecar-invalid"]
     links, reasons = _valid_test_targets(repo_root, entry.get("test_links"))
@@ -205,6 +223,9 @@ def _apply_evidence_sidecar(source_path: Path, imported_requirements: Sequence[A
 
 def _discover_changed_openspec_sources(repo_root: Path, base_ref: str) -> list[Path]:
     """Return existing active change directories that differ from ``base_ref``."""
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*", base_ref) is None:
+        msg = "base ref must be a non-option Git ref using alphanumeric, '.', '_', '/', or '-' characters"
+        raise ValueError(msg)
     result = subprocess.run(
         [
             "git",
@@ -258,7 +279,7 @@ def _evaluate_sources(source_paths: Sequence[Path], *, bundle_parent: Path) -> d
             if not sidecar_reasons:
                 validation = _model_payload(validate_requirements_bundle(bundle_dir, profile="enterprise"))
                 coverage = _model_payload(inspect_requirements_bundle_coverage(bundle_dir))
-                finding_counts = dict(requirements_gate_finding_counts(bundle_dir))
+                finding_counts = dict(requirements_gate_finding_counts(bundle_dir, profile="enterprise"))
         reasons = [*sidecar_reasons, *_source_reasons(imported, diagnostics, validation, coverage, finding_counts)]
         source_reports.append(
             {
@@ -306,11 +327,36 @@ def _write_markdown_summary(report: dict[str, Any], output_path: Path) -> None:
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _gate_failure_report(error: Exception) -> dict[str, Any]:
+    """Return schema-compatible failure evidence when evaluation cannot complete."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "verdict": "failed",
+        "execution_proof": EXECUTION_PROOF,
+        "sources": [
+            {
+                "source": "<gate>",
+                "verdict": "failed",
+                "reasons": [f"gate-exception:{type(error).__name__}"],
+                "import": {"diagnostics": [], "imported": 0},
+                "validation": None,
+                "coverage": None,
+                "gate_finding_counts": {},
+            }
+        ],
+        "summary": {"failed_sources": 1, "passed_sources": 0, "skipped_sources": 0, "total_sources": 1},
+    }
+
+
 def _run_evidence_gate(repo_root: Path, base_ref: str, output_path: Path, summary_path: Path | None = None) -> int:
     """Discover, evaluate, and persist evidence; return a CI-compatible status."""
-    source_paths = _discover_changed_openspec_sources(repo_root, base_ref)
-    with tempfile.TemporaryDirectory(prefix="specfact-requirements-evidence-") as raw_bundle_parent:
-        report = _evaluate_sources(source_paths, bundle_parent=Path(raw_bundle_parent))
+    try:
+        source_paths = _discover_changed_openspec_sources(repo_root, base_ref)
+        with tempfile.TemporaryDirectory(prefix="specfact-requirements-evidence-") as raw_bundle_parent:
+            report = _evaluate_sources(source_paths, bundle_parent=Path(raw_bundle_parent))
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        # This CI boundary intentionally turns every ordinary evaluation error into retained evidence.
+        report = _gate_failure_report(error)
     _write_evidence_report(report, output_path)
     if summary_path is not None:
         _write_markdown_summary(report, summary_path)

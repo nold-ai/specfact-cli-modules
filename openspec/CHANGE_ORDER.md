@@ -134,6 +134,7 @@ ceremony rather than validation evidence:
 - `requirements-02-module-commands`
 - `openspec-01-intent-trace` (pulled forward 2026-07-13, import-first rescope)
 - `requirements-04-upstream-source-readiness` (blocked on paired core source-readiness contract)
+- `requirements-05-dogfood-evidence-gate`
 - `architecture-01-solution-layer`
 - `sync-01-unified-kernel`
 - `requirements-03-backlog-sync` (parked 2026-07-13)

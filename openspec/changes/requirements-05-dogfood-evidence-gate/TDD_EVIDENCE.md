@@ -58,8 +58,7 @@
   `hatch run verify-modules-signature --payload-from-filesystem
   --enforce-version-bump --allow-missing-public-key`.
 - Result: passed (20 documentation tests, 28 contract tests, and 7 module
-  manifests). No signed module asset changed, so no module version bump is
-  required.
+  manifests) before review remediation.
 - 2026-07-25 (Europe/Berlin): staged SpecFact code review of the adapter and
   its two focused test files.
 - Result: passed with 0 findings.
@@ -69,3 +68,31 @@
   Python 3.14. This is not the CI runtime for this workflow, which pins Python
   3.12 and resolves the paired core from `dev`; the compatible user-scope
   0.53.2 smoke above is the local runtime evidence for the adapter.
+
+## Review remediation
+
+- 2026-07-25 (Europe/Berlin): PR #353 review remediation added regression
+  tests for repository-contained sidecar links (including symlink escapes),
+  enterprise-profile gate counts, and JSON/Markdown evidence persistence when
+  discovery raises.
+- Failing evidence: the new tests failed before implementation for traversal
+  acceptance, profile omission, and uncaught `CalledProcessError`.
+- Passing evidence: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py -q` reported 14
+  passed. A follow-up regression for option-like Git base refs brought the
+  focused total to 15 passed; targeted Requirements command-app tests reported 3 passed; and
+  `hatch run type-check` reported 0 errors.
+- 2026-07-25 (Europe/Berlin): paired-core CI failed its command-overview step
+  under Typer 0.27 because the pre-existing Requirements command used
+  `click.Context` as a Typer callback parameter. The command now uses
+  `typer.Context`, and the Requirements module was bumped from 0.2.5 to 0.2.6
+  with the repository's explicit unsigned signing mode. Registry artifact and
+  checksum metadata were regenerated; GitHub signing remains the production
+  signing authority.
+- Post-remediation quality: scoped Ruff format/lint, YAML validation, strict
+  OpenSpec validation, bundle import checks, signature/version verification,
+  registry-tooling tests (7 passed), and module contract tests (28 passed)
+  succeeded.
+- The changed-line SpecFact code review was rerun after the remediation and
+  completed with 0 findings.
