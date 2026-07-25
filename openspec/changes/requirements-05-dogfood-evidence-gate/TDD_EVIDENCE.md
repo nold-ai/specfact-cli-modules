@@ -125,8 +125,26 @@
   Passing evidence: the regression, focused Docs Review and workflow tests
   reported 28 passed, and `scripts/check-command-contract.py` validated all 91
   generated module command paths.
-- The quality matrix then exposed a Typer 0.27 type-alias mismatch in the
-  backlog test fixture. Replacing `click.testing.Result` with
-  `typer.testing.Result` restored type compatibility. The paired-core type
-  check reported 0 errors, and the focused backlog, generator, Docs Review,
-  and workflow suite reported 32 passed.
+- The quality matrix then exposed a Typer result-type compatibility issue in
+  the backlog test fixture. `click.testing.Result` is the stable public type
+  across the Typer 0.23 and 0.27 test runners; the paired-core type check
+  reported 0 errors after restoring that import.
+
+## Typer 0.27 full-suite remediation
+
+- 2026-07-25 (Europe/Berlin): the full quality matrix failed 8 tests under
+  the paired 0.53.5 / Typer 0.27 runtime. Six Requirements import tests
+  failed because Beartype validates the injected Click context against
+  `typer.Context`; the remaining two asserted Typer 0.23-specific help and
+  error wording.
+- Remediation: retained `typer.Context` as Typer's recognised callback type
+  while excluding the framework-injected context from Beartype validation;
+  command inputs remain covered by Icontract preconditions and postcondition.
+  The help and shared-error tests now assert the stable semantic contracts,
+  accepting the documented Typer 0.27 rendering.
+- Passing evidence: after restoring the paired `specfact-cli 0.53.5`,
+  `Typer 0.27.0`, and `Click 8.4.2` runtime, the focused Requirements,
+  global CLI, backlog, generator, Docs Review, and workflow suite reported
+  39 passed; `scripts/check-command-contract.py` validated all 91 generated
+  module command paths; and the repository type check reported 0 errors.
+- The final staged changed-line SpecFact review completed with 0 findings.

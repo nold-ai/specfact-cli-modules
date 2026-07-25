@@ -118,9 +118,7 @@ import asyncio
 old_spec = Path("api/openapi.v1.yaml")
 new_spec = Path("api/openapi.v2.yaml")
 
-is_compatible, breaking_changes = asyncio.run(
-    check_backward_compatibility(old_spec, new_spec)
-)
+is_compatible, breaking_changes = asyncio.run(check_backward_compatibility(old_spec, new_spec))
 
 if is_compatible:
     print("Specifications are backward compatible")

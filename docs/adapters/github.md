@@ -96,6 +96,7 @@ adapter = GitHubAdapter(
 
 # Or use environment variable
 import os
+
 os.environ["GITHUB_TOKEN"] = "ghp_..."
 adapter = GitHubAdapter(repo_owner="your-org", repo_name="your-repo")
 

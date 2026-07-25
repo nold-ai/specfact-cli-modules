@@ -176,7 +176,7 @@ def test_requirements_import_help_exposes_optional_native_source_path() -> None:
     result = runner.invoke(app, ["import", "--help"])
 
     assert result.exit_code == 0
-    assert "[SOURCE_PATH]" in result.output
+    assert "[source_path]" in result.output.lower()
 
 
 @pytest.mark.integration

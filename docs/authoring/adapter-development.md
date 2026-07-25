@@ -61,26 +61,35 @@ class MyAdapter(BridgeAdapter):
     def get_capabilities(self, repo_path: Path, bridge_config: BridgeConfig | None = None) -> ToolCapabilities:
         return ToolCapabilities(tool="mytool", layout="classic", specs_dir="specs", supported_sync_modes=["read-only"])
 
-    def import_artifact(self, artifact_key: str, artifact_path: Path | dict[str, Any], project_bundle: Any, bridge_config: BridgeConfig | None = None) -> None:
-        ...
+    def import_artifact(
+        self,
+        artifact_key: str,
+        artifact_path: Path | dict[str, Any],
+        project_bundle: Any,
+        bridge_config: BridgeConfig | None = None,
+    ) -> None: ...
 
-    def export_artifact(self, artifact_key: str, artifact_data: Any, bridge_config: BridgeConfig | None = None) -> Path | dict[str, Any]:
-        ...
+    def export_artifact(
+        self, artifact_key: str, artifact_data: Any, bridge_config: BridgeConfig | None = None
+    ) -> Path | dict[str, Any]: ...
 
-    def generate_bridge_config(self, repo_path: Path) -> BridgeConfig:
-        ...
+    def generate_bridge_config(self, repo_path: Path) -> BridgeConfig: ...
 
-    def load_change_tracking(self, bundle_dir: Path, bridge_config: BridgeConfig | None = None) -> ChangeTracking | None:
-        ...
+    def load_change_tracking(
+        self, bundle_dir: Path, bridge_config: BridgeConfig | None = None
+    ) -> ChangeTracking | None: ...
 
-    def save_change_tracking(self, bundle_dir: Path, change_tracking: ChangeTracking, bridge_config: BridgeConfig | None = None) -> None:
-        ...
+    def save_change_tracking(
+        self, bundle_dir: Path, change_tracking: ChangeTracking, bridge_config: BridgeConfig | None = None
+    ) -> None: ...
 
-    def load_change_proposal(self, bundle_dir: Path, change_name: str, bridge_config: BridgeConfig | None = None) -> ChangeProposal | None:
-        ...
+    def load_change_proposal(
+        self, bundle_dir: Path, change_name: str, bridge_config: BridgeConfig | None = None
+    ) -> ChangeProposal | None: ...
 
-    def save_change_proposal(self, bundle_dir: Path, proposal: ChangeProposal, bridge_config: BridgeConfig | None = None) -> None:
-        ...
+    def save_change_proposal(
+        self, bundle_dir: Path, proposal: ChangeProposal, bridge_config: BridgeConfig | None = None
+    ) -> None: ...
 ```
 
 ## Code references

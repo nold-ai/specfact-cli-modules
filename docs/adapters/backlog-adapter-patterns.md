@@ -46,20 +46,21 @@ All backlog adapters should inherit from `BacklogAdapterMixin` to get common fun
 from specfact_cli.adapters.backlog_base import BacklogAdapterMixin
 from specfact_cli.adapters.base import BridgeAdapter
 
+
 class MyBacklogAdapter(BridgeAdapter, BacklogAdapterMixin):
     """My backlog adapter implementation."""
-    
+
     # Implement abstract methods from BacklogAdapterMixin
     def map_backlog_status_to_openspec(self, status: str) -> str:
         """Map backlog tool status to OpenSpec status."""
         # Tool-specific mapping logic
         pass
-    
+
     def map_openspec_status_to_backlog(self, status: str) -> list[str]:
         """Map OpenSpec status to backlog tool status."""
         # Tool-specific mapping logic
         pass
-    
+
     def extract_change_proposal_data(self, item_data: dict[str, Any]) -> dict[str, Any]:
         """Extract change proposal data from backlog item."""
         # Tool-specific parsing logic
@@ -186,7 +187,7 @@ def import_artifact(
 ) -> None:
     """
     Import artifact from backlog tool.
-    
+
     Args:
         artifact_key: Artifact key (e.g., "github_issue", "ado_work_item", "jira_issue")
         artifact_path: Backlog item data (dict from API response)
@@ -200,23 +201,28 @@ def import_artifact(
     # - "change_proposal_comment": Add status comment to backlog item
     # - "code_change_progress": Add progress comment based on code changes
     # - "my_backlog_item": Import backlog item as change proposal (tool-specific)
-    
-    if artifact_key not in ["change_proposal", "change_status", "change_proposal_update", 
-                            "change_proposal_comment", "code_change_progress", "my_backlog_item"]:
+
+    if artifact_key not in [
+        "change_proposal",
+        "change_status",
+        "change_proposal_update",
+        "change_proposal_comment",
+        "code_change_progress",
+        "my_backlog_item",
+    ]:
         raise NotImplementedError(f"Unsupported artifact key: {artifact_key}")
-    
+
     if not isinstance(artifact_path, dict):
         raise ValueError("Backlog item import requires dict (API response)")
-    
+
     # Use reusable pattern from BacklogAdapterMixin
-    proposal = self.import_backlog_item_as_proposal(
-        artifact_path, "my_backlog_tool", bridge_config
-    )
-    
+    proposal = self.import_backlog_item_as_proposal(artifact_path, "my_backlog_tool", bridge_config)
+
     # Add to project bundle
     if hasattr(project_bundle, "change_tracking"):
         if not project_bundle.change_tracking:
             from specfact_cli.models.change import ChangeTracking
+
             project_bundle.change_tracking = ChangeTracking()
         project_bundle.change_tracking.proposals[proposal.name] = proposal
 ```
@@ -235,7 +241,7 @@ def sync_status_to_backlog(
 ) -> dict[str, Any]:
     """
     Sync OpenSpec change status to backlog tool.
-    
+
     Updates backlog item status based on OpenSpec change proposal status.
     """
     # Extract status and source_tracking
@@ -243,6 +249,7 @@ def sync_status_to_backlog(
     # Update backlog item via API
     # Return sync result
     pass
+
 
 def sync_status_from_backlog(
     self,
@@ -252,7 +259,7 @@ def sync_status_from_backlog(
 ) -> str:
     """
     Sync backlog tool status to OpenSpec change proposal.
-    
+
     Maps backlog item status to OpenSpec status and resolves conflicts.
     """
     # Extract backlog status
@@ -287,7 +294,7 @@ The mixin provides three conflict resolution strategies:
 resolved_status = self.resolve_status_conflict(
     openspec_status="proposed",
     backlog_status="in-progress",
-    strategy="merge"  # Results in "in-progress" (more advanced)
+    strategy="merge",  # Results in "in-progress" (more advanced)
 )
 ```
 

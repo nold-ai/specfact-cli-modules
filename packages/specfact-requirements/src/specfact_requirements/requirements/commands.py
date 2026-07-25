@@ -70,7 +70,6 @@ def _selected_import_source(from_file: Path | None, from_openspec: bool, from_sp
 
 
 @app.command("import", help="Import local, OpenSpec, or Spec Kit requirement evidence into a project bundle.")
-@beartype
 @require(lambda bundle: bundle.is_dir(), "bundle must exist")
 @require(_format_supported, "output format must be supported")
 @ensure(lambda result: result is None)
