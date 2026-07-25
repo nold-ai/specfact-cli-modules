@@ -125,3 +125,8 @@
   Passing evidence: the regression, focused Docs Review and workflow tests
   reported 28 passed, and `scripts/check-command-contract.py` validated all 91
   generated module command paths.
+- The quality matrix then exposed a Typer 0.27 type-alias mismatch in the
+  backlog test fixture. Replacing `click.testing.Result` with
+  `typer.testing.Result` restored type compatibility. The paired-core type
+  check reported 0 errors, and the focused backlog, generator, Docs Review,
+  and workflow suite reported 32 passed.
