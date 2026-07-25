@@ -111,3 +111,17 @@
   `docs/reference/commands.generated.{json,md}` and `llms.txt` using that
   shared runtime. Direct `--check` and the 25 focused Docs Review tests pass;
   the GitHub rerun remains the final proof.
+
+## Generated command-contract remediation
+
+- 2026-07-25 (Europe/Berlin): with the unified runtime, the generated command
+  contract correctly reached `specfact code import` and `specfact code repro`.
+  Their bare invocations emit bundle-validation guidance before subcommand
+  dispatch, but generated metadata incorrectly classified both as requiring a
+  subcommand. The initial regression test failed with
+  `requires-subcommand` for each command.
+- Remediation: the overview generator now records those runtime-validated
+  groups as `executes`; regeneration updates the two metadata records.
+  Passing evidence: the regression, focused Docs Review and workflow tests
+  reported 28 passed, and `scripts/check-command-contract.py` validated all 91
+  generated module command paths.

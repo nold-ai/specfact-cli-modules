@@ -489,7 +489,7 @@
   },
   {
     "arguments": [],
-    "bare_invocation": "requires-subcommand",
+    "bare_invocation": "executes",
     "command": "specfact code import",
     "deprecated": false,
     "hidden": false,
@@ -534,7 +534,7 @@
   },
   {
     "arguments": [],
-    "bare_invocation": "requires-subcommand",
+    "bare_invocation": "executes",
     "command": "specfact code repro",
     "deprecated": false,
     "hidden": false,
