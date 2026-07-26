@@ -16,6 +16,7 @@ def _write_temporary_text(destination: Path, contents: str) -> Path:
     with tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
+        newline="\n",
         dir=destination.parent,
         prefix=f".{destination.name}.",
         suffix=".tmp",
@@ -23,6 +24,44 @@ def _write_temporary_text(destination: Path, contents: str) -> Path:
     ) as temporary:
         temporary.write(contents)
         return Path(temporary.name)
+
+
+def _existing_text(path: Path) -> str | None:
+    """Return current text when an artifact already exists."""
+    return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
+def _restore_artifact(path: Path, previous_contents: str | None) -> None:
+    """Restore a prior artifact using the same atomic replacement primitive."""
+    if previous_contents is None:
+        path.unlink(missing_ok=True)
+        return
+    temporary_path = _write_temporary_text(path, previous_contents)
+    try:
+        temporary_path.replace(path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def _publish_artifact_pair(
+    output_temporary_path: Path, output_path: Path, summary_temporary_path: Path, summary_path: Path
+) -> None:
+    """Publish the paired artifacts and roll back any completed replacement on failure."""
+    previous_output = _existing_text(output_path)
+    previous_summary = _existing_text(summary_path)
+    summary_published = False
+    output_published = False
+    try:
+        summary_temporary_path.replace(summary_path)
+        summary_published = True
+        output_temporary_path.replace(output_path)
+        output_published = True
+    except OSError:
+        if output_published:
+            _restore_artifact(output_path, previous_output)
+        if summary_published:
+            _restore_artifact(summary_path, previous_summary)
+        raise
 
 
 def _failure_report_contents(stage: str) -> tuple[str, str]:
@@ -68,8 +107,7 @@ def _write_failure_report(output_path: Path, summary_path: Path, *, stage: str) 
         output_temporary_path.unlink(missing_ok=True)
         raise
     try:
-        summary_temporary_path.replace(summary_path)
-        output_temporary_path.replace(output_path)
+        _publish_artifact_pair(output_temporary_path, output_path, summary_temporary_path, summary_path)
     finally:
         output_temporary_path.unlink(missing_ok=True)
         summary_temporary_path.unlink(missing_ok=True)

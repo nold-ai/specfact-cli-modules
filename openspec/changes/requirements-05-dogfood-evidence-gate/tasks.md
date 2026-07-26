@@ -42,3 +42,5 @@
   completed changes into date-prefixed archive directories.
 - [x] 5.5 Publish the fallback JSON and Markdown as a complete, parseable
   artifact pair before considering evidence recovery complete.
+- [x] 5.6 Preserve prior evidence when fallback publication fails and make
+  generated fallback artifacts byte-stable across runner platforms.

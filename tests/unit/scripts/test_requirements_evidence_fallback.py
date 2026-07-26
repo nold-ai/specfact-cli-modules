@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -21,6 +22,47 @@ def test_private_failure_report_retains_machine_readable_setup_evidence(tmp_path
     assert report["execution_proof"] == "not-included"
     assert report["sources"][0]["reasons"] == ["setup-unavailable"]
     assert "Failure stage: `setup-unavailable`" in summary_path.read_text(encoding="utf-8")
+    assert b"\r\n" not in output_path.read_bytes()
+    assert b"\r\n" not in summary_path.read_bytes()
+
+
+def test_temporary_evidence_writer_pins_lf_line_endings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    named_temporary_file = fallback.tempfile.NamedTemporaryFile
+    captured: dict[str, object] = {}
+
+    def _capture_newline(*args: Any, **kwargs: Any) -> Any:
+        captured["newline"] = kwargs.get("newline")
+        return named_temporary_file(*args, **kwargs)
+
+    monkeypatch.setattr(fallback.tempfile, "NamedTemporaryFile", _capture_newline)
+
+    temporary_path = fallback._write_temporary_text(tmp_path / "evidence.json", "one\ntwo\n")
+
+    assert captured["newline"] == "\n"
+    assert temporary_path.read_bytes() == b"one\ntwo\n"
+
+
+def test_failure_report_restores_the_prior_artifact_pair_when_json_publication_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    output_path = tmp_path / "requirements-evidence.json"
+    summary_path = tmp_path / "requirements-evidence.md"
+    output_path.write_text('{"verdict": "previous"}\n', encoding="utf-8")
+    summary_path.write_text("previous summary\n", encoding="utf-8")
+    original_replace = Path.replace
+
+    def _fail_json_publication(path: Path, target: Path) -> Path:
+        if target == output_path:
+            raise OSError("json publication failed")
+        return original_replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", _fail_json_publication)
+
+    with pytest.raises(OSError, match="json publication failed"):
+        fallback._write_failure_report(output_path, summary_path, stage="setup-unavailable")
+
+    assert output_path.read_text(encoding="utf-8") == '{"verdict": "previous"}\n'
+    assert summary_path.read_text(encoding="utf-8") == "previous summary\n"
 
 
 def test_failure_report_does_not_publish_either_artifact_before_the_pair_is_ready(

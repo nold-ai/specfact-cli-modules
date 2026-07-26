@@ -40,14 +40,17 @@ def test_requirements_evidence_workflow_runs_adapter_with_paired_core() -> None:
 
 
 def _assert_fallback_step(fallback: dict[str, Any]) -> None:
+    run = fallback["run"]
     assert fallback["if"] == "always()"
     assert fallback["env"] == {"SETUP_OUTCOME": "${{ steps.setup.outcome }}"}
-    assert f"[ -f {JSON_ARTIFACT} ]" in fallback["run"]
-    assert f"[ -f {SUMMARY_ARTIFACT} ]" in fallback["run"]
-    assert "json.load" in fallback["run"]
-    assert "scripts/requirements_evidence_fallback.py" in fallback["run"]
-    assert f"--output {JSON_ARTIFACT}" in fallback["run"]
-    assert f"--summary {SUMMARY_ARTIFACT}" in fallback["run"]
+    assert f"[ -f {JSON_ARTIFACT} ]" in run
+    assert f"[ -f {SUMMARY_ARTIFACT} ]" in run
+    assert "json.load" in run
+    assert "exit 0" in run
+    assert "scripts/requirements_evidence_fallback.py" in run
+    assert f"--output {JSON_ARTIFACT}" in run
+    assert f"--summary {SUMMARY_ARTIFACT}" in run
+    assert '--stage "$EVIDENCE_STAGE"' in run
 
 
 def _assert_publication_and_enforcement_steps(

@@ -44,6 +44,28 @@
   `openspec validate requirements-04-upstream-source-readiness --strict` and
   `openspec validate requirements-05-dogfood-evidence-gate --strict` passed.
 
+## CodeRabbit publication-rollback remediation
+
+- 2026-07-26 (Europe/Berlin): CodeRabbit identified that text-mode temporary
+  files did not pin LF output and that a failed second file replacement could
+  leave the first fallback artifact published.
+- Failing-before: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_fallback.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py -q` reported 2
+  failures: the temporary writer omitted `newline="\\n"`, and a simulated JSON
+  publication failure left the replacement Markdown summary visible.
+- Remediation: temporary files now explicitly use LF line endings. The paired
+  publisher snapshots the existing artifacts and rolls back only replacements
+  that completed before a later replacement fails. The workflow contract also
+  asserts the valid-pair `exit 0` short-circuit and mandatory
+  `--stage "$EVIDENCE_STAGE"` argument.
+- Passing-after: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_fallback.py
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py -q` reported 22
+  passed; `hatch run lint` and `openspec validate
+  requirements-05-dogfood-evidence-gate --strict` passed.
+
 ## Failing before implementation
 
 - 2026-07-25 (Europe/Berlin):

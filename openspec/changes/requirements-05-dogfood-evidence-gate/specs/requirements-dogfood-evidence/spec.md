@@ -105,6 +105,8 @@ verdict.
   either final artifact
 - **AND** the workflow treats fallback evidence as complete only when both
   final artifacts exist and the JSON report parses successfully.
+- **AND** generated artifact text uses LF line endings
+- **AND** a failed artifact replacement restores the prior published pair.
 
 #### Scenario: Use local module source roots in CI
 
