@@ -40,3 +40,5 @@
   failure artifact retention; capture failing-before and passing-after evidence.
 - [x] 5.4 Keep the shipped-source dogfood regression valid when OpenSpec moves
   completed changes into date-prefixed archive directories.
+- [x] 5.5 Publish the fallback JSON and Markdown as a complete, parseable
+  artifact pair before considering evidence recovery complete.

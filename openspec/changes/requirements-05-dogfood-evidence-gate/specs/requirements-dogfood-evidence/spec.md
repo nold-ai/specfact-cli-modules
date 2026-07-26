@@ -96,6 +96,16 @@ verdict.
 - **AND** the failure report identifies setup as the unavailable evidence stage
 - **AND** the job remains failed.
 
+#### Scenario: Publish a complete fallback artifact pair
+
+- **GIVEN** the workflow needs fallback evidence because its adapter artifacts
+  are missing, incomplete, or the JSON report is unparsable
+- **WHEN** the fallback writer runs
+- **THEN** it prepares the JSON report and Markdown summary before publishing
+  either final artifact
+- **AND** the workflow treats fallback evidence as complete only when both
+  final artifacts exist and the JSON report parses successfully.
+
 #### Scenario: Use local module source roots in CI
 
 - **GIVEN** the workflow runs from this modules repository checkout

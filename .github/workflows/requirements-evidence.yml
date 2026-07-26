@@ -90,7 +90,9 @@ jobs:
         env:
           SETUP_OUTCOME: ${{ steps.setup.outcome }}
         run: |
-          if [ -f artifacts/requirements-evidence/requirements-evidence.json ]; then
+          if [ -f artifacts/requirements-evidence/requirements-evidence.json ] && \
+             [ -f artifacts/requirements-evidence/requirements-evidence.md ] && \
+             python -c 'import json, sys; from pathlib import Path; json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))' artifacts/requirements-evidence/requirements-evidence.json; then
             exit 0
           fi
           export EVIDENCE_STAGE=setup-unavailable

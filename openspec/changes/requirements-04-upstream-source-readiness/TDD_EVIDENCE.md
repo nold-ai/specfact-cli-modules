@@ -83,10 +83,18 @@
   tests/unit/specfact_requirements/test_requirements_runtime.py
   tests/integration/specfact_requirements/test_command_apps.py -q` reported
   `39 passed`.
+- Strict OpenSpec validation: `openspec validate
+  requirements-04-upstream-source-readiness --strict` passed on 2026-07-26
+  (Europe/Berlin).
 - Actual-source replay: the Requirements evidence adapter imported #346 (1
   requirement) and #352 (2 requirements) with no diagnostics, complete
   1/1 and 2/2 test-link coverage, and an aggregate `passed` verdict. The
-  retained JSON proof is `/private/tmp/requirements-source-dogfood.ch9yma/requirements-evidence-346-352-after.json`.
+  local-only replay JSON is
+  `/private/tmp/requirements-source-dogfood.ch9yma/requirements-evidence-346-352-after.json`.
+- Durable CI evidence: [PR #360 requirements-evidence run 30218255529](https://github.com/nold-ai/specfact-cli-modules/actions/runs/30218255529)
+  uploaded the `requirements-evidence` artifact (ID `8636426743`) at
+  2026-07-26 20:06:40 UTC. Its JSON recorded 2 passed sources, 0 failed or
+  skipped sources, and the same #346 1/1 and #352 2/2 test-link coverage.
 - Read-only check: SHA-256 file manifests captured before and after the
   actual-source adapter replay were identical for both OpenSpec source trees.
 - GitHub synchronization: issue #346 was reopened on 2026-07-26 and updated

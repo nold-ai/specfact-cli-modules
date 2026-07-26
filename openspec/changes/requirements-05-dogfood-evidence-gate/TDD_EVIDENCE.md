@@ -20,6 +20,30 @@
   passed; `openspec validate requirements-05-dogfood-evidence-gate --strict`
   passed.
 
+## CodeRabbit artifact-pair review remediation
+
+- 2026-07-26 (Europe/Berlin): CodeRabbit identified that the fallback writer
+  could publish JSON and Markdown independently, while the workflow treated
+  JSON existence alone as recovery completion. It also requested per-source
+  dogfood assertions, step-aware workflow contracts, and durable validation
+  evidence.
+- Failing-before: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_fallback.py
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py -q` reported 2
+  failures: no temporary artifact writer existed, and the workflow did not
+  require the Markdown artifact before skipping fallback.
+- Remediation: the fallback writes both reports to adjacent temporary files
+  before replacing either final path (Markdown first and JSON last as the
+  completion marker). The workflow skips fallback only when both final paths
+  exist and standard-library JSON parsing succeeds. Step-aware workflow
+  contracts verify the gate-local source roots, fallback arguments, summary,
+  upload, and enforcement steps; the actual-source regression asserts every
+  source verdict, diagnostics, import count, and full test-link coverage.
+- Passing-after: the same focused command reported 20 passed;
+  `openspec validate requirements-04-upstream-source-readiness --strict` and
+  `openspec validate requirements-05-dogfood-evidence-gate --strict` passed.
+
 ## Failing before implementation
 
 - 2026-07-25 (Europe/Berlin):

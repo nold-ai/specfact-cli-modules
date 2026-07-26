@@ -324,6 +324,14 @@ def test_shipped_source_readiness_and_dogfood_specs_pass_actual_evidence_gate(tm
     assert report["verdict"] == "passed"
     assert report["execution_proof"] == "not-included"
     assert report["summary"] == {"failed_sources": 0, "passed_sources": 2, "skipped_sources": 0, "total_sources": 2}
+    assert len(report["sources"]) == 2
+    assert all(source["verdict"] == "passed" for source in report["sources"])
+    assert all(source["import"]["diagnostics"] == [] for source in report["sources"])
+    assert all(source["import"]["imported"] > 0 for source in report["sources"])
+    assert all(
+        source["coverage"]["total_requirements"] == source["coverage"]["with_test_links"]
+        for source in report["sources"]
+    )
     assert all(source["reasons"] == [] for source in report["sources"])
 
 
