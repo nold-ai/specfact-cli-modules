@@ -278,6 +278,21 @@ def test_evaluate_sources_skips_without_sources(tmp_path: Path) -> None:
     assert report["summary"] == {"failed_sources": 0, "passed_sources": 0, "skipped_sources": 1, "total_sources": 0}
 
 
+def test_shipped_source_readiness_and_dogfood_specs_pass_actual_evidence_gate(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    sources = [
+        repo_root / "openspec" / "changes" / "requirements-04-upstream-source-readiness",
+        repo_root / "openspec" / "changes" / "requirements-05-dogfood-evidence-gate",
+    ]
+
+    report = evidence_gate._evaluate_sources(sources, bundle_parent=tmp_path)
+
+    assert report["verdict"] == "passed"
+    assert report["execution_proof"] == "not-included"
+    assert report["summary"] == {"failed_sources": 0, "passed_sources": 2, "skipped_sources": 0, "total_sources": 2}
+    assert all(source["reasons"] == [] for source in report["sources"])
+
+
 def test_discover_changed_openspec_sources_includes_deleted_active_files(monkeypatch, tmp_path: Path) -> None:
     active = tmp_path / "openspec" / "changes" / "widget-evidence"
     archived = tmp_path / "openspec" / "changes" / "archive" / "widget-evidence"

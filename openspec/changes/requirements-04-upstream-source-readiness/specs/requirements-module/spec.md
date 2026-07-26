@@ -58,3 +58,15 @@ placeholder detection, hashing, or upstream-validator policy itself.
 - **THEN** the module delegates the source to the core normalizer
 - **AND** it preserves the existing completed-import behavior without claiming
   that native CLI validation occurred.
+
+#### Scenario: Dogfood the shipped source-readiness specification
+
+- **GIVEN** this completed OpenSpec change maps its imported stable requirement
+  to the existing Requirements runtime and command-integration test targets
+- **WHEN** the Requirements evidence adapter evaluates this source together
+  with the #352 dogfood-evidence source in isolated bundles
+- **THEN** each source imports without error diagnostics and has complete
+  declared test-link coverage
+- **AND** the aggregate verdict is `passed`
+- **AND** the evidence continues to state that test-execution proof is not
+  included.
