@@ -68,5 +68,6 @@ released in SpecFact CLI 0.53.1; these tasks remain here as integration traceabi
   checks.
 - [x] 5.4 Synchronize and reopen issue #346 with the final core dependency,
   scope, and acceptance evidence.
-- [ ] 5.5 Open the modules PR to `dev` with the paired-core release requirement,
-  test evidence, signature verification, and documentation updates.
+- [x] 5.5 Merge modules PR #360 to `dev` with the paired-core release
+  requirement, test evidence, signature verification, and documentation
+  updates on 2026-07-26.

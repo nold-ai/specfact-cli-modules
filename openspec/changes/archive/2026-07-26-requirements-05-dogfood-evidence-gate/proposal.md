@@ -43,5 +43,6 @@ or incomplete requirement linkage has no durable red artifact.
 - **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/352>
 - **Parent Feature**: #161
 - **Follow-up To**: #346
-- **Last Synced Status**: open
+- **Last Synced Status**: completed after PR #360 merged to `dev` on
+  2026-07-26.
 - **Sanitized**: false

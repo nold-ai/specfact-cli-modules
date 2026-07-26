@@ -64,5 +64,6 @@ None.
 - **Parent Feature**: #161 Context Adapters For Validation Evidence
 - **Follow-up To**: #168
 - **Core Counterpart**: nold-ai/specfact-cli#648
-- **Last Synced Status**: reopened for traceability repair (aligned 2026-07-26)
+- **Last Synced Status**: completed after PR #360 merged to `dev` on 2026-07-26;
+  paired core issue #648 was released in SpecFact CLI 0.53.1.
 - **Sanitized**: false
