@@ -6,7 +6,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -34,7 +37,27 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--acceptance-criteria",
+      "--adapter",
+      "--body",
+      "--body-end-marker",
+      "--business-value",
+      "--check-dor",
+      "--custom-config",
+      "--description-format",
+      "--non-interactive",
+      "--parent",
+      "--priority",
+      "--project-id",
+      "--provider-field",
+      "--repo-path",
+      "--sprint",
+      "--story-points",
+      "--template",
+      "--title",
+      "--type"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -48,7 +71,14 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--custom-config",
+      "--json-export",
+      "--output",
+      "--project-id",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -81,7 +111,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--pat",
+      "--use-device-code"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -95,7 +128,9 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--provider"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -109,7 +144,11 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--base-url",
+      "--client-id",
+      "--scopes"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -151,13 +190,21 @@
     ]
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ADAPTER",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog ceremony flow",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--mode"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -165,13 +212,21 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ADAPTER",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog ceremony pi-summary",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--mode"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -179,13 +234,21 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ADAPTER",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog ceremony planning",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--mode"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -193,7 +256,13 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ADAPTER",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog ceremony refinement",
     "deprecated": false,
@@ -207,13 +276,21 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ADAPTER",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog ceremony standup",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--mode"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -221,13 +298,58 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ADAPTER",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog daily",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--ado-org",
+      "--ado-project",
+      "--ado-team",
+      "--ado-token",
+      "--annotations",
+      "--assignee",
+      "--blockers",
+      "--blockers-first",
+      "--comments",
+      "--copilot-export",
+      "--first-comments",
+      "--first-issues",
+      "--github-token",
+      "--id",
+      "--interactive",
+      "--iteration",
+      "--labels",
+      "--last-comments",
+      "--last-issues",
+      "--limit",
+      "--mode",
+      "--no-show-unassigned",
+      "--patch",
+      "--post",
+      "--release",
+      "--repo-name",
+      "--repo-owner",
+      "--search",
+      "--show-unassigned",
+      "--sprint",
+      "--state",
+      "--suggest-next",
+      "--summarize",
+      "--summarize-to",
+      "--tags",
+      "--today",
+      "--unassigned-only",
+      "--yesterday"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -260,7 +382,12 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--baseline-file",
+      "--project-id",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -268,13 +395,23 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ITEM_ID",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog delta impact",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--project-id",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -288,7 +425,12 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--baseline-file",
+      "--project-id",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -296,13 +438,27 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ADAPTER_ARG",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog delta status",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--baseline-file",
+      "--project-id",
+      "--repo-name",
+      "--repo-owner",
+      "--since",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -316,7 +472,12 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--baseline-file",
+      "--project-id",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -330,7 +491,9 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--force"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -344,7 +507,20 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--ado-base-url",
+      "--ado-framework",
+      "--ado-org",
+      "--ado-project",
+      "--ado-token",
+      "--github-project-id",
+      "--github-project-v2-id",
+      "--github-type-field-id",
+      "--github-type-option",
+      "--non-interactive",
+      "--provider",
+      "--reset"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -358,7 +534,13 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--item-id",
+      "--project-id",
+      "--template",
+      "--to-status"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -366,13 +548,58 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "ADAPTER",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact backlog refine",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--ado-org",
+      "--ado-project",
+      "--ado-team",
+      "--ado-token",
+      "--assignee",
+      "--auto-accept-high-confidence",
+      "--auto-bundle",
+      "--bundle",
+      "--check-dor",
+      "--custom-field-mapping",
+      "--export-to-tmp",
+      "--first-comments",
+      "--first-issues",
+      "--framework",
+      "--github-token",
+      "--id",
+      "--ignore-refined",
+      "--import-from-tmp",
+      "--iteration",
+      "--labels",
+      "--last-comments",
+      "--last-issues",
+      "--limit",
+      "--no-ignore-refined",
+      "--no-preview",
+      "--openspec-comment",
+      "--persona",
+      "--preview",
+      "--release",
+      "--repo-name",
+      "--repo-owner",
+      "--search",
+      "--sprint",
+      "--state",
+      "--tags",
+      "--template",
+      "--tmp-file",
+      "--write"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -386,7 +613,14 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--baseline-file",
+      "--force-baseline-overwrite",
+      "--output-format",
+      "--project-id",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -400,7 +634,12 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-backlog",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--project-id",
+      "--target-items",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-backlog",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -414,7 +653,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -450,7 +692,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -474,13 +719,23 @@
     ]
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "BUNDLE",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact code drift detect",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--format",
+      "--out",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -488,13 +743,34 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "BUNDLE",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact code import",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--confidence",
+      "--enrich-for-speckit",
+      "--enrichment",
+      "--entry-point",
+      "--exclude-tests",
+      "--force",
+      "--include-tests",
+      "--key-format",
+      "--no-enrich-for-speckit",
+      "--no-revalidate-features",
+      "--repo",
+      "--report",
+      "--revalidate-features",
+      "--shadow-only"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -511,7 +787,15 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--dry-run",
+      "--force",
+      "--out-branch",
+      "--repo",
+      "--report",
+      "--write"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -519,13 +803,34 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "BUNDLE",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact code import from-code",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--confidence",
+      "--enrich-for-speckit",
+      "--enrichment",
+      "--entry-point",
+      "--exclude-tests",
+      "--force",
+      "--include-tests",
+      "--key-format",
+      "--no-enrich-for-speckit",
+      "--no-revalidate-features",
+      "--repo",
+      "--report",
+      "--revalidate-features",
+      "--shadow-only"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -539,7 +844,18 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--budget",
+      "--crosshair-per-path-timeout",
+      "--crosshair-required",
+      "--fail-fast",
+      "--fix",
+      "--out",
+      "--repo",
+      "--sidecar",
+      "--sidecar-bundle",
+      "--verbose"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -555,7 +871,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--install-crosshair",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -569,7 +888,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -621,7 +943,9 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
+    "options": [
+      "--confirm"
+    ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -649,7 +973,9 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
+    "options": [
+      "--from"
+    ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -681,7 +1007,9 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
+    "options": [
+      "--ide"
+    ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -709,7 +1037,9 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
+    "options": [
+      "--ide"
+    ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -717,13 +1047,40 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "FILES",
+        "nargs": -1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact code review review run",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
+    "options": [
+      "--bug-hunt",
+      "--enforcement",
+      "--exclude-tests",
+      "--fix",
+      "--focus",
+      "--include-noise",
+      "--include-tests",
+      "--instructions",
+      "--interactive",
+      "--json",
+      "--level",
+      "--mode",
+      "--no-tests",
+      "--out",
+      "--path",
+      "--preview-fixes",
+      "--scope",
+      "--score-only",
+      "--suppress-noise",
+      "--with-mutation"
+    ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -764,7 +1121,18 @@
     ]
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "BUNDLE_NAME",
+        "nargs": 1,
+        "required": true
+      },
+      {
+        "name": "REPO_PATH",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact code validate sidecar init",
     "deprecated": false,
@@ -778,13 +1146,29 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "BUNDLE_NAME",
+        "nargs": 1,
+        "required": true
+      },
+      {
+        "name": "REPO_PATH",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact code validate sidecar run",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
-    "options": [],
+    "options": [
+      "--no-run-crosshair",
+      "--no-run-specmatic",
+      "--run-crosshair",
+      "--run-specmatic"
+    ],
     "owner_package": "nold-ai/specfact-codebase",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -798,7 +1182,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-govern",
-    "options": [],
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
     "owner_package": "nold-ai/specfact-govern",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -826,13 +1213,24 @@
     ]
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "BUNDLE",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact govern enforce sdd",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-govern",
-    "options": [],
+    "options": [
+      "--no-interactive",
+      "--out",
+      "--output-format",
+      "--sdd"
+    ],
     "owner_package": "nold-ai/specfact-govern",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -846,7 +1244,9 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-govern",
-    "options": [],
+    "options": [
+      "--preset"
+    ],
     "owner_package": "nold-ai/specfact-govern",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -870,13 +1270,23 @@
     ]
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "PATCH_FILE",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact govern patch apply",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-govern",
-    "options": [],
+    "options": [
+      "--dry-run",
+      "--write",
+      "--yes"
+    ],
     "owner_package": "nold-ai/specfact-govern",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -890,7 +1300,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -921,7 +1334,15 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--action",
+      "--bundle",
+      "--no-interactive",
+      "--project-name",
+      "--repo",
+      "--stage",
+      "--verbose"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -935,7 +1356,18 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--list-personas",
+      "--no-interactive",
+      "--out",
+      "--output",
+      "--output-dir",
+      "--persona",
+      "--repo",
+      "--stdout",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -949,7 +1381,13 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--output",
+      "--project-name",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -963,7 +1401,13 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--project-name",
+      "--repo",
+      "--verbose"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -977,7 +1421,15 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--dry-run",
+      "--file",
+      "--input",
+      "--no-interactive",
+      "--persona",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -991,7 +1443,12 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--persona",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1005,7 +1462,15 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--bundle",
+      "--no-interactive",
+      "--project-id",
+      "--project-name",
+      "--repo",
+      "--template"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1019,7 +1484,13 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--persona",
+      "--repo",
+      "--section"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1033,7 +1504,11 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1047,7 +1522,19 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--base",
+      "--bundle",
+      "--no-interactive",
+      "--ours",
+      "--out",
+      "--output",
+      "--persona-ours",
+      "--persona-theirs",
+      "--repo",
+      "--strategy",
+      "--theirs"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1061,7 +1548,14 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--project-name",
+      "--repo",
+      "--strict",
+      "--verbose"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1075,7 +1569,14 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--path",
+      "--persona",
+      "--repo",
+      "--resolution"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1089,7 +1590,13 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--output",
+      "--project-name",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1121,7 +1628,49 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--adapter",
+      "--add-progress-comment",
+      "--ado-base-url",
+      "--ado-org",
+      "--ado-project",
+      "--ado-token",
+      "--ado-work-item-type",
+      "--all",
+      "--backlog-ids",
+      "--backlog-ids-file",
+      "--bidirectional",
+      "--bundle",
+      "--change-ids",
+      "--code-repo",
+      "--ensure-compliance",
+      "--export-to-tmp",
+      "--external-base-path",
+      "--feature",
+      "--github-token",
+      "--import-from-tmp",
+      "--include-archived",
+      "--interactive",
+      "--interval",
+      "--mode",
+      "--no-add-progress-comment",
+      "--no-gh-cli",
+      "--no-include-archived",
+      "--no-sanitize",
+      "--no-track-code-changes",
+      "--no-update-existing",
+      "--overwrite",
+      "--repo",
+      "--repo-name",
+      "--repo-owner",
+      "--sanitize",
+      "--target-repo",
+      "--tmp-file",
+      "--track-code-changes",
+      "--update-existing",
+      "--use-gh-cli",
+      "--watch"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1129,13 +1678,25 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "BUNDLE",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact project sync intelligent",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--code-to-spec",
+      "--repo",
+      "--spec-to-code",
+      "--tests",
+      "--watch"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1149,7 +1710,13 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--confidence",
+      "--interval",
+      "--repo",
+      "--target",
+      "--watch"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1163,7 +1730,12 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--no-interactive",
+      "--repo",
+      "--section"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1195,7 +1767,11 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--repo",
+      "--type"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1209,7 +1785,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--repo"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1223,7 +1802,11 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-project",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--repo",
+      "--version"
+    ],
     "owner_package": "nold-ai/specfact-project",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1237,7 +1820,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
-    "options": [],
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
     "owner_package": "nold-ai/specfact-requirements",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1256,7 +1842,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--format"
+    ],
     "owner_package": "nold-ai/specfact-requirements",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1264,13 +1853,25 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "SOURCE_PATH",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact requirements import",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--format",
+      "--from-file",
+      "--from-openspec",
+      "--from-speckit"
+    ],
     "owner_package": "nold-ai/specfact-requirements",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1284,7 +1885,11 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--format",
+      "--show-coverage"
+    ],
     "owner_package": "nold-ai/specfact-requirements",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1298,7 +1903,11 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--format",
+      "--profile"
+    ],
     "owner_package": "nold-ai/specfact-requirements",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1312,7 +1921,10 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-spec",
-    "options": [],
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
     "owner_package": "nold-ai/specfact-spec",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1325,7 +1937,18 @@
     ]
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "OLD_SPEC",
+        "nargs": 1,
+        "required": true
+      },
+      {
+        "name": "NEW_SPEC",
+        "nargs": 1,
+        "required": true
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact spec backward-compat",
     "deprecated": false,
@@ -1339,13 +1962,24 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "SPEC_PATH",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact spec generate-tests",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-spec",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--force",
+      "--out",
+      "--output"
+    ],
     "owner_package": "nold-ai/specfact-spec",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1359,7 +1993,14 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-spec",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--examples",
+      "--no-interactive",
+      "--port",
+      "--spec",
+      "--strict"
+    ],
     "owner_package": "nold-ai/specfact-spec",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
@@ -1367,13 +2008,24 @@
     "subcommands": []
   },
   {
-    "arguments": [],
+    "arguments": [
+      {
+        "name": "SPEC_PATH",
+        "nargs": 1,
+        "required": false
+      }
+    ],
     "bare_invocation": "executes",
     "command": "specfact spec validate",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-spec",
-    "options": [],
+    "options": [
+      "--bundle",
+      "--force",
+      "--no-interactive",
+      "--previous"
+    ],
     "owner_package": "nold-ai/specfact-spec",
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
