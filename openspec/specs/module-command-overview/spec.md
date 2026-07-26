@@ -14,13 +14,31 @@ and registry inventory.
 #### Scenario: Module command overview artifacts are generated
 
 - **GIVEN** the module command overview generator runs in the modules repository
-- **WHEN** it writes artifacts
+- **WHEN** it writes artifacts under the pinned Docs Review dependency set
 - **THEN** it produces `llms.txt`, `docs/reference/commands.generated.md`, and
   `docs/reference/commands.generated.json`
 - **AND** every command record includes command path, owning repo, owning module
   package, install prerequisite, short help, arguments/options, subcommands,
   source import path when known, and hidden/deprecated status
 - **AND** generated output is stable for the same source tree.
+
+#### Scenario: Typer-provided parameters preserve command metadata
+
+- **GIVEN** a command parameter is supplied by the pinned Docs Review Typer
+  runtime rather than Click's public option or argument class
+- **WHEN** command overview generation or freshness validation runs
+- **THEN** it records that parameter's long options or argument metadata
+- **AND** it does not certify empty metadata caused only by the parameter's
+  implementation class.
+
+#### Scenario: Explicit argument metavars remain intact
+
+- **GIVEN** a Click or Typer argument defines an explicit `metavar`
+- **WHEN** command overview generation records the argument
+- **THEN** it emits the configured metavar without changing its casing or
+  punctuation
+- **AND** it continues to normalize only default argument labels for stable
+  generated artifacts across supported runtimes.
 
 #### Scenario: Official inventory is not represented by command mounts
 
