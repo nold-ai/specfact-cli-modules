@@ -22,6 +22,8 @@ in the Docs Review environment.
 
 - Classify parameters against the supported Click and Typer option/argument
   classes instead of relying only on Click's public inheritance hierarchy.
+- Preserve an explicitly configured argument metavar verbatim; normalize the
+  runtime-provided default label only when no explicit metavar exists.
 - Add focused regression tests using Typer command construction and regenerate
   artifacts in an environment built from `requirements-docs-ci.txt`.
 
@@ -31,6 +33,8 @@ in the Docs Review environment.
   dependency file and retain focused parameter-class coverage.
 - [Broader type acceptance misclassifies a parameter] → Limit accepted classes
   to the runtime types emitted by Click and Typer.
+- [Label normalization changes user-provided syntax] → Use the parameter's
+  explicit metavar before applying the stable default-label normalization.
 
 ## Migration Plan
 

@@ -26,6 +26,15 @@ and registry inventory.
 - **AND** it does not certify empty metadata caused only by the parameter's
   implementation class.
 
+#### Scenario: Explicit argument metavars remain intact
+
+- **GIVEN** a Click or Typer argument defines an explicit `metavar`
+- **WHEN** command overview generation records the argument
+- **THEN** it emits the configured metavar without changing its casing or
+  punctuation
+- **AND** it continues to normalize only default argument labels for stable
+  generated artifacts across supported runtimes.
+
 #### Scenario: Official inventory is not represented by command mounts
 
 - **GIVEN** an official package or grouped root in manifests and the registry is

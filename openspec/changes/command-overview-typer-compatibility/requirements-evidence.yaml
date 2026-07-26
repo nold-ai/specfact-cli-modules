@@ -1,0 +1,4 @@
+requirements:
+  "openspec:command-overview-typer-compatibility:module-command-overview:modules-publish-generated-command-overview-artifacts":
+    test_links:
+      - tests/unit/docs/test_llms_overview_freshness.py

@@ -18,6 +18,10 @@ Result: failed as expected. `_command_options` returned `[]` instead of
 `typer._click.core.Parameter`, not Click's public `Option` and `Argument`
 classes.
 
+Before the explicit-metavar repair, the focused Typer argument regression
+failed because the generated argument record changed `path/to/file` to
+`PATH/TO/FILE`.
+
 ## Passing-after
 
 ### 2026-07-26 Europe/Berlin
@@ -54,3 +58,16 @@ classes.
   `import_openspec_change` does not accept the `project_root` argument expected
   by the merged Requirements source. The change-specific Docs Review suite
   remains green under the CI dependency set.
+
+## Review and CI follow-up
+
+### 2026-07-26 Europe/Berlin
+
+- The explicit-metavar regression and the existing Typer parameter regression
+  passed under both the Hatch runtime and the exact Docs Review environment
+  (Typer 0.27.0, Click 8.4.2); the generated-artifact `--check` also passed.
+- `requirements-evidence.yaml` maps the modified OpenSpec requirement to
+  `tests/unit/docs/test_llms_overview_freshness.py`.
+- The repaired requirements-evidence gate passed against the current paired
+  core CLI `dev` source at version 0.53.5: one requirement imported, one test
+  link and evidence link recorded, and zero failed sources.

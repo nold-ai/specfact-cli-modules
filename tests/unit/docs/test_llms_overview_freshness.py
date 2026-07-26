@@ -85,6 +85,23 @@ def test_command_overview_records_typer_parameters() -> None:
     )
 
 
+def test_command_overview_preserves_explicit_typer_argument_metavar() -> None:
+    """An explicit metavar is user-facing syntax, not a default label to normalize."""
+    generator = load_module_from_path("generate_command_overview_typer_metavar", GENERATOR)
+    app = typer.Typer()
+
+    @app.command()
+    def inspect(source_path: str = typer.Argument(..., metavar="path/to/file")) -> None:
+        del source_path
+
+    assert inspect.__name__ == "inspect"
+    command = get_typer_command(app)
+
+    assert {"name": "path/to/file", "required": True, "nargs": 1} in generator._command_arguments(  # pylint: disable=protected-access
+        command
+    )
+
+
 def test_command_overview_rejects_unrepresented_official_inventory(tmp_path: Path, monkeypatch) -> None:
     generator = load_module_from_path("generate_command_overview_inventory", GENERATOR)
     manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"

@@ -170,13 +170,17 @@ def _command_options(command: click.Command) -> list[str]:
     return sorted(options)
 
 
+def _argument_display_name(param: click.Argument | TyperArgument) -> str:
+    return param.metavar or param.human_readable_name.upper()
+
+
 def _command_arguments(command: click.Command) -> list[dict[str, Any]]:
     arguments: list[dict[str, Any]] = []
     for param in command.params:
         if isinstance(param, ARGUMENT_PARAMETER_TYPES):
             arguments.append(
                 {
-                    "name": param.human_readable_name.upper(),
+                    "name": _argument_display_name(param),
                     "required": bool(param.required),
                     "nargs": param.nargs,
                 }
