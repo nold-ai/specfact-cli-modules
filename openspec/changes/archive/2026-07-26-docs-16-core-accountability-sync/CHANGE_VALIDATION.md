@@ -1,9 +1,12 @@
 # Change Validation: docs-16-core-accountability-sync
 
-- **Validated on:** 2026-07-11 Europe/Berlin
-- **Workflow:** proposal-readiness review and strict OpenSpec validation
-- **Strict command:** `openspec validate docs-16-core-accountability-sync --strict`
-- **Result:** PASS (0 issues)
+- **Validated on:** 2026-07-26 Europe/Berlin
+- **Workflow:** post-archive evidence refresh and strict OpenSpec validation of
+  the final archive bundle
+- **Strict command:** `openspec validate docs-16-core-accountability-sync
+  --strict`, run from an isolated temporary OpenSpec root reconstructed from
+  `archive/2026-07-26-docs-16-core-accountability-sync`
+- **Result:** PASS (`Change 'docs-16-core-accountability-sync' is valid`)
 
 ## Scope Summary
 
@@ -20,17 +23,22 @@
   official-inventory loading, and core catalogue/ownership rules.
 - Modules owns paired-core resolution, local and PR gate wiring, generated
   module-command artifacts, and modules-side regression coverage.
-- #339 is open, assigned, labelled, parented by #162, and in the SpecFact CLI
-  project Todo state as reviewed on 2026-07-10 Europe/Berlin.
-- No native GitHub `blocked_by` relation is present for the completed core
-  prerequisite; recheck that governance detail before production implementation.
+- #339 is closed (completed 2026-07-10 Europe/Berlin); the archived change is
+  retained as the authoritative implementation and validation record.
+- No native GitHub `blocked_by` relation was present for the completed core
+  prerequisite at implementation time.
 
 ## Validation Outcome
 
-`openspec validate docs-16-core-accountability-sync --strict` passed with zero
-issues. Production behavior is implemented, every change task is complete, and
-the recorded evidence follows the required `spec -> tests -> failing evidence
--> code -> passing evidence` sequence.
+On 2026-07-26 Europe/Berlin, an isolated OpenSpec root was reconstructed by
+copying the final date-prefixed archive bundle into its active-change location.
+`openspec validate docs-16-core-accountability-sync --strict` then passed with
+`Change 'docs-16-core-accountability-sync' is valid`. Production behavior is
+implemented, every change task is complete, and the recorded evidence follows
+the required `spec -> tests -> failing evidence -> code -> passing evidence`
+sequence. The normal repository root intentionally cannot validate this ID
+directly because OpenSpec lists archived changes as completed rather than
+active.
 
 ## Proposal Quality Evidence
 
@@ -55,7 +63,20 @@ the recorded evidence follows the required `spec -> tests -> failing evidence
   runtime cannot initialize its CA trust store, yielding unrelated fixture
   failures; see `TDD_EVIDENCE.md` for the exact evidence.
 
-## Final Code-Review Evidence
+## Archive Refresh Evidence
+
+At 2026-07-26 Europe/Berlin, the final archive bundle was copied without
+modification to a temporary OpenSpec root and validated with:
+
+```bash
+openspec validate docs-16-core-accountability-sync --strict
+```
+
+Result: PASS (`Change 'docs-16-core-accountability-sync' is valid`). This
+validates the archived bundle against the final canonical specs without
+manually moving or rewriting the archive.
+
+## Historical Final Code-Review Evidence
 
 At 2026-07-11 Europe/Berlin, `hatch run specfact code review run` with
 `--enforcement changed --bug-hunt --json` reported zero errors and zero

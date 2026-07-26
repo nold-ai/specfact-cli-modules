@@ -16,6 +16,10 @@ or incomplete requirement linkage has no durable red artifact.
   per-source and aggregate `passed`, `failed`, or `skipped` verdict.
 - **NEW**: a GitHub Actions `requirements-evidence` job that publishes the
   artifact and concise summary on every applicable pull request.
+- Bootstrap the adapter from repository-local module source roots rather than
+  treating an individual module bundle directory as a Python distribution.
+- Retain deterministic failed JSON and Markdown evidence when setup fails
+  before the adapter can run.
 - **NEW**: an optional per-change `requirements-evidence.yaml` sidecar that
   maps imported stable requirement IDs to repository-relative test targets.
 - **NEW**: explicit failure reasons for import diagnostics, validation failures,

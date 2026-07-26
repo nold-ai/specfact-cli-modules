@@ -29,3 +29,20 @@
   gates; record passing evidence.
 - [x] 4.2 Run the changed-line SpecFact code review and resolve all findings.
 - [x] 4.3 Open a PR to `dev` with the JSON evidence contract and its limits.
+
+## 5. Production stability follow-up
+
+- [x] 5.1 Replace invalid editable installation of the Requirements bundle with
+  repository-local source-root bootstrap in the workflow.
+- [x] 5.2 Write deterministic failed JSON and Markdown evidence fallback when
+  setup fails before the adapter runs.
+- [x] 5.3 Add workflow contract coverage for local source bootstrap and setup
+  failure artifact retention; capture failing-before and passing-after evidence.
+- [x] 5.4 Keep the shipped-source dogfood regression valid when OpenSpec moves
+  completed changes into date-prefixed archive directories.
+- [x] 5.5 Publish the fallback JSON and Markdown as a complete, parseable
+  artifact pair before considering evidence recovery complete.
+- [x] 5.6 Preserve prior evidence when fallback publication fails and make
+  generated fallback artifacts byte-stable across runner platforms.
+- [x] 5.7 Preserve existing artifact bytes during fallback rollback and reject
+  output/summary paths that resolve to the same destination before writing.

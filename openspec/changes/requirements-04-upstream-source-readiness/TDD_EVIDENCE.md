@@ -64,3 +64,40 @@
   `.tar.gz` artifact and its registry checksum, and committed the published
   registry metadata. The release is therefore gated by workflow success rather
   than the checksum-only local pre-PR check.
+
+## Requirements evidence dogfood repair
+
+- 2026-07-26 (Europe/Berlin): Added the actual-source regression
+  `test_shipped_source_readiness_and_dogfood_specs_pass_actual_evidence_gate`
+  before adding this change's evidence sidecar.
+- Failing-before: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_gate.py::test_shipped_source_readiness_and_dogfood_specs_pass_actual_evidence_gate
+  -q` reported `1 failed`: the aggregate Requirements evidence verdict was
+  `failed` because this change had no declared test links.
+- Repair: Added `requirements-evidence.yaml`, mapping the imported stable
+  requirement to the existing Requirements runtime and command-integration
+  tests. No production runtime logic changed.
+- Passing-after: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py
+  tests/unit/specfact_requirements/test_requirements_runtime.py
+  tests/integration/specfact_requirements/test_command_apps.py -q` reported
+  `39 passed`.
+- Strict OpenSpec validation: `openspec validate
+  requirements-04-upstream-source-readiness --strict` passed on 2026-07-26
+  (Europe/Berlin).
+- Actual-source replay: the Requirements evidence adapter imported #346 (1
+  requirement) and #352 (2 requirements) with no diagnostics, complete
+  1/1 and 2/2 test-link coverage, and an aggregate `passed` verdict. The
+  local-only replay JSON is
+  `/private/tmp/requirements-source-dogfood.ch9yma/requirements-evidence-346-352-after.json`.
+- Durable CI evidence: [PR #360 requirements-evidence run 30218255529](https://github.com/nold-ai/specfact-cli-modules/actions/runs/30218255529)
+  uploaded the `requirements-evidence` artifact (ID `8636426743`) at
+  2026-07-26 20:06:40 UTC. Its JSON recorded 2 passed sources, 0 failed or
+  skipped sources, and the same #346 1/1 and #352 2/2 test-link coverage.
+- Read-only check: SHA-256 file manifests captured before and after the
+  actual-source adapter replay were identical for both OpenSpec source trees.
+- GitHub synchronization: issue #346 was reopened on 2026-07-26 and updated
+  with the aggregate passed verdict, test counts, source-integrity check, and
+  explicit `execution_proof: not-included` boundary. It remains open pending
+  merge of this repair.

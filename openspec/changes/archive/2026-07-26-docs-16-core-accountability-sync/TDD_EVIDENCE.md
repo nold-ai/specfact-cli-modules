@@ -1,5 +1,32 @@
 # TDD Evidence: docs-16-core-accountability-sync
 
+## Archive refresh
+
+### 2026-07-26 Europe/Berlin
+
+- Initial `openspec archive docs-16-core-accountability-sync --yes` correctly
+  aborted because the delta's modified `modules-docs-publishing` requirement
+  omitted the newer `Docs-only pull request has broken published link` scenario
+  in the current main spec.
+- The delta now preserves that unchanged scenario verbatim alongside this
+  change's core-accountability scenario, so archiving can update the canonical
+  spec without dropping later behavior.
+- The subsequent archive validation also identified the newer docs-only
+  pre-commit scenarios; the delta now preserves both verbatim before adding
+  the manifest and registry accountability behavior.
+- The archive validator then confirmed that the deterministic staged-only
+  signature requirement is absent from the current canonical spec. Its delta
+  block is therefore correctly classified as an added requirement rather than
+  a modification of a missing header.
+- After archival, OpenSpec correctly no longer resolves this completed change
+  from the repository root. The final date-prefixed archive bundle was copied
+  unchanged into an isolated temporary OpenSpec root at its active-change
+  location, then validated with `openspec validate
+  docs-16-core-accountability-sync --strict` on 2026-07-26 Europe/Berlin.
+- Result: passed (`Change 'docs-16-core-accountability-sync' is valid`). This
+  is a strict validation of the final archive contents, not a manual archive
+  move or a claim that the archived ID remains active in the primary checkout.
+
 ## Failing-before
 
 ### 2026-07-10 Europe/Berlin

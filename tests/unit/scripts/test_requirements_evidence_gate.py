@@ -60,6 +60,17 @@ def _mapped_source(tmp_path: Path) -> tuple[Path, Path, bytes]:
     return source, sidecar, sidecar.read_bytes()
 
 
+def _resolve_shipped_openspec_change_source(repo_root: Path, change_id: str) -> Path:
+    """Find a shipped change in its active or OpenSpec-managed archive location."""
+    changes_root = repo_root / "openspec" / "changes"
+    candidates = [changes_root / change_id]
+    candidates.extend(sorted((changes_root / "archive").glob(f"*-{change_id}")))
+    sources = [candidate for candidate in candidates if candidate.is_dir()]
+
+    assert len(sources) == 1, f"expected one active or archived OpenSpec source for {change_id}, found {sources}"
+    return sources[0]
+
+
 def test_evaluate_sources_emits_passed_verdict_with_preserved_evidence(monkeypatch, tmp_path: Path) -> None:
     source = tmp_path / "openspec" / "changes" / "widget-evidence"
     source.mkdir(parents=True)
@@ -276,6 +287,52 @@ def test_evaluate_sources_skips_without_sources(tmp_path: Path) -> None:
     assert report["verdict"] == "skipped"
     assert not report["sources"]
     assert report["summary"] == {"failed_sources": 0, "passed_sources": 0, "skipped_sources": 1, "total_sources": 0}
+
+
+def test_resolve_shipped_openspec_change_source_accepts_active_or_archived_location(tmp_path: Path) -> None:
+    changes_root = tmp_path / "openspec" / "changes"
+    active = changes_root / "requirements-evidence"
+    active.mkdir(parents=True)
+
+    assert _resolve_shipped_openspec_change_source(tmp_path, "requirements-evidence") == active
+
+    active.rmdir()
+    archived = changes_root / "archive" / "2026-07-26-requirements-evidence"
+    archived.mkdir(parents=True)
+
+    assert _resolve_shipped_openspec_change_source(tmp_path, "requirements-evidence") == archived
+
+
+def test_resolve_shipped_openspec_change_source_rejects_ambiguous_locations(tmp_path: Path) -> None:
+    changes_root = tmp_path / "openspec" / "changes"
+    (changes_root / "requirements-evidence").mkdir(parents=True)
+    (changes_root / "archive" / "2026-07-26-requirements-evidence").mkdir(parents=True)
+
+    with pytest.raises(AssertionError, match="expected one active or archived OpenSpec source"):
+        _resolve_shipped_openspec_change_source(tmp_path, "requirements-evidence")
+
+
+def test_shipped_source_readiness_and_dogfood_specs_pass_actual_evidence_gate(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    sources = [
+        _resolve_shipped_openspec_change_source(repo_root, "requirements-04-upstream-source-readiness"),
+        _resolve_shipped_openspec_change_source(repo_root, "requirements-05-dogfood-evidence-gate"),
+    ]
+
+    report = evidence_gate._evaluate_sources(sources, bundle_parent=tmp_path)
+
+    assert report["verdict"] == "passed"
+    assert report["execution_proof"] == "not-included"
+    assert report["summary"] == {"failed_sources": 0, "passed_sources": 2, "skipped_sources": 0, "total_sources": 2}
+    assert len(report["sources"]) == 2
+    assert all(source["verdict"] == "passed" for source in report["sources"])
+    assert all(source["import"]["diagnostics"] == [] for source in report["sources"])
+    assert all(source["import"]["imported"] > 0 for source in report["sources"])
+    assert all(
+        source["coverage"]["total_requirements"] == source["coverage"]["with_test_links"]
+        for source in report["sources"]
+    )
+    assert all(source["reasons"] == [] for source in report["sources"])
 
 
 def test_discover_changed_openspec_sources_includes_deleted_active_files(monkeypatch, tmp_path: Path) -> None:

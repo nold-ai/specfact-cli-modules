@@ -24,6 +24,9 @@ normalised into misleading records.
   requirement records for any rejected source.
 - Preserve completed native imports, stable identifiers, hash provenance,
   idempotency, read-only source behavior, and portable basic imports.
+- Dogfood this shipped OpenSpec source through the Requirements evidence adapter
+  with an explicit test-link sidecar, so the source-readiness claim has
+  machine-readable traceability evidence rather than only historical test logs.
 
 ## Capabilities
 
@@ -43,8 +46,9 @@ None.
   modules change is blocked until that contract ships.
 - Affected modules code: `packages/specfact-requirements` import command and
   thin runtime delegation.
-- Affected tests: Requirements module command/runtime integration coverage and
-  source read-only/idempotency regression coverage.
+- Affected tests: Requirements module command/runtime integration coverage,
+  source read-only/idempotency regression coverage, and an actual-source
+  Requirements evidence replay covering this change together with #352.
 - Affected user docs: Requirements import examples and diagnostic guidance.
 - Release impact: patch release of `nold-ai/specfact-requirements` after the
   paired core compatibility floor is available; no registry or signed manifest
@@ -60,5 +64,5 @@ None.
 - **Parent Feature**: #161 Context Adapters For Validation Evidence
 - **Follow-up To**: #168
 - **Core Counterpart**: nold-ai/specfact-cli#648
-- **Last Synced Status**: open / Todo (aligned 2026-07-14)
+- **Last Synced Status**: reopened for traceability repair (aligned 2026-07-26)
 - **Sanitized**: false

@@ -60,6 +60,15 @@ SHALL emit a machine-readable aggregate verdict without modifying the source.
 - **AND** it does not describe the skipped result as proof that requirements
   are met.
 
+#### Scenario: Preserve shipped-source regression coverage after archival
+
+- **GIVEN** a shipped OpenSpec change is present either as an active change or
+  in OpenSpec's date-prefixed archive location
+- **WHEN** the permanent dogfood regression suite evaluates its source
+- **THEN** it resolves the source by its stable change ID in either location
+- **AND** normal `openspec archive <change-id>` finalization does not make the
+  regression suite fail because an active-change path disappeared.
+
 ### Requirement: Pull-request evidence publication
 
 The pull-request workflow SHALL run the requirements evidence adapter after the
@@ -76,3 +85,42 @@ verdict.
 - **AND** the job summary shows the aggregate verdict, source count, and
   whether execution-level test proof is included
 - **AND** a failed verdict fails the job.
+
+#### Scenario: Retain setup-failure evidence
+
+- **GIVEN** the workflow cannot bootstrap the paired core CLI or local
+  Requirements module source before the adapter runs
+- **WHEN** the setup step fails
+- **THEN** the workflow still writes and uploads a machine-readable failed
+  `requirements-evidence.json` and a concise Markdown summary
+- **AND** the failure report identifies setup as the unavailable evidence stage
+- **AND** the job remains failed.
+
+#### Scenario: Publish a complete fallback artifact pair
+
+- **GIVEN** the workflow needs fallback evidence because its adapter artifacts
+  are missing, incomplete, or the JSON report is unparsable
+- **WHEN** the fallback writer runs
+- **THEN** it prepares the JSON report and Markdown summary before publishing
+  either final artifact
+- **AND** the workflow treats fallback evidence as complete only when both
+  final artifacts exist and the JSON report parses successfully.
+- **AND** generated artifact text uses LF line endings
+- **AND** a failed artifact replacement restores the prior published pair.
+
+#### Scenario: Reject aliased fallback artifact destinations
+
+- **GIVEN** the fallback JSON output path and Markdown summary path resolve to
+  the same filesystem destination
+- **WHEN** the fallback writer runs
+- **THEN** it fails with a clear configuration error before creating parent
+  directories or writing either artifact.
+
+#### Scenario: Use local module source roots in CI
+
+- **GIVEN** the workflow runs from this modules repository checkout
+- **WHEN** it prepares the Requirements evidence adapter
+- **THEN** it exposes the Requirements module and its direct local bundle
+  dependency through repository source roots
+- **AND** it does not attempt to install a bundle directory that lacks Python
+  packaging metadata.

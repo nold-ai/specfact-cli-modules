@@ -1,5 +1,71 @@
 # TDD Evidence — requirements-05-dogfood-evidence-gate
 
+## OpenSpec archival review remediation
+
+- 2026-07-26 (Europe/Berlin): Codex PR #360 review identified that the
+  permanent shipped-source dogfood test named only active change directories,
+  so the required `openspec archive <change-id>` operation would break it.
+- Failing-before: after adding the archival scenario and test,
+  `hatch run pytest tests/unit/scripts/test_requirements_evidence_gate.py -q`
+  reported 2 failures because no source resolver existed.
+- Remediation: the test resolves each stable change ID to exactly one source in
+  either `openspec/changes/<change-id>` or OpenSpec's managed
+  `openspec/changes/archive/YYYY-MM-DD-<change-id>` location. It deliberately
+  rejects absent or ambiguous sources rather than hard-coding a move or
+  silently selecting one.
+- Passing-after: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py
+  tests/unit/scripts/test_requirements_evidence_fallback.py -q` reported 18
+  passed; `openspec validate requirements-05-dogfood-evidence-gate --strict`
+  passed.
+
+## CodeRabbit artifact-pair review remediation
+
+- 2026-07-26 (Europe/Berlin): CodeRabbit identified that the fallback writer
+  could publish JSON and Markdown independently, while the workflow treated
+  JSON existence alone as recovery completion. It also requested per-source
+  dogfood assertions, step-aware workflow contracts, and durable validation
+  evidence.
+- Failing-before: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_fallback.py
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py -q` reported 2
+  failures: no temporary artifact writer existed, and the workflow did not
+  require the Markdown artifact before skipping fallback.
+- Remediation: the fallback writes both reports to adjacent temporary files
+  before replacing either final path (Markdown first and JSON last as the
+  completion marker). The workflow skips fallback only when both final paths
+  exist and standard-library JSON parsing succeeds. Step-aware workflow
+  contracts verify the gate-local source roots, fallback arguments, summary,
+  upload, and enforcement steps; the actual-source regression asserts every
+  source verdict, diagnostics, import count, and full test-link coverage.
+- Passing-after: the same focused command reported 20 passed;
+  `openspec validate requirements-04-upstream-source-readiness --strict` and
+  `openspec validate requirements-05-dogfood-evidence-gate --strict` passed.
+
+## CodeRabbit publication-rollback remediation
+
+- 2026-07-26 (Europe/Berlin): CodeRabbit identified that text-mode temporary
+  files did not pin LF output and that a failed second file replacement could
+  leave the first fallback artifact published.
+- Failing-before: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_fallback.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py -q` reported 2
+  failures: the temporary writer omitted `newline="\\n"`, and a simulated JSON
+  publication failure left the replacement Markdown summary visible.
+- Remediation: temporary files now explicitly use LF line endings. The paired
+  publisher snapshots the existing artifacts and rolls back only replacements
+  that completed before a later replacement fails. The workflow contract also
+  asserts the valid-pair `exit 0` short-circuit and mandatory
+  `--stage "$EVIDENCE_STAGE"` argument.
+- Passing-after: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_fallback.py
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py -q` reported 22
+  passed; `hatch run lint` and `openspec validate
+  requirements-05-dogfood-evidence-gate --strict` passed.
+
 ## Failing before implementation
 
 - 2026-07-25 (Europe/Berlin):
@@ -185,3 +251,38 @@
   accepts both stable explicit diagnostics (`missing subcommand` and
   `missing command`). Passing evidence: the focused global CLI tests passed
   and `check-command-contract` validated all 91 generated command paths.
+
+## Production-stability repair
+
+- 2026-07-26 (Europe/Berlin): PR #360 exposed that the workflow tried to run
+  `pip install -e packages/specfact-requirements`, although that module bundle
+  directory has no `pyproject.toml` or `setup.py`. Setup stopped before the
+  adapter could create its required evidence artifact.
+- Failing-before: the expanded workflow contract reported two failures: it
+  detected the invalid editable install and the missing `setup-unavailable`
+  fallback guarantee.
+- Repair: the workflow now uses repository-local `PYTHONPATH` roots for the
+  Requirements module and its direct project dependency, and delegates
+  setup/adapter fallback artifact creation to the standard-library-only
+  `requirements_evidence_fallback.py` helper.
+- Passing-after: focused fallback, adapter, and workflow tests reported
+  `17 passed`; YAML validation and strict OpenSpec validation passed.
+- Runtime proof: invoking the adapter with the workflow's exact source-root
+  environment produced a `passed` verdict; invoking the fallback with
+  `setup-unavailable` produced a machine-readable failed report and Markdown
+  summary. Local artifacts are under `/private/tmp/requirements-evidence-ci.lcreX0/`.
+
+## Fallback publication integrity remediation
+
+- 2026-07-26 (Europe/Berlin): expanded
+  `hatch run pytest tests/unit/scripts/test_requirements_evidence_fallback.py -q`
+  first failed as expected (2 failed, 3 passed). Existing CRLF artifacts were
+  restored as LF text after a failed JSON replacement, and aliases resolving
+  to the same output/summary destination were accepted.
+- Remediation: snapshot and restore existing artifacts as raw bytes through
+  the atomic temporary-file path; retain UTF-8/LF generation for new fallback
+  text. Reject equal resolved output and summary destinations before any
+  parent directory or artifact is created.
+- Passing-after: the same focused command reported 5 passed. The CRLF rollback
+  regression proves byte-for-byte recovery, and the destination regression
+  proves the writer fails before writing either artifact.

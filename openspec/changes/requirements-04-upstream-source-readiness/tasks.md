@@ -59,7 +59,14 @@ released in SpecFact CLI 0.53.1; these tasks remain here as integration traceabi
 
 ## 5. Delivery
 
-- [ ] 5.1 Validate the OpenSpec change strictly and synchronize issue #346 with
-  final core dependency, scope, and acceptance evidence.
-- [ ] 5.2 Open the modules PR to `dev` with the paired-core release requirement,
+- [x] 5.1 Add a `requirements-evidence.yaml` mapping for this change's imported
+  stable requirement to the existing source-readiness runtime and command tests.
+- [x] 5.2 Add an actual-source regression test proving this change and #352
+  produce a passed Requirements evidence verdict together.
+- [x] 5.3 Capture failing-before and passing-after evidence for the missing
+  mapping repair, including strict OpenSpec validation and source read-only
+  checks.
+- [x] 5.4 Synchronize and reopen issue #346 with the final core dependency,
+  scope, and acceptance evidence.
+- [ ] 5.5 Open the modules PR to `dev` with the paired-core release requirement,
   test evidence, signature verification, and documentation updates.
