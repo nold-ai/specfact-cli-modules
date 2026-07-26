@@ -9,6 +9,20 @@ staged documentation-relevant changes before skipping code-specific review and
 contract-test stages. Any `packages/**` or `registry/**` change is
 documentation-relevant for generated command artifacts and accountability.
 
+#### Scenario: Docs-only commit with broken link fails pre-commit
+
+- **WHEN** only docs files are staged and one staged docs page introduces a
+  broken published-route link
+- **THEN** pre-commit runs docs validation
+- **AND** pre-commit fails before reporting the change as safe
+
+#### Scenario: Docs-only commit with valid docs skips code-specific checks
+
+- **WHEN** only docs files are staged and docs validation passes
+- **THEN** pre-commit may skip code review and contract-test stages
+- **AND** pre-commit reports that docs validation passed before applying the
+  safe-change bypass
+
 #### Scenario: Manifest-only commit cannot bypass documentation gates
 
 - **WHEN** only a module manifest or registry record is staged
@@ -16,13 +30,7 @@ documentation-relevant for generated command artifacts and accountability.
 - **AND** runs the core-accountability gate before the safe-change decision
 - **AND** fails if the generated artifacts or core documentation are stale.
 
-#### Scenario: Docs-only commit with valid documentation skips code-specific checks
-
-- **WHEN** only documentation-relevant paths are staged and all required docs,
-  generated-artifact, and accountability gates pass
-- **THEN** pre-commit may skip code review and contract-test stages
-- **AND** it reports each completed documentation gate before applying the safe
-  bypass.
+## ADDED Requirements
 
 ### Requirement: Non-main module-signature remediation SHALL be deterministic and staged-only
 

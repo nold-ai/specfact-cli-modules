@@ -7,6 +7,13 @@ pre-commit, including generated command-overview freshness, command-contract
 validation, applicable prompt-command validation, and fail-closed core
 documentation accountability, plus docs unit tests.
 
+#### Scenario: Docs-only pull request has broken published link
+
+- **WHEN** a pull request changes only Markdown files under `docs/`
+- **THEN** the docs review workflow runs `published-link` validation
+- **AND** the workflow fails when the changed docs introduce a broken
+  `published-link`
+
 #### Scenario: Module-only pull request validates core accountability
 
 - **WHEN** a pull request changes module manifests, registry data, package
