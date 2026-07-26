@@ -185,3 +185,23 @@
   accepts both stable explicit diagnostics (`missing subcommand` and
   `missing command`). Passing evidence: the focused global CLI tests passed
   and `check-command-contract` validated all 91 generated command paths.
+
+## Production-stability repair
+
+- 2026-07-26 (Europe/Berlin): PR #360 exposed that the workflow tried to run
+  `pip install -e packages/specfact-requirements`, although that module bundle
+  directory has no `pyproject.toml` or `setup.py`. Setup stopped before the
+  adapter could create its required evidence artifact.
+- Failing-before: the expanded workflow contract reported two failures: it
+  detected the invalid editable install and the missing `setup-unavailable`
+  fallback guarantee.
+- Repair: the workflow now uses repository-local `PYTHONPATH` roots for the
+  Requirements module and its direct project dependency, and delegates
+  setup/adapter fallback artifact creation to the standard-library-only
+  `requirements_evidence_fallback.py` helper.
+- Passing-after: focused fallback, adapter, and workflow tests reported
+  `17 passed`; YAML validation and strict OpenSpec validation passed.
+- Runtime proof: invoking the adapter with the workflow's exact source-root
+  environment produced a `passed` verdict; invoking the fallback with
+  `setup-unavailable` produced a machine-readable failed report and Markdown
+  summary. Local artifacts are under `/private/tmp/requirements-evidence-ci.lcreX0/`.

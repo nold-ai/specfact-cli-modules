@@ -59,26 +59,48 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prepare requirements evidence artifact directory
+        run: mkdir -p artifacts/requirements-evidence
+
       - name: Install Hatch and paired core CLI
+        id: setup
+        continue-on-error: true
         run: |
           python -m pip install --upgrade pip
           python -m pip install hatch
           hatch env create
           hatch run pip install -e ./specfact-cli
-          hatch run pip install -e ./packages/specfact-requirements
 
       - name: Run requirements evidence gate
         id: run-evidence
+        if: steps.setup.outcome == 'success'
         continue-on-error: true
         env:
           BASE_REF: origin/${{ github.event.pull_request.base.ref || 'dev' }}
+          PYTHONPATH: packages/specfact-project/src:packages/specfact-requirements/src
         run: |
-          mkdir -p artifacts/requirements-evidence
           hatch run python scripts/requirements_evidence_gate.py \
             --repo-root "$GITHUB_WORKSPACE" \
             --base-ref "$BASE_REF" \
             --output artifacts/requirements-evidence/requirements-evidence.json \
             --summary artifacts/requirements-evidence/requirements-evidence.md
+
+      - name: Retain setup failure evidence
+        if: always()
+        env:
+          SETUP_OUTCOME: ${{ steps.setup.outcome }}
+        run: |
+          if [ -f artifacts/requirements-evidence/requirements-evidence.json ]; then
+            exit 0
+          fi
+          export EVIDENCE_STAGE=setup-unavailable
+          if [ "$SETUP_OUTCOME" = "success" ]; then
+            export EVIDENCE_STAGE=adapter-unavailable
+          fi
+          python scripts/requirements_evidence_fallback.py \
+            --output artifacts/requirements-evidence/requirements-evidence.json \
+            --summary artifacts/requirements-evidence/requirements-evidence.md \
+            --stage "$EVIDENCE_STAGE"
 
       - name: Publish requirements evidence summary
         if: always()
@@ -93,5 +115,5 @@ jobs:
           if-no-files-found: warn
 
       - name: Enforce requirements evidence verdict
-        if: steps.run-evidence.outcome == 'failure'
+        if: steps.setup.outcome == 'failure' || steps.run-evidence.outcome == 'failure'
         run: exit 1

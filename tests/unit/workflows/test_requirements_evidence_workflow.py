@@ -20,7 +20,8 @@ def test_requirements_evidence_workflow_runs_adapter_with_paired_core() -> None:
     assert "branches: [main, dev]" in workflow
     assert "repository: nold-ai/specfact-cli" in workflow
     assert "hatch run pip install -e ./specfact-cli" in workflow
-    assert "hatch run pip install -e ./packages/specfact-requirements" in workflow
+    assert "hatch run pip install -e ./packages/specfact-requirements" not in workflow
+    assert "PYTHONPATH: packages/specfact-project/src:packages/specfact-requirements/src" in workflow
     assert "scripts/requirements_evidence_gate.py" in workflow
     assert "--base-ref" in workflow
     assert "--output artifacts/requirements-evidence/requirements-evidence.json" in workflow
@@ -36,3 +37,6 @@ def test_requirements_evidence_workflow_retains_red_artifacts_and_enforces_verdi
     assert "name: requirements-evidence" in workflow
     assert "steps.run-evidence.outcome == 'failure'" in workflow
     assert 'cat artifacts/requirements-evidence/requirements-evidence.md >> "$GITHUB_STEP_SUMMARY"' in workflow
+    assert "setup-unavailable" in workflow
+    assert "requirements-evidence.md" in workflow
+    assert "scripts/requirements_evidence_fallback.py" in workflow

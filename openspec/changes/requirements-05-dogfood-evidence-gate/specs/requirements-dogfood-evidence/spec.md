@@ -76,3 +76,22 @@ verdict.
 - **AND** the job summary shows the aggregate verdict, source count, and
   whether execution-level test proof is included
 - **AND** a failed verdict fails the job.
+
+#### Scenario: Retain setup-failure evidence
+
+- **GIVEN** the workflow cannot bootstrap the paired core CLI or local
+  Requirements module source before the adapter runs
+- **WHEN** the setup step fails
+- **THEN** the workflow still writes and uploads a machine-readable failed
+  `requirements-evidence.json` and a concise Markdown summary
+- **AND** the failure report identifies setup as the unavailable evidence stage
+- **AND** the job remains failed.
+
+#### Scenario: Use local module source roots in CI
+
+- **GIVEN** the workflow runs from this modules repository checkout
+- **WHEN** it prepares the Requirements evidence adapter
+- **THEN** it exposes the Requirements module and its direct local bundle
+  dependency through repository source roots
+- **AND** it does not attempt to install a bundle directory that lacks Python
+  packaging metadata.
