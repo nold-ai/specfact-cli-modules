@@ -44,3 +44,5 @@
   artifact pair before considering evidence recovery complete.
 - [x] 5.6 Preserve prior evidence when fallback publication fails and make
   generated fallback artifacts byte-stable across runner platforms.
+- [x] 5.7 Preserve existing artifact bytes during fallback rollback and reject
+  output/summary paths that resolve to the same destination before writing.

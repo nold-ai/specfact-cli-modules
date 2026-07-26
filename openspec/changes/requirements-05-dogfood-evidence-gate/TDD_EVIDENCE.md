@@ -271,3 +271,18 @@
   environment produced a `passed` verdict; invoking the fallback with
   `setup-unavailable` produced a machine-readable failed report and Markdown
   summary. Local artifacts are under `/private/tmp/requirements-evidence-ci.lcreX0/`.
+
+## Fallback publication integrity remediation
+
+- 2026-07-26 (Europe/Berlin): expanded
+  `hatch run pytest tests/unit/scripts/test_requirements_evidence_fallback.py -q`
+  first failed as expected (2 failed, 3 passed). Existing CRLF artifacts were
+  restored as LF text after a failed JSON replacement, and aliases resolving
+  to the same output/summary destination were accepted.
+- Remediation: snapshot and restore existing artifacts as raw bytes through
+  the atomic temporary-file path; retain UTF-8/LF generation for new fallback
+  text. Reject equal resolved output and summary destinations before any
+  parent directory or artifact is created.
+- Passing-after: the same focused command reported 5 passed. The CRLF rollback
+  regression proves byte-for-byte recovery, and the destination regression
+  proves the writer fails before writing either artifact.

@@ -108,6 +108,14 @@ verdict.
 - **AND** generated artifact text uses LF line endings
 - **AND** a failed artifact replacement restores the prior published pair.
 
+#### Scenario: Reject aliased fallback artifact destinations
+
+- **GIVEN** the fallback JSON output path and Markdown summary path resolve to
+  the same filesystem destination
+- **WHEN** the fallback writer runs
+- **THEN** it fails with a clear configuration error before creating parent
+  directories or writing either artifact.
+
 #### Scenario: Use local module source roots in CI
 
 - **GIVEN** the workflow runs from this modules repository checkout

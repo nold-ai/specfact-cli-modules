@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -26,19 +25,9 @@ def test_private_failure_report_retains_machine_readable_setup_evidence(tmp_path
     assert b"\r\n" not in summary_path.read_bytes()
 
 
-def test_temporary_evidence_writer_pins_lf_line_endings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    named_temporary_file = fallback.tempfile.NamedTemporaryFile
-    captured: dict[str, object] = {}
-
-    def _capture_newline(*args: Any, **kwargs: Any) -> Any:
-        captured["newline"] = kwargs.get("newline")
-        return named_temporary_file(*args, **kwargs)
-
-    monkeypatch.setattr(fallback.tempfile, "NamedTemporaryFile", _capture_newline)
-
+def test_temporary_evidence_writer_pins_lf_line_endings(tmp_path: Path) -> None:
     temporary_path = fallback._write_temporary_text(tmp_path / "evidence.json", "one\ntwo\n")
 
-    assert captured["newline"] == "\n"
     assert temporary_path.read_bytes() == b"one\ntwo\n"
 
 
@@ -47,8 +36,10 @@ def test_failure_report_restores_the_prior_artifact_pair_when_json_publication_f
 ) -> None:
     output_path = tmp_path / "requirements-evidence.json"
     summary_path = tmp_path / "requirements-evidence.md"
-    output_path.write_text('{"verdict": "previous"}\n', encoding="utf-8")
-    summary_path.write_text("previous summary\n", encoding="utf-8")
+    previous_output = b'{"verdict": "previous"}\r\n'
+    previous_summary = b"previous summary\r\n"
+    output_path.write_bytes(previous_output)
+    summary_path.write_bytes(previous_summary)
     original_replace = Path.replace
 
     def _fail_json_publication(path: Path, target: Path) -> Path:
@@ -61,8 +52,18 @@ def test_failure_report_restores_the_prior_artifact_pair_when_json_publication_f
     with pytest.raises(OSError, match="json publication failed"):
         fallback._write_failure_report(output_path, summary_path, stage="setup-unavailable")
 
-    assert output_path.read_text(encoding="utf-8") == '{"verdict": "previous"}\n'
-    assert summary_path.read_text(encoding="utf-8") == "previous summary\n"
+    assert output_path.read_bytes() == previous_output
+    assert summary_path.read_bytes() == previous_summary
+
+
+def test_failure_report_rejects_identical_resolved_destinations_before_writing(tmp_path: Path) -> None:
+    output_path = tmp_path / "evidence" / "requirements-evidence.json"
+    summary_path = tmp_path / "evidence" / "temporary" / ".." / "requirements-evidence.json"
+
+    with pytest.raises(ValueError, match="different destinations"):
+        fallback._write_failure_report(output_path, summary_path, stage="setup-unavailable")
+
+    assert not output_path.parent.exists()
 
 
 def test_failure_report_does_not_publish_either_artifact_before_the_pair_is_ready(

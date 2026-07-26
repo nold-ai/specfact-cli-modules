@@ -18,6 +18,14 @@
   signature requirement is absent from the current canonical spec. Its delta
   block is therefore correctly classified as an added requirement rather than
   a modification of a missing header.
+- After archival, OpenSpec correctly no longer resolves this completed change
+  from the repository root. The final date-prefixed archive bundle was copied
+  unchanged into an isolated temporary OpenSpec root at its active-change
+  location, then validated with `openspec validate
+  docs-16-core-accountability-sync --strict` on 2026-07-26 Europe/Berlin.
+- Result: passed (`Change 'docs-16-core-accountability-sync' is valid`). This
+  is a strict validation of the final archive contents, not a manual archive
+  move or a claim that the archived ID remains active in the primary checkout.
 
 ## Failing-before
 

@@ -11,12 +11,10 @@ from pathlib import Path
 VALID_STAGES = frozenset({"adapter-unavailable", "setup-unavailable"})
 
 
-def _write_temporary_text(destination: Path, contents: str) -> Path:
-    """Write text beside its destination without exposing a partial final artifact."""
+def _write_temporary_bytes(destination: Path, contents: bytes) -> Path:
+    """Write bytes beside their destination without exposing a partial final artifact."""
     with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        newline="\n",
+        mode="wb",
         dir=destination.parent,
         prefix=f".{destination.name}.",
         suffix=".tmp",
@@ -26,17 +24,22 @@ def _write_temporary_text(destination: Path, contents: str) -> Path:
         return Path(temporary.name)
 
 
-def _existing_text(path: Path) -> str | None:
-    """Return current text when an artifact already exists."""
-    return path.read_text(encoding="utf-8") if path.is_file() else None
+def _write_temporary_text(destination: Path, contents: str) -> Path:
+    """Write UTF-8 text with caller-supplied line endings."""
+    return _write_temporary_bytes(destination, contents.encode("utf-8"))
 
 
-def _restore_artifact(path: Path, previous_contents: str | None) -> None:
+def _existing_bytes(path: Path) -> bytes | None:
+    """Return current bytes when an artifact already exists."""
+    return path.read_bytes() if path.is_file() else None
+
+
+def _restore_artifact(path: Path, previous_contents: bytes | None) -> None:
     """Restore a prior artifact using the same atomic replacement primitive."""
     if previous_contents is None:
         path.unlink(missing_ok=True)
         return
-    temporary_path = _write_temporary_text(path, previous_contents)
+    temporary_path = _write_temporary_bytes(path, previous_contents)
     try:
         temporary_path.replace(path)
     finally:
@@ -47,8 +50,8 @@ def _publish_artifact_pair(
     output_temporary_path: Path, output_path: Path, summary_temporary_path: Path, summary_path: Path
 ) -> None:
     """Publish the paired artifacts and roll back any completed replacement on failure."""
-    previous_output = _existing_text(output_path)
-    previous_summary = _existing_text(summary_path)
+    previous_output = _existing_bytes(output_path)
+    previous_summary = _existing_bytes(summary_path)
     summary_published = False
     output_published = False
     try:
@@ -96,6 +99,9 @@ def _write_failure_report(output_path: Path, summary_path: Path, *, stage: str) 
     """Persist deterministic failed evidence without importing optional modules."""
     if stage not in VALID_STAGES:
         msg = f"unsupported evidence failure stage: {stage}"
+        raise ValueError(msg)
+    if output_path.resolve() == summary_path.resolve():
+        msg = "requirements evidence output and summary paths must resolve to different destinations"
         raise ValueError(msg)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.parent.mkdir(parents=True, exist_ok=True)
