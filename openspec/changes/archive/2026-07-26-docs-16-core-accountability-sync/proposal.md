@@ -46,12 +46,12 @@ command-artifact update path.
 
 - **GitHub Issue**: [#339](https://github.com/nold-ai/specfact-cli-modules/issues/339)
 - **Parent Epic**: [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162)
-- **Project**: SpecFact CLI (`Todo`)
+- **Project**: SpecFact CLI (`Done`)
 - **Labels**: `bug`, `documentation`, `change-proposal`
 - **Prerequisite**: core [#643](https://github.com/nold-ai/specfact-cli/issues/643),
   implemented by `specfact-cli/cli-val-05-ci-integration`; it owns the
   authoritative checker and is closed as of 2026-07-10 Europe/Berlin.
-- **Blockers / blocked-by**: no native GitHub dependency is currently recorded;
-  implementation readiness must recheck and reconcile the relationship before
-  production edits.
-- **Last Synced Status**: #339 open, assigned, Todo; #643 closed, Done
+- **Blockers / blocked-by**: no remaining blocker; core #643 is closed and the
+  implementation was merged before this archival finalization.
+- **Last Synced Status**: #339 closed as completed on 2026-07-10; #643 closed,
+  Done

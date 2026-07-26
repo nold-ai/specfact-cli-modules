@@ -18,6 +18,7 @@ import click
 import yaml
 from beartype import beartype
 from icontract import ensure
+from typer.core import TyperArgument, TyperOption
 from typer.main import get_command
 
 
@@ -46,6 +47,9 @@ RUNTIME_VALIDATED_GROUPS = frozenset(
         "specfact code repro",
     }
 )
+
+OPTION_PARAMETER_TYPES = (click.Option, TyperOption)
+ARGUMENT_PARAMETER_TYPES = (click.Argument, TyperArgument)
 
 
 def _paired_worktree_repo(source_marker: str, target_marker: str) -> Path | None:
@@ -160,19 +164,23 @@ def validate_official_mount_inventory() -> None:
 def _command_options(command: click.Command) -> list[str]:
     options: set[str] = set()
     for param in command.params:
-        if isinstance(param, click.Option):
+        if isinstance(param, OPTION_PARAMETER_TYPES):
             secondary_opts = param.secondary_opts
             options.update(opt for opt in [*param.opts, *secondary_opts] if opt.startswith("--"))
     return sorted(options)
 
 
+def _argument_display_name(param: click.Argument | TyperArgument) -> str:
+    return param.metavar or param.human_readable_name.upper()
+
+
 def _command_arguments(command: click.Command) -> list[dict[str, Any]]:
     arguments: list[dict[str, Any]] = []
     for param in command.params:
-        if isinstance(param, click.Argument):
+        if isinstance(param, ARGUMENT_PARAMETER_TYPES):
             arguments.append(
                 {
-                    "name": param.human_readable_name,
+                    "name": _argument_display_name(param),
                     "required": bool(param.required),
                     "nargs": param.nargs,
                 }
@@ -216,9 +224,9 @@ def _has_bare_business_parameters(command: click.Command) -> bool:
         "--show-completion",
     }
     for param in command.params:
-        if isinstance(param, click.Argument):
+        if isinstance(param, ARGUMENT_PARAMETER_TYPES):
             return True
-        if isinstance(param, click.Option):
+        if isinstance(param, OPTION_PARAMETER_TYPES):
             opts = set(param.opts) | set(param.secondary_opts)
             if opts and opts.isdisjoint(ignored_options):
                 return True

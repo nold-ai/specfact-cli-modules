@@ -15,6 +15,8 @@ from pathlib import Path
 
 import click
 import pytest
+import typer
+from typer.main import get_command as get_typer_command
 
 from tests.unit._script_test_utils import load_module_from_path
 
@@ -60,6 +62,44 @@ def test_command_overview_records_optional_click_arguments() -> None:
     assert generator._command_arguments(command) == [  # pylint: disable=protected-access
         {"name": "SOURCE_PATH", "required": False, "nargs": 1}
     ]
+
+
+def test_command_overview_records_typer_parameters() -> None:
+    """Typer's pinned Docs Review runtime must retain option and argument metadata."""
+    generator = load_module_from_path("generate_command_overview_typer", GENERATOR)
+    app = typer.Typer()
+
+    @app.command()
+    def inspect(
+        source_path: str = typer.Argument(...),
+        output_format: str = typer.Option("json", "--format"),
+    ) -> None:
+        del source_path, output_format
+
+    assert inspect.__name__ == "inspect"
+    command = get_typer_command(app)
+
+    assert "--format" in generator._command_options(command)  # pylint: disable=protected-access
+    assert {"name": "SOURCE_PATH", "required": True, "nargs": 1} in generator._command_arguments(  # pylint: disable=protected-access
+        command
+    )
+
+
+def test_command_overview_preserves_explicit_typer_argument_metavar() -> None:
+    """An explicit metavar is user-facing syntax, not a default label to normalize."""
+    generator = load_module_from_path("generate_command_overview_typer_metavar", GENERATOR)
+    app = typer.Typer()
+
+    @app.command()
+    def inspect(source_path: str = typer.Argument(..., metavar="path/to/file")) -> None:
+        del source_path
+
+    assert inspect.__name__ == "inspect"
+    command = get_typer_command(app)
+
+    assert {"name": "path/to/file", "required": True, "nargs": 1} in generator._command_arguments(  # pylint: disable=protected-access
+        command
+    )
 
 
 def test_command_overview_rejects_unrepresented_official_inventory(tmp_path: Path, monkeypatch) -> None:
