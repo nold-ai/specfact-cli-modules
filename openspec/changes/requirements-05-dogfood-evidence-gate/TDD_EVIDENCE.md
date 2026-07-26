@@ -1,5 +1,25 @@
 # TDD Evidence — requirements-05-dogfood-evidence-gate
 
+## OpenSpec archival review remediation
+
+- 2026-07-26 (Europe/Berlin): Codex PR #360 review identified that the
+  permanent shipped-source dogfood test named only active change directories,
+  so the required `openspec archive <change-id>` operation would break it.
+- Failing-before: after adding the archival scenario and test,
+  `hatch run pytest tests/unit/scripts/test_requirements_evidence_gate.py -q`
+  reported 2 failures because no source resolver existed.
+- Remediation: the test resolves each stable change ID to exactly one source in
+  either `openspec/changes/<change-id>` or OpenSpec's managed
+  `openspec/changes/archive/YYYY-MM-DD-<change-id>` location. It deliberately
+  rejects absent or ambiguous sources rather than hard-coding a move or
+  silently selecting one.
+- Passing-after: `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/workflows/test_requirements_evidence_workflow.py
+  tests/unit/scripts/test_requirements_evidence_fallback.py -q` reported 18
+  passed; `openspec validate requirements-05-dogfood-evidence-gate --strict`
+  passed.
+
 ## Failing before implementation
 
 - 2026-07-25 (Europe/Berlin):

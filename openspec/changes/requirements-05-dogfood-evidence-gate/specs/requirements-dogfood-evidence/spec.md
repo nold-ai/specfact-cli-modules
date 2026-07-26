@@ -60,6 +60,15 @@ SHALL emit a machine-readable aggregate verdict without modifying the source.
 - **AND** it does not describe the skipped result as proof that requirements
   are met.
 
+#### Scenario: Preserve shipped-source regression coverage after archival
+
+- **GIVEN** a shipped OpenSpec change is present either as an active change or
+  in OpenSpec's date-prefixed archive location
+- **WHEN** the permanent dogfood regression suite evaluates its source
+- **THEN** it resolves the source by its stable change ID in either location
+- **AND** normal `openspec archive <change-id>` finalization does not make the
+  regression suite fail because an active-change path disappeared.
+
 ### Requirement: Pull-request evidence publication
 
 The pull-request workflow SHALL run the requirements evidence adapter after the

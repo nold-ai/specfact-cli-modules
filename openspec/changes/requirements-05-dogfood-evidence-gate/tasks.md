@@ -38,3 +38,5 @@
   setup fails before the adapter runs.
 - [x] 5.3 Add workflow contract coverage for local source bootstrap and setup
   failure artifact retention; capture failing-before and passing-after evidence.
+- [x] 5.4 Keep the shipped-source dogfood regression valid when OpenSpec moves
+  completed changes into date-prefixed archive directories.
