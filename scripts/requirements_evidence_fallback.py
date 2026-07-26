@@ -6,18 +6,11 @@ import argparse
 import json
 from pathlib import Path
 
-from icontract import ensure, require
-
 
 VALID_STAGES = frozenset({"adapter-unavailable", "setup-unavailable"})
 
 
-@require(
-    lambda output_path, summary_path: isinstance(output_path, Path) and isinstance(summary_path, Path),
-    "evidence paths must be pathlib.Path instances",
-)
-@ensure(lambda output_path, summary_path: output_path.is_file() and summary_path.is_file())
-def write_failure_report(output_path: Path, summary_path: Path, *, stage: str) -> None:
+def _write_failure_report(output_path: Path, summary_path: Path, *, stage: str) -> None:
     """Persist deterministic failed evidence without importing optional modules."""
     if stage not in VALID_STAGES:
         msg = f"unsupported evidence failure stage: {stage}"
@@ -61,7 +54,7 @@ def _parse_args() -> argparse.Namespace:
 
 def _main() -> int:
     arguments = _parse_args()
-    write_failure_report(arguments.output, arguments.summary, stage=arguments.stage)
+    _write_failure_report(arguments.output, arguments.summary, stage=arguments.stage)
     return 0
 
 

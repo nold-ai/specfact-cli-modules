@@ -8,11 +8,11 @@ from pathlib import Path
 from scripts import requirements_evidence_fallback as fallback
 
 
-def test_write_failure_report_retains_machine_readable_setup_evidence(tmp_path: Path) -> None:
+def test_private_failure_report_retains_machine_readable_setup_evidence(tmp_path: Path) -> None:
     output_path = tmp_path / "requirements-evidence.json"
     summary_path = tmp_path / "requirements-evidence.md"
 
-    fallback.write_failure_report(output_path, summary_path, stage="setup-unavailable")
+    fallback._write_failure_report(output_path, summary_path, stage="setup-unavailable")
 
     report = json.loads(output_path.read_text(encoding="utf-8"))
     assert report["verdict"] == "failed"
