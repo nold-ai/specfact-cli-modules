@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from importlib import import_module
+from inspect import signature
 from pathlib import Path
 from typing import Any, cast, get_args
 
@@ -238,9 +239,10 @@ def import_native_requirements_to_bundle(source_kind: str, source_dir: Path, bun
     canonical_source_dir, project_root = (
         _openspec_source_context(source_dir) if source_kind == "openspec" else (source_dir, None)
     )
+    supports_project_root = "project_root" in signature(import_helper).parameters
     result = (
         import_helper(canonical_source_dir, project_root=project_root)
-        if project_root
+        if project_root and supports_project_root
         else import_helper(canonical_source_dir)
     )
     if not import_result_has_errors(result):

@@ -34,6 +34,7 @@ group.
 | `validate` | Validate attached requirement context against the selected or layered profile |
 | `list` | List attached requirement records with optional coverage and core gate counts |
 | `coverage` | Print coverage and core gate-finding counts |
+| `evidence` | Evaluate changed or staged native OpenSpec requirement evidence for CI and local hooks |
 
 ## Input shape
 
@@ -122,15 +123,25 @@ executed or that product behavior satisfies the requirement; that needs a
 future test-result evidence adapter with stable requirement-to-test-result
 mapping.
 
+For CI or a committed branch diff, the module evaluator accepts `--base-ref`.
+For pre-commit it accepts `--staged`; that mode materializes the Git index, so
+unstaged and untracked edits to the OpenSpec source or linked tests cannot
+influence the verdict. The modes are mutually exclusive, and both write JSON
+before a failed verdict exits non-zero.
+
 To reproduce the committed-branch check locally:
 
 ```bash
 hatch run python scripts/requirements_evidence_gate.py \
-  --repo-root . \
-  --base-ref origin/dev \
+  --repo-root . --base-ref origin/dev \
   --output artifacts/requirements-evidence/requirements-evidence.json \
   --summary artifacts/requirements-evidence/requirements-evidence.md
 ```
+
+Until the paired core CLI ships its module-command routing follow-up, this
+repository's CI and pre-commit use `scripts/requirements_evidence_gate.py` as
+a thin adapter to the module-owned evaluator. The core follow-up exposes the
+same contract as a CLI command without changing report semantics.
 
 ## Storage
 

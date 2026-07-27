@@ -11,6 +11,7 @@ import typer
 from beartype import beartype
 from icontract import ensure, require
 
+from specfact_requirements.requirements.evidence import write_requirements_evidence
 from specfact_requirements.requirements.runtime import (
     auto_detect_openspec_change,
     auto_detect_speckit_feature,
@@ -202,3 +203,24 @@ def coverage_command(
     payload = coverage.model_dump(mode="json")
     payload["gate_finding_counts"] = requirements_gate_finding_counts(bundle)
     _emit_payload(payload, output_format)
+
+
+@app.command("evidence", help="Evaluate OpenSpec requirement evidence for a base ref or staged Git index.")
+@beartype
+@ensure(lambda result: result is None)
+def evidence_command(
+    output: Annotated[Path, typer.Option("--output", help="Destination JSON evidence report.")],
+    repo_root: Annotated[
+        Path,
+        typer.Option("--repo-root", help="Repository root to inspect.", default_factory=Path.cwd),
+    ],
+    base_ref: Annotated[str | None, typer.Option("--base-ref", help="Git ref used for CI diff selection.")] = None,
+    staged: Annotated[bool, typer.Option("--staged", help="Evaluate the current Git index snapshot.")] = False,
+    summary: Annotated[Path | None, typer.Option("--summary", help="Optional Markdown remediation report.")] = None,
+) -> None:
+    """Write evidence reports before returning a non-zero verdict."""
+    if (base_ref is None) != staged:
+        raise typer.BadParameter("choose exactly one of --base-ref or --staged")
+    exit_code = write_requirements_evidence(repo_root.resolve(), output, summary, base_ref=base_ref, staged=staged)
+    if exit_code:
+        raise typer.Exit(exit_code)

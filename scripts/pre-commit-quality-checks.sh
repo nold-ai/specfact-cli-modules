@@ -36,9 +36,10 @@ print_block1_overview() {
 print_block2_overview() {
   echo "" >&2
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
-  echo "  modules pre-commit — Block 2: code review + contract tests (2 stages)" >&2
-  echo "    1/2  code review gate (staged paths under packages/, registry/, scripts/, tools/, tests/, openspec/changes/)" >&2
-  echo "    2/2  contract-first tests (contract-test-status → hatch run contract-test-contracts)" >&2
+  echo "  modules pre-commit — Block 2: evidence, review + contract tests (3 stages)" >&2
+  echo "    1/3  Requirements evidence for staged active OpenSpec sources" >&2
+  echo "    2/3  code review gate (staged paths under packages/, registry/, scripts/, tools/, tests/, openspec/changes/)" >&2
+  echo "    3/3  contract-first tests (contract-test-status → hatch run contract-test-contracts)" >&2
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
   echo "" >&2
 }
@@ -57,6 +58,17 @@ has_staged_python() {
 
 staged_python_files() {
   staged_files | grep -E '\.pyi?$' || true
+}
+
+has_staged_active_openspec_source() {
+  local staged_source
+  while IFS= read -r staged_source; do
+    case "${staged_source}" in
+      openspec/changes/archive/*) ;;
+      openspec/changes/*) return 0 ;;
+    esac
+  done < <(staged_files)
+  return 1
 }
 
 # Paths passed to scripts/pre_commit_code_review.py (packages/, registry/, scripts/, tools/, tests/, openspec/changes/).
@@ -311,32 +323,50 @@ run_code_review_gate() {
   done < <(staged_review_gate_files)
 
   if [ ${#review_array[@]} -eq 0 ]; then
-    info "📦 Block 2 — stage 1/2: code review — skipped (no staged paths under packages/, registry/, scripts/, tools/, tests/, or openspec/changes/)"
+    info "📦 Block 2 — stage 2/3: code review — skipped (no staged paths under packages/, registry/, scripts/, tools/, tests/, or openspec/changes/)"
     return
   fi
 
   local enforcement="${SPECFACT_CODE_REVIEW_ENFORCEMENT:-changed}"
-  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s), enforcement=${enforcement})"
+  info "📦 Block 2 — stage 2/3: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s), enforcement=${enforcement})"
   if hatch run python scripts/pre_commit_code_review.py "${review_array[@]}"; then
-    success "✅ Block 2 — stage 1/2: code review gate passed"
+    success "✅ Block 2 — stage 2/3: code review gate passed"
   else
-    error "❌ Block 2 — stage 1/2: code review gate failed"
+    error "❌ Block 2 — stage 2/3: code review gate failed"
     warn "💡 Fix blocking review findings or run: hatch run python scripts/pre_commit_code_review.py <paths>"
     exit 1
   fi
 }
 
-run_contract_tests_visible() {
-  info "📦 Block 2 — stage 2/2: contract tests — running \`hatch run contract-test-status\`"
-  if hatch run contract-test-status > /dev/null 2>&1; then
-    success "✅ Block 2 — stage 2/2: contract tests — skipped (contract-test-status: no input changes)"
+run_requirements_evidence_gate() {
+  if ! has_staged_active_openspec_source; then
+    info "📦 Block 2 — stage 1/3: Requirements evidence — skipped (no staged active OpenSpec source)"
+    return 0
+  fi
+  local report_path=".specfact/reports/requirements-evidence.json"
+  local summary_path=".specfact/reports/requirements-evidence.md"
+  mkdir -p "$(dirname "${report_path}")"
+  info "📦 Block 2 — stage 1/3: Requirements evidence — running the module adapter against the staged Git index"
+  if PYTHONPATH=packages/specfact-project/src:packages/specfact-requirements/src hatch run python scripts/requirements_evidence_gate.py --staged --output "${report_path}" --summary "${summary_path}"; then
+    success "✅ Block 2 — stage 1/3: Requirements evidence passed (${report_path})"
   else
-    info "📦 Block 2 — stage 2/2: contract tests — running \`hatch run contract-test-contracts\`"
+    error "❌ Block 2 — stage 1/3: Requirements evidence failed; report retained at ${report_path}"
+    warn "💡 Review ${summary_path}, fix the source or requirements-evidence.yaml sidecar, then re-stage the change."
+    exit 1
+  fi
+}
+
+run_contract_tests_visible() {
+  info "📦 Block 2 — stage 3/3: contract tests — running \`hatch run contract-test-status\`"
+  if hatch run contract-test-status > /dev/null 2>&1; then
+    success "✅ Block 2 — stage 3/3: contract tests — skipped (contract-test-status: no input changes)"
+  else
+    info "📦 Block 2 — stage 3/3: contract tests — running \`hatch run contract-test-contracts\`"
     if hatch run contract-test-contracts; then
-      success "✅ Block 2 — stage 2/2: contract-first tests passed"
+      success "✅ Block 2 — stage 3/3: contract-first tests passed"
       warn "💡 CI may still run the full quality matrix"
     else
-      error "❌ Block 2 — stage 2/2: contract-first tests failed"
+      error "❌ Block 2 — stage 3/3: contract-first tests failed"
       warn "💡 Run: hatch run contract-test-contracts"
       exit 1
     fi
@@ -370,6 +400,7 @@ run_block2() {
   run_core_documentation_accountability_gate
   run_docs_site_validation_gate
   run_prompt_command_validation_gate
+  run_requirements_evidence_gate
   if check_safe_change; then
     success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
     info "💡 Only docs, workflow, version, or pre-commit metadata changed"
@@ -392,6 +423,7 @@ run_all() {
   run_core_documentation_accountability_gate
   run_docs_site_validation_gate
   run_prompt_command_validation_gate
+  run_requirements_evidence_gate
   if check_safe_change; then
     success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
     info "💡 Only docs, workflow, version, or pre-commit metadata changed"
