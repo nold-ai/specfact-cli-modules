@@ -56,6 +56,32 @@ def test_failure_report_restores_the_prior_artifact_pair_when_json_publication_f
     assert summary_path.read_bytes() == previous_summary
 
 
+def test_failure_report_restores_both_artifacts_when_json_publication_raises_after_replacement(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    output_path = tmp_path / "requirements-evidence.json"
+    summary_path = tmp_path / "requirements-evidence.md"
+    previous_output = b'{"verdict": "previous"}\r\n'
+    previous_summary = b"previous summary\r\n"
+    output_path.write_bytes(previous_output)
+    summary_path.write_bytes(previous_summary)
+    original_replace = Path.replace
+
+    def _replace_then_fail(path: Path, target: Path) -> Path:
+        result = original_replace(path, target)
+        if target == output_path:
+            raise OSError("json publication reported failure after replacement")
+        return result
+
+    monkeypatch.setattr(Path, "replace", _replace_then_fail)
+
+    with pytest.raises(OSError, match="reported failure after replacement"):
+        fallback._write_failure_report(output_path, summary_path, stage="setup-unavailable")
+
+    assert output_path.read_bytes() == previous_output
+    assert summary_path.read_bytes() == previous_summary
+
+
 def test_failure_report_rejects_identical_resolved_destinations_before_writing(tmp_path: Path) -> None:
     output_path = tmp_path / "evidence" / "requirements-evidence.json"
     summary_path = tmp_path / "evidence" / "temporary" / ".." / "requirements-evidence.json"

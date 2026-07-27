@@ -53,17 +53,18 @@ def _publish_artifact_pair(
     previous_output = _existing_bytes(output_path)
     previous_summary = _existing_bytes(summary_path)
     summary_published = False
-    output_published = False
     try:
         summary_temporary_path.replace(summary_path)
         summary_published = True
         output_temporary_path.replace(output_path)
-        output_published = True
     except OSError:
-        if output_published:
-            _restore_artifact(output_path, previous_output)
         if summary_published:
-            _restore_artifact(summary_path, previous_summary)
+            try:
+                _restore_artifact(output_path, previous_output)
+            except OSError:
+                pass
+            finally:
+                _restore_artifact(summary_path, previous_summary)
         raise
 
 

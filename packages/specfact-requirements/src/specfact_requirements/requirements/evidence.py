@@ -287,11 +287,11 @@ def _evaluate_imported_source(
     import_source: Path,
     import_result: Any,
     bundle_dir: Path,
-    diagnostics: Sequence[dict[str, Any]],
-    imported: int,
-) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, int], list[str]]:
+) -> tuple[list[dict[str, Any]], int, dict[str, Any] | None, dict[str, Any] | None, dict[str, int], list[str]]:
+    diagnostics = _diagnostic_payloads(import_result.diagnostics)
+    imported = len(import_result.requirements)
     if any(diagnostic.get("severity") == "error" for diagnostic in diagnostics) or imported == 0:
-        return None, None, {}, []
+        return diagnostics, imported, None, None, {}, []
     sidecar_reasons = _apply_evidence_sidecar(
         import_source,
         import_result.requirements,
@@ -299,21 +299,19 @@ def _evaluate_imported_source(
         repository_root=_source_repository_root(source_path),
     )
     if sidecar_reasons:
-        return None, None, {}, sidecar_reasons
+        return diagnostics, imported, None, None, {}, sidecar_reasons
     validation = _model_payload(validate_requirements_bundle(bundle_dir, profile="enterprise"))
     coverage = _model_payload(inspect_requirements_bundle_coverage(bundle_dir))
     finding_counts = dict(requirements_gate_finding_counts(bundle_dir, profile="enterprise"))
-    return validation, coverage, finding_counts, []
+    return diagnostics, imported, validation, coverage, finding_counts, []
 
 
 def _source_report(source_path: Path, bundle_dir: Path, source_label: Path) -> dict[str, Any]:
     save_project_bundle(create_empty_project_bundle(bundle_dir.name), bundle_dir, atomic=False)
     with _source_path_for_import(source_path) as import_source:
         import_result = import_native_requirements_to_bundle("openspec", import_source, bundle_dir)
-        diagnostics = _diagnostic_payloads(import_result.diagnostics)
-        imported = len(import_result.requirements)
-        validation, coverage, finding_counts, sidecar_reasons = _evaluate_imported_source(
-            source_path, import_source, import_result, bundle_dir, diagnostics, imported
+        diagnostics, imported, validation, coverage, finding_counts, sidecar_reasons = _evaluate_imported_source(
+            source_path, import_source, import_result, bundle_dir
         )
     reasons = [*sidecar_reasons, *_source_reasons(imported, diagnostics, validation, coverage, finding_counts)]
     return {
@@ -432,6 +430,8 @@ def write_requirements_evidence(
     base_ref: str | None = None,
     staged: bool = False,
 ) -> int:
+    if summary_path is not None and output_path.resolve() == summary_path.resolve():
+        raise ValueError("output and summary paths must resolve to different destinations")
     try:
         report = evaluate_requirements_evidence(repo_root, base_ref=base_ref, staged=staged)
     except Exception as error:  # pylint: disable=broad-exception-caught

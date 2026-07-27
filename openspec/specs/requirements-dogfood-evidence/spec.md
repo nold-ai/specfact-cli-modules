@@ -54,14 +54,22 @@ SHALL emit a machine-readable aggregate verdict without modifying the source.
 
 #### Scenario: Skip when no active OpenSpec source changed
 
-- **GIVEN** the evaluated branch changes no existing directory beneath
-  `openspec/changes/` outside `archive/`
+- **GIVEN** the evaluated branch changes no active OpenSpec source path beneath
+  `openspec/changes/` outside `archive/`, including a newly created source
+  directory
 - **WHEN** the requirements evidence adapter runs
 - **THEN** it writes `requirements-evidence.json` with aggregate verdict
   `skipped`
 - **AND** it exits zero
 - **AND** it does not describe the skipped result as proof that requirements
   are met.
+
+#### Scenario: A newly added active source is evaluated
+
+- **GIVEN** the evaluated branch adds a source beneath
+  `openspec/changes/<change-id>/`
+- **WHEN** the requirements evidence adapter runs
+- **THEN** it evaluates that source rather than returning a skipped verdict.
 
 #### Scenario: Preserve shipped-source regression coverage after archival
 

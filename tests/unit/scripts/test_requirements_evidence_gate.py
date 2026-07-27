@@ -426,6 +426,18 @@ def test_discover_changed_openspec_sources_includes_deleted_active_files(monkeyp
     assert "--diff-filter=ACMRD" in commands[0]
 
 
+def test_discover_changed_openspec_sources_includes_new_active_directories(monkeypatch, tmp_path: Path) -> None:
+    active = tmp_path / "openspec" / "changes" / "new-evidence"
+    active.mkdir(parents=True)
+    monkeypatch.setattr(
+        evidence_gate,
+        "_git_changed_paths",
+        lambda *_args: ["openspec/changes/new-evidence/specs/evidence/spec.md"],
+    )
+
+    assert evidence_gate._discover_changed_openspec_sources(tmp_path, "origin/dev") == [active]
+
+
 def test_discover_changed_openspec_sources_rejects_option_like_base_refs(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="base ref"):
         evidence_gate._discover_changed_openspec_sources(tmp_path, "--output=/tmp/untrusted")

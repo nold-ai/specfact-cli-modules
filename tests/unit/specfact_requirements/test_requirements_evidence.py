@@ -10,6 +10,7 @@ import pytest
 from specfact_requirements.requirements.evidence import (
     _materialize_git_index_snapshot,
     evaluate_requirements_evidence,
+    write_requirements_evidence,
 )
 
 
@@ -34,6 +35,16 @@ def _initialize_repository(repo_root: Path) -> None:
 def test_evaluate_requirements_evidence_rejects_ambiguous_selection(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="exactly one of --base-ref or --staged"):
         evaluate_requirements_evidence(tmp_path, base_ref="HEAD", staged=True)
+
+
+def test_write_requirements_evidence_rejects_aliased_output_and_summary_paths(tmp_path: Path) -> None:
+    output_path = tmp_path / "evidence" / "requirements-evidence.json"
+    summary_path = output_path.parent / "temporary" / ".." / output_path.name
+
+    with pytest.raises(ValueError, match="different destinations"):
+        write_requirements_evidence(tmp_path, output_path, summary_path, base_ref="HEAD")
+
+    assert not output_path.parent.exists()
 
 
 def test_staged_snapshot_excludes_unstaged_source_and_test_edits(tmp_path: Path) -> None:
