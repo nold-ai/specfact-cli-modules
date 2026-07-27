@@ -39,6 +39,22 @@ hooks and CI.
   source/reason codes before returning non-zero
 - **AND** it states that test-execution proof is not included.
 
+#### Scenario: Failed paired-artifact publication restores prior output
+
+- **GIVEN** prior JSON and Markdown evidence artifacts exist
+- **AND** replacing either artifact reports an operating-system error after
+  the replacement takes effect
+- **WHEN** the fallback report publisher handles the error
+- **THEN** it restores both prior artifacts before propagating the error.
+
+#### Scenario: Evidence destinations cannot alias each other
+
+- **GIVEN** the JSON output and optional Markdown summary resolve to the same
+  filesystem destination or are existing aliases of the same filesystem object
+- **WHEN** the evidence command validates its arguments
+- **THEN** it returns an actionable usage error before evaluating sources or
+  creating either artifact.
+
 ### Requirement: Local and CI consumers share one evidence contract
 
 The modules pre-commit and CI workflows SHALL invoke the module-owned

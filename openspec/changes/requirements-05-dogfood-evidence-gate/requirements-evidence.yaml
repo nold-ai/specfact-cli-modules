@@ -1,7 +1,0 @@
-requirements:
-  "openspec:requirements-05-dogfood-evidence-gate:requirements-dogfood-evidence:requirements-evidence-verdict":
-    test_links:
-      - tests/unit/scripts/test_requirements_evidence_gate.py
-  "openspec:requirements-05-dogfood-evidence-gate:requirements-dogfood-evidence:pull-request-evidence-publication":
-    test_links:
-      - tests/unit/workflows/test_requirements_evidence_workflow.py

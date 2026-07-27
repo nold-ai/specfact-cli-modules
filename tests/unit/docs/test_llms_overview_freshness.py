@@ -9,6 +9,7 @@ test re-runs the generator in --check mode on every test run.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -132,6 +133,126 @@ def test_command_overview_rejects_unrepresented_official_inventory(tmp_path: Pat
 
     with pytest.raises(ValueError, match="missing command mounts"):
         generator.validate_official_mount_inventory()
+
+
+def _write_official_example_manifest(tmp_path: Path) -> None:
+    manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        "\n".join(
+            (
+                "name: nold-ai/specfact-example",
+                "version: 1.2.3",
+                "tier: official",
+                "publisher:",
+                "  name: nold-ai",
+                "  email: example@noldai.com",
+                "bundle_dependencies: []",
+                "core_compatibility: '>=1.0.0,<2.0.0'",
+                "description: Example module.",
+                "bundle_group_command: example",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_official_example_registry(
+    tmp_path: Path,
+    *,
+    latest_version: str = "1.2.3",
+    download_url: str = "modules/specfact-example-1.2.3.tar.gz",
+    description: str = "Example module.",
+) -> None:
+    registry = tmp_path / "registry" / "index.json"
+    registry.parent.mkdir()
+    registry.write_text(
+        json.dumps(
+            {
+                "modules": [
+                    {
+                        "id": "nold-ai/specfact-example",
+                        "latest_version": latest_version,
+                        "download_url": download_url,
+                        "tier": "official",
+                        "publisher": {"name": "nold-ai", "email": "example@noldai.com"},
+                        "bundle_dependencies": [],
+                        "core_compatibility": ">=1.0.0,<2.0.0",
+                        "description": description,
+                    }
+                ]
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_official_inventory_rejects_registry_description_divergence(tmp_path: Path, monkeypatch) -> None:
+    generator = load_module_from_path("generate_command_overview_metadata_drift", GENERATOR)
+    _write_official_example_manifest(tmp_path)
+    _write_official_example_registry(tmp_path, description="Stale module description.")
+    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        generator,
+        "MODULE_APP_MOUNTS",
+        (("example.commands", "app", ("specfact", "example"), "nold-ai/specfact-example"),),
+    )
+
+    with pytest.raises(ValueError, match="description"):
+        generator.validate_official_mount_inventory()
+
+
+@pytest.mark.parametrize(
+    "release_case",
+    (
+        ("1.2.2", "1.2.3", "modules/specfact-example-1.2.3.tar.gz", "latest_version"),
+        ("1.2.3", "1.2.3", "modules/specfact-example-1.2.4.tar.gz", "download_url"),
+    ),
+)
+def test_official_inventory_rejects_published_release_conflicts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    release_case: tuple[str, str, str, str],
+) -> None:
+    manifest_version, registry_version, download_url, error_field = release_case
+    generator = load_module_from_path("generate_command_overview_release_metadata", GENERATOR)
+    _write_official_example_manifest(tmp_path)
+    manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8").replace("version: 1.2.3", f"version: {manifest_version}"), encoding="utf-8"
+    )
+    _write_official_example_registry(tmp_path, latest_version=registry_version, download_url=download_url)
+    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        generator,
+        "MODULE_APP_MOUNTS",
+        (("example.commands", "app", ("specfact", "example"), "nold-ai/specfact-example"),),
+    )
+
+    with pytest.raises(ValueError, match=error_field):
+        generator.validate_official_mount_inventory()
+
+
+def test_official_inventory_permits_manifest_newer_than_approved_dev_registry_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    generator = load_module_from_path("generate_command_overview_approved_dev_release", GENERATOR)
+    _write_official_example_manifest(tmp_path)
+    manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8").replace("version: 1.2.3", "version: 1.2.4"), encoding="utf-8"
+    )
+    _write_official_example_registry(tmp_path)
+    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        generator,
+        "MODULE_APP_MOUNTS",
+        (("example.commands", "app", ("specfact", "example"), "nold-ai/specfact-example"),),
+    )
+
+    generator.validate_official_mount_inventory()
 
 
 def test_command_overview_rejects_duplicate_official_registry_entries(tmp_path: Path, monkeypatch) -> None:

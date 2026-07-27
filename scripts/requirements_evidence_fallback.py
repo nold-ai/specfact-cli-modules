@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 
@@ -52,18 +53,16 @@ def _publish_artifact_pair(
     """Publish the paired artifacts and roll back any completed replacement on failure."""
     previous_output = _existing_bytes(output_path)
     previous_summary = _existing_bytes(summary_path)
-    summary_published = False
-    output_published = False
     try:
         summary_temporary_path.replace(summary_path)
-        summary_published = True
         output_temporary_path.replace(output_path)
-        output_published = True
     except OSError:
-        if output_published:
-            _restore_artifact(output_path, previous_output)
-        if summary_published:
-            _restore_artifact(summary_path, previous_summary)
+        for path, previous_contents in (
+            (output_path, previous_output),
+            (summary_path, previous_summary),
+        ):
+            with suppress(OSError):
+                _restore_artifact(path, previous_contents)
         raise
 
 

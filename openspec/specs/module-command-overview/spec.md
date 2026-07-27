@@ -43,10 +43,16 @@ and registry inventory.
 #### Scenario: Official inventory is not represented by command mounts
 
 - **GIVEN** an official package or grouped root in manifests and the registry is
-  missing, renamed, or remapped relative to the command-mount inventory
+  missing, renamed, remapped, or has conflicting identity, version, install
+  artifact, ownership, dependency, description, or compatibility metadata
+  relative to the command-mount inventory
 - **WHEN** command overview generation or freshness validation runs
 - **THEN** it exits non-zero and identifies the unrepresented or inconsistent
-  official record
+  official record and conflicting metadata fields
+- **AND** it treats the manifest version and its future install artifact as the
+  source of truth while an approved `dev` release awaits registry publication;
+  the publish precondition validates that the manifest version is newer than
+  the registry before the immutable artifact is created
 - **AND** it does not certify unchanged generated artifacts as current.
 
 #### Scenario: README links generated overview
@@ -64,4 +70,3 @@ and registry inventory.
   rejecting relevant unstaged inputs
 - **AND** CI performs a read-only check and fails if the artifacts are stale
 - **AND** the failure reports the command needed to regenerate them.
-
