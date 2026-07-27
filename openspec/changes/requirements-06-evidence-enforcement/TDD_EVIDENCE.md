@@ -68,3 +68,28 @@
   tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_rejects_official_manifest_registry_metadata_drift -q`
   reported `29 passed`; `openspec validate requirements-06-evidence-enforcement
   --strict` passed.
+
+## PR #366 review remediation
+
+- **2026-07-28 (Europe/Berlin) failing-before:** `hatch run pytest
+  tests/unit/specfact_requirements/test_requirements_evidence.py
+  tests/integration/specfact_requirements/test_command_apps.py
+  tests/unit/scripts/test_requirements_evidence_fallback.py
+  tests/unit/docs/test_llms_overview_freshness.py -q` reported six expected
+  failures: hard-linked report destinations were not rejected, the public CLI
+  exposed a raw destination error, first-replacement rollback was incomplete,
+  rollback could mask publication failure, and release version/artifact drift
+  was accepted.
+- **2026-07-28 (Europe/Berlin) passing-after:** the same command reported
+  `35 passed in 1.67s`; `openspec validate requirements-06-evidence-enforcement
+  --strict` passed. Coverage includes existing hard-link aliases, actionable
+  CLI errors, rollback after either replacement and rollback failure, newer
+  registry-version rejection, immutable artifact validation, and permitted
+  manifest-newer `dev` publication state.
+- **Quality evidence (2026-07-28, Europe/Berlin):** full `hatch run test`
+  reported `929 passed`; required format, type, lint, YAML, bundle-import,
+  command-overview, contract, and smart-test gates passed. The refreshed
+  `0.3.3` requirements manifest checksum passed filesystem verification under
+  the dev-target unsigned policy. `hatch run specfact code review run
+  --enforcement changed --bug-hunt --json --out .specfact/code-review.json`
+  completed with `PASS`, score `115`, and no findings.

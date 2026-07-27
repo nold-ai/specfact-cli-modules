@@ -18,6 +18,7 @@ import click
 import yaml
 from beartype import beartype
 from icontract import ensure
+from packaging.version import InvalidVersion, Version
 from typer.core import TyperArgument, TyperOption
 from typer.main import get_command
 
@@ -143,12 +144,45 @@ def _validate_matching_official_inventory_keys(manifests: Mapping[str, object], 
 def _official_metadata_drift(
     manifests: Mapping[str, Mapping[str, object]], registry: Mapping[str, Mapping[str, object]]
 ) -> list[str]:
-    return [
+    metadata_drift = [
         f"{package_id}: manifest.{manifest_field} != registry.{registry_field}"
         for package_id, manifest in sorted(manifests.items())
         for manifest_field, registry_field in OFFICIAL_METADATA_FIELDS
         if manifest.get(manifest_field) != registry[package_id].get(registry_field)
     ]
+    return [
+        *metadata_drift,
+        *(
+            finding
+            for package_id, manifest in sorted(manifests.items())
+            for finding in _official_release_metadata_drift(package_id, manifest, registry[package_id])
+        ),
+    ]
+
+
+def _official_release_metadata_drift(
+    package_id: str, manifest: Mapping[str, object], registry: Mapping[str, object]
+) -> list[str]:
+    manifest_version = manifest.get("version")
+    registry_version = registry.get("latest_version")
+    if manifest_version is None and registry_version is None:
+        return []
+    if not isinstance(manifest_version, str) or not isinstance(registry_version, str):
+        return [f"{package_id}: manifest.version and registry.latest_version must be version strings"]
+    try:
+        parsed_manifest_version = Version(manifest_version)
+        parsed_registry_version = Version(registry_version)
+    except InvalidVersion:
+        return [f"{package_id}: manifest.version and registry.latest_version must be valid versions"]
+    if parsed_registry_version > parsed_manifest_version:
+        return [f"{package_id}: registry.latest_version must not be newer than manifest.version"]
+
+    expected_version = registry_version if parsed_manifest_version > parsed_registry_version else manifest_version
+    package_name = package_id.rsplit("/", maxsplit=1)[-1]
+    expected_artifact = f"modules/{package_name}-{expected_version}.tar.gz"
+    if registry.get("download_url") != expected_artifact:
+        return [f"{package_id}: registry.download_url != {expected_artifact}"]
+    return []
 
 
 def _mount_inventory_findings(manifests: Mapping[str, Mapping[str, object]]) -> list[str]:

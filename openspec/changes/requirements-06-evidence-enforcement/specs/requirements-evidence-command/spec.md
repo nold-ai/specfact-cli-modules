@@ -42,7 +42,7 @@ hooks and CI.
 #### Scenario: Failed paired-artifact publication restores prior output
 
 - **GIVEN** prior JSON and Markdown evidence artifacts exist
-- **AND** replacing the JSON artifact reports an operating-system error after
+- **AND** replacing either artifact reports an operating-system error after
   the replacement takes effect
 - **WHEN** the fallback report publisher handles the error
 - **THEN** it restores both prior artifacts before propagating the error.
@@ -50,9 +50,9 @@ hooks and CI.
 #### Scenario: Evidence destinations cannot alias each other
 
 - **GIVEN** the JSON output and optional Markdown summary resolve to the same
-  filesystem destination
+  filesystem destination or are existing aliases of the same filesystem object
 - **WHEN** the evidence command validates its arguments
-- **THEN** it returns a configuration error before evaluating sources or
+- **THEN** it returns an actionable usage error before evaluating sources or
   creating either artifact.
 
 ### Requirement: Local and CI consumers share one evidence contract

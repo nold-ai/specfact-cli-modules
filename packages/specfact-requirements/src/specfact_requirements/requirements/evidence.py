@@ -420,6 +420,16 @@ def _write_markdown_summary(report: dict[str, Any], output_path: Path) -> None:
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _evidence_destinations_alias(output_path: Path, summary_path: Path) -> bool:
+    """Return whether report destinations resolve or refer to the same file."""
+    if output_path.resolve() == summary_path.resolve():
+        return True
+    try:
+        return output_path.exists() and summary_path.exists() and output_path.samefile(summary_path)
+    except OSError:
+        return False
+
+
 @beartype
 @ensure(lambda result: result in {0, 1})
 def write_requirements_evidence(
@@ -430,7 +440,7 @@ def write_requirements_evidence(
     base_ref: str | None = None,
     staged: bool = False,
 ) -> int:
-    if summary_path is not None and output_path.resolve() == summary_path.resolve():
+    if summary_path is not None and _evidence_destinations_alias(output_path, summary_path):
         raise ValueError("output and summary paths must resolve to different destinations")
     try:
         report = evaluate_requirements_evidence(repo_root, base_ref=base_ref, staged=staged)

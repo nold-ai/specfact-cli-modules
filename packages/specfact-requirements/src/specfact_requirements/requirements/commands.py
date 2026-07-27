@@ -221,6 +221,9 @@ def evidence_command(
     """Write evidence reports before returning a non-zero verdict."""
     if (base_ref is None) != staged:
         raise typer.BadParameter("choose exactly one of --base-ref or --staged")
-    exit_code = write_requirements_evidence(repo_root.resolve(), output, summary, base_ref=base_ref, staged=staged)
+    try:
+        exit_code = write_requirements_evidence(repo_root.resolve(), output, summary, base_ref=base_ref, staged=staged)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
     if exit_code:
         raise typer.Exit(exit_code)
