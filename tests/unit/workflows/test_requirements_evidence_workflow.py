@@ -23,7 +23,7 @@ def _workflow_steps() -> dict[str, dict[str, Any]]:
     return {step["name"]: step for step in steps if "name" in step}
 
 
-def test_requirements_evidence_workflow_runs_adapter_with_paired_core() -> None:
+def test_requirements_evidence_workflow_runs_module_adapter_with_paired_core() -> None:
     steps = _workflow_steps()
     setup = steps["Install Hatch and paired core CLI"]
     gate = steps["Run requirements evidence gate"]

@@ -1,0 +1,9 @@
+requirements:
+  "openspec:requirements-06-evidence-enforcement:requirements-evidence-command:requirements-evidence-is-a-reusable-cli-command":
+    test_links:
+      - tests/unit/specfact_requirements/test_requirements_evidence.py
+      - tests/integration/specfact_requirements/test_command_apps.py
+  "openspec:requirements-06-evidence-enforcement:requirements-evidence-command:local-and-ci-consumers-share-one-evidence-contract":
+    test_links:
+      - tests/unit/test_pre_commit_quality_parity.py
+      - tests/unit/workflows/test_requirements_evidence_workflow.py

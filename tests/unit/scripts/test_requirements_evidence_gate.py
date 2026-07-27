@@ -10,7 +10,7 @@ from typing import cast
 
 import pytest
 
-from scripts import requirements_evidence_gate as evidence_gate
+from specfact_requirements.requirements import evidence as evidence_gate
 
 
 def _import_result(*, imported: int, diagnostics: list[dict[str, str]]) -> SimpleNamespace:
@@ -387,7 +387,7 @@ def test_run_evidence_gate_writes_failed_report_before_returning_nonzero(monkeyp
         },
     )
 
-    exit_code = evidence_gate._run_evidence_gate(tmp_path, "origin/dev", output_path)
+    exit_code = evidence_gate.write_requirements_evidence(tmp_path, output_path, base_ref="origin/dev")
 
     assert exit_code == 1
     assert '"verdict": "failed"' in output_path.read_text(encoding="utf-8")
@@ -402,7 +402,7 @@ def test_run_evidence_gate_writes_failed_report_when_discovery_raises(monkeypatc
         lambda *_args: (_ for _ in ()).throw(subprocess.CalledProcessError(128, ["git", "diff"])),
     )
 
-    exit_code = evidence_gate._run_evidence_gate(tmp_path, "missing-base", output_path, summary_path)
+    exit_code = evidence_gate.write_requirements_evidence(tmp_path, output_path, summary_path, base_ref="missing-base")
 
     report = json.loads(output_path.read_text(encoding="utf-8"))
     assert exit_code == 1

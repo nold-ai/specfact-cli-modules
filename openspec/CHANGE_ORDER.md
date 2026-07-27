@@ -70,8 +70,9 @@ AI IDE, rerun, and compare improved evidence.
 | 2 | `openspec-01-intent-trace` | [#168](https://github.com/nold-ai/specfact-cli-modules/issues/168) | Import-first OpenSpec and Spec Kit requirement evidence runtime with gate surfacing (rescoped 2026-07-13) | requirements-02 runtime; core nold-ai/specfact-cli#350 contracts |
 | 3 | `requirements-04-upstream-source-readiness` | [#346](https://github.com/nold-ai/specfact-cli-modules/issues/346) | Reject incomplete or policy-invalid native OpenSpec and Spec Kit sources before requirement evidence persistence | core [#648](https://github.com/nold-ai/specfact-cli/issues/648) |
 | 4 | `requirements-05-dogfood-evidence-gate` | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352) | CI evidence adapter that reports green/red requirement-source validity and traceability evidence; not test-execution proof | requirements-04 shipped; existing Requirements runtime |
-| 5 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
-| 6 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
+| 5 | `requirements-06-evidence-enforcement` | [#361](https://github.com/nold-ai/specfact-cli-modules/issues/361) | Reusable Requirements evidence command plus staged pre-commit enforcement and CI parity | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352); paired core [#657](https://github.com/nold-ai/specfact-cli/issues/657) |
+| 6 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
+| 7 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
 | Parked | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path. Deprioritized 2026-07-13 behind openspec-01 | requirements-02, sync-01 |
 | Gated | `architecture-02-module-well-architected` | [#230](https://github.com/nold-ai/specfact-cli-modules/issues/230) | Architecture-boundary review findings | architecture-01 shipped plus one usage cycle |
 
@@ -135,6 +136,7 @@ ceremony rather than validation evidence:
 - `openspec-01-intent-trace` (pulled forward 2026-07-13, import-first rescope)
 - `requirements-04-upstream-source-readiness` (blocked on paired core source-readiness contract)
 - `requirements-05-dogfood-evidence-gate`
+- `requirements-06-evidence-enforcement` (after requirements-05 archival/release evidence)
 - `architecture-01-solution-layer`
 - `sync-01-unified-kernel`
 - `requirements-03-backlog-sync` (parked 2026-07-13)
