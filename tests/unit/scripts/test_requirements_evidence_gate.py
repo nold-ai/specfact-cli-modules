@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -11,6 +13,63 @@ from typing import cast
 import pytest
 
 from specfact_requirements.requirements import evidence as evidence_gate
+
+
+def _load_adapter_module() -> object:
+    adapter_path = Path(__file__).parents[3] / "scripts" / "requirements_evidence_gate.py"
+    spec = importlib.util.spec_from_file_location("requirements_evidence_gate_adapter", adapter_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    ("selection", "expected_kwargs"),
+    [
+        (["--base-ref", "origin/dev"], {"base_ref": "origin/dev", "staged": False}),
+        (["--staged"], {"base_ref": None, "staged": True}),
+    ],
+)
+def test_adapter_forwards_source_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    selection: list[str],
+    expected_kwargs: dict[str, str | bool | None],
+) -> None:
+    adapter = _load_adapter_module()
+    captured: dict[str, object] = {}
+
+    def write_evidence(repo_root: Path, output_path: Path, summary_path: Path | None, **kwargs: object) -> int:
+        captured.update(
+            repo_root=repo_root,
+            output_path=output_path,
+            summary_path=summary_path,
+            **kwargs,
+        )
+        return 0
+
+    monkeypatch.setattr(adapter, "write_requirements_evidence", write_evidence)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "requirements_evidence_gate.py",
+            "--repo-root",
+            str(tmp_path),
+            "--output",
+            str(tmp_path / "evidence.json"),
+            *selection,
+        ],
+    )
+
+    assert adapter._main() == 0
+    assert captured == {
+        "repo_root": tmp_path.resolve(),
+        "output_path": tmp_path / "evidence.json",
+        "summary_path": None,
+        **expected_kwargs,
+    }
 
 
 def _import_result(*, imported: int, diagnostics: list[dict[str, str]]) -> SimpleNamespace:

@@ -148,9 +148,14 @@ def test_pre_commit_treats_all_module_and_registry_changes_as_docs_relevant() ->
 def test_pre_commit_runs_staged_requirements_evidence_before_review_and_contract_tests() -> None:
     script_text = (REPO_ROOT / "scripts" / "pre-commit-quality-checks.sh").read_text(encoding="utf-8")
     run_block2 = script_text.split("run_block2() {", 1)[1].split("\n}\n\nrun_all()", 1)[0]
+    run_all = script_text.split("run_all() {", 1)[1].split("\n}\n\nusage_error()", 1)[0]
 
     assert run_block2.index("run_requirements_evidence_gate") < run_block2.index("run_code_review_gate")
     assert run_block2.index("run_requirements_evidence_gate") < run_block2.index("run_contract_tests_visible")
+    assert run_block2.index("run_requirements_evidence_gate") < run_block2.index("check_safe_change")
+    assert run_all.index("run_requirements_evidence_gate") < run_all.index("run_code_review_gate")
+    assert run_all.index("run_requirements_evidence_gate") < run_all.index("run_contract_tests_visible")
+    assert run_all.index("run_requirements_evidence_gate") < run_all.index("check_safe_change")
 
 
 def test_code_review_gate_parses_staged_added_lines() -> None:

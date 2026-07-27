@@ -48,14 +48,14 @@ exist.
   evaluator through its thin adapter while retaining the existing summary,
   artifact, and failure order; move invocation to the public command in the
   paired core CLI follow-up.
-- [ ] 3.6 Bump the Requirements module release, regenerate registry metadata,
+- [x] 3.6 Bump the Requirements module release, regenerate registry metadata,
   and satisfy checksum/signature policy without changing unrelated modules.
 
 ## 4. Paired CLI handoff and verification
 
 - [ ] 4.1 Publish the immutable released commit SHA and command compatibility
   evidence for the paired CLI change.
-- [ ] 4.2 Run focused command/script/workflow tests, `hatch run format`,
+- [x] 4.2 Run focused command/script/workflow tests, `hatch run format`,
   `type-check`, `lint`, `yaml-lint`, `check-bundle-imports`, signature/version
   verification, `contract-test`, `smart-test`, and changed-line SpecFact code
   review; resolve all findings.

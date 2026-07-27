@@ -210,10 +210,13 @@ def coverage_command(
 @ensure(lambda result: result is None)
 def evidence_command(
     output: Annotated[Path, typer.Option("--output", help="Destination JSON evidence report.")],
+    repo_root: Annotated[
+        Path,
+        typer.Option("--repo-root", help="Repository root to inspect.", default_factory=Path.cwd),
+    ],
     base_ref: Annotated[str | None, typer.Option("--base-ref", help="Git ref used for CI diff selection.")] = None,
     staged: Annotated[bool, typer.Option("--staged", help="Evaluate the current Git index snapshot.")] = False,
     summary: Annotated[Path | None, typer.Option("--summary", help="Optional Markdown remediation report.")] = None,
-    repo_root: Annotated[Path, typer.Option("--repo-root", help="Repository root to inspect.")] = Path.cwd(),
 ) -> None:
     """Write evidence reports before returning a non-zero verdict."""
     if (base_ref is None) != staged:

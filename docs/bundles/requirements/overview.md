@@ -34,6 +34,7 @@ group.
 | `validate` | Validate attached requirement context against the selected or layered profile |
 | `list` | List attached requirement records with optional coverage and core gate counts |
 | `coverage` | Print coverage and core gate-finding counts |
+| `evidence` | Evaluate changed or staged native OpenSpec requirement evidence for CI and local hooks |
 
 ## Input shape
 

@@ -323,16 +323,16 @@ run_code_review_gate() {
   done < <(staged_review_gate_files)
 
   if [ ${#review_array[@]} -eq 0 ]; then
-    info "📦 Block 2 — stage 1/2: code review — skipped (no staged paths under packages/, registry/, scripts/, tools/, tests/, or openspec/changes/)"
+    info "📦 Block 2 — stage 2/3: code review — skipped (no staged paths under packages/, registry/, scripts/, tools/, tests/, or openspec/changes/)"
     return
   fi
 
   local enforcement="${SPECFACT_CODE_REVIEW_ENFORCEMENT:-changed}"
-  info "📦 Block 2 — stage 1/2: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s), enforcement=${enforcement})"
+  info "📦 Block 2 — stage 2/3: code review — running \`hatch run python scripts/pre_commit_code_review.py\` (${#review_array[@]} path(s), enforcement=${enforcement})"
   if hatch run python scripts/pre_commit_code_review.py "${review_array[@]}"; then
-    success "✅ Block 2 — stage 1/2: code review gate passed"
+    success "✅ Block 2 — stage 2/3: code review gate passed"
   else
-    error "❌ Block 2 — stage 1/2: code review gate failed"
+    error "❌ Block 2 — stage 2/3: code review gate failed"
     warn "💡 Fix blocking review findings or run: hatch run python scripts/pre_commit_code_review.py <paths>"
     exit 1
   fi
@@ -400,13 +400,13 @@ run_block2() {
   run_core_documentation_accountability_gate
   run_docs_site_validation_gate
   run_prompt_command_validation_gate
+  run_requirements_evidence_gate
   if check_safe_change; then
     success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
     info "💡 Only docs, workflow, version, or pre-commit metadata changed"
     exit 0
   fi
   print_block2_overview
-  run_requirements_evidence_gate
   run_code_review_gate
   run_contract_tests_visible
 }
@@ -423,13 +423,13 @@ run_all() {
   run_core_documentation_accountability_gate
   run_docs_site_validation_gate
   run_prompt_command_validation_gate
+  run_requirements_evidence_gate
   if check_safe_change; then
     success "✅ Safe change detected — skipping Block 2 (code review + contract tests)"
     info "💡 Only docs, workflow, version, or pre-commit metadata changed"
     exit 0
   fi
   print_block2_overview
-  run_requirements_evidence_gate
   run_code_review_gate
   run_contract_tests_visible
 }
