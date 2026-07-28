@@ -93,3 +93,27 @@
   the dev-target unsigned policy. `hatch run specfact code review run
   --enforcement changed --bug-hunt --json --out .specfact/code-review.json`
   completed with `PASS`, score `115`, and no findings.
+
+## PR #365 release-promotion follow-up
+
+- **2026-07-28 (Europe/Berlin) failing-before:** `hatch run pytest
+  tests/unit/scripts/test_requirements_evidence_gate.py
+  tests/unit/docs/test_llms_overview_freshness.py -q` reported the expected
+  adapter `ValueError` traceback and rejected an immutable artifact URL when
+  semantically equal manifest and registry versions used different spellings.
+- **2026-07-28 (Europe/Berlin) passing-after:** the same command reported
+  `32 passed in 1.33s`; `openspec validate requirements-06-evidence-enforcement
+  --strict` passed. Coverage now includes direct-adapter argument errors and
+  registry-version artifact naming under normalized version equality.
+- **Paired-core release gate (2026-07-28, Europe/Berlin):** the paired
+  `specfact-cli` `dev` command reference does not yet list
+  `specfact requirements evidence`; paired core issue
+  [#657](https://github.com/nold-ai/specfact-cli/issues/657) remains `Todo`.
+  This promotion MUST NOT merge to `main` until #657 regenerates the paired
+  core command reference or a core release explicitly documents equivalent
+  command-reference parity.
+- **Quality evidence (2026-07-28, Europe/Berlin):** `hatch run test` reported
+  `931 passed`; format, type, lint, YAML, bundle-import, command-overview,
+  checksum/version verification, contract, and smart-test gates passed. The
+  changed-line SpecFact review completed with `PASS`, score `120`, and no
+  findings.

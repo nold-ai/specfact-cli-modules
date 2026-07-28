@@ -204,6 +204,18 @@ def test_official_inventory_rejects_registry_description_divergence(tmp_path: Pa
         generator.validate_official_mount_inventory()
 
 
+def _prepare_official_example_inventory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, module_name: str):
+    generator = load_module_from_path(module_name, GENERATOR)
+    _write_official_example_manifest(tmp_path)
+    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        generator,
+        "MODULE_APP_MOUNTS",
+        (("example.commands", "app", ("specfact", "example"), "nold-ai/specfact-example"),),
+    )
+    return generator, tmp_path / "packages" / "specfact-example" / "module-package.yaml"
+
+
 @pytest.mark.parametrize(
     "release_case",
     (
@@ -217,40 +229,34 @@ def test_official_inventory_rejects_published_release_conflicts(
     release_case: tuple[str, str, str, str],
 ) -> None:
     manifest_version, registry_version, download_url, error_field = release_case
-    generator = load_module_from_path("generate_command_overview_release_metadata", GENERATOR)
-    _write_official_example_manifest(tmp_path)
-    manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"
+    generator, manifest = _prepare_official_example_inventory(
+        tmp_path, monkeypatch, "generate_command_overview_release_metadata"
+    )
     manifest.write_text(
         manifest.read_text(encoding="utf-8").replace("version: 1.2.3", f"version: {manifest_version}"), encoding="utf-8"
     )
     _write_official_example_registry(tmp_path, latest_version=registry_version, download_url=download_url)
-    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(
-        generator,
-        "MODULE_APP_MOUNTS",
-        (("example.commands", "app", ("specfact", "example"), "nold-ai/specfact-example"),),
-    )
 
     with pytest.raises(ValueError, match=error_field):
         generator.validate_official_mount_inventory()
 
 
-def test_official_inventory_permits_manifest_newer_than_approved_dev_registry_release(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("module_name", "manifest_version"),
+    (
+        ("generate_command_overview_approved_dev_release", "1.2.4"),
+        ("generate_command_overview_registry_version_spelling", "1.2.3.0"),
+    ),
+)
+def test_official_inventory_permits_pending_and_normalized_release_versions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, module_name: str, manifest_version: str
 ) -> None:
-    generator = load_module_from_path("generate_command_overview_approved_dev_release", GENERATOR)
-    _write_official_example_manifest(tmp_path)
-    manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"
+    generator, manifest = _prepare_official_example_inventory(tmp_path, monkeypatch, module_name)
     manifest.write_text(
-        manifest.read_text(encoding="utf-8").replace("version: 1.2.3", "version: 1.2.4"), encoding="utf-8"
+        manifest.read_text(encoding="utf-8").replace("version: 1.2.3", f"version: {manifest_version}"),
+        encoding="utf-8",
     )
     _write_official_example_registry(tmp_path)
-    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(
-        generator,
-        "MODULE_APP_MOUNTS",
-        (("example.commands", "app", ("specfact", "example"), "nold-ai/specfact-example"),),
-    )
 
     generator.validate_official_mount_inventory()
 

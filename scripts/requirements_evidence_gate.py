@@ -10,7 +10,7 @@ from pathlib import Path
 write_requirements_evidence = import_module("specfact_requirements.requirements.evidence").write_requirements_evidence
 
 
-def _parse_args() -> argparse.Namespace:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--base-ref", help="Git ref used as the branch-diff base.")
@@ -18,18 +18,26 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="Repository root to inspect.")
     parser.add_argument("--output", type=Path, required=True, help="Destination JSON evidence artifact.")
     parser.add_argument("--summary", type=Path, help="Optional destination for a GitHub Actions Markdown summary.")
-    return parser.parse_args()
+    return parser
+
+
+def _parse_args() -> argparse.Namespace:
+    return _build_parser().parse_args()
 
 
 def _main() -> int:
     arguments = _parse_args()
-    return write_requirements_evidence(
-        arguments.repo_root.resolve(),
-        arguments.output,
-        arguments.summary,
-        base_ref=arguments.base_ref,
-        staged=arguments.staged,
-    )
+    try:
+        return write_requirements_evidence(
+            arguments.repo_root.resolve(),
+            arguments.output,
+            arguments.summary,
+            base_ref=arguments.base_ref,
+            staged=arguments.staged,
+        )
+    except ValueError as error:
+        _build_parser().error(str(error))
+        raise AssertionError("argparse.ArgumentParser.error must exit") from error
 
 
 if __name__ == "__main__":

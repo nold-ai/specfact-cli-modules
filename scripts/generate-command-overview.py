@@ -177,9 +177,8 @@ def _official_release_metadata_drift(
     if parsed_registry_version > parsed_manifest_version:
         return [f"{package_id}: registry.latest_version must not be newer than manifest.version"]
 
-    expected_version = registry_version if parsed_manifest_version > parsed_registry_version else manifest_version
     package_name = package_id.rsplit("/", maxsplit=1)[-1]
-    expected_artifact = f"modules/{package_name}-{expected_version}.tar.gz"
+    expected_artifact = f"modules/{package_name}-{registry_version}.tar.gz"
     if registry.get("download_url") != expected_artifact:
         return [f"{package_id}: registry.download_url != {expected_artifact}"]
     return []

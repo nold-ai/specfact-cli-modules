@@ -72,6 +72,36 @@ def test_adapter_forwards_source_selection(
     }
 
 
+def test_adapter_reports_aliased_destinations_as_usage_error(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    adapter = _load_adapter_module()
+
+    def reject_aliased_destinations(*_args: object, **_kwargs: object) -> int:
+        raise ValueError("output and summary paths must resolve to different destinations")
+
+    monkeypatch.setattr(adapter, "write_requirements_evidence", reject_aliased_destinations)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "requirements_evidence_gate.py",
+            "--base-ref",
+            "origin/dev",
+            "--output",
+            str(tmp_path / "requirements-evidence.json"),
+            "--summary",
+            str(tmp_path / "requirements-evidence.md"),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as error:
+        adapter._main()
+
+    assert error.value.code == 2
+    assert "different destinations" in capsys.readouterr().err
+
+
 def _import_result(*, imported: int, diagnostics: list[dict[str, str]]) -> SimpleNamespace:
     return SimpleNamespace(
         requirements=[SimpleNamespace(requirement_id=f"REQ-{index}") for index in range(imported)],

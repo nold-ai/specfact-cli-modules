@@ -54,6 +54,8 @@ hooks and CI.
 - **WHEN** the evidence command validates its arguments
 - **THEN** it returns an actionable usage error before evaluating sources or
   creating either artifact.
+- **AND** the direct compatibility adapter returns an argparse usage error
+  rather than a traceback.
 
 ### Requirement: Local and CI consumers share one evidence contract
 
