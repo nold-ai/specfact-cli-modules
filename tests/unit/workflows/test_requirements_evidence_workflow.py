@@ -31,22 +31,15 @@ def _workflow_job() -> dict[str, Any]:
     return cast(dict[str, Any], workflow["jobs"]["requirements-evidence"])
 
 
-def test_requirements_evidence_workflow_enforces_paired_core_command_parity_on_main_promotion() -> None:
+def test_requirements_evidence_workflow_skips_circular_core_dependency_on_main_promotion() -> None:
     job = _workflow_job()
     steps = _workflow_steps()
-    parity_gate = steps["Enforce paired core requirements command parity"]
 
     assert job["if"] == (
-        "github.event_name != 'pull_request' || (github.event.pull_request.base.ref == 'main' &&\n"
-        " github.event.pull_request.head.ref == 'dev')"
+        "github.event_name != 'pull_request' || github.event.pull_request.base.ref != 'main' || "
+        "github.event.pull_request.head.ref != 'dev'"
     )
-    assert parity_gate["run"] == (
-        "if ! grep -Fq '| `specfact requirements evidence` |' specfact-cli/llms.txt; then\n"
-        '  echo "::error::Paired core command overview does not route specfact requirements evidence. '
-        'Merge the paired core command-routing change before promoting modules to main."\n'
-        "  exit 1\n"
-        "fi\n"
-    )
+    assert "Enforce paired core requirements command parity" not in steps
 
 
 def test_requirements_evidence_workflow_runs_module_adapter_with_paired_core() -> None:

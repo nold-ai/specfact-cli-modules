@@ -78,17 +78,19 @@ thin compatibility adapter MAY invoke that evaluator.
 - **THEN** it appends the Markdown summary and uploads the JSON report
 - **AND** it fails only after those artifacts are retained.
 
-### Requirement: Main promotion verifies paired-core command parity
+### Requirement: Main promotion preserves module-first bootstrap ordering
 
-A `dev` to `main` promotion SHALL run the Requirements evidence workflow
-against the paired core CLI ref and SHALL require its generated command
-overview to list `specfact requirements evidence`.
+A `dev` to `main` promotion SHALL NOT require the paired core CLI to route
+`specfact requirements evidence`, because core delivery gates consume the
+released modules fixture. The modules Requirements evidence workflow SHALL
+skip that promotion; paired core command routing is owned by core issue #657
+after the modules release is available.
 
-#### Scenario: Paired core has not routed the evidence command
+#### Scenario: Paired core has not yet routed the evidence command
 
 - **GIVEN** a pull request from `dev` to `main`
-- **AND** the checked-out paired core command overview lacks
+- **AND** the paired core command overview lacks
   `specfact requirements evidence`
-- **WHEN** the Requirements evidence workflow runs
-- **THEN** it fails before evaluating module evidence
-- **AND** it identifies the missing paired-core command parity as the reason.
+- **WHEN** the modules Requirements evidence workflow is evaluated
+- **THEN** its job is skipped without failing the promotion
+- **AND** no paired-core command-parity assertion runs.

@@ -109,33 +109,29 @@
   `specfact-cli` `dev` command reference does not yet list
   `specfact requirements evidence`; paired core issue
   [#657](https://github.com/nold-ai/specfact-cli/issues/657) remains `Todo`.
-  This promotion MUST NOT merge to `main` until #657 regenerates the paired
-  core command reference or a core release explicitly documents equivalent
-  command-reference parity.
+  #657 is blocked by the released immutable modules fixture, so this modules
+  promotion MUST precede the core command-routing and delivery-gate work.
 - **Quality evidence (2026-07-28, Europe/Berlin):** `hatch run test` reported
   `931 passed`; format, type, lint, YAML, bundle-import, command-overview,
   checksum/version verification, contract, and smart-test gates passed. The
   changed-line SpecFact review completed with `PASS`, score `120`, and no
   findings.
 
-## PR #365 paired-core promotion gate
+## PR #365 module-first bootstrap correction
 
-- **2026-07-29 (Europe/Berlin) failing-before:** after adding the promotion
-  scenario and its regression test, `hatch run pytest
+- **2026-07-29 (Europe/Berlin) failing-before:** `hatch run pytest
   tests/unit/workflows/test_requirements_evidence_workflow.py -q` reported
-  `1 failed, 2 passed`: the workflow had neither the paired-core parity step
-  nor a `dev` to `main` execution condition. Directly checking the current
-  paired core `dev` command overview for
-  `| \`specfact requirements evidence\` |` also returned no match.
+  `1 failed, 2 passed`: the workflow attempted to run for `dev` to `main`
+  and asserted a paired core command that #657 cannot add until the modules
+  fixture is released.
 - **2026-07-29 (Europe/Berlin) passing-after:** the focused suite reported
   `3 passed in 0.02s`; `openspec validate
-  requirements-06-evidence-enforcement --strict` passed. The workflow now
-  runs for `dev` to `main` promotions, checks the same paired core ref it
-  evaluates against, and fails before module evidence evaluation when the
-  generated command overview lacks the routed command.
+  requirements-06-evidence-enforcement --strict` passed. The workflow again
+  skips `dev` to `main` promotion and contains no paired-core command-parity
+  assertion. Core #657 owns command routing and enforcement after this module
+  release is available on `main`.
 - **Quality evidence (2026-07-29, Europe/Berlin):** format, type, lint, YAML,
   bundle-import, manifest verification (with the documented local
-  missing-public-key allowance), contract, and smart-test gates passed. The
-  full `hatch run test` suite completed successfully for `932` collected
-  tests. The changed-line SpecFact review with `--include-tests --bug-hunt`
-  produced score `120` with `0` findings.
+  missing-public-key allowance), contract, smart-test, and the full
+  `hatch run test` suite passed. The changed-line SpecFact review with
+  `--include-tests --bug-hunt` completed with no findings.

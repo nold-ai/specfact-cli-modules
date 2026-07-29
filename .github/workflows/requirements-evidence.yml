@@ -18,8 +18,8 @@ jobs:
     name: requirements-evidence
     if: >-
       github.event_name != 'pull_request' ||
-      (github.event.pull_request.base.ref == 'main' &&
-       github.event.pull_request.head.ref == 'dev')
+      github.event.pull_request.base.ref != 'main' ||
+      github.event.pull_request.head.ref != 'dev'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,13 +53,6 @@ jobs:
           path: specfact-cli
           ref: ${{ steps.core-ref.outputs.ref }}
           persist-credentials: false
-
-      - name: Enforce paired core requirements command parity
-        run: |
-          if ! grep -Fq '| `specfact requirements evidence` |' specfact-cli/llms.txt; then
-            echo "::error::Paired core command overview does not route specfact requirements evidence. Merge the paired core command-routing change before promoting modules to main."
-            exit 1
-          fi
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
