@@ -9,12 +9,15 @@ test re-runs the generator in --check mode on every test run.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
 
 import click
 import pytest
+import typer
+from typer.main import get_command as get_typer_command
 
 from tests.unit._script_test_utils import load_module_from_path
 
@@ -62,6 +65,44 @@ def test_command_overview_records_optional_click_arguments() -> None:
     ]
 
 
+def test_command_overview_records_typer_parameters() -> None:
+    """Typer's pinned Docs Review runtime must retain option and argument metadata."""
+    generator = load_module_from_path("generate_command_overview_typer", GENERATOR)
+    app = typer.Typer()
+
+    @app.command()
+    def inspect(
+        source_path: str = typer.Argument(...),
+        output_format: str = typer.Option("json", "--format"),
+    ) -> None:
+        del source_path, output_format
+
+    assert inspect.__name__ == "inspect"
+    command = get_typer_command(app)
+
+    assert "--format" in generator._command_options(command)  # pylint: disable=protected-access
+    assert {"name": "SOURCE_PATH", "required": True, "nargs": 1} in generator._command_arguments(  # pylint: disable=protected-access
+        command
+    )
+
+
+def test_command_overview_preserves_explicit_typer_argument_metavar() -> None:
+    """An explicit metavar is user-facing syntax, not a default label to normalize."""
+    generator = load_module_from_path("generate_command_overview_typer_metavar", GENERATOR)
+    app = typer.Typer()
+
+    @app.command()
+    def inspect(source_path: str = typer.Argument(..., metavar="path/to/file")) -> None:
+        del source_path
+
+    assert inspect.__name__ == "inspect"
+    command = get_typer_command(app)
+
+    assert {"name": "path/to/file", "required": True, "nargs": 1} in generator._command_arguments(  # pylint: disable=protected-access
+        command
+    )
+
+
 def test_command_overview_rejects_unrepresented_official_inventory(tmp_path: Path, monkeypatch) -> None:
     generator = load_module_from_path("generate_command_overview_inventory", GENERATOR)
     manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"
@@ -92,6 +133,132 @@ def test_command_overview_rejects_unrepresented_official_inventory(tmp_path: Pat
 
     with pytest.raises(ValueError, match="missing command mounts"):
         generator.validate_official_mount_inventory()
+
+
+def _write_official_example_manifest(tmp_path: Path) -> None:
+    manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        "\n".join(
+            (
+                "name: nold-ai/specfact-example",
+                "version: 1.2.3",
+                "tier: official",
+                "publisher:",
+                "  name: nold-ai",
+                "  email: example@noldai.com",
+                "bundle_dependencies: []",
+                "core_compatibility: '>=1.0.0,<2.0.0'",
+                "description: Example module.",
+                "bundle_group_command: example",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_official_example_registry(
+    tmp_path: Path,
+    *,
+    latest_version: str = "1.2.3",
+    download_url: str = "modules/specfact-example-1.2.3.tar.gz",
+    description: str = "Example module.",
+) -> None:
+    registry = tmp_path / "registry" / "index.json"
+    registry.parent.mkdir()
+    registry.write_text(
+        json.dumps(
+            {
+                "modules": [
+                    {
+                        "id": "nold-ai/specfact-example",
+                        "latest_version": latest_version,
+                        "download_url": download_url,
+                        "tier": "official",
+                        "publisher": {"name": "nold-ai", "email": "example@noldai.com"},
+                        "bundle_dependencies": [],
+                        "core_compatibility": ">=1.0.0,<2.0.0",
+                        "description": description,
+                    }
+                ]
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_official_inventory_rejects_registry_description_divergence(tmp_path: Path, monkeypatch) -> None:
+    generator = load_module_from_path("generate_command_overview_metadata_drift", GENERATOR)
+    _write_official_example_manifest(tmp_path)
+    _write_official_example_registry(tmp_path, description="Stale module description.")
+    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        generator,
+        "MODULE_APP_MOUNTS",
+        (("example.commands", "app", ("specfact", "example"), "nold-ai/specfact-example"),),
+    )
+
+    with pytest.raises(ValueError, match="description"):
+        generator.validate_official_mount_inventory()
+
+
+def _prepare_official_example_inventory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, module_name: str):
+    generator = load_module_from_path(module_name, GENERATOR)
+    _write_official_example_manifest(tmp_path)
+    monkeypatch.setattr(generator, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        generator,
+        "MODULE_APP_MOUNTS",
+        (("example.commands", "app", ("specfact", "example"), "nold-ai/specfact-example"),),
+    )
+    return generator, tmp_path / "packages" / "specfact-example" / "module-package.yaml"
+
+
+@pytest.mark.parametrize(
+    "release_case",
+    (
+        ("1.2.2", "1.2.3", "modules/specfact-example-1.2.3.tar.gz", "latest_version"),
+        ("1.2.3", "1.2.3", "modules/specfact-example-1.2.4.tar.gz", "download_url"),
+    ),
+)
+def test_official_inventory_rejects_published_release_conflicts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    release_case: tuple[str, str, str, str],
+) -> None:
+    manifest_version, registry_version, download_url, error_field = release_case
+    generator, manifest = _prepare_official_example_inventory(
+        tmp_path, monkeypatch, "generate_command_overview_release_metadata"
+    )
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8").replace("version: 1.2.3", f"version: {manifest_version}"), encoding="utf-8"
+    )
+    _write_official_example_registry(tmp_path, latest_version=registry_version, download_url=download_url)
+
+    with pytest.raises(ValueError, match=error_field):
+        generator.validate_official_mount_inventory()
+
+
+@pytest.mark.parametrize(
+    ("module_name", "manifest_version"),
+    (
+        ("generate_command_overview_approved_dev_release", "1.2.4"),
+        ("generate_command_overview_registry_version_spelling", "1.2.3.0"),
+    ),
+)
+def test_official_inventory_permits_pending_and_normalized_release_versions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, module_name: str, manifest_version: str
+) -> None:
+    generator, manifest = _prepare_official_example_inventory(tmp_path, monkeypatch, module_name)
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8").replace("version: 1.2.3", f"version: {manifest_version}"),
+        encoding="utf-8",
+    )
+    _write_official_example_registry(tmp_path)
+
+    generator.validate_official_mount_inventory()
 
 
 def test_command_overview_rejects_duplicate_official_registry_entries(tmp_path: Path, monkeypatch) -> None:

@@ -18,6 +18,8 @@ import click
 import yaml
 from beartype import beartype
 from icontract import ensure
+from packaging.version import InvalidVersion, Version
+from typer.core import TyperArgument, TyperOption
 from typer.main import get_command
 
 
@@ -45,6 +47,16 @@ RUNTIME_VALIDATED_GROUPS = frozenset(
         "specfact code import",
         "specfact code repro",
     }
+)
+
+OPTION_PARAMETER_TYPES = (click.Option, TyperOption)
+ARGUMENT_PARAMETER_TYPES = (click.Argument, TyperArgument)
+OFFICIAL_METADATA_FIELDS = (
+    ("tier", "tier"),
+    ("publisher", "publisher"),
+    ("bundle_dependencies", "bundle_dependencies"),
+    ("description", "description"),
+    ("core_compatibility", "core_compatibility"),
 )
 
 
@@ -85,8 +97,8 @@ def _is_official_nold_module(data: Mapping[str, object]) -> bool:
     return data.get("tier") == "official" and isinstance(publisher, Mapping) and publisher.get("name") == "nold-ai"
 
 
-def _official_manifest_inventory() -> dict[str, str]:
-    inventory: dict[str, str] = {}
+def _official_manifest_inventory() -> dict[str, dict[str, object]]:
+    inventory: dict[str, dict[str, object]] = {}
     for manifest_path in sorted((REPO_ROOT / "packages").glob("*/module-package.yaml")):
         data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
         if not isinstance(data, dict) or not _is_official_nold_module(data):
@@ -97,28 +109,101 @@ def _official_manifest_inventory() -> dict[str, str]:
             raise ValueError(f"Invalid official module manifest: {manifest_path}")
         if package_id in inventory:
             raise ValueError(f"Duplicate official module manifest: {package_id}")
-        inventory[package_id] = grouped_root
+        inventory[package_id] = data
     if not inventory:
         raise ValueError(f"No official module manifests found under {REPO_ROOT / 'packages'}")
     return inventory
 
 
-def _official_registry_inventory() -> set[str]:
+def _official_registry_inventory() -> dict[str, dict[str, object]]:
     registry_path = REPO_ROOT / "registry" / "index.json"
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
     if not isinstance(registry, dict) or not isinstance(registry.get("modules"), list):
         raise ValueError(f"Invalid marketplace registry: {registry_path}")
-    package_ids: set[str] = set()
+    inventory: dict[str, dict[str, object]] = {}
     for entry in registry["modules"]:
         if not isinstance(entry, dict) or not _is_official_nold_module(entry):
             continue
         package_id = entry.get("id")
         if not isinstance(package_id, str):
             raise ValueError(f"Invalid official registry entry: {registry_path}")
-        if package_id in package_ids:
+        if package_id in inventory:
             raise ValueError(f"Duplicate official registry entry: {package_id} ({registry_path})")
-        package_ids.add(package_id)
-    return package_ids
+        inventory[package_id] = entry
+    return inventory
+
+
+def _validate_matching_official_inventory_keys(manifests: Mapping[str, object], registry: Mapping[str, object]) -> None:
+    if set(manifests) != set(registry):
+        raise ValueError(
+            "Official manifests and marketplace registry disagree: "
+            f"manifests={sorted(manifests)}, registry={sorted(registry)}"
+        )
+
+
+def _official_metadata_drift(
+    manifests: Mapping[str, Mapping[str, object]], registry: Mapping[str, Mapping[str, object]]
+) -> list[str]:
+    metadata_drift = [
+        f"{package_id}: manifest.{manifest_field} != registry.{registry_field}"
+        for package_id, manifest in sorted(manifests.items())
+        for manifest_field, registry_field in OFFICIAL_METADATA_FIELDS
+        if manifest.get(manifest_field) != registry[package_id].get(registry_field)
+    ]
+    return [
+        *metadata_drift,
+        *(
+            finding
+            for package_id, manifest in sorted(manifests.items())
+            for finding in _official_release_metadata_drift(package_id, manifest, registry[package_id])
+        ),
+    ]
+
+
+def _official_release_metadata_drift(
+    package_id: str, manifest: Mapping[str, object], registry: Mapping[str, object]
+) -> list[str]:
+    manifest_version = manifest.get("version")
+    registry_version = registry.get("latest_version")
+    if manifest_version is None and registry_version is None:
+        return []
+    if not isinstance(manifest_version, str) or not isinstance(registry_version, str):
+        return [f"{package_id}: manifest.version and registry.latest_version must be version strings"]
+    try:
+        parsed_manifest_version = Version(manifest_version)
+        parsed_registry_version = Version(registry_version)
+    except InvalidVersion:
+        return [f"{package_id}: manifest.version and registry.latest_version must be valid versions"]
+    if parsed_registry_version > parsed_manifest_version:
+        return [f"{package_id}: registry.latest_version must not be newer than manifest.version"]
+
+    package_name = package_id.rsplit("/", maxsplit=1)[-1]
+    expected_artifact = f"modules/{package_name}-{registry_version}.tar.gz"
+    if registry.get("download_url") != expected_artifact:
+        return [f"{package_id}: registry.download_url != {expected_artifact}"]
+    return []
+
+
+def _mount_inventory_findings(manifests: Mapping[str, Mapping[str, object]]) -> list[str]:
+    mount_roots: dict[str, set[str]] = {}
+    for _, _, prefix, package_id in MODULE_APP_MOUNTS:
+        if len(prefix) < 2 or prefix[0] != "specfact":
+            raise ValueError(f"Invalid command mount for {package_id}: {prefix}")
+        mount_roots.setdefault(package_id, set()).add(prefix[1])
+    missing = sorted(set(manifests) - set(mount_roots))
+    unexpected = sorted(set(mount_roots) - set(manifests))
+    mismatched_roots = [
+        f"{package_id} (expected {root}, mounts {sorted(mount_roots[package_id])})"
+        for package_id, manifest in sorted(manifests.items())
+        if isinstance((root := manifest.get("bundle_group_command")), str)
+        and package_id in mount_roots
+        and root not in mount_roots[package_id]
+    ]
+    return [
+        *([f"missing command mounts for {missing}"] if missing else []),
+        *([f"command mounts without official manifests for {unexpected}"] if unexpected else []),
+        *([f"grouped root mismatch for {mismatched_roots}"] if mismatched_roots else []),
+    ]
 
 
 @beartype
@@ -126,33 +211,12 @@ def _official_registry_inventory() -> set[str]:
 def validate_official_mount_inventory() -> None:
     """Reject official package records that cannot appear in generated output."""
     manifests = _official_manifest_inventory()
-    registry_ids = _official_registry_inventory()
-    if set(manifests) != registry_ids:
-        raise ValueError(
-            "Official manifests and marketplace registry disagree: "
-            f"manifests={sorted(manifests)}, registry={sorted(registry_ids)}"
-        )
-
-    mount_roots: dict[str, set[str]] = {}
-    for _, _, prefix, package_id in MODULE_APP_MOUNTS:
-        if len(prefix) < 2 or prefix[0] != "specfact":
-            raise ValueError(f"Invalid command mount for {package_id}: {prefix}")
-        mount_roots.setdefault(package_id, set()).add(prefix[1])
-
-    missing = sorted(set(manifests) - set(mount_roots))
-    unexpected = sorted(set(mount_roots) - set(manifests))
-    mismatched_roots = [
-        f"{package_id} (expected {root}, mounts {sorted(mount_roots[package_id])})"
-        for package_id, root in sorted(manifests.items())
-        if package_id in mount_roots and root not in mount_roots[package_id]
-    ]
-    findings: list[str] = []
-    if missing:
-        findings.append(f"missing command mounts for {missing}")
-    if unexpected:
-        findings.append(f"command mounts without official manifests for {unexpected}")
-    if mismatched_roots:
-        findings.append(f"grouped root mismatch for {mismatched_roots}")
+    registry = _official_registry_inventory()
+    _validate_matching_official_inventory_keys(manifests, registry)
+    metadata_drift = _official_metadata_drift(manifests, registry)
+    if metadata_drift:
+        raise ValueError("Official manifest and registry metadata drift: " + "; ".join(metadata_drift))
+    findings = _mount_inventory_findings(manifests)
     if findings:
         raise ValueError("Official module command inventory is inconsistent: " + "; ".join(findings))
 
@@ -160,19 +224,23 @@ def validate_official_mount_inventory() -> None:
 def _command_options(command: click.Command) -> list[str]:
     options: set[str] = set()
     for param in command.params:
-        if isinstance(param, click.Option):
+        if isinstance(param, OPTION_PARAMETER_TYPES):
             secondary_opts = param.secondary_opts
             options.update(opt for opt in [*param.opts, *secondary_opts] if opt.startswith("--"))
     return sorted(options)
 
 
+def _argument_display_name(param: click.Argument | TyperArgument) -> str:
+    return param.metavar or param.human_readable_name.upper()
+
+
 def _command_arguments(command: click.Command) -> list[dict[str, Any]]:
     arguments: list[dict[str, Any]] = []
     for param in command.params:
-        if isinstance(param, click.Argument):
+        if isinstance(param, ARGUMENT_PARAMETER_TYPES):
             arguments.append(
                 {
-                    "name": param.human_readable_name,
+                    "name": _argument_display_name(param),
                     "required": bool(param.required),
                     "nargs": param.nargs,
                 }
@@ -216,9 +284,9 @@ def _has_bare_business_parameters(command: click.Command) -> bool:
         "--show-completion",
     }
     for param in command.params:
-        if isinstance(param, click.Argument):
+        if isinstance(param, ARGUMENT_PARAMETER_TYPES):
             return True
-        if isinstance(param, click.Option):
+        if isinstance(param, OPTION_PARAMETER_TYPES):
             opts = set(param.opts) | set(param.secondary_opts)
             if opts and opts.isdisjoint(ignored_options):
                 return True

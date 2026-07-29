@@ -2,15 +2,104 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
 
 import pytest
 
-from scripts import requirements_evidence_gate as evidence_gate
+from specfact_requirements.requirements import evidence as evidence_gate
+
+
+def _load_adapter_module() -> object:
+    adapter_path = Path(__file__).parents[3] / "scripts" / "requirements_evidence_gate.py"
+    spec = importlib.util.spec_from_file_location("requirements_evidence_gate_adapter", adapter_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    ("selection", "expected_kwargs"),
+    [
+        (["--base-ref", "origin/dev"], {"base_ref": "origin/dev", "staged": False}),
+        (["--staged"], {"base_ref": None, "staged": True}),
+    ],
+)
+def test_adapter_forwards_source_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    selection: list[str],
+    expected_kwargs: dict[str, str | bool | None],
+) -> None:
+    adapter = _load_adapter_module()
+    captured: dict[str, object] = {}
+
+    def write_evidence(repo_root: Path, output_path: Path, summary_path: Path | None, **kwargs: object) -> int:
+        captured.update(
+            repo_root=repo_root,
+            output_path=output_path,
+            summary_path=summary_path,
+            **kwargs,
+        )
+        return 0
+
+    monkeypatch.setattr(adapter, "write_requirements_evidence", write_evidence)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "requirements_evidence_gate.py",
+            "--repo-root",
+            str(tmp_path),
+            "--output",
+            str(tmp_path / "evidence.json"),
+            *selection,
+        ],
+    )
+
+    assert adapter._main() == 0
+    assert captured == {
+        "repo_root": tmp_path.resolve(),
+        "output_path": tmp_path / "evidence.json",
+        "summary_path": None,
+        **expected_kwargs,
+    }
+
+
+def test_adapter_reports_aliased_destinations_as_usage_error(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    adapter = _load_adapter_module()
+
+    def reject_aliased_destinations(*_args: object, **_kwargs: object) -> int:
+        raise ValueError("output and summary paths must resolve to different destinations")
+
+    monkeypatch.setattr(adapter, "write_requirements_evidence", reject_aliased_destinations)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "requirements_evidence_gate.py",
+            "--base-ref",
+            "origin/dev",
+            "--output",
+            str(tmp_path / "requirements-evidence.json"),
+            "--summary",
+            str(tmp_path / "requirements-evidence.md"),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as error:
+        adapter._main()
+
+    assert error.value.code == 2
+    assert "different destinations" in capsys.readouterr().err
 
 
 def _import_result(*, imported: int, diagnostics: list[dict[str, str]]) -> SimpleNamespace:
@@ -58,6 +147,17 @@ def _mapped_source(tmp_path: Path) -> tuple[Path, Path, bytes]:
         encoding="utf-8",
     )
     return source, sidecar, sidecar.read_bytes()
+
+
+def _resolve_shipped_openspec_change_source(repo_root: Path, change_id: str) -> Path:
+    """Find a shipped change in its active or OpenSpec-managed archive location."""
+    changes_root = repo_root / "openspec" / "changes"
+    candidates = [changes_root / change_id]
+    candidates.extend(sorted((changes_root / "archive").glob(f"*-{change_id}")))
+    sources = [candidate for candidate in candidates if candidate.is_dir()]
+
+    assert len(sources) == 1, f"expected one active or archived OpenSpec source for {change_id}, found {sources}"
+    return sources[0]
 
 
 def test_evaluate_sources_emits_passed_verdict_with_preserved_evidence(monkeypatch, tmp_path: Path) -> None:
@@ -278,6 +378,52 @@ def test_evaluate_sources_skips_without_sources(tmp_path: Path) -> None:
     assert report["summary"] == {"failed_sources": 0, "passed_sources": 0, "skipped_sources": 1, "total_sources": 0}
 
 
+def test_resolve_shipped_openspec_change_source_accepts_active_or_archived_location(tmp_path: Path) -> None:
+    changes_root = tmp_path / "openspec" / "changes"
+    active = changes_root / "requirements-evidence"
+    active.mkdir(parents=True)
+
+    assert _resolve_shipped_openspec_change_source(tmp_path, "requirements-evidence") == active
+
+    active.rmdir()
+    archived = changes_root / "archive" / "2026-07-26-requirements-evidence"
+    archived.mkdir(parents=True)
+
+    assert _resolve_shipped_openspec_change_source(tmp_path, "requirements-evidence") == archived
+
+
+def test_resolve_shipped_openspec_change_source_rejects_ambiguous_locations(tmp_path: Path) -> None:
+    changes_root = tmp_path / "openspec" / "changes"
+    (changes_root / "requirements-evidence").mkdir(parents=True)
+    (changes_root / "archive" / "2026-07-26-requirements-evidence").mkdir(parents=True)
+
+    with pytest.raises(AssertionError, match="expected one active or archived OpenSpec source"):
+        _resolve_shipped_openspec_change_source(tmp_path, "requirements-evidence")
+
+
+def test_shipped_source_readiness_and_dogfood_specs_pass_actual_evidence_gate(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    sources = [
+        _resolve_shipped_openspec_change_source(repo_root, "requirements-04-upstream-source-readiness"),
+        _resolve_shipped_openspec_change_source(repo_root, "requirements-05-dogfood-evidence-gate"),
+    ]
+
+    report = evidence_gate._evaluate_sources(sources, bundle_parent=tmp_path)
+
+    assert report["verdict"] == "passed"
+    assert report["execution_proof"] == "not-included"
+    assert report["summary"] == {"failed_sources": 0, "passed_sources": 2, "skipped_sources": 0, "total_sources": 2}
+    assert len(report["sources"]) == 2
+    assert all(source["verdict"] == "passed" for source in report["sources"])
+    assert all(source["import"]["diagnostics"] == [] for source in report["sources"])
+    assert all(source["import"]["imported"] > 0 for source in report["sources"])
+    assert all(
+        source["coverage"]["total_requirements"] == source["coverage"]["with_test_links"]
+        for source in report["sources"]
+    )
+    assert all(source["reasons"] == [] for source in report["sources"])
+
+
 def test_discover_changed_openspec_sources_includes_deleted_active_files(monkeypatch, tmp_path: Path) -> None:
     active = tmp_path / "openspec" / "changes" / "widget-evidence"
     archived = tmp_path / "openspec" / "changes" / "archive" / "widget-evidence"
@@ -310,6 +456,18 @@ def test_discover_changed_openspec_sources_includes_deleted_active_files(monkeyp
     assert "--diff-filter=ACMRD" in commands[0]
 
 
+def test_discover_changed_openspec_sources_includes_new_active_directories(monkeypatch, tmp_path: Path) -> None:
+    active = tmp_path / "openspec" / "changes" / "new-evidence"
+    active.mkdir(parents=True)
+    monkeypatch.setattr(
+        evidence_gate,
+        "_git_changed_paths",
+        lambda *_args: ["openspec/changes/new-evidence/specs/evidence/spec.md"],
+    )
+
+    assert evidence_gate._discover_changed_openspec_sources(tmp_path, "origin/dev") == [active]
+
+
 def test_discover_changed_openspec_sources_rejects_option_like_base_refs(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="base ref"):
         evidence_gate._discover_changed_openspec_sources(tmp_path, "--output=/tmp/untrusted")
@@ -330,7 +488,7 @@ def test_run_evidence_gate_writes_failed_report_before_returning_nonzero(monkeyp
         },
     )
 
-    exit_code = evidence_gate._run_evidence_gate(tmp_path, "origin/dev", output_path)
+    exit_code = evidence_gate.write_requirements_evidence(tmp_path, output_path, base_ref="origin/dev")
 
     assert exit_code == 1
     assert '"verdict": "failed"' in output_path.read_text(encoding="utf-8")
@@ -345,7 +503,7 @@ def test_run_evidence_gate_writes_failed_report_when_discovery_raises(monkeypatc
         lambda *_args: (_ for _ in ()).throw(subprocess.CalledProcessError(128, ["git", "diff"])),
     )
 
-    exit_code = evidence_gate._run_evidence_gate(tmp_path, "missing-base", output_path, summary_path)
+    exit_code = evidence_gate.write_requirements_evidence(tmp_path, output_path, summary_path, base_ref="missing-base")
 
     report = json.loads(output_path.read_text(encoding="utf-8"))
     assert exit_code == 1

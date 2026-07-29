@@ -4,7 +4,6 @@
 This specification governs the modules documentation publishing contract,
 including deterministic site inputs, generated navigation, and published-link
 validation for changed docs.
-
 ## Requirements
 ### Requirement: Modules docs site is the canonical home for official bundle documentation
 
@@ -70,10 +69,25 @@ The docs publishing workflow SHALL run docs dependency installation, Jekyll buil
 
 ### Requirement: Docs review CI SHALL run the same deterministic docs validators as local checks
 
-The docs review workflow SHALL run the deterministic docs validators used by local pre-commit, plus the docs unit tests, so PR and local validation enforce the same defect categories.
+The Docs Review workflow SHALL run the deterministic validators used by local
+pre-commit, including generated command-overview freshness, command-contract
+validation, applicable prompt-command validation, and fail-closed core
+documentation accountability, plus docs unit tests.
 
 #### Scenario: Docs-only pull request has broken published link
 
 - **WHEN** a pull request changes only Markdown files under `docs/`
 - **THEN** the docs review workflow runs `published-link` validation
-- **AND** the workflow fails when the changed docs introduce a broken `published-link`
+- **AND** the workflow fails when the changed docs introduce a broken
+  `published-link`
+
+#### Scenario: Module-only pull request validates core accountability
+
+- **WHEN** a pull request changes module manifests, registry data, package
+  source/resources/docs, generated artifacts, validation tooling, dependency
+  configuration, or Docs Review workflow inputs
+- **THEN** Docs Review runs generated-artifact and core-accountability checks
+- **AND** the workflow fails when the paired core catalogue or ownership
+  handoff is stale
+- **AND** it does not report a passing docs review without those checks.
+

@@ -172,6 +172,42 @@ def test_requirements_help_exposes_no_author_command() -> None:
 
 
 @pytest.mark.integration
+def test_requirements_evidence_requires_exactly_one_source_selection_mode(tmp_path: Path) -> None:
+    output_path = tmp_path / "requirements-evidence.json"
+
+    result = runner.invoke(app, ["evidence", "--output", str(output_path)])
+
+    assert result.exit_code == 2
+    assert "exactly one of --base-ref or --staged" in result.output
+    assert not output_path.exists()
+
+    result = runner.invoke(
+        app,
+        ["evidence", "--base-ref", "origin/dev", "--staged", "--output", str(output_path)],
+    )
+
+    assert result.exit_code == 2
+    assert "exactly one of --base-ref or --staged" in result.output
+    assert not output_path.exists()
+
+
+@pytest.mark.integration
+def test_requirements_evidence_reports_aliased_destinations_as_usage_error(tmp_path: Path) -> None:
+    output_path = tmp_path / "requirements-evidence.json"
+    summary_path = tmp_path / "requirements-evidence.md"
+    output_path.write_text('{"verdict": "previous"}\n', encoding="utf-8")
+    summary_path.hardlink_to(output_path)
+
+    result = runner.invoke(
+        app,
+        ["evidence", "--base-ref", "HEAD", "--output", str(output_path), "--summary", str(summary_path)],
+    )
+
+    assert result.exit_code == 2
+    assert "different destinations" in result.output
+
+
+@pytest.mark.integration
 def test_requirements_import_help_exposes_optional_native_source_path() -> None:
     result = runner.invoke(app, ["import", "--help"])
 

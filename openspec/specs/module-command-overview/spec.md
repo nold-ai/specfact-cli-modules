@@ -4,19 +4,56 @@
 This specification defines deterministic module command overview artifacts and
 the docs validation checks that keep published module command references aligned
 with the actual command tree.
-
 ## Requirements
 ### Requirement: Modules Publish Generated Command Overview Artifacts
 
-The modules repository SHALL generate deterministic command overview artifacts from the actual module command tree.
+The modules repository SHALL generate deterministic command overview artifacts
+from the actual module command tree and authoritative official-module manifest
+and registry inventory.
 
 #### Scenario: Module command overview artifacts are generated
 
 - **GIVEN** the module command overview generator runs in the modules repository
-- **WHEN** it writes artifacts
-- **THEN** it produces `llms.txt`, `docs/reference/commands.generated.md`, and `docs/reference/commands.generated.json`
-- **AND** every command record includes command path, owning repo, owning module package, install prerequisite, short help, arguments/options, subcommands, source import path when known, and hidden/deprecated status
+- **WHEN** it writes artifacts under the pinned Docs Review dependency set
+- **THEN** it produces `llms.txt`, `docs/reference/commands.generated.md`, and
+  `docs/reference/commands.generated.json`
+- **AND** every command record includes command path, owning repo, owning module
+  package, install prerequisite, short help, arguments/options, subcommands,
+  source import path when known, and hidden/deprecated status
 - **AND** generated output is stable for the same source tree.
+
+#### Scenario: Typer-provided parameters preserve command metadata
+
+- **GIVEN** a command parameter is supplied by the pinned Docs Review Typer
+  runtime rather than Click's public option or argument class
+- **WHEN** command overview generation or freshness validation runs
+- **THEN** it records that parameter's long options or argument metadata
+- **AND** it does not certify empty metadata caused only by the parameter's
+  implementation class.
+
+#### Scenario: Explicit argument metavars remain intact
+
+- **GIVEN** a Click or Typer argument defines an explicit `metavar`
+- **WHEN** command overview generation records the argument
+- **THEN** it emits the configured metavar without changing its casing or
+  punctuation
+- **AND** it continues to normalize only default argument labels for stable
+  generated artifacts across supported runtimes.
+
+#### Scenario: Official inventory is not represented by command mounts
+
+- **GIVEN** an official package or grouped root in manifests and the registry is
+  missing, renamed, remapped, or has conflicting identity, version, install
+  artifact, ownership, dependency, description, or compatibility metadata
+  relative to the command-mount inventory
+- **WHEN** command overview generation or freshness validation runs
+- **THEN** it exits non-zero and identifies the unrepresented or inconsistent
+  official record and conflicting metadata fields
+- **AND** it treats the manifest version and its future install artifact as the
+  source of truth while an approved `dev` release awaits registry publication;
+  the publish precondition validates that the manifest version is newer than
+  the registry before the immutable artifact is created
+- **AND** it does not certify unchanged generated artifacts as current.
 
 #### Scenario: README links generated overview
 
@@ -26,7 +63,10 @@ The modules repository SHALL generate deterministic command overview artifacts f
 
 #### Scenario: Stale generated artifacts fail checks
 
-- **GIVEN** module command source, module manifests, prompt resources, docs, or command validation scripts change
+- **GIVEN** any path under `packages/**` or `registry/**` changes, or command
+  overview, prompt, docs, or command-validation tooling changes
 - **WHEN** the command overview freshness check runs
-- **THEN** it fails if generated artifacts are stale
-- **AND** it reports the command needed to regenerate them.
+- **THEN** local pre-commit regenerates and stages all generated artifacts after
+  rejecting relevant unstaged inputs
+- **AND** CI performs a read-only check and fails if the artifacts are stale
+- **AND** the failure reports the command needed to regenerate them.
