@@ -77,3 +77,18 @@ thin compatibility adapter MAY invoke that evaluator.
 - **WHEN** the workflow completes
 - **THEN** it appends the Markdown summary and uploads the JSON report
 - **AND** it fails only after those artifacts are retained.
+
+### Requirement: Main promotion verifies paired-core command parity
+
+A `dev` to `main` promotion SHALL run the Requirements evidence workflow
+against the paired core CLI ref and SHALL require its generated command
+overview to list `specfact requirements evidence`.
+
+#### Scenario: Paired core has not routed the evidence command
+
+- **GIVEN** a pull request from `dev` to `main`
+- **AND** the checked-out paired core command overview lacks
+  `specfact requirements evidence`
+- **WHEN** the Requirements evidence workflow runs
+- **THEN** it fails before evaluating module evidence
+- **AND** it identifies the missing paired-core command parity as the reason.

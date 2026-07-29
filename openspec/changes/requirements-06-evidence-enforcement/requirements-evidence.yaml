@@ -7,3 +7,6 @@ requirements:
     test_links:
       - tests/unit/test_pre_commit_quality_parity.py
       - tests/unit/workflows/test_requirements_evidence_workflow.py
+  "openspec:requirements-06-evidence-enforcement:requirements-evidence-command:main-promotion-verifies-paired-core-command-parity":
+    test_links:
+      - tests/unit/workflows/test_requirements_evidence_workflow.py
