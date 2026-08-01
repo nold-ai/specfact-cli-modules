@@ -14,6 +14,7 @@ from specfact_cli.utils.bundle_loader import save_project_bundle
 from typer.testing import CliRunner
 
 from specfact_requirements.requirements.commands import app
+from specfact_requirements.requirements.lifecycle import evaluate_mapping
 
 
 runner = CliRunner()
@@ -189,6 +190,64 @@ def test_requirements_evidence_requires_exactly_one_source_selection_mode(tmp_pa
     assert result.exit_code == 2
     assert "exactly one of --base-ref or --staged" in result.output
     assert not output_path.exists()
+
+
+@pytest.mark.integration
+def test_requirements_evidence_exposes_lifecycle_options_and_reconciliation(tmp_path: Path) -> None:
+    help_result = runner.invoke(app, ["evidence", "--help"])
+
+    assert help_result.exit_code == 0
+    assert "--required-maturity" in help_result.output
+    assert "reconcile" in runner.invoke(app, ["--help"]).output
+
+    mapping = {
+        "schema_version": "2",
+        "requirements": {
+            "REQ-001": {
+                "rationale": "Readiness must be observable.",
+                "touchpoints": [{"id": "readiness", "kind": "cli_command", "locator": "specfact readiness"}],
+                "verification_cases": [
+                    {
+                        "case_id": "REQ-001-S01",
+                        "method": "test",
+                        "intent": "Report unavailable dependencies.",
+                        "observable": "Exit code.",
+                        "selector": {"runner": "pytest", "node_id": "tests/test_readiness.py::test_unavailable"},
+                    }
+                ],
+            }
+        },
+    }
+    plan = evaluate_mapping(mapping, required_maturity="test-authored")
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+    junit_path = tmp_path / "red.xml"
+    junit_path.write_text(
+        '<testsuite><testcase><properties><property name="specfact.selector" '
+        'value="tests/test_readiness.py::test_unavailable"/></properties><failure/></testcase></testsuite>',
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "proof.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "reconcile",
+            "--plan",
+            str(plan_path),
+            "--junit",
+            str(junit_path),
+            "--run-stage",
+            "red",
+            "--source-ref",
+            "a" * 40,
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(output_path.read_text(encoding="utf-8"))["observed_maturity"] == "red"
 
 
 @pytest.mark.integration

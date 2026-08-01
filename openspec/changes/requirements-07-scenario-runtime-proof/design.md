@@ -35,6 +35,22 @@ evidence domains.
 
 ## Decisions
 
+### Make lifecycle maturity explicit
+
+Schema-v2 mappings capture rationale, stakeholder references, touchpoints, and
+planned verification cases before a test exists. The evaluator reports gate
+decision, required maturity, observed maturity, delivery status, and
+implementation-evidence status separately. `planned` is a successful proposal
+readiness state, never a claim that implementation ran. `accepted` requires a
+provider-neutral review record bound to the canonical mapping digest;
+`test-authored` requires exact selectors for test cases; `red` and `verified`
+are created only by separate JUnit reconciliation.
+
+The mapping digest covers semantic mapping fields, so editing a requirement
+mapping invalidates prior acceptance and proof. The module validates and
+reconciles evidence only; the core delivery runner supplies trusted review,
+Git ancestry, execution, and environment provenance.
+
 ### Emit structured selectors, never commands
 
 The plan contains typed selector records rather than executable strings. The

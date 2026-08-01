@@ -12,9 +12,12 @@ scenario proof is absent.
 
 ## What Changes
 
-- Extend Requirements evidence with stable scenario identities, declared
-  product touchpoints, exact structured test selectors, and explicit
-  `declared`, `selected`, `executed`, and `passed` proof states.
+- Extend Requirements evidence with schema-v2 lifecycle maturity: mapped
+  proposal readiness, digest-bound acceptance, test-authored selection,
+  failing-first red proof, and final verified proof.
+- Require rationale, declared product touchpoints, verification cases, and
+  observables from proposal time; exact structured test selectors begin only
+  when test automation starts.
 - Add a deterministic two-phase public contract: emit a bounded test plan
   before execution, then reconcile trusted JUnit results into the final
   Requirements evidence report.
@@ -26,6 +29,8 @@ scenario proof is absent.
 - Preserve offline-first operation, read-only upstream sources, profile-aware
   severity, deterministic report ordering, and backward-compatible report
   evolution.
+- Keep proposal-ready success distinct from implementation proof: a passing
+  proposal report explicitly says that execution evidence is not yet available.
 
 ## Capabilities
 

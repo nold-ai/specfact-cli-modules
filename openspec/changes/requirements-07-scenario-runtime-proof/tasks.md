@@ -23,10 +23,11 @@ behavior before its tests exist and have failed for the expected reason.
 - [ ] 2.1 Refine the scenario-proof and review-context specs only if current
   release reality exposes a concrete ambiguity; mirror any paired contract
   adjustment in core before implementation.
-- [ ] 2.2 Add failing Requirements tests for stable scenario IDs, touchpoint
-  validation, canonical plan IDs, exact pytest selectors, unsafe-selector
-  rejection, and deterministic plan ordering.
-- [ ] 2.3 Add failing reconciliation tests for passed, failed, skipped,
+- [ ] 2.2 Add failing Requirements tests for schema-v2 proposal mappings,
+  rationale/touchpoint/verification-case completeness, mapping digest,
+  digest-bound acceptance, and explicit not-yet-available execution state.
+- [ ] 2.3 Add failing tests for exact pytest selectors, unsafe-selector
+  rejection, deterministic plan ordering, and reconciliation for passed, failed, skipped,
   uncollected, duplicate, stale, mismatched, missing-canonical-selector, and
   malformed JUnit cases.
 - [ ] 2.4 Add failing Code Review tests for valid, absent, red, stale, and
@@ -36,10 +37,13 @@ behavior before its tests exist and have failed for the expected reason.
 
 ## 3. Module implementation
 
-- [ ] 3.1 Add typed, contract-decorated scenario, touchpoint, selector, plan,
-  reconciliation, and proof-state models to `specfact-requirements`.
-- [ ] 3.2 Extend `specfact requirements evidence` with explicit plan and
-  reconciliation inputs/outputs while preserving current staged/base-ref use.
+- [ ] 3.1 Add typed, contract-decorated lifecycle mapping, acceptance,
+  touchpoint, selector, plan, reconciliation, and proof-state models to
+  `specfact-requirements`.
+- [ ] 3.2 Extend `specfact requirements evidence` with required-maturity,
+  review-evidence, and plan-output inputs while preserving the legacy
+  staged/base-ref contract; add `specfact requirements reconcile` without
+  module-owned test execution.
 - [ ] 3.3 Parse bounded JUnit XML defensively and bind exact results to the plan,
   source revisions, and result digest; do not invoke a test runner.
 - [ ] 3.4 Add optional validated Requirements evidence context to

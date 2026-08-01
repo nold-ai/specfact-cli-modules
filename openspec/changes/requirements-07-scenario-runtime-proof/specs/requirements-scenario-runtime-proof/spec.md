@@ -1,13 +1,66 @@
 ## ADDED Requirements
 
+### Requirement: Lifecycle-Aware Requirements Readiness
+
+The Requirements module SHALL distinguish proposal readiness from implementation
+proof. A proposal-only source SHALL be evaluated at `planned` maturity from
+stable requirement/scenario mappings, rationale, touchpoints, verification
+cases, and observables without requiring a test path or claiming execution.
+The report SHALL expose the requested and observed maturity separately from its
+gate verdict and SHALL label implementation evidence as not-yet-available.
+
+#### Scenario: Proposal mapping is complete but not executed
+
+- **GIVEN** imported requirements and scenarios with a schema-v2 sidecar that
+  maps each scenario to a rationale, touchpoint, verification case, and
+  observable, but has no test selector
+- **WHEN** evidence runs with required maturity `planned`
+- **THEN** it returns a passing proposal-readiness verdict
+- **AND** it reports `delivery_status: proposal-only`
+- **AND** it reports `implementation_evidence: not-yet-available`
+- **AND** it does not report the requirement as implemented or verified.
+
+#### Scenario: Proposal mapping is incomplete
+
+- **GIVEN** an imported requirement or scenario without a required schema-v2
+  mapping field
+- **WHEN** evidence runs with required maturity `planned`
+- **THEN** it returns a failing incomplete maturity result
+- **AND** each missing requirement, scenario, or field is reported
+- **AND** no synthetic test link is created.
+
+### Requirement: Mapping Acceptance Provenance
+
+The Requirements module SHALL validate provider-neutral acceptance evidence
+against the canonical mapping digest. Acceptance SHALL be a distinct maturity
+state; it SHALL not be inferred from a passing proposal-readiness verdict.
+
+#### Scenario: Accepted mapping enables test authoring
+
+- **GIVEN** a complete planned mapping and an acceptance record with a matching
+  mapping digest, decision, reviewer identity, role, timestamp, and immutable
+  reference
+- **WHEN** evidence requires `accepted` maturity
+- **THEN** it reports the mapping as accepted
+- **AND** it may proceed to test-authored validation.
+
+#### Scenario: Stale or rejected acceptance remains blocking
+
+- **GIVEN** an acceptance record with a rejected decision, missing provenance,
+  or a digest different from the current mapping
+- **WHEN** evidence requires `accepted` maturity or higher
+- **THEN** it returns a deterministic acceptance finding
+- **AND** it does not permit test or implementation proof to satisfy the gate.
+
 ### Requirement: Deterministic Scenario Proof Plan
 
 The Requirements module SHALL emit a deterministic, machine-readable proof
 plan for selected requirement scenarios without executing tests. Each planned
 scenario SHALL carry a stable requirement/scenario identity, source revision,
-declared product touchpoints, and exact structured test selectors. A selector
-SHALL identify a supported runner and repository-contained test case; it SHALL
-NOT contain a shell command.
+declared product touchpoints, verification method, intent, and observable.
+Exact structured test selectors are required only at `test-authored` maturity
+and above. A selector SHALL identify a supported runner and
+repository-contained test case; it SHALL NOT contain a shell command.
 
 #### Scenario: Selected scenarios produce a stable plan
 

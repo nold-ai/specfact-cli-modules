@@ -54,6 +54,7 @@ def test_requirements_evidence_workflow_runs_module_adapter_with_paired_core() -
     assert gate["continue-on-error"] is True
     assert gate["env"]["PYTHONPATH"] == "packages/specfact-project/src:packages/specfact-requirements/src"
     assert "scripts/requirements_evidence_gate.py" in gate["run"]
+    assert "--required-maturity planned" in gate["run"]
     assert f"--output {JSON_ARTIFACT}" in gate["run"]
     assert f"--summary {SUMMARY_ARTIFACT}" in gate["run"]
 
