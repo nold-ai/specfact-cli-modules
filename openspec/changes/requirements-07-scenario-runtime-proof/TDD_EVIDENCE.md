@@ -30,3 +30,12 @@
 - **Proof:** lifecycle mappings are explicit from proposal time; a passing
   readiness decision neither claims execution nor weakens failing-first or
   final verification requirements.
+
+## Review-remediation regression evidence
+
+- **Recorded:** 2026-08-02 (Europe/Berlin)
+- **Command:** `hatch run pytest tests/unit/specfact_requirements/test_requirements_lifecycle.py tests/integration/specfact_requirements/test_command_apps.py tests/unit/specfact_requirements/test_requirements_evidence.py -q`
+- **Result:** 25 passed.
+- **Proof:** ANSI-styled CLI help is checked semantically, unsafe selectors and
+  unsafe or oversized JUnit are rejected, and only a complete passing
+  `test-authored` plan can enter reconciliation.

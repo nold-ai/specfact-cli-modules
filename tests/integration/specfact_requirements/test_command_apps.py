@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,11 @@ from specfact_requirements.requirements.lifecycle import evaluate_mapping
 
 
 runner = CliRunner()
+
+
+def _plain_terminal_text(value: str) -> str:
+    """Normalize Rich terminal formatting before asserting command help semantics."""
+    return re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", value)
 
 
 def _bundle_dir(tmp_path: Path) -> Path:
@@ -197,8 +203,8 @@ def test_requirements_evidence_exposes_lifecycle_options_and_reconciliation(tmp_
     help_result = runner.invoke(app, ["evidence", "--help"])
 
     assert help_result.exit_code == 0
-    assert "--required-maturity" in help_result.output
-    assert "reconcile" in runner.invoke(app, ["--help"]).output
+    assert "--required-maturity" in _plain_terminal_text(help_result.output)
+    assert "reconcile" in _plain_terminal_text(runner.invoke(app, ["--help"]).output)
 
     mapping = {
         "schema_version": "2",
@@ -218,7 +224,19 @@ def test_requirements_evidence_exposes_lifecycle_options_and_reconciliation(tmp_
             }
         },
     }
-    plan = evaluate_mapping(mapping, required_maturity="test-authored")
+    planned = evaluate_mapping(mapping, required_maturity="planned")
+    plan = evaluate_mapping(
+        mapping,
+        required_maturity="test-authored",
+        review_evidence={
+            "decision": "accepted",
+            "reviewer_id": "owner@example.test",
+            "reviewer_role": "product-owner",
+            "recorded_at": "2026-08-02T00:00:00Z",
+            "reference": "review:369",
+            "mapping_digest": planned["mapping_digest"],
+        },
+    )
     plan_path = tmp_path / "plan.json"
     plan_path.write_text(json.dumps(plan), encoding="utf-8")
     junit_path = tmp_path / "red.xml"

@@ -52,16 +52,3 @@ requirements:
         method: test
         intent: Distinguish a failing-first result from a final passing result.
         observable: Red and verified maturity reports bound to exact selectors.
-  openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:requirements-aware-review-context:
-    rationale: Review can consume evidence context without becoming its proof authority.
-    stakeholder_refs:
-      - https://github.com/nold-ai/specfact-cli-modules/issues/368
-    touchpoints:
-      - id: requirements-review-context
-        kind: artifact
-        locator: finalized requirements lifecycle proof JSON
-    verification_cases:
-      - case_id: lifecycle-review-context
-        method: inspection
-        intent: Preserve Requirements verdict ownership when handing evidence to review.
-        observable: Separate report provenance and verdict fields.

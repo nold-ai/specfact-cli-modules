@@ -3,8 +3,8 @@
 ## TDD / SDD order (enforced)
 
 Specs first, then scenario-mapped tests and captured failing evidence, then
-production code. Do not implement planning, reconciliation, or review-context
-behavior before its tests exist and have failed for the expected reason.
+production code. Do not implement planning or reconciliation behavior before
+its tests exist and have failed for the expected reason.
 
 ---
 
@@ -20,44 +20,39 @@ behavior before its tests exist and have failed for the expected reason.
 
 ## 2. Specification and failing evidence
 
-- [ ] 2.1 Refine the scenario-proof and review-context specs only if current
+- [ ] 2.1 Refine the scenario-proof specs only if current
   release reality exposes a concrete ambiguity; mirror any paired contract
   adjustment in core before implementation.
-- [ ] 2.2 Add failing Requirements tests for schema-v2 proposal mappings,
+- [x] 2.2 Add failing Requirements tests for schema-v2 proposal mappings,
   rationale/touchpoint/verification-case completeness, mapping digest,
   digest-bound acceptance, and explicit not-yet-available execution state.
-- [ ] 2.3 Add failing tests for exact pytest selectors, unsafe-selector
+- [x] 2.3 Add failing tests for exact pytest selectors, unsafe-selector
   rejection, deterministic plan ordering, and reconciliation for passed, failed, skipped,
   uncollected, duplicate, stale, mismatched, missing-canonical-selector, and
   malformed JUnit cases.
-- [ ] 2.4 Add failing Code Review tests for valid, absent, red, stale, and
-  unsupported Requirements evidence context without verdict substitution.
-- [ ] 2.5 Record commands, timestamps, and expected failures in
+- [x] 2.4 Record commands, timestamps, and expected failures in
   `TDD_EVIDENCE.md` before production edits.
 
 ## 3. Module implementation
 
-- [ ] 3.1 Add typed, contract-decorated lifecycle mapping, acceptance,
+- [x] 3.1 Add typed, contract-decorated lifecycle mapping, acceptance,
   touchpoint, selector, plan, reconciliation, and proof-state models to
   `specfact-requirements`.
-- [ ] 3.2 Extend `specfact requirements evidence` with required-maturity,
+- [x] 3.2 Extend `specfact requirements evidence` with required-maturity,
   review-evidence, and plan-output inputs while preserving the legacy
   staged/base-ref contract; add `specfact requirements reconcile` without
   module-owned test execution.
-- [ ] 3.3 Parse bounded JUnit XML defensively and bind exact results to the plan,
+- [x] 3.3 Parse bounded JUnit XML defensively and bind exact results to the plan,
   source revisions, and result digest; do not invoke a test runner.
-- [ ] 3.4 Add optional validated Requirements evidence context to
-  `specfact code review run` and emit deterministic coverage findings without
-  changing the Requirements verdict.
-- [ ] 3.5 Keep output ordering, remediation, profile severity, and old-report
+- [x] 3.4 Keep output ordering, remediation, profile severity, and old-report
   compatibility deterministic across repeated runs.
 
 ## 4. Passing evidence and integration proof
 
-- [ ] 4.1 Run focused Requirements and Code Review tests and record passing
+- [ ] 4.1 Run focused Requirements tests and record passing
   evidence in `TDD_EVIDENCE.md`.
 - [ ] 4.2 Add integration fixtures proving plan -> external pytest/JUnit ->
-  reconciliation -> review-context handoff without module-owned execution.
+  reconciliation without module-owned execution.
 - [ ] 4.3 Verify paired core #662 can consume only public released interfaces;
   publish compatibility fixtures and the immutable release commit.
 
@@ -67,7 +62,7 @@ behavior before its tests exist and have failed for the expected reason.
   smart-test, and full focused test gates.
 - [ ] 5.2 Run fresh changed/full SpecFact code review with `--bug-hunt`; resolve
   every finding at every severity and record the final report evidence.
-- [ ] 5.3 Update Requirements and Code Review guides, command references, and
+- [ ] 5.3 Update Requirements guides, command references, and
   modules.specfact.io navigation with proof semantics and limitations.
 - [ ] 5.4 Bump affected bundle versions, regenerate registry artifacts and
   command overviews, sign changed module payloads, and verify signatures/version

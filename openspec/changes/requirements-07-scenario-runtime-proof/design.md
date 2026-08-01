@@ -4,9 +4,9 @@
 imports their requirements, validates profiles, and checks declared test links.
 That is a trustworthy static gate, but a path-level link cannot establish that
 an exact test was collected or passed. The core repository owns local and CI
-process orchestration; modules own Requirements semantics and Code Review
-semantics. The boundary must prevent both core-side verdict reimplementation
-and module-side execution of repository-controlled command text.
+process orchestration; modules own Requirements evidence semantics. The boundary
+must prevent core-side verdict reimplementation and module-side execution of
+repository-controlled command text.
 
 This slice is narrower than `validation-02-full-chain-engine`: it produces one
 Requirements scenario-proof signal that the future full-chain graph may
@@ -23,7 +23,6 @@ evidence domains.
   evaluation.
 - Reconcile exact current-run JUnit test cases into deterministic scenario
   proof states.
-- Supply finalized Requirements evidence to Code Review as validated context.
 
 ### Non-Goals
 
@@ -90,14 +89,6 @@ explicit inputs with stable identifiers; this change does not infer them from
 arbitrary code. Their purpose is to let downstream review compare a changed
 surface with its requirement and proof packet.
 
-### Keep review context read-only and subordinate
-
-`specfact code review run` may accept a finalized Requirements evidence file.
-It validates schema/provenance and emits deterministic findings when changed
-review targets touch declared interfaces with absent or red proof. It does not
-change the Requirements verdict, manufacture test results, or silently accept
-an invalid packet. Requirements and review reports remain separately auditable.
-
 ### Evolve reports compatibly
 
 Existing consumers that need only the current top-level verdict and findings
@@ -113,8 +104,6 @@ rejection of unsupported future versions.
   validate repository containment and reject option/control syntax.
 - **Stale or replayed results**: bind source revisions, plan ID, and result
   digest in the finalized report.
-- **Review circularity**: keep Requirements verdict authoritative and review
-  context read-only.
 - **Over-coupling to the future full-chain engine**: expose a bounded evidence
   packet without importing full-chain orchestration.
 
@@ -122,8 +111,7 @@ rejection of unsupported future versions.
 
 1. Release planning/reconciliation contracts behind explicit options while
    preserving current evidence behavior.
-2. Release optional Requirements context consumption in Code Review.
-3. Publish signed module artifacts and an immutable commit for core #662.
-4. Let core adopt the release first in advisory mode, then strict policy.
-5. Roll back core consumption or optional context input without changing
+2. Publish signed module artifacts and an immutable commit for core #662.
+3. Let core adopt the release first in advisory mode, then strict policy.
+4. Roll back core consumption without changing
    upstream requirement sources or deleting retained evidence.

@@ -1865,7 +1865,6 @@
       "--base-ref",
       "--output",
       "--plan-output",
-      "--policy",
       "--repo-root",
       "--required-maturity",
       "--review-evidence",

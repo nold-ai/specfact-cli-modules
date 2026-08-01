@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from specfact_requirements.requirements.evidence import _write_markdown_summary
-from specfact_requirements.requirements.lifecycle import evaluate_mapping, reconcile_junit
+from specfact_requirements.requirements.lifecycle import MAX_JUNIT_BYTES, evaluate_mapping, reconcile_junit
 
 
 def _planned_mapping() -> dict[str, object]:
@@ -54,6 +56,37 @@ def test_incomplete_proposal_mapping_fails_without_synthetic_test_link() -> None
     assert "missing-observable:REQ-001-S01" in report["findings"]
 
 
+def test_plans_preserve_non_test_case_semantics_but_require_safe_test_selectors() -> None:
+    mapping = _planned_mapping()
+    cases = mapping["requirements"]["REQ-001"]["verification_cases"]  # type: ignore[index]
+    cases.append(  # type: ignore[union-attr]
+        {
+            "case_id": "REQ-001-A01",
+            "method": "analysis",
+            "intent": "Review the documented dependency policy.",
+            "observable": "A policy decision is recorded.",
+        }
+    )
+    cases[0]["selector"] = {"runner": "pytest", "node_id": "tests/../secrets.py::test_leak"}  # type: ignore[index]
+
+    report = evaluate_mapping(mapping, required_maturity="test-authored")
+
+    assert report["gate_decision"] == "fail"
+    assert "invalid-selector:REQ-001-S01" in report["findings"]
+    analysis_case = next(case for case in report["plan"]["cases"] if case["method"] == "analysis")
+    assert analysis_case["observable"] == "A policy decision is recorded."
+
+
+def test_red_and_verified_require_execution_reconciliation() -> None:
+    mapping = _planned_mapping()
+
+    red = evaluate_mapping(mapping, required_maturity="red")
+    verified = evaluate_mapping(mapping, required_maturity="verified")
+
+    assert "execution-proof-required:red" in red["findings"]
+    assert "execution-proof-required:verified" in verified["findings"]
+
+
 def test_accepted_maturity_requires_matching_provider_neutral_review() -> None:
     mapping = _planned_mapping()
     planned = evaluate_mapping(mapping, required_maturity="planned")
@@ -80,7 +113,10 @@ def test_accepted_maturity_requires_matching_provider_neutral_review() -> None:
 def test_red_requires_collected_failure_and_final_requires_prior_red(tmp_path: Path) -> None:
     mapping = _planned_mapping()
     case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
-    case["selector"] = {"runner": "pytest", "node_id": "tests/test_readiness.py::test_unavailable"}  # type: ignore[index]
+    case["selector"] = {
+        "runner": "pytest",
+        "node_id": "tests/test_readiness.py::test_unavailable",
+    }  # type: ignore[index]
     plan = evaluate_mapping(
         mapping,
         required_maturity="test-authored",
@@ -116,6 +152,80 @@ def test_red_requires_collected_failure_and_final_requires_prior_red(tmp_path: P
     assert "prior-red-proof-missing" in final_without_red["findings"]
     assert final["gate_decision"] == "pass"
     assert final["observed_maturity"] == "verified"
+
+
+def test_reconciliation_finding_retains_the_observed_outcome(tmp_path: Path) -> None:
+    mapping = _planned_mapping()
+    case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
+    case["selector"] = {
+        "runner": "pytest",
+        "node_id": "tests/test_readiness.py::test_unavailable",
+    }  # type: ignore[index]
+    planned = evaluate_mapping(mapping, required_maturity="planned")
+    plan = evaluate_mapping(
+        mapping,
+        required_maturity="test-authored",
+        review_evidence={
+            "decision": "accepted",
+            "reviewer_id": "owner@example.test",
+            "reviewer_role": "product-owner",
+            "recorded_at": "2026-08-02T00:00:00Z",
+            "reference": "review:369",
+            "mapping_digest": planned["mapping_digest"],
+        },
+    )
+    junit = tmp_path / "skipped.xml"
+    junit.write_text(
+        '<testsuite><testcase><properties><property name="specfact.selector" '
+        'value="tests/test_readiness.py::test_unavailable"/></properties><skipped/></testcase></testsuite>',
+        encoding="utf-8",
+    )
+
+    report = reconcile_junit(plan, junit, run_stage="red", source_ref="a" * 40)
+
+    assert "red-proof-skipped-not-failed:tests/test_readiness.py::test_unavailable" in report["findings"]
+
+
+def test_reconciliation_rejects_incomplete_or_unsafe_plan_and_junit_doctype(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mapping = _planned_mapping()
+    incomplete_plan = evaluate_mapping(mapping, required_maturity="planned")
+    junit = tmp_path / "result.xml"
+    junit.write_text("<testsuite/>", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="test-authored"):
+        reconcile_junit(incomplete_plan, junit, run_stage="red", source_ref="a" * 40)
+    with pytest.raises(ValueError, match="full lowercase"):
+        reconcile_junit(incomplete_plan, junit, run_stage="red", source_ref="a" * 41)
+
+    mapping_case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
+    mapping_case["selector"] = {
+        "runner": "pytest",
+        "node_id": "tests/test_readiness.py::test_unavailable",
+    }  # type: ignore[index]
+    planned = evaluate_mapping(mapping, required_maturity="planned")
+    accepted_plan = evaluate_mapping(
+        mapping,
+        required_maturity="test-authored",
+        review_evidence={
+            "decision": "accepted",
+            "reviewer_id": "owner@example.test",
+            "reviewer_role": "product-owner",
+            "recorded_at": "2026-08-02T00:00:00Z",
+            "reference": "review:369",
+            "mapping_digest": planned["mapping_digest"],
+        },
+    )
+    junit.write_text("<!DOCTYPE testsuite><testsuite/>", encoding="utf-8")
+    rejected = reconcile_junit(accepted_plan, junit, run_stage="red", source_ref="a" * 40)
+
+    assert "junit-unsafe-doctype" in rejected["findings"]
+    assert "junit_digest" not in rejected["execution_proof"]
+    monkeypatch.setattr("specfact_requirements.requirements.lifecycle.MAX_JUNIT_BYTES", 1)
+    oversized = reconcile_junit(accepted_plan, junit, run_stage="red", source_ref="a" * 40)
+    assert "junit-too-large" in oversized["findings"]
+    assert MAX_JUNIT_BYTES > 1
 
 
 def test_lifecycle_evidence_summary_uses_findings_without_execution_claim(tmp_path: Path) -> None:

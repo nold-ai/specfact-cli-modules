@@ -35,6 +35,16 @@ class OutputFormat(StrEnum):
     TEXT = "text"
 
 
+class RequiredMaturity(StrEnum):
+    """Lifecycle maturity values accepted by the evidence command."""
+
+    PLANNED = "planned"
+    ACCEPTED = "accepted"
+    TEST_AUTHORED = "test-authored"
+    RED = "red"
+    VERIFIED = "verified"
+
+
 app = typer.Typer(
     help="Import, validate, and inspect requirement context evidence.",
     no_args_is_help=True,
@@ -225,7 +235,7 @@ def _write_command_evidence(options: EvidenceCommandOptions) -> int:
     return write_requirements_evidence(
         options.repo_root.resolve(),
         options.output,
-        options.summary,
+        summary_path=options.summary,
         base_ref=options.base_ref,
         staged=options.staged,
         required_maturity=options.required_maturity,
@@ -246,22 +256,37 @@ def evidence_command(
     staged: Annotated[bool, typer.Option("--staged", help="Evaluate the current Git index snapshot.")] = False,
     summary: Annotated[Path | None, typer.Option("--summary", help="Optional Markdown remediation report.")] = None,
     required_maturity: Annotated[
-        str | None, typer.Option("--required-maturity", help="Lifecycle maturity required for a schema-v2 sidecar.")
+        RequiredMaturity | None,
+        typer.Option(
+            "--required-maturity",
+            help="Lifecycle maturity required for a schema-v2 sidecar.",
+        ),
     ] = None,
     review_evidence: Annotated[
-        Path | None, typer.Option("--review-evidence", exists=True, file_okay=True, dir_okay=False, readable=True)
+        Path | None,
+        typer.Option(
+            "--review-evidence",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Provider-neutral acceptance record bound to the mapping digest.",
+        ),
     ] = None,
     plan_output: Annotated[
         Path | None, typer.Option("--plan-output", help="Optional normalized lifecycle plan JSON.")
     ] = None,
-    policy: Annotated[
-        Path | None, typer.Option("--policy", exists=True, file_okay=True, dir_okay=False, readable=True)
-    ] = None,
 ) -> None:
     """Write evidence reports before returning a non-zero verdict."""
-    del policy  # Policy ownership remains with the delivery runner; this command validates the supplied maturity.
     options = EvidenceCommandOptions(
-        output, repo_root, base_ref, staged, summary, required_maturity, review_evidence, plan_output
+        output=output,
+        repo_root=repo_root,
+        base_ref=base_ref,
+        staged=staged,
+        summary=summary,
+        required_maturity=required_maturity,
+        review_evidence=review_evidence,
+        plan_output=plan_output,
     )
     try:
         exit_code = _write_command_evidence(options)

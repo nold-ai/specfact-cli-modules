@@ -56,8 +56,9 @@ state; it SHALL not be inferred from a passing proposal-readiness verdict.
 
 The Requirements module SHALL emit a deterministic, machine-readable proof
 plan for selected requirement scenarios without executing tests. Each planned
-scenario SHALL carry a stable requirement/scenario identity, source revision,
-declared product touchpoints, verification method, intent, and observable.
+scenario SHALL carry a stable requirement/scenario identity, declared product
+touchpoints, verification method, intent, and observable. Reconciliation SHALL
+bind the plan to the supplied execution source revision.
 Exact structured test selectors are required only at `test-authored` maturity
 and above. A selector SHALL identify a supported runner and
 repository-contained test case; it SHALL NOT contain a shell command.
@@ -124,37 +125,3 @@ from a JUnit display name or class name.
 - **WHEN** reconciliation runs
 - **THEN** it never upgrades the affected scenario to passed
 - **AND** it emits deterministic findings that distinguish the failure class.
-
-### Requirement: Requirements-Aware Review Context
-
-The Code Review module SHALL optionally accept a finalized Requirements proof
-report as validated, read-only context. It MAY emit deterministic findings for
-reviewed product touchpoints with missing or red scenario proof, but SHALL NOT
-rewrite the Requirements report or substitute a review verdict for the
-Requirements verdict.
-
-#### Scenario: Changed touchpoint has valid passing proof
-
-- **GIVEN** Code Review receives a supported finalized Requirements report whose
-  declared touchpoint matches a reviewed change and whose required scenarios
-  have passed proof
-- **WHEN** review runs
-- **THEN** the review report records the Requirements context provenance
-- **AND** it emits no missing-proof finding for that touchpoint.
-
-#### Scenario: Changed touchpoint lacks passing proof
-
-- **GIVEN** a reviewed change matches a declared touchpoint with absent,
-  uncollected, failed, stale, or otherwise red scenario proof
-- **WHEN** review runs with the finalized Requirements context
-- **THEN** it emits a deterministic Requirements-coverage finding referencing
-  the requirement/scenario and touchpoint identities
-- **AND** it preserves the separate Requirements verdict unchanged.
-
-#### Scenario: Review context is malformed or unsupported
-
-- **GIVEN** Code Review receives malformed evidence or an unsupported future
-  schema version
-- **WHEN** context validation runs
-- **THEN** it fails closed with bounded remediation
-- **AND** it does not infer Requirements state from repository filenames.

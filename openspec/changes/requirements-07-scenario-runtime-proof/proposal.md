@@ -6,9 +6,7 @@ The released Requirements evidence command proves source validity and declared
 test-link coverage, but it intentionally does not execute tests or claim
 behavioral satisfaction. A linked test file is therefore traceability evidence,
 not empirical proof that an exact scenario test was selected, executed, and
-passed in the current delivery run. Code Review also lacks an authoritative
-Requirements context packet for detecting changed product touchpoints whose
-scenario proof is absent.
+passed in the current delivery run.
 
 ## What Changes
 
@@ -23,9 +21,6 @@ scenario proof is absent.
   Requirements evidence report.
 - Reject missing, ambiguous, stale, or unsafe selectors; never emit shell
   command strings and never execute a test process from module code.
-- Add an optional, machine-readable Requirements evidence context input to
-  `specfact code review run`. Review may emit coverage findings from that
-  packet but cannot invent proof or replace the Requirements verdict.
 - Preserve offline-first operation, read-only upstream sources, profile-aware
   severity, deterministic report ordering, and backward-compatible report
   evolution.
@@ -38,26 +33,21 @@ scenario proof is absent.
 
 - `requirements-scenario-runtime-proof`: Produce deterministic scenario test
   plans and reconcile current-run JUnit results into empirical proof states.
-- `requirements-aware-review-context`: Let Code Review consume finalized
-  Requirements proof as validated, read-only review context.
 
 ## Impact
 
-- Affected packages: `packages/specfact-requirements` and
-  `packages/specfact-code-review`, including public CLI contracts, typed report
-  models, tests, versions, manifests, registry artifacts, checksums, and
-  signatures.
+- Affected package: `packages/specfact-requirements`, including public CLI
+  contracts, typed report models, tests, version, manifest, registry artifacts,
+  checksums, and signatures.
 - Affected consumers: the paired core change executes module-produced plans
   and returns JUnit evidence; no core component reimplements proof semantics.
-- Affected documentation: Requirements evidence and Code Review command guides
-  on modules.specfact.io, including a precise statement of declared versus
-  executed proof.
+- Affected documentation: Requirements evidence guides on modules.specfact.io,
+  including a precise statement of declared versus executed proof.
 - Dependencies: extends the released `requirements-06-evidence-enforcement`
   command contract and supplies a bounded input to, but does not implement,
   `validation-02-full-chain-engine`.
-- Rollback: keep the existing evidence command/report behavior and omit the
-  optional review-context input; no source artifacts or tests are modified by
-  evidence evaluation.
+- Rollback: keep the existing evidence command/report behavior; no source
+  artifacts or tests are modified by evidence evaluation.
 
 ## Quality Standards
 
