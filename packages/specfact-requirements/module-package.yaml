@@ -20,3 +20,4 @@ category: project
 bundle_group_command: requirements
 integrity:
   checksum: sha256:058ced37900e1466f6affa28ea8ec0bd5aba4090832b15bff02ef7d6bc18c35c
+  signature: xdsym3Vwsn5tJENZKzIMBkjP+MxXy0c3O+sS+xbqsZ+17lbr0SyacPm1KXXThDRS9mfZDMNCrx2BHKo70TGpDg==
