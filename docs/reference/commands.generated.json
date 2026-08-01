@@ -1833,6 +1833,7 @@
       "evidence",
       "import",
       "list",
+      "reconcile",
       "validate"
     ]
   },
@@ -1863,7 +1864,11 @@
     "options": [
       "--base-ref",
       "--output",
+      "--plan-output",
+      "--policy",
       "--repo-root",
+      "--required-maturity",
+      "--review-evidence",
       "--staged",
       "--summary"
     ],
@@ -1910,6 +1915,28 @@
       "--bundle",
       "--format",
       "--show-coverage"
+    ],
+    "owner_package": "nold-ai/specfact-requirements",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_requirements.requirements.commands:app",
+    "subcommands": []
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "executes",
+    "command": "specfact requirements reconcile",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-requirements",
+    "options": [
+      "--junit",
+      "--output",
+      "--plan",
+      "--prior-red-proof",
+      "--run-stage",
+      "--source-ref",
+      "--summary"
     ],
     "owner_package": "nold-ai/specfact-requirements",
     "owner_repo": "nold-ai/specfact-cli-modules",

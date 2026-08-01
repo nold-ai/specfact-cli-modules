@@ -32,6 +32,7 @@ _REQUIRED_SCRIPT_FRAGMENTS = (
     "contract-test-status",
     "run_requirements_evidence_gate",
     "scripts/requirements_evidence_gate.py --staged",
+    "--required-maturity planned",
     "print_block1_overview",
     "Block 1 — stage 1/4",
     "Block 1 — stage 4/4",

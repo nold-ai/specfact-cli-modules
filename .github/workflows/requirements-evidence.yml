@@ -82,6 +82,7 @@ jobs:
           hatch run python scripts/requirements_evidence_gate.py \
             --repo-root "$GITHUB_WORKSPACE" \
             --base-ref "$BASE_REF" \
+            --required-maturity planned \
             --output artifacts/requirements-evidence/requirements-evidence.json \
             --summary artifacts/requirements-evidence/requirements-evidence.md
 
