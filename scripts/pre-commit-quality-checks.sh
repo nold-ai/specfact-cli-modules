@@ -347,7 +347,7 @@ run_requirements_evidence_gate() {
   local summary_path=".specfact/reports/requirements-evidence.md"
   mkdir -p "$(dirname "${report_path}")"
   info "📦 Block 2 — stage 1/3: Requirements evidence — running the module adapter against the staged Git index"
-  if PYTHONPATH=packages/specfact-project/src:packages/specfact-requirements/src hatch run python scripts/requirements_evidence_gate.py --staged --output "${report_path}" --summary "${summary_path}"; then
+  if PYTHONPATH=packages/specfact-project/src:packages/specfact-requirements/src hatch run python scripts/requirements_evidence_gate.py --staged --required-maturity planned --output "${report_path}" --summary "${summary_path}"; then
     success "✅ Block 2 — stage 1/3: Requirements evidence passed (${report_path})"
   else
     error "❌ Block 2 — stage 1/3: Requirements evidence failed; report retained at ${report_path}"

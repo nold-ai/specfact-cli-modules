@@ -27,8 +27,8 @@ def _load_adapter_module() -> object:
 @pytest.mark.parametrize(
     ("selection", "expected_kwargs"),
     [
-        (["--base-ref", "origin/dev"], {"base_ref": "origin/dev", "staged": False}),
-        (["--staged"], {"base_ref": None, "staged": True}),
+        (["--base-ref", "origin/dev"], {"base_ref": "origin/dev", "staged": False, "required_maturity": None}),
+        (["--staged"], {"base_ref": None, "staged": True, "required_maturity": None}),
     ],
 )
 def test_adapter_forwards_source_selection(

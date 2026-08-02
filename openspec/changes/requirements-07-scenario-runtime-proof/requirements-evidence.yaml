@@ -1,0 +1,54 @@
+schema_version: "2"
+requirements:
+  openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:lifecycle-aware-requirements-readiness:
+    rationale: Proposal mappings must be reviewable before code or tests exist.
+    stakeholder_refs:
+      - https://github.com/nold-ai/specfact-cli-modules/issues/368
+    touchpoints:
+      - id: requirements-evidence-lifecycle-report
+        kind: artifact
+        locator: specfact requirements evidence
+    verification_cases:
+      - case_id: lifecycle-proposal-ready
+        method: test
+        intent: Report proposal readiness without an execution claim.
+        observable: JSON report separates gate decision and implementation evidence.
+  openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:mapping-acceptance-provenance:
+    rationale: Automation must begin from requirements accepted against their reviewed mapping.
+    stakeholder_refs:
+      - https://github.com/nold-ai/specfact-cli-modules/issues/368
+    touchpoints:
+      - id: requirements-acceptance-digest
+        kind: artifact
+        locator: requirements-evidence.yaml mapping digest
+    verification_cases:
+      - case_id: lifecycle-acceptance-bound
+        method: test
+        intent: Reject stale or missing acceptance evidence.
+        observable: Digest-bound acceptance finding and maturity result.
+  openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:deterministic-scenario-proof-plan:
+    rationale: A test plan must be deterministic and safe before a delivery runner consumes it.
+    stakeholder_refs:
+      - https://github.com/nold-ai/specfact-cli-modules/issues/368
+    touchpoints:
+      - id: requirements-proof-plan
+        kind: artifact
+        locator: specfact requirements evidence --plan-output
+    verification_cases:
+      - case_id: lifecycle-test-authored
+        method: test
+        intent: Validate exact structured selectors at test-authored maturity.
+        observable: Deterministic normalized plan and selector findings.
+  openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:current-run-junit-reconciliation:
+    rationale: Requirements proof must be based on collected current-run results.
+    stakeholder_refs:
+      - https://github.com/nold-ai/specfact-cli-modules/issues/368
+    touchpoints:
+      - id: requirements-reconcile
+        kind: cli_command
+        locator: specfact requirements reconcile
+    verification_cases:
+      - case_id: lifecycle-junit-reconcile
+        method: test
+        intent: Distinguish a failing-first result from a final passing result.
+        observable: Red and verified maturity reports bound to exact selectors.

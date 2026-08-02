@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -14,9 +15,15 @@ from specfact_cli.utils.bundle_loader import save_project_bundle
 from typer.testing import CliRunner
 
 from specfact_requirements.requirements.commands import app
+from specfact_requirements.requirements.lifecycle import evaluate_mapping
 
 
 runner = CliRunner()
+
+
+def _plain_terminal_text(value: str) -> str:
+    """Normalize Rich terminal formatting before asserting command help semantics."""
+    return re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", value)
 
 
 def _bundle_dir(tmp_path: Path) -> Path:
@@ -189,6 +196,76 @@ def test_requirements_evidence_requires_exactly_one_source_selection_mode(tmp_pa
     assert result.exit_code == 2
     assert "exactly one of --base-ref or --staged" in result.output
     assert not output_path.exists()
+
+
+@pytest.mark.integration
+def test_requirements_evidence_exposes_lifecycle_options_and_reconciliation(tmp_path: Path) -> None:
+    help_result = runner.invoke(app, ["evidence", "--help"])
+
+    assert help_result.exit_code == 0
+    assert "--required-maturity" in _plain_terminal_text(help_result.output)
+    assert "reconcile" in _plain_terminal_text(runner.invoke(app, ["--help"]).output)
+
+    mapping = {
+        "schema_version": "2",
+        "requirements": {
+            "REQ-001": {
+                "rationale": "Readiness must be observable.",
+                "touchpoints": [{"id": "readiness", "kind": "cli_command", "locator": "specfact readiness"}],
+                "verification_cases": [
+                    {
+                        "case_id": "REQ-001-S01",
+                        "method": "test",
+                        "intent": "Report unavailable dependencies.",
+                        "observable": "Exit code.",
+                        "selector": {"runner": "pytest", "node_id": "tests/test_readiness.py::test_unavailable"},
+                    }
+                ],
+            }
+        },
+    }
+    planned = evaluate_mapping(mapping, required_maturity="planned")
+    plan = evaluate_mapping(
+        mapping,
+        required_maturity="test-authored",
+        review_evidence={
+            "decision": "accepted",
+            "reviewer_id": "owner@example.test",
+            "reviewer_role": "product-owner",
+            "recorded_at": "2026-08-02T00:00:00Z",
+            "reference": "review:369",
+            "mapping_digest": planned["mapping_digest"],
+        },
+    )
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+    junit_path = tmp_path / "red.xml"
+    junit_path.write_text(
+        '<testsuite><testcase><properties><property name="specfact.selector" '
+        'value="tests/test_readiness.py::test_unavailable"/></properties><failure/></testcase></testsuite>',
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "proof.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "reconcile",
+            "--plan",
+            str(plan_path),
+            "--junit",
+            str(junit_path),
+            "--run-stage",
+            "red",
+            "--source-ref",
+            "a" * 40,
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(output_path.read_text(encoding="utf-8"))["observed_maturity"] == "red"
 
 
 @pytest.mark.integration

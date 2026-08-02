@@ -11,8 +11,9 @@ import tarfile
 import tempfile
 from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, Unpack
 
 import yaml
 from beartype import beartype
@@ -20,6 +21,14 @@ from icontract import ensure
 from specfact_cli.common.bundle_factory import create_empty_project_bundle
 from specfact_cli.utils.bundle_loader import save_project_bundle
 
+from specfact_requirements.requirements.lifecycle import (
+    MATURITY_ORDER,
+    SUPPORTED_REQUIRED_MATURITY,
+    build_plan,
+    canonical_digest,
+    evaluate_mapping,
+    lifecycle_status,
+)
 from specfact_requirements.requirements.runtime import (
     import_native_requirements_to_bundle,
     import_requirements_file_to_bundle,
@@ -282,6 +291,137 @@ def _skipped_report() -> dict[str, Any]:
     }
 
 
+def _read_optional_mapping(path: Path) -> dict[str, Any]:
+    """Read one optional YAML mapping; callers turn unreadable input into a finding."""
+    try:
+        value = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        return {}
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _read_review_evidence(path: Path | None) -> Mapping[str, Any] | None:
+    """Return an optional provider-neutral review record without executing a provider."""
+    return _read_optional_mapping(path) if path is not None else None
+
+
+def _normalized_source_plan(source: object) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
+    """Return a source identity and its fully preserved cases when valid."""
+    if not isinstance(source, Mapping) or not isinstance(source.get("plan"), Mapping):
+        return None
+    plan = source["plan"]
+    if not isinstance(plan.get("cases"), list) or not isinstance(plan.get("mapping_digest"), str):
+        return None
+    source_name = str(source.get("source", ""))
+    cases = [{"source": source_name, **dict(case)} for case in plan["cases"] if isinstance(case, Mapping)]
+    if len(cases) != len(plan["cases"]):
+        return None
+    return {"source": source_name, "mapping_digest": plan["mapping_digest"]}, cases
+
+
+def _normalized_plan_inputs(sources: list[object]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]] | None:
+    """Collect deterministic source identities and case records for one plan."""
+    normalized = [_normalized_source_plan(source) for source in sources]
+    if any(source is None for source in normalized):
+        return None
+    source_plans = [source[0] for source in normalized if source is not None]
+    cases = [case for source in normalized if source is not None for case in source[1]]
+    if not source_plans or not cases:
+        return None
+    return source_plans, cases
+
+
+def _normalized_plan_report(report: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Build one deterministic plan artifact from passing lifecycle source reports."""
+    if report.get("gate_decision") != "pass" or not isinstance(report.get("sources"), list):
+        return None
+    inputs = _normalized_plan_inputs(
+        sorted(report["sources"], key=lambda item: str(item.get("source")) if isinstance(item, Mapping) else "")
+    )
+    if inputs is None:
+        return None
+    source_plans, cases = inputs
+    identity = {"sources": source_plans, "cases": cases}
+    mapping_digest = canonical_digest({"sources": source_plans})
+    plan = build_plan(mapping_digest, cases)
+    return {
+        "schema_version": "2",
+        "verdict": report["verdict"],
+        "gate_decision": report["gate_decision"],
+        "required_maturity": report["required_maturity"],
+        "observed_maturity": report["observed_maturity"],
+        "mapping_digest": mapping_digest,
+        "plan": plan,
+        "sources": source_plans,
+        "plan_identity_digest": canonical_digest(identity),
+    }
+
+
+def _unavailable_plan_report(report: Mapping[str, Any]) -> dict[str, Any]:
+    """Write an explicit non-reconcilable artifact when no lifecycle plan exists."""
+    return {
+        "schema_version": "2",
+        "gate_decision": report.get("gate_decision", "fail"),
+        "plan_status": "not-available",
+        "plan": None,
+        "sources": report.get("sources", []),
+    }
+
+
+def _lifecycle_report(
+    source_paths: Sequence[Path],
+    *,
+    required_maturity: str,
+    review_evidence: Mapping[str, Any] | None,
+    source_labels: Mapping[Path, Path] | None = None,
+) -> dict[str, Any]:
+    """Evaluate sidecar mappings without claiming test execution."""
+    if not source_paths:
+        report = _skipped_report()
+        report.update(
+            {
+                "schema_version": "2",
+                "gate_decision": "pass",
+                "required_maturity": required_maturity,
+                "observed_maturity": "no-impact",
+                "delivery_status": "no-impact",
+                "implementation_evidence": "not-applicable",
+            }
+        )
+        return report
+    labels = source_labels or {}
+    sources: list[dict[str, Any]] = []
+    for source_path in source_paths:
+        lifecycle = evaluate_mapping(
+            _read_optional_mapping(source_path / EVIDENCE_SIDECAR_NAME),
+            required_maturity=required_maturity,
+            review_evidence=review_evidence,
+        )
+        sources.append({"source": labels.get(source_path, source_path).as_posix(), **lifecycle})
+    failed_sources = sum(source["gate_decision"] == "fail" for source in sources)
+    observed = min(
+        (source["observed_maturity"] for source in sources),
+        key=lambda maturity: MATURITY_ORDER.get(maturity, -1),
+    )
+    delivery_status, implementation_evidence = lifecycle_status(observed)
+    return {
+        "schema_version": "2",
+        "verdict": "failed" if failed_sources else "passed",
+        "gate_decision": "fail" if failed_sources else "pass",
+        "required_maturity": required_maturity,
+        "observed_maturity": observed,
+        "delivery_status": delivery_status,
+        "implementation_evidence": implementation_evidence,
+        "sources": sources,
+        "summary": {
+            "failed_sources": failed_sources,
+            "passed_sources": len(sources) - failed_sources,
+            "skipped_sources": 0,
+            "total_sources": len(sources),
+        },
+    }
+
+
 def _evaluate_imported_source(
     source_path: Path,
     import_source: Path,
@@ -355,12 +495,22 @@ def _evaluate_sources(
 @beartype
 @ensure(lambda result: isinstance(result, dict))
 def evaluate_requirements_evidence(
-    repo_root: Path, *, base_ref: str | None = None, staged: bool = False
+    repo_root: Path,
+    *,
+    base_ref: str | None = None,
+    staged: bool = False,
+    required_maturity: str | None = None,
+    review_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Evaluate changed native requirements without running their verification."""
     if (base_ref is None) != staged:
         raise ValueError("choose exactly one of --base-ref or --staged")
+    if required_maturity is not None and required_maturity not in SUPPORTED_REQUIRED_MATURITY:
+        raise ValueError("required maturity must be planned, accepted, test-authored, red, or verified")
     if base_ref is not None:
         sources = _discover_changed_openspec_sources(repo_root, base_ref)
+        if required_maturity is not None:
+            return _lifecycle_report(sources, required_maturity=required_maturity, review_evidence=review_evidence)
         with tempfile.TemporaryDirectory(prefix="specfact-requirements-evidence-") as bundle_parent:
             return _evaluate_sources(sources, bundle_parent=Path(bundle_parent))
     relative_sources = _discover_staged_openspec_source_relatives(repo_root)
@@ -371,6 +521,13 @@ def evaluate_requirements_evidence(
             for source in relative_sources
             if (snapshot_root / source).is_dir()
         }
+        if required_maturity is not None:
+            return _lifecycle_report(
+                snapshot_sources,
+                required_maturity=required_maturity,
+                review_evidence=review_evidence,
+                source_labels=labels,
+            )
         with tempfile.TemporaryDirectory(prefix="specfact-requirements-evidence-") as bundle_parent:
             return _evaluate_sources(snapshot_sources, bundle_parent=Path(bundle_parent), source_labels=labels)
 
@@ -406,15 +563,30 @@ def _write_markdown_summary(report: dict[str, Any], output_path: Path) -> None:
         f"{summary['total_sources']} total; {summary['passed_sources']} passed; "
         f"{summary['failed_sources']} failed; {summary['skipped_sources']} skipped"
     )
+    lifecycle_report = "gate_decision" in report
     lines = [
         "## Requirements evidence",
         "",
         f"- Verdict: **{report['verdict']}**",
         f"- Sources: {source_summary}",
-        "- Test-execution proof: not included (this gate validates requirement-source and linkage evidence).",
     ]
+    if lifecycle_report:
+        lines.extend(
+            [
+                f"- Gate decision: **{report['gate_decision']}**",
+                f"- Required maturity: `{report['required_maturity']}`",
+                f"- Observed maturity: `{report['observed_maturity']}`",
+                f"- Implementation evidence: `{report['implementation_evidence']}`",
+            ]
+        )
+    else:
+        lines.append(
+            "- Test-execution proof: not included (this gate validates requirement-source and linkage evidence)."
+        )
     lines.extend(
-        f"- `{source['source']}`: {', '.join(source['reasons'])}" for source in report["sources"] if source["reasons"]
+        f"- `{source['source']}`: {', '.join(source.get('reasons', source.get('findings', [])))}"
+        for source in report["sources"]
+        if source.get("reasons", source.get("findings", []))
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -430,23 +602,79 @@ def _evidence_destinations_alias(output_path: Path, summary_path: Path) -> bool:
         return False
 
 
+@dataclass(frozen=True)
+class RequirementsEvidenceRequest:
+    """Explicit destinations and selection inputs for one evidence report."""
+
+    repo_root: Path
+    output_path: Path
+    summary_path: Path | None = None
+    base_ref: str | None = None
+    staged: bool = False
+    required_maturity: str | None = None
+    review_evidence_path: Path | None = None
+    plan_output_path: Path | None = None
+
+
+class _LegacyEvidenceOptions(TypedDict, total=False):
+    """Typed keyword compatibility surface for legacy Python callers."""
+
+    summary_path: Path | None
+    base_ref: str | None
+    staged: bool
+    required_maturity: str | None
+    review_evidence_path: Path | None
+    plan_output_path: Path | None
+
+
+def _legacy_request(
+    repo_root: Path, output_path: Path, positional: tuple[Any, ...], options: Mapping[str, Any]
+) -> RequirementsEvidenceRequest:
+    if len(positional) > 1:
+        raise TypeError("write_requirements_evidence accepts at most one positional summary path")
+    supported = {"summary_path", "base_ref", "staged", "required_maturity", "review_evidence_path", "plan_output_path"}
+    unexpected = sorted(set(options).difference(supported))
+    if unexpected:
+        raise TypeError(f"unexpected write_requirements_evidence option: {unexpected[0]}")
+    summary_path = positional[0] if positional else options.get("summary_path")
+    return RequirementsEvidenceRequest(
+        repo_root=repo_root,
+        output_path=output_path,
+        summary_path=summary_path,
+        base_ref=options.get("base_ref"),
+        staged=bool(options.get("staged", False)),
+        required_maturity=options.get("required_maturity"),
+        review_evidence_path=options.get("review_evidence_path"),
+        plan_output_path=options.get("plan_output_path"),
+    )
+
+
+def _write_requirements_evidence(request: RequirementsEvidenceRequest) -> int:
+    if request.summary_path is not None and _evidence_destinations_alias(request.output_path, request.summary_path):
+        raise ValueError("output and summary paths must resolve to different destinations")
+    try:
+        report = evaluate_requirements_evidence(
+            request.repo_root,
+            base_ref=request.base_ref,
+            staged=request.staged,
+            required_maturity=request.required_maturity,
+            review_evidence=_read_review_evidence(request.review_evidence_path),
+        )
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        report = _gate_failure_report(error)
+    _write_evidence_report(report, request.output_path)
+    if request.plan_output_path is not None and request.required_maturity is not None:
+        plan_report = _normalized_plan_report(report) or _unavailable_plan_report(report)
+        _write_evidence_report(plan_report, request.plan_output_path)
+    if request.summary_path is not None:
+        _write_markdown_summary(report, request.summary_path)
+    return 1 if report["verdict"] == "failed" else 0
+
+
 @beartype
 @ensure(lambda result: result in {0, 1})
 def write_requirements_evidence(
-    repo_root: Path,
-    output_path: Path,
-    summary_path: Path | None = None,
-    *,
-    base_ref: str | None = None,
-    staged: bool = False,
+    repo_root: Path, output_path: Path, *positional: Path, **options: Unpack[_LegacyEvidenceOptions]
 ) -> int:
-    if summary_path is not None and _evidence_destinations_alias(output_path, summary_path):
-        raise ValueError("output and summary paths must resolve to different destinations")
-    try:
-        report = evaluate_requirements_evidence(repo_root, base_ref=base_ref, staged=staged)
-    except Exception as error:  # pylint: disable=broad-exception-caught
-        report = _gate_failure_report(error)
-    _write_evidence_report(report, output_path)
-    if summary_path is not None:
-        _write_markdown_summary(report, summary_path)
-    return 1 if report["verdict"] == "failed" else 0
+    """Write evidence while preserving the v1 Python call convention."""
+    return _write_requirements_evidence(_legacy_request(repo_root, output_path, positional, options))

@@ -18,6 +18,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd(), help="Repository root to inspect.")
     parser.add_argument("--output", type=Path, required=True, help="Destination JSON evidence artifact.")
     parser.add_argument("--summary", type=Path, help="Optional destination for a GitHub Actions Markdown summary.")
+    parser.add_argument(
+        "--required-maturity",
+        choices=("planned", "accepted", "test-authored", "red", "verified"),
+        help="Lifecycle maturity required for schema-v2 evidence sidecars.",
+    )
     return parser
 
 
@@ -34,6 +39,7 @@ def _main() -> int:
             arguments.summary,
             base_ref=arguments.base_ref,
             staged=arguments.staged,
+            required_maturity=arguments.required_maturity,
         )
     except ValueError as error:
         _build_parser().error(str(error))

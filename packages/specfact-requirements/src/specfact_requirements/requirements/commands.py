@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
@@ -12,6 +13,7 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_requirements.requirements.evidence import write_requirements_evidence
+from specfact_requirements.requirements.lifecycle import reconcile_junit
 from specfact_requirements.requirements.runtime import (
     auto_detect_openspec_change,
     auto_detect_speckit_feature,
@@ -31,6 +33,16 @@ class OutputFormat(StrEnum):
 
     JSON = "json"
     TEXT = "text"
+
+
+class RequiredMaturity(StrEnum):
+    """Lifecycle maturity values accepted by the evidence command."""
+
+    PLANNED = "planned"
+    ACCEPTED = "accepted"
+    TEST_AUTHORED = "test-authored"
+    RED = "red"
+    VERIFIED = "verified"
 
 
 app = typer.Typer(
@@ -205,25 +217,137 @@ def coverage_command(
     _emit_payload(payload, output_format)
 
 
+@dataclass(frozen=True)
+class EvidenceCommandOptions:
+    output: Path
+    repo_root: Path
+    base_ref: str | None
+    staged: bool
+    summary: Path | None
+    required_maturity: str | None
+    review_evidence: Path | None
+    plan_output: Path | None
+
+
+def _write_command_evidence(options: EvidenceCommandOptions) -> int:
+    if (options.base_ref is None) != options.staged:
+        raise typer.BadParameter("choose exactly one of --base-ref or --staged")
+    return write_requirements_evidence(
+        options.repo_root.resolve(),
+        options.output,
+        summary_path=options.summary,
+        base_ref=options.base_ref,
+        staged=options.staged,
+        required_maturity=options.required_maturity,
+        review_evidence_path=options.review_evidence,
+        plan_output_path=options.plan_output,
+    )
+
+
 @app.command("evidence", help="Evaluate OpenSpec requirement evidence for a base ref or staged Git index.")
 @beartype
 @ensure(lambda result: result is None)
 def evidence_command(
     output: Annotated[Path, typer.Option("--output", help="Destination JSON evidence report.")],
     repo_root: Annotated[
-        Path,
-        typer.Option("--repo-root", help="Repository root to inspect.", default_factory=Path.cwd),
+        Path, typer.Option("--repo-root", help="Repository root to inspect.", default_factory=Path.cwd)
     ],
     base_ref: Annotated[str | None, typer.Option("--base-ref", help="Git ref used for CI diff selection.")] = None,
     staged: Annotated[bool, typer.Option("--staged", help="Evaluate the current Git index snapshot.")] = False,
     summary: Annotated[Path | None, typer.Option("--summary", help="Optional Markdown remediation report.")] = None,
+    required_maturity: Annotated[
+        RequiredMaturity | None,
+        typer.Option(
+            "--required-maturity",
+            help="Lifecycle maturity required for a schema-v2 sidecar.",
+        ),
+    ] = None,
+    review_evidence: Annotated[
+        Path | None,
+        typer.Option(
+            "--review-evidence",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Provider-neutral acceptance record bound to the mapping digest.",
+        ),
+    ] = None,
+    plan_output: Annotated[
+        Path | None, typer.Option("--plan-output", help="Optional normalized lifecycle plan JSON.")
+    ] = None,
 ) -> None:
     """Write evidence reports before returning a non-zero verdict."""
-    if (base_ref is None) != staged:
-        raise typer.BadParameter("choose exactly one of --base-ref or --staged")
+    options = EvidenceCommandOptions(
+        output=output,
+        repo_root=repo_root,
+        base_ref=base_ref,
+        staged=staged,
+        summary=summary,
+        required_maturity=required_maturity,
+        review_evidence=review_evidence,
+        plan_output=plan_output,
+    )
     try:
-        exit_code = write_requirements_evidence(repo_root.resolve(), output, summary, base_ref=base_ref, staged=staged)
+        exit_code = _write_command_evidence(options)
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
     if exit_code:
         raise typer.Exit(exit_code)
+
+
+def _load_json_mapping(path: Path, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise typer.BadParameter(f"{label} must be readable JSON") from error
+    if not isinstance(value, dict):
+        raise typer.BadParameter(f"{label} must contain a JSON object")
+    return value
+
+
+@app.command("reconcile", help="Reconcile a lifecycle plan with trusted JUnit without running tests.")
+@beartype
+@ensure(lambda result: result is None)
+def reconcile_command(
+    plan: Annotated[Path, typer.Option("--plan", exists=True, file_okay=True, dir_okay=False, readable=True)],
+    junit: Annotated[Path, typer.Option("--junit", exists=True, file_okay=True, dir_okay=False, readable=True)],
+    run_stage: Annotated[str, typer.Option("--run-stage", help="Evidence stage: red or final.")],
+    source_ref: Annotated[str, typer.Option("--source-ref", help="Full Git object ID for the executed source.")],
+    output: Annotated[Path, typer.Option("--output", help="Destination JSON proof report.")],
+    prior_red_proof: Annotated[
+        Path | None,
+        typer.Option("--prior-red-proof", exists=True, file_okay=True, dir_okay=False, readable=True),
+    ] = None,
+    summary: Annotated[Path | None, typer.Option("--summary", help="Optional Markdown proof summary.")] = None,
+) -> None:
+    """Reconcile result artifacts while keeping test execution outside the module."""
+    try:
+        report = reconcile_junit(
+            _load_json_mapping(plan, "plan"),
+            junit,
+            run_stage=run_stage,
+            source_ref=source_ref,
+            prior_red_proof=_load_json_mapping(prior_red_proof, "prior red proof") if prior_red_proof else None,
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if summary is not None:
+        summary.parent.mkdir(parents=True, exist_ok=True)
+        summary.write_text(
+            "\n".join(
+                [
+                    "## Requirements lifecycle proof",
+                    "",
+                    f"- Gate decision: **{report['gate_decision']}**",
+                    f"- Observed maturity: `{report['observed_maturity']}`",
+                    f"- Execution stage: `{report['execution_proof']['run_stage']}`",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    if report["gate_decision"] == "fail":
+        raise typer.Exit(1)
