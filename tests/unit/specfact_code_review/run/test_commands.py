@@ -42,6 +42,26 @@ def _report(*, score: int = 85) -> ReviewReport:
     )
 
 
+def _finalized_requirements_proof(tmp_path: Path, *, decision: str = "fail") -> Path:
+    proof_path = tmp_path / "requirements-proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "2",
+                "gate_decision": decision,
+                "mapping_digest": "sha256:" + "a" * 64,
+                "plan_digest": "sha256:" + "b" * 64,
+                "execution_proof": {
+                    "run_stage": "final",
+                    "source_ref": "c" * 40,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return proof_path
+
+
 def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:
     return ReviewFinding(
         category="ai_bloat",
@@ -123,6 +143,51 @@ def test_run_command_default_json_output_path_uses_review_report(monkeypatch: An
     assert output == "review-report.json"
     report = ReviewReport.model_validate_json((tmp_path / "review-report.json").read_text(encoding="utf-8"))
     assert report.run_id == "review-run-001"
+
+
+def test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review",
+        lambda files, **_kwargs: _report(),
+    )
+    proof_path = _finalized_requirements_proof(tmp_path, decision="fail")
+    out = tmp_path / "review-report.json"
+
+    exit_code, output = run_commands.run_command(
+        [FIXTURE_FILE],
+        json_output=True,
+        out=out,
+        requirements_evidence=proof_path,
+    )
+
+    report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert output == str(out)
+    assert report.requirements_evidence.gate_decision == "fail"  # type: ignore[union-attr]
+    assert report.requirements_evidence.source_ref == "c" * 40  # type: ignore[union-attr]
+
+
+def test_run_command_rejects_nonfinal_requirements_evidence_before_review(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path)
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["execution_proof"]["run_stage"] = "red"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--requirements-evidence",
+            str(proof_path),
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "finalized Requirements evidence" in result.output
 
 
 def test_run_command_score_only_prints_reward_delta(monkeypatch: Any) -> None:

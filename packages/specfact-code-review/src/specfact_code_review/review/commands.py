@@ -98,6 +98,7 @@ class _ReviewRunCommandInputs:
     fix: bool
     preview_fixes: bool
     with_mutation: bool
+    requirements_evidence: Path | None
     interactive: bool
 
 
@@ -227,6 +228,7 @@ def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
             fix=inputs.fix,
             preview_fixes=inputs.preview_fixes,
             with_mutation=inputs.with_mutation,
+            requirements_evidence=inputs.requirements_evidence,
         )
     except (ValueError, ViolationError) as exc:
         raise typer.BadParameter(_friendly_run_command_error(exc)) from exc
@@ -279,6 +281,11 @@ def run(
         "--with-mutation",
         help="Record opt-in mutation proof evidence for simplify cleanup candidates.",
     ),
+    requirements_evidence: Path | None = typer.Option(
+        None,
+        "--requirements-evidence",
+        help="Finalized Requirements proof JSON retained as independent review context.",
+    ),
     interactive: bool = typer.Option(False, "--interactive"),
     instructions: bool = typer.Option(
         False,
@@ -313,6 +320,7 @@ def run(
             fix=fix,
             preview_fixes=preview_fixes,
             with_mutation=with_mutation,
+            requirements_evidence=requirements_evidence,
             interactive=interactive,
         )
     )

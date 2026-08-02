@@ -450,6 +450,17 @@ class SimplificationSummary(BaseModel):
     kept_count: int = Field(default=0, ge=0)
 
 
+class RequirementsEvidenceContext(BaseModel):
+    """Immutable provenance from a finalized Requirements proof packet."""
+
+    path: str = Field(..., min_length=1)
+    content_digest: str = Field(..., pattern=r"^sha256:[0-9a-f]{64}$")
+    mapping_digest: str = Field(..., pattern=r"^sha256:[0-9a-f]{64}$")
+    plan_digest: str = Field(..., pattern=r"^sha256:[0-9a-f]{64}$")
+    source_ref: str = Field(..., pattern=r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+    gate_decision: Literal["pass", "fail"]
+
+
 class ReviewReport(BaseModel):
     """Governance-aligned evidence envelope for code review results."""
 
@@ -480,6 +491,10 @@ class ReviewReport(BaseModel):
     enforcement_summary: str | None = Field(
         default=None,
         description="Human-readable explanation of enforcement mode and blocking evidence.",
+    )
+    requirements_evidence: RequirementsEvidenceContext | None = Field(
+        default=None,
+        description="Finalized Requirements proof provenance; it does not affect the review verdict.",
     )
     house_rules_updates: list[str] = Field(default_factory=list, description="Suggested house-rules updates.")
 

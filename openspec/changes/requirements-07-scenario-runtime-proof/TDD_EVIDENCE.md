@@ -39,3 +39,25 @@
 - **Proof:** ANSI-styled CLI help is checked semantically, unsafe selectors and
   unsafe or oversized JUnit are rejected, and only a complete passing
   `test-authored` plan can enter reconciliation.
+
+## Failing-before Code Review Requirements context
+
+- **Recorded:** 2026-08-03 (Europe/Berlin)
+- **Command:** `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review -q`
+- **Result:** failed as expected (2 failures).
+- **Failure:** the public `run_command` rejected `requirements_evidence` as an
+  unknown keyword and the CLI exposed no `--requirements-evidence` option.
+- **Intent:** establish a public, provenance-only review handoff before adding
+  Code Review behavior for core #662.
+
+## Passing Code Review Requirements context
+
+- **Recorded:** 2026-08-03 (Europe/Berlin)
+- **Commands:**
+  - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review -q`
+  - `openspec validate requirements-07-scenario-runtime-proof --strict`
+- **Result:** 2 focused tests passed; strict OpenSpec validation passed.
+- **Proof:** `specfact code review run --requirements-evidence <path>` accepts
+  only a finalized schema-v2 proof, retains its path/digests/source/verdict in
+  review JSON, and does not use the Requirements verdict to calculate the
+  review exit code or verdict.

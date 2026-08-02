@@ -46,6 +46,9 @@ its tests exist and have failed for the expected reason.
   source revisions, and result digest; do not invoke a test runner.
 - [x] 3.4 Keep output ordering, remediation, profile severity, and old-report
   compatibility deterministic across repeated runs.
+- [x] 3.5 Add a Code Review public context input that accepts only finalized
+  Requirements proof, preserves independent provenance in the review report,
+  and never fuses verdicts.
 
 ## 4. Passing evidence and integration proof
 

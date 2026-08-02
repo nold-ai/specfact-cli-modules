@@ -19,6 +19,10 @@ passed in the current delivery run.
 - Add a deterministic two-phase public contract: emit a bounded test plan
   before execution, then reconcile trusted JUnit results into the final
   Requirements evidence report.
+- Extend the released Code Review public interface with an optional,
+  finalized Requirements-evidence context. The review report retains the
+  validated provenance separately and never uses the Requirements verdict to
+  calculate its own verdict.
 - Reject missing, ambiguous, stale, or unsafe selectors; never emit shell
   command strings and never execute a test process from module code.
 - Preserve offline-first operation, read-only upstream sources, profile-aware
@@ -36,9 +40,10 @@ passed in the current delivery run.
 
 ## Impact
 
-- Affected package: `packages/specfact-requirements`, including public CLI
-  contracts, typed report models, tests, version, manifest, registry artifacts,
-  checksums, and signatures.
+- Affected packages: `packages/specfact-requirements` and
+  `packages/specfact-code-review`, including public CLI contracts, typed report
+  models, tests, version, manifest, registry artifacts, checksums, and
+  signatures.
 - Affected consumers: the paired core change executes module-produced plans
   and returns JUnit evidence; no core component reimplements proof semantics.
 - Affected documentation: Requirements evidence guides on modules.specfact.io,

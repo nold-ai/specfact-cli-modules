@@ -56,3 +56,28 @@ requirements:
         method: test
         intent: Distinguish a failing-first result from a final passing result.
         observable: Red and verified maturity reports bound to exact selectors.
+  openspec:requirements-07-scenario-runtime-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
+    rationale: Code Review must consume finalized Requirements proof as provenance without fusing delivery verdicts.
+    stakeholder_refs:
+      - https://github.com/nold-ai/specfact-cli/issues/662
+    touchpoints:
+      - id: code-review-requirements-evidence-context
+        kind: cli_command
+        locator: specfact code review run --requirements-evidence
+    verification_cases:
+      - case_id: review-context-provenance
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion
+        intent: Preserve finalized Requirements provenance while retaining an independent review verdict.
+        observable: Review JSON contains separate Requirements provenance even when its gate decision is fail.
+      - case_id: review-context-rejection
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review
+        intent: Reject non-final proof before Code Review starts.
+        observable: Public CLI reports a finalized Requirements evidence validation error.

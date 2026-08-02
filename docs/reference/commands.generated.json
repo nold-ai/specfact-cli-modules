@@ -1076,6 +1076,7 @@
       "--out",
       "--path",
       "--preview-fixes",
+      "--requirements-evidence",
       "--scope",
       "--score-only",
       "--suppress-noise",
