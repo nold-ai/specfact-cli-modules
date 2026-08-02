@@ -7,7 +7,7 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 13 | [`openspec/changes/`](changes/) |
+| **Active** | 14 | [`openspec/changes/`](changes/) |
 | **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
 

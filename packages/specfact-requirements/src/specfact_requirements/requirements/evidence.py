@@ -239,8 +239,7 @@ def _git_changed_paths(repo_root: Path, arguments: list[str]) -> list[str]:
 
 
 def _discover_changed_openspec_sources(repo_root: Path, base_ref: str) -> list[Path]:
-    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*", base_ref) is None:
-        raise ValueError("base ref must be a non-option Git ref using alphanumeric, '.', '_', '/', or '-' characters")
+    _validate_base_ref(base_ref)
     roots = _changed_change_roots(
         _git_changed_paths(
             repo_root,
@@ -288,6 +287,79 @@ def _skipped_report() -> dict[str, Any]:
         "execution_proof": EXECUTION_PROOF,
         "sources": [],
         "summary": {"failed_sources": 0, "passed_sources": 0, "skipped_sources": 1, "total_sources": 0},
+    }
+
+
+def _validate_base_ref(base_ref: str) -> None:
+    """Reject ref values that Git could interpret as command-line options."""
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*", base_ref) is None:
+        raise ValueError("base ref must be a non-option Git ref using alphanumeric, '.', '_', '/', or '-' characters")
+
+
+def _source_requirement_ids(source_path: Path) -> tuple[set[str], list[str]]:
+    """Import one selected source and return the native requirement identities it declares."""
+    with tempfile.TemporaryDirectory(prefix="specfact-requirements-lifecycle-source-") as bundle_parent:
+        bundle_dir = Path(bundle_parent) / "bundle"
+        save_project_bundle(create_empty_project_bundle(bundle_dir.name), bundle_dir, atomic=False)
+        with _source_path_for_import(source_path) as import_source:
+            import_result = import_native_requirements_to_bundle("openspec", import_source, bundle_dir)
+    diagnostics = _diagnostic_payloads(import_result.diagnostics)
+    findings = [
+        f"source-import-error:{diagnostic.get('code', 'unknown')}"
+        for diagnostic in diagnostics
+        if diagnostic.get("severity") == "error"
+    ]
+    requirement_ids = {str(requirement.requirement_id) for requirement in import_result.requirements}
+    if not findings and not requirement_ids:
+        findings.append("source-no-requirements-imported")
+    return requirement_ids, findings
+
+
+def _source_mapping_findings(mapping: Mapping[str, Any], source_path: Path) -> list[str]:
+    """Require the lifecycle sidecar to cover exactly the selected native requirements."""
+    requirements = mapping.get("requirements")
+    if not isinstance(requirements, Mapping):
+        return []
+    source_ids, findings = _source_requirement_ids(source_path)
+    mapped_ids = {requirement_id for requirement_id in requirements if isinstance(requirement_id, str)}
+    return [
+        *findings,
+        *(f"missing-source-requirement-mapping:{requirement_id}" for requirement_id in sorted(source_ids - mapped_ids)),
+        *(f"unknown-source-requirement:{requirement_id}" for requirement_id in sorted(mapped_ids - source_ids)),
+        *(
+            f"unknown-source-scenario:{requirement_id}:{scenario_id}"
+            for requirement_id in sorted(source_ids & mapped_ids)
+            for scenario_id in _mapped_scenario_ids(requirements[requirement_id])
+            if scenario_id != requirement_id.rsplit(":", maxsplit=1)[-1]
+        ),
+    ]
+
+
+def _mapped_scenario_ids(requirement: Any) -> list[str]:
+    """Return declared nonblank scenario identifiers from one sidecar requirement."""
+    if not isinstance(requirement, Mapping):
+        return []
+    cases = requirement.get("verification_cases")
+    if not isinstance(cases, list):
+        return []
+    return [
+        scenario_id.strip()
+        for case in cases
+        if isinstance(case, Mapping) and isinstance(scenario_id := case.get("scenario_id"), str) and scenario_id.strip()
+    ]
+
+
+def _failed_lifecycle_source_report(report: dict[str, Any], findings: list[str]) -> dict[str, Any]:
+    """Return a lifecycle report failed by source-to-sidecar reconciliation."""
+    delivery_status, implementation_evidence = lifecycle_status("incomplete")
+    return {
+        **report,
+        "verdict": "failed",
+        "gate_decision": "fail",
+        "observed_maturity": "incomplete",
+        "delivery_status": delivery_status,
+        "implementation_evidence": implementation_evidence,
+        "findings": sorted({*report["findings"], *findings}),
     }
 
 
@@ -359,12 +431,25 @@ def _normalized_plan_report(report: Mapping[str, Any]) -> dict[str, Any] | None:
 
 def _unavailable_plan_report(report: Mapping[str, Any]) -> dict[str, Any]:
     """Write an explicit non-reconcilable artifact when no lifecycle plan exists."""
+    sources = report.get("sources", [])
     return {
         "schema_version": "2",
         "gate_decision": report.get("gate_decision", "fail"),
         "plan_status": "not-available",
         "plan": None,
-        "sources": report.get("sources", []),
+        "sources": [
+            {
+                "source": str(source.get("source", "")),
+                **(
+                    {"mapping_digest": source["mapping_digest"]}
+                    if isinstance(source.get("mapping_digest"), str)
+                    else {}
+                ),
+                **({"findings": source["findings"]} if isinstance(source.get("findings"), list) else {}),
+            }
+            for source in sources
+            if isinstance(source, Mapping)
+        ],
     }
 
 
@@ -392,11 +477,15 @@ def _lifecycle_report(
     labels = source_labels or {}
     sources: list[dict[str, Any]] = []
     for source_path in source_paths:
+        mapping = _read_optional_mapping(source_path / EVIDENCE_SIDECAR_NAME)
         lifecycle = evaluate_mapping(
-            _read_optional_mapping(source_path / EVIDENCE_SIDECAR_NAME),
+            mapping,
             required_maturity=required_maturity,
             review_evidence=review_evidence,
         )
+        source_findings = _source_mapping_findings(mapping, source_path)
+        if source_findings:
+            lifecycle = _failed_lifecycle_source_report(lifecycle, source_findings)
         sources.append({"source": labels.get(source_path, source_path).as_posix(), **lifecycle})
     failed_sources = sum(source["gate_decision"] == "fail" for source in sources)
     observed = min(
@@ -510,17 +599,16 @@ def evaluate_requirements_evidence(
     if base_ref is not None:
         sources = _discover_changed_openspec_sources(repo_root, base_ref)
         if required_maturity is not None:
-            return _lifecycle_report(sources, required_maturity=required_maturity, review_evidence=review_evidence)
+            labels = {source: source.relative_to(repo_root) for source in sources}
+            return _lifecycle_report(
+                sources, required_maturity=required_maturity, review_evidence=review_evidence, source_labels=labels
+            )
         with tempfile.TemporaryDirectory(prefix="specfact-requirements-evidence-") as bundle_parent:
             return _evaluate_sources(sources, bundle_parent=Path(bundle_parent))
     relative_sources = _discover_staged_openspec_source_relatives(repo_root)
     with _materialize_git_index_snapshot(repo_root) as snapshot_root:
         snapshot_sources = [snapshot_root / source for source in relative_sources if (snapshot_root / source).is_dir()]
-        labels = {
-            snapshot_root / source: repo_root / source
-            for source in relative_sources
-            if (snapshot_root / source).is_dir()
-        }
+        labels = {snapshot_root / source: source for source in relative_sources if (snapshot_root / source).is_dir()}
         if required_maturity is not None:
             return _lifecycle_report(
                 snapshot_sources,
@@ -602,6 +690,21 @@ def _evidence_destinations_alias(output_path: Path, summary_path: Path) -> bool:
         return False
 
 
+def _validate_evidence_destinations(request: RequirementsEvidenceRequest) -> None:
+    """Reject every output pair that could overwrite another requested artifact."""
+    destinations = [
+        ("output", request.output_path),
+        ("summary", request.summary_path),
+        ("plan output", request.plan_output_path),
+    ]
+    for index, (name, path) in enumerate(destinations):
+        if path is None:
+            continue
+        for other_name, other_path in destinations[index + 1 :]:
+            if other_path is not None and _evidence_destinations_alias(path, other_path):
+                raise ValueError(f"{name} and {other_name} paths must resolve to different destinations")
+
+
 @dataclass(frozen=True)
 class RequirementsEvidenceRequest:
     """Explicit destinations and selection inputs for one evidence report."""
@@ -650,8 +753,9 @@ def _legacy_request(
 
 
 def _write_requirements_evidence(request: RequirementsEvidenceRequest) -> int:
-    if request.summary_path is not None and _evidence_destinations_alias(request.output_path, request.summary_path):
-        raise ValueError("output and summary paths must resolve to different destinations")
+    _validate_evidence_destinations(request)
+    if request.base_ref is not None:
+        _validate_base_ref(request.base_ref)
     try:
         report = evaluate_requirements_evidence(
             request.repo_root,

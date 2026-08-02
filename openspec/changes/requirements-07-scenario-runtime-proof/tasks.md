@@ -64,10 +64,10 @@ its tests exist and have failed for the expected reason.
   every finding at every severity and record the final report evidence.
 - [ ] 5.3 Update Requirements guides, command references, and
   modules.specfact.io navigation with proof semantics and limitations.
-- [ ] 5.4 Bump affected bundle versions, regenerate registry artifacts and
+- [x] 5.4 Bump affected bundle versions, regenerate registry artifacts and
   command overviews, sign changed module payloads, and verify signatures/version
   policy from the filesystem.
-- [ ] 5.5 Run `openspec validate requirements-07-scenario-runtime-proof --strict`
+- [x] 5.5 Run `openspec validate requirements-07-scenario-runtime-proof --strict`
   and retain the validation result.
 
 ## 6. Delivery

@@ -66,6 +66,17 @@ def test_incomplete_proposal_mapping_fails_without_synthetic_test_link() -> None
     assert "missing-observable:REQ-001-S01" in report["findings"]
 
 
+def test_verification_cases_require_stable_scenario_ids() -> None:
+    mapping = _planned_mapping()
+    case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
+    del case["scenario_id"]  # type: ignore[index]
+
+    report = evaluate_mapping(mapping, required_maturity="planned")
+
+    assert report["gate_decision"] == "fail"
+    assert "missing-scenario_id:REQ-001-S01" in report["findings"]
+
+
 def test_plans_preserve_non_test_case_semantics_but_require_safe_test_selectors() -> None:
     mapping = _planned_mapping()
     cases = mapping["requirements"]["REQ-001"]["verification_cases"]  # type: ignore[index]
@@ -219,6 +230,53 @@ def test_red_requires_collected_failure_and_final_requires_prior_red(tmp_path: P
     assert "prior-red-proof-missing" in final_without_red["findings"]
     assert final["gate_decision"] == "pass"
     assert final["observed_maturity"] == "verified"
+
+
+def test_reconciliation_keeps_the_submitted_plan_digest_authoritative(tmp_path: Path) -> None:
+    mapping = _planned_mapping()
+    case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
+    case["selector"] = {
+        "runner": "pytest",
+        "node_id": "tests/test_readiness.py::test_unavailable",
+    }  # type: ignore[index]
+    planned = evaluate_mapping(mapping, required_maturity="planned")
+    plan = evaluate_mapping(
+        mapping,
+        required_maturity="test-authored",
+        review_evidence={
+            "decision": "accepted",
+            "reviewer_id": "owner@example.test",
+            "reviewer_role": "product-owner",
+            "recorded_at": "2026-08-02T00:00:00Z",
+            "reference": "review:369",
+            "mapping_digest": planned["mapping_digest"],
+        },
+    )
+    plan["plan"] = build_plan(
+        plan["mapping_digest"],
+        [
+            *plan["plan"]["cases"],
+            {
+                "requirement_id": "REQ-001",
+                "case_id": "REQ-001-A01",
+                "scenario_id": "REQ-001-A01",
+                "method": "analysis",
+                "intent": "Inspect a report.",
+                "observable": "A report is present.",
+            },
+        ],
+    )
+    junit = tmp_path / "red.xml"
+    junit.write_text(
+        '<testsuite><testcase><properties><property name="specfact.selector" '
+        'value="tests/test_readiness.py::test_unavailable"/></properties><failure/></testcase></testsuite>',
+        encoding="utf-8",
+    )
+
+    report = reconcile_junit(plan, junit, run_stage="red", source_ref="a" * 40)
+
+    assert report["plan"]["plan_digest"] == report["plan_digest"]
+    assert report["execution_plan"]["plan_digest"] != report["plan_digest"]
 
 
 def test_reconciliation_finding_retains_the_observed_outcome(tmp_path: Path) -> None:

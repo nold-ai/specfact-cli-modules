@@ -10,6 +10,7 @@ requirements:
         locator: specfact requirements evidence
     verification_cases:
       - case_id: lifecycle-proposal-ready
+        scenario_id: lifecycle-aware-requirements-readiness
         method: test
         intent: Report proposal readiness without an execution claim.
         observable: JSON report separates gate decision and implementation evidence.
@@ -23,6 +24,7 @@ requirements:
         locator: requirements-evidence.yaml mapping digest
     verification_cases:
       - case_id: lifecycle-acceptance-bound
+        scenario_id: mapping-acceptance-provenance
         method: test
         intent: Reject stale or missing acceptance evidence.
         observable: Digest-bound acceptance finding and maturity result.
@@ -36,6 +38,7 @@ requirements:
         locator: specfact requirements evidence --plan-output
     verification_cases:
       - case_id: lifecycle-test-authored
+        scenario_id: deterministic-scenario-proof-plan
         method: test
         intent: Validate exact structured selectors at test-authored maturity.
         observable: Deterministic normalized plan and selector findings.
@@ -49,6 +52,7 @@ requirements:
         locator: specfact requirements reconcile
     verification_cases:
       - case_id: lifecycle-junit-reconcile
+        scenario_id: current-run-junit-reconciliation
         method: test
         intent: Distinguish a failing-first result from a final passing result.
         observable: Red and verified maturity reports bound to exact selectors.

@@ -172,7 +172,7 @@ def _validated_case(
         return None, [f"missing-case-id:{requirement_id}"]
     case_name = str(case_id)
     findings: list[str] = []
-    for field in ("method", "intent", "observable"):
+    for field in ("scenario_id", "method", "intent", "observable"):
         _append_missing(findings, case.get(field), field, case_name)
     method = case.get("method")
     if method not in _SUPPORTED_METHODS:
@@ -465,12 +465,12 @@ def _execution_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return executable_cases
 
 
-def _plan_cases(plan_report: Mapping[str, Any]) -> tuple[str, str, list[dict[str, Any]]]:
+def _plan_cases(plan_report: Mapping[str, Any]) -> tuple[str, str, Mapping[str, Any], list[dict[str, Any]]]:
     """Accept only a complete test-authored lifecycle plan for reconciliation."""
     plan = _trusted_plan(plan_report)
     all_cases = _consistent_plan_cases(plan)
     cases = _execution_cases(all_cases)
-    return str(plan["mapping_digest"]), str(plan["plan_digest"]), cases
+    return str(plan["mapping_digest"]), str(plan["plan_digest"]), plan, cases
 
 
 def _selector_result_finding(selector: str, outcomes: list[str], expected_outcome: str, maturity: str) -> str | None:
@@ -525,7 +525,7 @@ def reconcile_junit(
         raise ValueError("run stage must be red or final")
     if _SOURCE_REF_PATTERN.fullmatch(source_ref) is None:
         raise ValueError("source ref must be a full lowercase Git object id")
-    mapping_digest, plan_digest, cases = _plan_cases(plan_report)
+    mapping_digest, plan_digest, submitted_plan, cases = _plan_cases(plan_report)
     results, junit_findings, junit_digest = _junit_results(junit_path)
     expected = {str(case["node_id"]) for case in cases}
     findings = [*junit_findings, *_selector_result_findings(expected, results, run_stage)]
@@ -539,6 +539,8 @@ def reconcile_junit(
         findings=findings,
         cases=[dict(case) for case in cases],
     )
+    report["execution_plan"] = report.pop("plan")
+    report["plan"] = dict(submitted_plan)
     report["execution_proof"] = {
         "run_stage": run_stage,
         "source_ref": source_ref,

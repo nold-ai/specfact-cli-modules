@@ -215,6 +215,7 @@ def test_requirements_evidence_exposes_lifecycle_options_and_reconciliation(tmp_
                 "verification_cases": [
                     {
                         "case_id": "REQ-001-S01",
+                        "scenario_id": "REQ-001-S01",
                         "method": "test",
                         "intent": "Report unavailable dependencies.",
                         "observable": "Exit code.",
