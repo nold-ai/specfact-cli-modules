@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import os
 from datetime import date
 from pathlib import Path
 
 import pytest
 
 from specfact_requirements.requirements.evidence import _write_markdown_summary
-from specfact_requirements.requirements.lifecycle import MAX_JUNIT_BYTES, evaluate_mapping, reconcile_junit
+from specfact_requirements.requirements.lifecycle import (
+    MAX_JUNIT_BYTES,
+    build_plan,
+    canonical_digest,
+    evaluate_mapping,
+    reconcile_junit,
+)
 
 
 def _planned_mapping() -> dict[str, object]:
@@ -81,13 +88,37 @@ def test_plans_preserve_non_test_case_semantics_but_require_safe_test_selectors(
 def test_mapping_digest_normalizes_yaml_scalars_and_rejects_runner_options() -> None:
     mapping = _planned_mapping()
     mapping["requirements"]["REQ-001"]["rationale"] = date(2026, 8, 2)  # type: ignore[index]
-    case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
-    case["selector"] = {"runner": "pytest", "node_id": "-p.py::test_option"}  # type: ignore[index]
 
     report = evaluate_mapping(mapping, required_maturity="test-authored")
 
     assert report["gate_decision"] == "fail"
-    assert "invalid-selector:REQ-001-S01" in report["findings"]
+    assert "missing-rationale:REQ-001" in report["findings"]
+
+    selector_mapping = _planned_mapping()
+    case = selector_mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
+    case["selector"] = {"runner": "pytest", "node_id": "-p.py::test_option"}  # type: ignore[index]
+    selector_report = evaluate_mapping(selector_mapping, required_maturity="test-authored")
+
+    assert selector_report["gate_decision"] == "fail"
+    assert "invalid-selector:REQ-001-S01" in selector_report["findings"]
+
+
+def test_canonical_digest_is_injective_for_yaml_values_and_total_plan_ordering() -> None:
+    date_digest = canonical_digest({"value": date(2026, 8, 2)})
+    sentinel_digest = canonical_digest({"value": {"__unsupported_value__": "date", "value": "2026-08-02"}})
+    non_string_key_digest = canonical_digest({1: 2})
+    sentinel_key_digest = canonical_digest({"__mapping_entries__": [[1, 2]]})
+    cases = [
+        {"requirement_id": "REQ-001", "case_id": "S01", "method": "analysis"},
+        {"requirement_id": "REQ-001", "case_id": "S01", "method": "demonstration"},
+    ]
+
+    assert date_digest != sentinel_digest
+    assert non_string_key_digest != sentinel_key_digest
+    assert canonical_digest({"values": {2, 1}}) == canonical_digest({"values": {1, 2}})
+    assert build_plan("sha256:" + "a" * 64, cases) == build_plan("sha256:" + "a" * 64, list(reversed(cases)))
+    with pytest.raises(ValueError, match="unsupported-sidecar-value:object"):
+        canonical_digest({"value": object()})
 
 
 def test_red_and_verified_require_execution_reconciliation() -> None:
@@ -237,6 +268,13 @@ def test_reconciliation_rejects_incomplete_or_unsafe_plan_and_junit_doctype(
 
     assert "junit-unsafe-doctype" in rejected["findings"]
     assert "junit_digest" not in rejected["execution_proof"]
+    fifo_path = tmp_path / "junit.fifo"
+    os.mkfifo(fifo_path)
+    non_regular = reconcile_junit(accepted_plan, fifo_path, run_stage="red", source_ref="a" * 40)
+    assert "junit-not-regular-file" in non_regular["findings"]
+    malformed_plan = {**accepted_plan, "plan": {**accepted_plan["plan"], "mapping_digest": 123}}
+    with pytest.raises(ValueError, match="lifecycle plan"):
+        reconcile_junit(malformed_plan, junit, run_stage="red", source_ref="a" * 40)
     monkeypatch.setattr("specfact_requirements.requirements.lifecycle.MAX_JUNIT_BYTES", 1)
     oversized = reconcile_junit(accepted_plan, junit, run_stage="red", source_ref="a" * 40)
     assert "junit-too-large" in oversized["findings"]

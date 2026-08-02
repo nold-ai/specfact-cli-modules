@@ -1,5 +1,5 @@
 name: nold-ai/specfact-requirements
-version: 0.4.1
+version: 0.4.2
 commands:
   - requirements
 tier: official
@@ -19,5 +19,4 @@ description: Official SpecFact requirements evidence runtime bundle package.
 category: project
 bundle_group_command: requirements
 integrity:
-  checksum: sha256:ecba9b3261e07721a279ab68fb06f6b1f0e6b97eadfdb04c104629b8c37c3781
-  signature: r5oc7hUv3oMeen1Hrykloh6QS2c0qq8k8HAtjU/GSpTYEw90+aeXkPNkCG9dQn6KVC4sLVIyC2mun1nzoyVcAA==
+  checksum: sha256:671d076b60ee26d581cd2bdd4eb31ce045bae7f8ba50c87cdcb1b027329398d6
