@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -116,6 +118,20 @@ def test_canonical_digest_is_injective_for_yaml_values_and_total_plan_ordering()
     assert date_digest != sentinel_digest
     assert non_string_key_digest != sentinel_key_digest
     assert canonical_digest({"values": {2, 1}}) == canonical_digest({"values": {1, 2}})
+    source_path = Path(__file__).parents[3] / "packages/specfact-requirements/src"
+    process = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from specfact_requirements.requirements.lifecycle import canonical_digest; "
+            "print(canonical_digest({'values': {1, 2}}))",
+        ],
+        check=True,
+        capture_output=True,
+        env={**os.environ, "PYTHONPATH": str(source_path)},
+        text=True,
+    )
+    assert process.stdout.strip() == canonical_digest({"values": {1, 2}})
     assert build_plan("sha256:" + "a" * 64, cases) == build_plan("sha256:" + "a" * 64, list(reversed(cases)))
     with pytest.raises(ValueError, match="unsupported-sidecar-value:object"):
         canonical_digest({"value": object()})
