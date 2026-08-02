@@ -84,7 +84,10 @@ def _json_safe(value: object) -> list[Any]:
         return scalar
     if isinstance(value, Mapping):
         entries = [[_json_safe(key), _json_safe(item)] for key, item in value.items()]
-        return ["mapping", sorted(entries, key=lambda entry: _encoded_sort_key(entry[0]))]
+        return [
+            "mapping",
+            sorted(entries, key=lambda entry: (_encoded_sort_key(entry[0]), _encoded_sort_key(entry[1]))),
+        ]
     if isinstance(value, list | tuple):
         tag = "list" if isinstance(value, list) else "tuple"
         return [tag, [_json_safe(item) for item in value]]

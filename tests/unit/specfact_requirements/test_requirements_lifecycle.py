@@ -118,6 +118,11 @@ def test_canonical_digest_is_injective_for_yaml_values_and_total_plan_ordering()
     assert date_digest != sentinel_digest
     assert non_string_key_digest != sentinel_key_digest
     assert canonical_digest({"values": {2, 1}}) == canonical_digest({"values": {1, 2}})
+    first_nan = float("nan")
+    second_nan = float("nan")
+    assert canonical_digest({first_nan: "first", second_nan: "second"}) == canonical_digest(
+        {second_nan: "second", first_nan: "first"}
+    )
     source_path = Path(__file__).parents[3] / "packages/specfact-requirements/src"
     process = subprocess.run(
         [
