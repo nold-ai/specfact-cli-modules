@@ -135,3 +135,27 @@ def test_plan_output_is_reconcile_compatible_for_a_passing_test_authored_mapping
         json.loads(plan_path.read_text(encoding="utf-8")), junit, run_stage="red", source_ref="a" * 40
     )
     assert proof["gate_decision"] == "pass"
+
+
+def test_requested_plan_output_replaces_stale_artifact_when_no_source_is_selected(tmp_path: Path) -> None:
+    _initialize_repository(tmp_path)
+    output_path = tmp_path / "evidence.json"
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text('{"plan": "stale"}\n', encoding="utf-8")
+
+    exit_code = write_requirements_evidence(
+        tmp_path,
+        output_path,
+        staged=True,
+        required_maturity="planned",
+        plan_output_path=plan_path,
+    )
+
+    assert exit_code == 0
+    assert json.loads(plan_path.read_text(encoding="utf-8")) == {
+        "gate_decision": "pass",
+        "plan": None,
+        "plan_status": "not-available",
+        "schema_version": "2",
+        "sources": [],
+    }

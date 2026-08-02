@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -75,6 +76,18 @@ def test_plans_preserve_non_test_case_semantics_but_require_safe_test_selectors(
     assert "invalid-selector:REQ-001-S01" in report["findings"]
     analysis_case = next(case for case in report["plan"]["cases"] if case["method"] == "analysis")
     assert analysis_case["observable"] == "A policy decision is recorded."
+
+
+def test_mapping_digest_normalizes_yaml_scalars_and_rejects_runner_options() -> None:
+    mapping = _planned_mapping()
+    mapping["requirements"]["REQ-001"]["rationale"] = date(2026, 8, 2)  # type: ignore[index]
+    case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
+    case["selector"] = {"runner": "pytest", "node_id": "-p.py::test_option"}  # type: ignore[index]
+
+    report = evaluate_mapping(mapping, required_maturity="test-authored")
+
+    assert report["gate_decision"] == "fail"
+    assert "invalid-selector:REQ-001-S01" in report["findings"]
 
 
 def test_red_and_verified_require_execution_reconciliation() -> None:
@@ -184,6 +197,8 @@ def test_reconciliation_finding_retains_the_observed_outcome(tmp_path: Path) -> 
     report = reconcile_junit(plan, junit, run_stage="red", source_ref="a" * 40)
 
     assert "red-proof-skipped-not-failed:tests/test_readiness.py::test_unavailable" in report["findings"]
+    assert report["gate_decision"] == "fail"
+    assert report["observed_maturity"] == "incomplete"
 
 
 def test_reconciliation_rejects_incomplete_or_unsafe_plan_and_junit_doctype(

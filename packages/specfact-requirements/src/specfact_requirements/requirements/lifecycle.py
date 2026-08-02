@@ -45,14 +45,30 @@ IMPLEMENTATION_EVIDENCE_BY_MATURITY = {
     "incomplete": "not-available",
 }
 _SOURCE_REF_PATTERN = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})")
-_PYTEST_SELECTOR_PATTERN = re.compile(r"[A-Za-z0-9_./-]+\.py::[A-Za-z0-9_:.\[\]-]+")
+_PYTEST_SELECTOR_PATTERN = re.compile(r"(?!-)[A-Za-z0-9_./-]+\.py::[A-Za-z0-9_:.\[\]-]+")
 _SELECTOR_FORBIDDEN_CHARACTERS = frozenset('$&;|`<>*?(){}!\\"')
 MAX_JUNIT_BYTES = 10 * 1024 * 1024
 
 
-def _canonical_digest(value: Mapping[str, Any]) -> str:
-    """Return a stable SHA-256 digest for a JSON-compatible mapping."""
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+def _json_safe(value: object) -> Any:
+    """Normalize YAML-derived values without changing valid JSON representations."""
+    if value is None or isinstance(value, bool | int | float | str):
+        return value
+    if isinstance(value, Mapping):
+        if all(isinstance(key, str) for key in value):
+            return {key: _json_safe(item) for key, item in value.items()}
+        entries = [[_json_safe(key), _json_safe(item)] for key, item in value.items()]
+        return {"__mapping_entries__": sorted(entries, key=lambda entry: json.dumps(entry[0], sort_keys=True))}
+    if isinstance(value, list | tuple):
+        return [_json_safe(item) for item in value]
+    return {"__unsupported_value__": type(value).__name__, "value": str(value)}
+
+
+@beartype
+@ensure(lambda result: result.startswith("sha256:"))
+def canonical_digest(value: Mapping[str, Any]) -> str:
+    """Return a stable SHA-256 digest for a mapping, including malformed YAML values."""
+    encoded = json.dumps(_json_safe(value), sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
@@ -229,11 +245,13 @@ def _valid_acceptance(review_evidence: Mapping[str, Any] | None, mapping_digest:
     return findings
 
 
-def _plan_payload(mapping_digest: str, cases: list[dict[str, Any]]) -> dict[str, Any]:
+@beartype
+@ensure(lambda result: isinstance(result, dict) and "plan_digest" in result)
+def build_plan(mapping_digest: str, cases: list[dict[str, Any]]) -> dict[str, Any]:
     """Return a deterministic, complete plan and its stable identity digest."""
     ordered_cases = sorted(cases, key=lambda case: (str(case.get("requirement_id")), str(case.get("case_id"))))
     identity = {"mapping_digest": mapping_digest, "cases": ordered_cases}
-    return {**identity, "plan_digest": _canonical_digest(identity)}
+    return {**identity, "plan_digest": canonical_digest(identity)}
 
 
 def _lifecycle_report(
@@ -257,7 +275,7 @@ def _lifecycle_report(
         "implementation_evidence": implementation_evidence,
         "mapping_digest": mapping_digest,
         "findings": sorted(set(findings)),
-        "plan": _plan_payload(mapping_digest, cases),
+        "plan": build_plan(mapping_digest, cases),
     }
 
 
@@ -282,7 +300,7 @@ def evaluate_mapping(
     """Evaluate a schema-v2 mapping without executing tests."""
     if required_maturity not in SUPPORTED_REQUIRED_MATURITY:
         raise ValueError("required maturity must be planned, accepted, test-authored, red, or verified")
-    mapping_digest = _canonical_digest(_mapping_payload(mapping))
+    mapping_digest = canonical_digest(_mapping_payload(mapping))
     cases, findings = _validated_cases(mapping, required_maturity)
     observed = "incomplete" if findings else "planned"
     if not findings and MATURITY_ORDER[required_maturity] >= MATURITY_ORDER["accepted"]:
@@ -326,8 +344,10 @@ def _junit_case_result(test_case: ET.Element) -> tuple[str | None, str]:
 def _junit_results(junit_path: Path) -> tuple[dict[str, list[str]], list[str], str | None]:
     """Safely parse bounded JUnit XML and preserve a digest only on success."""
     try:
+        if junit_path.stat().st_size > MAX_JUNIT_BYTES:
+            return {}, ["junit-too-large"], None
         payload = junit_path.read_bytes()
-    except (OSError, ET.ParseError):
+    except OSError:
         return {}, ["junit-malformed"], None
     if len(payload) > MAX_JUNIT_BYTES:
         return {}, ["junit-too-large"], None
@@ -366,7 +386,7 @@ def _trusted_plan(plan_report: Mapping[str, Any]) -> Mapping[str, Any]:
 def _consistent_plan_cases(plan: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Return nonempty plan cases only when their identity digest is valid."""
     all_cases = [dict(case) for case in plan["cases"] if isinstance(case, Mapping)]
-    expected_plan = _plan_payload(str(plan["mapping_digest"]), all_cases)
+    expected_plan = build_plan(str(plan["mapping_digest"]), all_cases)
     if expected_plan["plan_digest"] != plan["plan_digest"]:
         raise ValueError("plan report has an invalid plan digest")
     if len(all_cases) != len(plan["cases"]) or not all_cases:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import io
 import json
 import re
@@ -25,6 +24,8 @@ from specfact_cli.utils.bundle_loader import save_project_bundle
 from specfact_requirements.requirements.lifecycle import (
     MATURITY_ORDER,
     SUPPORTED_REQUIRED_MATURITY,
+    build_plan,
+    canonical_digest,
     evaluate_mapping,
     lifecycle_status,
 )
@@ -304,12 +305,6 @@ def _read_review_evidence(path: Path | None) -> Mapping[str, Any] | None:
     return _read_optional_mapping(path) if path is not None else None
 
 
-def _digest_mapping(value: Mapping[str, Any]) -> str:
-    """Return the same canonical SHA-256 format used by lifecycle reports."""
-    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-    return f"sha256:{hashlib.sha256(payload).hexdigest()}"
-
-
 def _normalized_source_plan(source: object) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
     """Return a source identity and its fully preserved cases when valid."""
     if not isinstance(source, Mapping) or not isinstance(source.get("plan"), Mapping):
@@ -347,12 +342,8 @@ def _normalized_plan_report(report: Mapping[str, Any]) -> dict[str, Any] | None:
         return None
     source_plans, cases = inputs
     identity = {"sources": source_plans, "cases": cases}
-    mapping_digest = _digest_mapping({"sources": source_plans})
-    plan = {
-        "mapping_digest": mapping_digest,
-        "cases": cases,
-        "plan_digest": _digest_mapping({"mapping_digest": mapping_digest, "cases": cases}),
-    }
+    mapping_digest = canonical_digest({"sources": source_plans})
+    plan = build_plan(mapping_digest, cases)
     return {
         "schema_version": "2",
         "verdict": report["verdict"],
@@ -362,7 +353,18 @@ def _normalized_plan_report(report: Mapping[str, Any]) -> dict[str, Any] | None:
         "mapping_digest": mapping_digest,
         "plan": plan,
         "sources": source_plans,
-        "plan_identity_digest": _digest_mapping(identity),
+        "plan_identity_digest": canonical_digest(identity),
+    }
+
+
+def _unavailable_plan_report(report: Mapping[str, Any]) -> dict[str, Any]:
+    """Write an explicit non-reconcilable artifact when no lifecycle plan exists."""
+    return {
+        "schema_version": "2",
+        "gate_decision": report.get("gate_decision", "fail"),
+        "plan_status": "not-available",
+        "plan": None,
+        "sources": report.get("sources", []),
     }
 
 
@@ -662,9 +664,8 @@ def _write_requirements_evidence(request: RequirementsEvidenceRequest) -> int:
         report = _gate_failure_report(error)
     _write_evidence_report(report, request.output_path)
     if request.plan_output_path is not None and request.required_maturity is not None:
-        normalized_plan = _normalized_plan_report(report)
-        if normalized_plan is not None:
-            _write_evidence_report(normalized_plan, request.plan_output_path)
+        plan_report = _normalized_plan_report(report) or _unavailable_plan_report(report)
+        _write_evidence_report(plan_report, request.plan_output_path)
     if request.summary_path is not None:
         _write_markdown_summary(report, request.summary_path)
     return 1 if report["verdict"] == "failed" else 0
