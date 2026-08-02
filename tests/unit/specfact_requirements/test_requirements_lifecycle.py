@@ -128,8 +128,10 @@ def test_canonical_digest_is_injective_for_yaml_values_and_total_plan_ordering()
         [
             sys.executable,
             "-c",
-            "from specfact_requirements.requirements.lifecycle import canonical_digest; "
-            "print(canonical_digest({'values': {1, 2}}))",
+            (
+                "from specfact_requirements.requirements.lifecycle import canonical_digest; "
+                + "print(canonical_digest({'values': {1, 2}}))"
+            ),
         ],
         check=True,
         capture_output=True,
