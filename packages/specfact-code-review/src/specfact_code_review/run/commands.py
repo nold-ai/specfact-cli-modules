@@ -958,6 +958,8 @@ def _requirements_evidence_context(path: Path) -> RequirementsEvidenceContext:
     execution_proof = decoded.get("execution_proof")
     if not isinstance(execution_proof, dict) or execution_proof.get("run_stage") != "final":
         raise RunCommandError("finalized Requirements evidence must have execution_proof.run_stage=final")
+    if not _is_complete_final_requirements_proof(decoded, execution_proof):
+        raise RunCommandError("finalized Requirements evidence must be a complete final Requirements proof")
     values: dict[str, Any] = {
         "path": str(path),
         "content_digest": _canonical_json_digest(decoded),
@@ -970,6 +972,86 @@ def _requirements_evidence_context(path: Path) -> RequirementsEvidenceContext:
         return RequirementsEvidenceContext.model_validate(values)
     except ValueError as error:
         raise RunCommandError("finalized Requirements evidence has invalid provenance") from error
+
+
+def _is_complete_final_requirements_proof(decoded: dict[str, Any], execution_proof: dict[str, Any]) -> bool:
+    """Return whether a final proof retains its plans, selectors, and reconciliation evidence."""
+    execution_plan = decoded.get("execution_plan")
+    findings = decoded.get("findings")
+    selectors = execution_proof.get("selectors")
+    if not isinstance(execution_plan, dict) or not isinstance(findings, list) or not isinstance(selectors, list):
+        return False
+    if not _proof_fields_are_complete(decoded, execution_proof):
+        return False
+    expected_selectors = _execution_plan_selectors(execution_plan)
+    if not expected_selectors or selectors != sorted(expected_selectors):
+        return False
+    return _proof_decision_is_consistent(decoded, findings)
+
+
+def _proof_fields_are_complete(decoded: dict[str, Any], execution_proof: dict[str, Any]) -> bool:
+    """Return whether required final-proof fields have valid structural values."""
+    mapping_digest = decoded.get("mapping_digest")
+    plan_digest = decoded.get("plan_digest")
+    findings = decoded.get("findings")
+    selectors = execution_proof.get("selectors")
+    if not isinstance(findings, list) or not isinstance(selectors, list):
+        return False
+    return all(
+        (
+            decoded.get("required_maturity") == "verified",
+            decoded.get("observed_maturity") in {"verified", "incomplete"},
+            _is_sha256_digest(mapping_digest),
+            _is_sha256_digest(plan_digest),
+            all(isinstance(finding, str) for finding in findings),
+            _is_complete_plan(decoded.get("plan"), mapping_digest, plan_digest),
+            _is_complete_plan(decoded.get("execution_plan"), mapping_digest),
+            _is_sha256_digest(execution_proof.get("junit_digest")),
+            bool(selectors),
+            all(isinstance(selector, str) and selector for selector in selectors),
+        )
+    )
+
+
+def _execution_plan_selectors(execution_plan: dict[str, Any]) -> set[str]:
+    """Return the exact test selectors emitted by one validated execution plan."""
+    selectors: set[str] = set()
+    for case in execution_plan.get("cases", []):
+        if not isinstance(case, dict) or case.get("method") != "test":
+            continue
+        node_id = case.get("node_id")
+        if isinstance(node_id, str):
+            selectors.add(node_id)
+    return selectors
+
+
+def _proof_decision_is_consistent(decoded: dict[str, Any], findings: list[Any]) -> bool:
+    """Return whether the proof decision agrees with its final maturity and findings."""
+    proof_passes = decoded.get("observed_maturity") == "verified" and not findings
+    return (decoded.get("gate_decision") == "pass") == proof_passes
+
+
+def _is_complete_plan(plan: object, mapping_digest: object, plan_digest: object | None = None) -> bool:
+    """Return whether one emitted Requirements plan has its identity and nonempty cases."""
+    if (
+        not isinstance(plan, dict)
+        or plan.get("mapping_digest") != mapping_digest
+        or not isinstance(plan.get("cases"), list)
+    ):
+        return False
+    if not plan["cases"] or not _is_sha256_digest(plan.get("plan_digest")):
+        return False
+    return plan_digest is None or plan.get("plan_digest") == plan_digest
+
+
+def _is_sha256_digest(value: object) -> bool:
+    """Return whether value is a lowercase SHA-256 digest with its canonical prefix."""
+    return (
+        isinstance(value, str)
+        and len(value) == 71
+        and value.startswith("sha256:")
+        and all(character in "0123456789abcdef" for character in value[7:])
+    )
 
 
 def _canonical_json_digest(value: dict[str, Any]) -> str:

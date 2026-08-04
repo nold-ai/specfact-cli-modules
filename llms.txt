@@ -73,10 +73,7 @@ This file is generated from the current module command trees. Do not edit by han
 | `specfact code validate sidecar run` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | --no-run-crosshair, --no-run-specmatic, --run-crosshair, --run-specmatic; args: BUNDLE_NAME (required), REPO_PATH (required) | - |  |
 | `specfact govern` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --install-completion, --show-completion; args: - | enforce, patch |  |
 | `specfact govern enforce` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | -; args: - | sdd, stage |  |
-| `specfact govern enforce` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --install-completion, --show-completion; args: - | sdd, stage |  |
 | `specfact govern enforce sdd` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --no-interactive, --out, --output-format, --sdd; args: BUNDLE | - |  |
-| `specfact govern enforce sdd` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --no-interactive, --out, --output-format, --sdd; args: BUNDLE | - |  |
-| `specfact govern enforce stage` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --preset; args: - | - |  |
 | `specfact govern enforce stage` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --preset; args: - | - |  |
 | `specfact govern patch` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | -; args: - | apply |  |
 | `specfact govern patch apply` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --dry-run, --write, --yes; args: PATCH_FILE (required) | - |  |

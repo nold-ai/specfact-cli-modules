@@ -79,7 +79,6 @@ MODULE_APP_MOUNTS = (
     ("specfact_codebase.code.commands", "app", ("specfact", "code")),
     ("specfact_code_review.review.commands", "app", ("specfact", "code")),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
-    ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")),
     ("specfact_project.project.commands", "app", ("specfact", "project")),
     ("specfact_requirements.requirements.commands", "app", ("specfact", "requirements")),
     ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")),
@@ -221,10 +220,10 @@ def _command_path_accepts_trailing_tokens(
 ) -> bool:
     if not remaining or remaining[0].startswith("-") or remaining[0] in {"...", "…"}:
         return True
-    if executable_paths is not None and prefix in executable_paths:
-        return True
     if remaining[0] == prefix[-1]:
         return False
+    if executable_paths is not None and prefix in executable_paths:
+        return True
     return not any(path[: len(prefix)] == prefix and len(path) > len(prefix) for path in valid_paths)
 
 

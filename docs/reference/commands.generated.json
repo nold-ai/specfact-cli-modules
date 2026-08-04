@@ -1278,26 +1278,6 @@
     ]
   },
   {
-    "arguments": [],
-    "bare_invocation": "requires-subcommand",
-    "command": "specfact govern enforce",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-govern",
-    "options": [
-      "--install-completion",
-      "--show-completion"
-    ],
-    "owner_package": "nold-ai/specfact-govern",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_govern.enforce.commands:app",
-    "subcommands": [
-      "sdd",
-      "stage"
-    ]
-  },
-  {
     "arguments": [
       {
         "name": "BUNDLE",
@@ -1323,31 +1303,6 @@
     "subcommands": []
   },
   {
-    "arguments": [
-      {
-        "name": "BUNDLE",
-        "nargs": 1,
-        "required": false
-      }
-    ],
-    "bare_invocation": "executes",
-    "command": "specfact govern enforce sdd",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-govern",
-    "options": [
-      "--no-interactive",
-      "--out",
-      "--output-format",
-      "--sdd"
-    ],
-    "owner_package": "nold-ai/specfact-govern",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_govern.enforce.commands:app",
-    "subcommands": []
-  },
-  {
     "arguments": [],
     "bare_invocation": "executes",
     "command": "specfact govern enforce stage",
@@ -1361,22 +1316,6 @@
     "owner_repo": "nold-ai/specfact-cli-modules",
     "short_help": "",
     "source": "specfact_govern.govern.commands:app",
-    "subcommands": []
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "executes",
-    "command": "specfact govern enforce stage",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-govern",
-    "options": [
-      "--preset"
-    ],
-    "owner_package": "nold-ai/specfact-govern",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_govern.enforce.commands:app",
     "subcommands": []
   },
   {

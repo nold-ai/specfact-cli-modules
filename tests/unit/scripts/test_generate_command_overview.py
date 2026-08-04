@@ -37,3 +37,10 @@ def test_code_review_inventory_matches_the_mounted_command_surface() -> None:
     assert "specfact code review review run" not in commands
     assert "specfact code review ledger status" in commands
     assert "specfact code review rules init" in commands
+
+
+def test_generated_command_inventory_has_no_duplicate_paths() -> None:
+    overview = _load_overview_module()
+    commands = [record["command"] for record in overview.build_records()]
+
+    assert len(commands) == len(set(commands))

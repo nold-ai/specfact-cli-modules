@@ -79,17 +79,32 @@ def _finalized_requirements_proof(
     decision: str = "fail",
     schema_version: str = "2",
 ) -> Path:
+    mapping_digest = "sha256:" + "a" * 64
+    plan_digest = "sha256:" + "b" * 64
+    selector = "tests/fixtures/review/clean_module.py::test_clean_module"
+    plan = {
+        "mapping_digest": mapping_digest,
+        "plan_digest": plan_digest,
+        "cases": [{"case_id": "REQ-001", "method": "test", "node_id": selector}],
+    }
     proof_path = tmp_path / "requirements-proof.json"
     proof_path.write_text(
         json.dumps(
             {
                 "schema_version": schema_version,
                 "gate_decision": decision,
-                "mapping_digest": "sha256:" + "a" * 64,
-                "plan_digest": "sha256:" + "b" * 64,
+                "required_maturity": "verified",
+                "observed_maturity": "verified" if decision == "pass" else "incomplete",
+                "mapping_digest": mapping_digest,
+                "plan_digest": plan_digest,
+                "findings": [] if decision == "pass" else ["uncollected-selector:" + selector],
+                "plan": plan,
+                "execution_plan": plan,
                 "execution_proof": {
                     "run_stage": "final",
                     "source_ref": "c" * 40,
+                    "selectors": [selector],
+                    "junit_digest": "sha256:" + "d" * 64,
                 },
             }
         ),
@@ -206,23 +221,10 @@ def test_run_command_retains_finalized_requirements_provenance_without_verdict_f
 
 
 def test_requirements_evidence_context_canonicalizes_equivalent_json(tmp_path: Path) -> None:
-    proof = {
-        "schema_version": "2",
-        "gate_decision": "pass",
-        "mapping_digest": "sha256:" + "a" * 64,
-        "plan_digest": "sha256:" + "b" * 64,
-        "execution_proof": {"run_stage": "final", "source_ref": "c" * 40},
-    }
-    reordered_proof = {
-        "execution_proof": {"source_ref": "c" * 40, "run_stage": "final"},
-        "plan_digest": "sha256:" + "b" * 64,
-        "mapping_digest": "sha256:" + "a" * 64,
-        "gate_decision": "pass",
-        "schema_version": "2",
-    }
-    formatted_path = tmp_path / "formatted-proof.json"
+    formatted_path = _finalized_requirements_proof(tmp_path, decision="pass")
+    proof = json.loads(formatted_path.read_text(encoding="utf-8"))
+    reordered_proof = dict(reversed(list(proof.items())))
     compact_path = tmp_path / "compact-proof.json"
-    formatted_path.write_text(json.dumps(proof, indent=2), encoding="utf-8")
     compact_path.write_text(json.dumps(reordered_proof, separators=(",", ":")), encoding="utf-8")
 
     formatted_context = run_commands._requirements_evidence_context(formatted_path)
@@ -231,6 +233,39 @@ def test_requirements_evidence_context_canonicalizes_equivalent_json(tmp_path: P
 
     assert formatted_context.content_digest == compact_context.content_digest
     assert formatted_context.content_digest == f"sha256:{hashlib.sha256(canonical_payload).hexdigest()}"
+
+
+def test_run_command_rejects_incomplete_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:
+    def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
+        pytest.fail("Requirements evidence validation must run before review execution.")
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", unexpected_review)
+    proof_path = tmp_path / "incomplete-requirements-proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "2",
+                "gate_decision": "pass",
+                "mapping_digest": "sha256:" + "a" * 64,
+                "plan_digest": "sha256:" + "b" * 64,
+                "execution_proof": {"run_stage": "final", "source_ref": "c" * 40},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--requirements-evidence",
+            str(proof_path),
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code != 0
 
 
 def test_run_command_preserves_changed_enforcement_when_attaching_requirements_evidence(

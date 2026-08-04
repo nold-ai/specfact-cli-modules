@@ -44,12 +44,6 @@ MODULE_APP_MOUNTS = (
         "nold-ai/specfact-code-review",
     ),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern"), "nold-ai/specfact-govern"),
-    (
-        "specfact_govern.enforce.commands",
-        "app",
-        ("specfact", "govern", "enforce"),
-        "nold-ai/specfact-govern",
-    ),
     ("specfact_project.project.commands", "app", ("specfact", "project"), "nold-ai/specfact-project"),
     (
         "specfact_requirements.requirements.commands",

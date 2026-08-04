@@ -63,3 +63,18 @@
   only a finalized schema-v2 proof, emits report schema `1.5` with its
   path/digests/source/verdict in review JSON, and does not use the Requirements
   verdict to calculate the review exit code or verdict.
+
+## Review-remediation proof-completeness evidence
+
+- **Recorded:** 2026-08-05 (Europe/Berlin)
+- **Failing-before command:** `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_commands.py tests/unit/scripts/test_generate_command_overview.py tests/unit/test_check_docs_commands_script.py`
+- **Result:** 4 failed, 75 passed as expected.
+- **Failures:** Code Review accepted a schema-v2 packet that lacked the
+  submitted and execution plans, selectors, maturity, findings, and JUnit
+  digest; the command inventory emitted `govern enforce` paths twice; and the
+  docs checker accepted `specfact code import import`.
+- **Passing-after command:** `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_commands.py tests/unit/scripts/test_generate_command_overview.py tests/unit/test_check_docs_commands_script.py`
+- **Result:** 79 passed.
+- **Proof:** Code Review rejects incomplete final Requirements proof packets
+  before review execution; published command records are unique; and docs
+  validation rejects duplicated executable command tokens.

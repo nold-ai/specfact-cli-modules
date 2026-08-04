@@ -25,7 +25,7 @@ def test_docs_command_mounts_include_nested_prompt_validator_mounts() -> None:
     script = _load_script()
     mounts = set(_script_attr(script, "MODULE_APP_MOUNTS"))
 
-    assert ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")) in mounts
+    assert ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")) not in mounts
     assert ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")) in mounts
     assert ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd")) in mounts
     assert ("specfact_spec.generate.commands", "app", ("specfact", "spec", "generate")) in mounts
@@ -142,6 +142,21 @@ def test_command_example_is_valid_allows_root_help_but_not_unknown_subgroups() -
     assert _script_attr(script, "_command_example_is_valid")("specfact --help", valid_paths)
     assert _script_attr(script, "_command_example_is_valid")("specfact -h", valid_paths)
     assert not _script_attr(script, "_command_example_is_valid")("specfact policy validate --repo .", valid_paths)
+
+
+def test_command_example_rejects_a_duplicate_token_after_an_executable_group() -> None:
+    script = _load_script()
+    valid_paths = {
+        ("specfact",),
+        ("specfact", "code"),
+        ("specfact", "code", "import"),
+    }
+
+    assert not _script_attr(script, "_command_example_is_valid")(
+        "specfact code import import",
+        valid_paths,
+        {("specfact", "code", "import")},
+    )
 
 
 @pytest.mark.parametrize(
