@@ -232,6 +232,71 @@ def test_red_requires_collected_failure_and_final_requires_prior_red(tmp_path: P
     assert final["observed_maturity"] == "verified"
 
 
+def test_final_reconciliation_records_a_matching_legacy_tdd_ledger(tmp_path: Path) -> None:
+    mapping = _planned_mapping()
+    case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]
+    case["selector"] = {
+        "runner": "pytest",
+        "node_id": "tests/test_readiness.py::test_unavailable",
+    }  # type: ignore[index]
+    planned = evaluate_mapping(mapping, required_maturity="planned")
+    plan = evaluate_mapping(
+        mapping,
+        required_maturity="test-authored",
+        review_evidence={
+            "decision": "accepted",
+            "reviewer_id": "product-owner@example.test",
+            "reviewer_role": "product-owner",
+            "recorded_at": "2026-08-01T12:00:00Z",
+            "reference": "review:123",
+            "mapping_digest": planned["mapping_digest"],
+        },
+    )
+    final_junit = tmp_path / "final.xml"
+    final_junit.write_text(
+        '<testsuite><testcase><properties><property name="specfact.selector" '
+        'value="tests/test_readiness.py::test_unavailable"/></properties></testcase></testsuite>',
+        encoding="utf-8",
+    )
+    legacy_tdd_evidence = {
+        "schema_version": "1",
+        "kind": "legacy-tdd-ledger",
+        "change_id": "requirements-07-runtime-proof-delivery",
+        "ledger_digest": f"sha256:{'c' * 64}",
+        "mapping_digest": plan["mapping_digest"],
+        "plan_digest": plan["plan"]["plan_digest"],  # type: ignore[index]
+    }
+
+    final = reconcile_junit(
+        plan,
+        final_junit,
+        run_stage="final",
+        source_ref="b" * 40,
+        legacy_tdd_evidence=legacy_tdd_evidence,
+    )
+    misplaced = reconcile_junit(
+        plan,
+        final_junit,
+        run_stage="red",
+        source_ref="a" * 40,
+        legacy_tdd_evidence=legacy_tdd_evidence,
+    )
+    stale = reconcile_junit(
+        plan,
+        final_junit,
+        run_stage="final",
+        source_ref="b" * 40,
+        legacy_tdd_evidence={**legacy_tdd_evidence, "plan_digest": f"sha256:{'d' * 64}"},
+    )
+
+    assert final["gate_decision"] == "pass"
+    assert final["implementation_evidence"] == "passing-after-legacy-tdd-ledger"
+    assert final["execution_proof"]["proof_basis"] == "legacy-tdd-ledger"
+    assert final["legacy_tdd_evidence"] == legacy_tdd_evidence
+    assert "legacy-tdd-evidence-red-stage" in misplaced["findings"]
+    assert "legacy-tdd-evidence-invalid" in stale["findings"]
+
+
 def test_reconciliation_keeps_the_submitted_plan_digest_authoritative(tmp_path: Path) -> None:
     mapping = _planned_mapping()
     case = mapping["requirements"]["REQ-001"]["verification_cases"][0]  # type: ignore[index]

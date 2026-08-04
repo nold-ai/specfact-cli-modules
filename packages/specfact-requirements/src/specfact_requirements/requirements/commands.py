@@ -13,7 +13,7 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_requirements.requirements.evidence import write_requirements_evidence
-from specfact_requirements.requirements.lifecycle import reconcile_junit
+from specfact_requirements.requirements.lifecycle import ReconciliationContext, reconcile_junit
 from specfact_requirements.requirements.runtime import (
     auto_detect_openspec_change,
     auto_detect_speckit_feature,
@@ -319,6 +319,17 @@ def reconcile_command(
         Path | None,
         typer.Option("--prior-red-proof", exists=True, file_okay=True, dir_okay=False, readable=True),
     ] = None,
+    legacy_tdd_evidence: Annotated[
+        Path | None,
+        typer.Option(
+            "--legacy-tdd-evidence",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Explicit legacy TDD ledger migration record for final reconciliation.",
+        ),
+    ] = None,
     summary: Annotated[Path | None, typer.Option("--summary", help="Optional Markdown proof summary.")] = None,
 ) -> None:
     """Reconcile result artifacts while keeping test execution outside the module."""
@@ -326,9 +337,14 @@ def reconcile_command(
         report = reconcile_junit(
             _load_json_mapping(plan, "plan"),
             junit,
-            run_stage=run_stage,
-            source_ref=source_ref,
-            prior_red_proof=_load_json_mapping(prior_red_proof, "prior red proof") if prior_red_proof else None,
+            ReconciliationContext(
+                run_stage=run_stage,
+                source_ref=source_ref,
+                prior_red_proof=_load_json_mapping(prior_red_proof, "prior red proof") if prior_red_proof else None,
+                legacy_tdd_evidence=(
+                    _load_json_mapping(legacy_tdd_evidence, "legacy TDD evidence") if legacy_tdd_evidence else None
+                ),
+            ),
         )
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
@@ -343,6 +359,7 @@ def reconcile_command(
                     "",
                     f"- Gate decision: **{report['gate_decision']}**",
                     f"- Observed maturity: `{report['observed_maturity']}`",
+                    f"- Implementation evidence: `{report['implementation_evidence']}`",
                     f"- Execution stage: `{report['execution_proof']['run_stage']}`",
                 ]
             )
