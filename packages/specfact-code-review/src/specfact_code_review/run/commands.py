@@ -960,7 +960,7 @@ def _requirements_evidence_context(path: Path) -> RequirementsEvidenceContext:
         raise RunCommandError("finalized Requirements evidence must have execution_proof.run_stage=final")
     values: dict[str, Any] = {
         "path": str(path),
-        "content_digest": f"sha256:{hashlib.sha256(payload).hexdigest()}",
+        "content_digest": _canonical_json_digest(decoded),
         "mapping_digest": decoded.get("mapping_digest"),
         "plan_digest": decoded.get("plan_digest"),
         "source_ref": execution_proof.get("source_ref"),
@@ -970,6 +970,12 @@ def _requirements_evidence_context(path: Path) -> RequirementsEvidenceContext:
         return RequirementsEvidenceContext.model_validate(values)
     except ValueError as error:
         raise RunCommandError("finalized Requirements evidence has invalid provenance") from error
+
+
+def _canonical_json_digest(value: dict[str, Any]) -> str:
+    """Return the stable digest for a semantically equivalent JSON object."""
+    canonical_json = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return f"sha256:{hashlib.sha256(canonical_json.encode('utf-8')).hexdigest()}"
 
 
 @beartype

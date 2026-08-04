@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -202,6 +203,34 @@ def test_run_command_retains_finalized_requirements_provenance_without_verdict_f
     assert output == str(out)
     assert report.requirements_evidence.gate_decision == "fail"  # type: ignore[union-attr]
     assert report.requirements_evidence.source_ref == "c" * 40  # type: ignore[union-attr]
+
+
+def test_requirements_evidence_context_canonicalizes_equivalent_json(tmp_path: Path) -> None:
+    proof = {
+        "schema_version": "2",
+        "gate_decision": "pass",
+        "mapping_digest": "sha256:" + "a" * 64,
+        "plan_digest": "sha256:" + "b" * 64,
+        "execution_proof": {"run_stage": "final", "source_ref": "c" * 40},
+    }
+    reordered_proof = {
+        "execution_proof": {"source_ref": "c" * 40, "run_stage": "final"},
+        "plan_digest": "sha256:" + "b" * 64,
+        "mapping_digest": "sha256:" + "a" * 64,
+        "gate_decision": "pass",
+        "schema_version": "2",
+    }
+    formatted_path = tmp_path / "formatted-proof.json"
+    compact_path = tmp_path / "compact-proof.json"
+    formatted_path.write_text(json.dumps(proof, indent=2), encoding="utf-8")
+    compact_path.write_text(json.dumps(reordered_proof, separators=(",", ":")), encoding="utf-8")
+
+    formatted_context = run_commands._requirements_evidence_context(formatted_path)
+    compact_context = run_commands._requirements_evidence_context(compact_path)
+    canonical_payload = json.dumps(proof, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+    assert formatted_context.content_digest == compact_context.content_digest
+    assert formatted_context.content_digest == f"sha256:{hashlib.sha256(canonical_payload).hexdigest()}"
 
 
 def test_run_command_preserves_changed_enforcement_when_attaching_requirements_evidence(

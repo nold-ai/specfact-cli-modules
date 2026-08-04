@@ -34,7 +34,7 @@ _EXPECTED_PAGES: dict[str, tuple[str, ...]] = {
         "--dry-run",
     ),
     "docs/bundles/code-review/run.md": (
-        "specfact code review run",
+        "specfact code review review run",
         "--scope",
         "--fix",
     ),

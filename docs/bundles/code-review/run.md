@@ -12,7 +12,7 @@ expertise_level: [intermediate, advanced]
 
 # Code review run
 
-`specfact code review run` executes the governed review pipeline for a set of files or for an auto-detected repo scope.
+`specfact code review review run` executes the governed review pipeline for a set of files or for an auto-detected repo scope.
 
 The command prints **progress** to the terminal (spinner/status while the pipeline prepares and runs). With **`--json`**, it writes a machine-readable **`ReviewReport`** JSON file (defaulting to **`review-report.json`** in the working directory when **`--out`** is omitted).
 
@@ -20,7 +20,7 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 
 ## Command
 
-- `specfact code review run [FILES...]`
+- `specfact code review review run [FILES...]`
 
 ## Key options
 
@@ -82,7 +82,7 @@ code. A finalized Requirements failure can therefore remain visible as
 provenance while an otherwise clean review reports its own independent result.
 
 ```bash
-specfact code review run --json --out .specfact/code-review.json \
+specfact code review review run --json --out .specfact/code-review.json \
   --requirements-evidence artifacts/requirements-evidence.json \
   packages/specfact-code-review/src/specfact_code_review/run/commands.py
 ```
@@ -93,22 +93,22 @@ specfact code review run --json --out .specfact/code-review.json \
 
 ```bash
 # Tracked + untracked changes; tests excluded by default for auto-scope
-specfact code review run --scope changed
+specfact code review review run --scope changed
 
 # Same, with bug-hunt heuristics on the discovered file set
-specfact code review run --scope changed --enforcement changed --bug-hunt
+specfact code review review run --scope changed --enforcement changed --bug-hunt
 
 # Full index, limited to one package (repeat --path for more repo-relative prefixes)
-specfact code review run --scope full --path packages/specfact-code-review
+specfact code review review run --scope full --path packages/specfact-code-review
 
 # Package sources plus that package’s unit tests
-specfact code review run --scope full --path packages/specfact-code-review --path tests/unit/specfact_code_review
+specfact code review review run --scope full --path packages/specfact-code-review --path tests/unit/specfact_code_review
 
 # Errors only before scoring — warnings and info omitted from JSON, verdict, and ci_exit_code
-specfact code review run --scope changed --level error
+specfact code review review run --scope changed --level error
 
 # Longer CrossHair budgets for exploratory bug-hunt pass (with explicit files)
-specfact code review run --enforcement changed --bug-hunt --json --out /tmp/review-bughunt.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review review run --enforcement changed --bug-hunt --json --out /tmp/review-bughunt.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
 ```
 
 ### Enforcement modes and JSON to a file
@@ -120,9 +120,9 @@ specfact code review run --enforcement changed --bug-hunt --json --out /tmp/revi
 **`--enforcement shadow`** runs the full toolchain but forces process exit code **`0`** and JSON **`ci_exit_code`** **`0`** so callers can ingest reports without failing a step; **`overall_verdict`** still reflects the real outcome. The older **`--mode shadow`** form remains available as a compatibility alias.
 
 ```bash
-specfact code review run --scope changed --enforcement changed --json --out /tmp/review-report.json
-specfact code review run --scope full --enforcement full --json --out /tmp/review-full.json
-specfact code review run --scope changed --enforcement shadow --json --out /tmp/review-shadow.json
+specfact code review review run --scope changed --enforcement changed --json --out /tmp/review-report.json
+specfact code review review run --scope full --enforcement full --json --out /tmp/review-full.json
+specfact code review review run --scope changed --enforcement shadow --json --out /tmp/review-shadow.json
 ```
 
 ### `--focus` facets (repeatable)
@@ -130,11 +130,11 @@ specfact code review run --scope changed --enforcement shadow --json --out /tmp/
 Use **`--focus`** with **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (union of facets, then intersect with scope). Do not combine **`--focus`** with **`--include-tests`** or **`--exclude-tests`**. The **`simplify`** facet produces simplification-focused reports: advisory **`ai_bloat`** findings plus high-confidence **`dry`** and **`kiss`** findings that carry deterministic metadata such as **`rewrite_hint`**, **`canonical_pattern`**, **`intent_key`**, **`estimated_deletion_lines`**, and **`related_locations`**. Simplification-focused JSON also includes **`cleanup_forecast`**, **`signal_trace`**, **`preserve_reasons`**, and **`remediation_packet`** fields when available.
 
 ```bash
-specfact code review run --scope changed --focus tests
-specfact code review run --scope full --path packages/specfact-code-review --focus source
-specfact code review run --scope full --focus docs
-specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review.json
-specfact code review run --scope changed --enforcement shadow --focus simplify --with-mutation --json --out .specfact/code-review.json
+specfact code review review run --scope changed --focus tests
+specfact code review review run --scope full --path packages/specfact-code-review --focus source
+specfact code review review run --scope full --path packages/specfact-code-review --focus docs
+specfact code review review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review.json
+specfact code review review run --scope changed --enforcement shadow --focus simplify --with-mutation --json --out .specfact/code-review.json
 ```
 
 Use the canonical `.specfact/code-review.json` path unless every consumer in your workflow has been updated to read a custom simplify report path.
@@ -144,7 +144,7 @@ Use the canonical `.specfact/code-review.json` path unless every consumer in you
 When an IDE does not support bundled prompts or skills, print the same guided simplify workflow for an AI assistant:
 
 ```bash
-specfact code review run --instructions
+specfact code review review run --instructions
 ```
 
 The output explains how to remove AI bloat and apply clean-code simplifications using SpecFact evidence, including `cleanup_forecast`, `safe_mechanical`, `needs_tests`, `design_judgment`, `preserve`, `remediation_packet`, patch previews, conservative keep/skip defaults, and per-file validation. It also tells assistants how to handle clean PR branches where `--scope changed` has no worktree files: find branch-delta Python files with a base-ref diff such as `git diff --name-only <base-ref>...HEAD -- '*.py' '*.pyi'`, review those files as explicit positional files, and treat findings without `guidance_kind` as unguided advisories rather than auto-fix input. `ai_bloat` findings are cleanup signals, not proof of AI authorship.
@@ -154,18 +154,18 @@ The output explains how to remove AI bloat and apply clean-code simplifications 
 Do not pass **`--scope`** or **`--path`** when **`FILES...`** are present.
 
 ```bash
-specfact code review run --json --out /tmp/review-report.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
-specfact code review run --score-only packages/specfact-code-review/src/specfact_code_review/run/commands.py
-specfact code review run --fix packages/specfact-code-review/src/specfact_code_review/run/commands.py
-specfact code review run --no-tests packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review review run --json --out /tmp/review-report.json packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review review run --score-only packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review review run --fix packages/specfact-code-review/src/specfact_code_review/run/commands.py
+specfact code review review run --no-tests packages/specfact-code-review/src/specfact_code_review/run/commands.py
 ```
 
 ### Noise and interactive test inclusion
 
 ```bash
-specfact code review run --scope changed --include-noise
-specfact code review run --scope changed --suppress-noise
-specfact code review run --scope changed --interactive
+specfact code review review run --scope changed --include-noise
+specfact code review review run --scope changed --suppress-noise
+specfact code review review run --scope changed --interactive
 ```
 
 ## Bundle-owned resources
@@ -177,7 +177,7 @@ The built-in `specfact/ai-bloat-patterns` policy pack is parallel to `specfact/c
 Use `--focus simplify` when producing the IDE simplification queue:
 
 ```bash
-specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review.json
+specfact code review review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review.json
 ```
 
 Simplify-focused reports keep advisory `ai_bloat` findings plus high-confidence `dry` and `kiss` findings that include deterministic simplification metadata. Metadata fields such as `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, `related_locations`, `signal_trace`, `preserve_reasons`, and `remediation_packet` are additive; legacy consumers can keep reading the original finding fields. The report-level `cleanup_forecast` summarizes reviewed LOC, estimated deletion ranges, guidance-kind totals, normalized AI-bloat density, weighted bloat points, and cleanup-yield LOC per KLOC. Simplification findings remain score-neutral; enforce mode blocks only unresolved safe-mechanical cleanup candidates.
