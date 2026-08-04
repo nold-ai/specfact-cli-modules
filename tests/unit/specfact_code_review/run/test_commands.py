@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -8,11 +9,13 @@ from pathlib import Path
 from typing import Any, Literal
 
 import pytest
+import yaml
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
 from specfact_code_review.run import commands as run_commands
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+from specfact_requirements.requirements.lifecycle import build_plan
 
 
 runner = CliRunner()
@@ -40,6 +43,89 @@ def _report(*, score: int = 85) -> ReviewReport:
         findings=[],
         summary="Review command test report.",
     )
+
+
+def _changed_enforcement_report() -> ReviewReport:
+    blocking_finding = ReviewFinding(
+        category="contracts",
+        severity="error",
+        tool="ast",
+        rule="legacy-blocker",
+        file="legacy.py",
+        line=1,
+        message="Legacy blocking finding retained as evidence.",
+        fixable=False,
+        confidence="high",
+    )
+    report = ReviewReport(
+        run_id="review-changed-enforcement",
+        timestamp=datetime(2026, 8, 4, tzinfo=UTC),
+        score=85,
+        findings=[blocking_finding],
+        summary="Changed enforcement excludes the legacy blocker.",
+    )
+    return report.model_copy(
+        update={
+            "overall_verdict": "PASS_WITH_ADVISORY",
+            "ci_exit_code": 0,
+            "enforcement_mode": "changed",
+            "enforcement_summary": "Changed enforcement excludes the legacy blocker.",
+            "schema_version": "1.4",
+        }
+    )
+
+
+def _finalized_requirements_proof(
+    tmp_path: Path,
+    *,
+    decision: str = "fail",
+    schema_version: str = "2",
+    proof_basis: Literal["red-junit", "legacy-tdd-ledger"] = "red-junit",
+) -> Path:
+    mapping_digest = "sha256:" + "a" * 64
+    selector = "tests/fixtures/review/clean_module.py::test_clean_module"
+    plan = build_plan(mapping_digest, [{"case_id": "REQ-001", "method": "test", "node_id": selector}])
+    plan_digest = plan["plan_digest"]
+    proof_path = tmp_path / "requirements-proof.json"
+    proof = {
+        "schema_version": schema_version,
+        "gate_decision": decision,
+        "required_maturity": "verified",
+        "observed_maturity": "verified" if decision == "pass" else "incomplete",
+        "mapping_digest": mapping_digest,
+        "plan_digest": plan_digest,
+        "findings": [] if decision == "pass" else ["uncollected-selector:" + selector],
+        "plan": plan,
+        "execution_plan": plan,
+        "execution_proof": {
+            "run_stage": "final",
+            "source_ref": "c" * 40,
+            "selectors": [selector],
+            "junit_digest": "sha256:" + "d" * 64,
+        },
+    }
+    if decision == "pass":
+        proof["execution_proof"]["proof_basis"] = proof_basis
+        if proof_basis == "legacy-tdd-ledger":
+            proof["legacy_tdd_evidence"] = {
+                "schema_version": "1",
+                "kind": "legacy-tdd-ledger",
+                "change_id": "requirements-07-runtime-proof-delivery",
+                "ledger_digest": "sha256:" + "e" * 64,
+                "mapping_digest": mapping_digest,
+                "plan_digest": plan_digest,
+            }
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+    return proof_path
+
+
+def test_code_review_manifest_declares_requirements_runtime_dependency() -> None:
+    """Keep Requirements-proof validation dependencies compatible at install time."""
+    manifest_path = REPO_ROOT / "packages" / "specfact-code-review" / "module-package.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+
+    assert "nold-ai/specfact-requirements" in manifest["bundle_dependencies"]
+    assert manifest["core_compatibility"] == ">=0.53.1,<1.0.0"
 
 
 def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:
@@ -123,6 +209,190 @@ def test_run_command_default_json_output_path_uses_review_report(monkeypatch: An
     assert output == "review-report.json"
     report = ReviewReport.model_validate_json((tmp_path / "review-report.json").read_text(encoding="utf-8"))
     assert report.run_id == "review-run-001"
+
+
+def test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review",
+        lambda files, **_kwargs: _report(),
+    )
+    proof_path = _finalized_requirements_proof(tmp_path, decision="fail")
+    out = tmp_path / "review-report.json"
+
+    exit_code, output = run_commands.run_command(
+        [FIXTURE_FILE],
+        json_output=True,
+        out=out,
+        requirements_evidence=proof_path,
+    )
+
+    report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert output == str(out)
+    assert report.requirements_evidence.gate_decision == "fail"  # type: ignore[union-attr]
+    assert report.requirements_evidence.source_ref == "c" * 40  # type: ignore[union-attr]
+
+
+def test_requirements_evidence_context_canonicalizes_equivalent_json(tmp_path: Path) -> None:
+    formatted_path = _finalized_requirements_proof(tmp_path, decision="pass")
+    proof = json.loads(formatted_path.read_text(encoding="utf-8"))
+    reordered_proof = dict(reversed(list(proof.items())))
+    compact_path = tmp_path / "compact-proof.json"
+    compact_path.write_text(json.dumps(reordered_proof, separators=(",", ":")), encoding="utf-8")
+
+    formatted_context = run_commands._requirements_evidence_context(formatted_path)
+    compact_context = run_commands._requirements_evidence_context(compact_path)
+    canonical_payload = json.dumps(proof, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+    assert formatted_context.content_digest == compact_context.content_digest
+    assert formatted_context.content_digest == f"sha256:{hashlib.sha256(canonical_payload).hexdigest()}"
+
+
+def test_run_command_rejects_incomplete_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:
+    def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
+        pytest.fail("Requirements evidence validation must run before review execution.")
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", unexpected_review)
+    proof_path = tmp_path / "incomplete-requirements-proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "2",
+                "gate_decision": "pass",
+                "mapping_digest": "sha256:" + "a" * 64,
+                "plan_digest": "sha256:" + "b" * 64,
+                "execution_proof": {"run_stage": "final", "source_ref": "c" * 40},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--requirements-evidence",
+            str(proof_path),
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code != 0
+
+
+def test_requirements_evidence_context_rejects_tampered_plan_digest(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["plan"]["cases"][0]["case_id"] = "FORGED-001"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    with pytest.raises(run_commands.RunCommandError, match="complete final Requirements proof"):
+        run_commands._requirements_evidence_context(proof_path)
+
+
+def test_requirements_evidence_context_rejects_passing_proof_without_basis(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    del proof["execution_proof"]["proof_basis"]
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    with pytest.raises(run_commands.RunCommandError, match="complete final Requirements proof"):
+        run_commands._requirements_evidence_context(proof_path)
+
+
+def test_requirements_evidence_context_accepts_legacy_tdd_ledger_basis(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass", proof_basis="legacy-tdd-ledger")
+
+    context = run_commands._requirements_evidence_context(proof_path)
+
+    assert context.gate_decision == "pass"
+
+
+def test_requirements_evidence_context_rejects_legacy_basis_without_ledger(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass", proof_basis="legacy-tdd-ledger")
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    del proof["legacy_tdd_evidence"]
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    with pytest.raises(run_commands.RunCommandError, match="complete final Requirements proof"):
+        run_commands._requirements_evidence_context(proof_path)
+
+
+def test_run_command_preserves_changed_enforcement_when_attaching_requirements_evidence(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review",
+        lambda files, **_kwargs: _changed_enforcement_report(),
+    )
+    out = tmp_path / "review-report.json"
+
+    exit_code, _ = run_commands.run_command(
+        [FIXTURE_FILE],
+        json_output=True,
+        out=out,
+        requirements_evidence=_finalized_requirements_proof(tmp_path),
+    )
+
+    report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert report.overall_verdict == "PASS_WITH_ADVISORY"
+    assert report.ci_exit_code == 0
+    assert report.enforcement_mode == "changed"
+    assert report.requirements_evidence is not None
+
+
+def test_run_command_rejects_nonfinal_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:
+    def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
+        pytest.fail("Requirements evidence validation must run before review execution.")
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", unexpected_review)
+    proof_path = _finalized_requirements_proof(tmp_path)
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["execution_proof"]["run_stage"] = "red"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--requirements-evidence",
+            str(proof_path),
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "finalized Requirements evidence" in result.output
+
+
+@pytest.mark.parametrize("schema_version", ["1", "3"])
+def test_run_command_rejects_non_v2_requirements_evidence_before_review(
+    monkeypatch: Any, tmp_path: Path, schema_version: str
+) -> None:
+    def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
+        pytest.fail("Requirements evidence validation must run before review execution.")
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", unexpected_review)
+    proof_path = _finalized_requirements_proof(tmp_path, schema_version=schema_version)
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--requirements-evidence",
+            str(proof_path),
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "schema_version=2" in result.output
 
 
 def test_run_command_score_only_prints_reward_delta(monkeypatch: Any) -> None:

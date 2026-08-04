@@ -394,6 +394,8 @@ jobs:
               entry["bundle_dependencies"] = manifest["bundle_dependencies"]
             if "description" in manifest:
               entry["description"] = manifest["description"]
+            if "core_compatibility" in manifest:
+              entry["core_compatibility"] = manifest["core_compatibility"]
 
             print(f"Published registry artifact for {module_id} v{version}")
 

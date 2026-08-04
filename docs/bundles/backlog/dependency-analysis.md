@@ -17,15 +17,14 @@ Use SpecFact to build a provider-agnostic dependency graph from backlog tools an
 
 ```bash
 specfact backlog analyze-deps --project-id <id> --adapter <github|ado> --template <template>
-specfact backlog trace-impact <item-id> --project-id <id> --adapter <github|ado>
 specfact backlog verify-readiness --project-id <id> --adapter <github|ado>
-specfact backlog export-roadmap --project-id <id> --adapter <github|ado>   # via project command: see devops flow guide
+specfact project export-roadmap --bundle <bundle>
 ```
 
 ## Typical Flow
 
 1. Run `analyze-deps` to compute typed coverage, orphans, cycles, and critical path.
-2. Run `trace-impact` for candidate changes to estimate downstream blast radius.
+2. Inspect the `analyze-deps` graph before making candidate changes to estimate downstream blast radius.
 3. Run `verify-readiness` before release for blocker and child-completion checks.
 
 ## Templates

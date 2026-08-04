@@ -14,6 +14,7 @@ from specfact_code_review.run.findings import (
     GuidanceKindForecast,
     PreserveReasonEvidence,
     RemediationPacket,
+    RequirementsEvidenceContext,
     ReviewedLoc,
     ReviewFinding,
     ReviewReport,
@@ -435,6 +436,64 @@ def test_review_report_maps_pass_verdict() -> None:
     assert report.overall_verdict == "PASS"
     assert report.ci_exit_code == 0
     assert report.reward_delta == 5
+
+
+def test_review_report_uses_schema_1_5_for_requirements_evidence() -> None:
+    report = ReviewReport(
+        run_id="run-requirements-context",
+        timestamp=datetime(2026, 8, 4, tzinfo=UTC),
+        score=85,
+        findings=[],
+        summary="Finalized Requirements provenance.",
+        requirements_evidence=RequirementsEvidenceContext(
+            path="artifacts/requirements-evidence.json",
+            content_digest="sha256:" + "a" * 64,
+            mapping_digest="sha256:" + "b" * 64,
+            plan_digest="sha256:" + "c" * 64,
+            source_ref="d" * 40,
+            gate_decision="pass",
+        ),
+    )
+
+    assert report.schema_version == "1.5"
+    assert report.requirements_evidence is not None
+
+
+@pytest.mark.parametrize(
+    ("legacy_payload", "expected_schema_version"),
+    [
+        (
+            {
+                "schema_version": "1.2",
+                "run_id": "legacy-guided",
+                "timestamp": "2026-03-11T00:00:00Z",
+                "score": 85,
+                "findings": [],
+                "summary": "Legacy guided report.",
+            },
+            "1.2",
+        ),
+        (
+            {
+                "schema_version": "1.4",
+                "run_id": "legacy-enforcement",
+                "timestamp": "2026-03-11T00:00:00Z",
+                "score": 85,
+                "findings": [],
+                "summary": "Legacy enforcement report.",
+                "enforcement_mode": "changed",
+            },
+            "1.4",
+        ),
+    ],
+)
+def test_review_report_accepts_legacy_schema_fixtures_without_requirements_provenance(
+    legacy_payload: dict[str, Any], expected_schema_version: str
+) -> None:
+    report = ReviewReport.model_validate(legacy_payload)
+
+    assert report.schema_version == expected_schema_version
+    assert report.requirements_evidence is None
 
 
 def test_review_report_uses_schema_1_1_when_simplification_metadata_is_present() -> None:

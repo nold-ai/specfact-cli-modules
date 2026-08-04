@@ -1,5 +1,5 @@
 name: nold-ai/specfact-code-review
-version: 0.47.52
+version: 0.48.15
 commands:
   - code
 tier: official
@@ -8,6 +8,7 @@ publisher:
   email: hello@noldai.com
 bundle_dependencies:
   - nold-ai/specfact-codebase
+  - nold-ai/specfact-requirements
 pip_dependencies:
   - basedpyright
   - crosshair-tool
@@ -18,10 +19,10 @@ pip_dependencies:
   - requests
   - ruff
   - semgrep
-core_compatibility: '>=0.44.0,<1.0.0'
+core_compatibility: '>=0.53.1,<1.0.0'
 description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:2fc7b2456493245328c294008e17a72a224edfeb7c3ca2fc581b5de94fe941ca
-  signature: QJB9dXYvdTTzboXBRGGqMXoEKvoVdVwK/B9NVZ/xk2F8QwusMkXMGVqmQzF+biH4xIaujqK94wqw30s2yIUMDQ==
+  checksum: sha256:4fe9721bf68c2652df709e05ed67dbd4993d7a67bc49b7e03d10331d321c8972
+  signature: oVoWuWg14QEbQP+zF7N+qSxp58gCiu7W9oQkQ3ByA7Hn6A+AlMICWHLRar8TkReI4kzn9FwSLK+YZFU2SlzBBA==

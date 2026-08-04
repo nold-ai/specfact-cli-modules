@@ -17,13 +17,14 @@ Backlog module command surface:
 
 - `specfact backlog add`
 - `specfact backlog analyze-deps`
-- `specfact backlog trace-impact`
 - `specfact backlog verify-readiness`
 - `specfact backlog diff`
 - `specfact backlog sync`
 - `specfact backlog promote`
-- `specfact backlog generate-release-notes`
-- `specfact backlog delta status|impact|cost-estimate|rollback-analysis`
+- `specfact backlog delta status`
+- `specfact backlog delta impact`
+- `specfact backlog delta cost-estimate`
+- `specfact backlog delta rollback-analysis`
 
 ## Backlog Issue Creation (`backlog add`)
 

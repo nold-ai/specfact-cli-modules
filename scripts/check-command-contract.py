@@ -22,12 +22,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 COMMANDS_JSON = REPO_ROOT / "docs" / "reference" / "commands.generated.json"
 APP_MOUNTS = (
     ("specfact_backlog.backlog.commands", "app", ("specfact", "backlog")),
+    ("specfact_backlog.policy_engine.commands", "app", ("specfact", "backlog", "policy")),
     ("specfact_codebase.code.commands", "app", ("specfact", "code")),
-    ("specfact_code_review.review.commands", "app", ("specfact", "code", "review")),
+    ("specfact_code_review.review.commands", "review_app", ("specfact", "code", "review")),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern")),
     ("specfact_project.project.commands", "app", ("specfact", "project")),
     ("specfact_requirements.requirements.commands", "app", ("specfact", "requirements")),
+    ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
+    ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd")),
+    ("specfact_spec.generate.commands", "app", ("specfact", "spec", "generate")),
 )
 MISSING_MARKERS = (
     "missing",

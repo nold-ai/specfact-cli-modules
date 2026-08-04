@@ -39,3 +39,94 @@
 - **Proof:** ANSI-styled CLI help is checked semantically, unsafe selectors and
   unsafe or oversized JUnit are rejected, and only a complete passing
   `test-authored` plan can enter reconciliation.
+
+## Failing-before Code Review Requirements-context remediation
+
+- **Recorded:** 2026-08-04 (Europe/Berlin)
+- **Command:** `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_non_v2_requirements_evidence_before_review tests/unit/specfact_code_review/run/test_findings.py::test_review_report_uses_schema_1_5_for_requirements_evidence -q`
+- **Result:** failed as expected (3 failures).
+- **Failure:** schema-v1 and schema-v3 finalized-looking proof packets reached
+  review execution, and a report containing Requirements provenance retained
+  schema version `1.0`.
+- **Intent:** establish the compatibility boundary before accepting only
+  finalized schema-v2 provenance for core #662.
+
+## Passing Code Review Requirements context
+
+- **Recorded:** 2026-08-04 (Europe/Berlin)
+- **Commands:**
+  - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_non_v2_requirements_evidence_before_review tests/unit/specfact_code_review/run/test_findings.py::test_review_report_uses_schema_1_5_for_requirements_evidence tests/unit/specfact_code_review/run/test_findings.py::test_review_report_accepts_legacy_schema_fixtures_without_requirements_provenance -q`
+  - `openspec validate requirements-07-scenario-runtime-proof --strict`
+- **Result:** focused regression and legacy-compatibility tests passed; strict
+  OpenSpec validation passed.
+- **Proof:** `specfact code review run --requirements-evidence <path>` accepts
+  only a finalized schema-v2 proof, emits report schema `1.5` with its
+  path/digests/source/verdict in review JSON, and does not use the Requirements
+  verdict to calculate the review exit code or verdict.
+
+## Review-remediation proof-completeness evidence
+
+- **Recorded:** 2026-08-05 (Europe/Berlin)
+- **Failing-before command:** `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_commands.py tests/unit/scripts/test_generate_command_overview.py tests/unit/test_check_docs_commands_script.py`
+- **Result:** 4 failed, 75 passed as expected.
+- **Failures:** Code Review accepted a schema-v2 packet that lacked the
+  submitted and execution plans, selectors, maturity, findings, and JUnit
+  digest; the command inventory emitted `govern enforce` paths twice; and the
+  docs checker accepted `specfact code import import`.
+- **Passing-after command:** `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_commands.py tests/unit/scripts/test_generate_command_overview.py tests/unit/test_check_docs_commands_script.py`
+- **Result:** 79 passed.
+- **Proof:** Code Review rejects incomplete final Requirements proof packets
+  before review execution; published command records are unique; and docs
+  validation rejects duplicated executable command tokens.
+## Failing-before legacy TDD ledger migration
+
+- **Recorded:** 2026-08-04 (Europe/Berlin)
+- **Command:** `hatch run pytest tests/unit/specfact_requirements/test_requirements_lifecycle.py::test_final_reconciliation_records_a_matching_legacy_tdd_ledger -q`
+- **Result:** failed as expected (1 failure).
+- **Failure:** `reconcile_junit()` did not accept an explicit
+  `legacy_tdd_evidence` record, so a previously recorded TDD-first ledger
+  could not serve as a transparent one-time migration basis.
+- **Intent:** preserve strict red-JUnit enforcement for normal delivery while
+  making legacy evidence visibly distinct from red proof.
+
+## Passing-after legacy TDD ledger migration
+
+- **Recorded:** 2026-08-04 (Europe/Berlin)
+- **Command:** `hatch run pytest tests/unit/specfact_requirements/test_requirements_lifecycle.py tests/integration/specfact_requirements/test_command_apps.py::test_requirements_evidence_exposes_lifecycle_options_and_reconciliation -q`
+- **Result:** 15 passed.
+- **Proof:** final reconciliation accepts only a matching, explicit ledger
+  record; stale records, ambiguous proof bases, and red-stage ledger use do
+  not waive the normal red-proof requirement. A successful migration reports
+  `implementation_evidence: passing-after-legacy-tdd-ledger` rather than
+  claiming JUnit red proof.
+
+## Passing-proof-basis consumer validation
+
+- **Recorded:** 2026-08-05 (Europe/Berlin)
+- **Failing-before command:** `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_commands.py -k passing_proof_without_basis`
+- **Result:** failed as expected (1 failure, 59 deselected).
+- **Failure:** Code Review accepted a structurally complete passing final
+  Requirements proof after its `execution_proof.proof_basis` was removed.
+- **Passing-after command:** `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_commands.py`
+- **Result:** 62 passed.
+- **Proof:** Code Review accepts passing provenance only with `red-junit`, or
+  with `legacy-tdd-ledger` plus a matching digest-bound legacy ledger record;
+  missing or unrecognized bases are rejected before review execution.
+
+## Final migration quality evidence
+
+- **Recorded:** 2026-08-04 (Europe/Berlin)
+- **Commands:** `hatch run format`, `hatch run type-check`, `hatch run lint`,
+  `hatch run yaml-lint`, `hatch run check-bundle-imports`, `hatch run
+  contract-test`, `hatch run smart-test`, `openspec validate
+  requirements-07-scenario-runtime-proof --strict`, and `hatch run specfact
+  code review run --enforcement changed --bug-hunt --json --out
+  .specfact/code-review.json`.
+- **Result:** format, type, lint, YAML, bundle-import, contract, smart-test,
+  and strict OpenSpec validation passed. The final changed-scope review has no
+  blocking findings.
+- **Reviewed advisory:** the remaining informational AI-bloat suggestion is on
+  the pre-existing `evidence_command` orchestration. It is outside this
+  migration's behavioral change; collapsing it would mix an unrelated
+  readability refactor into a release-critical provenance fix. It is retained
+  intentionally and does not change the reviewed reconciliation surface.

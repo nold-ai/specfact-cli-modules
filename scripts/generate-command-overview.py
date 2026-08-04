@@ -30,8 +30,19 @@ LLMS_PATH = REPO_ROOT / "llms.txt"
 
 MODULE_APP_MOUNTS = (
     ("specfact_backlog.backlog.commands", "app", ("specfact", "backlog"), "nold-ai/specfact-backlog"),
+    (
+        "specfact_backlog.policy_engine.commands",
+        "app",
+        ("specfact", "backlog", "policy"),
+        "nold-ai/specfact-backlog",
+    ),
     ("specfact_codebase.code.commands", "app", ("specfact", "code"), "nold-ai/specfact-codebase"),
-    ("specfact_code_review.review.commands", "app", ("specfact", "code", "review"), "nold-ai/specfact-code-review"),
+    (
+        "specfact_code_review.review.commands",
+        "review_app",
+        ("specfact", "code", "review"),
+        "nold-ai/specfact-code-review",
+    ),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern"), "nold-ai/specfact-govern"),
     ("specfact_project.project.commands", "app", ("specfact", "project"), "nold-ai/specfact-project"),
     (
@@ -40,7 +51,20 @@ MODULE_APP_MOUNTS = (
         ("specfact", "requirements"),
         "nold-ai/specfact-requirements",
     ),
+    (
+        "specfact_spec.contract.commands",
+        "app",
+        ("specfact", "spec", "contract"),
+        "nold-ai/specfact-spec",
+    ),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec"), "nold-ai/specfact-spec"),
+    ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd"), "nold-ai/specfact-spec"),
+    (
+        "specfact_spec.generate.commands",
+        "app",
+        ("specfact", "spec", "generate"),
+        "nold-ai/specfact-spec",
+    ),
 )
 RUNTIME_VALIDATED_GROUPS = frozenset(
     {
@@ -149,6 +173,7 @@ def _official_metadata_drift(
         for package_id, manifest in sorted(manifests.items())
         for manifest_field, registry_field in OFFICIAL_METADATA_FIELDS
         if manifest.get(manifest_field) != registry[package_id].get(registry_field)
+        and not _manifest_release_is_pending_publication(manifest, registry[package_id])
     ]
     return [
         *metadata_drift,
@@ -158,6 +183,18 @@ def _official_metadata_drift(
             for finding in _official_release_metadata_drift(package_id, manifest, registry[package_id])
         ),
     ]
+
+
+def _manifest_release_is_pending_publication(manifest: Mapping[str, object], registry: Mapping[str, object]) -> bool:
+    """Return whether CI/CD has yet to publish a newer manifest release."""
+    manifest_version = manifest.get("version")
+    registry_version = registry.get("latest_version")
+    if not isinstance(manifest_version, str) or not isinstance(registry_version, str):
+        return False
+    try:
+        return Version(manifest_version) > Version(registry_version)
+    except InvalidVersion:
+        return False
 
 
 def _official_release_metadata_drift(

@@ -86,6 +86,8 @@ def test_missing_command_docs_pages_exist_and_cover_expected_commands() -> None:
         assert page_text.startswith("---\n"), f"missing front matter: {relative_path}"
         for snippet in expected_snippets:
             assert snippet in page_text, f"{relative_path} missing snippet: {snippet}"
+        if relative_path == "docs/bundles/code-review/run.md":
+            assert "specfact code review review run" not in page_text
 
 
 def test_bundle_overviews_link_to_new_command_reference_pages() -> None:

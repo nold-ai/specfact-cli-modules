@@ -96,6 +96,16 @@ remain supported. New proof fields are versioned and deterministic. Any schema
 version transition includes fixtures proving old-report reading and explicit
 rejection of unsupported future versions.
 
+### Keep review context provenance-only
+
+`specfact code review run --requirements-evidence <path>` accepts only a
+readable finalized schema-v2 Requirements proof. Code Review records the
+evidence path, canonical content digest, mapping digest, plan digest, source
+reference, and Requirements gate decision as a dedicated review-report context.
+The Requirements decision is not a review finding and never changes review
+score, verdict, or exit status. Invalid or non-final evidence is rejected
+before any review process starts.
+
 ## Risks and Mitigations
 
 - **False proof from path-level matching**: require exact test case identities

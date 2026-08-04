@@ -77,3 +77,10 @@ def test_publish_modules_tracks_registry_signatures_in_publish_commit() -> None:
 
     assert "git diff --quiet -- registry/index.json registry/modules registry/signatures" in workflow
     assert "git add registry/index.json registry/modules registry/signatures" in workflow
+
+
+def test_publish_modules_propagates_core_compatibility_to_registry() -> None:
+    block = _publish_python_block()
+
+    assert 'if "core_compatibility" in manifest:' in block
+    assert 'entry["core_compatibility"] = manifest["core_compatibility"]' in block
