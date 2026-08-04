@@ -173,6 +173,7 @@ def _official_metadata_drift(
         for package_id, manifest in sorted(manifests.items())
         for manifest_field, registry_field in OFFICIAL_METADATA_FIELDS
         if manifest.get(manifest_field) != registry[package_id].get(registry_field)
+        and not _manifest_release_is_pending_publication(manifest, registry[package_id])
     ]
     return [
         *metadata_drift,
@@ -182,6 +183,18 @@ def _official_metadata_drift(
             for finding in _official_release_metadata_drift(package_id, manifest, registry[package_id])
         ),
     ]
+
+
+def _manifest_release_is_pending_publication(manifest: Mapping[str, object], registry: Mapping[str, object]) -> bool:
+    """Return whether CI/CD has yet to publish a newer manifest release."""
+    manifest_version = manifest.get("version")
+    registry_version = registry.get("latest_version")
+    if not isinstance(manifest_version, str) or not isinstance(registry_version, str):
+        return False
+    try:
+        return Version(manifest_version) > Version(registry_version)
+    except InvalidVersion:
+        return False
 
 
 def _official_release_metadata_drift(

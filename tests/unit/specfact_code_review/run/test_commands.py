@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import pytest
+import yaml
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
@@ -108,6 +109,14 @@ def _finalized_requirements_proof(
         encoding="utf-8",
     )
     return proof_path
+
+
+def test_code_review_manifest_declares_requirements_runtime_dependency() -> None:
+    """Keep the producer package available for Requirements-proof validation."""
+    manifest_path = REPO_ROOT / "packages" / "specfact-code-review" / "module-package.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+
+    assert "nold-ai/specfact-requirements" in manifest["bundle_dependencies"]
 
 
 def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:

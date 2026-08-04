@@ -44,3 +44,53 @@ def test_generated_command_inventory_has_no_duplicate_paths() -> None:
     commands = [record["command"] for record in overview.build_records()]
 
     assert len(commands) == len(set(commands))
+
+
+def test_unpublished_manifest_metadata_may_lead_registry() -> None:
+    """Allow CI/CD to publish metadata for a manifest version not yet in the registry."""
+    overview = _load_overview_module()
+    manifest = {
+        "version": "1.2.4",
+        "tier": "official",
+        "publisher": {"name": "nold-ai"},
+        "bundle_dependencies": ["nold-ai/specfact-requirements"],
+        "description": "Current module metadata.",
+        "core_compatibility": ">=0.53.1,<1.0.0",
+    }
+    registry = {
+        "latest_version": "1.2.3",
+        "download_url": "modules/example-1.2.3.tar.gz",
+        "tier": "official",
+        "publisher": {"name": "nold-ai"},
+        "bundle_dependencies": [],
+        "description": "Previous module metadata.",
+        "core_compatibility": ">=0.52.0,<1.0.0",
+    }
+
+    assert overview._official_metadata_drift({"nold-ai/example": manifest}, {"nold-ai/example": registry}) == []
+
+
+def test_published_manifest_metadata_must_match_registry() -> None:
+    """Keep registry metadata authoritative once a manifest version is published."""
+    overview = _load_overview_module()
+    manifest = {
+        "version": "1.2.3",
+        "tier": "official",
+        "publisher": {"name": "nold-ai"},
+        "bundle_dependencies": ["nold-ai/specfact-requirements"],
+        "description": "Current module metadata.",
+        "core_compatibility": ">=0.53.1,<1.0.0",
+    }
+    registry = {
+        "latest_version": "1.2.3",
+        "download_url": "modules/example-1.2.3.tar.gz",
+        "tier": "official",
+        "publisher": {"name": "nold-ai"},
+        "bundle_dependencies": [],
+        "description": "Current module metadata.",
+        "core_compatibility": ">=0.53.1,<1.0.0",
+    }
+
+    assert overview._official_metadata_drift({"nold-ai/example": manifest}, {"nold-ai/example": registry}) == [
+        "nold-ai/example: manifest.bundle_dependencies != registry.bundle_dependencies"
+    ]
