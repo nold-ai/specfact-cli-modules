@@ -42,6 +42,7 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 | `--fix` | Apply Ruff autofixes, then rerun the review |
 | `--preview-fixes` | For **`--focus simplify`**, compute non-mutating patch evidence for supported safe-mechanical simplification fixers |
 | `--with-mutation` | For **`--focus simplify`**, record opt-in mutation proof evidence for cleanup candidates; unavailable tooling is inconclusive |
+| `--requirements-evidence <path>` | Attach a finalized schema-v2 Requirements proof as independent provenance in the review JSON; it does not affect the review verdict or exit code |
 | `--interactive` | Prompt for scope decisions before execution |
 | `--instructions` | Print AI-facing simplify / clean-code workflow instructions and exit without running review |
 
@@ -61,6 +62,30 @@ The Typer entrypoint validates **review flags** first: it raises **`typer.BadPar
 - **`--with-mutation` without simplify focus**: mutation proof is scoped to cleanup candidates. Runtime error: **`Use --with-mutation only with --focus simplify.`**
 
 **Supported targeting:** either pass **positional file paths** for a fixed review set (the pipeline still only reviews Python sources it accepts, such as **`.py`** / **`.pyi`**), or omit files and use **`--scope`** / **`--path`** (and related test flags) for auto-discovery — do not mix positional paths with **`--scope`** or **`--path`**.
+
+## Requirements proof context
+
+Use **`--requirements-evidence <path>`** to retain the provenance of a completed
+Requirements proof beside the review result. The input must be a complete,
+readable finalized proof accepted by the runtime loader: **`schema_version:
+"2"`**, **`execution_proof.run_stage: "final"`**, valid SHA-256
+**`mapping_digest`** and **`plan_digest`** values, a 40- or 64-character
+hexadecimal **`execution_proof.source_ref`**, and a **`gate_decision`** of
+`pass` or `fail`.
+The resulting `ReviewReport` uses schema version **`1.5`** and records the
+proof path, content digest, mapping and plan digests, source revision, and the
+Requirements gate decision under `requirements_evidence`.
+
+This is context only: Code Review does not reinterpret the Requirements proof,
+and the Requirements decision neither changes the review verdict nor its exit
+code. A finalized Requirements failure can therefore remain visible as
+provenance while an otherwise clean review reports its own independent result.
+
+```bash
+specfact code review run --json --out .specfact/code-review.json \
+  --requirements-evidence artifacts/requirements-evidence.json \
+  packages/specfact-code-review/src/specfact_code_review/run/commands.py
+```
 
 ## Examples
 

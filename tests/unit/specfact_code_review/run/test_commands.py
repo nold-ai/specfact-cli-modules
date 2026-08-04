@@ -42,6 +42,61 @@ def _report(*, score: int = 85) -> ReviewReport:
     )
 
 
+def _changed_enforcement_report() -> ReviewReport:
+    blocking_finding = ReviewFinding(
+        category="contracts",
+        severity="error",
+        tool="ast",
+        rule="legacy-blocker",
+        file="legacy.py",
+        line=1,
+        message="Legacy blocking finding retained as evidence.",
+        fixable=False,
+        confidence="high",
+    )
+    report = ReviewReport(
+        run_id="review-changed-enforcement",
+        timestamp=datetime(2026, 8, 4, tzinfo=UTC),
+        score=85,
+        findings=[blocking_finding],
+        summary="Changed enforcement excludes the legacy blocker.",
+    )
+    return report.model_copy(
+        update={
+            "overall_verdict": "PASS_WITH_ADVISORY",
+            "ci_exit_code": 0,
+            "enforcement_mode": "changed",
+            "enforcement_summary": "Changed enforcement excludes the legacy blocker.",
+            "schema_version": "1.4",
+        }
+    )
+
+
+def _finalized_requirements_proof(
+    tmp_path: Path,
+    *,
+    decision: str = "fail",
+    schema_version: str = "2",
+) -> Path:
+    proof_path = tmp_path / "requirements-proof.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema_version": schema_version,
+                "gate_decision": decision,
+                "mapping_digest": "sha256:" + "a" * 64,
+                "plan_digest": "sha256:" + "b" * 64,
+                "execution_proof": {
+                    "run_stage": "final",
+                    "source_ref": "c" * 40,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return proof_path
+
+
 def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:
     return ReviewFinding(
         category="ai_bloat",
@@ -123,6 +178,104 @@ def test_run_command_default_json_output_path_uses_review_report(monkeypatch: An
     assert output == "review-report.json"
     report = ReviewReport.model_validate_json((tmp_path / "review-report.json").read_text(encoding="utf-8"))
     assert report.run_id == "review-run-001"
+
+
+def test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review",
+        lambda files, **_kwargs: _report(),
+    )
+    proof_path = _finalized_requirements_proof(tmp_path, decision="fail")
+    out = tmp_path / "review-report.json"
+
+    exit_code, output = run_commands.run_command(
+        [FIXTURE_FILE],
+        json_output=True,
+        out=out,
+        requirements_evidence=proof_path,
+    )
+
+    report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert output == str(out)
+    assert report.requirements_evidence.gate_decision == "fail"  # type: ignore[union-attr]
+    assert report.requirements_evidence.source_ref == "c" * 40  # type: ignore[union-attr]
+
+
+def test_run_command_preserves_changed_enforcement_when_attaching_requirements_evidence(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review",
+        lambda files, **_kwargs: _changed_enforcement_report(),
+    )
+    out = tmp_path / "review-report.json"
+
+    exit_code, _ = run_commands.run_command(
+        [FIXTURE_FILE],
+        json_output=True,
+        out=out,
+        requirements_evidence=_finalized_requirements_proof(tmp_path),
+    )
+
+    report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert report.overall_verdict == "PASS_WITH_ADVISORY"
+    assert report.ci_exit_code == 0
+    assert report.enforcement_mode == "changed"
+    assert report.requirements_evidence is not None
+
+
+def test_run_command_rejects_nonfinal_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:
+    def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
+        pytest.fail("Requirements evidence validation must run before review execution.")
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", unexpected_review)
+    proof_path = _finalized_requirements_proof(tmp_path)
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["execution_proof"]["run_stage"] = "red"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--requirements-evidence",
+            str(proof_path),
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "finalized Requirements evidence" in result.output
+
+
+@pytest.mark.parametrize("schema_version", ["1", "3"])
+def test_run_command_rejects_non_v2_requirements_evidence_before_review(
+    monkeypatch: Any, tmp_path: Path, schema_version: str
+) -> None:
+    def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
+        pytest.fail("Requirements evidence validation must run before review execution.")
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", unexpected_review)
+    proof_path = _finalized_requirements_proof(tmp_path, schema_version=schema_version)
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--requirements-evidence",
+            str(proof_path),
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "schema_version=2" in result.output
 
 
 def test_run_command_score_only_prints_reward_delta(monkeypatch: Any) -> None:

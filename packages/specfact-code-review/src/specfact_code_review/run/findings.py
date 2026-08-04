@@ -450,6 +450,17 @@ class SimplificationSummary(BaseModel):
     kept_count: int = Field(default=0, ge=0)
 
 
+class RequirementsEvidenceContext(BaseModel):
+    """Immutable provenance from a finalized Requirements proof packet."""
+
+    path: str = Field(..., min_length=1)
+    content_digest: str = Field(..., pattern=r"^sha256:[0-9a-f]{64}$")
+    mapping_digest: str = Field(..., pattern=r"^sha256:[0-9a-f]{64}$")
+    plan_digest: str = Field(..., pattern=r"^sha256:[0-9a-f]{64}$")
+    source_ref: str = Field(..., pattern=r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+    gate_decision: Literal["pass", "fail"]
+
+
 class ReviewReport(BaseModel):
     """Governance-aligned evidence envelope for code review results."""
 
@@ -481,6 +492,10 @@ class ReviewReport(BaseModel):
         default=None,
         description="Human-readable explanation of enforcement mode and blocking evidence.",
     )
+    requirements_evidence: RequirementsEvidenceContext | None = Field(
+        default=None,
+        description="Finalized Requirements proof provenance; it does not affect the review verdict.",
+    )
     house_rules_updates: list[str] = Field(default_factory=list, description="Suggested house-rules updates.")
 
     @field_validator("schema_version", "run_id", "summary")
@@ -497,22 +512,31 @@ class ReviewReport(BaseModel):
             return value.replace(tzinfo=UTC)
         return value.astimezone(UTC)
 
+    def _schema_version(self) -> str:
+        """Return the evidence schema version required by the present report fields."""
+        if self.requirements_evidence is not None:
+            return "1.5"
+        if self.enforcement_mode is not None:
+            return "1.4"
+        if self.cleanup_forecast is not None or any(
+            finding.has_cleanup_handoff_metadata() for finding in self.findings
+        ):
+            return "1.3"
+        if self.simplification_summary is not None:
+            return "1.2"
+        if any(finding.has_simplification_metadata() for finding in self.findings):
+            return "1.1"
+        return self.schema_version
+
     @model_validator(mode="after")
     def _derive_governance_fields(self) -> ReviewReport:
         if self.simplification_summary is None:
             self.simplification_summary = _build_simplification_summary(self.findings)
-        if self.enforcement_mode is not None:
-            self.schema_version = "1.4"
-        elif self.cleanup_forecast is not None or any(
-            finding.has_cleanup_handoff_metadata() for finding in self.findings
-        ):
-            self.schema_version = "1.3"
-        elif self.simplification_summary is not None:
-            self.schema_version = "1.2"
-        elif any(finding.has_simplification_metadata() for finding in self.findings):
-            self.schema_version = "1.1"
-        blocking_error_present = any(finding.is_blocking() for finding in self.findings)
+        self.schema_version = self._schema_version()
         self.reward_delta = self.score - 80
+        if self.enforcement_mode is not None and self.overall_verdict is not None and self.ci_exit_code is not None:
+            return self
+        blocking_error_present = any(finding.is_blocking() for finding in self.findings)
         if blocking_error_present:
             self.overall_verdict = FAIL
             self.ci_exit_code = 1

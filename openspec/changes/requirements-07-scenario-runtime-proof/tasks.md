@@ -15,8 +15,16 @@ its tests exist and have failed for the expected reason.
   from current `origin/dev`; verify branch and clean scope.
 - [x] 1.2 Create modules User Story #368; verify labels, project `Todo`, parent
   Feature #161, Epic #144, and native blocking relation to core #662.
-- [ ] 1.3 Before implementation, recheck that #368 is not already `In Progress`
-  elsewhere and verify the paired core proposal remains contract-compatible.
+- [x] 1.3 Recheck #368 ownership and verify the paired core proposal remains
+  contract-compatible. On 2026-08-04, #368 was confirmed as the active
+  `In Progress` item for this linked PR; the paired core #662 proposal/design
+  require finalized schema-v2 proof, independent review provenance, and no
+  verdict fusion. The shipped `nold-ai/specfact-cli` generated command
+  references do not yet expose `--requirements-evidence`; this is an explicit
+  release boundary, not a completed cross-repository publication. Core #662
+  remains blocked until this module version is published and core regenerates
+  its references from the released module metadata. This public context input
+  supplies the required contract without claiming the paired release is done.
 
 ## 2. Specification and failing evidence
 
@@ -46,6 +54,9 @@ its tests exist and have failed for the expected reason.
   source revisions, and result digest; do not invoke a test runner.
 - [x] 3.4 Keep output ordering, remediation, profile severity, and old-report
   compatibility deterministic across repeated runs.
+- [x] 3.5 Add a Code Review public context input that accepts only finalized
+  Requirements proof, preserves independent provenance in the review report,
+  and never fuses verdicts.
 
 ## 4. Passing evidence and integration proof
 

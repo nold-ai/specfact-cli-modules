@@ -8,13 +8,15 @@ and ask the user before guessing when help output disagrees.
 from __future__ import annotations
 
 import ast
+import hashlib
+import json
 import subprocess
 import sys
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from beartype import beartype
 from icontract import ensure, require
@@ -25,7 +27,7 @@ from specfact_code_review.run.cleanup_evidence import (
     with_mutation_evidence,
     with_previewed_simplification_findings,
 )
-from specfact_code_review.run.findings import EvidenceRef, ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import EvidenceRef, RequirementsEvidenceContext, ReviewFinding, ReviewReport
 from specfact_code_review.run.runner import ReviewFocus, run_review
 
 
@@ -79,6 +81,7 @@ class ReviewRunRequest:
     review_level: ReviewLevelFilter | None = None
     focus_facets: tuple[str, ...] = ()
     review_focus: ReviewFocus | None = None
+    requirements_evidence: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -851,11 +854,13 @@ def _build_review_run_request(
     scope_value = _get_optional_param("scope", _as_auto_scope)
     path_filters_value = _get_optional_param("path_filters", _as_path_filters)
     out_value = _get_optional_param("out", _as_optional_path)
+    requirements_evidence_value = _get_optional_param("requirements_evidence", _as_optional_path)
 
     # Cast the optional parameters to their proper types
     scope = cast(AutoScope | None, scope_value)
     path_filters = cast(list[Path] | None, path_filters_value)
     out = cast(Path | None, out_value)
+    requirements_evidence = cast(Path | None, requirements_evidence_value)
 
     focus_facets = cast(tuple[str, ...], _as_focus_facets(request_kwargs.pop("focus_facets", None)))
 
@@ -877,6 +882,7 @@ def _build_review_run_request(
         review_level=_as_review_level(request_kwargs.pop("review_level", None)),
         focus_facets=focus_facets,
         review_focus=_review_focus_from_facets(focus_facets),
+        requirements_evidence=requirements_evidence,
     )
 
     # Reject any unexpected keyword arguments
@@ -934,7 +940,36 @@ def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
         review_level=request.review_level,
         focus_facets=request.focus_facets,
         review_focus=_review_focus_from_facets(request.focus_facets),
+        requirements_evidence=request.requirements_evidence,
     )
+
+
+def _requirements_evidence_context(path: Path) -> RequirementsEvidenceContext:
+    """Read only a complete final Requirements proof for review provenance."""
+    try:
+        payload = path.read_bytes()
+        decoded = json.loads(payload)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RunCommandError("finalized Requirements evidence must be readable JSON") from error
+    if not isinstance(decoded, dict):
+        raise RunCommandError("finalized Requirements evidence must contain a JSON object")
+    if decoded.get("schema_version") != "2":
+        raise RunCommandError("finalized Requirements evidence must have schema_version=2")
+    execution_proof = decoded.get("execution_proof")
+    if not isinstance(execution_proof, dict) or execution_proof.get("run_stage") != "final":
+        raise RunCommandError("finalized Requirements evidence must have execution_proof.run_stage=final")
+    values: dict[str, Any] = {
+        "path": str(path),
+        "content_digest": f"sha256:{hashlib.sha256(payload).hexdigest()}",
+        "mapping_digest": decoded.get("mapping_digest"),
+        "plan_digest": decoded.get("plan_digest"),
+        "source_ref": execution_proof.get("source_ref"),
+        "gate_decision": decoded.get("gate_decision"),
+    }
+    try:
+        return RequirementsEvidenceContext.model_validate(values)
+    except ValueError as error:
+        raise RunCommandError("finalized Requirements evidence has invalid provenance") from error
 
 
 @beartype
@@ -975,6 +1010,11 @@ def run_command(
             else "No Python files to review were provided or detected."
         )
 
+    requirements_evidence = (
+        _requirements_evidence_context(request.requirements_evidence)
+        if request.requirements_evidence is not None
+        else None
+    )
     report = _run_review_with_progress(
         resolved_files,
         _ReviewLoopFlags(
@@ -990,6 +1030,13 @@ def run_command(
             review_focus=request.review_focus,
         ),
     )
+    if requirements_evidence is not None:
+        report = report.model_copy(
+            update={
+                "requirements_evidence": requirements_evidence,
+                "schema_version": "1.5",
+            }
+        )
     return _render_review_result(report, request)
 
 

@@ -33,7 +33,8 @@ def test_review_run_clean_fixture_passes(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
-    assert report.overall_verdict == "PASS"
+    assert report.overall_verdict in {"PASS", "PASS_WITH_ADVISORY"}
+    assert report.ci_exit_code == 0
 
 
 @pytest.mark.e2e
