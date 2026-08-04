@@ -1031,8 +1031,11 @@ def run_command(
         ),
     )
     if requirements_evidence is not None:
-        report = ReviewReport.model_validate(
-            report.model_dump(mode="json") | {"requirements_evidence": requirements_evidence.model_dump(mode="json")}
+        report = report.model_copy(
+            update={
+                "requirements_evidence": requirements_evidence,
+                "schema_version": "1.5",
+            }
         )
     return _render_review_result(report, request)
 

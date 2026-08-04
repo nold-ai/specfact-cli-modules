@@ -42,6 +42,36 @@ def _report(*, score: int = 85) -> ReviewReport:
     )
 
 
+def _changed_enforcement_report() -> ReviewReport:
+    blocking_finding = ReviewFinding(
+        category="contracts",
+        severity="error",
+        tool="ast",
+        rule="legacy-blocker",
+        file="legacy.py",
+        line=1,
+        message="Legacy blocking finding retained as evidence.",
+        fixable=False,
+        confidence="high",
+    )
+    report = ReviewReport(
+        run_id="review-changed-enforcement",
+        timestamp=datetime(2026, 8, 4, tzinfo=UTC),
+        score=85,
+        findings=[blocking_finding],
+        summary="Changed enforcement excludes the legacy blocker.",
+    )
+    return report.model_copy(
+        update={
+            "overall_verdict": "PASS_WITH_ADVISORY",
+            "ci_exit_code": 0,
+            "enforcement_mode": "changed",
+            "enforcement_summary": "Changed enforcement excludes the legacy blocker.",
+            "schema_version": "1.4",
+        }
+    )
+
+
 def _finalized_requirements_proof(
     tmp_path: Path,
     *,
@@ -172,6 +202,30 @@ def test_run_command_retains_finalized_requirements_provenance_without_verdict_f
     assert output == str(out)
     assert report.requirements_evidence.gate_decision == "fail"  # type: ignore[union-attr]
     assert report.requirements_evidence.source_ref == "c" * 40  # type: ignore[union-attr]
+
+
+def test_run_command_preserves_changed_enforcement_when_attaching_requirements_evidence(
+    monkeypatch: Any, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        "specfact_code_review.run.commands.run_review",
+        lambda files, **_kwargs: _changed_enforcement_report(),
+    )
+    out = tmp_path / "review-report.json"
+
+    exit_code, _ = run_commands.run_command(
+        [FIXTURE_FILE],
+        json_output=True,
+        out=out,
+        requirements_evidence=_finalized_requirements_proof(tmp_path),
+    )
+
+    report = ReviewReport.model_validate_json(out.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert report.overall_verdict == "PASS_WITH_ADVISORY"
+    assert report.ci_exit_code == 0
+    assert report.enforcement_mode == "changed"
+    assert report.requirements_evidence is not None
 
 
 def test_run_command_rejects_nonfinal_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:

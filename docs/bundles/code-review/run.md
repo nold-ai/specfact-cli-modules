@@ -66,8 +66,12 @@ The Typer entrypoint validates **review flags** first: it raises **`typer.BadPar
 ## Requirements proof context
 
 Use **`--requirements-evidence <path>`** to retain the provenance of a completed
-Requirements proof beside the review result. The input must be readable JSON
-with **`schema_version: "2"`** and **`execution_proof.run_stage: "final"`**.
+Requirements proof beside the review result. The input must be a complete,
+readable finalized proof accepted by the runtime loader: **`schema_version:
+"2"`**, **`execution_proof.run_stage: "final"`**, valid SHA-256
+**`mapping_digest`** and **`plan_digest`** values, a 40- or 64-character
+hexadecimal **`execution_proof.source_ref`**, and a **`gate_decision`** of
+`pass` or `fail`.
 The resulting `ReviewReport` uses schema version **`1.5`** and records the
 proof path, content digest, mapping and plan digests, source revision, and the
 Requirements gate decision under `requirements_evidence`.

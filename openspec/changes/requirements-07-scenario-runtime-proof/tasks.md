@@ -19,7 +19,12 @@ its tests exist and have failed for the expected reason.
   contract-compatible. On 2026-08-04, #368 was confirmed as the active
   `In Progress` item for this linked PR; the paired core #662 proposal/design
   require finalized schema-v2 proof, independent review provenance, and no
-  verdict fusion. This public context input supplies exactly that contract.
+  verdict fusion. The shipped `nold-ai/specfact-cli` generated command
+  references do not yet expose `--requirements-evidence`; this is an explicit
+  release boundary, not a completed cross-repository publication. Core #662
+  remains blocked until this module version is published and core regenerates
+  its references from the released module metadata. This public context input
+  supplies the required contract without claiming the paired release is done.
 
 ## 2. Specification and failing evidence
 
