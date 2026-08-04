@@ -100,6 +100,19 @@
   `implementation_evidence: passing-after-legacy-tdd-ledger` rather than
   claiming JUnit red proof.
 
+## Passing-proof-basis consumer validation
+
+- **Recorded:** 2026-08-05 (Europe/Berlin)
+- **Failing-before command:** `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_commands.py -k passing_proof_without_basis`
+- **Result:** failed as expected (1 failure, 59 deselected).
+- **Failure:** Code Review accepted a structurally complete passing final
+  Requirements proof after its `execution_proof.proof_basis` was removed.
+- **Passing-after command:** `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_commands.py`
+- **Result:** 62 passed.
+- **Proof:** Code Review accepts passing provenance only with `red-junit`, or
+  with `legacy-tdd-ledger` plus a matching digest-bound legacy ledger record;
+  missing or unrecognized bases are rejected before review execution.
+
 ## Final migration quality evidence
 
 - **Recorded:** 2026-08-04 (Europe/Berlin)

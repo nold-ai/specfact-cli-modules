@@ -1010,7 +1010,30 @@ def _proof_fields_are_complete(decoded: dict[str, Any], execution_proof: dict[st
             _is_sha256_digest(execution_proof.get("junit_digest")),
             bool(selectors),
             all(isinstance(selector, str) and selector for selector in selectors),
+            _passing_proof_basis_is_complete(decoded, execution_proof),
         )
+    )
+
+
+def _passing_proof_basis_is_complete(decoded: dict[str, Any], execution_proof: dict[str, Any]) -> bool:
+    """Require an auditable historical basis before accepting passing provenance."""
+    if decoded.get("gate_decision") != "pass":
+        return True
+    proof_basis = execution_proof.get("proof_basis")
+    if proof_basis == "red-junit":
+        return True
+    if proof_basis != "legacy-tdd-ledger":
+        return False
+    legacy_tdd_evidence = decoded.get("legacy_tdd_evidence")
+    return (
+        isinstance(legacy_tdd_evidence, dict)
+        and legacy_tdd_evidence.get("schema_version") == "1"
+        and legacy_tdd_evidence.get("kind") == "legacy-tdd-ledger"
+        and isinstance(legacy_tdd_evidence.get("change_id"), str)
+        and bool(legacy_tdd_evidence["change_id"])
+        and _is_sha256_digest(legacy_tdd_evidence.get("ledger_digest"))
+        and legacy_tdd_evidence.get("mapping_digest") == decoded.get("mapping_digest")
+        and legacy_tdd_evidence.get("plan_digest") == decoded.get("plan_digest")
     )
 
 

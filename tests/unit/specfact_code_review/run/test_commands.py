@@ -80,34 +80,42 @@ def _finalized_requirements_proof(
     *,
     decision: str = "fail",
     schema_version: str = "2",
+    proof_basis: Literal["red-junit", "legacy-tdd-ledger"] = "red-junit",
 ) -> Path:
     mapping_digest = "sha256:" + "a" * 64
     selector = "tests/fixtures/review/clean_module.py::test_clean_module"
     plan = build_plan(mapping_digest, [{"case_id": "REQ-001", "method": "test", "node_id": selector}])
     plan_digest = plan["plan_digest"]
     proof_path = tmp_path / "requirements-proof.json"
-    proof_path.write_text(
-        json.dumps(
-            {
-                "schema_version": schema_version,
-                "gate_decision": decision,
-                "required_maturity": "verified",
-                "observed_maturity": "verified" if decision == "pass" else "incomplete",
+    proof = {
+        "schema_version": schema_version,
+        "gate_decision": decision,
+        "required_maturity": "verified",
+        "observed_maturity": "verified" if decision == "pass" else "incomplete",
+        "mapping_digest": mapping_digest,
+        "plan_digest": plan_digest,
+        "findings": [] if decision == "pass" else ["uncollected-selector:" + selector],
+        "plan": plan,
+        "execution_plan": plan,
+        "execution_proof": {
+            "run_stage": "final",
+            "source_ref": "c" * 40,
+            "selectors": [selector],
+            "junit_digest": "sha256:" + "d" * 64,
+        },
+    }
+    if decision == "pass":
+        proof["execution_proof"]["proof_basis"] = proof_basis
+        if proof_basis == "legacy-tdd-ledger":
+            proof["legacy_tdd_evidence"] = {
+                "schema_version": "1",
+                "kind": "legacy-tdd-ledger",
+                "change_id": "requirements-07-runtime-proof-delivery",
+                "ledger_digest": "sha256:" + "e" * 64,
                 "mapping_digest": mapping_digest,
                 "plan_digest": plan_digest,
-                "findings": [] if decision == "pass" else ["uncollected-selector:" + selector],
-                "plan": plan,
-                "execution_plan": plan,
-                "execution_proof": {
-                    "run_stage": "final",
-                    "source_ref": "c" * 40,
-                    "selectors": [selector],
-                    "junit_digest": "sha256:" + "d" * 64,
-                },
             }
-        ),
-        encoding="utf-8",
-    )
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
     return proof_path
 
 
@@ -278,6 +286,34 @@ def test_requirements_evidence_context_rejects_tampered_plan_digest(tmp_path: Pa
     proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     proof["plan"]["cases"][0]["case_id"] = "FORGED-001"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    with pytest.raises(run_commands.RunCommandError, match="complete final Requirements proof"):
+        run_commands._requirements_evidence_context(proof_path)
+
+
+def test_requirements_evidence_context_rejects_passing_proof_without_basis(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    del proof["execution_proof"]["proof_basis"]
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    with pytest.raises(run_commands.RunCommandError, match="complete final Requirements proof"):
+        run_commands._requirements_evidence_context(proof_path)
+
+
+def test_requirements_evidence_context_accepts_legacy_tdd_ledger_basis(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass", proof_basis="legacy-tdd-ledger")
+
+    context = run_commands._requirements_evidence_context(proof_path)
+
+    assert context.gate_decision == "pass"
+
+
+def test_requirements_evidence_context_rejects_legacy_basis_without_ledger(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass", proof_basis="legacy-tdd-ledger")
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    del proof["legacy_tdd_evidence"]
     proof_path.write_text(json.dumps(proof), encoding="utf-8")
 
     with pytest.raises(run_commands.RunCommandError, match="complete final Requirements proof"):

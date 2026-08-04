@@ -28,9 +28,11 @@ its tests exist and have failed for the expected reason.
 
 ## 2. Specification and failing evidence
 
-- [ ] 2.1 Refine the scenario-proof specs only if current
-  release reality exposes a concrete ambiguity; mirror any paired contract
-  adjustment in core before implementation.
+- [x] 2.1 Refine the scenario-proof specs when current release reality exposes
+  a concrete ambiguity. On 2026-08-05, the Code Review consumer contract was
+  made explicit: a passing final proof retains a valid `red-junit` or
+  digest-bound `legacy-tdd-ledger` basis before it can be attached as review
+  provenance.
 - [x] 2.2 Add failing Requirements tests for schema-v2 proposal mappings,
   rationale/touchpoint/verification-case completeness, mapping digest,
   digest-bound acceptance, and explicit not-yet-available execution state.

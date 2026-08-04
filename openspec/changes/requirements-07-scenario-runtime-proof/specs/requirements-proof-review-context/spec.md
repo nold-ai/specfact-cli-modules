@@ -27,3 +27,13 @@ or exit code.
 - **THEN** it rejects the invocation before review execution
 - **AND** it does not emit a review report that could be mistaken for a
   Requirements-aware review.
+
+#### Scenario: Passing evidence retains its historical proof basis
+
+- **GIVEN** a structurally complete final Requirements proof with a passing
+  gate decision
+- **WHEN** Code Review receives it through the public context option
+- **THEN** it accepts only the `red-junit` proof basis or a
+  `legacy-tdd-ledger` basis with matching digest-bound ledger provenance
+- **AND** it rejects a missing or unrecognized proof basis before review
+  execution.
