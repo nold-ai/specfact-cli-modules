@@ -67,13 +67,13 @@
 - **Recorded:** 2026-08-04 (Europe/Berlin)
 - **Commands:** `hatch run format`, `hatch run type-check`, `hatch run lint`,
   `hatch run yaml-lint`, `hatch run check-bundle-imports`, `hatch run
-  contract-test`, `hatch run smart-test`, `openspec validate
+  contract-test`, `hatch run smart-test`, `hatch run test`, `openspec validate
   requirements-07-scenario-runtime-proof --strict`, and `hatch run specfact
   code review run --enforcement changed --bug-hunt --json --out
   .specfact/code-review.json`.
 - **Result:** format, type, lint, YAML, bundle-import, contract, smart-test,
-  and strict OpenSpec validation passed. The final changed-scope review has no
-  blocking findings.
+  full test, and strict OpenSpec validation passed. The final changed-scope
+  review has no blocking findings.
 - **Reviewed advisory:** the remaining informational AI-bloat suggestion is on
   the pre-existing `evidence_command` orchestration. It is outside this
   migration's behavioral change; collapsing it would mix an unrelated
