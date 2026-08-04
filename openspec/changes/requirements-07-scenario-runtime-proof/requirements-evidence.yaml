@@ -81,3 +81,17 @@ requirements:
           node_id: tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review
         intent: Reject non-final proof before Code Review starts.
         observable: Public CLI reports a finalized Requirements evidence validation error.
+  openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:auditable-legacy-tdd-ledger-migration:
+    rationale: Legacy TDD evidence must remain explicit and never be mislabeled as red JUnit proof.
+    stakeholder_refs:
+      - https://github.com/nold-ai/specfact-cli-modules/issues/368
+    touchpoints:
+      - id: requirements-legacy-ledger-migration
+        kind: cli_command
+        locator: specfact requirements reconcile --legacy-tdd-evidence
+    verification_cases:
+      - case_id: lifecycle-legacy-tdd-ledger
+        scenario_id: auditable-legacy-tdd-ledger-migration
+        method: test
+        intent: Reject stale or misplaced legacy ledger records.
+        observable: Final reports label a valid ledger transition without claiming red proof.

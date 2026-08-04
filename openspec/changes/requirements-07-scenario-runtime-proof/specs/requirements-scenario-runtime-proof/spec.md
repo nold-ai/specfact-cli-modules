@@ -125,3 +125,31 @@ from a JUnit display name or class name.
 - **WHEN** reconciliation runs
 - **THEN** it never upgrades the affected scenario to passed
 - **AND** it emits deterministic findings that distinguish the failure class.
+
+### Requirement: Auditable Legacy TDD Ledger Migration
+
+The Requirements module SHALL support an explicit, opt-in migration record for
+legacy changes that captured failing-first evidence in an immutable TDD ledger
+before this runtime-proof contract existed. The migration record SHALL bind the
+ledger digest, current mapping digest, and current plan digest; it SHALL be
+accepted only during final reconciliation. A valid migration record SHALL not
+be represented as red JUnit proof, and the final report SHALL identify its
+implementation evidence as `passing-after-legacy-tdd-ledger`.
+
+#### Scenario: Immutable legacy ledger permits a transparent final transition
+
+- **GIVEN** current-run passing JUnit results and an explicit legacy migration
+  record whose ledger, mapping, and plan digests match the final plan
+- **WHEN** final Requirements evidence reconciliation runs with that record
+- **THEN** it returns a passing verified result when no other finding blocks it
+- **AND** it records the migration basis and ledger provenance
+- **AND** it labels the implementation evidence
+  `passing-after-legacy-tdd-ledger`, not `passing-after-red-proven`.
+
+#### Scenario: Missing, stale, or misplaced legacy record remains blocking
+
+- **GIVEN** a missing, malformed, digest-mismatched, or red-stage legacy
+  migration record
+- **WHEN** Requirements evidence reconciliation runs
+- **THEN** it does not waive the required red proof
+- **AND** it emits a deterministic legacy-migration finding.

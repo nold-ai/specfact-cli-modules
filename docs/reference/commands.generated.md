@@ -101,7 +101,7 @@ This file is generated from the current module command trees. Do not edit by han
 | `specfact requirements evidence` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --base-ref, --output, --plan-output, --repo-root, --required-maturity, --review-evidence, --staged, --summary; args: - | - |  |
 | `specfact requirements import` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format, --from-file, --from-openspec, --from-speckit; args: SOURCE_PATH | - |  |
 | `specfact requirements list` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format, --show-coverage; args: - | - |  |
-| `specfact requirements reconcile` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --junit, --output, --plan, --prior-red-proof, --run-stage, --source-ref, --summary; args: - | - |  |
+| `specfact requirements reconcile` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --junit, --legacy-tdd-evidence, --output, --plan, --prior-red-proof, --run-stage, --source-ref, --summary; args: - | - |  |
 | `specfact requirements validate` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format, --profile; args: - | - |  |
 | `specfact spec` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --install-completion, --show-completion; args: - | backward-compat, generate-tests, mock, validate |  |
 | `specfact spec backward-compat` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | -; args: OLD_SPEC (required), NEW_SPEC (required) | - |  |

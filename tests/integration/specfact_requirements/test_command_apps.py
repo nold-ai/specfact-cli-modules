@@ -204,7 +204,9 @@ def test_requirements_evidence_exposes_lifecycle_options_and_reconciliation(tmp_
 
     assert help_result.exit_code == 0
     assert "--required-maturity" in _plain_terminal_text(help_result.output)
+    command_help = _plain_terminal_text(runner.invoke(app, ["reconcile", "--help"]).output)
     assert "reconcile" in _plain_terminal_text(runner.invoke(app, ["--help"]).output)
+    assert "--legacy-tdd-evidence" in command_help
 
     mapping = {
         "schema_version": "2",

@@ -12,6 +12,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 from stat import S_ISREG
@@ -60,6 +61,29 @@ _SCALAR_TAGS = {
     datetime: "datetime",
     date: "date",
 }
+
+
+@dataclass(frozen=True)
+class ReconciliationContext:
+    """Provenance inputs for one non-executing JUnit reconciliation."""
+
+    run_stage: str
+    source_ref: str
+    prior_red_proof: Mapping[str, Any] | None = None
+    legacy_tdd_evidence: Mapping[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class ReconciliationOutcome:
+    """Derived JUnit and plan data used to render one reconciliation report."""
+
+    mapping_digest: str
+    plan_digest: str
+    submitted_plan: Mapping[str, Any]
+    cases: list[dict[str, Any]]
+    findings: list[str]
+    proof_basis: str | None
+    junit_digest: str | None
 
 
 def _encoded_sort_key(value: list[Any]) -> str:
@@ -510,43 +534,131 @@ def _prior_red_proof_findings(
     return [] if valid else ["prior-red-proof-invalid"]
 
 
+def _legacy_tdd_evidence_findings(
+    legacy_tdd_evidence: Mapping[str, Any] | None, mapping_digest: str, plan_digest: str
+) -> list[str]:
+    """Validate an explicit transition record without calling it red proof."""
+    if legacy_tdd_evidence is None:
+        return ["prior-red-proof-missing"]
+    valid = (
+        legacy_tdd_evidence.get("schema_version") == "1"
+        and legacy_tdd_evidence.get("kind") == "legacy-tdd-ledger"
+        and _is_text(legacy_tdd_evidence.get("change_id"))
+        and isinstance(legacy_tdd_evidence.get("ledger_digest"), str)
+        and _DIGEST_PATTERN.fullmatch(legacy_tdd_evidence["ledger_digest"]) is not None
+        and legacy_tdd_evidence.get("mapping_digest") == mapping_digest
+        and legacy_tdd_evidence.get("plan_digest") == plan_digest
+    )
+    return [] if valid else ["legacy-tdd-evidence-invalid"]
+
+
+def _final_proof_findings(
+    prior_red_proof: Mapping[str, Any] | None,
+    legacy_tdd_evidence: Mapping[str, Any] | None,
+    mapping_digest: str,
+    plan_digest: str,
+) -> tuple[list[str], str | None]:
+    """Require one auditable historical proof basis for final reconciliation."""
+    if prior_red_proof is not None and legacy_tdd_evidence is not None:
+        return ["proof-basis-ambiguous"], None
+    if prior_red_proof is not None:
+        findings = _prior_red_proof_findings(prior_red_proof, mapping_digest, plan_digest)
+        return findings, "red-junit" if not findings else None
+    findings = _legacy_tdd_evidence_findings(legacy_tdd_evidence, mapping_digest, plan_digest)
+    return findings, "legacy-tdd-ledger" if not findings else None
+
+
+def _validate_reconciliation_context(context: ReconciliationContext) -> None:
+    """Reject unsupported reconciliation provenance before examining results."""
+    if context.run_stage not in {"red", "final"}:
+        raise ValueError("run stage must be red or final")
+    if _SOURCE_REF_PATTERN.fullmatch(context.source_ref) is None:
+        raise ValueError("source ref must be a full lowercase Git object id")
+
+
+def _proof_basis_for_context(
+    context: ReconciliationContext, mapping_digest: str, plan_digest: str
+) -> tuple[list[str], str | None]:
+    """Return the historical proof findings applicable to this run stage."""
+    if context.run_stage == "final":
+        return _final_proof_findings(context.prior_red_proof, context.legacy_tdd_evidence, mapping_digest, plan_digest)
+    return (["legacy-tdd-evidence-red-stage"], None) if context.legacy_tdd_evidence is not None else ([], None)
+
+
+def _reconciliation_report(
+    context: ReconciliationContext,
+    outcome: ReconciliationOutcome,
+) -> dict[str, Any]:
+    """Build a final report without conflating legacy ledger and red-JUnit proof."""
+    observed = "red" if context.run_stage == "red" else "verified"
+    report = _lifecycle_report(
+        required_maturity=observed,
+        observed_maturity=observed if not outcome.findings else "incomplete",
+        mapping_digest=outcome.mapping_digest,
+        findings=outcome.findings,
+        cases=[dict(case) for case in outcome.cases],
+    )
+    report["execution_plan"] = report.pop("plan")
+    report["plan"] = dict(outcome.submitted_plan)
+    report["execution_proof"] = {
+        "run_stage": context.run_stage,
+        "source_ref": context.source_ref,
+        "selectors": sorted(str(case["node_id"]) for case in outcome.cases),
+    }
+    if outcome.proof_basis is not None:
+        report["execution_proof"]["proof_basis"] = outcome.proof_basis
+    if outcome.proof_basis == "legacy-tdd-ledger" and not outcome.findings:
+        report["implementation_evidence"] = "passing-after-legacy-tdd-ledger"
+        report["legacy_tdd_evidence"] = dict(context.legacy_tdd_evidence or {})
+    report["plan_digest"] = outcome.plan_digest
+    if outcome.junit_digest is not None:
+        report["execution_proof"]["junit_digest"] = outcome.junit_digest
+    return report
+
+
+def _resolved_reconciliation_context(
+    context: ReconciliationContext | None, legacy_context: Mapping[str, Any]
+) -> ReconciliationContext:
+    """Accept the typed provenance context while preserving existing callers."""
+    if context is not None:
+        if legacy_context:
+            raise ValueError("reconciliation context cannot be combined with legacy keyword arguments")
+        return context
+    try:
+        return ReconciliationContext(**legacy_context)
+    except TypeError as error:
+        raise ValueError("reconciliation context requires run_stage and source_ref") from error
+
+
 @beartype
 @ensure(lambda result: isinstance(result, dict))
 def reconcile_junit(
     plan_report: Mapping[str, Any],
     junit_path: Path,
-    *,
-    run_stage: str,
-    source_ref: str,
-    prior_red_proof: Mapping[str, Any] | None = None,
+    context: ReconciliationContext | None = None,
+    **legacy_context: Any,
 ) -> dict[str, Any]:
     """Reconcile trusted JUnit results without starting a test process."""
-    if run_stage not in {"red", "final"}:
-        raise ValueError("run stage must be red or final")
-    if _SOURCE_REF_PATTERN.fullmatch(source_ref) is None:
-        raise ValueError("source ref must be a full lowercase Git object id")
+    context = _resolved_reconciliation_context(context, legacy_context)
+    _validate_reconciliation_context(context)
     mapping_digest, plan_digest, submitted_plan, cases = _plan_cases(plan_report)
     results, junit_findings, junit_digest = _junit_results(junit_path)
     expected = {str(case["node_id"]) for case in cases}
-    findings = [*junit_findings, *_selector_result_findings(expected, results, run_stage)]
-    if run_stage == "final":
-        findings.extend(_prior_red_proof_findings(prior_red_proof, mapping_digest, plan_digest))
-    observed = "red" if run_stage == "red" else "verified"
-    report = _lifecycle_report(
-        required_maturity=observed,
-        observed_maturity=observed if not findings else "incomplete",
-        mapping_digest=mapping_digest,
-        findings=findings,
-        cases=[dict(case) for case in cases],
+    proof_findings, proof_basis = _proof_basis_for_context(context, mapping_digest, plan_digest)
+    findings = [
+        *junit_findings,
+        *_selector_result_findings(expected, results, context.run_stage),
+        *proof_findings,
+    ]
+    return _reconciliation_report(
+        context,
+        ReconciliationOutcome(
+            mapping_digest=mapping_digest,
+            plan_digest=plan_digest,
+            submitted_plan=submitted_plan,
+            cases=cases,
+            findings=findings,
+            proof_basis=proof_basis,
+            junit_digest=junit_digest,
+        ),
     )
-    report["execution_plan"] = report.pop("plan")
-    report["plan"] = dict(submitted_plan)
-    report["execution_proof"] = {
-        "run_stage": run_stage,
-        "source_ref": source_ref,
-        "selectors": sorted(expected),
-    }
-    report["plan_digest"] = plan_digest
-    if junit_digest is not None:
-        report["execution_proof"]["junit_digest"] = junit_digest
-    return report
