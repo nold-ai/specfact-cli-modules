@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 from specfact_code_review.review.commands import app
 from specfact_code_review.run import commands as run_commands
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+from specfact_requirements.requirements.lifecycle import build_plan
 
 
 runner = CliRunner()
@@ -80,13 +81,9 @@ def _finalized_requirements_proof(
     schema_version: str = "2",
 ) -> Path:
     mapping_digest = "sha256:" + "a" * 64
-    plan_digest = "sha256:" + "b" * 64
     selector = "tests/fixtures/review/clean_module.py::test_clean_module"
-    plan = {
-        "mapping_digest": mapping_digest,
-        "plan_digest": plan_digest,
-        "cases": [{"case_id": "REQ-001", "method": "test", "node_id": selector}],
-    }
+    plan = build_plan(mapping_digest, [{"case_id": "REQ-001", "method": "test", "node_id": selector}])
+    plan_digest = plan["plan_digest"]
     proof_path = tmp_path / "requirements-proof.json"
     proof_path.write_text(
         json.dumps(
@@ -266,6 +263,16 @@ def test_run_command_rejects_incomplete_requirements_evidence_before_review(monk
     )
 
     assert result.exit_code != 0
+
+
+def test_requirements_evidence_context_rejects_tampered_plan_digest(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["plan"]["cases"][0]["case_id"] = "FORGED-001"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    with pytest.raises(run_commands.RunCommandError, match="complete final Requirements proof"):
+        run_commands._requirements_evidence_context(proof_path)
 
 
 def test_run_command_preserves_changed_enforcement_when_attaching_requirements_evidence(

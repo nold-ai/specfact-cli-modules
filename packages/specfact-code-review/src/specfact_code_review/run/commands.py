@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import importlib
 import json
 import subprocess
 import sys
@@ -1041,7 +1042,18 @@ def _is_complete_plan(plan: object, mapping_digest: object, plan_digest: object 
         return False
     if not plan["cases"] or not _is_sha256_digest(plan.get("plan_digest")):
         return False
-    return plan_digest is None or plan.get("plan_digest") == plan_digest
+    if not isinstance(mapping_digest, str) or not all(isinstance(case, dict) for case in plan["cases"]):
+        return False
+    if plan.get("plan_digest") != _requirements_plan_digest(mapping_digest, [dict(case) for case in plan["cases"]]):
+        return False
+    return plan_digest is None or plan["plan_digest"] == plan_digest
+
+
+def _requirements_plan_digest(mapping_digest: str, cases: list[dict[str, Any]]) -> str:
+    """Use the Requirements producer's canonical plan identity algorithm."""
+    lifecycle = importlib.import_module("specfact_requirements.requirements.lifecycle")
+    plan = lifecycle.build_plan(mapping_digest, cases)
+    return str(plan["plan_digest"])
 
 
 def _is_sha256_digest(value: object) -> bool:
