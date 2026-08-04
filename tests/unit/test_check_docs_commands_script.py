@@ -27,6 +27,8 @@ def test_docs_command_mounts_include_nested_prompt_validator_mounts() -> None:
 
     assert ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")) in mounts
     assert ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")) in mounts
+    assert ("specfact_spec.sdd.commands", "app", ("specfact", "spec")) in mounts
+    assert ("specfact_spec.generate.commands", "app", ("specfact", "spec")) in mounts
 
 
 def test_extract_command_examples_reads_bash_and_inline_examples(tmp_path: Path) -> None:
@@ -85,6 +87,34 @@ def test_command_example_is_valid_accepts_longest_matching_prefix() -> None:
     assert not _script_attr(script, "_command_example_is_valid")("specfact backlog nonexistent --help", valid_paths)
 
 
+def test_command_example_rejects_unknown_trailing_subcommand() -> None:
+    script = _load_script()
+    valid_paths = {
+        ("specfact",),
+        ("specfact", "code"),
+        ("specfact", "code", "review"),
+        ("specfact", "code", "review", "run"),
+    }
+
+    assert not _script_attr(script, "_command_example_is_valid")("specfact code review review run --help", valid_paths)
+
+
+def test_command_example_allows_positional_arguments_for_an_executable_group() -> None:
+    script = _load_script()
+    valid_paths = {
+        ("specfact",),
+        ("specfact", "code"),
+        ("specfact", "code", "import"),
+        ("specfact", "code", "import", "from-code"),
+    }
+
+    assert _script_attr(script, "_command_example_is_valid")(
+        "specfact code import my-bundle",
+        valid_paths,
+        {("specfact", "code", "import")},
+    )
+
+
 def test_command_example_is_valid_allows_root_help_but_not_unknown_subgroups() -> None:
     script = _load_script()
     valid_paths = {
@@ -114,7 +144,7 @@ def test_build_valid_command_paths_rejects_malformed_generated_input(
     monkeypatch.setattr(script, "GENERATED_COMMANDS_PATH", generated)
 
     with pytest.raises(ValueError, match=message):
-        _script_attr(script, "_build_valid_command_paths")()
+        _script_attr(script, "_build_command_inventory")()
 
 
 def _scan_path_findings(script, path: Path, text: str, finding_function: str):

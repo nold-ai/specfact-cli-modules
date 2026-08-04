@@ -9,6 +9,7 @@ import json
 import re
 import sys
 from collections.abc import Callable
+from itertools import pairwise
 from pathlib import Path
 from typing import NamedTuple, cast
 from urllib.parse import urlparse
@@ -168,7 +169,7 @@ def _collect_click_paths(group: click.Command, prefix: CommandPath) -> set[Comma
     return paths
 
 
-def _build_valid_command_paths() -> set[CommandPath]:
+def _build_command_inventory() -> tuple[set[CommandPath], set[CommandPath]]:
     if GENERATED_COMMANDS_PATH.is_file():
         try:
             raw = json.loads(GENERATED_COMMANDS_PATH.read_text(encoding="utf-8"))
@@ -179,14 +180,18 @@ def _build_valid_command_paths() -> set[CommandPath]:
                 f"Unexpected generated commands schema at {GENERATED_COMMANDS_PATH}: expected a JSON list."
             )
         generated_paths: set[CommandPath] = set(CORE_COMMAND_PREFIXES)
+        executable_paths: set[CommandPath] = set()
         for entry in raw:
             if not isinstance(entry, dict):
                 raise ValueError(f"Unexpected generated commands entry at {GENERATED_COMMANDS_PATH}: {entry!r}")
             command = entry.get("command")
             if not isinstance(command, str) or not command.strip():
                 raise ValueError(f"Unexpected generated commands entry missing 'command': {entry!r}")
-            generated_paths.add(tuple(command.split()))
-        return generated_paths
+            path = tuple(command.split())
+            generated_paths.add(path)
+            if entry.get("bare_invocation") == "executes":
+                executable_paths.add(path)
+        return generated_paths, executable_paths
 
     _ensure_package_paths()
     paths: set[CommandPath] = set(CORE_COMMAND_PREFIXES)
@@ -196,10 +201,14 @@ def _build_valid_command_paths() -> set[CommandPath]:
         click_group = cast(click.Command, typer_get_command(app))
         paths.add(prefix)
         paths.update(_collect_click_paths(click_group, prefix))
-    return paths
+    return paths, set()
 
 
-def _command_example_is_valid(command_text: str, valid_paths: set[CommandPath]) -> bool:
+def _command_example_is_valid(
+    command_text: str,
+    valid_paths: set[CommandPath],
+    executable_paths: set[CommandPath] | None = None,
+) -> bool:
     tokens = _normalize_command_text(command_text)
     if not tokens or tokens[0] != "specfact":
         return True
@@ -207,15 +216,23 @@ def _command_example_is_valid(command_text: str, valid_paths: set[CommandPath]) 
         return ("specfact",) in valid_paths
     if tokens[1].startswith("-"):
         return ("specfact",) in valid_paths
+    del executable_paths
+    command_tokens = tokens[1:]
+    if any(left == right for left, right in pairwise(command_tokens)):
+        return False
     prefixes = (tuple(tokens[:length]) for length in range(len(tokens), 0, -1))
     return any(prefix in valid_paths for prefix in prefixes if len(prefix) > 1)
 
 
-def _validate_command_examples(text_by_path: dict[Path, str], valid_paths: set[CommandPath]) -> list[ValidationFinding]:
+def _validate_command_examples(
+    text_by_path: dict[Path, str],
+    valid_paths: set[CommandPath],
+    executable_paths: set[CommandPath],
+) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
     for path, text in text_by_path.items():
         for example in _extract_command_examples_from_text(text, path):
-            if _command_example_is_valid(example.text, valid_paths):
+            if _command_example_is_valid(example.text, valid_paths, executable_paths):
                 continue
             findings.append(
                 ValidationFinding(
@@ -386,10 +403,10 @@ def _main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     docs_paths = _iter_validation_docs_paths()
     text_by_path = _load_docs_texts(docs_paths)
-    valid_paths = _build_valid_command_paths()
+    valid_paths, executable_paths = _build_command_inventory()
     valid_routes = docs_site_validation.build_valid_internal_routes(DOCS_ROOT)
     findings = [
-        *_validate_command_examples(text_by_path, valid_paths),
+        *_validate_command_examples(text_by_path, valid_paths, executable_paths),
         *_scan_text_by_path_for_findings(text_by_path, _legacy_resource_findings_for_line),
         *_scan_text_by_path_for_findings(text_by_path, _core_docs_link_findings_for_line),
         *_validate_core_docs_config(DOCS_ROOT / "_config.yml"),

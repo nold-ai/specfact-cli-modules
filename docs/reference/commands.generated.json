@@ -672,6 +672,25 @@
   {
     "arguments": [],
     "bare_invocation": "requires-subcommand",
+    "command": "specfact code",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
+    "options": [
+      "--install-completion",
+      "--show-completion"
+    ],
+    "owner_package": "nold-ai/specfact-code-review",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_code_review.review.commands:app",
+    "subcommands": [
+      "review"
+    ]
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "requires-subcommand",
     "command": "specfact code analyze",
     "deprecated": false,
     "hidden": false,
@@ -888,25 +907,6 @@
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [
-      "--install-completion",
-      "--show-completion"
-    ],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": [
-      "review"
-    ]
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "requires-subcommand",
-    "command": "specfact code review review",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
     "options": [],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",
@@ -919,134 +919,6 @@
     ]
   },
   {
-    "arguments": [],
-    "bare_invocation": "requires-subcommand",
-    "command": "specfact code review review ledger",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": [
-      "reset",
-      "status",
-      "update"
-    ]
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "executes",
-    "command": "specfact code review review ledger reset",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [
-      "--confirm"
-    ],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": []
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "executes",
-    "command": "specfact code review review ledger status",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": []
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "executes",
-    "command": "specfact code review review ledger update",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [
-      "--from"
-    ],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": []
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "requires-subcommand",
-    "command": "specfact code review review rules",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": [
-      "init",
-      "show",
-      "update"
-    ]
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "executes",
-    "command": "specfact code review review rules init",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [
-      "--ide"
-    ],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": []
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "executes",
-    "command": "specfact code review review rules show",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": []
-  },
-  {
-    "arguments": [],
-    "bare_invocation": "executes",
-    "command": "specfact code review review rules update",
-    "deprecated": false,
-    "hidden": false,
-    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
-    "options": [
-      "--ide"
-    ],
-    "owner_package": "nold-ai/specfact-code-review",
-    "owner_repo": "nold-ai/specfact-cli-modules",
-    "short_help": "",
-    "source": "specfact_code_review.review.commands:app",
-    "subcommands": []
-  },
-  {
     "arguments": [
       {
         "name": "FILES",
@@ -1055,7 +927,7 @@
       }
     ],
     "bare_invocation": "executes",
-    "command": "specfact code review review run",
+    "command": "specfact code review run",
     "deprecated": false,
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",

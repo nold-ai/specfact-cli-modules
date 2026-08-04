@@ -15,6 +15,11 @@ def _load_overview_module():
     return module
 
 
+def _generated_commands() -> set[str]:
+    overview = _load_overview_module()
+    return {record["command"] for record in overview.build_records()}
+
+
 def test_runtime_validated_code_groups_are_marked_as_executing() -> None:
     """Groups that validate a bundle before dispatch are not missing-subcommand errors."""
     overview = _load_overview_module()
@@ -22,3 +27,12 @@ def test_runtime_validated_code_groups_are_marked_as_executing() -> None:
 
     assert records["specfact code import"]["bare_invocation"] == "executes"
     assert records["specfact code repro"]["bare_invocation"] == "executes"
+
+
+def test_code_review_inventory_matches_the_mounted_command_surface() -> None:
+    """The public review path has one review segment and no unmounted legacy subcommands."""
+    commands = _generated_commands()
+
+    assert "specfact code review run" in commands
+    assert "specfact code review review run" not in commands
+    assert "specfact code review ledger status" not in commands
