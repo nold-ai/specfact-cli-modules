@@ -27,8 +27,8 @@ def test_docs_command_mounts_include_nested_prompt_validator_mounts() -> None:
 
     assert ("specfact_govern.enforce.commands", "app", ("specfact", "govern", "enforce")) in mounts
     assert ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")) in mounts
-    assert ("specfact_spec.sdd.commands", "app", ("specfact", "spec")) in mounts
-    assert ("specfact_spec.generate.commands", "app", ("specfact", "spec")) in mounts
+    assert ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd")) in mounts
+    assert ("specfact_spec.generate.commands", "app", ("specfact", "spec", "generate")) in mounts
 
 
 def test_extract_command_examples_reads_bash_and_inline_examples(tmp_path: Path) -> None:
@@ -112,6 +112,22 @@ def test_command_example_allows_positional_arguments_for_an_executable_group() -
         "specfact code import my-bundle",
         valid_paths,
         {("specfact", "code", "import")},
+    )
+
+
+def test_command_example_rejects_a_trailing_token_after_a_non_executable_group() -> None:
+    script = _load_script()
+    valid_paths = {
+        ("specfact",),
+        ("specfact", "code"),
+        ("specfact", "code", "review"),
+        ("specfact", "code", "review", "run"),
+    }
+
+    assert not _script_attr(script, "_command_example_is_valid")(
+        "specfact code review unexpected",
+        valid_paths,
+        set(),
     )
 
 

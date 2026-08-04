@@ -30,9 +30,10 @@ def test_runtime_validated_code_groups_are_marked_as_executing() -> None:
 
 
 def test_code_review_inventory_matches_the_mounted_command_surface() -> None:
-    """The public review path has one review segment and no unmounted legacy subcommands."""
+    """The public review path has one review segment and all review subcommands."""
     commands = _generated_commands()
 
     assert "specfact code review run" in commands
     assert "specfact code review review run" not in commands
-    assert "specfact code review ledger status" not in commands
+    assert "specfact code review ledger status" in commands
+    assert "specfact code review rules init" in commands

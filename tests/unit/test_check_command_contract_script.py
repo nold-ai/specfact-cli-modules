@@ -16,3 +16,4 @@ def test_code_review_mount_targets_the_review_subapp() -> None:
         "review_app",
         ("specfact", "code", "review"),
     ) in script.APP_MOUNTS
+    assert ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd")) in script.APP_MOUNTS

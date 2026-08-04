@@ -35,12 +35,15 @@ This file is generated from the current module command trees. Do not edit by han
 | `specfact backlog diff` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --adapter, --baseline-file, --project-id, --template; args: - | - |  |
 | `specfact backlog init-config` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --force; args: - | - |  |
 | `specfact backlog map-fields` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --ado-base-url, --ado-framework, --ado-org, --ado-project, --ado-token, --github-project-id, --github-project-v2-id, --github-type-field-id, --github-type-option, --non-interactive, --provider, --reset; args: - | - |  |
+| `specfact backlog policy` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --install-completion, --show-completion; args: - | init, suggest, validate |  |
+| `specfact backlog policy init` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --force, --repo, --template; args: - | - |  |
+| `specfact backlog policy suggest` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --group-by-item, --limit, --repo, --rule, --snapshot; args: - | - |  |
+| `specfact backlog policy validate` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --format, --group-by-item, --limit, --repo, --rule, --snapshot; args: - | - |  |
 | `specfact backlog promote` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --adapter, --item-id, --project-id, --template, --to-status; args: - | - |  |
 | `specfact backlog refine` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --ado-org, --ado-project, --ado-team, --ado-token, --assignee, --auto-accept-high-confidence, --auto-bundle, --bundle, --check-dor, --custom-field-mapping, --export-to-tmp, --first-comments, --first-issues, --framework, --github-token, --id, --ignore-refined, --import-from-tmp, --iteration, --labels, --last-comments, --last-issues, --limit, --no-ignore-refined, --no-preview, --openspec-comment, --persona, --preview, --release, --repo-name, --repo-owner, --search, --sprint, --state, --tags, --template, --tmp-file, --write; args: ADAPTER (required) | - |  |
 | `specfact backlog sync` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --adapter, --baseline-file, --force-baseline-overwrite, --output-format, --project-id, --template; args: - | - |  |
 | `specfact backlog verify-readiness` | nold-ai/specfact-backlog | `specfact module install nold-ai/specfact-backlog` | --adapter, --project-id, --target-items, --template; args: - | - |  |
 | `specfact code` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | --install-completion, --show-completion; args: - | analyze, drift, import, repro, validate |  |
-| `specfact code` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | --install-completion, --show-completion; args: - | review |  |
 | `specfact code analyze` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | -; args: - | contracts |  |
 | `specfact code analyze contracts` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | --bundle, --repo; args: - | - |  |
 | `specfact code drift` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | -; args: - | detect |  |
@@ -50,7 +53,15 @@ This file is generated from the current module command trees. Do not edit by han
 | `specfact code import from-code` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | --confidence, --enrich-for-speckit, --enrichment, --entry-point, --exclude-tests, --force, --include-tests, --key-format, --no-enrich-for-speckit, --no-revalidate-features, --repo, --report, --revalidate-features, --shadow-only; args: BUNDLE | - |  |
 | `specfact code repro` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | --budget, --crosshair-per-path-timeout, --crosshair-required, --fail-fast, --fix, --out, --repo, --sidecar, --sidecar-bundle, --verbose; args: - | setup |  |
 | `specfact code repro setup` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | --install-crosshair, --repo; args: - | - |  |
-| `specfact code review` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | -; args: - | ledger, rules, run |  |
+| `specfact code review` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | --install-completion, --show-completion; args: - | ledger, rules, run |  |
+| `specfact code review ledger` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | -; args: - | reset, status, update |  |
+| `specfact code review ledger reset` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | --confirm; args: - | - |  |
+| `specfact code review ledger status` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | -; args: - | - |  |
+| `specfact code review ledger update` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | --from; args: - | - |  |
+| `specfact code review rules` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | -; args: - | init, show, update |  |
+| `specfact code review rules init` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | --ide; args: - | - |  |
+| `specfact code review rules show` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | -; args: - | - |  |
+| `specfact code review rules update` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | --ide; args: - | - |  |
 | `specfact code review run` | nold-ai/specfact-code-review | `specfact module install nold-ai/specfact-code-review` | --bug-hunt, --enforcement, --exclude-tests, --fix, --focus, --include-noise, --include-tests, --instructions, --interactive, --json, --level, --mode, --no-tests, --out, --path, --preview-fixes, --requirements-evidence, --scope, --score-only, --suppress-noise, --with-mutation; args: FILES | - |  |
 | `specfact code validate` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | -; args: - | sidecar |  |
 | `specfact code validate sidecar` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | -; args: - | init, run |  |
@@ -58,7 +69,10 @@ This file is generated from the current module command trees. Do not edit by han
 | `specfact code validate sidecar run` | nold-ai/specfact-codebase | `specfact module install nold-ai/specfact-codebase` | --no-run-crosshair, --no-run-specmatic, --run-crosshair, --run-specmatic; args: BUNDLE_NAME (required), REPO_PATH (required) | - |  |
 | `specfact govern` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --install-completion, --show-completion; args: - | enforce, patch |  |
 | `specfact govern enforce` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | -; args: - | sdd, stage |  |
+| `specfact govern enforce` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --install-completion, --show-completion; args: - | sdd, stage |  |
 | `specfact govern enforce sdd` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --no-interactive, --out, --output-format, --sdd; args: BUNDLE | - |  |
+| `specfact govern enforce sdd` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --no-interactive, --out, --output-format, --sdd; args: BUNDLE | - |  |
+| `specfact govern enforce stage` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --preset; args: - | - |  |
 | `specfact govern enforce stage` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --preset; args: - | - |  |
 | `specfact govern patch` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | -; args: - | apply |  |
 | `specfact govern patch apply` | nold-ai/specfact-govern | `specfact module install nold-ai/specfact-govern` | --dry-run, --write, --yes; args: PATCH_FILE (required) | - |  |
@@ -94,6 +108,25 @@ This file is generated from the current module command trees. Do not edit by han
 | `specfact requirements validate` | nold-ai/specfact-requirements | `specfact module install nold-ai/specfact-requirements` | --bundle, --format, --profile; args: - | - |  |
 | `specfact spec` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --install-completion, --show-completion; args: - | backward-compat, generate-tests, mock, validate |  |
 | `specfact spec backward-compat` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | -; args: OLD_SPEC (required), NEW_SPEC (required) | - |  |
+| `specfact spec contract` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --install-completion, --show-completion; args: - | coverage, init, serve, test, validate, verify |  |
+| `specfact spec contract coverage` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --no-interactive, --repo; args: - | - |  |
+| `specfact spec contract init` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --feature, --force, --no-interactive, --repo, --title, --version; args: - | - |  |
+| `specfact spec contract serve` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --examples, --feature, --no-interactive, --port, --repo, --strict; args: - | - |  |
+| `specfact spec contract test` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --feature, --no-interactive, --out, --output, --repo; args: - | - |  |
+| `specfact spec contract validate` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --feature, --no-interactive, --repo; args: - | - |  |
+| `specfact spec contract verify` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --feature, --no-interactive, --port, --repo, --skip-mock; args: - | - |  |
+| `specfact spec generate` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --install-completion, --show-completion; args: - | contracts, contracts-apply, contracts-prompt, fix-prompt, test-prompt |  |
+| `specfact spec generate contracts` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --no-interactive, --plan, --repo, --sdd; args: - | - |  |
+| `specfact spec generate contracts-apply` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --dry-run, --original, --yes; args: ENHANCED_FILE (required) | - |  |
+| `specfact spec generate contracts-prompt` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --apply, --bundle, --no-interactive, --output; args: FILE | - |  |
+| `specfact spec generate fix-prompt` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --no-interactive, --output, --top; args: GAP_ID | - |  |
+| `specfact spec generate test-prompt` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --no-interactive, --output, --type; args: FILE | - |  |
 | `specfact spec generate-tests` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --force, --out, --output; args: SPEC_PATH | - |  |
 | `specfact spec mock` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --examples, --no-interactive, --port, --spec, --strict; args: - | - |  |
+| `specfact spec sdd` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --install-completion, --show-completion; args: - | constitution, list |  |
+| `specfact spec sdd constitution` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | -; args: - | bootstrap, enrich, validate |  |
+| `specfact spec sdd constitution bootstrap` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --out, --overwrite, --repo; args: - | - |  |
+| `specfact spec sdd constitution enrich` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --constitution, --repo; args: - | - |  |
+| `specfact spec sdd constitution validate` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --constitution; args: - | - |  |
+| `specfact spec sdd list` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --repo; args: - | - |  |
 | `specfact spec validate` | nold-ai/specfact-spec | `specfact module install nold-ai/specfact-spec` | --bundle, --force, --no-interactive, --previous; args: SPEC_PATH | - |  |

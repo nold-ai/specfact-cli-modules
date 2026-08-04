@@ -9,7 +9,6 @@ import json
 import re
 import sys
 from collections.abc import Callable
-from itertools import pairwise
 from pathlib import Path
 from typing import NamedTuple, cast
 from urllib.parse import urlparse
@@ -85,8 +84,8 @@ MODULE_APP_MOUNTS = (
     ("specfact_requirements.requirements.commands", "app", ("specfact", "requirements")),
     ("specfact_spec.contract.commands", "app", ("specfact", "spec", "contract")),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec")),
-    ("specfact_spec.sdd.commands", "app", ("specfact", "spec")),
-    ("specfact_spec.generate.commands", "app", ("specfact", "spec")),
+    ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd")),
+    ("specfact_spec.generate.commands", "app", ("specfact", "spec", "generate")),
 )
 
 
@@ -204,6 +203,31 @@ def _build_command_inventory() -> tuple[set[CommandPath], set[CommandPath]]:
     return paths, set()
 
 
+def _longest_valid_command_prefix(
+    tokens: list[str], valid_paths: set[CommandPath]
+) -> tuple[CommandPath, list[str]] | None:
+    for length in range(len(tokens), 1, -1):
+        prefix = tuple(tokens[:length])
+        if prefix in valid_paths:
+            return prefix, tokens[length:]
+    return None
+
+
+def _command_path_accepts_trailing_tokens(
+    prefix: CommandPath,
+    remaining: list[str],
+    valid_paths: set[CommandPath],
+    executable_paths: set[CommandPath] | None,
+) -> bool:
+    if not remaining or remaining[0].startswith("-") or remaining[0] in {"...", "…"}:
+        return True
+    if executable_paths is not None and prefix in executable_paths:
+        return True
+    if remaining[0] == prefix[-1]:
+        return False
+    return not any(path[: len(prefix)] == prefix and len(path) > len(prefix) for path in valid_paths)
+
+
 def _command_example_is_valid(
     command_text: str,
     valid_paths: set[CommandPath],
@@ -216,12 +240,8 @@ def _command_example_is_valid(
         return ("specfact",) in valid_paths
     if tokens[1].startswith("-"):
         return ("specfact",) in valid_paths
-    del executable_paths
-    command_tokens = tokens[1:]
-    if any(left == right for left, right in pairwise(command_tokens)):
-        return False
-    prefixes = (tuple(tokens[:length]) for length in range(len(tokens), 0, -1))
-    return any(prefix in valid_paths for prefix in prefixes if len(prefix) > 1)
+    match = _longest_valid_command_prefix(tokens, valid_paths)
+    return match is not None and _command_path_accepts_trailing_tokens(*match, valid_paths, executable_paths)
 
 
 def _validate_command_examples(

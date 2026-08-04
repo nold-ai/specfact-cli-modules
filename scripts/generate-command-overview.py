@@ -30,14 +30,26 @@ LLMS_PATH = REPO_ROOT / "llms.txt"
 
 MODULE_APP_MOUNTS = (
     ("specfact_backlog.backlog.commands", "app", ("specfact", "backlog"), "nold-ai/specfact-backlog"),
+    (
+        "specfact_backlog.policy_engine.commands",
+        "app",
+        ("specfact", "backlog", "policy"),
+        "nold-ai/specfact-backlog",
+    ),
     ("specfact_codebase.code.commands", "app", ("specfact", "code"), "nold-ai/specfact-codebase"),
     (
         "specfact_code_review.review.commands",
-        "app",
-        ("specfact", "code"),
+        "review_app",
+        ("specfact", "code", "review"),
         "nold-ai/specfact-code-review",
     ),
     ("specfact_govern.govern.commands", "app", ("specfact", "govern"), "nold-ai/specfact-govern"),
+    (
+        "specfact_govern.enforce.commands",
+        "app",
+        ("specfact", "govern", "enforce"),
+        "nold-ai/specfact-govern",
+    ),
     ("specfact_project.project.commands", "app", ("specfact", "project"), "nold-ai/specfact-project"),
     (
         "specfact_requirements.requirements.commands",
@@ -45,17 +57,26 @@ MODULE_APP_MOUNTS = (
         ("specfact", "requirements"),
         "nold-ai/specfact-requirements",
     ),
+    (
+        "specfact_spec.contract.commands",
+        "app",
+        ("specfact", "spec", "contract"),
+        "nold-ai/specfact-spec",
+    ),
     ("specfact_spec.spec.commands", "app", ("specfact", "spec"), "nold-ai/specfact-spec"),
+    ("specfact_spec.sdd.commands", "app", ("specfact", "spec", "sdd"), "nold-ai/specfact-spec"),
+    (
+        "specfact_spec.generate.commands",
+        "app",
+        ("specfact", "spec", "generate"),
+        "nold-ai/specfact-spec",
+    ),
 )
 RUNTIME_VALIDATED_GROUPS = frozenset(
     {
         "specfact code import",
         "specfact code repro",
     }
-)
-UNMOUNTED_REVIEW_SUBCOMMAND_PREFIXES = (
-    "specfact code review ledger",
-    "specfact code review rules",
 )
 
 OPTION_PARAMETER_TYPES = (click.Option, TyperOption)
@@ -335,10 +356,7 @@ def build_records() -> list[dict[str, Any]]:
         app = getattr(module, attr_name)
         click_command = cast(click.Command, get_command(app))
         records.extend(_walk(click_command, prefix, f"{module_name}:{attr_name}", module_id))
-    mounted_records = [
-        record for record in records if not str(record["command"]).startswith(UNMOUNTED_REVIEW_SUBCOMMAND_PREFIXES)
-    ]
-    return sorted(mounted_records, key=lambda record: record["command"])
+    return sorted(records, key=lambda record: record["command"])
 
 
 def _render_markdown(records: list[dict[str, Any]]) -> str:
