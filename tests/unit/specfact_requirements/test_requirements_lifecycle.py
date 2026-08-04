@@ -288,6 +288,19 @@ def test_final_reconciliation_records_a_matching_legacy_tdd_ledger(tmp_path: Pat
         source_ref="b" * 40,
         legacy_tdd_evidence={**legacy_tdd_evidence, "plan_digest": f"sha256:{'d' * 64}"},
     )
+    ambiguous = reconcile_junit(
+        plan,
+        final_junit,
+        run_stage="final",
+        source_ref="b" * 40,
+        prior_red_proof={
+            "observed_maturity": "red",
+            "mapping_digest": plan["mapping_digest"],
+            "plan_digest": plan["plan"]["plan_digest"],  # type: ignore[index]
+            "gate_decision": "pass",
+        },
+        legacy_tdd_evidence=legacy_tdd_evidence,
+    )
 
     assert final["gate_decision"] == "pass"
     assert final["implementation_evidence"] == "passing-after-legacy-tdd-ledger"
@@ -295,6 +308,7 @@ def test_final_reconciliation_records_a_matching_legacy_tdd_ledger(tmp_path: Pat
     assert final["legacy_tdd_evidence"] == legacy_tdd_evidence
     assert "legacy-tdd-evidence-red-stage" in misplaced["findings"]
     assert "legacy-tdd-evidence-invalid" in stale["findings"]
+    assert "proof-basis-ambiguous" in ambiguous["findings"]
 
 
 def test_reconciliation_keeps_the_submitted_plan_digest_authoritative(tmp_path: Path) -> None:
