@@ -15,8 +15,11 @@ its tests exist and have failed for the expected reason.
   from current `origin/dev`; verify branch and clean scope.
 - [x] 1.2 Create modules User Story #368; verify labels, project `Todo`, parent
   Feature #161, Epic #144, and native blocking relation to core #662.
-- [ ] 1.3 Before implementation, recheck that #368 is not already `In Progress`
-  elsewhere and verify the paired core proposal remains contract-compatible.
+- [x] 1.3 Recheck #368 ownership and verify the paired core proposal remains
+  contract-compatible. On 2026-08-04, #368 was confirmed as the active
+  `In Progress` item for this linked PR; the paired core #662 proposal/design
+  require finalized schema-v2 proof, independent review provenance, and no
+  verdict fusion. This public context input supplies exactly that contract.
 
 ## 2. Specification and failing evidence
 

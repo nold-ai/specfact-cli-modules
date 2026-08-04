@@ -42,12 +42,17 @@ def _report(*, score: int = 85) -> ReviewReport:
     )
 
 
-def _finalized_requirements_proof(tmp_path: Path, *, decision: str = "fail") -> Path:
+def _finalized_requirements_proof(
+    tmp_path: Path,
+    *,
+    decision: str = "fail",
+    schema_version: str = "2",
+) -> Path:
     proof_path = tmp_path / "requirements-proof.json"
     proof_path.write_text(
         json.dumps(
             {
-                "schema_version": "2",
+                "schema_version": schema_version,
                 "gate_decision": decision,
                 "mapping_digest": "sha256:" + "a" * 64,
                 "plan_digest": "sha256:" + "b" * 64,
@@ -169,7 +174,11 @@ def test_run_command_retains_finalized_requirements_provenance_without_verdict_f
     assert report.requirements_evidence.source_ref == "c" * 40  # type: ignore[union-attr]
 
 
-def test_run_command_rejects_nonfinal_requirements_evidence_before_review(tmp_path: Path) -> None:
+def test_run_command_rejects_nonfinal_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:
+    def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
+        pytest.fail("Requirements evidence validation must run before review execution.")
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", unexpected_review)
     proof_path = _finalized_requirements_proof(tmp_path)
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     proof["execution_proof"]["run_stage"] = "red"
@@ -188,6 +197,31 @@ def test_run_command_rejects_nonfinal_requirements_evidence_before_review(tmp_pa
 
     assert result.exit_code != 0
     assert "finalized Requirements evidence" in result.output
+
+
+@pytest.mark.parametrize("schema_version", ["1", "3"])
+def test_run_command_rejects_non_v2_requirements_evidence_before_review(
+    monkeypatch: Any, tmp_path: Path, schema_version: str
+) -> None:
+    def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
+        pytest.fail("Requirements evidence validation must run before review execution.")
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", unexpected_review)
+    proof_path = _finalized_requirements_proof(tmp_path, schema_version=schema_version)
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--requirements-evidence",
+            str(proof_path),
+            "tests/fixtures/review/clean_module.py",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "schema_version=2" in result.output
 
 
 def test_run_command_score_only_prints_reward_delta(monkeypatch: Any) -> None:

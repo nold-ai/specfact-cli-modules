@@ -953,6 +953,8 @@ def _requirements_evidence_context(path: Path) -> RequirementsEvidenceContext:
         raise RunCommandError("finalized Requirements evidence must be readable JSON") from error
     if not isinstance(decoded, dict):
         raise RunCommandError("finalized Requirements evidence must contain a JSON object")
+    if decoded.get("schema_version") != "2":
+        raise RunCommandError("finalized Requirements evidence must have schema_version=2")
     execution_proof = decoded.get("execution_proof")
     if not isinstance(execution_proof, dict) or execution_proof.get("run_stage") != "final":
         raise RunCommandError("finalized Requirements evidence must have execution_proof.run_stage=final")
@@ -1029,7 +1031,9 @@ def run_command(
         ),
     )
     if requirements_evidence is not None:
-        report = report.model_copy(update={"requirements_evidence": requirements_evidence})
+        report = ReviewReport.model_validate(
+            report.model_dump(mode="json") | {"requirements_evidence": requirements_evidence.model_dump(mode="json")}
+        )
     return _render_review_result(report, request)
 
 

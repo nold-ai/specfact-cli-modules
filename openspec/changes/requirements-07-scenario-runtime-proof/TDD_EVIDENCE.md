@@ -40,24 +40,26 @@
   unsafe or oversized JUnit are rejected, and only a complete passing
   `test-authored` plan can enter reconciliation.
 
-## Failing-before Code Review Requirements context
+## Failing-before Code Review Requirements-context remediation
 
-- **Recorded:** 2026-08-03 (Europe/Berlin)
-- **Command:** `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review -q`
-- **Result:** failed as expected (2 failures).
-- **Failure:** the public `run_command` rejected `requirements_evidence` as an
-  unknown keyword and the CLI exposed no `--requirements-evidence` option.
-- **Intent:** establish a public, provenance-only review handoff before adding
-  Code Review behavior for core #662.
+- **Recorded:** 2026-08-04 (Europe/Berlin)
+- **Command:** `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_non_v2_requirements_evidence_before_review tests/unit/specfact_code_review/run/test_findings.py::test_review_report_uses_schema_1_5_for_requirements_evidence -q`
+- **Result:** failed as expected (3 failures).
+- **Failure:** schema-v1 and schema-v3 finalized-looking proof packets reached
+  review execution, and a report containing Requirements provenance retained
+  schema version `1.0`.
+- **Intent:** establish the compatibility boundary before accepting only
+  finalized schema-v2 provenance for core #662.
 
 ## Passing Code Review Requirements context
 
-- **Recorded:** 2026-08-03 (Europe/Berlin)
+- **Recorded:** 2026-08-04 (Europe/Berlin)
 - **Commands:**
-  - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review -q`
+  - `hatch run pytest tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_non_v2_requirements_evidence_before_review tests/unit/specfact_code_review/run/test_findings.py::test_review_report_uses_schema_1_5_for_requirements_evidence tests/unit/specfact_code_review/run/test_findings.py::test_review_report_accepts_legacy_schema_fixtures_without_requirements_provenance -q`
   - `openspec validate requirements-07-scenario-runtime-proof --strict`
-- **Result:** 2 focused tests passed; strict OpenSpec validation passed.
+- **Result:** focused regression and legacy-compatibility tests passed; strict
+  OpenSpec validation passed.
 - **Proof:** `specfact code review run --requirements-evidence <path>` accepts
-  only a finalized schema-v2 proof, retains its path/digests/source/verdict in
-  review JSON, and does not use the Requirements verdict to calculate the
-  review exit code or verdict.
+  only a finalized schema-v2 proof, emits report schema `1.5` with its
+  path/digests/source/verdict in review JSON, and does not use the Requirements
+  verdict to calculate the review exit code or verdict.

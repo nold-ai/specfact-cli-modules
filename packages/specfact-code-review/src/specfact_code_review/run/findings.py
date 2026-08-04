@@ -516,7 +516,9 @@ class ReviewReport(BaseModel):
     def _derive_governance_fields(self) -> ReviewReport:
         if self.simplification_summary is None:
             self.simplification_summary = _build_simplification_summary(self.findings)
-        if self.enforcement_mode is not None:
+        if self.requirements_evidence is not None:
+            self.schema_version = "1.5"
+        elif self.enforcement_mode is not None:
             self.schema_version = "1.4"
         elif self.cleanup_forecast is not None or any(
             finding.has_cleanup_handoff_metadata() for finding in self.findings
