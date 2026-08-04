@@ -1,5 +1,5 @@
 name: nold-ai/specfact-code-review
-version: 0.48.11
+version: 0.48.12
 commands:
   - code
 tier: official
@@ -19,10 +19,9 @@ pip_dependencies:
   - requests
   - ruff
   - semgrep
-core_compatibility: '>=0.44.0,<1.0.0'
+core_compatibility: '>=0.53.1,<1.0.0'
 description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:ec07c72531fd78008a29437aed1e84b3aa4236aaf7a23f70a2dca451a60c246a
-  signature: zalNyZbBXOHsettZThqC4gpanDaX5sKeASsdqRK4RFqaTGuPTtXb72mfxHNoB1U7L4Ag+Rri9GB7sv/dLNfYCA==
+  checksum: sha256:42ef5f6c47d30193ebf730bf483ec513adde4efb7a72e07c8a6bf683a6706549
