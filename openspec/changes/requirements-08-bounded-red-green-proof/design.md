@@ -1,26 +1,45 @@
 ## Context
 
-Core is the trusted execution boundary; Requirements modules are the semantic evidence boundary. The capsule connects them without making modules a Git/test orchestrator or making core reinterpret Requirements status.
+Core is the trusted Git/execution boundary; Requirements modules are the semantic evidence boundary. The capsule connects them without making modules a Git/test orchestrator or making core reinterpret Requirements status.
+
+B, R, and H are the three proof commits: merge base, red checkpoint, and green implementation checkpoint. D is the delivered-head binding required because repository policy commits passing-after evidence after H.
 
 ## Decisions
 
 ### Keep current execution and chronology independent
 
-The report carries separate `current_execution` and `tdd_chronology` claims. Chronology may reference current execution but cannot replace it. A valid current run with no capsule remains a valid current observation with unproven/not-evaluated chronology.
+The report carries separate `current_execution` and `tdd_chronology` claims. Chronology may reference current execution but cannot replace, erase, inflate, or downgrade it. A valid current run with no capsule remains a valid current observation with unproven/not-evaluated chronology.
 
-### Validate a content-addressed replay capsule
+### Validate a content-addressed B/R/H/D capsule
 
-The versioned capsule includes B/R/H commits and trees; ancestry facts; B..R and R..H changed-path/rename manifests and digests; allowed implementation touchpoints; mapping/plan/selector identities; red/final JUnit digests and exact outcomes; runner/toolchain/environment/policy identities; verifier identity/epoch; resource limits; and hash links to retained artifacts.
+The versioned capsule requires:
 
-Core asserts Git and execution facts under its pinned verifier. Modules validate schema, hash links, allowed transition classifications supplied by the accepted mapping/policy, selector equality, outcome rules, and trusted verifier/policy identities.
+- B/R/H/D commit and tree identities, B < R < H <= D ancestry facts, and D equality with the delivery identity;
+- B..R, R..H, and H..D changed-path and rename manifests plus canonical digests;
+- accepted red-setup, implementation, and delivery-evidence touchpoint sets;
+- mapping and plan digests, exact selectors, and frozen failing-before evidence identity;
+- red, green-checkpoint, and delivery JUnit digests plus exact selector outcomes;
+- runner, toolchain, dependency, environment, plugin-autoload, network-policy, policy, and verifier identities/results;
+- verifier epoch, timestamps, timeouts/resource bounds, and retained artifact hash links;
+- signed module repository, commit, tree, package version, manifest integrity, signer, and signature identities.
 
-### Use a conservative transition contract
+Core asserts Git and execution facts under its pinned verifier. Modules validate schema, canonical hashes, transition classifications, selector equality, outcome rules, trusted module identity, and verifier/policy epoch. Modules do not recompute Git facts or run tests.
 
-B..R may contain requirement/spec/test changes but no governed implementation touchpoint. R..H may change only declared implementation touchpoints. A selected test, helper, fixture, conftest, pytest configuration, dependency lock, proof runner, workflow, mapping, plan, policy, schema, or unclassified path after R invalidates chronology and requires a new R.
+### Use three closed transition policies
+
+B..R may contain only declared requirements/specifications/tests/test harness/configuration, the accepted proof mapping, and the failing-before TDD evidence record. It may not contain governed implementation, dependencies, workflows, runners, verifier/policy/schema changes, other generated artifacts, or unclassified paths. The mapping, plan, selectors, path sets, and failing evidence are frozen at R.
+
+R..H may change only declared implementation touchpoints. A selected test, helper, fixture, conftest, test configuration, dependency lock, proof runner, workflow, mapping, plan, evidence record, policy, schema, or unclassified path invalidates chronology and requires a new R.
+
+When D differs from H, H..D may change only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records. Any behavior, test, configuration, mapping, runner, workflow, policy, schema, other documentation, generated runtime input, or unclassified change is invalid. The identical selectors must remain passing at D.
 
 ### State only the bounded claim
 
-The chronology text is fixed: "These declared selectors failed at R and passed at H while only declared implementation touchpoints changed." Limitations state that intent completeness, complete runtime dependencies, code quality, and defect absence were not proven.
+The chronology text is fixed:
+
+> These declared selectors failed at R, passed at H, and still passed at delivery head D; only declared implementation touchpoints changed from R to H and only declared delivery-evidence touchpoints changed from H to D.
+
+Limitations state that stakeholder-intent completeness, complete runtime dependencies, code quality, correctness, and absence of defects were not proven.
 
 ### Missing trust is unknown/unproven
 
@@ -28,18 +47,18 @@ An incomplete, mismatched, unsupported, or untrusted capsule never produces pass
 
 ### Verifier epochs prevent self-authorization
 
-The capsule identifies a previously promoted verifier/policy epoch. A candidate schema, verifier, workflow, or policy cannot establish its own trusted status; it remains shadow evidence until independently promoted.
+The capsule identifies a previously promoted verifier/policy epoch. A candidate schema, verifier, workflow, fixture, or policy cannot establish its own trusted status; it remains shadow evidence until independently promoted.
 
 ## Implementation Boundary
 
-Later implementation is limited to typed capsule/report models, reconciliation, public input options, focused fixtures/tests, docs, and release metadata. Modules must not add Git worktrees, pytest execution, or static dependency inference.
+Implementation is limited to the typed capsule validator in new `requirements/replay_proof.py`, narrow Requirements lifecycle/command/status integration, provenance-only Code Review adaptation, focused fixtures/tests, docs, and generated signed release outputs. Modules must not add Git worktrees, pytest execution, subprocesses, or static dependency inference.
 
 ## Rollout and Rollback
 
-1. Add failing capsule/reconciliation tests.
-2. Implement the typed schema and dual-write report fields.
-3. Publish a signed release for core shadow adoption.
-4. Promote the initial verifier epoch independently.
-5. Enable strict chronology only after benchmark validation.
-6. Roll back chronology enforcement without disabling current-run evidence.
-
+1. Verify issue #414 metadata and both paired contracts.
+2. Add failing capsule/reconciliation tests.
+3. Implement the typed schema and dual-write report fields.
+4. Publish a signed release through existing registry/signing generators for core shadow adoption.
+5. Promote the initial verifier epoch independently.
+6. Enable strict chronology only after benchmark validation.
+7. Roll back chronology enforcement without disabling current-run evidence.

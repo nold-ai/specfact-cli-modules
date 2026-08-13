@@ -4,6 +4,8 @@ requirements:
     rationale: "Current execution and historical chronology are separate evidence claims."
     stakeholder_refs:
       - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
     touchpoints:
       - id: requirements-report-claims
         kind: planned_schema
@@ -18,6 +20,8 @@ requirements:
     rationale: "The module validates trusted replay evidence without owning execution."
     stakeholder_refs:
       - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
     touchpoints:
       - id: replay-capsule-schema
         kind: planned_schema
@@ -26,12 +30,14 @@ requirements:
       - case_id: R08-MOD-002
         scenario_id: trusted-replay-capsule-validation
         method: test
-        intent: "Validate capsule identities, hash links, transitions, selectors, outcomes, and epoch."
-        observable: "Trusted capsules produce bounded chronology; mismatches produce findings."
+        intent: "Validate B/R/H/D identities, all transition/hash links, frozen red inputs, selectors, fail/pass/pass outcomes, signed module identity, and epoch."
+        observable: "Trusted capsules bound to delivered head D produce bounded chronology; every mismatch produces a deterministic non-green finding."
   openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:bounded-chronology-claim:
     rationale: "The assurance statement must not exceed the supplied evidence."
     stakeholder_refs:
       - "nold-ai/specfact-cli#671"
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
     touchpoints:
       - id: chronology-claim
         kind: planned_artifact
@@ -40,12 +46,14 @@ requirements:
       - case_id: R08-MOD-003
         scenario_id: bounded-chronology-claim
         method: test
-        intent: "Emit the fixed bounded claim and limitations."
+        intent: "Emit the fixed fail-at-R/pass-at-H/remain-pass-at-D bounded claim and limitations."
         observable: "No complete-intent, dependency, quality, or defect-absence claim."
   openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:fail-closed-untrusted-chronology:
     rationale: "Missing trust must never become a green chronology result."
     stakeholder_refs:
       - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
     touchpoints:
       - id: chronology-policy
         kind: planned_policy
