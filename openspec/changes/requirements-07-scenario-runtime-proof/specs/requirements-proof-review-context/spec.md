@@ -2,38 +2,27 @@
 
 ### Requirement: Finalized Requirements Evidence Review Context
 
-The Code Review public interface SHALL accept an optional finalized
-Requirements proof as context. It SHALL validate the structured proof before
-review begins, preserve its immutable path, content digest, mapping digest,
-plan digest, source reference, and Requirements gate decision in the review
-report, and SHALL NOT use that gate decision to calculate the review verdict
-or exit code.
+The Code Review public interface SHALL accept optional finalized Requirements evidence, validate its schema, and retain its path, content digest, mapping digest, plan digest, source identity, `current_execution`, and optional `tdd_chronology` as provenance. Requirements status SHALL NOT calculate or rewrite review findings, score, verdict, or exit code.
 
-#### Scenario: Finalized proof informs review without verdict fusion
+#### Scenario: Final current execution informs review without chronology
 
-- **GIVEN** a readable schema-v2 Requirements proof whose execution stage is
-  `final`
-- **WHEN** `specfact code review run` receives it through its public context
-  option
-- **THEN** the resulting review JSON retains the Requirements provenance
-- **AND** the review verdict and exit code remain derived only from review
-  findings.
+- **GIVEN** readable finalized Requirements evidence with a valid current-execution claim and no historical attestation
+- **WHEN** Code Review receives it
+- **THEN** review retains current-execution provenance
+- **AND** it records chronology as absent/unproven rather than rejecting the report
+- **AND** the review verdict remains independent.
 
-#### Scenario: Non-final or malformed evidence is rejected
+#### Scenario: Malformed or non-final evidence is rejected
 
-- **GIVEN** an unreadable, malformed, incomplete, or non-final Requirements
-  proof
-- **WHEN** Code Review receives it through the public context option
+- **GIVEN** unreadable, malformed, unsupported, or non-final Requirements evidence
+- **WHEN** Code Review receives it
 - **THEN** it rejects the invocation before review execution
-- **AND** it does not emit a review report that could be mistaken for a
-  Requirements-aware review.
+- **AND** it emits no report that could be mistaken for a valid Requirements-aware review.
 
-#### Scenario: Passing evidence retains its historical proof basis
+#### Scenario: Historical chronology is retained without verdict fusion
 
-- **GIVEN** a structurally complete final Requirements proof with a passing
-  gate decision
-- **WHEN** Code Review receives it through the public context option
-- **THEN** it accepts only the `red-junit` proof basis or a
-  `legacy-tdd-ledger` basis with matching digest-bound ledger provenance
-- **AND** it rejects a missing or unrecognized proof basis before review
-  execution.
+- **GIVEN** finalized Requirements evidence contains a valid R08 chronology attestation
+- **WHEN** Code Review receives it
+- **THEN** it retains the attestation identity and bounded claim separately from current execution
+- **AND** neither Requirements claim changes the review policy result.
+

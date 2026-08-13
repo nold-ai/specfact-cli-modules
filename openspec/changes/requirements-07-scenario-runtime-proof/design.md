@@ -1,127 +1,65 @@
 ## Context
 
-`specfact requirements evidence` currently selects changed OpenSpec sources,
-imports their requirements, validates profiles, and checks declared test links.
-That is a trustworthy static gate, but a path-level link cannot establish that
-an exact test was collected or passed. The core repository owns local and CI
-process orchestration; modules own Requirements evidence semantics. The boundary
-must prevent core-side verdict reimplementation and module-side execution of
-repository-controlled command text.
+Modules own Requirements mappings, maturity, deterministic plans, JUnit reconciliation, and report semantics. Core owns Git snapshot selection, isolated execution, timeouts, environments, artifacts, and CI enforcement.
 
-This slice is narrower than `validation-02-full-chain-engine`: it produces one
-Requirements scenario-proof signal that the future full-chain graph may
-consume. It does not aggregate architecture, contracts, code quality, or other
-evidence domains.
+The previous schema used one linear maturity ladder where a final passing current run implied or required a historical red basis. The corrected model represents two independent claims.
 
 ## Goals and Non-Goals
 
 ### Goals
 
-- Represent every selected scenario with a stable identity and explicit
-  touchpoint/test mappings.
-- Emit a safe, structured test plan that a consumer can execute without shell
-  evaluation.
-- Reconcile exact current-run JUnit test cases into deterministic scenario
-  proof states.
+- Keep proposal/readiness/mapping/selector planning deterministic.
+- Finalize current-run execution from exact canonical JUnit identities.
+- Represent historical chronology separately and honestly.
+- Preserve both claims as optional Code Review provenance without verdict fusion.
+- Keep compatibility explicit and migration-only.
 
 ### Non-Goals
 
-- Execute pytest, choose CI runners, or own branch-protection policy.
-- Infer requirements, touchpoints, or test mappings from code with an LLM.
-- Claim that a passing linked test proves every real-world property of a
-  requirement.
-- Implement the full-chain evidence graph or governance-wide envelope.
+- Run pytest, inspect Git history, or create worktrees inside the module.
+- Infer complete runtime input closure.
+- Define the global governance evidence graph.
+- Make Requirements evidence change Code Review scores or exits.
 
 ## Decisions
 
-### Make lifecycle maturity explicit
+### Use two independent claim objects
 
-Schema-v2 mappings capture rationale, stakeholder references, touchpoints, and
-planned verification cases before a test exists. The evaluator reports gate
-decision, required maturity, observed maturity, delivery status, and
-implementation-evidence status separately. `planned` is a successful proposal
-readiness state, never a claim that implementation ran. `accepted` requires a
-provider-neutral review record bound to the canonical mapping digest;
-`test-authored` requires exact selectors for test cases; `red` and `verified`
-are created only by separate JUnit reconciliation.
+`current_execution` records status, mapping/plan/source identities, exact selectors, result digest, collection counts, outcome counts, runner identity, and environment provenance supplied by core.
 
-The mapping digest covers semantic mapping fields, so editing a requirement
-mapping invalidates prior acceptance and proof. The module validates and
-reconciles evidence only; the core delivery runner supplies trusted review,
-Git ancestry, execution, and environment provenance.
+`tdd_chronology` records status and optional R08 attestation identity. Missing chronology is `unproven`/`not_evaluated` according to the versioned report contract and cannot erase or inflate current execution.
 
-### Emit structured selectors, never commands
+### Current reconciliation needs only current evidence
 
-The plan contains typed selector records rather than executable strings. The
-initial runner kind is `pytest`; each selector is an exact repository-relative
-test node ID. Selectors beginning with option syntax, escaping the repository,
-containing control characters, or relying on shell expansion are invalid. The
-plan has a deterministic identifier derived from canonical selected sources,
-scenario mappings, and selector records.
+Final current-run reconciliation validates the original deterministic plan and trusted JUnit. Every exact selector must match one canonical result. Passing, failing, skipped, errored, missing, or ambiguous outcomes remain distinct.
 
-### Separate planning from reconciliation
+A current execution pass must not be called `verified-red-green`, `passing-after-red`, or `change-proven` without an independently validated R08 capsule.
 
-Planning validates sources, scenario identity, touchpoints, and selectors, then
-emits a report that can say only `declared` or `selected`. A separate
-reconciliation invocation accepts the original plan plus trusted JUnit XML and
-records `executed` and `passed`. Missing, duplicate, uncollected, skipped,
-failed, or errored exact test cases remain explicit findings governed by the
-resolved profile.
+### Legacy history remains labelled compatibility
 
-The module does not start tests. This keeps process execution, timeouts,
-parallelism, and runner hardening in the core delivery layer while retaining
-one proof authority.
+Existing `legacy-tdd-ledger` payloads may remain readable for old artifacts. The command cannot generate them for new changes, and they cannot silently satisfy the new R08 chronology claim.
 
-### Bind results to the current plan
+### Review context is provenance-only
 
-The final report carries the plan identifier, source revisions, result-artifact
-digest, and bounded run metadata. For pytest, every JUnit test case must carry a
-dedicated canonical selector property containing the collected pytest node ID;
-the reconciler does not guess identity from `classname` and `name`. Results
-without that property, or identities not present in the supplied plan, are
-untrusted. File-level coverage or a similarly named test is not proof.
+Code Review validates the finalized Requirements report and retains separate current-execution and chronology fields. Missing historical proof is not a malformed current-run report. Requirements status does not alter review findings, score, or exit code.
 
-### Treat touchpoints as declared evidence
+## Implementation Boundary
 
-Touchpoints identify product interfaces such as CLI commands/options, API
-operations, schemas, emitted artifacts, events, or state transitions. They are
-explicit inputs with stable identifiers; this change does not infer them from
-arbitrary code. Their purpose is to let downstream review compare a changed
-surface with its requirement and proof packet.
+This planning commit touches OpenSpec only. Later implementation is limited to:
 
-### Evolve reports compatibly
+- Requirements lifecycle/report/reconciliation models;
+- the public reconciliation command;
+- the Code Review Requirements-context adapter;
+- focused unit/contract fixtures and docs;
+- bundle version/signature/registry updates only after behavior is ready.
 
-Existing consumers that need only the current top-level verdict and findings
-remain supported. New proof fields are versioned and deterministic. Any schema
-version transition includes fixtures proving old-report reading and explicit
-rejection of unsupported future versions.
-
-### Keep review context provenance-only
-
-`specfact code review run --requirements-evidence <path>` accepts only a
-readable finalized schema-v2 Requirements proof. Code Review records the
-evidence path, canonical content digest, mapping digest, plan digest, source
-reference, and Requirements gate decision as a dedicated review-report context.
-The Requirements decision is not a review finding and never changes review
-score, verdict, or exit status. Invalid or non-final evidence is rejected
-before any review process starts.
-
-## Risks and Mitigations
-
-- **False proof from path-level matching**: require exact test case identities
-  from JUnit, bound to the original plan.
-- **Command injection through selectors**: publish structured selectors only;
-  validate repository containment and reject option/control syntax.
-- **Stale or replayed results**: bind source revisions, plan ID, and result
-  digest in the finalized report.
-- **Over-coupling to the future full-chain engine**: expose a bounded evidence
-  packet without importing full-chain orchestration.
+Do not add Git orchestration, pytest execution, or static import/plugin/configuration analysis to modules.
 
 ## Rollout and Rollback
 
-1. Release planning/reconciliation contracts behind explicit options while
-   preserving current evidence behavior.
-2. Publish signed module artifacts and an immutable commit for core #662.
-3. Let core adopt the release first in advisory mode, then strict policy.
-4. Roll back core consumption without changing
-   upstream requirement sources or deleting retained evidence.
+1. Add failing schema and reconciliation tests.
+2. Dual-read old reports and dual-write the corrected fields during one compatibility release.
+3. Publish a signed release for core adoption.
+4. Remove generation of new legacy-ledger evidence after core migrates.
+5. Roll back by keeping the old reader while disabling the new writer; never collapse the two claims again.
+

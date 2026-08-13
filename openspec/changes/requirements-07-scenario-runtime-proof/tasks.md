@@ -1,101 +1,38 @@
-# Tasks: Requirement Scenario Runtime Proof
+# Tasks: Separate Current Execution from Historical Chronology
 
-## TDD / SDD order (enforced)
+## 0. Planning-only correction
 
-Specs first, then scenario-mapped tests and captured failing evidence, then
-production code. Do not implement planning or reconciliation behavior before
-its tests exist and have failed for the expected reason.
+- [x] 0.1 Define independent `current_execution` and `tdd_chronology` claims.
+- [x] 0.2 Move new historical proof to R08 and prohibit dependency-closure inference.
+- [x] 0.3 Create OpenSpec-only planning changes with no package or registry edits.
 
----
+## 1. Failing tests first — each task at most two hours
 
-## 1. Worktree and readiness
+- [ ] 1.1 Add `test_final_reconciliation_reports_current_execution_without_chronology`. Allowed files: focused Requirements lifecycle tests.
+- [ ] 1.2 Add `test_current_execution_pass_does_not_emit_passing_after_red`. Allowed files: focused Requirements report tests.
+- [ ] 1.3 Add `test_missing_current_junit_cannot_be_replaced_by_historical_context`. Allowed files: focused reconciliation tests.
+- [ ] 1.4 Add `test_review_context_accepts_final_current_execution_without_historical_basis`. Allowed files: focused Code Review context tests.
+- [ ] 1.5 Add `test_new_reconciliation_cannot_generate_legacy_tdd_ledger`. Allowed files: focused compatibility tests.
+- [ ] 1.6 Record failing commands and outcomes in `TDD_EVIDENCE.md` before source edits.
 
-- [x] 1.1 Create issue-linked worktree
-  `../specfact-cli-modules-worktrees/feature/requirements-07-scenario-runtime-proof`
-  from current `origin/dev`; verify branch and clean scope.
-- [x] 1.2 Create modules User Story #368; verify labels, project `Todo`, parent
-  Feature #161, Epic #144, and native blocking relation to core #662.
-- [x] 1.3 Recheck #368 ownership and verify the paired core proposal remains
-  contract-compatible. On 2026-08-04, #368 was confirmed as the active
-  `In Progress` item for this linked PR; the paired core #662 proposal/design
-  require finalized schema-v2 proof, independent review provenance, and no
-  verdict fusion. The shipped `nold-ai/specfact-cli` generated command
-  references do not yet expose `--requirements-evidence`; this is an explicit
-  release boundary, not a completed cross-repository publication. Core #662
-  remains blocked until this module version is published and core regenerates
-  its references from the released module metadata. This public context input
-  supplies the required contract without claiming the paired release is done.
+## 2. Minimal implementation — each task at most two hours
 
-## 2. Specification and failing evidence
+- [ ] 2.1 Add versioned current-execution and chronology fields to the Requirements report model.
+- [ ] 2.2 Reconcile current JUnit independently and retain exact outcome classes.
+- [ ] 2.3 Update Code Review context validation to retain both claims without requiring chronology.
+- [ ] 2.4 Keep old report reading explicit; stop generating legacy-ledger evidence for new changes.
+- [ ] 2.5 Update public command/docs fixtures without adding execution or Git behavior.
 
-- [x] 2.1 Refine the scenario-proof specs when current release reality exposes
-  a concrete ambiguity. On 2026-08-05, the Code Review consumer contract was
-  made explicit: a passing final proof retains a valid `red-junit` or
-  digest-bound `legacy-tdd-ledger` basis before it can be attached as review
-  provenance.
-- [x] 2.2 Add failing Requirements tests for schema-v2 proposal mappings,
-  rationale/touchpoint/verification-case completeness, mapping digest,
-  digest-bound acceptance, and explicit not-yet-available execution state.
-- [x] 2.3 Add failing tests for exact pytest selectors, unsafe-selector
-  rejection, deterministic plan ordering, and reconciliation for passed, failed, skipped,
-  uncollected, duplicate, stale, mismatched, missing-canonical-selector, and
-  malformed JUnit cases.
-- [x] 2.4 Record commands, timestamps, and expected failures in
-  `TDD_EVIDENCE.md` before production edits.
+## 3. Release
 
-## 3. Module implementation
+- [ ] 3.1 Run focused/full tests, contracts, type/lint, strict OpenSpec, and full explicit-range Code Review.
+- [ ] 3.2 Update bundle version, manifest integrity, registry entry, signatures, and compatibility metadata.
+- [ ] 3.3 Publish the signed release and give core the immutable commit/package identities.
 
-- [x] 3.1 Add typed, contract-decorated lifecycle mapping, acceptance,
-  touchpoint, selector, plan, reconciliation, and proof-state models to
-  `specfact-requirements`.
-- [x] 3.2 Extend `specfact requirements evidence` with required-maturity,
-  review-evidence, and plan-output inputs while preserving the legacy
-  staged/base-ref contract; add `specfact requirements reconcile` without
-  module-owned test execution.
-- [x] 3.3 Parse bounded JUnit XML defensively and bind exact results to the plan,
-  source revisions, and result digest; do not invoke a test runner.
-- [x] 3.4 Keep output ordering, remediation, profile severity, and old-report
-  compatibility deterministic across repeated runs.
-- [x] 3.5 Add a Code Review public context input that accepts only finalized
-  Requirements proof, preserves independent provenance in the review report,
-  and never fuses verdicts.
+## Prohibited shortcuts
 
-## 4. Passing evidence and integration proof
+- Do not execute pytest or Git in the Requirements module.
+- Do not add AST/import/plugin/configuration/data-read inference.
+- Do not make missing chronology invalidate an otherwise valid current-run observation.
+- Do not let Requirements status change the Code Review verdict.
 
-- [ ] 4.1 Run focused Requirements tests and record passing
-  evidence in `TDD_EVIDENCE.md`.
-- [ ] 4.2 Add integration fixtures proving plan -> external pytest/JUnit ->
-  reconciliation without module-owned execution.
-- [ ] 4.3 Verify paired core #662 can consume only public released interfaces;
-  publish compatibility fixtures and the immutable release commit.
-
-## 5. Quality, documentation, and release
-
-- [ ] 5.1 Run format, type-check, lint, YAML lint, bundle-import, contract,
-  smart-test, and full focused test gates.
-- [ ] 5.2 Run fresh changed/full SpecFact code review with `--bug-hunt`; resolve
-  every finding at every severity and record the final report evidence.
-- [ ] 5.3 Update Requirements guides, command references, and
-  modules.specfact.io navigation with proof semantics and limitations.
-- [x] 5.4 Bump affected bundle versions, regenerate registry artifacts and
-  command overviews, sign changed module payloads, and verify signatures/version
-  policy from the filesystem.
-- [x] 5.5 Run `openspec validate requirements-07-scenario-runtime-proof --strict`
-  and retain the validation result.
-
-## 6. Delivery
-
-- [ ] 6.1 Commit implementation, push the issue-linked feature branch, and open
-  the implementation PR to `dev` using the repository PR template and
-  `Fixes nold-ai/specfact-cli-modules#368`.
-- [ ] 6.2 Add the PR to project 1, set implementation status to `In Progress`,
-  verify Development/parent/blocker metadata, and publish the immutable release
-  handoff for core #662.
-- [ ] 6.3 After merge and core handoff, archive only with
-  `openspec archive requirements-07-scenario-runtime-proof` from repo root.
-
-## Post-merge cleanup
-
-- [ ] Return to the primary modules checkout, fetch `dev`, remove the worktree,
-  delete the local feature branch after merge, prune worktrees, and optionally
-  delete the merged remote branch.

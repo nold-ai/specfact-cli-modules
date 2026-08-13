@@ -1,0 +1,59 @@
+schema_version: "2"
+requirements:
+  openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:independent-current-execution-and-chronology:
+    rationale: "Current execution and historical chronology are separate evidence claims."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+    touchpoints:
+      - id: requirements-report-claims
+        kind: planned_schema
+        locator: "requirements report schema"
+    verification_cases:
+      - case_id: R08-MOD-001
+        scenario_id: independent-current-execution-and-chronology
+        method: test
+        intent: "Prevent either claim from inflating or erasing the other."
+        observable: "Separate statuses and provenance in finalized evidence."
+  openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:trusted-replay-capsule-validation:
+    rationale: "The module validates trusted replay evidence without owning execution."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+    touchpoints:
+      - id: replay-capsule-schema
+        kind: planned_schema
+        locator: "historical replay capsule"
+    verification_cases:
+      - case_id: R08-MOD-002
+        scenario_id: trusted-replay-capsule-validation
+        method: test
+        intent: "Validate capsule identities, hash links, transitions, selectors, outcomes, and epoch."
+        observable: "Trusted capsules produce bounded chronology; mismatches produce findings."
+  openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:bounded-chronology-claim:
+    rationale: "The assurance statement must not exceed the supplied evidence."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: chronology-claim
+        kind: planned_artifact
+        locator: "tdd_chronology"
+    verification_cases:
+      - case_id: R08-MOD-003
+        scenario_id: bounded-chronology-claim
+        method: test
+        intent: "Emit the fixed bounded claim and limitations."
+        observable: "No complete-intent, dependency, quality, or defect-absence claim."
+  openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:fail-closed-untrusted-chronology:
+    rationale: "Missing trust must never become a green chronology result."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+    touchpoints:
+      - id: chronology-policy
+        kind: planned_policy
+        locator: "bounded red-green reconciliation"
+    verification_cases:
+      - case_id: R08-MOD-004
+        scenario_id: fail-closed-untrusted-chronology
+        method: test
+        intent: "Return unknown/unproven and fail strict policy for incomplete capsules."
+        observable: "Diagnostics are retained and no pass/no-impact is emitted."
+

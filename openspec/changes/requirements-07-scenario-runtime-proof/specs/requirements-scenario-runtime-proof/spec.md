@@ -2,154 +2,79 @@
 
 ### Requirement: Lifecycle-Aware Requirements Readiness
 
-The Requirements module SHALL distinguish proposal readiness from implementation
-proof. A proposal-only source SHALL be evaluated at `planned` maturity from
-stable requirement/scenario mappings, rationale, touchpoints, verification
-cases, and observables without requiring a test path or claiming execution.
-The report SHALL expose the requested and observed maturity separately from its
-gate verdict and SHALL label implementation evidence as not-yet-available.
+The Requirements module SHALL distinguish planned readiness, mapping acceptance, test-authored planning, current execution, and historical TDD chronology. Current execution and chronology SHALL be independent claims; neither may silently imply or overwrite the other.
 
 #### Scenario: Proposal mapping is complete but not executed
 
-- **GIVEN** imported requirements and scenarios with a schema-v2 sidecar that
-  maps each scenario to a rationale, touchpoint, verification case, and
-  observable, but has no test selector
-- **WHEN** evidence runs with required maturity `planned`
-- **THEN** it returns a passing proposal-readiness verdict
-- **AND** it reports `delivery_status: proposal-only`
-- **AND** it reports `implementation_evidence: not-yet-available`
-- **AND** it does not report the requirement as implemented or verified.
-
-#### Scenario: Proposal mapping is incomplete
-
-- **GIVEN** an imported requirement or scenario without a required schema-v2
-  mapping field
-- **WHEN** evidence runs with required maturity `planned`
-- **THEN** it returns a failing incomplete maturity result
-- **AND** each missing requirement, scenario, or field is reported
-- **AND** no synthetic test link is created.
+- **GIVEN** complete planned mappings without exact selectors
+- **WHEN** planned maturity is evaluated
+- **THEN** proposal readiness may pass
+- **AND** current execution and chronology remain not evaluated
+- **AND** the report does not claim implementation.
 
 ### Requirement: Mapping Acceptance Provenance
 
-The Requirements module SHALL validate provider-neutral acceptance evidence
-against the canonical mapping digest. Acceptance SHALL be a distinct maturity
-state; it SHALL not be inferred from a passing proposal-readiness verdict.
+The Requirements module SHALL validate provider-neutral acceptance against the canonical mapping digest before test-authored or stronger evidence satisfies strict policy.
 
-#### Scenario: Accepted mapping enables test authoring
+#### Scenario: Stale acceptance remains blocking
 
-- **GIVEN** a complete planned mapping and an acceptance record with a matching
-  mapping digest, decision, reviewer identity, role, timestamp, and immutable
-  reference
-- **WHEN** evidence requires `accepted` maturity
-- **THEN** it reports the mapping as accepted
-- **AND** it may proceed to test-authored validation.
-
-#### Scenario: Stale or rejected acceptance remains blocking
-
-- **GIVEN** an acceptance record with a rejected decision, missing provenance,
-  or a digest different from the current mapping
-- **WHEN** evidence requires `accepted` maturity or higher
-- **THEN** it returns a deterministic acceptance finding
-- **AND** it does not permit test or implementation proof to satisfy the gate.
+- **GIVEN** acceptance is missing, rejected, incomplete, or bound to another mapping digest
+- **WHEN** accepted maturity or higher is required
+- **THEN** the module emits a deterministic finding
+- **AND** passing tests do not invent acceptance.
 
 ### Requirement: Deterministic Scenario Proof Plan
 
-The Requirements module SHALL emit a deterministic, machine-readable proof
-plan for selected requirement scenarios without executing tests. Each planned
-scenario SHALL carry a stable requirement/scenario identity, declared product
-touchpoints, verification method, intent, and observable. Reconciliation SHALL
-bind the plan to the supplied execution source revision.
-Exact structured test selectors are required only at `test-authored` maturity
-and above. A selector SHALL identify a supported runner and
-repository-contained test case; it SHALL NOT contain a shell command.
+The Requirements module SHALL emit a deterministic plan of stable requirement/scenario identities, declared touchpoints, intents, observables, and exact structured selectors without executing commands. Exact selectors are required only at test-authored maturity and above.
 
-#### Scenario: Selected scenarios produce a stable plan
+#### Scenario: Stable inputs produce a stable plan
 
-- **GIVEN** unchanged selected requirement sources, scenario mappings,
-  touchpoints, and exact test selectors
-- **WHEN** Requirements evidence planning runs repeatedly
-- **THEN** it emits byte-stable ordered plan content with the same plan identity
-- **AND** every scenario is marked only as declared or selected
-- **AND** the report does not claim that a test executed or passed.
+- **GIVEN** unchanged mappings and selectors
+- **WHEN** planning repeats
+- **THEN** the ordered plan and plan identity are byte-stable
+- **AND** the report makes no execution or chronology claim.
 
-#### Scenario: Unsafe selector fails before consumer execution
+#### Scenario: Unsafe selector is rejected
 
-- **GIVEN** a test selector that escapes the repository, begins with runner
-  option syntax, contains control or shell syntax, uses an unsupported runner,
-  or does not identify an exact test case
-- **WHEN** Requirements evidence planning validates the mapping
-- **THEN** it emits a bounded machine-readable invalid-selector finding
-- **AND** the plan is non-executable under strict policy
-- **AND** it emits no command string for a consumer to evaluate.
-
-#### Scenario: Changed scenario lacks executable proof mapping
-
-- **GIVEN** a selected requirement scenario with no valid exact test selector
-- **WHEN** the resolved profile evaluates plan completeness
-- **THEN** strict policy produces a failing scenario-unverified verdict
-- **AND** advisory policy retains the same finding without claiming proof.
+- **GIVEN** a selector escapes the repository, starts with option syntax, contains control/shell/wildcard syntax, uses an unsupported runner, or is not an exact test identity
+- **WHEN** planning validates it
+- **THEN** the plan is non-executable under strict policy
+- **AND** no command string is emitted.
 
 ### Requirement: Current-Run JUnit Reconciliation
 
-The Requirements module SHALL reconcile a previously emitted proof plan with
-trusted JUnit XML without starting a test process. It SHALL mark a scenario as
-executed or passed only when every required exact selector is matched
-unambiguously to current-run test case results bound to that plan. For pytest,
-the trusted result identity SHALL be a dedicated canonical selector property
-containing the collected pytest node ID; the module SHALL NOT infer identity
-from a JUnit display name or class name.
+The Requirements module SHALL reconcile a deterministic plan with trusted current-run JUnit without starting tests. `current_execution` SHALL bind the mapping, plan, source, selector set, JUnit digest, runner/environment provenance, collection counts, and exact outcomes. It SHALL be final without requiring historical evidence.
 
-#### Scenario: Exact linked test executes and passes
+#### Scenario: Every exact selector passes in the current run
 
-- **GIVEN** a valid proof plan and trusted current-run JUnit results containing
-  one passing test case for every required exact selector
-- **WHEN** Requirements evidence reconciliation runs
-- **THEN** the final report binds the plan identity, source revisions, and
-  result-artifact digest
-- **AND** it marks the matched scenarios executed and passed
-- **AND** it emits a passing verdict when no other blocking finding exists.
+- **GIVEN** one canonical passing result for every required exact selector
+- **WHEN** final current-run reconciliation executes
+- **THEN** `current_execution` is pass
+- **AND** absent historical evidence leaves `tdd_chronology` unproven or not evaluated
+- **AND** the report does not say passing-after-red or change-proven.
 
-#### Scenario: Declared test is absent from results
+#### Scenario: Current result is incomplete or failing
 
-- **GIVEN** a valid plan whose required exact selector is not collected in the
-  supplied JUnit results
-- **WHEN** reconciliation runs
-- **THEN** the scenario remains unproven with an uncollected-test finding
-- **AND** strict policy returns a failing verdict after preserving diagnostics.
+- **GIVEN** a selector is missing, duplicate, ambiguous, skipped, failed, errored, or lacks canonical identity
+- **WHEN** reconciliation executes
+- **THEN** current execution does not pass
+- **AND** chronology cannot replace the current result.
 
-#### Scenario: Result cannot be trusted or matched
+### Requirement: Historical Chronology Is a Separate Claim
 
-- **GIVEN** malformed JUnit, a missing canonical selector property, a
-  mismatched plan identity or source revision, duplicate ambiguous test
-  identities, or failed, errored, or skipped results
-- **WHEN** reconciliation runs
-- **THEN** it never upgrades the affected scenario to passed
-- **AND** it emits deterministic findings that distinguish the failure class.
+New historical red-to-green claims SHALL be accepted only through the R08 bounded replay contract. R07 SHALL NOT infer chronology from current maturity, current JUnit, static Python/pytest analysis, or a newly generated legacy ledger.
 
-### Requirement: Auditable Legacy TDD Ledger Migration
+#### Scenario: No R08 capsule is supplied
 
-The Requirements module SHALL support an explicit, opt-in migration record for
-legacy changes that captured failing-first evidence in an immutable TDD ledger
-before this runtime-proof contract existed. The migration record SHALL bind the
-ledger digest, current mapping digest, and current plan digest; it SHALL be
-accepted only during final reconciliation. A valid migration record SHALL not
-be represented as red JUnit proof, and the final report SHALL identify its
-implementation evidence as `passing-after-legacy-tdd-ledger`.
+- **GIVEN** current execution is final but no valid R08 capsule exists
+- **WHEN** the report is finalized
+- **THEN** current execution retains its exact status
+- **AND** chronology remains unproven or not evaluated
+- **AND** no broader proof label is emitted.
 
-#### Scenario: Immutable legacy ledger permits a transparent final transition
+#### Scenario: Legacy artifact is read for compatibility
 
-- **GIVEN** current-run passing JUnit results and an explicit legacy migration
-  record whose ledger, mapping, and plan digests match the final plan
-- **WHEN** final Requirements evidence reconciliation runs with that record
-- **THEN** it returns a passing verified result when no other finding blocks it
-- **AND** it records the migration basis and ledger provenance
-- **AND** it labels the implementation evidence
-  `passing-after-legacy-tdd-ledger`, not `passing-after-red-proven`.
-
-#### Scenario: Missing, stale, or misplaced legacy record remains blocking
-
-- **GIVEN** a missing, malformed, digest-mismatched, or red-stage legacy
-  migration record
-- **WHEN** Requirements evidence reconciliation runs
-- **THEN** it does not waive the required red proof
-- **AND** it emits a deterministic legacy-migration finding.
+- **GIVEN** an old report contains an explicitly labelled legacy-ledger basis
+- **WHEN** compatibility reading occurs
+- **THEN** the historical label remains migration-only
+- **AND** it is not converted into a new R08 attestation.

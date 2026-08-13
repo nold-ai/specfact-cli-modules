@@ -130,3 +130,12 @@
   migration's behavioral change; collapsing it would mix an unrelated
   readability refactor into a release-critical provenance fix. It is retained
   intentionally and does not change the reviewed reconciliation surface.
+
+
+## 2026-08-13 scope-correction record
+
+This planning commit preserves the historical entries above but supersedes their coupling of current execution to prior-red or legacy-ledger evidence. Those results describe the previous contract; they do not prove the corrected R07 behavior or the new R08 capsule contract.
+
+- Corrected behavior status: not started.
+- Package, registry, schema, runtime, and test changes in this commit: none.
+- Required next evidence: the named failing tests in `tasks.md`, then minimal model/reconciliation changes and a signed module release.
