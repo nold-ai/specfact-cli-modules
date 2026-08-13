@@ -28,7 +28,11 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - [ ] 1.8 Add `test_missing_capsule_is_unknown_under_strict_policy`.
 - [ ] 1.9 Add `test_runtime_observation_cannot_claim_complete_dependency_scope`.
 - [ ] 1.10 Add a table-driven mandatory-field test that deletes or alters every identity, transition manifest/digest, mapping/plan/selector, JUnit/outcome, runner/toolchain/environment/network/policy/verifier, resource/timestamp, artifact-link, and signed-module field and requires deterministic non-green chronology.
-- [ ] 1.11 Record actual failing commands/results in `TDD_EVIDENCE.md` before source edits.
+- [ ] 1.11 Add `test_current_execution_passes_without_tdd_chronology` in `tests/unit/specfact_requirements/test_requirements_lifecycle.py`.
+- [ ] 1.12 Add `test_historical_capsule_cannot_substitute_for_missing_current_execution` in `tests/unit/specfact_requirements/test_requirements_lifecycle.py`.
+- [ ] 1.13 Add `test_code_review_accepts_current_execution_without_tdd_chronology` in `tests/unit/specfact_code_review/run/test_commands.py`; assert Requirements provenance is retained but does not calculate review findings, score, verdict, or exit code.
+- [ ] 1.14 Before any source edit, update `requirements-evidence.yaml` under the accepted mapping schema with the exact selectors from tasks 1.1–1.13, verify each selector collects once, and freeze the accepted mapping and plan digests. Do not invent selectors on this planning-only branch.
+- [ ] 1.15 Record actual failing commands/results in `TDD_EVIDENCE.md` before source edits.
 
 ## 2. Minimal implementation
 
@@ -57,6 +61,12 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - Do not manually move OpenSpec change directories or hand-edit generated registry archives/checksums/signatures.
 
 ## Closed implementation allowlist
+
+OpenSpec mapping and evidence records:
+
+- `openspec/changes/requirements-08-bounded-red-green-proof/requirements-evidence.yaml`: before source edits only, add the exact selectors from tasks 1.1–1.13 and freeze the accepted mapping/plan digests.
+- `openspec/changes/requirements-08-bounded-red-green-proof/TDD_EVIDENCE.md`: add failing-before evidence after the named tests fail and before source edits; add a separate passing-after section only after implementation passes.
+- `openspec/changes/requirements-08-bounded-red-green-proof/CHANGE_VALIDATION.md`: final implementation validation only after implementation and all required gates complete.
 
 Capsule model/validation:
 
