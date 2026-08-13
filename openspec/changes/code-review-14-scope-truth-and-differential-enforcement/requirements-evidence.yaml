@@ -1,0 +1,60 @@
+schema_version: "2"
+requirements:
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:explicit-review-scope-evidence:
+    rationale: "A review verdict is meaningful only when the evaluated snapshot is known."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-scope-cli
+        kind: planned_cli_command
+        locator: "specfact code review run --scope"
+    verification_cases:
+      - case_id: CR14-001
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Resolve worktree, index, range, full, or explicit-file scope without ambiguity."
+        observable: "Immutable scope evidence identifies the analyzed snapshot and files."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
+    rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-differential-runner
+        kind: planned_component
+        locator: "specfact-code-review differential runner"
+    verification_cases:
+      - case_id: CR14-002
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Classify introduced, fixed, unchanged, and unknown findings under identical analyzers."
+        observable: "Introduced blockers block even away from added lines; baseline failures remain unknown."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:independent-finding-lifecycle-and-remediation:
+    rationale: "Severity, resolution, autofix availability, and policy are distinct facts."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-finding-schema
+        kind: planned_schema
+        locator: "ReviewFinding"
+    verification_cases:
+      - case_id: CR14-003
+        scenario_id: independent-finding-lifecycle-and-remediation
+        method: test
+        intent: "Keep open fixable errors blocking until actually fixed or waived."
+        observable: "Separate fields and deterministic policy derivation."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:truthful-review-assurance-status:
+    rationale: "Unknown and not-applicable are not green passes."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+    touchpoints:
+      - id: review-report-status
+        kind: planned_schema
+        locator: "ReviewReport"
+    verification_cases:
+      - case_id: CR14-004
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Expose PASS, FAIL, UNKNOWN, and NOT_APPLICABLE with analyzer coverage."
+        observable: "No all-passed summary when mandatory evidence is skipped or unknown."
+

@@ -7,7 +7,7 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 14 | [`openspec/changes/`](changes/) |
+| **Active** | 15 | [`openspec/changes/`](changes/) |
 | **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
 
@@ -49,6 +49,16 @@ issues and are now archived:
 These archived specs are now the shipped basis for the flagship demo: run review,
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
 AI IDE, rerun, and compare improved evidence.
+
+## Immediate Corrective Track
+
+This track is first because no changed-scope assurance claim is trustworthy until its Git boundary and unknown states are explicit.
+
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `code-review-14-scope-truth-and-differential-enforcement` | - | Resolve worktree/index/range/full scope explicitly; compare pinned base/head analyses; fail closed on unknown scope or analyzer coverage | paired core callers must adopt explicit base/head after the signed release |
+
+Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
 
 ## Active Tracks
 
@@ -115,6 +125,7 @@ ceremony rather than validation evidence:
 
 ### Wave 1 - Cleanup and Scope Alignment
 
+- Accept and implement `code-review-14-scope-truth-and-differential-enforcement` before making changed-range assurance claims.
 - Archive completed/closed changes.
 - Park upstream ceremony expansions.
 - Update active proposals and wiki mirrors to validation positioning.
