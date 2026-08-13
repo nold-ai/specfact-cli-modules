@@ -52,3 +52,38 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - Do not make `autofix_available` mean resolved/non-blocking.
 - Do not add detector rules or AI review to this change.
 
+## Closed implementation allowlist
+
+CLI/request parsing:
+
+- `packages/specfact-code-review/src/specfact_code_review/review/commands.py`.
+- `packages/specfact-code-review/src/specfact_code_review/run/commands.py` only for request translation/validation and consumption of `ScopeResolution`.
+- `tests/unit/specfact_code_review/run/test_commands.py` and `tests/cli-contracts/specfact-code-review-run.scenarios.yaml`.
+
+Scope:
+
+- New exactly `packages/specfact-code-review/src/specfact_code_review/run/scope.py`.
+- New exactly `tests/unit/specfact_code_review/run/test_scope.py`.
+- `scope.py` is the only component allowed to invoke Git for scope discovery; replace/delegate the old scope helpers in `run/commands.py`.
+
+Differential enforcement:
+
+- New exactly `packages/specfact-code-review/src/specfact_code_review/run/differential.py`.
+- New exactly `tests/unit/specfact_code_review/run/test_differential.py`.
+- `packages/specfact-code-review/src/specfact_code_review/run/runner.py` collects analyzer facts and consumes classification; `differential.py` classifies already-produced base/head findings and contains no analyzer or Requirements logic.
+
+Report truth:
+
+- `packages/specfact-code-review/src/specfact_code_review/run/findings.py` remains the only report/finding model; do not create a parallel model. `fixable` must not affect `is_blocking()`.
+- `tests/unit/specfact_code_review/run/test_findings.py` and `tests/unit/specfact_code_review/run/test_runner.py`.
+
+End-to-end/docs/release:
+
+- `tests/e2e/specfact_code_review/test_review_run_e2e.py`, the CLI-contract YAML, and `docs/bundles/code-review/run.md`.
+- `packages/specfact-code-review/module-package.yaml` and generated docs/registry/signatures only after tests pass; use existing generators and never hand-edit archives.
+
+Explicitly forbidden:
+
+- `packages/specfact-code-review/src/specfact_code_review/run/cleanup_evidence.py`, `packages/specfact-code-review/src/specfact_code_review/run/forecast.py`, `packages/specfact-code-review/src/specfact_code_review/run/scorer.py`, and analyzer implementations under `specfact_code_review/tools/`;
+- the Requirements package and archived OpenSpec changes;
+- any new source/test file other than the four exact `scope.py`/`differential.py` files above.
