@@ -64,4 +64,18 @@ requirements:
         method: test
         intent: "Return unknown/unproven and fail strict policy for incomplete capsules."
         observable: "Diagnostics are retained and no pass/no-impact is emitted."
-
+  openspec:requirements-08-bounded-red-green-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
+    rationale: "Code Review must retain chronology and current-execution provenance without verdict fusion."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
+    touchpoints:
+      - id: code-review-proof-context
+        kind: planned_schema
+        locator: "specfact code review run --requirements-evidence"
+    verification_cases:
+      - case_id: R08-MOD-005
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        intent: "Retain finalized B/R/H/D chronology provenance independently from the Code Review verdict."
+        observable: "Review context exposes both Requirements claims and their limitations without changing findings, score, verdict, or exit code."
