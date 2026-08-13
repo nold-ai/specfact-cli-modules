@@ -36,3 +36,15 @@
 - Do not make missing chronology invalidate an otherwise valid current-run observation.
 - Do not let Requirements status change the Code Review verdict.
 
+## Closed R07 implementation allowlist
+
+R07 may edit only:
+
+- `packages/specfact-requirements/src/specfact_requirements/requirements/lifecycle.py` for the canonical independent claim/status shape;
+- `packages/specfact-requirements/src/specfact_requirements/requirements/evidence.py` only to propagate that same shape—never to add another verdict engine;
+- `packages/specfact-requirements/src/specfact_requirements/requirements/commands.py` and `packages/specfact-requirements/src/specfact_requirements/requirements/app.py` only for public input/help wiring;
+- `packages/specfact-code-review/src/specfact_code_review/run/commands.py` and `packages/specfact-code-review/src/specfact_code_review/run/findings.py` only to validate and retain Requirements provenance without verdict fusion;
+- `tests/unit/specfact_requirements/test_requirements_lifecycle.py`, `tests/unit/specfact_requirements/test_requirements_evidence.py`, `tests/integration/specfact_requirements/test_command_apps.py`, `tests/unit/specfact_code_review/run/test_commands.py`, and `tests/unit/specfact_code_review/run/test_findings.py`;
+- Requirements/Code Review module-package metadata, public docs, and generated release outputs only after behavior passes.
+
+Do not edit R07 exact-selector/JUnit parsing except where a named failing test proves the independent-status schema requires it. Do not add a new aggregate report model or any Git/pytest execution path.

@@ -42,3 +42,31 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - Do not generate new legacy-ledger evidence.
 - Do not emit pass/no-impact for missing or untrusted capsule facts.
 
+## Closed implementation allowlist
+
+Capsule model/validation:
+
+- New exactly `packages/specfact-requirements/src/specfact_requirements/requirements/replay_proof.py`.
+- New exactly `tests/unit/specfact_requirements/test_requirements_replay_proof.py`.
+- `replay_proof.py` validates typed data and hash relationships only; it must not run Git, pytest, or subprocesses.
+
+Integration seams:
+
+- `packages/specfact-requirements/src/specfact_requirements/requirements/lifecycle.py`: delegate historical-proof acceptance to `replay_proof.py`; preserve selector validation, plan construction, and JUnit parsing.
+- `packages/specfact-requirements/src/specfact_requirements/requirements/commands.py` and, only for registration/help, `packages/specfact-requirements/src/specfact_requirements/requirements/app.py` and `packages/specfact-requirements/src/specfact_requirements/requirements/__init__.py`.
+- `packages/specfact-requirements/src/specfact_requirements/requirements/evidence.py` only for canonical current-execution/chronology status propagation; no second verdict engine.
+- `packages/specfact-code-review/src/specfact_code_review/run/commands.py` and `packages/specfact-code-review/src/specfact_code_review/run/findings.py` only to validate/retain capsule provenance without verdict fusion.
+
+Tests/docs/release:
+
+- `tests/unit/specfact_requirements/test_requirements_lifecycle.py`, `tests/unit/specfact_requirements/test_requirements_evidence.py`, and the new replay-proof test.
+- `tests/integration/specfact_requirements/test_command_apps.py`.
+- `tests/unit/specfact_code_review/run/test_commands.py` and `tests/unit/specfact_code_review/run/test_findings.py`.
+- Requirements/Code Review module-package metadata, public docs, and generated release outputs only after behavior passes.
+
+Explicitly forbidden:
+
+- core-side ancestry, worktree, test-execution, or runtime-tracing code;
+- AST/import/conftest/plugin/config/data dependency inference;
+- analyzer or AI-review changes;
+- editing shipped R07 history as a substitute for this R08 delta.
