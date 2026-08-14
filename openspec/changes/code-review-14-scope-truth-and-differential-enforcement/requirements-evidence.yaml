@@ -57,4 +57,33 @@ requirements:
         method: test
         intent: "Expose PASS, FAIL, UNKNOWN, and NOT_APPLICABLE with analyzer coverage."
         observable: "No all-passed summary when mandatory evidence is skipped or unknown."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:review-cli-contracts-cover-explicit-scope-and-differential-evidence:
+    rationale: "The public CLI contract must prove every explicit scope and differential evidence path."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-cli-contract-fixtures
+        kind: planned_component
+        locator: "tests/cli-contracts/specfact-code-review-run.scenarios.yaml"
+    verification_cases:
+      - case_id: CR14-005
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Exercise explicit scope sources, full-ref validation, merge-base range selection, analyzer coverage, and invalid combinations."
+        observable: "CLI contract fixtures reject ambiguous inputs and preserve truthful range and unknown evidence."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
+    rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-analyzer-coverage
+        kind: planned_schema
+        locator: "ReviewReport.analyzer_coverage"
+    verification_cases:
+      - case_id: CR14-006
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Record each analyzer identity and outcome and fail closed when mandatory coverage is unavailable."
+        observable: "Skipped, failed, timed-out, or unparsable mandatory analyzer evidence yields UNKNOWN without an all-passed summary."
 

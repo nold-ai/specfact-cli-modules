@@ -25,7 +25,9 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 2.4 Add `test_report_exposes_mandatory_analyzer_coverage`.
 - [ ] 2.5 Add `test_fixable_error_remains_blocking_until_applied`.
 - [ ] 2.6 Add `test_report_never_says_all_passed_with_mandatory_unknown`.
-- [ ] 2.7 Record failing commands and outcomes in `TDD_EVIDENCE.md` before source edits.
+- [ ] 2.7 Collect the exact canonical pytest node ID for every test-authored CR14 scenario, write each selector into `requirements-evidence.yaml`, and rerun strict mapping validation. Do not edit production source in this task.
+- [ ] 2.8 Build the deterministic plan from the accepted mapping and source identity, then record and freeze the mapping digest, plan identity/digest, source revision/tree, analyzer policy/config identities, and selector set. Any later change to a frozen input repeats tasks 2.7–2.8.
+- [ ] 2.9 Execute the frozen exact selectors, confirm the expected failing outcomes, and record the exact commands and outcomes in `TDD_EVIDENCE.md` before any source edit. Section 3 is blocked until tasks 2.7–2.9 are complete.
 
 ## 3. Minimal implementation
 
@@ -80,6 +82,8 @@ Report truth:
 End-to-end/docs/release:
 
 - `tests/e2e/specfact_code_review/test_review_run_e2e.py`, the CLI-contract YAML, and `docs/bundles/code-review/run.md`.
+- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml` only in task 2.7 to add exact collected selectors and freeze their mapping identity.
+- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md` for task 2.9 failing evidence and later verified green evidence.
 - `packages/specfact-code-review/module-package.yaml` and generated docs/registry/signatures only after tests pass; use existing generators and never hand-edit archives.
 
 Explicitly forbidden:
