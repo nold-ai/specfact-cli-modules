@@ -76,11 +76,20 @@ An open fixable error remains unresolved and can block. A waiver is a signed gov
 
 Schema `1.6` adds authoritative `assurance_status: PASS | FAIL | UNKNOWN | NOT_APPLICABLE`. A report cannot say all validations passed when a mandatory scope/analyzer/claim is unknown or skipped. Facts, deterministic claims, heuristic signals, and optional AI hypotheses remain labelled separately; an unvalidated hypothesis cannot block.
 
-For one compatibility release, `overall_verdict` remains a non-authoritative legacy projection: PASS maps to PASS or PASS_WITH_ADVISORY, FAIL maps to FAIL, UNKNOWN maps conservatively to FAIL, and NOT_APPLICABLE maps to PASS_WITH_ADVISORY plus explicit no-impact text. Strict/full/range exits are respectively 0, 1, 1, and 0; shadow always exits 0 while preserving the authoritative status. Legacy reports older than 1.6 can yield only PASS or FAIL. Missing/invalid `assurance_status` in 1.6+ is invalid/unknown, never legacy fallback.
+For one compatibility release, `overall_verdict` remains a non-authoritative legacy projection: PASS maps to PASS or PASS_WITH_ADVISORY, FAIL maps to FAIL, UNKNOWN maps conservatively to FAIL, and NOT_APPLICABLE maps to PASS_WITH_ADVISORY plus explicit no-impact text. Non-shadow exits for those statuses are respectively 0, 1, 1, and 0; shadow always exits 0 while preserving the authoritative status.
+
+Legacy `enforcement_mode` is the normalized policy request, not a scope label: `enforce` becomes `full`; `full`, `changed`, and `shadow` remain those values. `changed` is restricted to the one-release changed/worktree compatibility path. Range plus changed-mode is invalid; strict range writes `full`, shadow range writes `shadow`, and range identity lives only in `scope_evidence`. Legacy reports older than 1.6 can yield only PASS or FAIL. Missing/invalid `assurance_status` in 1.6+ is invalid/unknown, never legacy fallback.
 
 ## Implementation Boundary
 
-The future behavior PR may touch only the Code Review command/resolver/runner/report models, focused fixtures/tests, CLI contracts, docs, and release metadata. It must not edit analyzer rule packs or unrelated bundles.
+The normative closed path allowlist is the one enumerated in `tasks.md`; no implementation path outside that list is permitted without first updating this OpenSpec change and adding a named failing test. Exactly four new source/test files are permitted:
+
+- `packages/specfact-code-review/src/specfact_code_review/run/scope.py`;
+- `tests/unit/specfact_code_review/run/test_scope.py`;
+- `packages/specfact-code-review/src/specfact_code_review/run/differential.py`;
+- `tests/unit/specfact_code_review/run/test_differential.py`.
+
+All other allowed work edits existing command, runner, report, named test/CLI-contract, documentation, and release-metadata seams listed in `tasks.md`. Git scope discovery and index/range materialization are confined to `scope.py`. Detector rules, analyzer implementations, AI review, Requirements-verdict fusion, pytest dependency inference, and unrelated bundles remain prohibited.
 
 ## Rollout and Rollback
 

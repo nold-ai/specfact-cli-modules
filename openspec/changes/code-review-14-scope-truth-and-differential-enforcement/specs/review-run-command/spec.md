@@ -67,6 +67,14 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 - **AND** target-only changes after divergence are not classified as feature-branch fixes or introductions
 - **AND** the supplied base-ref tip remains recorded as resolver evidence.
 
+#### Scenario: Analyzer identity mismatch is unknown
+
+- **GIVEN** merge-base and head analyzer version, toolchain, policy, or configuration identities differ
+- **WHEN** differential classification is requested
+- **THEN** the affected comparison is UNKNOWN
+- **AND** no finding is classified introduced, fixed, or unchanged from non-identical analyzer inputs
+- **AND** strict enforcement exits non-zero with both identities retained.
+
 #### Scenario: Introduced blocker outside added lines still blocks
 
 - **GIVEN** a head change introduces a blocking semantic finding whose reported anchor is outside an added-line range

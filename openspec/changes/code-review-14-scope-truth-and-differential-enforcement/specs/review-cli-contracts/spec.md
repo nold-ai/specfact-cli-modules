@@ -22,6 +22,16 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** NOT_APPLICABLE writes PASS_WITH_ADVISORY plus explicit no-governed-impact text
 - **AND** strict/full/range exit codes are 0, 1, 1, and 0 respectively.
 
+#### Scenario: Legacy enforcement mode is policy, not scope
+
+- **GIVEN** schema 1.6 dual-writing is enabled
+- **WHEN** enforcement and scope are serialized
+- **THEN** request mode enforce normalizes to legacy enforcement_mode full
+- **AND** full, changed, and shadow retain their legacy values
+- **AND** changed mode is accepted only with the deprecated changed/worktree compatibility path
+- **AND** range plus changed mode is rejected
+- **AND** strict range writes enforcement_mode full, shadow range writes shadow, and scope_evidence alone identifies range.
+
 #### Scenario: Versioned readers never infer new truth from old fields
 
 - **GIVEN** a report older than schema 1.6

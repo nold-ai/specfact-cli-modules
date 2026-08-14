@@ -8,6 +8,11 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [x] 0.2 Define a one-release compatibility path for `--scope changed`.
 - [x] 0.3 Create no package, test, registry, version, signature, prompt, or generated-doc changes.
 
+## Implementation acceptance gate
+
+- [ ] A.1 Before tests or implementation, revalidate this accepted module contract against current `dev`, inspect the public core Code Review callers and the adjudicated #665–#671 benchmark at immutable refs, and confirm the merged core #674 boundary that generic review-scope semantics remain module-owned.
+- [ ] A.2 Record those reviewed core refs/paths and the decision that module implementation may proceed independently in this change's `TDD_EVIDENCE.md`. Do not edit core from this change. A separate accepted core adoption change is required before release task 4.7, after the signed module release exists.
+
 ## 1. Failing scope tests
 
 - [ ] 1.1 Add `test_range_scope_includes_committed_files_on_clean_checkout`.
@@ -27,27 +32,27 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 2.2 Add `test_unchanged_baseline_blocker_is_retained_but_not_introduced`.
 - [ ] 2.3 Add `test_baseline_analysis_failure_is_unknown`.
 - [ ] 2.4 Add `test_range_differential_uses_merge_base_snapshot_when_base_tip_advanced`.
-- [ ] 2.5 Add `test_report_exposes_mandatory_analyzer_coverage`.
+- [ ] 2.5 Add `test_report_exposes_mandatory_analyzer_coverage` and `test_analyzer_identity_mismatch_is_unknown`; the latter varies analyzer version, toolchain, policy, and config identities independently.
 - [ ] 2.6 Add `test_fixable_error_remains_blocking_until_applied`.
 - [ ] 2.7 Add `test_report_never_says_all_passed_with_mandatory_unknown`.
-- [ ] 2.8 Add table-driven `test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix` for PASS/FAIL/UNKNOWN/NOT_APPLICABLE under strict and shadow modes.
+- [ ] 2.8 Add table-driven `test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix` for PASS/FAIL/UNKNOWN/NOT_APPLICABLE under strict and shadow modes, including enforce-to-full normalization, changed/worktree compatibility, and range-plus-changed rejection.
 - [ ] 2.9 Add `test_schema_1_6_missing_assurance_status_is_unknown` and legacy-reader cases proving old PASS/FAIL cannot imply UNKNOWN/NOT_APPLICABLE.
 - [ ] 2.10 Collect the exact canonical pytest node ID for every test-authored CR14 scenario, write each selector into `requirements-evidence.yaml`, and rerun strict mapping validation. Do not edit production source in this task.
-- [ ] 2.11 Build the deterministic plan from the accepted mapping and source identity, then record and freeze the mapping digest, plan identity/digest, source revision/tree, analyzer policy/config identities, and selector set. Any later change to a frozen input repeats tasks 2.10–2.11.
-- [ ] 2.12 Execute the frozen exact selectors, confirm the expected failing outcomes, and record the exact commands and outcomes in `TDD_EVIDENCE.md` before any source edit. Section 3 is blocked until tasks 2.10–2.12 are complete.
+- [ ] 2.11 Build the deterministic plan from the accepted mapping and source identity, then write and commit `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json`. Schema version `1` SHALL contain: `change_id`; `checkpoint_parent.commit_sha` and `tree_sha`; `mapping_digest`; `plan.id` and `digest`; sorted `selectors` plus `selector_digest`; sorted `frozen_input_paths` plus `frozen_input_manifest_digest`; and sorted `analyzers[]` entries with `id`, `required`, `version`, `toolchain_digest`, `policy_digest`, and `config_digest`. All digests are canonical SHA-256 values. The parent commit/tree identifies the test-and-mapping checkpoint before this evidence file is added.
+- [ ] 2.12 Verify the committed checkpoint against the current frozen inputs, execute its exact selectors, confirm the expected failing outcomes, and record the exact commands, checkpoint-file digest, and outcomes in `TDD_EVIDENCE.md` before any source edit. Any frozen-input mismatch invalidates the checkpoint and repeats tasks 2.10–2.12. Section 3 is blocked until this task passes.
 
 ## 3. Minimal implementation
 
 - [ ] 3.1 Implement the explicit worktree/index/range/full resolver and immutable scope evidence.
 - [ ] 3.2 In `scope.py`, materialize the exact index snapshot and detached merge-base/head commit trees, produce and pre/post verify selected-input manifests, and clean temporary roots; no other component may invoke Git.
-- [ ] 3.3 Reject positional-file downgrade for PR-range policy and reject fix/preview/mutation options in range mode.
+- [ ] 3.3 Reject positional-file downgrade for PR-range policy and reject fix/preview/mutation options in index and range snapshot modes.
 - [ ] 3.4 Add unknown/not-applicable handling before analyzer execution.
-- [ ] 3.5 Implement isolated symmetric merge-base/head analyzer execution with pinned toolchain and trusted merge-base-policy/config identities.
-- [ ] 3.6 Add stable fingerprints and introduced/fixed/unchanged/unknown classification.
+- [ ] 3.5 Implement isolated symmetric merge-base/head analyzer execution with identical immutable analyzer-version, toolchain, policy, and configuration identities; any identity mismatch yields UNKNOWN.
+- [ ] 3.6 Add stable fingerprints and introduced/fixed/unchanged/unknown classification only after task 3.5 proves identical identities.
 - [ ] 3.7 Add mandatory analyzer coverage evidence.
 - [ ] 3.8 Separate finding status, differential state, autofix availability, and blocking policy.
 - [ ] 3.9 Add schema 1.6 `assurance_status`, versioned legacy reading, closed dual-write projection, and strict/shadow exit matrix.
-- [ ] 3.10 Update CLI/docs/fixtures and retain `changed` only as a deprecated worktree alias.
+- [ ] 3.10 Update CLI behavior, `docs/bundles/code-review/run.md`, and exactly `tests/cli-contracts/specfact-code-review-run.scenarios.yaml`; retain `changed` only as a deprecated worktree alias.
 
 ## 4. Release and adoption
 
@@ -57,7 +62,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 4.4 Re-run the complete feature-branch gates and merge the reviewed implementation PR to `dev` only when schema 1.6 consumer compatibility is proven.
 - [ ] 4.5 Observe the canonical `.github/workflows/publish-modules.yml` run and review its `auto/publish-dev-<run-id>` PR.
 - [ ] 4.6 Require the generated signed manifest/archive/checksum/sidecar/index, filesystem signature/version-bump verification, and full quality matrix before merging the auto-publish PR.
-- [ ] 4.7 Give core the final merged commit/tree, module version, schema 1.6 contract, archive/checksum/signature, signer, workflow, and auto-publish PR identities. Core PR CI migrates in shadow, warning, then enforce mode and requires `assurance_kind=pr_range`.
+- [ ] 4.7 After a separate core adoption change is accepted, give core the final merged commit/tree, module version, schema 1.6 contract, archive/checksum/signature, signer, workflow, and auto-publish PR identities. Core PR CI SHALL pass full base/head refs to range scope, require the reported merge-base/head identities and `assurance_kind=pr_range`, and migrate in shadow, warning, then enforce mode.
 - [ ] 4.8 After implementation and signed handoff merge, run exactly `openspec archive code-review-14-scope-truth-and-differential-enforcement` from the repository root; never move the change manually.
 
 ## Prohibited shortcuts
@@ -97,7 +102,8 @@ End-to-end/docs/release:
 
 - `tests/e2e/specfact_code_review/test_review_run_e2e.py`, the CLI-contract YAML, and `docs/bundles/code-review/run.md`.
 - `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml` only in task 2.10 to add exact collected selectors and freeze their mapping identity.
-- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md` for task 2.12 failing evidence and later verified green evidence.
+- New exactly `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json` in task 2.11 with only the closed schema named there.
+- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md` for acceptance task A.2, task 2.12 failing evidence, and later verified green evidence.
 - `packages/specfact-code-review/module-package.yaml` and generated docs/registry/signatures only after tests pass; use existing generators and never hand-edit archives.
 
 Explicitly forbidden:

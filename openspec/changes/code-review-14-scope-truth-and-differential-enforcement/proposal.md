@@ -37,12 +37,14 @@ The report also lacks an honest unknown/not-applicable state, conflates autofix 
 
 The additive authoritative field SHALL be `assurance_status` in `ReviewReport` schema `1.6`. For one compatibility release, producers SHALL also write the legacy `overall_verdict`, `ci_exit_code`, and `enforcement_mode` fields with this closed projection:
 
-| `assurance_status` | Legacy `overall_verdict` | Strict/full/range `ci_exit_code` | Shadow `ci_exit_code` |
+| `assurance_status` | Legacy `overall_verdict` | Non-shadow `ci_exit_code` | Shadow `ci_exit_code` |
 |---|---|---:|---:|
 | `PASS` | `PASS`, or `PASS_WITH_ADVISORY` when non-blocking findings remain | 0 | 0 |
 | `FAIL` | `FAIL` | 1 | 0 |
 | `UNKNOWN` | `FAIL` as the conservative legacy projection | 1 | 0 |
 | `NOT_APPLICABLE` | `PASS_WITH_ADVISORY`, with an explicit no-governed-impact summary | 0 | 0 |
+
+`enforcement_mode` is copied from the normalized enforcement-policy request, not from scope: `enforce` normalizes to legacy `full`; `full`, `changed`, and `shadow` serialize unchanged. `changed` remains valid for one release only with the deprecated changed/worktree path. Range plus `changed` is invalid; a non-shadow range run writes `full`, a shadow range run writes `shadow`, and `range` is never an `enforcement_mode` value. Scope truth remains in `scope_evidence.requested_scope`, `effective_scope`, and `assurance_kind`.
 
 The new field is authoritative; dual-writing MUST NOT rewrite `UNKNOWN` or `NOT_APPLICABLE` to `PASS`. A schema older than `1.6` may be read only as legacy `PASS` (from `PASS` or `PASS_WITH_ADVISORY`) or `FAIL`; it can never be upgraded by inference to `UNKNOWN` or `NOT_APPLICABLE`. Schema `1.6+` with a missing or invalid `assurance_status` is invalid/unknown and cannot pass.
 
