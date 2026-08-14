@@ -26,6 +26,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 1.9 Add `test_index_and_range_reject_fix_preview_and_mutation_options`.
 - [ ] 1.10 Add `test_index_scope_reads_staged_blobs_not_unstaged_worktree` with conflicting staged/unstaged bytes at the same path.
 - [ ] 1.11 Add `test_range_scope_omitted_enforcement_defaults_to_full` and update existing `test_review_run_instructions_prints_ai_workflow_without_running_review` to require the executable range/base/head/`--enforcement full` workflow; retain explicit range-plus-changed rejection.
+- [ ] 1.12 Add `test_installed_merge_quality_guidance_uses_pr_range`; prove rules updater output and the bundled skill use range/base/head/full for merge review while simplification preview remains worktree-scoped.
 
 ## 2. Failing differential/report tests
 
@@ -34,7 +35,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 2.3 Add `test_baseline_analysis_failure_is_unknown`.
 - [ ] 2.4 Add `test_range_differential_uses_merge_base_snapshot_when_base_tip_advanced`.
 - [ ] 2.5 Add `test_pure_rename_preserves_unchanged_fingerprint`; use the recorded one-to-one rename map to canonicalize the head file anchor while retaining both paths in evidence.
-- [ ] 2.6 Add `test_report_exposes_mandatory_analyzer_coverage` and `test_analyzer_identity_mismatch_is_unknown`; the latter varies analyzer version, toolchain, policy, and config identities independently.
+- [ ] 2.6 Add `test_default_pr_range_analyzer_profile_has_closed_membership`, `test_report_exposes_mandatory_analyzer_coverage`, and `test_analyzer_identity_mismatch_is_unknown`. Freeze the eight required IDs and conditional `semgrep-bugs` rule; the identity test varies analyzer version, toolchain, policy, and config identities independently.
 - [ ] 2.7 Add `test_fixable_error_remains_blocking_until_applied` and update existing `test_score_review_single_fixable_error` to expect FAIL; production `scorer.py` remains unchanged.
 - [ ] 2.8 Add `test_report_never_says_all_passed_with_mandatory_unknown`.
 - [ ] 2.9 Add table-driven `test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix` for PASS/FAIL/UNKNOWN/NOT_APPLICABLE under strict and shadow modes, including enforce-to-full normalization, changed/worktree compatibility, and range-plus-changed rejection.
@@ -51,7 +52,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 3.2 In `scope.py`, materialize the exact index snapshot and detached merge-base/head commit trees, produce and pre/post verify selected-input manifests, and clean temporary roots; no other component may invoke Git.
 - [ ] 3.3 Reject positional-file downgrade for PR-range policy, resolve omitted range enforcement to strict full while rejecting explicit range-plus-changed, update public AI instructions to the executable range command, and reject fix/preview/mutation options in index and range snapshot modes.
 - [ ] 3.4 Add unknown/not-applicable handling before analyzer execution.
-- [ ] 3.5 Implement isolated symmetric merge-base/head analyzer execution with identical immutable analyzer-version, toolchain, policy, and configuration identities; any identity mismatch yields UNKNOWN.
+- [ ] 3.5 Define `pr-range-v1` as a schema-versioned runner-owned profile with the exact required/conditional membership in the spec, bind it to the report/policy digest, and implement isolated symmetric merge-base/head execution with identical immutable analyzer-version, toolchain, policy, and configuration identities; any required gap or identity mismatch yields UNKNOWN.
 - [ ] 3.6 Add stable fingerprints and introduced/fixed/unchanged/unknown classification only after task 3.5 proves identical identities; normalize head file anchors through resolved one-to-one rename facts before matching.
 - [ ] 3.7 Add mandatory analyzer coverage evidence.
 - [ ] 3.8 Separate finding status, differential state, autofix availability, and blocking policy.
@@ -86,6 +87,12 @@ CLI/request parsing:
 - `packages/specfact-code-review/src/specfact_code_review/run/commands.py` only for request translation/validation and consumption of `ScopeResolution`.
 - `tests/unit/specfact_code_review/review/test_commands.py` only to replace the obsolete positional-file PR instruction expectation with the executable range/base/head/full workflow.
 - `tests/unit/specfact_code_review/run/test_commands.py` and `tests/cli-contracts/specfact-code-review-run.scenarios.yaml`.
+
+Installed merge-quality guidance:
+
+- `packages/specfact-code-review/src/specfact_code_review/rules/updater.py` only to replace merge-quality changed/worktree guidance with the executable range/base/head/full command; simplification preview remains worktree-scoped.
+- `packages/specfact-code-review/src/specfact_code_review/resources/skills/specfact-code-review/SKILL.md` for the same merge-quality correction.
+- `tests/unit/specfact_code_review/rules/test_updater.py` only for the focused installed/bundled guidance regression.
 
 Scope:
 

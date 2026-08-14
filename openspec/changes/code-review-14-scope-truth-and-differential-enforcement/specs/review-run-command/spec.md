@@ -106,7 +106,17 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 
 ### Requirement: Mandatory Analyzer Coverage
 
-The report SHALL list each required and optional analyzer with ran/skipped/failed status, version, configuration digest, duration, and diagnostics. A mandatory analyzer that is unavailable, skipped, failed, timed out, or unparsable SHALL make assurance UNKNOWN.
+Strict PR-range assurance SHALL use the closed schema-versioned `pr-range-v1` profile defined authoritatively in `run/runner.py` and bound in the report by profile ID and policy/config digest. Required analyzer IDs are `ruff`, `radon`, `semgrep`, `ai-bloat-ast`, `ast-clean-code`, `basedpyright`, `pylint`, and `contracts`. `semgrep-bugs` is conditionally required when the trusted merge-base policy snapshot contains the governed bugs configuration; when that configuration is absent its outcome SHALL be NOT_APPLICABLE rather than skipped. The profile has no optional analyzers.
+
+The report SHALL list each profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain and configuration digests, duration, and diagnostics. A required analyzer that is unavailable, skipped, failed, timed out, unparsable, or identity-mismatched SHALL make assurance UNKNOWN. Zero findings SHALL count as successful coverage only when an explicit successful run record exists; an empty finding list alone is not analyzer evidence.
+
+#### Scenario: Default PR-range profile has closed membership
+
+- **GIVEN** strict range review resolves the `pr-range-v1` profile
+- **WHEN** analyzer coverage is planned
+- **THEN** the eight always-required analyzer IDs and conditional `semgrep-bugs` membership match the normative profile exactly
+- **AND** the profile ID, membership, required flags, versions, and policy/config digest are retained in the report
+- **AND** no implementation-specific optionality changes assurance.
 
 #### Scenario: Mandatory analyzer did not run
 

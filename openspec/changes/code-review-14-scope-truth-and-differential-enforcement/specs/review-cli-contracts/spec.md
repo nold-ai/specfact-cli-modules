@@ -82,3 +82,11 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **AND** the supported alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref> --enforcement full`
 - **AND** positional files remain valid for explicitly labelled non-PR `assurance_kind=explicit_files` runs.
 
+#### Scenario: Installed merge-quality guidance uses PR range
+
+- **GIVEN** Code Review guidance is installed or refreshed through `rules init` or `rules update`
+- **WHEN** the generated house rules or bundled skill describe merge-quality review
+- **THEN** they use `--scope range`, full base/head ref placeholders, and `--enforcement full`
+- **AND** they do not present changed/worktree or positional files as pull-request assurance
+- **AND** simplification-preview guidance may retain worktree scope because it is a local mutation workflow.
+

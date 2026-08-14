@@ -107,6 +107,11 @@ requirements:
         method: test
         intent: "Make range defaults and generated AI instructions executable under the normalized enforcement contract."
         observable: "Omitted range enforcement becomes strict full; explicit range-plus-changed is rejected; instructions use range refs and explicit full enforcement."
+      - case_id: CR14-016
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Migrate installed merge-quality guidance from changed/worktree scope to executable PR-range assurance."
+        observable: "Rules updater and bundled skill emit range/base/head/full guidance while local simplification preview remains worktree-scoped."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
     rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."
     stakeholder_refs:
@@ -121,6 +126,11 @@ requirements:
         method: test
         intent: "Record each analyzer identity and outcome and fail closed when mandatory coverage is unavailable."
         observable: "Skipped, failed, timed-out, or unparsable mandatory analyzer evidence yields UNKNOWN without an all-passed summary."
+      - case_id: CR14-015
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Freeze the pr-range-v1 analyzer membership and required/conditional statuses."
+        observable: "Eight analyzers are always required; semgrep-bugs is required when governed config exists and otherwise NOT_APPLICABLE; no member is silently optional."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:

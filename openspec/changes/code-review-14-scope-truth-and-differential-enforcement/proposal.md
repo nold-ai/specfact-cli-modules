@@ -14,7 +14,7 @@ The report also lacks an honest unknown/not-applicable state, conflates autofix 
 - Emit immutable scope evidence and fail closed as `UNKNOWN` when Git scope cannot be resolved.
 - Include changed tests by default for range review; exclusions are explicit evidence.
 - Analyze the resolved merge-base and head with the same pinned analyzer/config identities and classify findings as introduced, fixed, unchanged, or unknown using stable fingerprints; normalize a head file anchor through the resolved one-to-one rename map before comparison, and never use the supplied base-ref tip as the differential baseline.
-- Report mandatory analyzer coverage and make skipped/failed mandatory tools `UNKNOWN`.
+- Define the closed `pr-range-v1` analyzer profile and report its identity/coverage; any missing, skipped, failed, or identity-mismatched required analyzer makes assurance `UNKNOWN`.
 - Separate finding severity, lifecycle status, autofix availability, and blocking policy.
 - Use `PASS`, `FAIL`, `UNKNOWN`, and `NOT_APPLICABLE` truthfully; waivers remain a governance overlay.
 - Migrate the first-party review ledger to consume and persist schema 1.6 `assurance_status`; UNKNOWN and NOT_APPLICABLE are audit records but never passing streaks or reward events.

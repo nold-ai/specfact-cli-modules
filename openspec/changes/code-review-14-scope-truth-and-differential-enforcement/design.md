@@ -58,7 +58,21 @@ Each head finding is classified `introduced`, `unchanged`, or `unknown`; missing
 
 ### Make analyzer coverage explicit
 
-The report lists every mandatory analyzer with required/ran/skipped/failed, version, configuration digest, duration, and diagnostic. Missing, skipped, failed, timed-out, or unparsable mandatory analysis yields `UNKNOWN`; optional analyzers are clearly labelled optional.
+The authoritative strict PR-range profile is the schema-versioned `pr-range-v1` definition in `run/runner.py`, serialized into the report and bound by the trusted policy/config digest. Its closed membership is:
+
+| Analyzer ID | Status |
+|---|---|
+| `ruff` | required |
+| `radon` | required |
+| `semgrep` | required |
+| `semgrep-bugs` | required when the trusted merge-base policy snapshot contains the governed bugs configuration; otherwise NOT_APPLICABLE, never skipped |
+| `ai-bloat-ast` | required |
+| `ast-clean-code` | required |
+| `basedpyright` | required |
+| `pylint` | required |
+| `contracts` | required |
+
+There are no optional analyzers in `pr-range-v1`. Future profile membership changes require a new profile ID/version and policy digest; an ad hoc extra analyzer may be advisory but cannot silently change this profile or assurance. The report lists every profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain/configuration digest, duration, and diagnostic. Missing, skipped, failed, timed-out, unparsable, or identity-mismatched required analysis yields `UNKNOWN`. A successful run with zero findings is still recorded as ran; it is not inferred from an empty finding list.
 
 ### Separate finding concepts
 
