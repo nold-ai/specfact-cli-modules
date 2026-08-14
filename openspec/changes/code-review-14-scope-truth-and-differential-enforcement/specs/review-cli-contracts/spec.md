@@ -22,6 +22,13 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** NOT_APPLICABLE writes PASS_WITH_ADVISORY plus explicit no-governed-impact text
 - **AND** the non-shadow `ci_exit_code` values for PASS, FAIL, UNKNOWN, and NOT_APPLICABLE are respectively 0, 1, 1, and 0.
 
+#### Scenario: Post-analysis enrichment preserves schema 1.6 truth
+
+- **GIVEN** a schema 1.6 report is enriched after analysis, including by cleanup forecast refresh for an allowed worktree or explicit-file run
+- **WHEN** the enriched report is returned or persisted
+- **THEN** schema_version, assurance_status, scope_evidence, analyzer_coverage, overall_verdict, and ci_exit_code are preserved unchanged
+- **AND** enrichment may add its own evidence but cannot downgrade the report to a legacy schema or recompute assurance.
+
 #### Scenario: Legacy enforcement mode is policy, not scope
 
 - **GIVEN** schema 1.6 dual-writing is enabled

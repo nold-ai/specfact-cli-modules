@@ -82,6 +82,11 @@ requirements:
         method: test
         intent: "Dual-write schema 1.6 assurance into the closed legacy verdict, normalized enforcement-mode, and exit-code projection."
         observable: "UNKNOWN is never green; old reports cannot imply UNKNOWN/NOT_APPLICABLE; malformed 1.6 reports cannot pass."
+      - case_id: CR14-013
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Preserve schema 1.6 truth through every post-analysis enrichment path."
+        observable: "Cleanup forecast refresh retains schema, authoritative assurance, scope/analyzer evidence, legacy projection, and exit code unchanged."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:review-cli-contracts-cover-explicit-scope-and-differential-evidence:
     rationale: "The public CLI contract must prove every explicit scope and differential evidence path."
     stakeholder_refs:

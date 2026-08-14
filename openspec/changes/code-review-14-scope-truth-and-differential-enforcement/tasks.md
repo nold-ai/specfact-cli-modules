@@ -39,9 +39,10 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 2.9 Add table-driven `test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix` for PASS/FAIL/UNKNOWN/NOT_APPLICABLE under strict and shadow modes, including enforce-to-full normalization, changed/worktree compatibility, and range-plus-changed rejection.
 - [ ] 2.10 Add `test_schema_1_6_missing_assurance_status_is_unknown` and legacy-reader cases proving old PASS/FAIL cannot imply UNKNOWN/NOT_APPLICABLE.
 - [ ] 2.11 Add table-driven `test_ledger_authoritative_assurance_controls_rewards_and_streaks` for schema 1.6 PASS/FAIL/UNKNOWN/NOT_APPLICABLE plus legacy PASS_WITH_ADVISORY. Prove UNKNOWN/NOT_APPLICABLE persist verbatim, apply zero reward/last delta, leave both streaks unchanged, and are accepted by local/Supabase schemas. Add a no-findings UNKNOWN case proving local and Supabase `report_json` plus canonical SHA-256 `report_digest` retain scope/analyzer diagnostics.
-- [ ] 2.12 Collect the exact canonical pytest node ID for every test-authored CR14 scenario, write each selector into `requirements-evidence.yaml`, and rerun strict mapping validation. Do not edit production source in this task.
-- [ ] 2.13 Build the deterministic plan from the accepted mapping and source identity, then write and commit `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json`. Schema version `1` SHALL contain: `change_id`; `checkpoint_parent.commit_sha` and `tree_sha`; `mapping_digest`; `plan.id` and `digest`; sorted `selectors` plus `selector_digest`; sorted `frozen_input_paths` plus `frozen_input_manifest_digest`; and sorted `analyzers[]` entries with `id`, `required`, `version`, `toolchain_digest`, `policy_digest`, and `config_digest`. All digests are canonical SHA-256 values. The parent commit/tree identifies the test-and-mapping checkpoint before this evidence file is added.
-- [ ] 2.14 Verify the committed checkpoint against the current frozen inputs, execute its exact selectors, confirm the expected failing outcomes, and record the exact commands, checkpoint-file digest, and outcomes in `TDD_EVIDENCE.md` before any source edit. Any frozen-input mismatch invalidates the checkpoint and repeats tasks 2.12–2.14. Section 3 is blocked until this task passes.
+- [ ] 2.12 Add `test_cleanup_enrichment_preserves_schema_1_6_assurance_status`; exercise UNKNOWN with empty findings and prove cleanup forecast refresh preserves schema, assurance, scope/analyzer evidence, legacy projection, and exit code.
+- [ ] 2.13 Collect the exact canonical pytest node ID for every test-authored CR14 scenario, write each selector into `requirements-evidence.yaml`, and rerun strict mapping validation. Do not edit production source in this task.
+- [ ] 2.14 Build the deterministic plan from the accepted mapping and source identity, then write and commit `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json`. Schema version `1` SHALL contain: `change_id`; `checkpoint_parent.commit_sha` and `tree_sha`; `mapping_digest`; `plan.id` and `digest`; sorted `selectors` plus `selector_digest`; sorted `frozen_input_paths` plus `frozen_input_manifest_digest`; and sorted `analyzers[]` entries with `id`, `required`, `version`, `toolchain_digest`, `policy_digest`, and `config_digest`. All digests are canonical SHA-256 values. The parent commit/tree identifies the test-and-mapping checkpoint before this evidence file is added.
+- [ ] 2.15 Verify the committed checkpoint against the current frozen inputs, execute its exact selectors, confirm the expected failing outcomes, and record the exact commands, checkpoint-file digest, and outcomes in `TDD_EVIDENCE.md` before any source edit. Any frozen-input mismatch invalidates the checkpoint and repeats tasks 2.13–2.15. Section 3 is blocked until this task passes.
 
 ## 3. Minimal implementation
 
@@ -53,7 +54,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 3.6 Add stable fingerprints and introduced/fixed/unchanged/unknown classification only after task 3.5 proves identical identities; normalize head file anchors through resolved one-to-one rename facts before matching.
 - [ ] 3.7 Add mandatory analyzer coverage evidence.
 - [ ] 3.8 Separate finding status, differential state, autofix availability, and blocking policy.
-- [ ] 3.9 Add schema 1.6 `assurance_status`, versioned legacy reading, closed dual-write projection, and strict/shadow exit matrix.
+- [ ] 3.9 Add schema 1.6 `assurance_status`, versioned legacy reading, closed dual-write projection, and strict/shadow exit matrix; make every post-analysis enrichment/model-copy path preserve these authoritative fields.
 - [ ] 3.10 Update the existing ledger client/model, local reader, Supabase DDL constraints/columns, focused ledger tests/contracts, and ledger docs so schema 1.6 UNKNOWN/NOT_APPLICABLE are persisted neutral states while pre-1.6 behavior remains compatible. Persist the complete canonical report in `report_json` with `report_digest`; legacy rows may leave both nullable.
 - [ ] 3.11 Update CLI behavior, `docs/bundles/code-review/run.md`, and exactly `tests/cli-contracts/specfact-code-review-run.scenarios.yaml` for static argv/report cases only; retain `changed` only as a deprecated worktree alias and keep stateful Git setup in the named unit/e2e modules.
 
@@ -99,6 +100,8 @@ Differential enforcement:
 Report truth:
 
 - `packages/specfact-code-review/src/specfact_code_review/run/findings.py` remains the only report/finding model; do not create a parallel model. `fixable` must not affect `is_blocking()`.
+- `packages/specfact-code-review/src/specfact_code_review/run/cleanup_evidence.py` only to preserve the incoming schema-1.6 report/status/evidence fields while refreshing cleanup evidence; cleanup algorithms and forecast semantics are out of scope.
+- `tests/unit/specfact_code_review/run/test_cleanup_evidence.py` only for the schema/status preservation regression.
 - `tests/unit/specfact_code_review/run/test_findings.py`, `tests/unit/specfact_code_review/run/test_runner.py`, and existing `tests/unit/specfact_code_review/run/test_scorer.py` only to update the fixable-error regression expectation; production `scorer.py` remains forbidden.
 
 First-party ledger consumer:
@@ -111,13 +114,14 @@ First-party ledger consumer:
 End-to-end/docs/release:
 
 - `tests/e2e/specfact_code_review/test_review_run_e2e.py`, the CLI-contract YAML, and `docs/bundles/code-review/run.md`.
-- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml` only in task 2.12 to add exact collected selectors and freeze their mapping identity.
-- New exactly `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json` in task 2.13 with only the closed schema named there.
-- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md` for acceptance task A.2, task 2.14 failing evidence, and later verified green evidence.
-- `packages/specfact-code-review/module-package.yaml` and generated docs/registry/signatures only after tests pass; use existing generators and never hand-edit archives.
+- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml` only in task 2.13 to add exact collected selectors and freeze their mapping identity.
+- New exactly `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json` in task 2.14 with only the closed schema named there.
+- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md` for acceptance task A.2, task 2.15 failing evidence, and later verified green evidence.
+- `CHANGELOG.md` and `packages/specfact-code-review/module-package.yaml` only after behavior passes for the required release note, version, and compatibility metadata.
+- Generated docs/registry/signatures only after tests pass; use existing generators and never hand-edit archives.
 
 Explicitly forbidden:
 
-- `packages/specfact-code-review/src/specfact_code_review/run/cleanup_evidence.py`, `packages/specfact-code-review/src/specfact_code_review/run/forecast.py`, `packages/specfact-code-review/src/specfact_code_review/run/scorer.py`, and analyzer implementations under `specfact_code_review/tools/`;
+- `packages/specfact-code-review/src/specfact_code_review/run/forecast.py`, `packages/specfact-code-review/src/specfact_code_review/run/scorer.py`, and analyzer implementations under `specfact_code_review/tools/`;
 - the Requirements package and archived OpenSpec changes;
 - any new source/test file other than the four exact `scope.py`/`differential.py` files above.
