@@ -17,6 +17,7 @@ The versioned capsule requires:
 - B/R/H/D commit and tree identities, B < R < H <= D ancestry facts, and D equality with the delivery identity;
 - derived protected signed R/H checkpoint tag names, tag-object identities, canonical annotations, signatures, approved issuer/trust identities, repository-ruleset identity, and checkpoint-policy epoch;
 - B..R, R..H, and H..D changed-path and rename manifests plus canonical digests;
+- exactly one frozen failing-before section and one frozen readiness section, their R/D bytes and digests, and equality results;
 - accepted red-setup, implementation, and delivery-evidence touchpoint sets;
 - mapping and plan digests, exact selectors, one stable opaque mapped `expected_failure_id` per selector, frozen failing-before evidence identity, and frozen pre-R readiness-validation evidence identity;
 - red, green-checkpoint, and delivery JUnit digests plus exact selector outcomes, canonical observed red failure IDs, and their digest;
@@ -32,7 +33,7 @@ B..R may contain only declared requirements/specifications/tests/test harness/co
 
 R..H may change only declared implementation touchpoints. A selected test, helper, fixture, conftest, test configuration, dependency lock, proof runner, workflow, mapping, plan, evidence record, policy, schema, or unclassified path invalidates chronology and requires a new R.
 
-When D differs from H, H..D may change only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records. Any behavior, test, configuration, mapping, runner, workflow, policy, schema, other documentation, generated runtime input, or unclassified change is invalid. The identical selectors must remain passing at D.
+When D differs from H, H..D may change only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records. Any behavior, test, configuration, mapping, runner, workflow, policy, schema, other documentation, generated runtime input, or unclassified change is invalid. The identical selectors must remain passing at D. The capsule must also prove that D contains exactly one byte-identical `specfact:frozen-failing` section and one byte-identical `specfact:frozen-readiness` section from R; append-only content may exist only outside those markers.
 
 ### State only the bounded claim
 
