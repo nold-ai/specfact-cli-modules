@@ -57,7 +57,7 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 
 ### Requirement: Differential Base-Head Enforcement
 
-Range enforcement SHALL analyze the resolved merge-base and head with identical pinned analyzer versions, configuration digests, and policy. The supplied base-ref tip SHALL NOT be used as the analyzer baseline when it differs from the merge base. Stable fingerprints SHALL classify findings as introduced, fixed, unchanged, or unknown. Changed-line intersection SHALL be evidence only and SHALL NOT be the sole introduction rule.
+Range enforcement SHALL analyze the resolved merge-base and head with identical pinned analyzer versions, configuration digests, and policy. The supplied base-ref tip SHALL NOT be used as the analyzer baseline when it differs from the merge base. Stable fingerprints SHALL classify findings as introduced, fixed, unchanged, or unknown. Before fingerprint comparison, the head file anchor for a resolved one-to-one rename SHALL be normalized to the recorded old/base path; copies and unpaired additions SHALL NOT be rename-normalized, and both original paths plus the rename fact SHALL remain in evidence. Changed-line intersection SHALL be evidence only and SHALL NOT be the sole introduction rule.
 
 #### Scenario: Advanced base-ref tip does not replace the merge-base baseline
 
@@ -66,6 +66,14 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 - **THEN** the baseline analyzer snapshot is the resolved merge-base SHA
 - **AND** target-only changes after divergence are not classified as feature-branch fixes or introductions
 - **AND** the supplied base-ref tip remains recorded as resolver evidence.
+
+#### Scenario: Pure rename preserves an unchanged finding
+
+- **GIVEN** a one-to-one range rename moves a file without changing its bytes and the same blocker is reported at the old base path and new head path
+- **WHEN** differential fingerprints are compared
+- **THEN** the head anchor is normalized through the recorded rename relation to the old/base path
+- **AND** the blocker is classified unchanged rather than fixed at base and introduced at head
+- **AND** the report retains both paths and the rename fact.
 
 #### Scenario: Analyzer identity mismatch is unknown
 

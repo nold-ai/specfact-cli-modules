@@ -44,6 +44,11 @@ requirements:
         method: test
         intent: "Use the resolved merge-base rather than an advanced base-ref tip as the differential baseline."
         observable: "Target-only post-divergence findings are not misclassified as feature-branch changes."
+      - case_id: CR14-012
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Normalize stable file anchors through resolved one-to-one renames before base/head fingerprint comparison."
+        observable: "A pure file rename retains the blocker as unchanged while both paths and the rename fact remain evidence."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:independent-finding-lifecycle-and-remediation:
     rationale: "Severity, resolution, autofix availability, and policy are distinct facts."
     stakeholder_refs:
