@@ -15,7 +15,7 @@ The report carries separate `current_execution` and `red_green_chronology` claim
 The versioned capsule requires:
 
 - B/R/H/D commit and tree identities, B < R < H <= D ancestry facts, and D equality with the delivery identity;
-- derived protected signed R/H checkpoint tag names, tag-object identities, canonical annotations, signatures, approved issuer/trust identities, repository-ruleset identity, and checkpoint-policy epoch;
+- derived protected signed R/H checkpoint tag names, tag-object identities, canonical annotations, signatures, approved issuer/trust identities, repository-ruleset identity, checkpoint-policy epoch, and accepted positive checkpoint-attempt identity;
 - B..R, R..H, and H..D changed-path and rename manifests plus canonical digests;
 - exactly one frozen failing-before section and one frozen readiness section, their R/D bytes and digests, and equality results;
 - accepted red-setup, implementation, and delivery-evidence touchpoint sets;
