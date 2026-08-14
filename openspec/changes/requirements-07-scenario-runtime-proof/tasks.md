@@ -18,9 +18,9 @@
 - [ ] 1.3 Add `test_missing_current_junit_cannot_be_replaced_by_historical_context`. Allowed files: focused reconciliation tests.
 - [ ] 1.4 Add `test_review_context_accepts_final_current_execution_without_historical_basis`. Allowed files: focused Code Review context tests.
 - [ ] 1.5 Add `test_new_reconciliation_cannot_generate_legacy_tdd_ledger`. Allowed files: focused compatibility tests.
-- [ ] 1.6 Add table-driven `test_current_execution_rejects_each_nonpass_or_noncanonical_result` covering missing, duplicate, ambiguous, skipped, failed, errored, and non-canonical selector results.
-- [ ] 1.7 Add table-driven `test_review_context_rejects_each_invalid_requirements_evidence_class` covering unreadable, malformed, unsupported-schema, non-final top-level evidence, and corrected-schema evidence missing the mandatory chronology claim object before review execution. Add `test_review_context_accepts_final_report_with_unknown_chronology` to prove a valid current-execution claim plus requested invalid/untrusted chronology remains accepted provenance and is never relabelled pass.
-- [ ] 1.8 Add `test_report_uses_canonical_no_chronology_claim_object` for `status: not_evaluated` plus `reason: capsule_not_supplied`, and `status: unknown` when requested chronology evidence is missing or untrusted.
+- [ ] 1.6 Add table-driven `test_current_execution_rejects_each_nonpass_or_noncanonical_result` covering missing, duplicate, ambiguous, skipped, failed, errored, non-canonical selector results, and mismatched mapping digest, plan identity/digest, source revision/tree, or selector set.
+- [ ] 1.7 Add table-driven `test_review_context_rejects_each_invalid_requirements_evidence_class` covering unreadable, malformed, unsupported-schema, non-final top-level evidence, and corrected-schema evidence missing the mandatory chronology claim object before review execution. R07 review fixtures cover only the canonical not-evaluated chronology placeholder; R08 owns unknown/pass/fail chronology provenance.
+- [ ] 1.8 Add `test_report_uses_canonical_no_chronology_claim_object` for the mandatory R07 `status: not_evaluated` plus `reason: capsule_not_supplied` placeholder. Assert R07 has no chronology-request/capsule input and cannot emit chronology pass, fail, or unknown; those tests begin in R08.
 - [ ] 1.9 Add `test_rollback_reader_preserves_independent_claims_as_opaque_provenance` and prove old readers never reinterpret corrected chronology as a legacy basis.
 - [ ] 1.10 Record failing commands and outcomes in `TDD_EVIDENCE.md` before source edits.
 
@@ -28,7 +28,7 @@
 
 - [ ] 2.1 Add versioned current-execution and chronology fields to the Requirements report model.
 - [ ] 2.2 Reconcile current JUnit independently and retain exact outcome classes.
-- [ ] 2.3 Update Code Review context validation to require and retain both corrected-schema claim objects without requiring a successful chronology attestation; use the versioned compatibility path for truly legacy payloads.
+- [ ] 2.3 Update Code Review context validation to require and retain both corrected-schema claim objects, including the R07 not-evaluated chronology placeholder; use the versioned compatibility path for truly legacy payloads. R08 later adds non-not-evaluated chronology states.
 - [ ] 2.4 Keep old report reading explicit; stop generating legacy-ledger evidence for new changes.
 - [ ] 2.5 Update public command/docs fixtures without adding execution or Git behavior.
 

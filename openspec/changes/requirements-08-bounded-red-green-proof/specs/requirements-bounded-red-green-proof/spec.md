@@ -42,11 +42,12 @@ B..R SHALL contain only declared red-setup touchpoints, including the accepted p
 - **THEN** chronology passes with the capsule digest and verifier epoch
 - **AND** current execution retains its own status.
 
-#### Scenario: Capsule identity, transition, or outcome is invalid
+#### Scenario: Capsule status class is deterministic
 
-- **GIVEN** non-ancestral refs, identical H/D identities, a mismatched delivered head, mismatched trees/digests, changed frozen red inputs, a missing/lightweight/movable/unsigned/wrong-role or untrusted R/H checkpoint binding, a missing, non-positive, stale, or reused `checkpoint_attempt`, an undeclared path/rename, a non-implementation R..H path, a non-evidence H..D path, a missing/duplicate/reordered/rewritten/deleted frozen section at D, selector/outcome mismatch, missing/duplicate/wrong red failure identity including a wrong same-class assertion, missing mandatory field, untrusted signed module, or untrusted epoch
+- **GIVEN** a required capsule has an invalid identity, transition, trust, or outcome condition
 - **WHEN** validation runs
-- **THEN** chronology is failed or unknown according to the deterministic failure class
+- **THEN** a missing, unreadable, incomplete, unsupported, or unverifiable mandatory fact; trust/signature/issuer/ruleset/epoch that cannot be established; verifier/tool failure; or identical H/D produces `status: unknown`
+- **AND** a complete trusted verified contradiction of ancestry, delivered-head/tree/digest equality, checkpoint-attempt freshness/non-reuse, closed path policy, frozen-section equality, selector/failure identity, or fail-at-R/pass-at-H/pass-at-D outcome produces `status: fail`
 - **AND** strict policy does not pass.
 
 ### Requirement: Bounded Chronology Claim
@@ -62,12 +63,19 @@ A passing chronology SHALL state exactly: "These declared selectors failed at R,
 
 ### Requirement: Fail-Closed Untrusted Chronology
 
-`chronology_request: required` with a missing capsule SHALL produce `status: unknown` with unproven assurance and a non-passing strict policy result. Any supplied incomplete, unsupported, hash-mismatched, path-policy-invalid, outcome-invalid, delivery-mismatched, or untrusted capsule SHALL produce the same result. `chronology_request: not_requested` with no capsule SHALL instead produce the mandatory `status: not_evaluated` / `reason: capsule_not_supplied` claim; strict chronology policy is not invoked. `not_requested` with a capsule is an invalid contradictory invocation. None of these states SHALL become pass, skip, no-impact, or current-execution failure.
+`chronology_request: required` with a missing capsule, or a supplied capsule whose mandatory evidence is unavailable, unreadable, incomplete, unsupported, unverifiable, or cannot establish required trust, SHALL produce `status: unknown` with unproven assurance and a non-passing strict-policy result. `D = H` is the explicit complete-but-insufficient exception and also SHALL remain unknown. A complete trusted capsule whose verified facts contradict an ancestry, delivered-head/tree/digest equality, checkpoint-attempt freshness/non-reuse, closed path, frozen-section equality, selector/failure identity, or fail/pass/pass outcome requirement SHALL produce `status: fail`. `chronology_request: not_requested` with no capsule SHALL produce the mandatory `status: not_evaluated` / `reason: capsule_not_supplied` claim; `not_requested` with a capsule is an invalid invocation rejected before reconciliation. No non-green chronology state SHALL become pass, skip, no-impact, or current-execution failure.
 
 #### Scenario: Mandatory capsule fact is unavailable
 
 - **GIVEN** a mandatory identity, checkpoint tag/object/signature/issuer/trust/ruleset/epoch binding, positive fresh non-reused `checkpoint_attempt`, transition, selector, expected/observed red failure identity, result, environment, network, signed-module, policy, artifact-link, or verifier fact is unavailable
 - **WHEN** chronology is requested under strict policy
 - **THEN** the report names the missing fact and remediation
-- **AND** chronology is non-green
+- **AND** chronology uses `status: unknown` with unproven assurance
+- **AND** current execution remains independently represented.
+
+#### Scenario: Complete trusted capsule contradicts policy
+
+- **GIVEN** every mandatory fact and trust binding is available and verified, H and D are distinct, and at least one verified ancestry, identity/hash equality, checkpoint-attempt, closed-path, frozen-section, selector/failure-identity, or fail/pass/pass outcome requirement is false
+- **WHEN** chronology is requested under strict policy
+- **THEN** chronology uses `status: fail` with the exact contradiction
 - **AND** current execution remains independently represented.

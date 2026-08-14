@@ -59,8 +59,8 @@ requirements:
       - case_id: R08-MOD-004
         scenario_id: fail-closed-untrusted-chronology
         method: test
-        intent: "Validate the explicit chronology_request matrix: not_requested/no capsule is not_evaluated, required/no capsule is unknown strict non-pass, required/capsule is validated, and not_requested/capsule is rejected."
-        observable: "Current-execution-only reconciliation retains the mandatory not_evaluated chronology claim; requested or supplied invalid chronology retains diagnostics and emits no pass/no-impact."
+        intent: "Validate both the explicit chronology_request matrix and the status taxonomy: unavailable/unsupported/untrusted evidence and D=H are unknown; complete trusted verified policy/outcome contradictions are fail."
+        observable: "Current-only reconciliation retains not_evaluated; missing/unverifiable/untrusted required proof retains unknown diagnostics; complete trusted contradictions retain fail diagnostics; neither changes current_execution or becomes pass/no-impact."
   openspec:requirements-08-bounded-red-green-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
     rationale: "Code Review must retain chronology and current-execution provenance without verdict fusion."
     stakeholder_refs:

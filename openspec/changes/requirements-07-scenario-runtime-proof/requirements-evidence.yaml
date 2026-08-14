@@ -60,7 +60,7 @@ requirements:
         scenario_id: current-run-junit-reconciliation
         method: test
         intent: Reject every incomplete, non-pass, or non-canonical current selector result.
-        observable: Missing, duplicate, ambiguous, skipped, failed, errored, and non-canonical results cannot produce current_execution pass.
+        observable: Missing, duplicate, ambiguous, skipped, failed, errored, non-canonical, or mismatched mapping/plan/source/selector identities cannot produce current_execution pass.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:historical-chronology-is-a-separate-claim:
     rationale: Historical TDD chronology is optional evidence owned by R08, not a prerequisite for current execution.
     stakeholder_refs:
@@ -75,7 +75,7 @@ requirements:
         scenario_id: historical-chronology-is-a-separate-claim
         method: test
         intent: Preserve a valid current-run observation when no R08 replay capsule is supplied.
-        observable: current_execution is final while red_green_chronology is the canonical not_evaluated/capsule_not_supplied claim object; requested missing or untrusted chronology is unknown with diagnostics.
+        observable: current_execution is final while red_green_chronology is the canonical R07 not_evaluated/capsule_not_supplied placeholder; R07 exposes no chronology request/capsule input or other chronology status.
   openspec:requirements-07-scenario-runtime-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
     rationale: Code Review must consume finalized Requirements evidence as provenance without fusing delivery verdicts.
     stakeholder_refs:
@@ -121,8 +121,3 @@ requirements:
         method: test
         intent: Reject corrected-schema Requirements evidence that omits the mandatory red_green_chronology claim object.
         observable: Truly legacy payloads use the compatibility reader; corrected input cannot omit the canonical not_evaluated claim.
-      - case_id: review-context-unknown-chronology
-        scenario_id: finalized-requirements-evidence-review-context
-        method: test
-        intent: Accept a finalized corrected-schema report whose current execution is valid and whose requested invalid or untrusted chronology is unknown.
-        observable: Code Review retains unknown chronology diagnostics without rejecting the top-level report, relabelling chronology pass, or changing its own verdict.

@@ -2,7 +2,7 @@
 
 ### Requirement: Lifecycle-Aware Requirements Readiness
 
-The Requirements module SHALL distinguish planned readiness, mapping acceptance, test-authored planning, current execution, and historical TDD chronology. Current execution and chronology SHALL be independent claims; neither may silently imply or overwrite the other. The report SHALL always emit a `red_green_chronology` claim object. No chronology request or capsule SHALL produce `status: not_evaluated` with `reason: capsule_not_supplied`; requested chronology with missing or untrusted evidence SHALL produce `status: unknown` with deterministic diagnostics. `unproven` is the assurance conclusion, not a serialized status alias.
+The Requirements module SHALL distinguish planned readiness, mapping acceptance, test-authored planning, current execution, and historical TDD chronology. Current execution and chronology SHALL be independent claims; neither may silently imply or overwrite the other. The corrected R07 report SHALL always emit a `red_green_chronology` placeholder claim object with `status: not_evaluated` and `reason: capsule_not_supplied`. R07 SHALL expose no chronology-request or capsule input and SHALL NOT emit chronology pass, fail, or unknown; R08 owns those later MODIFIED semantics.
 
 #### Scenario: Proposal mapping is complete but not executed
 
@@ -43,15 +43,23 @@ The Requirements module SHALL emit a deterministic plan of stable requirement/sc
 
 ### Requirement: Current-Run JUnit Reconciliation
 
-The Requirements module SHALL reconcile a deterministic plan with trusted current-run JUnit without starting tests. `current_execution` SHALL bind the mapping, plan, source, selector set, JUnit digest, runner/environment provenance, collection counts, and exact outcomes. It SHALL be final without requiring historical evidence.
+The Requirements module SHALL reconcile a deterministic plan with trusted current-run JUnit without starting tests. `current_execution` SHALL bind the mapping, plan, source, selector set, JUnit digest, runner/environment provenance, collection counts, and exact outcomes. The supplied mapping digest, plan identity/digest, source revision/tree, and selector set SHALL exactly equal the accepted plan and execution inputs; any mismatch SHALL be non-passing with deterministic diagnostics. Current execution SHALL be final without requiring historical evidence.
 
 #### Scenario: Every exact selector passes in the current run
 
 - **GIVEN** one canonical passing result for every required exact selector
 - **WHEN** final current-run reconciliation executes
 - **THEN** `current_execution` is pass
-- **AND** absent, unrequested historical evidence leaves `red_green_chronology.status` as `not_evaluated` with `reason: capsule_not_supplied`
+- **AND** the mandatory R07 chronology placeholder remains `status: not_evaluated` with `reason: capsule_not_supplied`
 - **AND** the report does not say passing-after-red or change-proven.
+
+#### Scenario: JUnit plan or source identity does not match
+
+- **GIVEN** otherwise passing JUnit is bound to a different mapping digest, plan identity/digest, source revision/tree, or selector set than the accepted execution plan
+- **WHEN** final current-run reconciliation executes
+- **THEN** `current_execution` does not pass
+- **AND** the report names every mismatched identity
+- **AND** chronology cannot replace the rejected current result.
 
 #### Scenario: Current result is incomplete or failing
 
@@ -66,10 +74,10 @@ New historical red-to-green claims SHALL be accepted only through the R08 bounde
 
 #### Scenario: No R08 capsule is supplied
 
-- **GIVEN** current execution is final but no valid R08 capsule exists
+- **GIVEN** corrected R07 current execution is final and R07 has no chronology-request or capsule input
 - **WHEN** the report is finalized
 - **THEN** current execution retains its exact status
-- **AND** chronology uses `status: not_evaluated` with `reason: capsule_not_supplied`
+- **AND** the R07 chronology placeholder uses `status: not_evaluated` with `reason: capsule_not_supplied`
 - **AND** no broader proof label is emitted.
 
 #### Scenario: Legacy artifact is read for compatibility

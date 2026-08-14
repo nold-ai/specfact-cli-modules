@@ -11,7 +11,7 @@ The previous schema used one linear maturity ladder where a final passing curren
 - Keep proposal/readiness/mapping/selector planning deterministic.
 - Finalize current-run execution from exact canonical JUnit identities.
 - Represent historical chronology separately and honestly.
-- Preserve both claims as optional Code Review provenance without verdict fusion.
+- Preserve both mandatory corrected-schema claim objects as Code Review provenance without verdict fusion.
 - Keep compatibility explicit and migration-only.
 
 ### Non-Goals
@@ -27,7 +27,7 @@ The previous schema used one linear maturity ladder where a final passing curren
 
 `current_execution` records status, mapping/plan/source identities, exact selectors, result digest, collection counts, outcome counts, runner identity, and environment provenance supplied by core.
 
-`red_green_chronology` records status and optional R08 attestation identity. The versioned report always emits this claim object: when chronology was not requested and no capsule was supplied it uses `status: not_evaluated` with `reason: capsule_not_supplied`; when chronology was requested but evidence is missing or untrusted it uses `status: unknown` with deterministic diagnostics. `unproven` describes the assurance conclusion, not a second serialized status or an omitted field. Neither state can erase or inflate current execution.
+`red_green_chronology` is a mandatory placeholder claim object in the corrected R07 report. R07 has no chronology-request or capsule input and always emits `status: not_evaluated` with `reason: capsule_not_supplied`; it cannot emit chronology pass, fail, or unknown. R08 later MODIFIES this claim with the explicit request input, capsule validation, and non-not-evaluated statuses. The placeholder cannot erase or inflate current execution.
 
 ### Current reconciliation needs only current evidence
 

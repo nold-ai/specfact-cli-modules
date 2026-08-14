@@ -19,18 +19,3 @@ The Code Review public interface MAY accept finalized Requirements evidence as a
 - **THEN** it rejects the invocation before review execution
 - **AND** it emits no report that could be mistaken for a valid Requirements-aware review.
 
-#### Scenario: Unknown chronology remains valid provenance
-
-- **GIVEN** readable finalized corrected-schema Requirements evidence has valid `current_execution` and `red_green_chronology.status: unknown` with deterministic diagnostics for a requested invalid or untrusted capsule
-- **WHEN** Code Review receives it
-- **THEN** it accepts the top-level Requirements evidence and retains both claim objects plus the chronology diagnostics
-- **AND** it does not label chronology pass or valid
-- **AND** neither Requirements claim changes review findings, score, verdict, or exit code.
-
-#### Scenario: Historical chronology is retained without verdict fusion
-
-- **GIVEN** finalized Requirements evidence contains a valid R08 chronology attestation
-- **WHEN** Code Review receives it
-- **THEN** it retains the attestation identity and bounded claim separately from current execution
-- **AND** neither Requirements claim changes the review policy result.
-
