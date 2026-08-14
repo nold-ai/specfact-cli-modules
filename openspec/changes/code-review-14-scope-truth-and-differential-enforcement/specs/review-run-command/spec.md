@@ -4,9 +4,9 @@
 
 `specfact code review run` SHALL support unambiguous `worktree`, `index`, `range`, and `full` scopes plus explicit positional files. Index scope SHALL analyze the exact staged blob snapshot, not current worktree path content. Range scope SHALL require base and head refs, resolve full base/head and merge-base commit/tree SHAs, select the committed merge-base-to-head delta, and use the merge-base—not the supplied base-ref tip—as the differential baseline. Changed tests SHALL be included and `assurance_kind=pr_range` SHALL mean the complete governed merge-base-to-head Python selection. Range SHALL reject `--exclude-tests`, every `--focus` facet, `--path`, `--no-tests`, and `--level` before analysis; this change defines no filtered-range assurance. `changed` SHALL be a deprecated alias for `worktree`, not PR range. Positional files SHALL emit `assurance_kind=explicit_files` and SHALL NOT satisfy a consumer or policy requiring `pr_range` assurance.
 
-For index mode, `scope.py` SHALL materialize staged blobs outside the caller worktree and record the index tree/blob/content identities so later unstaged edits at the same path cannot affect analysis. For range mode, it SHALL materialize fresh detached merge-base/head roots from the resolved commit trees outside the caller worktree plus a separate sealed policy bundle from the resolved target base-ref tip. The supplied base-ref tip SHALL be authorized by the pull-request/CI context, and its exact commit/tree and policy/config manifest SHALL be frozen before analysis; an untrusted, moved, missing, or unreadable target policy identity SHALL yield UNKNOWN. The merge-base remains the source-code baseline, while the current authorized target-tip policy governs both source snapshots. The resolver SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; pass explicit target-policy config paths to configurable adapters; and verify every snapshot manifest before and after analysis. Ruff SHALL use explicit target-policy `--config` or `--isolated`, Pylint explicit target-policy `--rcfile` or a sealed pinned-default config, basedpyright explicit target-policy `--project` rather than `.`, and Semgrep the explicit target-policy `bundle_root`. Adapter/config injection failure SHALL yield UNKNOWN. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any index conflict/object failure, materialization failure, path-root violation, or content-integrity failure SHALL yield UNKNOWN.
+For index mode, `scope.py` SHALL materialize staged blobs outside the caller worktree and record the index tree/blob/content identities so later unstaged edits at the same path cannot affect analysis. For range mode, it SHALL materialize fresh detached merge-base/head roots from the resolved commit trees outside the caller worktree plus a separate sealed policy bundle from the resolved target base-ref tip. The producer SHALL receive an `expected_target_tip` record from the trusted pull-request/CI integration, containing provider, repository identity, target ref, pull-request or merge-queue identity, expected full commit SHA, and expected tree SHA. It SHALL resolve the supplied base ref and require its commit/tree to equal that authenticated expectation before freezing policy; a caller-supplied ref or self-asserted expectation alone is not trusted. The report SHALL bind the trusted-context digest plus expected and resolved target identities. A moved, mismatched, untrusted, missing, or unreadable target identity or policy SHALL yield UNKNOWN. A consuming PR gate SHALL independently compare those report fields with its own trusted event context before accepting `assurance_kind=pr_range`; producer equality alone is insufficient. The merge-base remains the source-code baseline, while the current authorized target-tip policy governs both source snapshots. The resolver SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; pass explicit target-policy config paths to configurable adapters; and verify every snapshot manifest before and after analysis. Ruff SHALL use explicit target-policy `--config` or `--isolated`, Pylint explicit target-policy `--rcfile` or a sealed pinned-default config, basedpyright an explicit per-snapshot projected `--project` rather than `.` or the policy-bundle config path, and Semgrep the explicit target-policy `bundle_root`. For basedpyright, the pinned configuration schema SHALL identify every filesystem path field (including nested execution environments); source-relative values SHALL be rewritten to the corresponding merge-base or head materialization, and `venvPath`/`venv` SHALL resolve to the same sealed toolchain environment for both sides. The original policy digest, projection mapping/digest, and resulting absolute roots SHALL be recorded. Unsupported path semantics, path escape, a path into the target-policy bundle/caller worktree, or a missing projected dependency SHALL yield UNKNOWN. Adapter/config injection failure SHALL yield UNKNOWN. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any index conflict/object failure, materialization failure, path-root violation, or content-integrity failure SHALL yield UNKNOWN.
 
-The report SHALL record requested/effective scope, assurance kind, repository root, index tree/blob identities when applicable, supplied base/head commit/tree SHAs, the analyzed merge-base commit/tree SHA, diff digest, selected files/lines and content manifests, rename/deletion facts, filters/facets, trusted policy/config identity, resolver identity, status, and diagnostics.
+The report SHALL record requested/effective scope, assurance kind, repository root, index tree/blob identities when applicable, supplied base/head refs and resolved commit/tree SHAs, authenticated expected target-tip commit/tree plus trusted-context digest, the analyzed merge-base commit/tree SHA, diff digest, selected files/lines and content manifests, rename/deletion facts, filters/facets, trusted policy/config identity and per-snapshot config-projection digests, resolver identity, status, and diagnostics.
 
 #### Scenario: Clean PR checkout still reviews committed range files
 
@@ -14,6 +14,15 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 - **WHEN** range scope runs with those refs
 - **THEN** the committed merge-base-to-head files, including tests, are reviewed
 - **AND** worktree emptiness does not produce an empty PR review.
+
+#### Scenario: PR range binds the authenticated expected target tip
+
+- **GIVEN** a trusted PR or merge-queue event supplies the expected repository, target ref, target-tip commit/tree, and event-context identity
+- **WHEN** range scope resolves the caller's base ref
+- **THEN** the resolved base-tip commit/tree must exactly equal the authenticated expectation before policy is selected
+- **AND** the report binds expected/resolved identities and the trusted-context digest
+- **AND** mismatch, movement, or a self-asserted/untrusted expectation yields UNKNOWN
+- **AND** the consuming PR gate independently matches those fields to its own trusted event context before accepting `pr_range`.
 
 #### Scenario: Index analysis uses staged bytes, not later unstaged edits
 
@@ -74,8 +83,9 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 - **THEN** the baseline analyzer snapshot is the resolved merge-base SHA
 - **AND** target-only changes after divergence are not classified as feature-branch fixes or introductions
 - **AND** the supplied base-ref tip remains recorded as resolver evidence
+- **AND** its commit/tree exactly matches the authenticated `expected_target_tip`
 - **AND** its authorized target-tip policy/config bundle is applied identically to the merge-base and head source snapshots
-- **AND** an untrusted, moved, missing, or unusable target policy identity yields UNKNOWN.
+- **AND** an untrusted, mismatched, moved, missing, or unusable target policy identity yields UNKNOWN.
 
 #### Scenario: Pure rename preserves an unchanged finding
 
@@ -93,6 +103,16 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 - **AND** no adapter discovers configuration from the merge-base source tree, head tree, caller worktree, or process current directory
 - **AND** the head-side candidate configuration remains scope/shadow evidence but cannot change differential enforcement
 - **AND** missing or unusable target-tip configuration yields UNKNOWN rather than fallback discovery.
+
+#### Scenario: basedpyright projects relative paths into each source snapshot
+
+- **GIVEN** the trusted target policy contains relative basedpyright source/import paths
+- **WHEN** merge-base and head analysis is prepared
+- **THEN** the pinned configuration schema rewrites every source-relative path to the corresponding immutable source root
+- **AND** environment fields resolve to the same sealed toolchain environment on both sides
+- **AND** basedpyright receives a distinct manifest-bound projected `--project` artifact for each side, never the policy-bundle config path or process `.`
+- **AND** an imported dependency is read from the appropriate merge-base or head snapshot
+- **AND** unsupported, escaping, external, or missing projected paths yield UNKNOWN.
 
 #### Scenario: Analyzer identity mismatch is unknown
 
