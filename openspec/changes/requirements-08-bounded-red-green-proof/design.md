@@ -8,13 +8,14 @@ B, R, and H are the three proof commits: merge base, red checkpoint, and green i
 
 ### Keep current execution and chronology independent
 
-The report carries separate `current_execution` and `tdd_chronology` claims. Chronology may reference current execution but cannot replace, erase, inflate, or downgrade it. A valid current run with no capsule remains a valid current observation with unproven/not-evaluated chronology.
+The report carries separate `current_execution` and `red_green_chronology` claims. Chronology may reference current execution but cannot replace, erase, inflate, or downgrade it. A valid current run with no capsule remains a valid current observation with unproven/not-evaluated chronology.
 
 ### Validate a content-addressed B/R/H/D capsule
 
 The versioned capsule requires:
 
 - B/R/H/D commit and tree identities, B < R < H <= D ancestry facts, and D equality with the delivery identity;
+- derived protected signed R/H checkpoint tag names, tag-object identities, canonical annotations, signatures, approved issuer/trust identities, repository-ruleset identity, and checkpoint-policy epoch;
 - B..R, R..H, and H..D changed-path and rename manifests plus canonical digests;
 - accepted red-setup, implementation, and delivery-evidence touchpoint sets;
 - mapping and plan digests, exact selectors, one stable opaque mapped `expected_failure_id` per selector, and frozen failing-before evidence identity;
@@ -23,7 +24,7 @@ The versioned capsule requires:
 - verifier epoch, timestamps, timeouts/resource bounds, and retained artifact hash links;
 - signed module repository, commit, tree, package version, manifest integrity, signer, and signature identities.
 
-Core asserts Git and execution facts under its pinned verifier. Modules validate schema, canonical hashes, transition classifications, selector equality, exact mapped/observed red failure-identity equality, outcome rules, trusted module identity, and verifier/policy epoch. Modules do not recompute Git facts or run tests.
+Core resolves and validates Git/checkpoint/execution facts under its pinned verifier. Modules validate the capsule's checkpoint object/signature/trust hash links, schema, canonical hashes, transition classifications, selector equality, exact mapped/observed red failure-identity equality, outcome rules, trusted module identity, and verifier/policy epoch. Modules do not recompute Git facts or run tests.
 
 ### Use three closed transition policies
 
@@ -43,7 +44,7 @@ Limitations state that stakeholder-intent completeness, complete runtime depende
 
 ### Missing trust is unknown/unproven
 
-An incomplete, mismatched, unsupported, or untrusted capsule never produces pass/no-impact. Strict chronology policy fails after returning deterministic diagnostics. Runtime observations may be advisory facts but cannot claim complete dependency scope.
+An incomplete, mismatched, unsupported, untrusted, or checkpoint-authority-invalid capsule never produces pass/no-impact. Strict chronology policy fails after returning deterministic diagnostics. Runtime observations may be advisory facts but cannot claim complete dependency scope.
 
 ### Verifier epochs prevent self-authorization
 
