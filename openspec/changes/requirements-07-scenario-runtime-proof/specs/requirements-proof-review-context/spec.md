@@ -2,7 +2,7 @@
 
 ### Requirement: Finalized Requirements Evidence Review Context
 
-The Code Review public interface SHALL accept optional finalized Requirements evidence, validate its schema, and retain its path, content digest, mapping digest, plan digest, source identity, `current_execution`, and optional `red_green_chronology` as provenance. Requirements status SHALL NOT calculate or rewrite review findings, score, verdict, or exit code.
+The Code Review public interface MAY accept finalized Requirements evidence as an optional input. When that input uses the corrected schema, Code Review SHALL require and retain its path, content digest, mapping digest, plan digest, source identity, `current_execution`, and `red_green_chronology` claim objects as provenance; only the chronology attestation inside that mandatory claim object is optional. Truly legacy payloads SHALL be handled only by the explicit versioned compatibility path. Requirements status SHALL NOT calculate or rewrite review findings, score, verdict, or exit code.
 
 #### Scenario: Final current execution informs review without chronology
 

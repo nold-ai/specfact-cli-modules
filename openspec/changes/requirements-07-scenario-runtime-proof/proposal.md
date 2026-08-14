@@ -20,7 +20,7 @@ This conflation pushed core toward static inference of every pytest-determining 
 ### Modified Capabilities
 
 - `requirements-scenario-runtime-proof`: Plan and reconcile exact current-run selector evidence independently from chronology.
-- `requirements-proof-review-context`: Preserve current-run and optional chronology provenance without verdict fusion.
+- `requirements-proof-review-context`: Require both corrected-schema claim objects, preserve the optional chronology attestation as provenance, and prevent verdict fusion.
 
 ## Impact
 

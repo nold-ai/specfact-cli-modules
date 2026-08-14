@@ -59,8 +59,8 @@ requirements:
       - case_id: R08-MOD-004
         scenario_id: fail-closed-untrusted-chronology
         method: test
-        intent: "Return `status: unknown` with unproven assurance and fail strict policy for incomplete capsules."
-        observable: "Diagnostics are retained and no pass/no-impact is emitted."
+        intent: "Distinguish an unrequested absent capsule (`not_evaluated/capsule_not_supplied`) from a requested missing or supplied invalid capsule (`status: unknown` with unproven assurance and strict-policy failure)."
+        observable: "Current-execution-only reconciliation retains the mandatory not_evaluated chronology claim; requested or supplied invalid chronology retains diagnostics and emits no pass/no-impact."
   openspec:requirements-08-bounded-red-green-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
     rationale: "Code Review must retain chronology and current-execution provenance without verdict fusion."
     stakeholder_refs:

@@ -8,7 +8,7 @@ B, R, and H are the three proof commits: merge base, red checkpoint, and green i
 
 ### Keep current execution and chronology independent
 
-The report carries separate `current_execution` and `red_green_chronology` claims. Chronology may reference current execution but cannot replace, erase, inflate, or downgrade it. A valid current run with no capsule remains a valid current observation with unproven/not-evaluated chronology.
+The report carries separate `current_execution` and `red_green_chronology` claims. Chronology may reference current execution but cannot replace, erase, inflate, or downgrade it. A valid current run, when chronology was not requested and no capsule was supplied, remains a valid current observation; the mandatory chronology claim object uses `status: not_evaluated` with `reason: capsule_not_supplied`.
 
 ### Validate a content-addressed B/R/H/D capsule
 
@@ -45,7 +45,7 @@ Limitations state that stakeholder-intent completeness, complete runtime depende
 
 ### Missing trust produces unknown status and unproven assurance
 
-An incomplete, mismatched, unsupported, untrusted, checkpoint-authority-invalid, or same-H-and-D capsule never produces pass/no-impact. If chronology was requested, unavailable or untrusted facts produce canonical `status: unknown` plus deterministic diagnostics and strict policy failure; a complete trusted contradiction produces `status: fail`. Runtime observations may be advisory facts but cannot claim complete dependency scope.
+An incomplete, mismatched, unsupported, untrusted, checkpoint-authority-invalid, or same-H-and-D capsule never produces pass/no-impact. If chronology was requested, a missing capsule produces canonical `status: unknown` plus deterministic diagnostics and strict policy failure. Any supplied unavailable or untrusted capsule facts produce the same result; a complete trusted contradiction produces `status: fail`. No request and no capsule instead produces `status: not_evaluated` with `reason: capsule_not_supplied`. Runtime observations may be advisory facts but cannot claim complete dependency scope.
 
 ### Verifier epochs prevent self-authorization
 

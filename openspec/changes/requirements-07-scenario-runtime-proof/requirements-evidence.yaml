@@ -116,3 +116,8 @@ requirements:
         method: test
         intent: Reject unsupported-schema Requirements evidence before review execution.
         observable: No Requirements-aware review report is emitted.
+      - case_id: review-context-missing-chronology-claim
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        intent: Reject corrected-schema Requirements evidence that omits the mandatory red_green_chronology claim object.
+        observable: Truly legacy payloads use the compatibility reader; corrected input cannot omit the canonical not_evaluated claim.

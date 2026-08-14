@@ -16,7 +16,7 @@ The Requirements module should validate a typed capsule produced by trusted core
 - Validate identical exact selectors failed as declared at R, passed at H, and remained passing at distinct D.
 - Validate artifact hashes, runner/toolchain/dependency/environment/plugin/network-policy identities, resource bounds, signed module identity, and verifier epoch without executing Git, pytest, or subprocesses.
 - Reconcile `red_green_chronology` independently from `current_execution`.
-- Report `status: unknown` with unproven assurance and fail strict chronology policy for every incomplete, mismatched, policy-invalid, unsupported, or untrusted capsule.
+- When chronology is requested, report `status: unknown` with unproven assurance for a missing capsule; apply the same fail-closed result to any supplied incomplete, mismatched, policy-invalid, unsupported, or untrusted capsule. No request and no capsule remains `status: not_evaluated` with `reason: capsule_not_supplied`.
 - Keep legacy-ledger reading migration-only and prohibit new generation.
 
 ## Capabilities
@@ -24,7 +24,7 @@ The Requirements module should validate a typed capsule produced by trusted core
 ### New Capabilities
 
 - `requirements-bounded-red-green-proof`: Validate a trusted core B/R/H/D replay capsule and emit a bounded historical chronology claim.
-- `requirements-proof-review-context`: Retain optional chronology provenance alongside current execution without verdict fusion.
+- `requirements-proof-review-context`: Require the corrected-schema chronology claim object, retain its optional R08 attestation alongside current execution, and keep both provenance-only.
 
 ## Impact
 

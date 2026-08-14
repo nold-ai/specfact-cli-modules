@@ -25,12 +25,12 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - [ ] 1.5 Add `test_capsule_rejects_nonimplementation_transition_after_red`.
 - [ ] 1.6 Add `test_capsule_rejects_invalid_delivery_evidence_transition` and `test_capsule_rejects_rewritten_or_missing_frozen_ledger_section`; reject missing, duplicate, reordered, rewritten, or deleted frozen failing/readiness bytes at D even when the H..D paths are allowed.
 - [ ] 1.7 Add `test_capsule_requires_fail_at_r_pass_at_h_and_pass_at_distinct_d` and `test_capsule_rejects_wrong_red_failure_identity_with_same_assertion_class`; require exactly one canonical observed red marker matching each frozen mapped `expected_failure_id`.
-- [ ] 1.8 Add `test_missing_capsule_is_unknown_under_strict_policy`.
+- [ ] 1.8 Add `test_requested_missing_capsule_is_unknown_under_strict_policy` and `test_unrequested_absent_capsule_is_not_evaluated`; distinguish an invoked chronology gate from current-execution-only reconciliation.
 - [ ] 1.9 Add `test_runtime_observation_cannot_claim_complete_dependency_scope`.
 - [ ] 1.10 Add a table-driven mandatory-field test that deletes or alters every identity, checkpoint tag/object/annotation/signature/issuer/trust/ruleset/epoch/attempt binding, frozen failing/readiness R/D bytes/digests/equality result, transition manifest/digest, mapping/plan/selector/expected-failure ID, failing-before/readiness-evidence identity, observed-red-failure-ID digest, JUnit/outcome, runner/toolchain/environment/network/policy/verifier, resource/timestamp, artifact-link, and signed-module field and requires deterministic non-green chronology.
 - [ ] 1.11 Add `test_current_execution_passes_without_red_green_chronology` in `tests/unit/specfact_requirements/test_requirements_lifecycle.py`.
 - [ ] 1.12 Add `test_historical_capsule_cannot_substitute_for_missing_current_execution` in `tests/unit/specfact_requirements/test_requirements_lifecycle.py`.
-- [ ] 1.13 Add `test_code_review_accepts_current_execution_without_red_green_chronology` in `tests/unit/specfact_code_review/run/test_commands.py`; assert Requirements provenance is retained but does not calculate review findings, score, verdict, or exit code.
+- [ ] 1.13 Add `test_code_review_accepts_current_execution_without_red_green_chronology_attestation` and `test_code_review_rejects_corrected_report_without_chronology_claim` in `tests/unit/specfact_code_review/run/test_commands.py`; require the canonical chronology claim object in corrected-schema input while allowing `status: not_evaluated`, and assert Requirements provenance does not calculate review findings, score, verdict, or exit code.
 - [ ] 1.14 After authoring tasks 1.1–1.13 and before any production source edit, collect each named test, then update `requirements-evidence.yaml` under the accepted mapping schema with the exact observed selectors, one stable opaque `expected_failure_id` per replayed selector, one accepted positive `checkpoint_attempt` incremented for every new R, and the governed pre-R readiness-evidence touchpoint. Verify each selector collects once, define exactly one frozen failing marker pair and one frozen readiness marker pair, and freeze the accepted mapping, plan, failing-section, and readiness-section digests. Test names are planning inputs; the collected selectors are frozen only after the tests exist. Do not invent selectors on this planning-only branch.
 - [ ] 1.15 Record actual failing commands/results in `TDD_EVIDENCE.md` before source edits.
 
@@ -39,7 +39,7 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - [ ] 2.1 In new `requirements/replay_proof.py`, add typed versioned capsule and canonical digest/link validation only.
 - [ ] 2.2 Validate B/R/H/D identities, protected signed checkpoint object/signature/trust/attempt bindings supplied by core, exact R/D frozen failing/readiness section equality, all three transition classifications, frozen red inputs including readiness-validation evidence, selector equality, mapped/observed red failure-identity equality, fail/pass/pass outcome rules, every mandatory digest, signed module identity, and verifier epoch.
 - [ ] 2.3 Delegate independent chronology reconciliation and the public capsule input from the existing Requirements lifecycle/command seams.
-- [ ] 2.4 Retain chronology in Code Review context without verdict fusion.
+- [ ] 2.4 Require and retain the corrected-schema chronology claim object in Code Review context without requiring a successful chronology attestation and without verdict fusion; route truly legacy payloads only through the versioned compatibility reader.
 - [ ] 2.5 Keep legacy-ledger read compatibility and prohibit new generation.
 
 ## 3. Verification and release
@@ -47,7 +47,7 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - [ ] 3.1 Run format, type, lint, YAML, bundle imports, contracts, focused/full tests, strict OpenSpec, and explicit-range/full Code Review on the behavior-ready tree; resolve every finding.
 - [ ] 3.2 Update `docs/bundles/requirements/overview.md`, `CHANGELOG.md`, and `packages/specfact-requirements/module-package.yaml`; update the Code Review manifest/docs only if its serialized proof context changes.
 - [ ] 3.3 Run `python scripts/publish_module.py --bundle specfact-requirements` as the publish pre-check, then use the existing release wrapper to generate `registry/index.json`, `registry/modules/specfact-requirements-<version>.tar.gz`, its `.sha256`, and `registry/signatures/specfact-requirements-<version>.tar.sig`. Never hand-edit archives, checksums, or signatures.
-- [ ] 3.4 Re-run the complete mandatory quality sequence after all docs, manifests, registry entries, archives, checksums, and signatures exist, including `verify-modules-signature --payload-from-filesystem --enforce-version-bump`, focused/full tests, strict OpenSpec, and explicit-range/full Code Review. Resolve every fix-producing result before designating H.
+- [ ] 3.4 Re-run the complete mandatory quality sequence after all docs, manifests, registry entries, archives, checksums, and signatures exist, including `verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`, focused/full tests, strict OpenSpec, and explicit-range/full Code Review. Require the generated `.tar.sig` sidecar to exist and match the signed manifest/archive payload, and resolve every fix-producing result before designating H.
 - [ ] 3.5 If chronology is claimed for this implementation, designate the exact stable release-ready tree as H only after task 3.4. Modules validate but do not issue core-owned checkpoints. After H, append only the governed `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records outside their frozen markers to produce a distinct D; no docs, package metadata, changelog, registry, archive, checksum, signature, test, source, policy, or generated-artifact edit is permitted in H..D.
 - [ ] 3.6 At D, run only read-only final verification and replay. If any result requires a non-ledger or frozen-section edit, invalidate the checkpoint and establish a new R rather than mutating H..D.
 - [ ] 3.7 Record immutable H/D repository commit/tree, package/capsule-schema versions, manifest integrity, signer/signature identities, registry/archive/checksum identities, core compatibility, and passing verification evidence for the signed release supplied to core.
@@ -60,7 +60,7 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - Do not infer imports, plugins, configuration, data files, aliases, mutation, namespaces, symlinks, or dynamic execution.
 - Do not accept old red JUnit without the new trusted capsule for new proofs.
 - Do not generate new legacy-ledger evidence.
-- Do not emit pass/no-impact for missing or untrusted capsule facts.
+- When chronology is requested or a capsule is supplied, do not emit pass/no-impact for missing or untrusted capsule facts; no request and no capsule must remain the canonical `not_evaluated/capsule_not_supplied` claim.
 - Do not manually move OpenSpec change directories or hand-edit generated registry archives/checksums/signatures.
 
 ## Closed implementation allowlist

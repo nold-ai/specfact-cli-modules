@@ -47,7 +47,7 @@ A passing chronology SHALL state exactly: "These declared selectors failed at R,
 
 ### Requirement: Fail-Closed Untrusted Chronology
 
-Missing, incomplete, unsupported, hash-mismatched, path-policy-invalid, outcome-invalid, delivery-mismatched, or untrusted capsules SHALL produce `status: unknown` with unproven assurance and a non-passing strict policy result. They SHALL NOT become pass, skip, no-impact, or current-execution failure.
+When chronology is requested, a missing capsule SHALL produce `status: unknown` with unproven assurance and a non-passing strict policy result. Any supplied incomplete, unsupported, hash-mismatched, path-policy-invalid, outcome-invalid, delivery-mismatched, or untrusted capsule SHALL produce the same result. When chronology is not requested and no capsule is supplied, the mandatory chronology claim object SHALL instead use `status: not_evaluated` with `reason: capsule_not_supplied`; strict chronology policy is not invoked. Neither state SHALL become pass, skip, no-impact, or current-execution failure.
 
 #### Scenario: Mandatory capsule fact is unavailable
 
