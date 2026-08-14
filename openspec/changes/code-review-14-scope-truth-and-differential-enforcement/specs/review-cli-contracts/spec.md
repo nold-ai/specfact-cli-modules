@@ -2,7 +2,7 @@
 
 ### Requirement: Truthful Review Assurance Status
 
-The governed review report SHALL expose assurance status `PASS`, `FAIL`, `UNKNOWN`, or `NOT_APPLICABLE`. `WAIVED` SHALL be a governance overlay, not a verifier-produced status. A mandatory UNKNOWN SHALL prevent PASS. NOT_APPLICABLE SHALL require successfully resolved no-governed-impact evidence.
+The governed review report schema `1.6` SHALL expose authoritative `assurance_status` as `PASS`, `FAIL`, `UNKNOWN`, or `NOT_APPLICABLE`. `WAIVED` SHALL be a governance overlay, not a verifier-produced status. A mandatory UNKNOWN SHALL prevent PASS. NOT_APPLICABLE SHALL require successfully resolved no-governed-impact evidence.
 
 #### Scenario: Mandatory evidence is unknown
 
@@ -11,6 +11,24 @@ The governed review report SHALL expose assurance status `PASS`, `FAIL`, `UNKNOW
 - **THEN** assurance is UNKNOWN and process exit is non-zero
 - **AND** partial facts/findings remain available
 - **AND** the human summary does not say all validations passed.
+
+#### Scenario: Schema 1.6 dual-writes a conservative legacy projection
+
+- **GIVEN** a schema 1.6 report has assurance PASS, FAIL, UNKNOWN, or NOT_APPLICABLE
+- **WHEN** compatibility fields are serialized
+- **THEN** PASS writes legacy PASS or PASS_WITH_ADVISORY according to remaining advisories
+- **AND** FAIL writes legacy FAIL
+- **AND** UNKNOWN writes legacy FAIL rather than a green verdict
+- **AND** NOT_APPLICABLE writes PASS_WITH_ADVISORY plus explicit no-governed-impact text
+- **AND** strict/full/range exit codes are 0, 1, 1, and 0 respectively.
+
+#### Scenario: Versioned readers never infer new truth from old fields
+
+- **GIVEN** a report older than schema 1.6
+- **WHEN** compatibility reading completes
+- **THEN** legacy PASS or PASS_WITH_ADVISORY may yield only PASS and legacy FAIL may yield only FAIL
+- **AND** UNKNOWN or NOT_APPLICABLE is never inferred
+- **AND** schema 1.6 or newer with missing/invalid assurance_status is invalid/unknown and cannot pass.
 
 #### Scenario: Shadow preserves unknown while exiting zero
 
@@ -29,4 +47,12 @@ CLI contract fixtures SHALL cover worktree, index, range, full, positional files
 - **GIVEN** range scope is requested without one required ref or together with positional files
 - **WHEN** the CLI parses the request
 - **THEN** it fails with a bounded error and a supported invocation example.
+
+#### Scenario: Positional files cannot satisfy pull-request assurance
+
+- **GIVEN** positional files are supplied to a consumer or policy that requires pull-request range assurance
+- **WHEN** the request is validated
+- **THEN** it is rejected before analysis because base, head, and merge-base evidence is absent
+- **AND** the supported alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref>`
+- **AND** positional files remain valid for explicitly labelled non-PR `assurance_kind=explicit_files` runs.
 

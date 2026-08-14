@@ -30,11 +30,19 @@ The CLI accepts:
 - `--scope index`: staged/index changes relative to HEAD;
 - `--scope range --base-ref <full-ref> --head-ref <full-ref>`: committed merge-base-to-head delta;
 - `--scope full`: all eligible repository files;
-- positional files: one explicit caller-selected set.
+- positional files: one explicit caller-selected set labelled `scope_evidence.assurance_kind=explicit_files`; it is not pull-request range evidence.
 
-`--scope changed` remains one-release deprecated compatibility for `worktree` and prints a warning. CI/enforce mode rejects an implicit or ambiguous changed scope when PR/range semantics are required.
+`--scope changed` remains one-release deprecated compatibility for `worktree` and prints a warning. A PR assurance consumer requires `scope_evidence.assurance_kind=pr_range` and rejects worktree, index, full, changed-alias, or positional-file evidence. Explicit files remain valid for local/manual enforcement when no PR-range claim is made.
 
-Range resolution records full base, head, and merge-base SHAs; diff/path digest; selected file and line facts; rename/deletion facts; filters/facets; repository root; command request; resolver version; and diagnostics. Tests are included by default. Explicit facet exclusion is recorded and cannot be mistaken for analyzed evidence.
+Range resolution records full base, head, and merge-base commit/tree SHAs; diff/path digest; selected file and line facts; rename/deletion facts; filters/facets; repository root; command request; resolver version; assurance kind; and diagnostics. Tests are included by default. Explicit facet exclusion is recorded and cannot be mistaken for analyzed evidence.
+
+### Bind analysis to immutable commit content
+
+`scope.py` is the only Git boundary. For range mode it SHALL materialize fresh, detached base and head roots from the resolved commit trees outside the caller worktree. It SHALL build a manifest of repository-relative path, Git blob identity, and content digest for every selected analyzer input and every declared analyzer-configuration input. The runner receives only paths rooted in the appropriate materialization and runs both snapshots with the same pinned analyzer/toolchain and trusted policy/config digest.
+
+The trusted policy/config identity is resolved once from the explicit base policy epoch and applied to both snapshots. Candidate analyzer-config changes remain visible in scope evidence but cannot authorize or weaken their own comparison; they run only as separately labelled shadow evidence until promoted.
+
+Before and after each analysis, the resolver SHALL verify the selected-input manifest. A missing object, path escape, content mismatch, cleanup failure that prevents verification, or post-analysis mutation yields `UNKNOWN` with diagnostics. Range mode SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation` before materialization. Those operations require a separate worktree/explicit-file run and cannot be attached to PR-range assurance.
 
 ### Empty and unresolved are different
 
@@ -62,9 +70,11 @@ Finding fields distinguish:
 
 An open fixable error remains unresolved and can block. A waiver is a signed governance overlay, not a detector outcome.
 
-### Calibrate the terminal status
+### Calibrate and version the terminal status
 
-Review assurance status is `PASS`, `FAIL`, `UNKNOWN`, or `NOT_APPLICABLE`. A report cannot say all validations passed when a mandatory scope/analyzer/claim is unknown or skipped. Facts, deterministic claims, heuristic signals, and optional AI hypotheses remain labelled separately; an unvalidated hypothesis cannot block.
+Schema `1.6` adds authoritative `assurance_status: PASS | FAIL | UNKNOWN | NOT_APPLICABLE`. A report cannot say all validations passed when a mandatory scope/analyzer/claim is unknown or skipped. Facts, deterministic claims, heuristic signals, and optional AI hypotheses remain labelled separately; an unvalidated hypothesis cannot block.
+
+For one compatibility release, `overall_verdict` remains a non-authoritative legacy projection: PASS maps to PASS or PASS_WITH_ADVISORY, FAIL maps to FAIL, UNKNOWN maps conservatively to FAIL, and NOT_APPLICABLE maps to PASS_WITH_ADVISORY plus explicit no-impact text. Strict/full/range exits are respectively 0, 1, 1, and 0; shadow always exits 0 while preserving the authoritative status. Legacy reports older than 1.6 can yield only PASS or FAIL. Missing/invalid `assurance_status` in 1.6+ is invalid/unknown, never legacy fallback.
 
 ## Implementation Boundary
 
@@ -73,9 +83,10 @@ The future behavior PR may touch only the Code Review command/resolver/runner/re
 ## Rollout and Rollback
 
 1. Add red tests for scope truth, differential classification, analyzer coverage, and lifecycle semantics.
-2. Add new scope/report fields while dual-writing legacy fields.
-3. Migrate core CI to explicit range scope in shadow mode.
-4. Compare against the #665–#671 adjudicated benchmark.
-5. Enable strict unknown handling, then remove the deprecated alias in a later major-compatible release.
-6. Roll back by restoring legacy command routing while retaining new evidence fields for diagnosis.
+2. Add schema 1.6 scope/report fields and the closed legacy projection while dual-writing old fields for one compatibility release.
+3. Publish only after command references, module metadata, registry artifacts, checksums, and signatures are regenerated by the canonical workflow; set the consuming core floor to `>=0.56.0,<1.0.0`.
+4. Migrate core CI to explicit range scope in shadow mode and require `assurance_kind=pr_range`.
+5. Compare against the #665–#671 adjudicated benchmark.
+6. Enable strict unknown handling, then remove the deprecated alias in a later major-compatible release.
+7. Roll back by restoring legacy command routing while retaining schema 1.6 evidence fields for diagnosis.
 

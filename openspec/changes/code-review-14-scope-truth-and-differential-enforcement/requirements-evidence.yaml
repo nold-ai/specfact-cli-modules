@@ -15,6 +15,11 @@ requirements:
         method: test
         intent: "Resolve worktree, index, range, full, or explicit-file scope without ambiguity."
         observable: "Immutable scope evidence identifies the analyzed snapshot and files."
+      - case_id: CR14-007
+        scenario_id: immutable-range-analysis-inputs
+        method: test
+        intent: "Materialize base/head inputs from resolved commit trees and reject mutation-capable range options."
+        observable: "Caller-worktree mutation cannot affect range results; manifest mismatch yields UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
     rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
     stakeholder_refs:
@@ -57,6 +62,11 @@ requirements:
         method: test
         intent: "Expose PASS, FAIL, UNKNOWN, and NOT_APPLICABLE with analyzer coverage."
         observable: "No all-passed summary when mandatory evidence is skipped or unknown."
+      - case_id: CR14-008
+        scenario_id: versioned-assurance-status-compatibility
+        method: test
+        intent: "Dual-write schema 1.6 assurance into the closed legacy verdict and exit-code projection."
+        observable: "UNKNOWN is never green; old reports cannot imply UNKNOWN/NOT_APPLICABLE; malformed 1.6 reports cannot pass."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:review-cli-contracts-cover-explicit-scope-and-differential-evidence:
     rationale: "The public CLI contract must prove every explicit scope and differential evidence path."
     stakeholder_refs:
@@ -70,7 +80,7 @@ requirements:
       - case_id: CR14-005
         scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
         method: test
-        intent: "Exercise explicit scope sources, full-ref validation, merge-base range selection, analyzer coverage, and invalid combinations."
+        intent: "Exercise explicit scope sources, full-ref validation, merge-base range selection, positional-file PR downgrade rejection, analyzer coverage, and invalid combinations."
         observable: "CLI contract fixtures reject ambiguous inputs and preserve truthful range and unknown evidence."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
     rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."

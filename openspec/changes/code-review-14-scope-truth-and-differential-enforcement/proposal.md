@@ -8,8 +8,9 @@ The report also lacks an honest unknown/not-applicable state, conflates autofix 
 
 ## What Changes
 
-- Define explicit scope sources: `worktree`, `index`, `range`, `full`, or positional files. Keep `changed` only as a deprecated alias for `worktree`.
-- Require full base/head refs for range scope and derive the PR delta from the merge base.
+- Define explicit scope sources: `worktree`, `index`, `range`, `full`, or positional files for explicitly labelled non-PR inspection. Keep `changed` only as a deprecated alias for `worktree`.
+- Require full base/head refs for range scope, derive the PR delta from the merge base, and reject any positional-file invocation that claims PR-range assurance.
+- Materialize base and head analyzer inputs from the resolved commit trees in isolated roots, bind them with content manifests, and reject mutation-capable options in range mode.
 - Emit immutable scope evidence and fail closed as `UNKNOWN` when Git scope cannot be resolved.
 - Include changed tests by default for range review; exclusions are explicit evidence.
 - Analyze base and head with the same pinned analyzer/config identities and classify findings as introduced, fixed, unchanged, or unknown using stable fingerprints.
@@ -29,8 +30,23 @@ The report also lacks an honest unknown/not-applicable state, conflates autofix 
 
 - Planning artifacts only. No package source, tests, manifests, registry, version, signatures, prompts, or generated docs change in this commit.
 - Later implementation changes the public review CLI and JSON schema additively, with a deprecation path for `--scope changed`.
-- CI integrations must migrate to `--scope range --base-ref <base> --head-ref <head>` or explicit positional files.
+- CI integrations that claim pull-request assurance must migrate to `--scope range --base-ref <base> --head-ref <head>` and require `scope_evidence.assurance_kind=pr_range`; positional files remain valid only as `explicit_files` evidence and cannot satisfy that policy.
 - Rollback: retain the legacy alias and dual-write old/new report fields during one compatibility release.
+
+### Report compatibility and release gate
+
+The additive authoritative field SHALL be `assurance_status` in `ReviewReport` schema `1.6`. For one compatibility release, producers SHALL also write the legacy `overall_verdict`, `ci_exit_code`, and `enforcement_mode` fields with this closed projection:
+
+| `assurance_status` | Legacy `overall_verdict` | Strict/full/range `ci_exit_code` | Shadow `ci_exit_code` |
+|---|---|---:|---:|
+| `PASS` | `PASS`, or `PASS_WITH_ADVISORY` when non-blocking findings remain | 0 | 0 |
+| `FAIL` | `FAIL` | 1 | 0 |
+| `UNKNOWN` | `FAIL` as the conservative legacy projection | 1 | 0 |
+| `NOT_APPLICABLE` | `PASS_WITH_ADVISORY`, with an explicit no-governed-impact summary | 0 | 0 |
+
+The new field is authoritative; dual-writing MUST NOT rewrite `UNKNOWN` or `NOT_APPLICABLE` to `PASS`. A schema older than `1.6` may be read only as legacy `PASS` (from `PASS` or `PASS_WITH_ADVISORY`) or `FAIL`; it can never be upgraded by inference to `UNKNOWN` or `NOT_APPLICABLE`. Schema `1.6+` with a missing or invalid `assurance_status` is invalid/unknown and cannot pass.
+
+The first signed C14 module release SHALL set `core_compatibility: '>=0.56.0,<1.0.0'` and is blocked until that core version validates schema `1.6` and requires `pr_range` evidence in PR CI. The behavior-ready implementation PR regenerates command references and public docs; the canonical post-merge publish workflow alone generates and signs registry/archive/checksum/sidecar artifacts. Core adoption is pinned to those final signed identities, never to a feature-branch package.
 
 ## Explicit Non-Goals
 
