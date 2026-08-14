@@ -30,7 +30,7 @@
 
 For ReviewReport schema 1.6 or newer, the first-party review ledger SHALL consume and persist authoritative `assurance_status` rather than deriving ledger behavior from legacy `overall_verdict`. Persisted local and Supabase ledger status SHALL support PASS, FAIL, UNKNOWN, and NOT_APPLICABLE; PASS_WITH_ADVISORY remains accepted only for legacy reports older than 1.6.
 
-UNKNOWN and NOT_APPLICABLE SHALL be neutral audit events: the run metadata and findings remain recorded, applied reward/coins are zero, pass and block streak counters remain unchanged, and no pass bonus or block penalty is triggered.
+UNKNOWN and NOT_APPLICABLE SHALL be neutral audit events: the run metadata and findings remain recorded, applied reward/coins are zero, pass and block streak counters remain unchanged, and no pass bonus or block penalty is triggered. Local and Supabase run records SHALL store the complete canonical schema 1.6 report in `report_json` with its SHA-256 `report_digest`, including scope/analyzer diagnostics even when `findings` is empty.
 
 #### Scenario: Unknown review is neutral in the ledger
 
@@ -39,7 +39,8 @@ UNKNOWN and NOT_APPLICABLE SHALL be neutral audit events: the run metadata and f
 - **THEN** the persisted authoritative ledger verdict is UNKNOWN
 - **AND** reward and applied last delta are zero
 - **AND** pass and block streaks are unchanged
-- **AND** the legacy FAIL projection does not create a block-streak event.
+- **AND** the legacy FAIL projection does not create a block-streak event
+- **AND** report_json and report_digest preserve the UNKNOWN scope/analyzer evidence even when findings are empty.
 
 #### Scenario: Not-applicable review is neutral in the ledger
 
@@ -48,7 +49,8 @@ UNKNOWN and NOT_APPLICABLE SHALL be neutral audit events: the run metadata and f
 - **THEN** the persisted authoritative ledger verdict is NOT_APPLICABLE
 - **AND** reward and applied last delta are zero
 - **AND** pass and block streaks are unchanged
-- **AND** no pass streak or coin bonus is awarded.
+- **AND** no pass streak or coin bonus is awarded
+- **AND** report_json and report_digest preserve the no-governed-impact evidence.
 
 #### Scenario: Legacy ledger behavior remains readable
 
@@ -56,5 +58,6 @@ UNKNOWN and NOT_APPLICABLE SHALL be neutral audit events: the run metadata and f
 - **WHEN** the ledger reads PASS, PASS_WITH_ADVISORY, or FAIL
 - **THEN** the prior reward and streak behavior remains compatible
 - **AND** updated local models and Supabase check constraints also accept UNKNOWN and NOT_APPLICABLE
+- **AND** nullable report_json/report_digest columns keep existing Supabase rows readable
 - **AND** no missing new field is inferred as either new authoritative state.
 

@@ -33,11 +33,11 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 2.3 Add `test_baseline_analysis_failure_is_unknown`.
 - [ ] 2.4 Add `test_range_differential_uses_merge_base_snapshot_when_base_tip_advanced`.
 - [ ] 2.5 Add `test_report_exposes_mandatory_analyzer_coverage` and `test_analyzer_identity_mismatch_is_unknown`; the latter varies analyzer version, toolchain, policy, and config identities independently.
-- [ ] 2.6 Add `test_fixable_error_remains_blocking_until_applied`.
+- [ ] 2.6 Add `test_fixable_error_remains_blocking_until_applied` and update existing `test_score_review_single_fixable_error` to expect FAIL; production `scorer.py` remains unchanged.
 - [ ] 2.7 Add `test_report_never_says_all_passed_with_mandatory_unknown`.
 - [ ] 2.8 Add table-driven `test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix` for PASS/FAIL/UNKNOWN/NOT_APPLICABLE under strict and shadow modes, including enforce-to-full normalization, changed/worktree compatibility, and range-plus-changed rejection.
 - [ ] 2.9 Add `test_schema_1_6_missing_assurance_status_is_unknown` and legacy-reader cases proving old PASS/FAIL cannot imply UNKNOWN/NOT_APPLICABLE.
-- [ ] 2.10 Add table-driven `test_ledger_authoritative_assurance_controls_rewards_and_streaks` for schema 1.6 PASS/FAIL/UNKNOWN/NOT_APPLICABLE plus legacy PASS_WITH_ADVISORY. Prove UNKNOWN/NOT_APPLICABLE persist verbatim, apply zero reward/last delta, leave both streaks unchanged, and are accepted by local/Supabase schemas.
+- [ ] 2.10 Add table-driven `test_ledger_authoritative_assurance_controls_rewards_and_streaks` for schema 1.6 PASS/FAIL/UNKNOWN/NOT_APPLICABLE plus legacy PASS_WITH_ADVISORY. Prove UNKNOWN/NOT_APPLICABLE persist verbatim, apply zero reward/last delta, leave both streaks unchanged, and are accepted by local/Supabase schemas. Add a no-findings UNKNOWN case proving local and Supabase `report_json` plus canonical SHA-256 `report_digest` retain scope/analyzer diagnostics.
 - [ ] 2.11 Collect the exact canonical pytest node ID for every test-authored CR14 scenario, write each selector into `requirements-evidence.yaml`, and rerun strict mapping validation. Do not edit production source in this task.
 - [ ] 2.12 Build the deterministic plan from the accepted mapping and source identity, then write and commit `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json`. Schema version `1` SHALL contain: `change_id`; `checkpoint_parent.commit_sha` and `tree_sha`; `mapping_digest`; `plan.id` and `digest`; sorted `selectors` plus `selector_digest`; sorted `frozen_input_paths` plus `frozen_input_manifest_digest`; and sorted `analyzers[]` entries with `id`, `required`, `version`, `toolchain_digest`, `policy_digest`, and `config_digest`. All digests are canonical SHA-256 values. The parent commit/tree identifies the test-and-mapping checkpoint before this evidence file is added.
 - [ ] 2.13 Verify the committed checkpoint against the current frozen inputs, execute its exact selectors, confirm the expected failing outcomes, and record the exact commands, checkpoint-file digest, and outcomes in `TDD_EVIDENCE.md` before any source edit. Any frozen-input mismatch invalidates the checkpoint and repeats tasks 2.11–2.13. Section 3 is blocked until this task passes.
@@ -53,7 +53,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 3.7 Add mandatory analyzer coverage evidence.
 - [ ] 3.8 Separate finding status, differential state, autofix availability, and blocking policy.
 - [ ] 3.9 Add schema 1.6 `assurance_status`, versioned legacy reading, closed dual-write projection, and strict/shadow exit matrix.
-- [ ] 3.10 Update the existing ledger client/model, local reader, Supabase DDL constraints, focused ledger tests/contracts, and ledger docs so schema 1.6 UNKNOWN/NOT_APPLICABLE are persisted neutral states while pre-1.6 behavior remains compatible.
+- [ ] 3.10 Update the existing ledger client/model, local reader, Supabase DDL constraints/columns, focused ledger tests/contracts, and ledger docs so schema 1.6 UNKNOWN/NOT_APPLICABLE are persisted neutral states while pre-1.6 behavior remains compatible. Persist the complete canonical report in `report_json` with `report_digest`; legacy rows may leave both nullable.
 - [ ] 3.11 Update CLI behavior, `docs/bundles/code-review/run.md`, and exactly `tests/cli-contracts/specfact-code-review-run.scenarios.yaml` for static argv/report cases only; retain `changed` only as a deprecated worktree alias and keep stateful Git setup in the named unit/e2e modules.
 
 ## 4. Release and adoption
@@ -98,13 +98,13 @@ Differential enforcement:
 Report truth:
 
 - `packages/specfact-code-review/src/specfact_code_review/run/findings.py` remains the only report/finding model; do not create a parallel model. `fixable` must not affect `is_blocking()`.
-- `tests/unit/specfact_code_review/run/test_findings.py` and `tests/unit/specfact_code_review/run/test_runner.py`.
+- `tests/unit/specfact_code_review/run/test_findings.py`, `tests/unit/specfact_code_review/run/test_runner.py`, and existing `tests/unit/specfact_code_review/run/test_scorer.py` only to update the fixable-error regression expectation; production `scorer.py` remains forbidden.
 
 First-party ledger consumer:
 
 - `packages/specfact-code-review/src/specfact_code_review/ledger/client.py` only for authoritative-status persistence and neutral reward/streak policy.
 - `tests/unit/specfact_code_review/ledger/test_client.py`.
-- `packages/specfact-code-review/src/specfact_code_review/resources/supabase/review_ledger_ddl.sql` only to migrate the verdict constraints for UNKNOWN/NOT_APPLICABLE while preserving existing rows.
+- `packages/specfact-code-review/src/specfact_code_review/resources/supabase/review_ledger_ddl.sql` only to migrate verdict constraints and add nullable `report_json`/`report_digest` columns for canonical schema 1.6 audit evidence while preserving existing rows.
 - `tests/cli-contracts/specfact-code-review-ledger.scenarios.yaml` and `docs/bundles/code-review/ledger.md` only for the public ledger status contract.
 
 End-to-end/docs/release:

@@ -20,7 +20,7 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** FAIL writes legacy FAIL
 - **AND** UNKNOWN writes legacy FAIL rather than a green verdict
 - **AND** NOT_APPLICABLE writes PASS_WITH_ADVISORY plus explicit no-governed-impact text
-- **AND** strict/full/range exit codes are 0, 1, 1, and 0 respectively.
+- **AND** the non-shadow `ci_exit_code` values for PASS, FAIL, UNKNOWN, and NOT_APPLICABLE are respectively 0, 1, 1, and 0.
 
 #### Scenario: Legacy enforcement mode is policy, not scope
 

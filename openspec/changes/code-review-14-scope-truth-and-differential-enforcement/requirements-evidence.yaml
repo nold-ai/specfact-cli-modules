@@ -120,5 +120,5 @@ requirements:
         scenario_id: ledger-preserves-authoritative-assurance-status
         method: test
         intent: "Persist schema 1.6 assurance directly and keep UNKNOWN/NOT_APPLICABLE neutral for rewards and streaks."
-        observable: "Neutral states remain auditable without coins, pass bonuses, block penalties, or streak changes; legacy records remain readable."
+        observable: "Neutral states persist canonical report_json/report_digest without coins, pass bonuses, block penalties, or streak changes; legacy records remain readable."
 
