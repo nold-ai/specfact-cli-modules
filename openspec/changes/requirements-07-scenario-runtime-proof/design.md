@@ -27,7 +27,7 @@ The previous schema used one linear maturity ladder where a final passing curren
 
 `current_execution` records status, mapping/plan/source identities, exact selectors, result digest, collection counts, outcome counts, runner identity, and environment provenance supplied by core.
 
-`tdd_chronology` records status and optional R08 attestation identity. Missing chronology is `unproven`/`not_evaluated` according to the versioned report contract and cannot erase or inflate current execution.
+`red_green_chronology` records status and optional R08 attestation identity. Missing chronology is `unproven`/`not_evaluated` according to the versioned report contract and cannot erase or inflate current execution.
 
 ### Current reconciliation needs only current evidence
 
