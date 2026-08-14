@@ -106,6 +106,12 @@ For one compatibility release, `overall_verdict` remains a non-authoritative leg
 
 Legacy `enforcement_mode` is the normalized policy request, not a scope label: `enforce` becomes `full`; `full`, `changed`, and `shadow` remain those values. `changed` is restricted to the one-release changed/worktree compatibility path. The parser represents an omitted enforcement option distinctly from an explicit value: omitted plus range normalizes to strict `full`, while omitted plus the deprecated changed/worktree path retains `changed`. Explicit range plus changed-mode is invalid; strict range writes `full`, shadow range writes `shadow`, and range identity lives only in `scope_evidence`.
 
+### Keep repository guidance on the same assurance boundary
+
+Canonical merge/PR-quality instructions in both agent-rule files, the module and bundle guides, the generated `--instructions` text, the rules updater, bundled skill, and tracked generated skill copies SHALL use the executable complete-range form with full base/head identities and strict/full enforcement. They SHALL NOT recommend changed/worktree or positional branch-delta files as merge assurance.
+
+The local pre-commit helper remains a staged positional-file gate and simplification preview remains a worktree workflow; both are useful but SHALL be labelled `explicit_files` or `worktree` and SHALL NOT satisfy `pr_range`. `AGENTS.md` already loads the canonical agent-rule files and need not duplicate the command. Tracked skill copies are regenerated from the bundled source through the existing updater, not hand-edited independently.
+
 ### Preserve assurance truth in the first-party ledger
 
 For schema 1.6 reports, the ledger reads authoritative `assurance_status`, not the legacy `overall_verdict` projection. Persisted `LedgerRun.verdict`, `LedgerState.last_verdict`, local JSON, and Supabase constraints SHALL accept PASS, FAIL, UNKNOWN, and NOT_APPLICABLE while retaining PASS_WITH_ADVISORY only for reports older than 1.6.

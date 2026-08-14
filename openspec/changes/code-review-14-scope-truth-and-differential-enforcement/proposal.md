@@ -18,6 +18,7 @@ The report also lacks an honest unknown/not-applicable state, conflates autofix 
 - Separate finding severity, lifecycle status, autofix availability, and blocking policy.
 - Use `PASS`, `FAIL`, `UNKNOWN`, and `NOT_APPLICABLE` truthfully; waivers remain a governance overlay.
 - Migrate the first-party review ledger to consume and persist schema 1.6 `assurance_status`; UNKNOWN and NOT_APPLICABLE are audit records but never passing streaks or reward events.
+- Migrate every canonical merge/PR-quality instruction surface to complete range/base/head/full usage while explicitly retaining worktree/positional commands only for local staged or simplification workflows that do not claim PR assurance.
 
 ## Capabilities
 

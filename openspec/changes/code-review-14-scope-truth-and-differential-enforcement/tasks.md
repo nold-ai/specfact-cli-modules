@@ -28,6 +28,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 1.11 Add `test_range_scope_omitted_enforcement_defaults_to_full` and update existing `test_review_run_instructions_prints_ai_workflow_without_running_review` to require the executable range/base/head/`--enforcement full` workflow; retain explicit range-plus-changed rejection.
 - [ ] 1.12 Add `test_installed_merge_quality_guidance_uses_pr_range`; prove rules updater output and the bundled skill use range/base/head/full for merge review while simplification preview remains worktree-scoped.
 - [ ] 1.13 Add table-driven `test_range_scope_rejects_narrowing_filters_before_analysis` for `--exclude-tests`, `--focus source|tests|docs|simplify`, `--path`, `--no-tests`, and `--level`; no narrowed result may carry `assurance_kind=pr_range` or produce false NOT_APPLICABLE.
+- [ ] 1.14 Add `test_merge_quality_guidance_requires_complete_pr_range`; cover both agent-rule files, module/bundle guides, generated instructions, updater/bundled skill, and tracked skill copies. Assert local pre-commit positional and simplification worktree guidance is explicitly non-PR.
 
 ## 2. Failing differential/report tests
 
@@ -59,7 +60,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 3.8 Separate finding status, differential state, autofix availability, and blocking policy.
 - [ ] 3.9 Add schema 1.6 `assurance_status`, versioned legacy reading, closed dual-write projection, and strict/shadow exit matrix; make every post-analysis enrichment/model-copy path preserve these authoritative fields.
 - [ ] 3.10 Update the existing ledger client/model, local reader, Supabase DDL constraints/columns, focused ledger tests/contracts, and ledger docs so schema 1.6 UNKNOWN/NOT_APPLICABLE are persisted neutral states while pre-1.6 behavior remains compatible. Persist the complete canonical report in `report_json` with `report_digest`; legacy rows may leave both nullable.
-- [ ] 3.11 Update CLI behavior, `docs/bundles/code-review/run.md`, and exactly `tests/cli-contracts/specfact-code-review-run.scenarios.yaml` for static argv/report cases only; retain `changed` only as a deprecated worktree alias and keep stateful Git setup in the named unit/e2e modules.
+- [ ] 3.11 Update CLI behavior, both canonical agent-rule files, module/bundle guides, generated instructions, updater/bundled skill and updater-generated tracked skill copies so merge assurance uses complete range/base/head/full while staged positional and simplification worktree workflows are explicitly non-PR. Update exactly `tests/cli-contracts/specfact-code-review-run.scenarios.yaml` for static argv/report cases; retain `changed` only as a deprecated worktree alias and keep stateful Git setup in the named unit/e2e modules.
 
 ## 4. Release and adoption
 
@@ -89,11 +90,15 @@ CLI/request parsing:
 - `tests/unit/specfact_code_review/review/test_commands.py` only to replace the obsolete positional-file PR instruction expectation with the executable range/base/head/full workflow.
 - `tests/unit/specfact_code_review/run/test_commands.py` and `tests/cli-contracts/specfact-code-review-run.scenarios.yaml`.
 
-Installed merge-quality guidance:
+Canonical merge-quality guidance:
 
+- `docs/agent-rules/20-repository-context.md` and `docs/agent-rules/50-quality-gates-and-review.md` only to replace mandatory merge-review commands with complete range/base/head/full guidance and label the staged pre-commit helper non-PR.
+- `docs/modules/code-review.md` and `docs/bundles/code-review/run.md` only to remove positional branch-delta/changed-worktree PR guidance, document the complete range contract, and retain clearly local examples.
 - `packages/specfact-code-review/src/specfact_code_review/rules/updater.py` only to replace merge-quality changed/worktree guidance with the executable range/base/head/full command; simplification preview remains worktree-scoped.
 - `packages/specfact-code-review/src/specfact_code_review/resources/skills/specfact-code-review/SKILL.md` for the same merge-quality correction.
-- `tests/unit/specfact_code_review/rules/test_updater.py` only for the focused installed/bundled guidance regression.
+- `skills/specfact-code-review/SKILL.md` and `.vibe/skills/specfact-code-review/SKILL.md` only as updater-generated tracked copies after the bundled source and tests pass; never hand-edit them independently.
+- `tests/unit/specfact_code_review/rules/test_updater.py` and `tests/unit/docs/test_code_review_docs_parity.py` only for focused guidance/parity regressions.
+- `scripts/pre_commit_code_review.py`, `scripts/pre-commit-quality-checks.sh`, and their tests remain unchanged: they are local staged positional-file evidence, not PR assurance.
 
 Scope:
 

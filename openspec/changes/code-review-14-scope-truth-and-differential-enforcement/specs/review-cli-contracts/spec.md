@@ -82,6 +82,15 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **AND** the supported alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref> --enforcement full`
 - **AND** positional files remain valid for explicitly labelled non-PR `assurance_kind=explicit_files` runs.
 
+#### Scenario: Canonical repository merge guidance uses complete PR range
+
+- **GIVEN** a developer or agent follows the mandatory repository quality gate, module/bundle guide, or generated Code Review instructions
+- **WHEN** the guidance describes merge or pull-request assurance
+- **THEN** it uses `--scope range`, full base/head identities, and `--enforcement full`
+- **AND** it does not use changed/worktree or positional branch-delta files as merge evidence
+- **AND** the local pre-commit positional gate and simplification worktree workflow are labelled non-PR assurance
+- **AND** tracked skill copies are regenerated from the bundled source and remain byte-consistent.
+
 #### Scenario: Installed merge-quality guidance uses PR range
 
 - **GIVEN** Code Review guidance is installed or refreshed through `rules init` or `rules update`
