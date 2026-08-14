@@ -50,7 +50,15 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 
 ### Requirement: Review CLI Contracts Cover Explicit Scope and Differential Evidence
 
-CLI contract fixtures SHALL cover worktree, index, range, full, positional files, deprecated changed alias, full-ref validation, staged-versus-unstaged index content, merge-base selection with an advanced base-ref tip, changed-test inclusion, empty range, Git failure, merge-base/head classifications, analyzer coverage, and invalid option combinations.
+Static CLI contract fixtures SHALL cover argv parsing and serialized report/error contracts for worktree, index, range, full, positional files, deprecated changed alias, required full refs, assurance/enforcement status projection, positional PR-range downgrade rejection, and invalid option combinations. Stateful Git content/topology behavior—staged-versus-unstaged index content, merge-base selection with an advanced base-ref tip, changed-test inclusion, empty range, Git failure, immutable materialization, merge-base/head classifications, and analyzer identity/coverage—SHALL be proved only in the allowlisted scope/differential unit and end-to-end tests that create isolated temporary repositories.
+
+#### Scenario: Stateful Git setup is outside static CLI fixtures
+
+- **GIVEN** a case requires index mutation, unstaged overlap, branch divergence, missing refs, or controlled analyzer outcomes
+- **WHEN** verification is assigned
+- **THEN** it uses `test_scope.py`, `test_differential.py`, or the named review-run e2e module with a temporary repository
+- **AND** the static CLI-contract YAML and its existing harness are not extended to perform repository setup
+- **AND** no stateful case is claimed from argv-only fixture evidence.
 
 #### Scenario: Range contract requires base and head
 

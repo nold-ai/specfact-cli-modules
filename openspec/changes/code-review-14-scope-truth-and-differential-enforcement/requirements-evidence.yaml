@@ -90,8 +90,8 @@ requirements:
       - case_id: CR14-005
         scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
         method: test
-        intent: "Exercise explicit scope sources, full-ref validation, merge-base range selection, positional-file PR downgrade rejection, analyzer coverage, and invalid combinations."
-        observable: "CLI contract fixtures reject ambiguous inputs and preserve truthful range and unknown evidence."
+        intent: "Exercise static argv/report contracts for explicit scope sources, full-ref requirements, assurance/enforcement projection, positional-file PR downgrade rejection, and invalid combinations."
+        observable: "Static CLI fixtures reject ambiguous inputs without claiming stateful Git topology or analyzer evidence."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
     rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."
     stakeholder_refs:

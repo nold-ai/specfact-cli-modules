@@ -48,7 +48,7 @@ The additive authoritative field SHALL be `assurance_status` in `ReviewReport` s
 
 The new field is authoritative; dual-writing MUST NOT rewrite `UNKNOWN` or `NOT_APPLICABLE` to `PASS`. A schema older than `1.6` may be read only as legacy `PASS` (from `PASS` or `PASS_WITH_ADVISORY`) or `FAIL`; it can never be upgraded by inference to `UNKNOWN` or `NOT_APPLICABLE`. Schema `1.6+` with a missing or invalid `assurance_status` is invalid/unknown and cannot pass.
 
-The first signed C14 module release SHALL set `core_compatibility: '>=0.56.0,<1.0.0'` and is blocked until that core version validates schema `1.6` and requires `pr_range` evidence in PR CI. The behavior-ready implementation PR regenerates command references and public docs; the canonical post-merge publish workflow alone generates and signs registry/archive/checksum/sidecar artifacts. Core adoption is pinned to those final signed identities, never to a feature-branch package.
+The first signed C14 module release SHALL set `core_compatibility: '>=0.56.0,<1.0.0'` and is blocked only until compatibility tests prove that core version can load and validate schema `1.6`; actual core PR-CI migration is explicitly downstream of the signed release. The behavior-ready implementation PR regenerates command references and public docs; the canonical post-merge publish workflow alone generates and signs registry/archive/checksum/sidecar artifacts. A separate accepted core adoption change then pins those final signed identities and requires `pr_range`; it never adopts a feature-branch package.
 
 ## Explicit Non-Goals
 

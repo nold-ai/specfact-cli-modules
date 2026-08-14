@@ -20,7 +20,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 1.3 Add `test_scope_git_failure_is_unknown_and_blocks_enforcement`.
 - [ ] 1.4 Add `test_empty_resolved_range_is_not_applicable`.
 - [ ] 1.5 Add `test_range_scope_includes_changed_tests_by_default`.
-- [ ] 1.6 Add CLI-contract red cases for full refs, invalid combinations, deprecated changed alias, and explicit positional files.
+- [ ] 1.6 Add static CLI-contract red cases for required full refs, invalid combinations, deprecated changed alias, assurance/enforcement projection, and explicit positional files. Do not add Git setup to the argv-only contract harness; tasks 1.8, 1.10, 2.4, and 2.5 own stateful temporary-repository cases.
 - [ ] 1.7 Add `test_pr_assurance_rejects_positional_file_downgrade` while retaining local explicit-file enforcement.
 - [ ] 1.8 Add `test_range_analysis_uses_materialized_commit_snapshots` with caller-worktree mutation and pre/post manifest mismatch cases.
 - [ ] 1.9 Add `test_index_and_range_reject_fix_preview_and_mutation_options`.
@@ -52,7 +52,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 3.7 Add mandatory analyzer coverage evidence.
 - [ ] 3.8 Separate finding status, differential state, autofix availability, and blocking policy.
 - [ ] 3.9 Add schema 1.6 `assurance_status`, versioned legacy reading, closed dual-write projection, and strict/shadow exit matrix.
-- [ ] 3.10 Update CLI behavior, `docs/bundles/code-review/run.md`, and exactly `tests/cli-contracts/specfact-code-review-run.scenarios.yaml`; retain `changed` only as a deprecated worktree alias.
+- [ ] 3.10 Update CLI behavior, `docs/bundles/code-review/run.md`, and exactly `tests/cli-contracts/specfact-code-review-run.scenarios.yaml` for static argv/report cases only; retain `changed` only as a deprecated worktree alias and keep stateful Git setup in the named unit/e2e modules.
 
 ## 4. Release and adoption
 
