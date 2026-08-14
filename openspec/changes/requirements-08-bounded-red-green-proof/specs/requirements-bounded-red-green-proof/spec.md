@@ -14,13 +14,13 @@ The Requirements report SHALL represent `current_execution` and `tdd_chronology`
 
 ### Requirement: Trusted Replay Capsule Validation
 
-The Requirements module SHALL accept a versioned capsule from the trusted core replay boundary and validate its schema, canonical artifact hash links, full B/R/H/D commit and tree identities, B < R < H <= D ancestry facts, D equality with the delivered-head identity, all three transition manifests/digests and path-role sets, frozen mapping/plan/selectors/failing-before evidence at R, exact fail-at-R/pass-at-H/remain-pass-at-distinct-D outcomes, runner/toolchain/dependency/environment/plugin/network-policy identities, timestamps/resource bounds, signed module identity, policy identity, and verifier epoch. The module SHALL NOT execute Git, pytest, or subprocesses.
+The Requirements module SHALL accept a versioned capsule from the trusted core replay boundary and validate its schema, canonical artifact hash links, full B/R/H/D commit and tree identities, B < R < H <= D ancestry facts, D equality with the delivered-head identity, all three transition manifests/digests and path-role sets, frozen mapping/plan/selectors/expected-failure identities/failing-before evidence at R, exact mapped expected-failure-ID-at-R/pass-at-H/remain-pass-at-distinct-D outcomes, canonical observed red failure IDs and their digest, runner/toolchain/dependency/environment/plugin/network-policy identities, timestamps/resource bounds, signed module identity, policy identity, and verifier epoch. The module SHALL NOT execute Git, pytest, or subprocesses.
 
 B..R SHALL contain only declared red-setup touchpoints, including the accepted proof mapping and failing-before TDD record. R..H SHALL contain only declared implementation touchpoints. H..D SHALL contain only exact declared delivery-evidence touchpoints for the governed change's `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md`.
 
 #### Scenario: Valid capsule proves bounded chronology
 
-- **GIVEN** a complete trusted capsule whose identical selectors failed as declared at R, passed at H, and remained passing at distinct D
+- **GIVEN** a complete trusted capsule whose identical selectors each emitted exactly one canonical red marker matching the frozen mapped `expected_failure_id` at R, passed at H, and remained passing at distinct D
 - **AND** D equals the delivered head
 - **AND** every transition classification satisfies its accepted closed path policy
 - **WHEN** chronology reconciliation runs
@@ -29,7 +29,7 @@ B..R SHALL contain only declared red-setup touchpoints, including the accepted p
 
 #### Scenario: Capsule identity, transition, or outcome is invalid
 
-- **GIVEN** non-ancestral refs, a mismatched delivered head, mismatched trees/digests, changed frozen red inputs, an undeclared path/rename, a non-implementation R..H path, a non-evidence H..D path, selector/outcome mismatch, missing mandatory field, untrusted signed module, or untrusted epoch
+- **GIVEN** non-ancestral refs, a mismatched delivered head, mismatched trees/digests, changed frozen red inputs, an undeclared path/rename, a non-implementation R..H path, a non-evidence H..D path, selector/outcome mismatch, missing/duplicate/wrong red failure identity including a wrong same-class assertion, missing mandatory field, untrusted signed module, or untrusted epoch
 - **WHEN** validation runs
 - **THEN** chronology is failed or unknown according to the deterministic failure class
 - **AND** strict policy does not pass.
@@ -51,7 +51,7 @@ Missing, incomplete, unsupported, hash-mismatched, path-policy-invalid, outcome-
 
 #### Scenario: Mandatory capsule fact is unavailable
 
-- **GIVEN** a mandatory identity, transition, selector, result, environment, network, signed-module, policy, artifact-link, or verifier fact is unavailable
+- **GIVEN** a mandatory identity, transition, selector, expected/observed red failure identity, result, environment, network, signed-module, policy, artifact-link, or verifier fact is unavailable
 - **WHEN** chronology is requested under strict policy
 - **THEN** the report names the missing fact and remediation
 - **AND** chronology is non-green
