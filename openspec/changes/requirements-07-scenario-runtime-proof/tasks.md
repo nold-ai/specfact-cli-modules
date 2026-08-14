@@ -23,7 +23,9 @@
 - [ ] 1.8 Add `test_report_schema_v3_discriminates_corrected_from_legacy_v2` and `test_report_uses_canonical_no_chronology_claim_object` for the mandatory R07 `status: not_evaluated` plus `reason: capsule_not_supplied` placeholder. Assert finalized report v2 routes only to legacy compatibility, finalized report v3 missing either claim is rejected, mapping sidecars remain v2, and R07 has no chronology-request/capsule input and cannot emit chronology pass, fail, or unknown; those tests begin in R08.
 - [ ] 1.9 Add or retain `test_mapping_acceptance_requires_complete_provenance` covering mapping digest, decision, stable reviewer identity, reviewer role, timestamp, and immutable reference so the scope correction cannot weaken shipped acceptance checks.
 - [ ] 1.10 Add `test_rollback_reader_preserves_independent_claims_as_opaque_provenance` and prove old readers never reinterpret corrected chronology as a legacy basis.
-- [ ] 1.11 Record failing commands and outcomes in `TDD_EVIDENCE.md` before source edits.
+- [ ] 1.11 Collect the exact canonical pytest node ID for every test-authored R07 scenario from the named test files, write those selectors into `requirements-evidence.yaml`, and rerun strict mapping validation. Do not edit production source in this task.
+- [ ] 1.12 Build the deterministic plan from the accepted mapping and source identity, record and freeze the mapping digest, plan identity/digest, source revision/tree, and selector set. Any later change to a frozen input invalidates the checkpoint and repeats tasks 1.11–1.12 before implementation.
+- [ ] 1.13 Execute the frozen exact selectors, confirm the expected failing outcomes, and record the exact commands and outcomes in `TDD_EVIDENCE.md` before any source edit. Section 2 is blocked until tasks 1.11–1.13 are complete.
 
 ## 2. Minimal implementation — each task at most two hours
 
@@ -59,6 +61,8 @@ R07 may edit only:
 - `packages/specfact-requirements/src/specfact_requirements/requirements/commands.py` and `packages/specfact-requirements/src/specfact_requirements/requirements/app.py` only for public input/help wiring;
 - `packages/specfact-code-review/src/specfact_code_review/run/commands.py` and `packages/specfact-code-review/src/specfact_code_review/run/findings.py` only to validate and retain Requirements provenance without verdict fusion;
 - `tests/unit/specfact_requirements/test_requirements_lifecycle.py`, `tests/unit/specfact_requirements/test_requirements_evidence.py`, `tests/integration/specfact_requirements/test_command_apps.py`, `tests/unit/specfact_code_review/run/test_commands.py`, and `tests/unit/specfact_code_review/run/test_findings.py`;
+- `openspec/changes/requirements-07-scenario-runtime-proof/requirements-evidence.yaml` only in task 1.11 to add exact collected selectors and freeze their mapping identity;
+- `openspec/changes/requirements-07-scenario-runtime-proof/TDD_EVIDENCE.md` for task 1.13 failing evidence and later verified green evidence;
 - Requirements/Code Review module-package metadata, public docs, and generated release outputs only after behavior passes.
 
 Do not edit R07 exact-selector/JUnit parsing except where a named failing test proves the independent-status schema requires it. Do not add a new aggregate report model or any Git/pytest execution path.
