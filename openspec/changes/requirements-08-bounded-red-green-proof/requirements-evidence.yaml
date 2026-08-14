@@ -75,4 +75,4 @@ requirements:
         scenario_id: finalized-requirements-evidence-review-context
         method: test
         intent: "Retain finalized B/R/H/D chronology provenance independently from the Code Review verdict."
-        observable: "Review context retains explicit chronology_request plus both schema-v4 claim objects, preserves required missing/invalid/untrusted chronology as unknown rather than not_evaluated, and never changes findings, score, verdict, or exit code."
+        observable: "Review context retains the top-level Requirements gate decision, explicit chronology_request, and both schema-v4 claim objects; unavailable/unverifiable/untrusted chronology remains unknown, complete trusted contradiction remains fail, and neither changes findings, score, verdict, or exit code."

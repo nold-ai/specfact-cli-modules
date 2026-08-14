@@ -12,8 +12,8 @@ requirements:
       - case_id: lifecycle-proposal-ready
         scenario_id: lifecycle-aware-requirements-readiness
         method: test
-        intent: Report proposal readiness without an execution claim.
-        observable: Mapping sidecar remains schema v2; corrected finalized report is schema v3 with separate gate, implementation, current_execution, and chronology fields.
+        intent: Require all planned schema-v2 mapping fields and report proposal readiness without an execution claim.
+        observable: Incomplete schema-v2 mappings are non-passing with named missing fields; corrected finalized report is schema v3 with separate gate, implementation, current_execution, and chronology fields.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:mapping-acceptance-provenance:
     rationale: Automation must begin from requirements accepted against their reviewed mapping.
     stakeholder_refs:
@@ -60,7 +60,7 @@ requirements:
         scenario_id: current-run-junit-reconciliation
         method: test
         intent: Reject every incomplete, non-pass, or non-canonical current selector result.
-        observable: Missing, duplicate, ambiguous, skipped, failed, errored, non-canonical, or mismatched mapping/plan/source/selector identities cannot produce current_execution pass.
+        observable: Missing, duplicate, ambiguous, skipped, failed, errored, missing/mismatched specfact.selector, display/class-only, non-canonical, or mismatched mapping/plan/source/selector identities cannot produce current_execution pass.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:historical-chronology-is-a-separate-claim:
     rationale: Historical TDD chronology is optional evidence owned by R08, not a prerequisite for current execution.
     stakeholder_refs:
@@ -91,8 +91,8 @@ requirements:
         selector:
           runner: pytest
           node_id: tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion
-        intent: Preserve finalized Requirements provenance while retaining an independent review verdict.
-        observable: Review JSON contains separate Requirements provenance even when its gate decision is fail.
+        intent: Preserve the top-level Requirements gate decision and finalized Requirements provenance while retaining an independent review verdict.
+        observable: Review JSON contains the independent Requirements gate decision and separate claim provenance even when that gate decision is fail.
       - case_id: review-context-rejection
         scenario_id: finalized-requirements-evidence-review-context
         method: test

@@ -18,7 +18,7 @@
 - [ ] 1.3 Add `test_missing_current_junit_cannot_be_replaced_by_historical_context`. Allowed files: focused reconciliation tests.
 - [ ] 1.4 Add `test_review_context_accepts_final_current_execution_without_historical_basis`. Allowed files: focused Code Review context tests.
 - [ ] 1.5 Add `test_new_reconciliation_cannot_generate_legacy_tdd_ledger`. Allowed files: focused compatibility tests.
-- [ ] 1.6 Add table-driven `test_current_execution_rejects_each_nonpass_or_noncanonical_result` covering missing, duplicate, ambiguous, skipped, failed, errored, non-canonical selector results, and mismatched mapping digest, plan identity/digest, source revision/tree, or selector set.
+- [ ] 1.6 Add or retain table-driven `test_planned_mapping_requires_every_schema_v2_field`, `test_selected_test_authored_scenario_requires_exact_selector`, and `test_current_execution_rejects_each_nonpass_or_noncanonical_result` covering missing, duplicate, ambiguous, skipped, failed, errored, missing/mismatched `specfact.selector` properties, display/class-name-only identity, non-canonical selector results, and mismatched mapping digest, plan identity/digest, source revision/tree, or selector set.
 - [ ] 1.7 Add table-driven `test_review_context_rejects_each_invalid_requirements_evidence_class` covering unreadable, malformed, unsupported-schema, non-final top-level evidence, and schema-v3 evidence missing either mandatory claim object before review execution. R07 review fixtures cover only the canonical not-evaluated chronology placeholder; R08 owns unknown/pass/fail chronology provenance.
 - [ ] 1.8 Add `test_report_schema_v3_discriminates_corrected_from_legacy_v2` and `test_report_uses_canonical_no_chronology_claim_object` for the mandatory R07 `status: not_evaluated` plus `reason: capsule_not_supplied` placeholder. Assert finalized report v2 routes only to legacy compatibility, finalized report v3 missing either claim is rejected, mapping sidecars remain v2, and R07 has no chronology-request/capsule input and cannot emit chronology pass, fail, or unknown; those tests begin in R08.
 - [ ] 1.9 Add or retain `test_mapping_acceptance_requires_complete_provenance` covering mapping digest, decision, stable reviewer identity, reviewer role, timestamp, and immutable reference so the scope correction cannot weaken shipped acceptance checks.
@@ -29,7 +29,7 @@
 
 - [ ] 2.1 Add finalized report schema v3 with mandatory current-execution and chronology claim objects; preserve mapping sidecar schema v2 and add an explicit finalized-report v2 compatibility reader. Do not detect legacy by field absence.
 - [ ] 2.2 Reconcile current JUnit independently and retain exact outcome classes.
-- [ ] 2.3 Update Code Review context validation to require and retain both schema-v3 claim objects, including the R07 not-evaluated chronology placeholder; use the versioned compatibility path for truly legacy payloads. R08 later adds non-not-evaluated chronology states.
+- [ ] 2.3 Update Code Review context validation to require and retain the top-level Requirements gate decision plus both schema-v3 claim objects, including the R07 not-evaluated chronology placeholder; use the versioned compatibility path for truly legacy payloads. R08 later adds non-not-evaluated chronology states.
 - [ ] 2.4 Keep old report reading explicit; stop generating legacy-ledger evidence for new changes.
 - [ ] 2.5 Update public command/docs fixtures without adding execution or Git behavior.
 

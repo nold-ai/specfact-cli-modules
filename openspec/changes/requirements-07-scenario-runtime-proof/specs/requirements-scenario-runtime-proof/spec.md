@@ -2,15 +2,27 @@
 
 ### Requirement: Lifecycle-Aware Requirements Readiness
 
-The Requirements module SHALL distinguish planned readiness, mapping acceptance, test-authored planning, current execution, and historical TDD chronology. Current execution and chronology SHALL be independent claims; neither may silently imply or overwrite the other. The corrected R07 finalized report SHALL use `schema_version: "3"` and always emit a `red_green_chronology` placeholder claim object with `status: not_evaluated` and `reason: capsule_not_supplied`. R07 SHALL expose no chronology-request or capsule input and SHALL NOT emit chronology pass, fail, or unknown; R08 owns those later MODIFIED semantics. Mapping sidecars SHALL remain schema v2. Finalized report schema v2 SHALL be read only through the explicit legacy compatibility path; a v3 report missing either mandatory claim object SHALL be rejected as malformed v3.
+The Requirements module SHALL distinguish proposal readiness from implementation proof. A proposal-only schema-v2 mapping sidecar SHALL be evaluated at `planned` maturity only when every selected requirement/scenario mapping contains stable identities, rationale, at least one declared touchpoint, at least one verification case with method and intent, and an observable. It SHALL NOT require a test selector at planned maturity or claim execution. The report SHALL expose requested maturity, observed maturity, gate decision, delivery status, and implementation-evidence status separately.
+
+The corrected R07 finalized Requirements report SHALL use `schema_version: "3"` and SHALL always emit independent `current_execution` and `red_green_chronology` claim objects. R07 SHALL expose no chronology-request or capsule input; its chronology object is the mandatory `status: not_evaluated` / `reason: capsule_not_supplied` placeholder and cannot emit pass, fail, or unknown. Mapping sidecars remain schema v2. Finalized report v2 is legacy-only; a v3 report missing either mandatory claim object or required v3 provenance is malformed v3 and SHALL NOT be reinterpreted as legacy.
 
 #### Scenario: Proposal mapping is complete but not executed
 
-- **GIVEN** complete planned mappings without exact selectors
-- **WHEN** planned maturity is evaluated
+- **GIVEN** imported requirements and scenarios with a schema-v2 sidecar mapping every scenario to rationale, touchpoint, verification case with method and intent, and observable, but no exact selector
+- **WHEN** evidence runs with required maturity `planned`
 - **THEN** proposal readiness may pass
+- **AND** requested and observed maturity remain explicit
+- **AND** delivery status is proposal-only and implementation evidence is not-yet-available
 - **AND** current execution and chronology remain not evaluated
-- **AND** the report does not claim implementation.
+- **AND** the report does not claim implementation or verification.
+
+#### Scenario: Proposal mapping is incomplete
+
+- **GIVEN** a selected requirement or scenario is missing a stable identity, rationale, touchpoint, verification case, verification method/intent, or observable
+- **WHEN** evidence runs with required maturity `planned`
+- **THEN** the gate is non-passing for incomplete planned maturity
+- **AND** every missing requirement, scenario, or field is named
+- **AND** no synthetic selector, execution, or implementation claim is created.
 
 ### Requirement: Mapping Acceptance Provenance
 
@@ -32,31 +44,42 @@ The Requirements module SHALL validate provider-neutral acceptance evidence agai
 
 ### Requirement: Deterministic Scenario Proof Plan
 
-The Requirements module SHALL emit a deterministic plan of stable requirement/scenario identities, declared touchpoints, intents, observables, and exact structured selectors without executing commands. Exact selectors are required only at test-authored maturity and above.
+The Requirements module SHALL emit a deterministic machine-readable plan without executing tests. Every selected scenario SHALL carry stable requirement/scenario identity, declared product touchpoints, verification method, intent, observable, and—at test-authored maturity and above—an exact structured selector with supported runner and repository-contained test identity. The plan SHALL bind the selected source revisions and canonical mapping digest, and reconciliation SHALL bind to that exact emitted plan. The module SHALL emit no shell command.
 
 #### Scenario: Stable inputs produce a stable plan
 
-- **GIVEN** unchanged mappings and selectors
+- **GIVEN** unchanged selected sources, mappings, touchpoints, methods, intents, observables, and exact selectors
 - **WHEN** planning repeats
-- **THEN** the ordered plan and plan identity are byte-stable
-- **AND** the report makes no execution or chronology claim.
+- **THEN** ordered plan content and plan identity are byte-stable
+- **AND** every scenario is only declared or selected
+- **AND** no execution or chronology claim is emitted.
 
 #### Scenario: Unsafe selector is rejected
 
 - **GIVEN** a selector escapes the repository, starts with option syntax, contains control/shell/wildcard syntax, uses an unsupported runner, or is not an exact test identity
 - **WHEN** planning validates it
 - **THEN** the plan is non-executable under strict policy
+- **AND** a bounded invalid-selector finding is emitted
 - **AND** no command string is emitted.
+
+#### Scenario: Selected scenario lacks executable proof mapping
+
+- **GIVEN** a selected scenario at test-authored or stronger maturity has no valid exact selector
+- **WHEN** plan completeness is evaluated
+- **THEN** strict policy is non-passing with a scenario-unverified finding
+- **AND** advisory policy retains the same finding without claiming proof.
 
 ### Requirement: Current-Run JUnit Reconciliation
 
-The Requirements module SHALL reconcile a deterministic plan with trusted current-run JUnit without starting tests. `current_execution` SHALL bind the mapping, plan, source, selector set, JUnit digest, runner/environment provenance, collection counts, and exact outcomes. The supplied mapping digest, plan identity/digest, source revision/tree, and selector set SHALL exactly equal the accepted plan and execution inputs; any mismatch SHALL be non-passing with deterministic diagnostics. Current execution SHALL be final without requiring historical evidence.
+The Requirements module SHALL reconcile a previously emitted deterministic plan with trusted current-run JUnit without starting tests. For pytest, every trusted result identity SHALL be the exact collected node ID in the dedicated canonical `specfact.selector` JUnit property; display name, class name, or approximate path/name matching SHALL NOT establish identity. Every required selector SHALL match exactly one result.
+
+`current_execution` SHALL bind the accepted mapping digest, plan identity/digest, selected source revisions/trees, exact selector set, JUnit digest, runner/environment provenance, collection counts, and exact outcomes. Each supplied identity SHALL exactly equal its counterpart in the accepted emitted plan and execution request; any mismatch is non-passing. Current execution SHALL finalize independently from historical evidence.
 
 #### Scenario: Every exact selector passes in the current run
 
-- **GIVEN** one canonical passing result for every required exact selector
+- **GIVEN** trusted JUnit contains exactly one canonical `specfact.selector` property and one passing result for every exact selector in the accepted plan, with matching mapping/plan/source identities
 - **WHEN** final current-run reconciliation executes
-- **THEN** `current_execution` is pass
+- **THEN** `current_execution` is pass and binds all current-run provenance
 - **AND** the mandatory R07 chronology placeholder remains `status: not_evaluated` with `reason: capsule_not_supplied`
 - **AND** the report does not say passing-after-red or change-proven.
 
@@ -65,31 +88,39 @@ The Requirements module SHALL reconcile a deterministic plan with trusted curren
 - **GIVEN** otherwise passing JUnit is bound to a different mapping digest, plan identity/digest, source revision/tree, or selector set than the accepted execution plan
 - **WHEN** final current-run reconciliation executes
 - **THEN** `current_execution` does not pass
-- **AND** the report names every mismatched identity
+- **AND** every mismatched identity is named
 - **AND** chronology cannot replace the rejected current result.
 
-#### Scenario: Current result is incomplete or failing
+#### Scenario: Declared test is absent from results
 
-- **GIVEN** a selector is missing, duplicate, ambiguous, skipped, failed, errored, or lacks canonical identity
-- **WHEN** reconciliation executes
-- **THEN** current execution does not pass
-- **AND** chronology cannot replace the current result.
+- **GIVEN** an accepted plan whose required exact selector is not collected
+- **WHEN** reconciliation runs
+- **THEN** current execution remains non-passing with an uncollected-test finding
+- **AND** diagnostics are preserved under strict policy.
+
+#### Scenario: Result cannot be trusted or matched
+
+- **GIVEN** malformed JUnit, a missing or mismatched `specfact.selector` property, display/class-name-only identity, duplicate or ambiguous selector identity, or failed, errored, or skipped result
+- **WHEN** reconciliation runs
+- **THEN** it never upgrades the affected selector or scenario to passed
+- **AND** deterministic findings distinguish every failure class
+- **AND** chronology cannot substitute for the current result.
 
 ### Requirement: Historical Chronology Is a Separate Claim
 
-New historical red-to-green claims SHALL be accepted only through the R08 bounded replay contract. R07 SHALL NOT infer chronology from current maturity, current JUnit, static Python/pytest analysis, or a newly generated legacy ledger.
+New historical red-to-green claims SHALL be accepted only through the later R08 bounded replay contract. R07 SHALL NOT infer chronology from current maturity, current JUnit, static Python/pytest analysis, or a newly generated legacy ledger.
 
-#### Scenario: No R08 capsule is supplied
+#### Scenario: R07 finalizes without chronology input
 
 - **GIVEN** corrected R07 current execution is final and R07 has no chronology-request or capsule input
-- **WHEN** the report is finalized
+- **WHEN** the schema-v3 report is finalized
 - **THEN** current execution retains its exact status
 - **AND** the R07 chronology placeholder uses `status: not_evaluated` with `reason: capsule_not_supplied`
 - **AND** no broader proof label is emitted.
 
 #### Scenario: Legacy artifact is read for compatibility
 
-- **GIVEN** an old report contains an explicitly labelled legacy-ledger basis
+- **GIVEN** a finalized report v2 contains an explicitly labelled legacy-ledger basis
 - **WHEN** compatibility reading occurs
-- **THEN** the historical label remains migration-only
-- **AND** it is not converted into a new R08 attestation.
+- **THEN** the historical label remains migration-only with `source_schema_version: 2`
+- **AND** it is not converted into a v3 claim, new R08 attestation, or chronology pass.
