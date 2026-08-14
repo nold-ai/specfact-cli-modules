@@ -2,7 +2,7 @@
 
 ### Requirement: Finalized Requirements Evidence Review Context
 
-Code Review SHALL retain finalized `current_execution` and optional `tdd_chronology` claims as separate provenance, including their digests, statuses, evidence references, verifier epoch, and limitations. It SHALL NOT use either Requirements claim to calculate review findings, score, verdict, or exit code.
+Code Review SHALL retain finalized `current_execution` and optional `red_green_chronology` claims as separate provenance, including their digests, statuses, evidence references, verifier epoch, and limitations. It SHALL NOT use either Requirements claim to calculate review findings, score, verdict, or exit code.
 
 #### Scenario: Bounded chronology is visible but independent
 
