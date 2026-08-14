@@ -31,7 +31,7 @@ requirements:
         scenario_id: trusted-replay-capsule-validation
         method: test
         intent: "Validate B/R/H/D identities, protected signed R/H checkpoint object/signature/trust bindings, all transition/hash links, frozen red inputs including pre-R readiness-validation evidence, selectors, exact R/D frozen failing/readiness section equality, exact mapped/observed red failure identities, fail/pass/pass outcomes, signed module identity, and epoch."
-        observable: "Trusted capsules require valid externally issued R/H checkpoint bindings, byte-identical frozen failing/readiness sections from R through D, and one canonical observed red marker matching each frozen expected_failure_id before pass/pass outcomes; missing, duplicate, wrong, or same-class-but-wrong IDs produce a deterministic non-green finding."
+        observable: "Trusted capsules require valid externally issued R/H checkpoint bindings, byte-identical frozen failing/readiness sections from R through D, and one canonical observed red marker matching each frozen expected_failure_id before pass/pass outcomes; missing/duplicate/rewritten frozen sections and missing, duplicate, wrong, or same-class-but-wrong failure IDs produce a deterministic non-green finding."
   openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:bounded-chronology-claim:
     rationale: "The assurance statement must not exceed the supplied evidence."
     stakeholder_refs:
