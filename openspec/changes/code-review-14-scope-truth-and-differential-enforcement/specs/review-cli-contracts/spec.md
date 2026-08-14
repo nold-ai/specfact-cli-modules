@@ -91,7 +91,7 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **WHEN** the request is validated
 - **THEN** it is rejected before analysis because base, head, and merge-base evidence is absent
 - **AND** the protected-CI alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref> --pr-context-file <runner-temp-file> --enforcement full`
-- **AND** the same local command without trusted context is `assurance_kind=range_preview`, not merge authority
+- **AND** the producer result with matching claimed context is `range_candidate`, while the same local command without context is `range_preview`; neither is merge authority without the protected verification envelope
 - **AND** positional files remain valid for explicitly labelled non-PR `assurance_kind=explicit_files` runs.
 
 #### Scenario: Canonical repository merge guidance uses complete PR range
@@ -99,8 +99,10 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **GIVEN** a developer or agent follows the mandatory repository quality gate, module/bundle guide, or generated Code Review instructions
 - **WHEN** the guidance describes merge or pull-request assurance
 - **THEN** protected CI uses `--scope range`, full base/head identities, an event-derived `--pr-context-file` outside the checkout, and `--enforcement full`
-- **AND** the consumer independently verifies the emitted context, expected/resolved target tip, merge base, and head against the protected event
-- **AND** manual guidance without trusted context is explicitly `assurance_kind=range_preview` and directs merge authority to the protected workflow
+- **AND** the producer emits `assurance_kind=range_candidate`, never pr_range
+- **AND** the protected consumer independently verifies the immutable report digest, context, expected/resolved target tip, merge base, and head against workflow-native event data
+- **AND** only its separate verification envelope emits `effective_assurance_kind=pr_range`
+- **AND** manual guidance without context is `assurance_kind=range_preview` and directs merge authority to that protected envelope
 - **AND** it does not use changed/worktree or positional branch-delta files as merge evidence
 - **AND** the local pre-commit positional gate and simplification worktree workflow are labelled non-PR assurance
 - **AND** tracked skill copies are regenerated from the bundled source and remain byte-consistent.

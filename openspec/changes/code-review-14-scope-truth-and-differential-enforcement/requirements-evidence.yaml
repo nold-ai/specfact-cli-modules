@@ -29,12 +29,12 @@ requirements:
         scenario_id: explicit-review-scope-evidence
         method: test
         intent: "Reserve pull-request range assurance for the complete governed Python selection."
-        observable: "Range rejects exclude-tests, every focus facet, path, no-tests, and level filters before analysis; narrowed runs cannot emit assurance_kind=pr_range or false NOT_APPLICABLE."
+        observable: "Range rejects exclude-tests, every focus facet, path, no-tests, and level filters before analysis; narrowed runs cannot emit range_candidate or an effective pr_range envelope or false NOT_APPLICABLE."
       - case_id: CR14-027
         scenario_id: explicit-review-scope-evidence
         method: test
         intent: "Bind the producer and consumer to the independently authenticated expected PR target tip."
-        observable: "Resolved base-tip commit/tree must match trusted repository/ref/PR-or-queue context; mismatch or caller self-assertion is UNKNOWN and cannot satisfy pr_range."
+        observable: "Producer emits only range_candidate/preview after structural checks; a protected consumer independently verifies the immutable report against workflow-native event data and alone emits the effective pr_range envelope."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
     rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
     stakeholder_refs:
@@ -161,7 +161,7 @@ requirements:
         scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
         method: test
         intent: "Make authenticated PR context an executable input without letting a local caller self-assert trust."
-        observable: "A safe event-derived context file plus consumer verification yields pr_range; absent/unverified context yields range_preview; unsafe/mismatched context yields UNKNOWN."
+        observable: "A matching claimed context yields producer range_candidate, absence yields range_preview, unsafe/mismatch yields UNKNOWN, and only a separate trusted consumer envelope yields effective pr_range."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
     rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."
     stakeholder_refs:
@@ -201,6 +201,11 @@ requirements:
         method: test
         intent: "Prevent an exit-zero head run from neutralizing selected tests through skip/xfail/xpass or deselection."
         observable: "Selector/JUnit/count reconciliation overrides process success and readable coverage; non-passing selected outcomes cannot produce PASS."
+      - case_id: CR14-033
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Execute governed changed tests even when a range changes no production Python."
+        observable: "Changed/added test-file selectors run and failures block; deleted or non-expandable test inputs are UNKNOWN; test-only range is never silently NOT_APPLICABLE."
       - case_id: CR14-023
         scenario_id: mandatory-analyzer-coverage
         method: test
