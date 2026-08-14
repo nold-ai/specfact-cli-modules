@@ -18,7 +18,7 @@ The versioned capsule requires:
 - derived protected signed R/H checkpoint tag names, tag-object identities, canonical annotations, signatures, approved issuer/trust identities, repository-ruleset identity, and checkpoint-policy epoch;
 - B..R, R..H, and H..D changed-path and rename manifests plus canonical digests;
 - accepted red-setup, implementation, and delivery-evidence touchpoint sets;
-- mapping and plan digests, exact selectors, one stable opaque mapped `expected_failure_id` per selector, and frozen failing-before evidence identity;
+- mapping and plan digests, exact selectors, one stable opaque mapped `expected_failure_id` per selector, frozen failing-before evidence identity, and frozen pre-R readiness-validation evidence identity;
 - red, green-checkpoint, and delivery JUnit digests plus exact selector outcomes, canonical observed red failure IDs, and their digest;
 - runner, toolchain, dependency, environment, plugin-autoload, network-policy, policy, and verifier identities/results;
 - verifier epoch, timestamps, timeouts/resource bounds, and retained artifact hash links;
@@ -28,7 +28,7 @@ Core resolves and validates Git/checkpoint/execution facts under its pinned veri
 
 ### Use three closed transition policies
 
-B..R may contain only declared requirements/specifications/tests/test harness/configuration, the accepted proof mapping, and the failing-before TDD evidence record. It may not contain governed implementation, dependencies, workflows, runners, verifier/policy/schema changes, other generated artifacts, or unclassified paths. The mapping, plan, selectors, expected-failure identities, path sets, and failing evidence are frozen at R.
+B..R may contain only declared requirements/specifications/tests/test harness/configuration, the accepted proof mapping, the failing-before TDD evidence record, and the governed `CHANGE_VALIDATION.md` pre-R readiness section. It may not contain governed implementation, dependencies, workflows, runners, verifier/policy/schema changes, other generated artifacts, or unclassified paths. The mapping, plan, selectors, expected-failure identities, path sets, failing evidence, and readiness evidence are frozen at R. `CHANGE_VALIDATION.md` may be extended only in H..D under its separate delivery-evidence role.
 
 R..H may change only declared implementation touchpoints. A selected test, helper, fixture, conftest, test configuration, dependency lock, proof runner, workflow, mapping, plan, evidence record, policy, schema, or unclassified path invalidates chronology and requires a new R.
 
