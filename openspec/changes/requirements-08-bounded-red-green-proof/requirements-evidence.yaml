@@ -1,0 +1,78 @@
+schema_version: "2"
+requirements:
+  openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:independent-current-execution-and-chronology:
+    rationale: "Current execution and historical chronology are separate evidence claims."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
+    touchpoints:
+      - id: requirements-report-claims
+        kind: planned_schema
+        locator: "requirements report schema"
+    verification_cases:
+      - case_id: R08-MOD-001
+        scenario_id: independent-current-execution-and-chronology
+        method: test
+        intent: "Prevent either claim from inflating or erasing the other."
+        observable: "Mapping sidecars remain v2; finalized report v2 retains source epoch and proof-basis validation, v3 is R07 compatibility, and v4 requires request plus both claims and preserves the explicit chronology_request matrix; neither version nor intent is inferred from field/capsule absence."
+  openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:trusted-replay-capsule-validation:
+    rationale: "The module validates trusted replay evidence without owning execution."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
+    touchpoints:
+      - id: replay-capsule-schema
+        kind: planned_schema
+        locator: "historical replay capsule"
+    verification_cases:
+      - case_id: R08-MOD-002
+        scenario_id: trusted-replay-capsule-validation
+        method: test
+        intent: "Validate B/R/H/D identities, protected signed R/H checkpoint object/signature/trust/attempt bindings, all transition/hash links, frozen red inputs including pre-R readiness-validation evidence, selectors, exact R/D frozen failing/readiness section equality, exact mapped/observed red failure identities, fail/pass/pass outcomes, signed module identity, and epoch."
+        observable: "Trusted capsules require distinct H/D for pass, valid externally issued R/H checkpoint bindings, a positive fresh non-reused checkpoint_attempt, byte-identical frozen failing/readiness sections from R through D, and one canonical observed red marker matching each frozen expected_failure_id before pass/pass outcomes; invalid attempts, same H/D (always status unknown, never trusted contradiction), missing/duplicate/rewritten frozen sections, and missing, duplicate, wrong, or same-class-but-wrong failure IDs produce a deterministic non-green finding."
+  openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:bounded-chronology-claim:
+    rationale: "The assurance statement must not exceed the supplied evidence."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#671"
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
+    touchpoints:
+      - id: chronology-claim
+        kind: planned_artifact
+        locator: "red_green_chronology"
+    verification_cases:
+      - case_id: R08-MOD-003
+        scenario_id: bounded-chronology-claim
+        method: test
+        intent: "Emit the fixed fail-at-R/pass-at-H/remain-pass-at-D bounded claim and limitations."
+        observable: "No stakeholder-intent completeness, complete runtime dependency closure, code quality, correctness, or absence-of-defects claim."
+  openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:fail-closed-untrusted-chronology:
+    rationale: "Missing trust must never become a green chronology result."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
+    touchpoints:
+      - id: chronology-policy
+        kind: planned_policy
+        locator: "bounded red-green reconciliation"
+    verification_cases:
+      - case_id: R08-MOD-004
+        scenario_id: fail-closed-untrusted-chronology
+        method: test
+        intent: "Validate both the explicit chronology_request matrix and the status taxonomy: unavailable/unsupported/untrusted evidence and D=H are unknown; complete trusted verified policy/outcome contradictions are fail."
+        observable: "Current-only reconciliation retains not_evaluated; missing/unverifiable/untrusted required proof retains unknown diagnostics; complete trusted contradictions retain fail diagnostics; neither changes current_execution or becomes pass/no-impact."
+  openspec:requirements-08-bounded-red-green-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
+    rationale: "Code Review must retain chronology and current-execution provenance without verdict fusion."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#675"
+      - "nold-ai/specfact-cli-modules#414"
+    touchpoints:
+      - id: code-review-proof-context
+        kind: planned_schema
+        locator: "specfact code review run --requirements-evidence"
+    verification_cases:
+      - case_id: R08-MOD-005
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        intent: "Retain finalized B/R/H/D chronology provenance independently from the Code Review verdict."
+        observable: "Review context retains the top-level Requirements gate decision, explicit chronology_request, and both schema-v4 claim objects; unavailable/unverifiable/untrusted chronology remains unknown, complete trusted contradiction remains fail, and neither changes findings, score, verdict, or exit code."
