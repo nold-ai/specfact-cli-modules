@@ -40,7 +40,7 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 
 ### Requirement: Review CLI Contracts Cover Explicit Scope and Differential Evidence
 
-CLI contract fixtures SHALL cover worktree, index, range, full, positional files, deprecated changed alias, full-ref validation, merge-base selection, changed-test inclusion, empty range, Git failure, base/head classifications, analyzer coverage, and invalid option combinations.
+CLI contract fixtures SHALL cover worktree, index, range, full, positional files, deprecated changed alias, full-ref validation, staged-versus-unstaged index content, merge-base selection with an advanced base-ref tip, changed-test inclusion, empty range, Git failure, merge-base/head classifications, analyzer coverage, and invalid option combinations.
 
 #### Scenario: Range contract requires base and head
 

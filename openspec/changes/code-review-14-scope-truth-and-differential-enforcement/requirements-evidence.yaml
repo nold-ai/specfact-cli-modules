@@ -20,6 +20,11 @@ requirements:
         method: test
         intent: "Materialize base/head inputs from resolved commit trees and reject mutation-capable range options."
         observable: "Caller-worktree mutation cannot affect range results; manifest mismatch yields UNKNOWN."
+      - case_id: CR14-009
+        scenario_id: index-analysis-uses-staged-bytes
+        method: test
+        intent: "Analyze materialized staged blobs even when the same path has later unstaged edits."
+        observable: "Only index tree/blob/content identities affect index findings, score, and status."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
     rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
     stakeholder_refs:
@@ -34,6 +39,11 @@ requirements:
         method: test
         intent: "Classify introduced, fixed, unchanged, and unknown findings under identical analyzers."
         observable: "Introduced blockers block even away from added lines; baseline failures remain unknown."
+      - case_id: CR14-010
+        scenario_id: advanced-base-tip-uses-merge-base-baseline
+        method: test
+        intent: "Use the resolved merge-base rather than an advanced base-ref tip as the differential baseline."
+        observable: "Target-only post-divergence findings are not misclassified as feature-branch changes."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:independent-finding-lifecycle-and-remediation:
     rationale: "Severity, resolution, autofix availability, and policy are distinct facts."
     stakeholder_refs:

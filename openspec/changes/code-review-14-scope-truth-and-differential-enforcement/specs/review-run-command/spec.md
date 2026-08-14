@@ -2,11 +2,11 @@
 
 ### Requirement: Explicit Review Scope Evidence
 
-`specfact code review run` SHALL support unambiguous `worktree`, `index`, `range`, and `full` scopes plus explicit positional files. Range scope SHALL require base and head refs, resolve full base/head and merge-base commit/tree SHAs, and select the committed merge-base-to-head delta. Changed tests SHALL be included by default. `changed` SHALL be a deprecated alias for `worktree`, not PR range. Positional files SHALL emit `assurance_kind=explicit_files` and SHALL NOT satisfy a consumer or policy requiring `pr_range` assurance.
+`specfact code review run` SHALL support unambiguous `worktree`, `index`, `range`, and `full` scopes plus explicit positional files. Index scope SHALL analyze the exact staged blob snapshot, not current worktree path content. Range scope SHALL require base and head refs, resolve full base/head and merge-base commit/tree SHAs, select the committed merge-base-to-head delta, and use the merge-base—not the supplied base-ref tip—as the differential baseline. Changed tests SHALL be included by default. `changed` SHALL be a deprecated alias for `worktree`, not PR range. Positional files SHALL emit `assurance_kind=explicit_files` and SHALL NOT satisfy a consumer or policy requiring `pr_range` assurance.
 
-For range mode, `scope.py` SHALL materialize fresh detached base/head roots from the resolved commit trees outside the caller worktree. It SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; apply one trusted base-policy analyzer/config identity to both snapshots; and verify the manifests before and after analysis. Range mode SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any materialization, path-root, or content-integrity failure SHALL yield UNKNOWN.
+For index mode, `scope.py` SHALL materialize staged blobs outside the caller worktree and record the index tree/blob/content identities so later unstaged edits at the same path cannot affect analysis. For range mode, it SHALL materialize fresh detached merge-base/head roots from the resolved commit trees outside the caller worktree. It SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; apply one trusted merge-base-policy analyzer/config identity to both range snapshots; and verify every snapshot manifest before and after analysis. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any index conflict/object failure, materialization failure, path-root violation, or content-integrity failure SHALL yield UNKNOWN.
 
-The report SHALL record requested/effective scope, assurance kind, repository root, commit/tree SHAs, merge base, diff digest, selected files/lines and content manifests, rename/deletion facts, filters/facets, trusted policy/config identity, resolver identity, status, and diagnostics.
+The report SHALL record requested/effective scope, assurance kind, repository root, index tree/blob identities when applicable, supplied base/head commit/tree SHAs, the analyzed merge-base commit/tree SHA, diff digest, selected files/lines and content manifests, rename/deletion facts, filters/facets, trusted policy/config identity, resolver identity, status, and diagnostics.
 
 #### Scenario: Clean PR checkout still reviews committed range files
 
@@ -15,18 +15,26 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 - **THEN** the committed merge-base-to-head files, including tests, are reviewed
 - **AND** worktree emptiness does not produce an empty PR review.
 
+#### Scenario: Index analysis uses staged bytes, not later unstaged edits
+
+- **GIVEN** a tracked pathname has staged content and different additional unstaged worktree edits
+- **WHEN** index scope runs
+- **THEN** analyzers receive the staged blob bytes from the materialized index snapshot
+- **AND** the unstaged bytes do not affect findings, score, or status
+- **AND** the report binds the analyzed index tree/blob/content identities.
+
 #### Scenario: Range analysis uses immutable commit materializations
 
 - **GIVEN** full base/head refs resolve successfully
 - **WHEN** range analysis starts
-- **THEN** analyzers receive only paths under separate detached roots materialized from the resolved commit trees
+- **THEN** analyzers receive only paths under separate detached roots materialized from the resolved merge-base and head commit trees
 - **AND** selected inputs and declared analyzer configuration are bound by Git blob identity and content digest before and after analysis
 - **AND** mutable files in the caller worktree cannot alter either snapshot result
 - **AND** a manifest mismatch yields UNKNOWN with diagnostics.
 
-#### Scenario: Range mode rejects mutation-capable options
+#### Scenario: Snapshot modes reject mutation-capable options
 
-- **GIVEN** range scope is combined with `--fix`, `--preview-fixes`, or `--with-mutation`
+- **GIVEN** index or range scope is combined with `--fix`, `--preview-fixes`, or `--with-mutation`
 - **WHEN** the request is validated
 - **THEN** it fails before materialization with an explicit non-mutating range-mode error
 - **AND** the message directs the caller to a separate worktree or explicit-file run for mutation workflows.
@@ -49,7 +57,15 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 
 ### Requirement: Differential Base-Head Enforcement
 
-Range enforcement SHALL analyze base and head with identical pinned analyzer versions, configuration digests, and policy. Stable fingerprints SHALL classify findings as introduced, fixed, unchanged, or unknown. Changed-line intersection SHALL be evidence only and SHALL NOT be the sole introduction rule.
+Range enforcement SHALL analyze the resolved merge-base and head with identical pinned analyzer versions, configuration digests, and policy. The supplied base-ref tip SHALL NOT be used as the analyzer baseline when it differs from the merge base. Stable fingerprints SHALL classify findings as introduced, fixed, unchanged, or unknown. Changed-line intersection SHALL be evidence only and SHALL NOT be the sole introduction rule.
+
+#### Scenario: Advanced base-ref tip does not replace the merge-base baseline
+
+- **GIVEN** the target base-ref tip advanced after the feature head diverged
+- **WHEN** range differential analysis runs
+- **THEN** the baseline analyzer snapshot is the resolved merge-base SHA
+- **AND** target-only changes after divergence are not classified as feature-branch fixes or introductions
+- **AND** the supplied base-ref tip remains recorded as resolver evidence.
 
 #### Scenario: Introduced blocker outside added lines still blocks
 

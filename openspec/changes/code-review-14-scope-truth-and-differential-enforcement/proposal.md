@@ -10,10 +10,10 @@ The report also lacks an honest unknown/not-applicable state, conflates autofix 
 
 - Define explicit scope sources: `worktree`, `index`, `range`, `full`, or positional files for explicitly labelled non-PR inspection. Keep `changed` only as a deprecated alias for `worktree`.
 - Require full base/head refs for range scope, derive the PR delta from the merge base, and reject any positional-file invocation that claims PR-range assurance.
-- Materialize base and head analyzer inputs from the resolved commit trees in isolated roots, bind them with content manifests, and reject mutation-capable options in range mode.
+- Materialize index analysis from staged blobs and range analysis from the resolved merge-base/head commit trees in isolated roots, bind them with content manifests, and reject mutation-capable options for snapshot scopes.
 - Emit immutable scope evidence and fail closed as `UNKNOWN` when Git scope cannot be resolved.
 - Include changed tests by default for range review; exclusions are explicit evidence.
-- Analyze base and head with the same pinned analyzer/config identities and classify findings as introduced, fixed, unchanged, or unknown using stable fingerprints.
+- Analyze the resolved merge-base and head with the same pinned analyzer/config identities and classify findings as introduced, fixed, unchanged, or unknown using stable fingerprints; the supplied base-ref tip is never the differential baseline.
 - Report mandatory analyzer coverage and make skipped/failed mandatory tools `UNKNOWN`.
 - Separate finding severity, lifecycle status, autofix availability, and blocking policy.
 - Use `PASS`, `FAIL`, `UNKNOWN`, and `NOT_APPLICABLE` truthfully; waivers remain a governance overlay.

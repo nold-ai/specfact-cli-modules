@@ -27,7 +27,7 @@ Review quality is bounded first by whether the intended code was actually analyz
 The CLI accepts:
 
 - `--scope worktree`: tracked changes relative to HEAD plus untracked eligible files;
-- `--scope index`: staged/index changes relative to HEAD;
+- `--scope index`: the exact staged/index blob snapshot relative to HEAD, materialized independently from later unstaged worktree edits;
 - `--scope range --base-ref <full-ref> --head-ref <full-ref>`: committed merge-base-to-head delta;
 - `--scope full`: all eligible repository files;
 - positional files: one explicit caller-selected set labelled `scope_evidence.assurance_kind=explicit_files`; it is not pull-request range evidence.
@@ -38,19 +38,21 @@ Range resolution records full base, head, and merge-base commit/tree SHAs; diff/
 
 ### Bind analysis to immutable commit content
 
-`scope.py` is the only Git boundary. For range mode it SHALL materialize fresh, detached base and head roots from the resolved commit trees outside the caller worktree. It SHALL build a manifest of repository-relative path, Git blob identity, and content digest for every selected analyzer input and every declared analyzer-configuration input. The runner receives only paths rooted in the appropriate materialization and runs both snapshots with the same pinned analyzer/toolchain and trusted policy/config digest.
+`scope.py` is the only Git boundary. For index mode it SHALL materialize the exact staged blobs and declared staged configuration from the Git index outside the caller worktree, record the index tree/blob identities, and analyze those bytes even when the same pathname has additional unstaged edits. Unmerged entries, intent-to-add entries without content, or unreadable index objects yield `UNKNOWN`.
 
-The trusted policy/config identity is resolved once from the explicit base policy epoch and applied to both snapshots. Candidate analyzer-config changes remain visible in scope evidence but cannot authorize or weaken their own comparison; they run only as separately labelled shadow evidence until promoted.
+For range mode it SHALL materialize fresh, detached baseline and head roots outside the caller worktree. The baseline root is the resolved merge-base commit/tree; the supplied base-ref tip is recorded only as a resolver input and SHALL NOT be analyzed as the PR baseline. The head root is the resolved head commit/tree. For each snapshot, `scope.py` SHALL build a manifest of repository-relative path, Git blob identity, and content digest for every selected analyzer input and every declared analyzer-configuration input. The runner receives only paths rooted in the appropriate materialization and runs the merge-base/head snapshots with the same pinned analyzer/toolchain and trusted policy/config digest.
 
-Before and after each analysis, the resolver SHALL verify the selected-input manifest. A missing object, path escape, content mismatch, cleanup failure that prevents verification, or post-analysis mutation yields `UNKNOWN` with diagnostics. Range mode SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation` before materialization. Those operations require a separate worktree/explicit-file run and cannot be attached to PR-range assurance.
+The trusted policy/config identity is resolved once from the merge-base policy epoch and applied to both range snapshots. Candidate analyzer-config changes remain visible in scope evidence but cannot authorize or weaken their own comparison; they run only as separately labelled shadow evidence until promoted.
+
+Before and after each snapshot analysis, the resolver SHALL verify the selected-input manifest. A missing object, path escape, content mismatch, cleanup failure that prevents verification, or post-analysis mutation yields `UNKNOWN` with diagnostics. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation` before materialization. Those operations require a separate worktree/explicit-file run and cannot be attached to index-snapshot or PR-range assurance.
 
 ### Empty and unresolved are different
 
 A successfully resolved range with zero governed Python files is `NOT_APPLICABLE`. A missing ref, shallow history, Git error, timeout, repository mismatch, or parsing failure is `UNKNOWN`. Enforce mode exits non-zero for unknown; shadow may exit zero but must preserve the unknown report/status.
 
-### Use symmetric base/head analysis
+### Use symmetric merge-base/head analysis
 
-Range review evaluates both snapshots with the same analyzer version, configuration digest, policy, and normalization. Stable fingerprints use analyzer/rule, semantic file anchor, symbol/region identity, and normalized message fields. Exact implementation may vary by tool but line-number equality alone is insufficient.
+Range review evaluates the resolved merge-base snapshot and head snapshot with the same analyzer version, configuration digest, policy, and normalization. The current base-ref tip participates only in merge-base resolution; target-branch commits after divergence are never treated as the PR baseline or classified as feature-branch fixes. Stable fingerprints use analyzer/rule, semantic file anchor, symbol/region identity, and normalized message fields. Exact implementation may vary by tool but line-number equality alone is insufficient.
 
 Each head finding is classified `introduced`, `unchanged`, or `unknown`; missing head fingerprints matched at base are `fixed`. Changed lines are supporting evidence, never the sole introduction rule. Baseline analysis failure makes affected classification unknown and blocks strict differential enforcement.
 

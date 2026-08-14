@@ -56,7 +56,7 @@ This track is first because no changed-scope assurance claim is trustworthy unti
 
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
-| 1 | `code-review-14-scope-truth-and-differential-enforcement` | - | Resolve worktree/index/range/full scope explicitly; compare pinned base/head analyses; fail closed on unknown scope or analyzer coverage | paired core callers must adopt explicit base/head after the signed release |
+| 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#413](https://github.com/nold-ai/specfact-cli-modules/pull/413) | Resolve worktree/index/range/full scope explicitly; compare pinned merge-base/head analyses; fail closed on unknown scope or analyzer coverage | acceptance of this OpenSpec plan; paired core adoption is downstream after the signed release |
 
 Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
 
