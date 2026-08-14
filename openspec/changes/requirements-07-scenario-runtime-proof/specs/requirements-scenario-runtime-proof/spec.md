@@ -50,7 +50,7 @@ The Requirements module SHALL reconcile a deterministic plan with trusted curren
 - **GIVEN** one canonical passing result for every required exact selector
 - **WHEN** final current-run reconciliation executes
 - **THEN** `current_execution` is pass
-- **AND** absent historical evidence leaves `tdd_chronology` unproven or not evaluated
+- **AND** absent historical evidence leaves `red_green_chronology` unproven or not evaluated
 - **AND** the report does not say passing-after-red or change-proven.
 
 #### Scenario: Current result is incomplete or failing
