@@ -24,20 +24,20 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - [ ] 1.4 Add `test_capsule_rejects_changed_selector_plan_mapping_or_failing_evidence_after_red`.
 - [ ] 1.5 Add `test_capsule_rejects_nonimplementation_transition_after_red`.
 - [ ] 1.6 Add `test_capsule_rejects_invalid_delivery_evidence_transition`.
-- [ ] 1.7 Add `test_capsule_requires_fail_at_r_pass_at_h_and_pass_at_distinct_d`.
+- [ ] 1.7 Add `test_capsule_requires_fail_at_r_pass_at_h_and_pass_at_distinct_d` and `test_capsule_rejects_wrong_red_failure_identity_with_same_assertion_class`; require exactly one canonical observed red marker matching each frozen mapped `expected_failure_id`.
 - [ ] 1.8 Add `test_missing_capsule_is_unknown_under_strict_policy`.
 - [ ] 1.9 Add `test_runtime_observation_cannot_claim_complete_dependency_scope`.
-- [ ] 1.10 Add a table-driven mandatory-field test that deletes or alters every identity, transition manifest/digest, mapping/plan/selector, JUnit/outcome, runner/toolchain/environment/network/policy/verifier, resource/timestamp, artifact-link, and signed-module field and requires deterministic non-green chronology.
+- [ ] 1.10 Add a table-driven mandatory-field test that deletes or alters every identity, transition manifest/digest, mapping/plan/selector/expected-failure ID, observed-red-failure-ID digest, JUnit/outcome, runner/toolchain/environment/network/policy/verifier, resource/timestamp, artifact-link, and signed-module field and requires deterministic non-green chronology.
 - [ ] 1.11 Add `test_current_execution_passes_without_tdd_chronology` in `tests/unit/specfact_requirements/test_requirements_lifecycle.py`.
 - [ ] 1.12 Add `test_historical_capsule_cannot_substitute_for_missing_current_execution` in `tests/unit/specfact_requirements/test_requirements_lifecycle.py`.
 - [ ] 1.13 Add `test_code_review_accepts_current_execution_without_tdd_chronology` in `tests/unit/specfact_code_review/run/test_commands.py`; assert Requirements provenance is retained but does not calculate review findings, score, verdict, or exit code.
-- [ ] 1.14 Before any source edit, update `requirements-evidence.yaml` under the accepted mapping schema with the exact selectors from tasks 1.1–1.13, verify each selector collects once, and freeze the accepted mapping and plan digests. Do not invent selectors on this planning-only branch.
+- [ ] 1.14 Before any source edit, update `requirements-evidence.yaml` under the accepted mapping schema with the exact selectors from tasks 1.1–1.13 and one stable opaque `expected_failure_id` per replayed selector, verify each selector collects once, and freeze the accepted mapping and plan digests. Do not invent selectors on this planning-only branch.
 - [ ] 1.15 Record actual failing commands/results in `TDD_EVIDENCE.md` before source edits.
 
 ## 2. Minimal implementation
 
 - [ ] 2.1 In new `requirements/replay_proof.py`, add typed versioned capsule and canonical digest/link validation only.
-- [ ] 2.2 Validate B/R/H/D identities, all three transition classifications, frozen red inputs, selector equality, fail/pass/pass outcome rules, every mandatory digest, signed module identity, and verifier epoch.
+- [ ] 2.2 Validate B/R/H/D identities, all three transition classifications, frozen red inputs, selector equality, mapped/observed red failure-identity equality, fail/pass/pass outcome rules, every mandatory digest, signed module identity, and verifier epoch.
 - [ ] 2.3 Delegate independent chronology reconciliation and the public capsule input from the existing Requirements lifecycle/command seams.
 - [ ] 2.4 Retain chronology in Code Review context without verdict fusion.
 - [ ] 2.5 Keep legacy-ledger read compatibility and prohibit new generation.
@@ -64,7 +64,7 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 
 OpenSpec mapping and evidence records:
 
-- `openspec/changes/requirements-08-bounded-red-green-proof/requirements-evidence.yaml`: before source edits only, add the exact selectors from tasks 1.1–1.13 and freeze the accepted mapping/plan digests.
+- `openspec/changes/requirements-08-bounded-red-green-proof/requirements-evidence.yaml`: before source edits only, add the exact selectors from tasks 1.1–1.13, one stable opaque `expected_failure_id` per replayed selector, and freeze the accepted mapping/plan digests.
 - `openspec/changes/requirements-08-bounded-red-green-proof/TDD_EVIDENCE.md`: add failing-before evidence after the named tests fail and before source edits; add a separate passing-after section only after implementation passes.
 - `openspec/changes/requirements-08-bounded-red-green-proof/CHANGE_VALIDATION.md`: final implementation validation only after implementation and all required gates complete.
 
