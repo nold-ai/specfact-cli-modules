@@ -102,6 +102,11 @@ requirements:
         method: test
         intent: "Preserve schema 1.6 truth through every post-analysis enrichment path."
         observable: "Cleanup forecast refresh retains schema, authoritative assurance, scope/analyzer evidence, legacy projection, and exit code unchanged."
+      - case_id: CR14-025
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Attach validated Requirements context without downgrading the Code Review report schema."
+        observable: "Requirements attachment preserves schema 1.6 assurance, scope/analyzer evidence, legacy projection, and exit code while adding only its context."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:review-cli-contracts-cover-explicit-scope-and-differential-evidence:
     rationale: "The public CLI contract must prove every explicit scope and differential evidence path."
     stakeholder_refs:
@@ -166,6 +171,11 @@ requirements:
         method: test
         intent: "Distinguish a structurally absent merge-base input/selector from an attempted empty pytest run."
         observable: "A new-file range records manifest-bound merge-base-side NOT_APPLICABLE and still requires valid head collection/coverage; missing head tests remain UNKNOWN."
+      - case_id: CR14-024
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Represent structurally empty per-snapshot analyzer input truthfully for add-only and delete-only ranges."
+        observable: "The empty side is manifest-bound NOT_APPLICABLE, the non-empty side still runs, unrecorded adapter early return is rejected, and aggregate range assurance remains applicable."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:
