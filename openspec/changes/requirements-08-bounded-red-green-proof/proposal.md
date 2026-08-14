@@ -15,8 +15,8 @@ The Requirements module should validate a typed capsule produced by trusted core
 - Permit only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records in H..D.
 - Validate identical exact selectors failed as declared at R, passed at H, and remained passing at distinct D.
 - Validate artifact hashes, runner/toolchain/dependency/environment/plugin/network-policy identities, resource bounds, signed module identity, and verifier epoch without executing Git, pytest, or subprocesses.
-- Reconcile `red_green_chronology` independently from `current_execution`.
-- When chronology is requested, report `status: unknown` with unproven assurance for a missing capsule; apply the same fail-closed result to any supplied incomplete, mismatched, policy-invalid, unsupported, or untrusted capsule. No request and no capsule remains `status: not_evaluated` with `reason: capsule_not_supplied`.
+- Reconcile `red_green_chronology` independently from `current_execution` using an explicit versioned `chronology_request: not_requested|required` input and CLI `--chronology-request not-requested|required`; never infer intent from capsule absence.
+- With `chronology_request: required`, report `status: unknown` with unproven assurance for a missing capsule; apply the same fail-closed result to any supplied incomplete, mismatched, policy-invalid, unsupported, or untrusted capsule. `not_requested` with no capsule remains `status: not_evaluated` / `reason: capsule_not_supplied`; `not_requested` plus a capsule is rejected as contradictory input.
 - Keep legacy-ledger reading migration-only and prohibit new generation.
 
 ## Capabilities

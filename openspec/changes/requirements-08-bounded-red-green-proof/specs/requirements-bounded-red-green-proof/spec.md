@@ -2,7 +2,7 @@
 
 ### Requirement: Independent Current Execution and Chronology
 
-The Requirements report SHALL represent `current_execution` and `red_green_chronology` as separate versioned claims with independent status, provenance, evidence references, and limitations. Neither claim SHALL silently imply, replace, downgrade, or upgrade the other. The chronology field SHALL always be present: no request/capsule uses `status: not_evaluated` with `reason: capsule_not_supplied`; requested but missing or untrusted evidence uses `status: unknown` with deterministic diagnostics.
+The Requirements report SHALL represent `current_execution` and `red_green_chronology` as separate versioned claims with independent status, provenance, evidence references, and limitations. Neither claim SHALL silently imply, replace, downgrade, or upgrade the other. Reconciliation SHALL accept an explicit versioned `chronology_request` input with exactly `not_requested` or `required`; the public CLI SHALL expose `--chronology-request not-requested|required` and default to `not-requested` only for backward-compatible current-execution calls. The chronology field SHALL always be present: `not_requested` with no capsule uses `status: not_evaluated` and `reason: capsule_not_supplied`; `required` with no capsule uses `status: unknown` with deterministic diagnostics and a non-passing strict result. A supplied capsule requires `chronology_request: required`; the contradictory `not_requested` plus capsule combination SHALL be rejected before reconciliation.
 
 #### Scenario: Current execution passes without chronology
 
@@ -11,6 +11,21 @@ The Requirements report SHALL represent `current_execution` and `red_green_chron
 - **THEN** current execution remains pass
 - **AND** chronology uses `status: not_evaluated` with `reason: capsule_not_supplied`
 - **AND** no passing-after-red label is emitted.
+
+#### Scenario: Chronology is explicitly required but unavailable
+
+- **GIVEN** `chronology_request: required` and no replay capsule
+- **WHEN** reconciliation runs
+- **THEN** current execution remains independently represented
+- **AND** chronology uses `status: unknown` with deterministic missing-capsule diagnostics
+- **AND** strict chronology policy does not pass.
+
+#### Scenario: Request and capsule inputs contradict
+
+- **GIVEN** `chronology_request: not_requested` and a replay capsule
+- **WHEN** reconciliation input is validated
+- **THEN** the invocation is rejected before reconciliation
+- **AND** no Requirements report is emitted.
 
 ### Requirement: Trusted Replay Capsule Validation
 
@@ -47,7 +62,7 @@ A passing chronology SHALL state exactly: "These declared selectors failed at R,
 
 ### Requirement: Fail-Closed Untrusted Chronology
 
-When chronology is requested, a missing capsule SHALL produce `status: unknown` with unproven assurance and a non-passing strict policy result. Any supplied incomplete, unsupported, hash-mismatched, path-policy-invalid, outcome-invalid, delivery-mismatched, or untrusted capsule SHALL produce the same result. When chronology is not requested and no capsule is supplied, the mandatory chronology claim object SHALL instead use `status: not_evaluated` with `reason: capsule_not_supplied`; strict chronology policy is not invoked. Neither state SHALL become pass, skip, no-impact, or current-execution failure.
+`chronology_request: required` with a missing capsule SHALL produce `status: unknown` with unproven assurance and a non-passing strict policy result. Any supplied incomplete, unsupported, hash-mismatched, path-policy-invalid, outcome-invalid, delivery-mismatched, or untrusted capsule SHALL produce the same result. `chronology_request: not_requested` with no capsule SHALL instead produce the mandatory `status: not_evaluated` / `reason: capsule_not_supplied` claim; strict chronology policy is not invoked. `not_requested` with a capsule is an invalid contradictory invocation. None of these states SHALL become pass, skip, no-impact, or current-execution failure.
 
 #### Scenario: Mandatory capsule fact is unavailable
 

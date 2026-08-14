@@ -14,7 +14,7 @@ requirements:
         scenario_id: independent-current-execution-and-chronology
         method: test
         intent: "Prevent either claim from inflating or erasing the other."
-        observable: "Separate statuses and provenance in finalized evidence."
+        observable: "Separate statuses and provenance in finalized evidence plus an explicit chronology_request matrix; capsule absence never infers caller intent."
   openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:trusted-replay-capsule-validation:
     rationale: "The module validates trusted replay evidence without owning execution."
     stakeholder_refs:
@@ -29,7 +29,7 @@ requirements:
         scenario_id: trusted-replay-capsule-validation
         method: test
         intent: "Validate B/R/H/D identities, protected signed R/H checkpoint object/signature/trust/attempt bindings, all transition/hash links, frozen red inputs including pre-R readiness-validation evidence, selectors, exact R/D frozen failing/readiness section equality, exact mapped/observed red failure identities, fail/pass/pass outcomes, signed module identity, and epoch."
-        observable: "Trusted capsules require distinct H/D for pass, valid externally issued R/H checkpoint bindings, a positive fresh non-reused checkpoint_attempt, byte-identical frozen failing/readiness sections from R through D, and one canonical observed red marker matching each frozen expected_failure_id before pass/pass outcomes; invalid attempts, same H/D, missing/duplicate/rewritten frozen sections, and missing, duplicate, wrong, or same-class-but-wrong failure IDs produce a deterministic non-green finding."
+        observable: "Trusted capsules require distinct H/D for pass, valid externally issued R/H checkpoint bindings, a positive fresh non-reused checkpoint_attempt, byte-identical frozen failing/readiness sections from R through D, and one canonical observed red marker matching each frozen expected_failure_id before pass/pass outcomes; invalid attempts, same H/D (always status unknown, never trusted contradiction), missing/duplicate/rewritten frozen sections, and missing, duplicate, wrong, or same-class-but-wrong failure IDs produce a deterministic non-green finding."
   openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:bounded-chronology-claim:
     rationale: "The assurance statement must not exceed the supplied evidence."
     stakeholder_refs:
@@ -59,7 +59,7 @@ requirements:
       - case_id: R08-MOD-004
         scenario_id: fail-closed-untrusted-chronology
         method: test
-        intent: "Distinguish an unrequested absent capsule (`not_evaluated/capsule_not_supplied`) from a requested missing or supplied invalid capsule (`status: unknown` with unproven assurance and strict-policy failure)."
+        intent: "Validate the explicit chronology_request matrix: not_requested/no capsule is not_evaluated, required/no capsule is unknown strict non-pass, required/capsule is validated, and not_requested/capsule is rejected."
         observable: "Current-execution-only reconciliation retains the mandatory not_evaluated chronology claim; requested or supplied invalid chronology retains diagnostics and emits no pass/no-impact."
   openspec:requirements-08-bounded-red-green-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
     rationale: "Code Review must retain chronology and current-execution provenance without verdict fusion."

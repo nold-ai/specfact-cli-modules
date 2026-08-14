@@ -10,6 +10,10 @@ B, R, and H are the three proof commits: merge base, red checkpoint, and green i
 
 The report carries separate `current_execution` and `red_green_chronology` claims. Chronology may reference current execution but cannot replace, erase, inflate, or downgrade it. A valid current run, when chronology was not requested and no capsule was supplied, remains a valid current observation; the mandatory chronology claim object uses `status: not_evaluated` with `reason: capsule_not_supplied`.
 
+### Make chronology intent an explicit input
+
+Reconciliation accepts the versioned `chronology_request` enum `not_requested|required`; the CLI exposes `--chronology-request not-requested|required` and defaults to `not-requested` for backward-compatible current-only calls. `not_requested` plus no capsule emits the canonical not-evaluated claim. `required` plus no capsule emits unknown and fails strict chronology policy. A capsule is accepted only with `required`; `not_requested` plus a capsule is rejected as contradictory input. Absence of a capsule is never used to guess caller intent.
+
 ### Validate a content-addressed B/R/H/D capsule
 
 The versioned capsule requires:
@@ -45,7 +49,7 @@ Limitations state that stakeholder-intent completeness, complete runtime depende
 
 ### Missing trust produces unknown status and unproven assurance
 
-An incomplete, mismatched, unsupported, untrusted, checkpoint-authority-invalid, or same-H-and-D capsule never produces pass/no-impact. If chronology was requested, a missing capsule produces canonical `status: unknown` plus deterministic diagnostics and strict policy failure. Any supplied unavailable or untrusted capsule facts produce the same result; a complete trusted contradiction produces `status: fail`. No request and no capsule instead produces `status: not_evaluated` with `reason: capsule_not_supplied`. Runtime observations may be advisory facts but cannot claim complete dependency scope.
+An incomplete, mismatched, unsupported, untrusted, checkpoint-authority-invalid, or same-H-and-D capsule never produces pass/no-impact. `chronology_request: required` with no capsule produces canonical `status: unknown` plus deterministic diagnostics and strict policy failure. Any supplied unavailable or untrusted capsule facts produce the same result. `D = H` is an insufficient distinct-delivery observation and always remains `status: unknown` with unproven assurance under strict policy; it is explicitly not a complete trusted contradiction. Only after excluding missing, untrusted, structurally insufficient, and same-H/D cases may another complete trusted semantic contradiction produce `status: fail`. `chronology_request: not_requested` with no capsule instead produces `status: not_evaluated` with `reason: capsule_not_supplied`; supplying a capsule in that mode is rejected before reconciliation. Runtime observations may be advisory facts but cannot claim complete dependency scope.
 
 ### Verifier epochs prevent self-authorization
 
