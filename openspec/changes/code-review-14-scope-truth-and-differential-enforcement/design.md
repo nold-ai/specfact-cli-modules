@@ -44,7 +44,7 @@ For range mode it SHALL materialize fresh, detached baseline and head roots outs
 
 The trusted policy/config identity is resolved once from the merge-base policy epoch and applied to both range snapshots. Candidate analyzer-config changes remain visible in scope evidence but cannot authorize or weaken their own comparison; they run only as separately labelled shadow evidence until promoted.
 
-Before and after each snapshot analysis, the resolver SHALL verify the selected-input manifest. A missing object, path escape, content mismatch, cleanup failure that prevents verification, or post-analysis mutation yields `UNKNOWN` with diagnostics. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation` before materialization. Those operations require a separate worktree/explicit-file run and cannot be attached to index-snapshot or PR-range assurance.
+Before and after each snapshot analysis, the resolver SHALL verify the selected-input manifest. A missing object, path escape, content mismatch, cleanup failure that prevents verification, or post-analysis mutation yields `UNKNOWN` with diagnostics. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation` before materialization. Those operations require a separate worktree/explicit-file run and cannot be attached to index-snapshot or PR-range assurance. Range mode SHALL also reject `--focus simplify`: simplification intentionally filters findings and therefore cannot emit `assurance_kind=pr_range`; callers use a separate worktree or explicit-file simplification run.
 
 ### Empty and unresolved are different
 
@@ -72,7 +72,7 @@ The authoritative strict PR-range profile is the schema-versioned `pr-range-v1` 
 | `pylint` | required |
 | `contracts` | required |
 
-There are no optional analyzers in `pr-range-v1`. Future profile membership changes require a new profile ID/version and policy digest; an ad hoc extra analyzer may be advisory but cannot silently change this profile or assurance. The report lists every profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain/configuration digest, duration, and diagnostic. Missing, skipped, failed, timed-out, unparsable, or identity-mismatched required analysis yields `UNKNOWN`. A successful run with zero findings is still recorded as ran; it is not inferred from an empty finding list.
+There are no optional analyzers in `pr-range-v1`. Future profile membership changes require a new profile ID/version and policy digest; an ad hoc extra analyzer may be advisory but cannot silently change this profile or assurance. The report lists every profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain/configuration digest, duration, and diagnostic. Missing, skipped, failed, timed-out, unparsable, or identity-mismatched required analysis yields `UNKNOWN`. A successful run with zero findings is still recorded as ran; it is not inferred from an empty finding list. Analyzer adapters SHALL surface timeout/unavailable/parse failures explicitly. In particular, the required `contracts` member includes its CrossHair subprocess and SHALL expose a CrossHair timeout as failed coverage rather than an empty successful result.
 
 ### Separate finding concepts
 

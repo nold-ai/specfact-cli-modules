@@ -39,6 +39,14 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 - **THEN** it fails before materialization with an explicit non-mutating range-mode error
 - **AND** the message directs the caller to a separate worktree or explicit-file run for mutation workflows.
 
+#### Scenario: Range assurance rejects simplification focus
+
+- **GIVEN** range scope is combined with `--focus simplify`
+- **WHEN** the request is validated
+- **THEN** it fails before analysis because the simplification queue filters unrelated findings
+- **AND** no report from that narrowed run carries `assurance_kind=pr_range`
+- **AND** the message directs the caller to a separate worktree or explicit-file simplification workflow.
+
 #### Scenario: Scope failure is unknown
 
 - **GIVEN** missing/shallow refs, Git error, timeout, or repository mismatch
@@ -108,7 +116,7 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 
 Strict PR-range assurance SHALL use the closed schema-versioned `pr-range-v1` profile defined authoritatively in `run/runner.py` and bound in the report by profile ID and policy/config digest. Required analyzer IDs are `ruff`, `radon`, `semgrep`, `ai-bloat-ast`, `ast-clean-code`, `basedpyright`, `pylint`, and `contracts`. `semgrep-bugs` is conditionally required when the trusted merge-base policy snapshot contains the governed bugs configuration; when that configuration is absent its outcome SHALL be NOT_APPLICABLE rather than skipped. The profile has no optional analyzers.
 
-The report SHALL list each profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain and configuration digests, duration, and diagnostics. A required analyzer that is unavailable, skipped, failed, timed out, unparsable, or identity-mismatched SHALL make assurance UNKNOWN. Zero findings SHALL count as successful coverage only when an explicit successful run record exists; an empty finding list alone is not analyzer evidence.
+The report SHALL list each profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain and configuration digests, duration, and diagnostics. A required analyzer that is unavailable, skipped, failed, timed out, unparsable, or identity-mismatched SHALL make assurance UNKNOWN. Zero findings SHALL count as successful coverage only when an explicit successful run record exists; an empty finding list alone is not analyzer evidence. Analyzer adapters SHALL surface timeout, unavailable, and parse failures explicitly. The required `contracts` member includes the CrossHair subprocess; a CrossHair timeout SHALL record failed contracts coverage and make assurance UNKNOWN rather than returning an empty success.
 
 #### Scenario: Default PR-range profile has closed membership
 
@@ -117,6 +125,14 @@ The report SHALL list each profile member with required/conditional status, ran/
 - **THEN** the eight always-required analyzer IDs and conditional `semgrep-bugs` membership match the normative profile exactly
 - **AND** the profile ID, membership, required flags, versions, and policy/config digest are retained in the report
 - **AND** no implementation-specific optionality changes assurance.
+
+#### Scenario: Contract subprocess timeout is unknown
+
+- **GIVEN** the required contracts analyzer starts CrossHair and that subprocess times out
+- **WHEN** analyzer coverage is finalized
+- **THEN** contracts coverage is failed with the timeout diagnostic
+- **AND** the run is UNKNOWN even if contract findings are empty
+- **AND** the timeout is never represented as a successful zero-finding run.
 
 #### Scenario: Mandatory analyzer did not run
 

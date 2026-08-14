@@ -25,6 +25,11 @@ requirements:
         method: test
         intent: "Analyze materialized staged blobs even when the same path has later unstaged edits."
         observable: "Only index tree/blob/content identities affect index findings, score, and status."
+      - case_id: CR14-018
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Reject simplification-filtered analysis from pull-request range assurance."
+        observable: "Range plus focus=simplify fails before analysis and cannot emit assurance_kind=pr_range."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
     rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
     stakeholder_refs:
@@ -131,6 +136,11 @@ requirements:
         method: test
         intent: "Freeze the pr-range-v1 analyzer membership and required/conditional statuses."
         observable: "Eight analyzers are always required; semgrep-bugs is required when governed config exists and otherwise NOT_APPLICABLE; no member is silently optional."
+      - case_id: CR14-017
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Surface required contract/CrossHair timeout as failed analyzer coverage."
+        observable: "A swallowed timeout cannot become an empty successful contracts run; strict assurance is UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:

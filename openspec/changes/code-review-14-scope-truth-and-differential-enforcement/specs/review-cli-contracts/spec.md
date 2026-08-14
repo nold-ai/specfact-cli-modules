@@ -88,5 +88,6 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **WHEN** the generated house rules or bundled skill describe merge-quality review
 - **THEN** they use `--scope range`, full base/head ref placeholders, and `--enforcement full`
 - **AND** they do not present changed/worktree or positional files as pull-request assurance
-- **AND** simplification-preview guidance may retain worktree scope because it is a local mutation workflow.
+- **AND** simplification-preview guidance may retain worktree scope because it is a local mutation workflow
+- **AND** range plus `--focus simplify` is documented and tested as invalid for PR assurance.
 
