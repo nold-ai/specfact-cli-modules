@@ -106,4 +106,19 @@ requirements:
         method: test
         intent: "Record each analyzer identity and outcome and fail closed when mandatory coverage is unavailable."
         observable: "Skipped, failed, timed-out, or unparsable mandatory analyzer evidence yields UNKNOWN without an all-passed summary."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
+    rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-ledger-assurance
+        kind: planned_component
+        locator: "specfact-code-review ledger client"
+    verification_cases:
+      - case_id: CR14-011
+        scenario_id: ledger-preserves-authoritative-assurance-status
+        method: test
+        intent: "Persist schema 1.6 assurance directly and keep UNKNOWN/NOT_APPLICABLE neutral for rewards and streaks."
+        observable: "Neutral states remain auditable without coins, pass bonuses, block penalties, or streak changes; legacy records remain readable."
 

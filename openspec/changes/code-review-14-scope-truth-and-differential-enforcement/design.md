@@ -78,7 +78,13 @@ Schema `1.6` adds authoritative `assurance_status: PASS | FAIL | UNKNOWN | NOT_A
 
 For one compatibility release, `overall_verdict` remains a non-authoritative legacy projection: PASS maps to PASS or PASS_WITH_ADVISORY, FAIL maps to FAIL, UNKNOWN maps conservatively to FAIL, and NOT_APPLICABLE maps to PASS_WITH_ADVISORY plus explicit no-impact text. Non-shadow exits for those statuses are respectively 0, 1, 1, and 0; shadow always exits 0 while preserving the authoritative status.
 
-Legacy `enforcement_mode` is the normalized policy request, not a scope label: `enforce` becomes `full`; `full`, `changed`, and `shadow` remain those values. `changed` is restricted to the one-release changed/worktree compatibility path. Range plus changed-mode is invalid; strict range writes `full`, shadow range writes `shadow`, and range identity lives only in `scope_evidence`. Legacy reports older than 1.6 can yield only PASS or FAIL. Missing/invalid `assurance_status` in 1.6+ is invalid/unknown, never legacy fallback.
+Legacy `enforcement_mode` is the normalized policy request, not a scope label: `enforce` becomes `full`; `full`, `changed`, and `shadow` remain those values. `changed` is restricted to the one-release changed/worktree compatibility path. Range plus changed-mode is invalid; strict range writes `full`, shadow range writes `shadow`, and range identity lives only in `scope_evidence`.
+
+### Preserve assurance truth in the first-party ledger
+
+For schema 1.6 reports, the ledger reads authoritative `assurance_status`, not the legacy `overall_verdict` projection. Persisted `LedgerRun.verdict`, `LedgerState.last_verdict`, local JSON, and Supabase constraints SHALL accept PASS, FAIL, UNKNOWN, and NOT_APPLICABLE while retaining PASS_WITH_ADVISORY only for reports older than 1.6.
+
+PASS advances the pass streak and applies the existing reward rules. FAIL advances the block streak and applies the existing penalty rules. UNKNOWN and NOT_APPLICABLE are neutral audit events: retain the run, score, source reward metadata, findings, and authoritative status; apply zero coins; set the applied last delta to zero; and leave both streak counters unchanged. They SHALL never trigger a pass bonus. The DDL migration and local reader remain backward compatible with existing three-value ledger records. Legacy reports older than 1.6 can yield only PASS or FAIL. Missing/invalid `assurance_status` in 1.6+ is invalid/unknown, never legacy fallback.
 
 ## Implementation Boundary
 
