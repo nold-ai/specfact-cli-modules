@@ -37,7 +37,7 @@ B..R may contain only declared requirements/specifications/tests/test harness/co
 
 R..H may change only declared implementation touchpoints. A selected test, helper, fixture, conftest, test configuration, dependency lock, proof runner, workflow, mapping, plan, evidence record, policy, schema, or unclassified path invalidates chronology and requires a new R.
 
-A passing chronology requires D to differ from H. Before H is designated, every implementation, test, documentation, package metadata, changelog, generated registry/archive/checksum/signature artifact, and fix-producing gate change must be complete. H..D may then change only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records. Any behavior, test, configuration, mapping, runner, workflow, policy, schema, other documentation, generated runtime input, release artifact, or unclassified change is invalid. The identical selectors must remain passing at D. The capsule must also prove that D contains exactly one byte-identical `specfact:frozen-failing` section and one byte-identical `specfact:frozen-readiness` section from R; append-only content may exist only outside those markers.
+A passing chronology requires D to differ from H. Before H is designated, every implementation, test, documentation, package metadata, changelog, generated registry/archive/checksum/signature artifact, and fix-producing gate change must be complete. For later changes whose signed publication uses the post-merge `publish-modules.yml` workflow, H may be designated only at the merged `dev` commit after its auto-publish PR and final gates, only if protected R remains a strict ancestor and every pre-H publication path is an explicitly declared R..H implementation touchpoint. Squash/rewritten ancestry or an undeclared publish path leaves chronology unproven and requires a new R. H..D may then change only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records. Any behavior, test, configuration, mapping, runner, workflow, policy, schema, other documentation, generated runtime input, release artifact, or unclassified change is invalid. The identical selectors must remain passing at D. The capsule must also prove that D contains exactly one byte-identical `specfact:frozen-failing` section and one byte-identical `specfact:frozen-readiness` section from R; append-only content may exist only outside those markers.
 
 ### State only the bounded claim
 
@@ -57,14 +57,14 @@ The capsule identifies a previously promoted verifier/policy epoch. A candidate 
 
 ## Implementation Boundary
 
-Implementation is limited to the typed capsule validator in new `requirements/replay_proof.py`, narrow Requirements lifecycle/command/status integration, provenance-only Code Review adaptation, focused fixtures/tests, docs, and generated signed release outputs. Modules must not add Git worktrees, pytest execution, subprocesses, or static dependency inference.
+Implementation is limited to the typed capsule validator in new `requirements/replay_proof.py`, narrow Requirements lifecycle/command/status integration, provenance-only Code Review adaptation, focused fixtures/tests, docs, and signed release outputs generated only by the post-merge canonical publish workflow. Modules must not add Git worktrees, pytest execution, subprocesses, or static dependency inference.
 
 ## Rollout and Rollback
 
 1. Verify issue #414 metadata and both paired contracts.
 2. Add failing capsule/reconciliation tests.
-3. Implement the typed schema and dual-write report fields.
-4. Publish a signed release through existing registry/signing generators for core shadow adoption.
-5. Promote the initial verifier epoch independently.
+3. Implement the typed schema and dual-write report fields on a feature branch; the candidate makes no self-chronology claim and designates no H/D.
+4. Merge the green implementation to `dev`; let the canonical `publish-modules.yml` workflow use the signing secret and open its generated auto-publish PR.
+5. Require signed-artifact and full-gate verification on that auto-publish PR, merge it to `dev`, and promote the resulting verifier epoch independently.
 6. Enable strict chronology only after benchmark validation.
 7. Roll back chronology enforcement without disabling current-run evidence.

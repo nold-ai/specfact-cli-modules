@@ -21,8 +21,9 @@
 - [ ] 1.6 Add table-driven `test_current_execution_rejects_each_nonpass_or_noncanonical_result` covering missing, duplicate, ambiguous, skipped, failed, errored, non-canonical selector results, and mismatched mapping digest, plan identity/digest, source revision/tree, or selector set.
 - [ ] 1.7 Add table-driven `test_review_context_rejects_each_invalid_requirements_evidence_class` covering unreadable, malformed, unsupported-schema, non-final top-level evidence, and corrected-schema evidence missing the mandatory chronology claim object before review execution. R07 review fixtures cover only the canonical not-evaluated chronology placeholder; R08 owns unknown/pass/fail chronology provenance.
 - [ ] 1.8 Add `test_report_uses_canonical_no_chronology_claim_object` for the mandatory R07 `status: not_evaluated` plus `reason: capsule_not_supplied` placeholder. Assert R07 has no chronology-request/capsule input and cannot emit chronology pass, fail, or unknown; those tests begin in R08.
-- [ ] 1.9 Add `test_rollback_reader_preserves_independent_claims_as_opaque_provenance` and prove old readers never reinterpret corrected chronology as a legacy basis.
-- [ ] 1.10 Record failing commands and outcomes in `TDD_EVIDENCE.md` before source edits.
+- [ ] 1.9 Add or retain `test_mapping_acceptance_requires_complete_provenance` covering mapping digest, decision, stable reviewer identity, reviewer role, timestamp, and immutable reference so the scope correction cannot weaken shipped acceptance checks.
+- [ ] 1.10 Add `test_rollback_reader_preserves_independent_claims_as_opaque_provenance` and prove old readers never reinterpret corrected chronology as a legacy basis.
+- [ ] 1.11 Record failing commands and outcomes in `TDD_EVIDENCE.md` before source edits.
 
 ## 2. Minimal implementation — each task at most two hours
 
@@ -34,11 +35,13 @@
 
 ## 3. Release
 
-- [ ] 3.1 Run focused/full tests, contracts, type/lint, strict OpenSpec, and full explicit-range Code Review on the behavior-ready tree.
-- [ ] 3.2 Update bundle version, manifest integrity, registry entry, signatures, and compatibility metadata only after behavior passes.
-- [ ] 3.3 Re-run the complete mandatory quality sequence after every generated manifest, registry, archive, checksum, and signature change, including `verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`; require the generated signature sidecar to exist and match the signed payload, and resolve every finding before publication.
-- [ ] 3.4 Publish the signed release and give core the immutable commit/package identities.
-- [ ] 3.5 After the implementation and signed handoff merge, run exactly `openspec archive requirements-07-scenario-runtime-proof` from the repository root as the final release-integrity operation; never move the change directory manually.
+- [ ] 3.1 On the feature branch, run focused/full tests, contracts, type/lint, strict OpenSpec, full explicit-range Code Review, and filesystem payload/version-bump verification on the behavior-ready tree.
+- [ ] 3.2 After behavior passes, update public docs, bundle version, `module-package.yaml` version and compatibility metadata, and changelog allowed by the implementation plan. Do not generate or hand-edit registry archives, checksums, sidecars, or `registry/index.json` on the feature branch.
+- [ ] 3.3 Re-run the complete feature-branch gate sequence after task 3.2 and merge the reviewed implementation PR to `dev` only when it is green. This implementation PR is not yet the signed registry publication.
+- [ ] 3.4 Observe the canonical `.github/workflows/publish-modules.yml` run triggered by the `dev` push. It SHALL use the repository signing secret, generate the signed manifest plus registry archive/checksum/signature sidecar/index changes, and open its `auto/publish-dev-<run-id>` PR; no nonexistent local release wrapper may be assumed.
+- [ ] 3.5 Review the exact auto-publish PR and require the generated `.tar.sig` sidecar, signed manifest/archive identity, `verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`, and the full final quality matrix to pass before merging that PR to `dev`.
+- [ ] 3.6 Give core the immutable merged `dev` commit/tree, package version, registry archive/checksum/signature, manifest integrity, signer, and workflow/auto-publish PR identities. Historical green reports before the auto-publish merge are not signed-release evidence.
+- [ ] 3.7 After the implementation and signed handoff merges, run exactly `openspec archive requirements-07-scenario-runtime-proof` from the repository root as the final release-integrity operation; never move the change directory manually.
 
 ## Prohibited shortcuts
 

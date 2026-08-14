@@ -27,7 +27,7 @@ requirements:
         scenario_id: mapping-acceptance-provenance
         method: test
         intent: Reject stale or missing acceptance evidence.
-        observable: Digest-bound acceptance finding and maturity result.
+        observable: Acceptance requires the matching mapping digest, decision, stable reviewer identity, reviewer role, timestamp, and immutable reference; omission, rejection, or staleness remains blocking.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:deterministic-scenario-proof-plan:
     rationale: A test plan must be deterministic and safe before a delivery runner consumes it.
     stakeholder_refs:

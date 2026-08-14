@@ -14,13 +14,20 @@ The Requirements module SHALL distinguish planned readiness, mapping acceptance,
 
 ### Requirement: Mapping Acceptance Provenance
 
-The Requirements module SHALL validate provider-neutral acceptance against the canonical mapping digest before test-authored or stronger evidence satisfies strict policy.
+The Requirements module SHALL validate provider-neutral acceptance evidence against the canonical mapping digest before test-authored or stronger evidence satisfies strict policy. A complete acceptance record SHALL contain the matching mapping digest, an explicit decision, stable reviewer identity, reviewer role, timestamp, and immutable reference. Acceptance SHALL be a distinct maturity state and SHALL NOT be inferred from proposal readiness, test results, or implementation evidence.
 
-#### Scenario: Stale acceptance remains blocking
+#### Scenario: Accepted mapping enables test authoring
 
-- **GIVEN** acceptance is missing, rejected, incomplete, or bound to another mapping digest
+- **GIVEN** a complete planned mapping and an acceptance record with a matching mapping digest, accepted decision, stable reviewer identity, reviewer role, timestamp, and immutable reference
+- **WHEN** evidence requires accepted maturity
+- **THEN** it reports the mapping as accepted
+- **AND** it may proceed to test-authored validation.
+
+#### Scenario: Stale or unauditable acceptance remains blocking
+
+- **GIVEN** acceptance is missing, rejected, incomplete, missing any required provenance field, or bound to another mapping digest
 - **WHEN** accepted maturity or higher is required
-- **THEN** the module emits a deterministic finding
+- **THEN** the module emits a deterministic finding naming the invalid or missing field
 - **AND** passing tests do not invent acceptance.
 
 ### Requirement: Deterministic Scenario Proof Plan

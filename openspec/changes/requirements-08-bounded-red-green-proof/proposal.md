@@ -31,7 +31,7 @@ The Requirements module should validate a typed capsule produced by trusted core
 - Planning artifacts only; no package, tests, registry, version, signature, prompts, or generated docs change in this commit.
 - The paired core R08 implementation owns Git/worktree/test execution and must use a signed modules release.
 - Backward-compatible report evolution is required for existing R07 consumers.
-- Later implementation changes `packages/specfact-requirements/module-package.yaml`, `docs/bundles/requirements/overview.md`, `CHANGELOG.md`, `registry/index.json`, generated archive/checksum/signature outputs, and Code Review metadata only if its serialized proof context changes.
+- Later implementation changes package/docs/changelog metadata on its feature branch. After that PR merges to `dev`, the canonical `publish-modules.yml` workflow—not a local wrapper—generates signed manifest/registry/archive/checksum/sidecar changes in a separate auto-publish PR. The initial validator release makes no self-chronology claim.
 - Rollback: disable chronology reconciliation while preserving corrected R07 current-run evidence and every already-written independent claim object as opaque provenance; no old reader may reinterpret corrected chronology as a legacy basis.
 
 ## Explicit Non-Goals
