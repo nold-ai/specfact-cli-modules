@@ -12,12 +12,20 @@ The Code Review public interface MAY accept finalized Requirements evidence as a
 - **AND** it retains the canonical `red_green_chronology` claim object with `status: not_evaluated` and `reason: capsule_not_supplied` rather than omitting the field or rejecting the report
 - **AND** the review verdict remains independent.
 
-#### Scenario: Malformed or non-final evidence is rejected
+#### Scenario: Invalid top-level or non-final evidence is rejected
 
-- **GIVEN** unreadable, malformed, unsupported, non-final, or corrected-schema Requirements evidence missing either mandatory claim object or required provenance
+- **GIVEN** an unreadable, malformed, unsupported, non-final top-level Requirements envelope, or corrected-schema evidence missing either mandatory claim object or required provenance
 - **WHEN** Code Review receives it
 - **THEN** it rejects the invocation before review execution
 - **AND** it emits no report that could be mistaken for a valid Requirements-aware review.
+
+#### Scenario: Unknown chronology remains valid provenance
+
+- **GIVEN** readable finalized corrected-schema Requirements evidence has valid `current_execution` and `red_green_chronology.status: unknown` with deterministic diagnostics for a requested invalid or untrusted capsule
+- **WHEN** Code Review receives it
+- **THEN** it accepts the top-level Requirements evidence and retains both claim objects plus the chronology diagnostics
+- **AND** it does not label chronology pass or valid
+- **AND** neither Requirements claim changes review findings, score, verdict, or exit code.
 
 #### Scenario: Bounded chronology is visible but independent
 

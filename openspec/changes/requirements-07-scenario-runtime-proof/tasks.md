@@ -19,7 +19,7 @@
 - [ ] 1.4 Add `test_review_context_accepts_final_current_execution_without_historical_basis`. Allowed files: focused Code Review context tests.
 - [ ] 1.5 Add `test_new_reconciliation_cannot_generate_legacy_tdd_ledger`. Allowed files: focused compatibility tests.
 - [ ] 1.6 Add table-driven `test_current_execution_rejects_each_nonpass_or_noncanonical_result` covering missing, duplicate, ambiguous, skipped, failed, errored, and non-canonical selector results.
-- [ ] 1.7 Add table-driven `test_review_context_rejects_each_invalid_requirements_evidence_class` covering unreadable, malformed, unsupported-schema, non-final evidence, and corrected-schema evidence missing the mandatory chronology claim object before review execution.
+- [ ] 1.7 Add table-driven `test_review_context_rejects_each_invalid_requirements_evidence_class` covering unreadable, malformed, unsupported-schema, non-final top-level evidence, and corrected-schema evidence missing the mandatory chronology claim object before review execution. Add `test_review_context_accepts_final_report_with_unknown_chronology` to prove a valid current-execution claim plus requested invalid/untrusted chronology remains accepted provenance and is never relabelled pass.
 - [ ] 1.8 Add `test_report_uses_canonical_no_chronology_claim_object` for `status: not_evaluated` plus `reason: capsule_not_supplied`, and `status: unknown` when requested chronology evidence is missing or untrusted.
 - [ ] 1.9 Add `test_rollback_reader_preserves_independent_claims_as_opaque_provenance` and prove old readers never reinterpret corrected chronology as a legacy basis.
 - [ ] 1.10 Record failing commands and outcomes in `TDD_EVIDENCE.md` before source edits.

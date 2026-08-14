@@ -121,3 +121,8 @@ requirements:
         method: test
         intent: Reject corrected-schema Requirements evidence that omits the mandatory red_green_chronology claim object.
         observable: Truly legacy payloads use the compatibility reader; corrected input cannot omit the canonical not_evaluated claim.
+      - case_id: review-context-unknown-chronology
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        intent: Accept a finalized corrected-schema report whose current execution is valid and whose requested invalid or untrusted chronology is unknown.
+        observable: Code Review retains unknown chronology diagnostics without rejecting the top-level report, relabelling chronology pass, or changing its own verdict.
