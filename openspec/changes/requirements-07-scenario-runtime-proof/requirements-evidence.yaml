@@ -70,7 +70,7 @@ requirements:
         scenario_id: historical-chronology-is-a-separate-claim
         method: test
         intent: Preserve a valid current-run observation when no R08 replay capsule is supplied.
-        observable: current_execution is final while tdd_chronology remains independently unproven.
+        observable: current_execution is final while red_green_chronology remains independently unproven.
   openspec:requirements-07-scenario-runtime-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
     rationale: Code Review must consume finalized Requirements evidence as provenance without fusing delivery verdicts.
     stakeholder_refs:
