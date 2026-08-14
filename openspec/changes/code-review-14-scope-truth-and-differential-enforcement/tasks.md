@@ -36,7 +36,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 2.3 Add `test_baseline_analysis_failure_is_unknown`.
 - [ ] 2.4 Add `test_range_differential_uses_merge_base_snapshot_when_base_tip_advanced`.
 - [ ] 2.5 Add `test_pure_rename_preserves_unchanged_fingerprint`; use the recorded one-to-one rename map to canonicalize the head file anchor while retaining both paths in evidence.
-- [ ] 2.6 Add `test_default_pr_range_analyzer_profile_has_closed_membership`, `test_report_exposes_mandatory_analyzer_coverage`, and `test_analyzer_identity_mismatch_is_unknown`. Freeze the eight required IDs and conditional `semgrep-bugs` rule; the identity test varies analyzer version, toolchain, policy, and config identities independently. Rename/update existing `test_run_contract_check_ignores_crosshair_timeout` to `test_run_contract_check_reports_crosshair_timeout_for_mandatory_coverage` to prove the adapter emits explicit failure; the runner coverage test proves that failure yields UNKNOWN.
+- [ ] 2.6 Add `test_default_pr_range_analyzer_profile_has_closed_membership`, `test_report_exposes_mandatory_analyzer_coverage`, `test_analyzer_identity_mismatch_is_unknown`, and `test_head_config_cannot_suppress_introduced_finding`. Freeze the eight required IDs and conditional `semgrep-bugs` rule; vary analyzer/toolchain/policy/config identities independently; prove explicit baseline config argv/root for Ruff, Pylint, basedpyright, and Semgrep and UNKNOWN on injection failure. Rename/update existing `test_run_contract_check_ignores_crosshair_timeout` to `test_run_contract_check_reports_crosshair_timeout_for_mandatory_coverage` to prove the adapter emits explicit failure; the runner coverage test proves that failure yields UNKNOWN.
 - [ ] 2.7 Add `test_fixable_error_remains_blocking_until_applied` and update existing `test_score_review_single_fixable_error` to expect FAIL; production `scorer.py` remains unchanged.
 - [ ] 2.8 Add `test_report_never_says_all_passed_with_mandatory_unknown`.
 - [ ] 2.9 Add table-driven `test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix` for PASS/FAIL/UNKNOWN/NOT_APPLICABLE under strict and shadow modes, including enforce-to-full normalization, changed/worktree compatibility, and range-plus-changed rejection.
@@ -53,7 +53,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 3.2 In `scope.py`, materialize the exact index snapshot and detached merge-base/head commit trees, produce and pre/post verify selected-input manifests, and clean temporary roots; no other component may invoke Git.
 - [ ] 3.3 Reject positional-file downgrade for PR-range policy, resolve omitted range enforcement to strict full while rejecting explicit range-plus-changed, reject range-plus-simplify before analysis, update public AI instructions to the executable range command, and reject fix/preview/mutation options in index and range snapshot modes.
 - [ ] 3.4 Add unknown/not-applicable handling before analyzer execution.
-- [ ] 3.5 Define `pr-range-v1` as a schema-versioned runner-owned profile with the exact required/conditional membership in the spec, bind it to the report/policy digest, make the contract adapter surface CrossHair timeout as failed coverage, and implement isolated symmetric merge-base/head execution with identical immutable analyzer-version, toolchain, policy, and configuration identities; any required gap or identity mismatch yields UNKNOWN.
+- [ ] 3.5 Define `pr-range-v1` as a schema-versioned runner-owned profile with the exact required/conditional membership in the spec, bind it to the report/policy digest, make the contract adapter surface CrossHair timeout as failed coverage, materialize one sealed merge-base policy bundle, and inject its explicit Ruff/Pylint/basedpyright/Semgrep configuration into both isolated snapshot runs; candidate config is shadow-only and any required gap, discovery fallback, injection failure, or identity mismatch yields UNKNOWN.
 - [ ] 3.6 Add stable fingerprints and introduced/fixed/unchanged/unknown classification only after task 3.5 proves identical identities; normalize head file anchors through resolved one-to-one rename facts before matching.
 - [ ] 3.7 Add mandatory analyzer coverage evidence.
 - [ ] 3.8 Separate finding status, differential state, autofix availability, and blocking policy.
@@ -107,8 +107,12 @@ Differential enforcement:
 - New exactly `tests/unit/specfact_code_review/run/test_differential.py`.
 - `packages/specfact-code-review/src/specfact_code_review/run/runner.py` collects analyzer facts and consumes classification; `differential.py` classifies already-produced base/head findings and contains no analyzer or Requirements logic.
 
-Analyzer failure propagation:
+Analyzer configuration and failure propagation:
 
+- `packages/specfact-code-review/src/specfact_code_review/tools/ruff_runner.py` and `tests/unit/specfact_code_review/tools/test_ruff_runner.py` only to accept the invocation context and use explicit baseline `--config` or `--isolated`.
+- `packages/specfact-code-review/src/specfact_code_review/tools/pylint_runner.py` and `tests/unit/specfact_code_review/tools/test_pylint_runner.py` only to use the explicit baseline `--rcfile` or sealed pinned-default config.
+- `packages/specfact-code-review/src/specfact_code_review/tools/basedpyright_runner.py` and `tests/unit/specfact_code_review/tools/test_basedpyright_runner.py` only to use the explicit baseline `--project` artifact and remove `--project .`.
+- `packages/specfact-code-review/src/specfact_code_review/tools/semgrep_runner.py` and `tests/unit/specfact_code_review/tools/test_semgrep_runner.py` only to require the explicit baseline policy `bundle_root` for both Semgrep passes.
 - `packages/specfact-code-review/src/specfact_code_review/tools/contract_runner.py` only to replace the swallowed CrossHair timeout with explicit failed contracts coverage; contract rules and counterexample semantics remain unchanged.
 - `tests/unit/specfact_code_review/tools/test_contract_runner.py` only to replace the timeout-ignore regression with the named fail-closed timeout case.
 
@@ -137,6 +141,6 @@ End-to-end/docs/release:
 
 Explicitly forbidden:
 
-- `packages/specfact-code-review/src/specfact_code_review/run/forecast.py`, `packages/specfact-code-review/src/specfact_code_review/run/scorer.py`, and analyzer implementations under `specfact_code_review/tools/`;
+- `packages/specfact-code-review/src/specfact_code_review/run/forecast.py`, `packages/specfact-code-review/src/specfact_code_review/run/scorer.py`, and detector/rule-semantic changes under `specfact_code_review/tools/`; only the exact adapter configuration/failure plumbing above is allowed;
 - the Requirements package and archived OpenSpec changes;
 - any new source/test file other than the four exact `scope.py`/`differential.py` files above.

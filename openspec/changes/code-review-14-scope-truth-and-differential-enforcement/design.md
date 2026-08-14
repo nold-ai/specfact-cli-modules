@@ -42,7 +42,16 @@ Range resolution records full base, head, and merge-base commit/tree SHAs; diff/
 
 For range mode it SHALL materialize fresh, detached baseline and head roots outside the caller worktree. The baseline root is the resolved merge-base commit/tree; the supplied base-ref tip is recorded only as a resolver input and SHALL NOT be analyzed as the PR baseline. The head root is the resolved head commit/tree. For each snapshot, `scope.py` SHALL build a manifest of repository-relative path, Git blob identity, and content digest for every selected analyzer input and every declared analyzer-configuration input. The runner receives only paths rooted in the appropriate materialization and runs the merge-base/head snapshots with the same pinned analyzer/toolchain and trusted policy/config digest.
 
-The trusted policy/config identity is resolved once from the merge-base policy epoch and applied to both range snapshots. Candidate analyzer-config changes remain visible in scope evidence but cannot authorize or weaken their own comparison; they run only as separately labelled shadow evidence until promoted.
+The trusted policy/config identity is resolved once from the merge-base policy epoch and applied to both range snapshots. `scope.py` materializes a sealed policy bundle separately from both source roots and records every selected config path/blob/digest. `runner.py` passes that bundle through one invocation context; configurable adapters MUST NOT discover policy from the analyzed head path, caller worktree, or process `.`.
+
+The exact adapter boundary is:
+
+- Ruff receives the selected merge-base Ruff config with explicit `--config`, or `--isolated` when no governed config exists.
+- Pylint receives an explicit merge-base `--rcfile`; absence uses a sealed pinned-default config and disables source-tree discovery.
+- basedpyright receives an explicit merge-base `--project` artifact; it never uses `--project .`.
+- Semgrep and the conditional bug pass resolve only from the explicit merge-base policy bundle already represented by their `bundle_root` seam.
+
+The same config artifacts and digests govern base and head. A missing/unreadable selected config or any adapter that cannot honor explicit configuration makes coverage `UNKNOWN`. Candidate analyzer-config changes remain visible in scope evidence but cannot authorize or weaken their own comparison; they run only as separately labelled shadow evidence until promoted.
 
 Before and after each snapshot analysis, the resolver SHALL verify the selected-input manifest. A missing object, path escape, content mismatch, cleanup failure that prevents verification, or post-analysis mutation yields `UNKNOWN` with diagnostics. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation` before materialization. Those operations require a separate worktree/explicit-file run and cannot be attached to index-snapshot or PR-range assurance. Range mode SHALL also reject `--focus simplify`: simplification intentionally filters findings and therefore cannot emit `assurance_kind=pr_range`; callers use a separate worktree or explicit-file simplification run.
 

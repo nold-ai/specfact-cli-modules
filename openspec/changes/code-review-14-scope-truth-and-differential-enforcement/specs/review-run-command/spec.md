@@ -4,7 +4,7 @@
 
 `specfact code review run` SHALL support unambiguous `worktree`, `index`, `range`, and `full` scopes plus explicit positional files. Index scope SHALL analyze the exact staged blob snapshot, not current worktree path content. Range scope SHALL require base and head refs, resolve full base/head and merge-base commit/tree SHAs, select the committed merge-base-to-head delta, and use the merge-base—not the supplied base-ref tip—as the differential baseline. Changed tests SHALL be included by default. `changed` SHALL be a deprecated alias for `worktree`, not PR range. Positional files SHALL emit `assurance_kind=explicit_files` and SHALL NOT satisfy a consumer or policy requiring `pr_range` assurance.
 
-For index mode, `scope.py` SHALL materialize staged blobs outside the caller worktree and record the index tree/blob/content identities so later unstaged edits at the same path cannot affect analysis. For range mode, it SHALL materialize fresh detached merge-base/head roots from the resolved commit trees outside the caller worktree. It SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; apply one trusted merge-base-policy analyzer/config identity to both range snapshots; and verify every snapshot manifest before and after analysis. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any index conflict/object failure, materialization failure, path-root violation, or content-integrity failure SHALL yield UNKNOWN.
+For index mode, `scope.py` SHALL materialize staged blobs outside the caller worktree and record the index tree/blob/content identities so later unstaged edits at the same path cannot affect analysis. For range mode, it SHALL materialize fresh detached merge-base/head roots from the resolved commit trees outside the caller worktree plus a separate sealed merge-base policy bundle. It SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; apply one trusted merge-base-policy analyzer/config identity to both range snapshots; pass explicit baseline config paths to configurable adapters; and verify every snapshot manifest before and after analysis. Ruff SHALL use explicit baseline `--config` or `--isolated`, Pylint explicit baseline `--rcfile` or a sealed pinned-default config, basedpyright explicit baseline `--project` rather than `.`, and Semgrep the explicit baseline policy `bundle_root`. Adapter/config injection failure SHALL yield UNKNOWN. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any index conflict/object failure, materialization failure, path-root violation, or content-integrity failure SHALL yield UNKNOWN.
 
 The report SHALL record requested/effective scope, assurance kind, repository root, index tree/blob identities when applicable, supplied base/head commit/tree SHAs, the analyzed merge-base commit/tree SHA, diff digest, selected files/lines and content manifests, rename/deletion facts, filters/facets, trusted policy/config identity, resolver identity, status, and diagnostics.
 
@@ -82,6 +82,15 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 - **THEN** the head anchor is normalized through the recorded rename relation to the old/base path
 - **AND** the blocker is classified unchanged rather than fixed at base and introduced at head
 - **AND** the report retains both paths and the rename fact.
+
+#### Scenario: Candidate config cannot suppress its own finding
+
+- **GIVEN** the head changes analyzer configuration to suppress a finding that the trusted merge-base policy would report
+- **WHEN** merge-base and head snapshots are analyzed
+- **THEN** every configurable adapter receives the same explicit sealed merge-base policy bundle
+- **AND** no adapter discovers configuration from the head tree, caller worktree, or process current directory
+- **AND** the head-side candidate configuration remains scope/shadow evidence but cannot change differential enforcement
+- **AND** missing or unusable baseline configuration yields UNKNOWN rather than fallback discovery.
 
 #### Scenario: Analyzer identity mismatch is unknown
 

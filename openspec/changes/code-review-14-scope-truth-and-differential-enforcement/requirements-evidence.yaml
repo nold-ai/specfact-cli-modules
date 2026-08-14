@@ -54,6 +54,11 @@ requirements:
         method: test
         intent: "Normalize stable file anchors through resolved one-to-one renames before base/head fingerprint comparison."
         observable: "A pure file rename retains the blocker as unchanged while both paths and the rename fact remain evidence."
+      - case_id: CR14-019
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Inject one sealed merge-base configuration bundle into both snapshot analyzer runs."
+        observable: "Head config cannot suppress its own finding; Ruff/Pylint/basedpyright/Semgrep never fall back to head/worktree/dot discovery; injection failure is UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:independent-finding-lifecycle-and-remediation:
     rationale: "Severity, resolution, autofix availability, and policy are distinct facts."
     stakeholder_refs:
