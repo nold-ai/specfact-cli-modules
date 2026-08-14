@@ -14,7 +14,7 @@ requirements:
         scenario_id: independent-current-execution-and-chronology
         method: test
         intent: "Prevent either claim from inflating or erasing the other."
-        observable: "Mapping sidecars remain v2; finalized report v2 is legacy-only, v3 is R07 compatibility, and v4 requires request plus both claims and preserves the explicit chronology_request matrix; neither version nor intent is inferred from field/capsule absence."
+        observable: "Mapping sidecars remain v2; finalized report v2 retains source epoch and proof-basis validation, v3 is R07 compatibility, and v4 requires request plus both claims and preserves the explicit chronology_request matrix; neither version nor intent is inferred from field/capsule absence."
   openspec:requirements-08-bounded-red-green-proof:requirements-bounded-red-green-proof:trusted-replay-capsule-validation:
     rationale: "The module validates trusted replay evidence without owning execution."
     stakeholder_refs:

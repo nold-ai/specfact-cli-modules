@@ -25,7 +25,7 @@ The previous schema used one linear maturity ladder where a final passing curren
 
 ### Version the corrected finalized report explicitly
 
-The mapping sidecar remains `schema_version: "2"`; this change does not alter mapping schema. The finalized Requirements report increments from `schema_version: "2"` to `schema_version: "3"`. A v2 finalized report is routed only through the legacy compatibility reader and may omit the new claim objects. A v3 report MUST contain both claim objects and all v3 provenance; missing fields are malformed v3, never reinterpreted as legacy. Unsupported future versions remain rejected.
+The mapping sidecar remains `schema_version: "2"`; this change does not alter mapping schema. The finalized Requirements report increments from `schema_version: "2"` to `schema_version: "3"`. A v2 finalized report is routed only through the legacy compatibility reader, retains `source_schema_version: 2`, may omit the new claim objects, and preserves the shipped rule that a passing gate requires `red-junit` or matching digest-bound `legacy-tdd-ledger` proof basis. A v3 report MUST contain both claim objects and all v3 provenance; missing fields are malformed v3, never reinterpreted as legacy. Unsupported future versions remain rejected.
 
 ### Use two independent claim objects
 

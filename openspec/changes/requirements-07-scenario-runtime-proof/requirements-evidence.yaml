@@ -121,3 +121,8 @@ requirements:
         method: test
         intent: Reject finalized report schema v3 Requirements evidence that omits the mandatory red_green_chronology claim object.
         observable: Truly legacy payloads use the compatibility reader; schema v3 cannot omit the canonical not_evaluated claim; finalized report v2 is routed only through legacy compatibility.
+      - case_id: review-context-v2-proof-basis
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        intent: Preserve finalized report v2 source epoch and shipped passing proof-basis validation.
+        observable: Passing v2 context records source_schema_version 2 and requires red-junit or matching digest-bound legacy-tdd-ledger basis; missing or invalid basis is rejected and never reinterpreted as v3.

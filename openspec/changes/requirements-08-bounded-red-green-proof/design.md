@@ -8,7 +8,7 @@ B, R, and H are the three proof commits: merge base, red checkpoint, and green i
 
 ### Advance the finalized report to schema v4
 
-R08 increments the finalized Requirements report from R07 schema v3 to `schema_version: "4"` because it adds the explicit chronology request and capsule/attestation semantics. Mapping sidecars remain schema v2. Finalized report v2 remains legacy-only; v3 is the corrected R07 compatibility format with both claims and no chronology-request field; v4 requires `chronology_request`, both claims, and all R08 provenance. A v3 report is normalized as compatibility `not_requested` only because the immutable v3 contract cannot express a chronology request, and the source version remains visible. Field absence never downgrades v4 to v3 or v2.
+R08 increments the finalized Requirements report from R07 schema v3 to `schema_version: "4"` because it adds the explicit chronology request and capsule/attestation semantics. Mapping sidecars remain schema v2. Finalized report v2 remains legacy-only with `source_schema_version: 2` and its shipped passing proof-basis validation; v3 is the corrected R07 compatibility format with both claims and no chronology-request field; v4 requires `chronology_request`, both claims, and all R08 provenance. A v3 report is normalized as compatibility `not_requested` only because the immutable v3 contract cannot express a chronology request, and the source version remains visible. Field absence never downgrades v4 to v3 or v2.
 
 ### Keep current execution and chronology independent
 
