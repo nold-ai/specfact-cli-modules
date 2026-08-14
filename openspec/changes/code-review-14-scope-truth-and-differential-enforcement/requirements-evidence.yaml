@@ -23,8 +23,13 @@ requirements:
       - case_id: CR14-009
         scenario_id: explicit-review-scope-evidence
         method: test
-        intent: "Analyze materialized staged blobs even when the same path has later unstaged edits."
-        observable: "Only index tree/blob/content identities affect index findings, score, and status."
+        intent: "Analyze a complete materialized HEAD-plus-index tree even when selected or supporting paths have later unstaged edits."
+        observable: "Staged selection and complete index tree/path/blob/content identities are distinct evidence; caller-worktree bytes cannot affect findings, imports, score, or status."
+      - case_id: CR14-037
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Bind index-side imports and subprocess execution to the complete isolated index snapshot."
+        observable: "Imported dependencies, cwd, configuration, and environment come from HEAD-plus-index SnapshotInvocationContext; caller-source resolution or manifest mismatch is UNKNOWN."
       - case_id: CR14-018
         scenario_id: explicit-review-scope-evidence
         method: test

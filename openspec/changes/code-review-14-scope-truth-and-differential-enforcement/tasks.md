@@ -24,7 +24,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 1.7 Add `test_pr_assurance_rejects_positional_file_downgrade` while retaining local explicit-file enforcement.
 - [ ] 1.8 Add `test_range_analysis_uses_materialized_commit_snapshots` with caller-worktree mutation and pre/post manifest mismatch cases.
 - [ ] 1.9 Add `test_index_and_range_reject_fix_preview_and_mutation_options`.
-- [ ] 1.10 Add `test_index_scope_reads_staged_blobs_not_unstaged_worktree` with conflicting staged/unstaged bytes at the same path.
+- [ ] 1.10 Add `test_index_scope_reads_staged_blobs_not_unstaged_worktree` and `test_index_scope_imports_dependency_from_complete_index_tree`; use conflicting staged/unstaged selected bytes plus an imported tracked dependency with unstaged edits, and assert selected-path evidence, complete index-tree manifest, index SnapshotInvocationContext, and no caller-source reads.
 - [ ] 1.11 Add `test_range_scope_omitted_enforcement_defaults_to_full` and update existing `test_review_run_instructions_prints_ai_workflow_without_running_review` to require the executable range/base/head/`--enforcement full` workflow; retain explicit range-plus-changed rejection.
 - [ ] 1.12 Add `test_installed_merge_quality_guidance_uses_pr_range`; prove rules updater output and the bundled skill make protected range/base/head/context/full the merge authority, label local range preview-only, and retain worktree-scoped simplification.
 - [ ] 1.13 Add table-driven `test_range_scope_rejects_narrowing_filters_before_analysis` for `--exclude-tests`, `--focus source|tests|docs|simplify`, `--path`, `--no-tests`, and `--level`; no narrowed result may carry `range_candidate` or an effective pr_range envelope or produce false NOT_APPLICABLE.
@@ -63,7 +63,7 @@ Each item consumes only the named failing tests from Section 2 and must finish g
 
 - [ ] 3.1 Add request/status types for worktree, index, range, full, and explicit-files scope; delegate all Git discovery from `run/commands.py` to `scope.py`.
 - [ ] 3.2 Parse/freeze the outside-checkout claimed context file, resolve full base/head/merge-base identities, validate expected target/head plus context digest, emit range_candidate or range_preview but never pr_range, and make unsafe/mismatched context UNKNOWN.
-- [ ] 3.3 Materialize and manifest the exact index snapshot, including conflicts/intent-to-add/object failures and pre/post integrity checks.
+- [ ] 3.3 Write/materialize the complete HEAD-plus-index tree, keep staged governed selection separate from supporting paths, build the index SnapshotInvocationContext, and cover conflicts/intent-to-add/object failures plus pre/post integrity checks.
 - [ ] 3.4 Materialize detached merge-base/head source roots plus rename/deletion facts and pre/post source manifests; clean roots or report UNKNOWN.
 - [ ] 3.5 Materialize the authorized target-tip policy bundle and its source digest; candidate head policy remains shadow-only.
 - [ ] 3.6 Build and validate per-snapshot configuration projections, including the canonical shared identity and side-specific projected digests.
