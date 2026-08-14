@@ -15,7 +15,7 @@ The Requirements module should validate a typed capsule produced by trusted core
 - Permit only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records in H..D.
 - Validate identical exact selectors failed as declared at R, passed at H, and remained passing at distinct D.
 - Validate artifact hashes, runner/toolchain/dependency/environment/plugin/network-policy identities, resource bounds, signed module identity, and verifier epoch without executing Git, pytest, or subprocesses.
-- Reconcile `tdd_chronology` independently from `current_execution`.
+- Reconcile `red_green_chronology` independently from `current_execution`.
 - Fail strict chronology policy as unknown/unproven for every incomplete, mismatched, policy-invalid, unsupported, or untrusted capsule.
 - Keep legacy-ledger reading migration-only and prohibit new generation.
 
