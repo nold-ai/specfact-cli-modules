@@ -16,12 +16,12 @@ requirements:
         intent: "Resolve worktree, index, range, full, or explicit-file scope without ambiguity."
         observable: "Immutable scope evidence identifies the analyzed snapshot and files."
       - case_id: CR14-007
-        scenario_id: immutable-range-analysis-inputs
+        scenario_id: explicit-review-scope-evidence
         method: test
         intent: "Materialize base/head inputs from resolved commit trees and reject mutation-capable range options."
         observable: "Caller-worktree mutation cannot affect range results; manifest mismatch yields UNKNOWN."
       - case_id: CR14-009
-        scenario_id: index-analysis-uses-staged-bytes
+        scenario_id: explicit-review-scope-evidence
         method: test
         intent: "Analyze materialized staged blobs even when the same path has later unstaged edits."
         observable: "Only index tree/blob/content identities affect index findings, score, and status."
@@ -40,7 +40,7 @@ requirements:
         intent: "Classify introduced, fixed, unchanged, and unknown findings under identical analyzers."
         observable: "Introduced blockers block even away from added lines; baseline failures remain unknown."
       - case_id: CR14-010
-        scenario_id: advanced-base-tip-uses-merge-base-baseline
+        scenario_id: differential-base-head-enforcement
         method: test
         intent: "Use the resolved merge-base rather than an advanced base-ref tip as the differential baseline."
         observable: "Target-only post-divergence findings are not misclassified as feature-branch changes."
@@ -73,7 +73,7 @@ requirements:
         intent: "Expose PASS, FAIL, UNKNOWN, and NOT_APPLICABLE with analyzer coverage."
         observable: "No all-passed summary when mandatory evidence is skipped or unknown."
       - case_id: CR14-008
-        scenario_id: versioned-assurance-status-compatibility
+        scenario_id: truthful-review-assurance-status
         method: test
         intent: "Dual-write schema 1.6 assurance into the closed legacy verdict and exit-code projection."
         observable: "UNKNOWN is never green; old reports cannot imply UNKNOWN/NOT_APPLICABLE; malformed 1.6 reports cannot pass."
