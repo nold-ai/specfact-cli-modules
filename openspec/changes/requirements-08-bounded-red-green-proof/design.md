@@ -17,17 +17,17 @@ The versioned capsule requires:
 - B/R/H/D commit and tree identities, B < R < H <= D ancestry facts, and D equality with the delivery identity;
 - B..R, R..H, and H..D changed-path and rename manifests plus canonical digests;
 - accepted red-setup, implementation, and delivery-evidence touchpoint sets;
-- mapping and plan digests, exact selectors, and frozen failing-before evidence identity;
-- red, green-checkpoint, and delivery JUnit digests plus exact selector outcomes;
+- mapping and plan digests, exact selectors, one stable opaque mapped `expected_failure_id` per selector, and frozen failing-before evidence identity;
+- red, green-checkpoint, and delivery JUnit digests plus exact selector outcomes, canonical observed red failure IDs, and their digest;
 - runner, toolchain, dependency, environment, plugin-autoload, network-policy, policy, and verifier identities/results;
 - verifier epoch, timestamps, timeouts/resource bounds, and retained artifact hash links;
 - signed module repository, commit, tree, package version, manifest integrity, signer, and signature identities.
 
-Core asserts Git and execution facts under its pinned verifier. Modules validate schema, canonical hashes, transition classifications, selector equality, outcome rules, trusted module identity, and verifier/policy epoch. Modules do not recompute Git facts or run tests.
+Core asserts Git and execution facts under its pinned verifier. Modules validate schema, canonical hashes, transition classifications, selector equality, exact mapped/observed red failure-identity equality, outcome rules, trusted module identity, and verifier/policy epoch. Modules do not recompute Git facts or run tests.
 
 ### Use three closed transition policies
 
-B..R may contain only declared requirements/specifications/tests/test harness/configuration, the accepted proof mapping, and the failing-before TDD evidence record. It may not contain governed implementation, dependencies, workflows, runners, verifier/policy/schema changes, other generated artifacts, or unclassified paths. The mapping, plan, selectors, path sets, and failing evidence are frozen at R.
+B..R may contain only declared requirements/specifications/tests/test harness/configuration, the accepted proof mapping, and the failing-before TDD evidence record. It may not contain governed implementation, dependencies, workflows, runners, verifier/policy/schema changes, other generated artifacts, or unclassified paths. The mapping, plan, selectors, expected-failure identities, path sets, and failing evidence are frozen at R.
 
 R..H may change only declared implementation touchpoints. A selected test, helper, fixture, conftest, test configuration, dependency lock, proof runner, workflow, mapping, plan, evidence record, policy, schema, or unclassified path invalidates chronology and requires a new R.
 
