@@ -74,7 +74,7 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 
 ### Requirement: Differential Base-Head Enforcement
 
-Range enforcement SHALL analyze the resolved merge-base and head with identical pinned analyzer versions, configuration digests, and policy. The supplied base-ref tip SHALL NOT be used as the analyzer baseline when it differs from the merge base. Stable fingerprints SHALL classify findings as introduced, fixed, unchanged, or unknown. Before fingerprint comparison, the head file anchor for a resolved one-to-one rename SHALL be normalized to the recorded old/base path; copies and unpaired additions SHALL NOT be rename-normalized, and both original paths plus the rename fact SHALL remain in evidence. Changed-line intersection SHALL be evidence only and SHALL NOT be the sole introduction rule.
+Range enforcement SHALL analyze the resolved merge-base and head with identical shared analyzer/configuration identity: analyzer and toolchain identities; trusted target-policy/config source digest; projection algorithm/schema identity; and a canonical logical projection-map digest whose source-root placeholders are independent of either materialized path. Per-snapshot projected-config bytes and digests MAY differ because their absolute roots differ; those digests are materialization evidence and SHALL NOT be compared for raw equality. A mismatch in any shared identity field yields UNKNOWN, while a difference limited to the recorded side-specific root substitutions does not. The supplied base-ref tip SHALL NOT be used as the analyzer baseline when it differs from the merge base. Stable fingerprints SHALL classify findings as introduced, fixed, unchanged, or unknown. Before fingerprint comparison, the head file anchor for a resolved one-to-one rename SHALL be normalized to the recorded old/base path; copies and unpaired additions SHALL NOT be rename-normalized, and both original paths plus the rename fact SHALL remain in evidence. Changed-line intersection SHALL be evidence only and SHALL NOT be the sole introduction rule.
 
 #### Scenario: Advanced base-ref tip does not replace the merge-base baseline
 
@@ -126,11 +126,12 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 
 #### Scenario: Analyzer identity mismatch is unknown
 
-- **GIVEN** merge-base and head analyzer version, toolchain, policy, or configuration identities differ
+- **GIVEN** merge-base and head analyzer/toolchain, target-policy/config source, projection algorithm/schema, or canonical logical projection-map identities differ
 - **WHEN** differential classification is requested
 - **THEN** the affected comparison is UNKNOWN
 - **AND** no finding is classified introduced, fixed, or unchanged from non-identical analyzer inputs
-- **AND** strict enforcement exits non-zero with both identities retained.
+- **AND** strict enforcement exits non-zero with both shared identities and side-specific projected-config digests retained
+- **AND** different projected bytes caused only by the recorded merge-base/head root substitutions do not create a false identity mismatch.
 
 #### Scenario: Introduced blocker outside added lines still blocks
 

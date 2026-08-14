@@ -48,27 +48,43 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 2.13 Add `test_fixable_error_remains_blocking_until_applied` and update existing `test_score_review_single_fixable_error` to expect FAIL; production `scorer.py` remains unchanged.
 - [ ] 2.14 Add `test_report_never_says_all_passed_with_mandatory_unknown`.
 - [ ] 2.15 Add table-driven `test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix` for PASS/FAIL/UNKNOWN/NOT_APPLICABLE under strict and shadow modes, including enforce-to-full normalization, changed/worktree compatibility, and range-plus-changed rejection.
-- [ ] 2.16 Add `test_schema_1_6_missing_assurance_status_is_unknown` and legacy-reader cases proving old PASS/FAIL cannot imply UNKNOWN/NOT_APPLICABLE.
-- [ ] 2.17 Add table-driven `test_ledger_authoritative_assurance_controls_rewards_and_streaks` for schema 1.6 PASS/FAIL/UNKNOWN/NOT_APPLICABLE plus legacy PASS_WITH_ADVISORY. Prove UNKNOWN/NOT_APPLICABLE persist verbatim, apply zero reward/last delta, leave both streaks unchanged, and are accepted by local/Supabase schemas. Add a no-findings UNKNOWN case proving local and Supabase `report_json` plus canonical SHA-256 `report_digest` retain scope/analyzer diagnostics.
-- [ ] 2.18 Add `test_cleanup_enrichment_preserves_schema_1_6_assurance_status`; exercise UNKNOWN with empty findings and prove cleanup forecast refresh preserves schema, assurance, scope/analyzer evidence, legacy projection, and exit code.
-- [ ] 2.19 Add `test_requirements_evidence_attachment_preserves_schema_1_6_assurance_status` in `tests/unit/specfact_code_review/run/test_commands.py`; attach validated Requirements context to an UNKNOWN report and prove schema, assurance, scope/analyzer evidence, legacy projection, and exit code remain unchanged.
-- [ ] 2.20 Collect the exact canonical pytest node ID for every test-authored CR14 scenario, write each selector into `requirements-evidence.yaml`, and rerun strict mapping validation. Do not edit production source in this task.
-- [ ] 2.21 Build the deterministic plan from the accepted mapping and source identity, then write and commit `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json`. Schema version `1` SHALL contain: `change_id`; `checkpoint_parent.commit_sha` and `tree_sha`; `mapping_digest`; `plan.id` and `digest`; sorted `selectors` plus `selector_digest`; sorted `frozen_input_paths` plus `frozen_input_manifest_digest`; and sorted `analyzers[]` entries with `id`, `required`, `version`, `toolchain_digest`, `policy_digest`, and `config_digest`. All digests are canonical SHA-256 values. The parent commit/tree identifies the test-and-mapping checkpoint before this evidence file is added.
-- [ ] 2.22 Verify the committed checkpoint against the current frozen inputs, execute its exact selectors, confirm the expected failing outcomes, and record the exact commands, checkpoint-file digest, and outcomes in `TDD_EVIDENCE.md` before any source edit. Any frozen-input mismatch invalidates the checkpoint and repeats tasks 2.20–2.22. Section 3 is blocked until this task passes.
+- [ ] 2.16 Add `test_schema_1_6_consumer_compatibility_matrix_is_closed` in `tests/unit/specfact_code_review/run/test_findings.py`; validate the exact checked-in package resource, its four canonical reports, permitted legacy projections, strict/shadow exits, invalid mismatch cases, and canonical digest.
+- [ ] 2.17 Add `test_schema_1_6_missing_assurance_status_is_unknown` and legacy-reader cases proving old PASS/FAIL cannot imply UNKNOWN/NOT_APPLICABLE.
+- [ ] 2.18 Add table-driven `test_ledger_authoritative_assurance_controls_rewards_and_streaks` for schema 1.6 PASS/FAIL/UNKNOWN/NOT_APPLICABLE plus legacy PASS_WITH_ADVISORY. Prove UNKNOWN/NOT_APPLICABLE persist verbatim, apply zero reward/last delta, leave both streaks unchanged, and are accepted by local/Supabase schemas. Add a no-findings UNKNOWN case proving local and Supabase `report_json` plus canonical SHA-256 `report_digest` retain scope/analyzer diagnostics.
+- [ ] 2.19 Add `test_cleanup_enrichment_preserves_schema_1_6_assurance_status`; exercise UNKNOWN with empty findings and prove cleanup forecast refresh preserves schema, assurance, scope/analyzer evidence, legacy projection, and exit code.
+- [ ] 2.20 Add `test_requirements_evidence_attachment_preserves_schema_1_6_assurance_status` in `tests/unit/specfact_code_review/run/test_commands.py`; attach validated Requirements context to an UNKNOWN report and prove schema, assurance, scope/analyzer evidence, legacy projection, and exit code remain unchanged.
+- [ ] 2.21 Collect the exact canonical pytest node ID for every test-authored CR14 scenario, write each selector into `requirements-evidence.yaml`, and rerun strict mapping validation. Do not edit production source in this task.
+- [ ] 2.22 Build the deterministic plan from the accepted mapping and source identity, then write and commit `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json`. Schema version `1` SHALL contain: `change_id`; `checkpoint_parent.commit_sha` and `tree_sha`; `mapping_digest`; `plan.id` and `digest`; sorted `selectors` plus `selector_digest`; sorted `frozen_input_paths` plus `frozen_input_manifest_digest`; and sorted `analyzers[]` entries with `id`, `required`, `version`, `toolchain_digest`, `policy_digest`, and `config_digest`. All digests are canonical SHA-256 values. The parent commit/tree identifies the test-and-mapping checkpoint before this evidence file is added.
+- [ ] 2.23 Verify the committed checkpoint against the current frozen inputs, execute its exact selectors, confirm the expected failing outcomes, and record the exact commands, checkpoint-file digest, and outcomes in `TDD_EVIDENCE.md` before any source edit. Any frozen-input mismatch invalidates the checkpoint and repeats tasks 2.21–2.23. Section 3 is blocked until this task passes.
 
 ## 3. Minimal implementation
 
-- [ ] 3.1 Implement the explicit worktree/index/range/full resolver and immutable scope evidence.
-- [ ] 3.2 In `scope.py`, validate the authenticated `expected_target_tip` against the resolved base ref, materialize the exact index snapshot, detached merge-base/head source trees, and authorized target-base-tip policy tree; produce and pre/post verify source/policy/config-projection manifests, reject mismatched/moved/untrusted target identity or unsafe projected paths as UNKNOWN, and clean temporary roots; no other component may invoke Git.
-- [ ] 3.3 Reserve range for complete governed PR selection: reject positional files, exclude-tests, every focus facet, path filters, no-tests, level filters, explicit range-plus-changed, and fix/preview/mutation before analysis; resolve omitted range enforcement to strict full and update public AI instructions to the executable complete-range command.
-- [ ] 3.4 Build one `SnapshotInvocationContext` per range side; enforce snapshot-root cwd, manifest-bound imports, sealed non-editable toolchain/dependencies, sanitized Python/pytest environment, pinned plugins, external output root, and UNKNOWN on context/import mismatch before analyzer execution.
-- [ ] 3.5 Define `pr-range-v1` as a schema-versioned runner-owned profile with the exact required/conditional membership in the spec, bind it to the report/policy digest, derive per-snapshot eligible inputs for every member, record manifest-bound NOT_APPLICABLE for structurally empty sides, make the contract adapter surface CrossHair timeout and documented process-error exits as failed coverage, model `targeted-pytest-coverage` with per-snapshot required/NOT_APPLICABLE outcomes and FAIL/UNKNOWN separation, materialize one sealed authorized target-tip policy bundle, and inject explicit Ruff/Pylint/Semgrep policy plus distinct manifest-bound basedpyright projections into both isolated source runs; candidate head config is shadow-only and any required gap, unrecorded empty-input return, discovery fallback, injection failure, or identity mismatch yields UNKNOWN.
-- [ ] 3.6 Add stable fingerprints and introduced/fixed/unchanged/unknown classification only after task 3.5 proves identical identities; normalize head file anchors through resolved one-to-one rename facts before matching.
-- [ ] 3.7 Add mandatory analyzer coverage evidence.
-- [ ] 3.8 Separate finding status, differential state, autofix availability, and blocking policy.
-- [ ] 3.9 Add schema 1.6 `assurance_status`, versioned legacy reading, closed dual-write projection, and strict/shadow exit matrix; make every post-analysis enrichment/model-copy path—including cleanup refresh and Requirements-context attachment—preserve these authoritative fields.
-- [ ] 3.10 Update the existing ledger client/model, local reader, Supabase DDL constraints/columns, focused ledger tests/contracts, and ledger docs so schema 1.6 UNKNOWN/NOT_APPLICABLE are persisted neutral states while pre-1.6 behavior remains compatible. Persist the complete canonical report in `report_json` with `report_digest`; legacy rows may leave both nullable.
-- [ ] 3.11 Update CLI behavior, both canonical agent-rule files, module/bundle guides, generated instructions, updater/bundled skill and updater-generated tracked skill copies so merge assurance uses complete range/base/head/full while staged positional and simplification worktree workflows are explicitly non-PR. Update exactly `tests/cli-contracts/specfact-code-review-run.scenarios.yaml` for static argv/report cases; retain `changed` only as a deprecated worktree alias and keep stateful Git setup in the named unit/e2e modules.
+Each item consumes only the named failing tests from Section 2 and must finish green before the next item starts.
+
+- [ ] 3.1 Add request/status types for worktree, index, range, full, and explicit-files scope; delegate all Git discovery from `run/commands.py` to `scope.py`.
+- [ ] 3.2 Resolve full base/head/merge-base identities and validate `expected_target_tip` plus trusted-context digest; mismatch is UNKNOWN.
+- [ ] 3.3 Materialize and manifest the exact index snapshot, including conflicts/intent-to-add/object failures and pre/post integrity checks.
+- [ ] 3.4 Materialize detached merge-base/head source roots plus rename/deletion facts and pre/post source manifests; clean roots or report UNKNOWN.
+- [ ] 3.5 Materialize the authorized target-tip policy bundle and its source digest; candidate head policy remains shadow-only.
+- [ ] 3.6 Build and validate per-snapshot configuration projections, including the canonical shared identity and side-specific projected digests.
+- [ ] 3.7 Build one `SnapshotInvocationContext` per side with snapshot cwd/import roots, sealed non-editable toolchain/dependencies, sanitized Python/pytest environment, pinned plugins, external output root, and context digest.
+- [ ] 3.8 Reject every range narrowing/mutation combination and normalize omitted enforcement to strict full before materialization.
+- [ ] 3.9 Emit UNKNOWN for unresolved scope/context and NOT_APPLICABLE only for manifest-proven empty range or per-snapshot analyzer input.
+- [ ] 3.10 Define the exact runner-owned `pr-range-v1` membership and serialize per-snapshot required/conditional coverage facts.
+- [ ] 3.11 Make CrossHair timeout and documented process-error exits failed contracts coverage while retaining parsed counterexamples as findings.
+- [ ] 3.12 Execute targeted pytest/coverage per snapshot with explicit absent-side, FAIL, UNKNOWN, selector, environment, and artifact evidence.
+- [ ] 3.13 Update Ruff invocation only for explicit target-policy config or isolated mode.
+- [ ] 3.14 Update Pylint invocation only for explicit target-policy rcfile/default plus snapshot invocation context.
+- [ ] 3.15 Update basedpyright invocation only for per-snapshot projected project files and sealed toolchain paths.
+- [ ] 3.16 Update both Semgrep passes only for explicit target-policy bundle roots and surfaced adapter failures.
+- [ ] 3.17 Implement stable base/head fingerprint classification, including one-to-one rename normalization and shared-identity validation.
+- [ ] 3.18 Separate finding lifecycle, differential state, autofix availability, waiver reference, and derived blocking policy in the canonical model.
+- [ ] 3.19 Add schema 1.6 authoritative status, legacy projection, normalized enforcement, and strict/shadow exit behavior.
+- [ ] 3.20 Preserve schema 1.6 fields through cleanup refresh and Requirements-context attachment without verdict fusion.
+- [ ] 3.21 Add and validate the closed consumer compatibility matrix package resource; bind its digest in package metadata/tests.
+- [ ] 3.22 Update ledger model/local persistence and neutral reward/streak behavior for UNKNOWN/NOT_APPLICABLE while retaining legacy reads.
+- [ ] 3.23 Migrate Supabase constraints and canonical `report_json`/`report_digest` persistence; preserve legacy rows.
+- [ ] 3.24 Update CLI contracts and canonical agent/module/bundle/generated/updater/skill guidance to complete PR range; keep staged positional and simplification worktree guidance explicitly non-PR.
 
 ## 4. Release and adoption
 
@@ -78,7 +94,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 4.4 Re-run the complete feature-branch gates and merge the reviewed implementation PR to `dev` only when schema 1.6 consumer compatibility is proven.
 - [ ] 4.5 Observe the canonical `.github/workflows/publish-modules.yml` run and review its `auto/publish-dev-<run-id>` PR.
 - [ ] 4.6 Require the generated signed manifest/archive/checksum/sidecar/index, filesystem signature/version-bump verification, and full quality matrix before merging the auto-publish PR.
-- [ ] 4.7 After a separate core adoption change is accepted, give core the final merged commit/tree, module version, schema 1.6 contract, archive/checksum/signature, signer, workflow, and auto-publish PR identities. Core PR CI SHALL pass full base/head refs plus the authenticated expected target-tip commit/tree/context from the trusted GitHub PR or merge-queue event, require the reported expected/resolved target-tip, merge-base, and head identities plus `assurance_kind=pr_range`, independently compare them to that event context, and migrate in shadow, warning, then enforce mode.
+- [ ] 4.7 After the signed consumer compatibility matrix passes and a separate core adoption change is accepted, give core the final merged commit/tree, module version, schema 1.6 contract and compatibility-matrix digest, archive/checksum/signature, signer, workflow, and auto-publish PR identities. The core PR SHALL keep `scripts/pre_commit_code_review.py` limited to `explicit_files` but make it consume authoritative schema 1.6 status/exit fields; a separate PR-range consumer SHALL reject any report or code path that cannot consume them. Core PR CI SHALL pass full base/head refs plus the authenticated expected target-tip commit/tree/context from the trusted GitHub PR or merge-queue event, require the reported expected/resolved target-tip, merge-base, and head identities plus `assurance_kind=pr_range`, independently compare them to that event context, and migrate in shadow, warning, then enforce mode.
 - [ ] 4.8 After implementation and signed handoff merge, run exactly `openspec archive code-review-14-scope-truth-and-differential-enforcement` from the repository root; never move the change manually.
 
 ## Prohibited shortcuts
@@ -131,6 +147,7 @@ Analyzer configuration and failure propagation:
 
 Report truth:
 
+- New exactly `packages/specfact-code-review/src/specfact_code_review/resources/contracts/review-report-schema-1.6-consumer-matrix.json` for the closed signed producer/consumer status-projection-exit contract; no other compatibility fixture is allowed.
 - `packages/specfact-code-review/src/specfact_code_review/run/findings.py` remains the only report/finding model; do not create a parallel model. `fixable` must not affect `is_blocking()`.
 - `packages/specfact-code-review/src/specfact_code_review/run/cleanup_evidence.py` only to preserve the incoming schema-1.6 report/status/evidence fields while refreshing cleanup evidence; cleanup algorithms and forecast semantics are out of scope.
 - `tests/unit/specfact_code_review/run/test_cleanup_evidence.py` only for the schema/status preservation regression.
@@ -146,9 +163,9 @@ First-party ledger consumer:
 End-to-end/docs/release:
 
 - `tests/e2e/specfact_code_review/test_review_run_e2e.py`, the CLI-contract YAML, and `docs/bundles/code-review/run.md`.
-- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml` only in task 2.20 to add exact collected selectors and freeze their mapping identity.
-- New exactly `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json` in task 2.21 with only the closed schema named there.
-- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md` for acceptance task A.2, task 2.22 failing evidence, and later verified green evidence.
+- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml` only in task 2.21 to add exact collected selectors and freeze their mapping identity.
+- New exactly `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json` in task 2.22 with only the closed schema named there.
+- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md` for acceptance task A.2, task 2.23 failing evidence, and later verified green evidence.
 - `CHANGELOG.md` and `packages/specfact-code-review/module-package.yaml` only after behavior passes for the required release note, version, and compatibility metadata.
 - Generated docs/registry/signatures only after tests pass; use existing generators and never hand-edit archives.
 
@@ -156,4 +173,4 @@ Explicitly forbidden:
 
 - `packages/specfact-code-review/src/specfact_code_review/run/forecast.py`, `packages/specfact-code-review/src/specfact_code_review/run/scorer.py`, and detector/rule-semantic changes under `specfact_code_review/tools/`; only the exact adapter configuration/failure plumbing above is allowed;
 - the Requirements package and archived OpenSpec changes;
-- any new source/test file other than the four exact `scope.py`/`differential.py` files above.
+- any new source/test/resource file other than the four exact `scope.py`/`differential.py` files and the one exact schema 1.6 consumer-matrix resource above.

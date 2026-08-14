@@ -73,7 +73,7 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Project target-policy basedpyright paths independently onto each immutable source snapshot."
-        observable: "Relative imports resolve only against the corresponding snapshot and shared sealed toolchain; unsupported, escaping, policy-bundle/worktree, or missing paths yield UNKNOWN."
+        observable: "Shared policy/toolchain/projection identities match while side-specific projected digests may differ only by recorded root bindings; relative imports stay inside the corresponding snapshot; true shared-identity drift or unsafe paths yield UNKNOWN."
       - case_id: CR14-029
         scenario_id: differential-base-head-enforcement
         method: test
@@ -112,6 +112,11 @@ requirements:
         method: test
         intent: "Dual-write schema 1.6 assurance into the closed legacy verdict, normalized enforcement-mode, and exit-code projection."
         observable: "UNKNOWN is never green; old reports cannot imply UNKNOWN/NOT_APPLICABLE; malformed 1.6 reports cannot pass."
+      - case_id: CR14-030
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Publish one signed machine-readable compatibility matrix before any core consumer adoption."
+        observable: "Four canonical statuses bind legacy projections and strict/shadow exits; mismatches are invalid; explicit-files and pr-range consumers must pass the exact matrix digest."
       - case_id: CR14-013
         scenario_id: truthful-review-assurance-status
         method: test
