@@ -89,6 +89,11 @@ requirements:
         method: test
         intent: "Prevent untrusted analyzer or imported candidate code from reading or modifying another evidence root."
         observable: "The pinned `linux-bwrap-v1` capability-probed sandbox exposes only the active read-only snapshot, exact read-only config/toolchain inputs, and process-private writable outputs; cross-root, credential, descriptor, and network access is denied, artifacts are sealed after exit, and unavailable or failed isolation yields UNKNOWN."
+      - case_id: CR14-040
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "State the trust boundary for pytest, CrossHair, and other candidate-executing observations without inventing hostile-code proof."
+        observable: "Runtime artifacts are labelled candidate-executed observations under the explicit non-adversarial-candidate assumption; sealing claims post-collection immutability only, and a consumer requiring adversarial runtime evidence receives UNKNOWN/no PASS."
       - case_id: CR14-034
         scenario_id: differential-base-head-enforcement
         method: test
@@ -136,7 +141,7 @@ requirements:
         scenario_id: truthful-review-assurance-status
         method: test
         intent: "Publish one signed machine-readable compatibility matrix before any core consumer adoption."
-        observable: "Four canonical statuses bind legacy projections and strict/shadow exits; mismatches are invalid; explicit-files and pr-range consumers must pass the exact matrix digest."
+        observable: "Four canonical statuses bind legacy projections, strict/shadow exits, and runtime-trust fields; hostile-candidate policy is UNKNOWN; mismatches are invalid; explicit-files and pr-range consumers must pass the exact matrix digest."
       - case_id: CR14-013
         scenario_id: truthful-review-assurance-status
         method: test

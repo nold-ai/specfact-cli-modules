@@ -35,7 +35,8 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **GIVEN** the schema 1.6 Code Review package is built for release
 - **WHEN** producer and consumer compatibility is validated
 - **THEN** the checked-in signed consumer matrix contains canonical PASS, FAIL, UNKNOWN, and NOT_APPLICABLE reports
-- **AND** each case binds required authoritative fields, permitted legacy projection, and strict/shadow exit behavior
+- **AND** each case binds required authoritative fields—including runtime trust model, adversarial-runtime capability, and per-member observation trust—permitted legacy projection, and strict/shadow exit behavior
+- **AND** the matrix contains a hostile-candidate-policy case whose candidate-executing evidence and aggregate status are UNKNOWN
 - **AND** contradictory status, legacy verdict, or exit combinations are invalid cases
 - **AND** core's staged pre-commit helper remains `explicit_files` while consuming authoritative status
 - **AND** no core PR-range consumer is accepted unless it passes the exact released matrix digest.

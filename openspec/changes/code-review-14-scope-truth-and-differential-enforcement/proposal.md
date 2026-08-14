@@ -60,6 +60,7 @@ The first signed C14 module release SHALL set `core_compatibility: '>=0.56.0,<1.
 - Perform LLM review or claim semantic completeness.
 - Infer historical pytest dependency closure.
 - Implement the global governance evidence graph.
+- Claim hostile-candidate resistance for pytest, CrossHair, or any analyzer that executes candidate Python. CR14 isolates other evidence roots but does not make candidate-authored runtime output an independent security attestation.
 
 ## Source Tracking
 
