@@ -102,6 +102,11 @@ requirements:
         method: test
         intent: "Exercise static argv/report contracts for explicit scope sources, full-ref requirements, assurance/enforcement projection, positional-file PR downgrade rejection, and invalid combinations."
         observable: "Static CLI fixtures reject ambiguous inputs without claiming stateful Git topology or analyzer evidence."
+      - case_id: CR14-014
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Make range defaults and generated AI instructions executable under the normalized enforcement contract."
+        observable: "Omitted range enforcement becomes strict full; explicit range-plus-changed is rejected; instructions use range refs and explicit full enforcement."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
     rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."
     stakeholder_refs:

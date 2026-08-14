@@ -25,6 +25,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 1.8 Add `test_range_analysis_uses_materialized_commit_snapshots` with caller-worktree mutation and pre/post manifest mismatch cases.
 - [ ] 1.9 Add `test_index_and_range_reject_fix_preview_and_mutation_options`.
 - [ ] 1.10 Add `test_index_scope_reads_staged_blobs_not_unstaged_worktree` with conflicting staged/unstaged bytes at the same path.
+- [ ] 1.11 Add `test_range_scope_omitted_enforcement_defaults_to_full` and update existing `test_review_run_instructions_prints_ai_workflow_without_running_review` to require the executable range/base/head/`--enforcement full` workflow; retain explicit range-plus-changed rejection.
 
 ## 2. Failing differential/report tests
 
@@ -48,7 +49,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 
 - [ ] 3.1 Implement the explicit worktree/index/range/full resolver and immutable scope evidence.
 - [ ] 3.2 In `scope.py`, materialize the exact index snapshot and detached merge-base/head commit trees, produce and pre/post verify selected-input manifests, and clean temporary roots; no other component may invoke Git.
-- [ ] 3.3 Reject positional-file downgrade for PR-range policy and reject fix/preview/mutation options in index and range snapshot modes.
+- [ ] 3.3 Reject positional-file downgrade for PR-range policy, resolve omitted range enforcement to strict full while rejecting explicit range-plus-changed, update public AI instructions to the executable range command, and reject fix/preview/mutation options in index and range snapshot modes.
 - [ ] 3.4 Add unknown/not-applicable handling before analyzer execution.
 - [ ] 3.5 Implement isolated symmetric merge-base/head analyzer execution with identical immutable analyzer-version, toolchain, policy, and configuration identities; any identity mismatch yields UNKNOWN.
 - [ ] 3.6 Add stable fingerprints and introduced/fixed/unchanged/unknown classification only after task 3.5 proves identical identities; normalize head file anchors through resolved one-to-one rename facts before matching.
@@ -83,6 +84,7 @@ CLI/request parsing:
 
 - `packages/specfact-code-review/src/specfact_code_review/review/commands.py`.
 - `packages/specfact-code-review/src/specfact_code_review/run/commands.py` only for request translation/validation and consumption of `ScopeResolution`.
+- `tests/unit/specfact_code_review/review/test_commands.py` only to replace the obsolete positional-file PR instruction expectation with the executable range/base/head/full workflow.
 - `tests/unit/specfact_code_review/run/test_commands.py` and `tests/cli-contracts/specfact-code-review-run.scenarios.yaml`.
 
 Scope:

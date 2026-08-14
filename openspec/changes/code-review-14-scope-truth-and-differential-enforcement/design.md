@@ -78,7 +78,7 @@ Schema `1.6` adds authoritative `assurance_status: PASS | FAIL | UNKNOWN | NOT_A
 
 For one compatibility release, `overall_verdict` remains a non-authoritative legacy projection: PASS maps to PASS or PASS_WITH_ADVISORY, FAIL maps to FAIL, UNKNOWN maps conservatively to FAIL, and NOT_APPLICABLE maps to PASS_WITH_ADVISORY plus explicit no-impact text. Non-shadow exits for those statuses are respectively 0, 1, 1, and 0; shadow always exits 0 while preserving the authoritative status.
 
-Legacy `enforcement_mode` is the normalized policy request, not a scope label: `enforce` becomes `full`; `full`, `changed`, and `shadow` remain those values. `changed` is restricted to the one-release changed/worktree compatibility path. Range plus changed-mode is invalid; strict range writes `full`, shadow range writes `shadow`, and range identity lives only in `scope_evidence`.
+Legacy `enforcement_mode` is the normalized policy request, not a scope label: `enforce` becomes `full`; `full`, `changed`, and `shadow` remain those values. `changed` is restricted to the one-release changed/worktree compatibility path. The parser represents an omitted enforcement option distinctly from an explicit value: omitted plus range normalizes to strict `full`, while omitted plus the deprecated changed/worktree path retains `changed`. Explicit range plus changed-mode is invalid; strict range writes `full`, shadow range writes `shadow`, and range identity lives only in `scope_evidence`.
 
 ### Preserve assurance truth in the first-party ledger
 

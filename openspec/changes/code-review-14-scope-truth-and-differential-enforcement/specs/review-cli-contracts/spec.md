@@ -34,9 +34,10 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **GIVEN** schema 1.6 dual-writing is enabled
 - **WHEN** enforcement and scope are serialized
 - **THEN** request mode enforce normalizes to legacy enforcement_mode full
-- **AND** full, changed, and shadow retain their legacy values
+- **AND** an omitted enforcement option with range scope normalizes to strict full, while omission on the deprecated changed/worktree path retains changed
+- **AND** full, changed, and shadow retain their legacy values when explicitly valid
 - **AND** changed mode is accepted only with the deprecated changed/worktree compatibility path
-- **AND** range plus changed mode is rejected
+- **AND** explicit range plus changed mode is rejected
 - **AND** strict range writes enforcement_mode full, shadow range writes shadow, and scope_evidence alone identifies range.
 
 #### Scenario: Versioned readers never infer new truth from old fields
@@ -78,6 +79,6 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **GIVEN** positional files are supplied to a consumer or policy that requires pull-request range assurance
 - **WHEN** the request is validated
 - **THEN** it is rejected before analysis because base, head, and merge-base evidence is absent
-- **AND** the supported alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref>`
+- **AND** the supported alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref> --enforcement full`
 - **AND** positional files remain valid for explicitly labelled non-PR `assurance_kind=explicit_files` runs.
 
