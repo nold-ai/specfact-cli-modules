@@ -206,6 +206,11 @@ requirements:
         method: test
         intent: "Surface a documented CrossHair tool/process-error exit without parsed findings as failed analyzer coverage."
         observable: "Exit code 2 retains exit/stderr diagnostics and yields UNKNOWN, while parsed counterexamples remain findings."
+      - case_id: CR14-038
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep mandatory Semgrep coverage usable when a consumer repository does not vendor the module clean-code policy."
+        observable: "Both snapshots receive the same explicit clean-code payload from the exact signed installed module artifact with package and payload digests; source/worktree discovery is disabled, semgrep-bugs remains conditional on target policy, and missing or invalid fallback evidence yields UNKNOWN."
       - case_id: CR14-020
         scenario_id: mandatory-analyzer-coverage
         method: test
