@@ -13,7 +13,7 @@ requirements:
         scenario_id: lifecycle-aware-requirements-readiness
         method: test
         intent: Report proposal readiness without an execution claim.
-        observable: JSON report separates gate decision and implementation evidence.
+        observable: Mapping sidecar remains schema v2; corrected finalized report is schema v3 with separate gate, implementation, current_execution, and chronology fields.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:mapping-acceptance-provenance:
     rationale: Automation must begin from requirements accepted against their reviewed mapping.
     stakeholder_refs:
@@ -74,7 +74,7 @@ requirements:
       - case_id: lifecycle-chronology-independent
         scenario_id: historical-chronology-is-a-separate-claim
         method: test
-        intent: Preserve a valid current-run observation when no R08 replay capsule is supplied.
+        intent: Emit finalized report schema v3 with a valid current-run observation and mandatory chronology placeholder when no R08 replay capsule is supplied.
         observable: current_execution is final while red_green_chronology is the canonical R07 not_evaluated/capsule_not_supplied placeholder; R07 exposes no chronology request/capsule input or other chronology status.
   openspec:requirements-07-scenario-runtime-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
     rationale: Code Review must consume finalized Requirements evidence as provenance without fusing delivery verdicts.
@@ -119,5 +119,5 @@ requirements:
       - case_id: review-context-missing-chronology-claim
         scenario_id: finalized-requirements-evidence-review-context
         method: test
-        intent: Reject corrected-schema Requirements evidence that omits the mandatory red_green_chronology claim object.
-        observable: Truly legacy payloads use the compatibility reader; corrected input cannot omit the canonical not_evaluated claim.
+        intent: Reject finalized report schema v3 Requirements evidence that omits the mandatory red_green_chronology claim object.
+        observable: Truly legacy payloads use the compatibility reader; schema v3 cannot omit the canonical not_evaluated claim; finalized report v2 is routed only through legacy compatibility.

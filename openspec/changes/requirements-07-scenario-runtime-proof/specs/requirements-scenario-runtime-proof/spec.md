@@ -2,7 +2,7 @@
 
 ### Requirement: Lifecycle-Aware Requirements Readiness
 
-The Requirements module SHALL distinguish planned readiness, mapping acceptance, test-authored planning, current execution, and historical TDD chronology. Current execution and chronology SHALL be independent claims; neither may silently imply or overwrite the other. The corrected R07 report SHALL always emit a `red_green_chronology` placeholder claim object with `status: not_evaluated` and `reason: capsule_not_supplied`. R07 SHALL expose no chronology-request or capsule input and SHALL NOT emit chronology pass, fail, or unknown; R08 owns those later MODIFIED semantics.
+The Requirements module SHALL distinguish planned readiness, mapping acceptance, test-authored planning, current execution, and historical TDD chronology. Current execution and chronology SHALL be independent claims; neither may silently imply or overwrite the other. The corrected R07 finalized report SHALL use `schema_version: "3"` and always emit a `red_green_chronology` placeholder claim object with `status: not_evaluated` and `reason: capsule_not_supplied`. R07 SHALL expose no chronology-request or capsule input and SHALL NOT emit chronology pass, fail, or unknown; R08 owns those later MODIFIED semantics. Mapping sidecars SHALL remain schema v2. Finalized report schema v2 SHALL be read only through the explicit legacy compatibility path; a v3 report missing either mandatory claim object SHALL be rejected as malformed v3.
 
 #### Scenario: Proposal mapping is complete but not executed
 

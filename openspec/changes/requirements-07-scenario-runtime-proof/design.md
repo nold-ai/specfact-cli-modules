@@ -11,7 +11,7 @@ The previous schema used one linear maturity ladder where a final passing curren
 - Keep proposal/readiness/mapping/selector planning deterministic.
 - Finalize current-run execution from exact canonical JUnit identities.
 - Represent historical chronology separately and honestly.
-- Preserve both mandatory corrected-schema claim objects as Code Review provenance without verdict fusion.
+- Preserve both mandatory schema-v3 claim objects as Code Review provenance without verdict fusion.
 - Keep compatibility explicit and migration-only.
 
 ### Non-Goals
@@ -22,6 +22,10 @@ The previous schema used one linear maturity ladder where a final passing curren
 - Make Requirements evidence change Code Review scores or exits.
 
 ## Decisions
+
+### Version the corrected finalized report explicitly
+
+The mapping sidecar remains `schema_version: "2"`; this change does not alter mapping schema. The finalized Requirements report increments from `schema_version: "2"` to `schema_version: "3"`. A v2 finalized report is routed only through the legacy compatibility reader and may omit the new claim objects. A v3 report MUST contain both claim objects and all v3 provenance; missing fields are malformed v3, never reinterpreted as legacy. Unsupported future versions remain rejected.
 
 ### Use two independent claim objects
 
@@ -58,7 +62,7 @@ Do not add Git orchestration, pytest execution, or static import/plugin/configur
 ## Rollout and Rollback
 
 1. Add failing schema and reconciliation tests.
-2. Dual-read old reports and dual-write the corrected fields during one compatibility release.
+2. Dual-read finalized report schema v2 and v3 during one compatibility release; write only schema v3 for corrected R07 output while leaving mapping sidecars at schema v2.
 3. Publish a signed release for core adoption.
 4. Remove generation of new legacy-ledger evidence after core migrates.
 5. Roll back by disabling the new writer while preserving every already-written `current_execution` and `red_green_chronology` object byte-for-byte. The old reader must treat unknown corrected fields as opaque provenance and must never reinterpret them as legacy chronology.

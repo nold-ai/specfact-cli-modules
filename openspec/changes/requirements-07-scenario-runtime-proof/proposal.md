@@ -9,9 +9,10 @@ This conflation pushed core toward static inference of every pytest-determining 
 ## What Changes
 
 - Preserve lifecycle planning, accepted mappings, deterministic exact selector plans, and current-run JUnit reconciliation.
+- Advance only the finalized Requirements report from schema v2 to v3; mapping sidecars remain schema v2. Finalized-report v2 uses the legacy reader, while v3 requires both corrected claim objects.
 - Add a first-class `current_execution` result that can be finalized from the current plan and JUnit without historical evidence.
 - Stop deriving `passing-after-red` from current-run pass or generic maturity.
-- Remove new use of the R07 legacy-ledger migration path; keep old payload reading only for explicitly labelled compatibility.
+- Remove new use of the R07 legacy-ledger migration path; keep finalized-report v2 reading only for explicitly labelled compatibility and reject malformed v3 instead of treating it as legacy.
 - Accept finalized current-run Requirements evidence as Code Review provenance without requiring a historical proof basis.
 - Move trusted historical chronology to `requirements-08-bounded-red-green-proof`.
 
@@ -20,12 +21,12 @@ This conflation pushed core toward static inference of every pytest-determining 
 ### Modified Capabilities
 
 - `requirements-scenario-runtime-proof`: Plan and reconcile exact current-run selector evidence independently from chronology.
-- `requirements-proof-review-context`: Require both corrected-schema claim objects, preserve the optional chronology attestation as provenance, and prevent verdict fusion.
+- `requirements-proof-review-context`: Require both finalized-report schema-v3 claim objects, preserve the chronology placeholder as provenance, and prevent verdict fusion.
 
 ## Impact
 
 - Planning artifacts only in this commit; no package source, tests, prompts, registry, version, signature, or generated docs change.
-- A later implementation requires a signed Requirements module release before core adopts the corrected schema.
+- A later implementation requires a signed Requirements module release before core adopts finalized report schema v3.
 - Backward compatibility must preserve reading existing reports while making their historical basis explicit.
 - Rollback is lossless: disable only new-field writing, preserve already-written `current_execution` and `red_green_chronology` objects, and require an old-reader fixture proving they remain opaque rather than being reinterpreted as legacy chronology. Do not relabel current-run results as historical proof.
 

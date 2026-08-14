@@ -8,6 +8,7 @@ The Requirements module should validate a typed capsule produced by trusted core
 
 ## What Changes
 
+- Advance finalized Requirements reports from R07 schema v3 to R08 schema v4 while leaving mapping sidecars at schema v2. Finalized report v2 is legacy-only; v3 is explicit R07 compatibility; v4 requires the request state, both claims, and R08 provenance.
 - Add a versioned historical replay capsule binding B/R/H/D commits and trees, structural B < R < H <= D ancestry, and D equality with the delivery identity. A passing chronology additionally requires distinct H and D (`H < D`); `D = H` produces `status: unknown`; assurance remains unproven.
 - Validate complete B..R, R..H, and H..D changed-path/rename manifests and digests against the accepted red-setup, implementation, and delivery-evidence declarations.
 - Require the accepted proof mapping, failing-before `TDD_EVIDENCE.md` record, and governed `CHANGE_VALIDATION.md` pre-R readiness-validation record in B..R. Freeze mapping, plan, selectors, path sets, expected-failure identities, and the exact failing/readiness section bytes and digests at R; validate their byte-identical R/D preservation.
@@ -24,13 +25,13 @@ The Requirements module should validate a typed capsule produced by trusted core
 ### New Capabilities
 
 - `requirements-bounded-red-green-proof`: Validate a trusted core B/R/H/D replay capsule and emit a bounded historical chronology claim.
-- `requirements-proof-review-context`: Require the corrected-schema chronology claim object, retain its optional R08 attestation alongside current execution, and keep both provenance-only.
+- `requirements-proof-review-context`: Require the schema-v4 chronology claim object, retain its optional R08 attestation alongside current execution, and keep both provenance-only.
 
 ## Impact
 
 - Planning artifacts only; no package, tests, registry, version, signature, prompts, or generated docs change in this commit.
 - The paired core R08 implementation owns Git/worktree/test execution and must use a signed modules release.
-- Backward-compatible report evolution is required for existing R07 consumers.
+- Backward-compatible report evolution is explicit: read finalized report v2 as legacy, v3 as R07 compatibility, and v4 as R08; never infer the version from missing fields.
 - Later implementation changes package/docs/changelog metadata on its feature branch. After that PR merges to `dev`, the canonical `publish-modules.yml` workflow—not a local wrapper—generates signed manifest/registry/archive/checksum/sidecar changes in a separate auto-publish PR. The initial validator release makes no self-chronology claim.
 - Rollback: disable chronology reconciliation while preserving corrected R07 current-run evidence and every already-written independent claim object as opaque provenance; no old reader may reinterpret corrected chronology as a legacy basis.
 

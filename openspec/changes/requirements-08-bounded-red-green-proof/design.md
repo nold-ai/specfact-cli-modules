@@ -6,13 +6,17 @@ B, R, and H are the three proof commits: merge base, red checkpoint, and green i
 
 ## Decisions
 
+### Advance the finalized report to schema v4
+
+R08 increments the finalized Requirements report from R07 schema v3 to `schema_version: "4"` because it adds the explicit chronology request and capsule/attestation semantics. Mapping sidecars remain schema v2. Finalized report v2 remains legacy-only; v3 is the corrected R07 compatibility format with both claims and no chronology-request field; v4 requires `chronology_request`, both claims, and all R08 provenance. A v3 report is normalized as compatibility `not_requested` only because the immutable v3 contract cannot express a chronology request, and the source version remains visible. Field absence never downgrades v4 to v3 or v2.
+
 ### Keep current execution and chronology independent
 
 The report carries separate `current_execution` and `red_green_chronology` claims. Chronology may reference current execution but cannot replace, erase, inflate, or downgrade it. A valid current run, when chronology was not requested and no capsule was supplied, remains a valid current observation; the mandatory chronology claim object uses `status: not_evaluated` with `reason: capsule_not_supplied`.
 
 ### Make chronology intent an explicit input
 
-Reconciliation accepts the versioned `chronology_request` enum `not_requested|required`; the CLI exposes `--chronology-request not-requested|required` and defaults to `not-requested` for backward-compatible current-only calls. `not_requested` plus no capsule emits the canonical not-evaluated claim. `required` plus no capsule emits unknown and fails strict chronology policy. A capsule is accepted only with `required`; `not_requested` plus a capsule is rejected as contradictory input. Absence of a capsule is never used to guess caller intent.
+Finalized report schema v4 reconciliation accepts the versioned `chronology_request` enum `not_requested|required`; the CLI exposes `--chronology-request not-requested|required` and defaults to `not-requested` for backward-compatible current-only calls. `not_requested` plus no capsule emits the canonical not-evaluated claim. `required` plus no capsule emits unknown and fails strict chronology policy. A capsule is accepted only with `required`; `not_requested` plus a capsule is rejected as contradictory input. Absence of a capsule is never used to guess caller intent.
 
 ### Validate a content-addressed B/R/H/D capsule
 
