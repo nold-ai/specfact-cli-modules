@@ -172,8 +172,8 @@ First-party ledger consumer:
 End-to-end/docs/release:
 
 - `tests/e2e/specfact_code_review/test_review_run_e2e.py`, the CLI-contract YAML, and `docs/bundles/code-review/run.md`.
-- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml` only in task 2.21 to add exact collected selectors and freeze their mapping identity.
-- New exactly `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json` in task 2.22 with only the closed schema named there.
+- `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml` only in task 2.23 to add exact collected selectors and freeze their mapping identity.
+- New exactly `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json` in task 2.24 with only the closed schema named there.
 - `openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md` for acceptance task A.3, task 2.25 failing evidence, and later verified green evidence.
 - `CHANGELOG.md` and `packages/specfact-code-review/module-package.yaml` only after behavior passes for the required release note, version, and compatibility metadata.
 - Generated docs/registry/signatures only after tests pass; use existing generators and never hand-edit archives.
@@ -182,4 +182,4 @@ Explicitly forbidden:
 
 - `packages/specfact-code-review/src/specfact_code_review/run/forecast.py`, `packages/specfact-code-review/src/specfact_code_review/run/scorer.py`, and detector/rule-semantic changes under `specfact_code_review/tools/`; only the exact adapter configuration/failure plumbing above is allowed;
 - the Requirements package and archived OpenSpec changes;
-- any new source/test/resource file other than the four exact `scope.py`/`differential.py` files and the one exact schema 1.6 consumer-matrix resource above.
+- any new source/test/resource file other than the six exact `scope.py`/`differential.py`/`sandbox.py` source-and-test files and the one exact schema 1.6 consumer-matrix resource above.
