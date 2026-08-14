@@ -8,15 +8,15 @@ The Requirements module should validate a typed capsule produced by trusted core
 
 ## What Changes
 
-- Add a versioned historical replay capsule binding B/R/H/D commits and trees, B < R < H <= D ancestry, and D equality with the delivery identity.
+- Add a versioned historical replay capsule binding B/R/H/D commits and trees, structural B < R < H <= D ancestry, and D equality with the delivery identity. A passing chronology additionally requires distinct H and D (`H < D`); `D = H` produces `status: unknown`; assurance remains unproven.
 - Validate complete B..R, R..H, and H..D changed-path/rename manifests and digests against the accepted red-setup, implementation, and delivery-evidence declarations.
-- Require the accepted proof mapping and failing-before TDD record in B..R and freeze mapping, plan, selectors, path sets, and failing evidence at R.
+- Require the accepted proof mapping, failing-before `TDD_EVIDENCE.md` record, and governed `CHANGE_VALIDATION.md` pre-R readiness-validation record in B..R. Freeze mapping, plan, selectors, path sets, expected-failure identities, and the exact failing/readiness section bytes and digests at R; validate their byte-identical R/D preservation.
 - Require only declared implementation touchpoints in R..H.
 - Permit only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records in H..D.
 - Validate identical exact selectors failed as declared at R, passed at H, and remained passing at distinct D.
 - Validate artifact hashes, runner/toolchain/dependency/environment/plugin/network-policy identities, resource bounds, signed module identity, and verifier epoch without executing Git, pytest, or subprocesses.
 - Reconcile `red_green_chronology` independently from `current_execution`.
-- Fail strict chronology policy as unknown/unproven for every incomplete, mismatched, policy-invalid, unsupported, or untrusted capsule.
+- Report `status: unknown` with unproven assurance and fail strict chronology policy for every incomplete, mismatched, policy-invalid, unsupported, or untrusted capsule.
 - Keep legacy-ledger reading migration-only and prohibit new generation.
 
 ## Capabilities
@@ -32,7 +32,7 @@ The Requirements module should validate a typed capsule produced by trusted core
 - The paired core R08 implementation owns Git/worktree/test execution and must use a signed modules release.
 - Backward-compatible report evolution is required for existing R07 consumers.
 - Later implementation changes `packages/specfact-requirements/module-package.yaml`, `docs/bundles/requirements/overview.md`, `CHANGELOG.md`, `registry/index.json`, generated archive/checksum/signature outputs, and Code Review metadata only if its serialized proof context changes.
-- Rollback: disable chronology reconciliation while preserving corrected R07 current-run evidence.
+- Rollback: disable chronology reconciliation while preserving corrected R07 current-run evidence and every already-written independent claim object as opaque provenance; no old reader may reinterpret corrected chronology as a legacy basis.
 
 ## Explicit Non-Goals
 

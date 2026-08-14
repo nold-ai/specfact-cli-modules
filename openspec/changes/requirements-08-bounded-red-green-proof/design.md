@@ -2,7 +2,7 @@
 
 Core is the trusted Git/execution boundary; Requirements modules are the semantic evidence boundary. The capsule connects them without making modules a Git/test orchestrator or making core reinterpret Requirements status.
 
-B, R, and H are the three proof commits: merge base, red checkpoint, and green implementation checkpoint. D is the delivered-head binding required because repository policy commits passing-after evidence after H.
+B, R, and H are the three proof commits: merge base, red checkpoint, and green implementation checkpoint. D is the delivered-head binding required because repository policy commits passing-after evidence after H. The capsule schema can represent structural `H <= D` ordering, but a passing chronology requires a distinct delivery observation (`H < D`); `D = H` produces `status: unknown`; assurance remains unproven because the fixed remain-pass-at-D claim was not observed at a distinct delivery commit.
 
 ## Decisions
 
@@ -14,7 +14,7 @@ The report carries separate `current_execution` and `red_green_chronology` claim
 
 The versioned capsule requires:
 
-- B/R/H/D commit and tree identities, B < R < H <= D ancestry facts, and D equality with the delivery identity;
+- B/R/H/D commit and tree identities, structural B < R < H <= D ancestry facts, D equality with the delivery identity, and distinct H/D identities (`H < D`) for a passing chronology;
 - derived protected signed R/H checkpoint tag names, tag-object identities, canonical annotations, signatures, approved issuer/trust identities, repository-ruleset identity, checkpoint-policy epoch, and accepted positive checkpoint-attempt identity;
 - B..R, R..H, and H..D changed-path and rename manifests plus canonical digests;
 - exactly one frozen failing-before section and one frozen readiness section, their R/D bytes and digests, and equality results;
@@ -33,7 +33,7 @@ B..R may contain only declared requirements/specifications/tests/test harness/co
 
 R..H may change only declared implementation touchpoints. A selected test, helper, fixture, conftest, test configuration, dependency lock, proof runner, workflow, mapping, plan, evidence record, policy, schema, or unclassified path invalidates chronology and requires a new R.
 
-When D differs from H, H..D may change only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records. Any behavior, test, configuration, mapping, runner, workflow, policy, schema, other documentation, generated runtime input, or unclassified change is invalid. The identical selectors must remain passing at D. The capsule must also prove that D contains exactly one byte-identical `specfact:frozen-failing` section and one byte-identical `specfact:frozen-readiness` section from R; append-only content may exist only outside those markers.
+A passing chronology requires D to differ from H. Before H is designated, every implementation, test, documentation, package metadata, changelog, generated registry/archive/checksum/signature artifact, and fix-producing gate change must be complete. H..D may then change only the governed change's exact mapped `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records. Any behavior, test, configuration, mapping, runner, workflow, policy, schema, other documentation, generated runtime input, release artifact, or unclassified change is invalid. The identical selectors must remain passing at D. The capsule must also prove that D contains exactly one byte-identical `specfact:frozen-failing` section and one byte-identical `specfact:frozen-readiness` section from R; append-only content may exist only outside those markers.
 
 ### State only the bounded claim
 
@@ -43,9 +43,9 @@ The chronology text is fixed:
 
 Limitations state that stakeholder-intent completeness, complete runtime dependencies, code quality, correctness, and absence of defects were not proven.
 
-### Missing trust is unknown/unproven
+### Missing trust produces unknown status and unproven assurance
 
-An incomplete, mismatched, unsupported, untrusted, or checkpoint-authority-invalid capsule never produces pass/no-impact. Strict chronology policy fails after returning deterministic diagnostics. Runtime observations may be advisory facts but cannot claim complete dependency scope.
+An incomplete, mismatched, unsupported, untrusted, checkpoint-authority-invalid, or same-H-and-D capsule never produces pass/no-impact. If chronology was requested, unavailable or untrusted facts produce canonical `status: unknown` plus deterministic diagnostics and strict policy failure; a complete trusted contradiction produces `status: fail`. Runtime observations may be advisory facts but cannot claim complete dependency scope.
 
 ### Verifier epochs prevent self-authorization
 

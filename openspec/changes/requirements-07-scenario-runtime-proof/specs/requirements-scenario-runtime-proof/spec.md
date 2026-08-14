@@ -2,7 +2,7 @@
 
 ### Requirement: Lifecycle-Aware Requirements Readiness
 
-The Requirements module SHALL distinguish planned readiness, mapping acceptance, test-authored planning, current execution, and historical TDD chronology. Current execution and chronology SHALL be independent claims; neither may silently imply or overwrite the other.
+The Requirements module SHALL distinguish planned readiness, mapping acceptance, test-authored planning, current execution, and historical TDD chronology. Current execution and chronology SHALL be independent claims; neither may silently imply or overwrite the other. The report SHALL always emit a `red_green_chronology` claim object. No chronology request or capsule SHALL produce `status: not_evaluated` with `reason: capsule_not_supplied`; requested chronology with missing or untrusted evidence SHALL produce `status: unknown` with deterministic diagnostics. `unproven` is the assurance conclusion, not a serialized status alias.
 
 #### Scenario: Proposal mapping is complete but not executed
 
@@ -50,7 +50,7 @@ The Requirements module SHALL reconcile a deterministic plan with trusted curren
 - **GIVEN** one canonical passing result for every required exact selector
 - **WHEN** final current-run reconciliation executes
 - **THEN** `current_execution` is pass
-- **AND** absent historical evidence leaves `red_green_chronology` unproven or not evaluated
+- **AND** absent, unrequested historical evidence leaves `red_green_chronology.status` as `not_evaluated` with `reason: capsule_not_supplied`
 - **AND** the report does not say passing-after-red or change-proven.
 
 #### Scenario: Current result is incomplete or failing
@@ -69,7 +69,7 @@ New historical red-to-green claims SHALL be accepted only through the R08 bounde
 - **GIVEN** current execution is final but no valid R08 capsule exists
 - **WHEN** the report is finalized
 - **THEN** current execution retains its exact status
-- **AND** chronology remains unproven or not evaluated
+- **AND** chronology uses `status: not_evaluated` with `reason: capsule_not_supplied`
 - **AND** no broader proof label is emitted.
 
 #### Scenario: Legacy artifact is read for compatibility

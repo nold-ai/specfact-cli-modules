@@ -9,7 +9,7 @@ The Code Review public interface SHALL accept optional finalized Requirements ev
 - **GIVEN** readable finalized Requirements evidence with a valid current-execution claim and no historical attestation
 - **WHEN** Code Review receives it
 - **THEN** review retains current-execution provenance
-- **AND** it records chronology as absent/unproven rather than rejecting the report
+- **AND** it retains the canonical `red_green_chronology` claim object with `status: not_evaluated` and `reason: capsule_not_supplied` rather than omitting the field or rejecting the report
 - **AND** the review verdict remains independent.
 
 #### Scenario: Malformed or non-final evidence is rejected

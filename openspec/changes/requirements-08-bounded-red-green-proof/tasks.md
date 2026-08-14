@@ -13,14 +13,14 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 
 - [ ] B.1 Create a dedicated feature worktree from current `origin/dev`; run `hatch env create`, `hatch run dev-deps`, `hatch run smart-test-status`, and `hatch run contract-test-status` serially before edits.
 - [ ] B.2 Refresh/consult the ephemeral hierarchy cache; verify issue #414 parent Feature #161, requested User Story type, labels, project assignment, blockers, and concurrency state. Stop if metadata is incomplete or the issue is already in progress elsewhere.
-- [ ] B.3 Run `openspec validate requirements-08-bounded-red-green-proof --strict`, re-read paired core issue #675/PR #674, and confirm the closed allowlist before tests or source edits.
+- [ ] B.3 Run `openspec validate requirements-08-bounded-red-green-proof --strict`, then hard-stop until merged core PR #674 and this modules contract are both reviewed and accepted on their target `dev` branches. Confirm issue #414 metadata and the closed allowlist before tests or source edits; re-reading references alone is not acceptance.
 - [ ] B.4 Follow spec -> tests -> actual failing evidence -> source -> actual passing evidence. Record timestamps, exact commands/results, behavioral summaries, limitations, and artifacts in separate TDD evidence sections.
 
 ## 1. Failing tests first
 
 - [ ] 1.1 Add `test_final_reconciliation_accepts_valid_brhd_replay_capsule`.
 - [ ] 1.2 Add `test_final_reconciliation_keeps_current_execution_and_red_green_chronology_separate`.
-- [ ] 1.3 Add `test_capsule_rejects_non_ancestral_or_mismatched_delivery_identity` and `test_capsule_rejects_untrusted_or_mismatched_checkpoint_binding`; reject missing, lightweight, movable, unsigned, wrong-role/digest, unapproved-issuer/trust, ruleset, checkpoint-policy-epoch, stale checkpoint-attempt, or moved/deleted/reused tag-namespace facts.
+- [ ] 1.3 Add `test_capsule_rejects_non_ancestral_or_mismatched_delivery_identity`, `test_capsule_rejects_untrusted_or_mismatched_checkpoint_binding`, and table-driven `test_capsule_rejects_missing_nonpositive_stale_or_reused_checkpoint_attempt`; reject identical H/D, missing, lightweight, movable, unsigned, wrong-role/digest, unapproved-issuer/trust, ruleset, checkpoint-policy-epoch, or moved/deleted/reused tag-namespace facts.
 - [ ] 1.4 Add `test_capsule_rejects_changed_selector_plan_mapping_failing_or_readiness_evidence_after_red`.
 - [ ] 1.5 Add `test_capsule_rejects_nonimplementation_transition_after_red`.
 - [ ] 1.6 Add `test_capsule_rejects_invalid_delivery_evidence_transition` and `test_capsule_rejects_rewritten_or_missing_frozen_ledger_section`; reject missing, duplicate, reordered, rewritten, or deleted frozen failing/readiness bytes at D even when the H..D paths are allowed.
@@ -31,7 +31,7 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - [ ] 1.11 Add `test_current_execution_passes_without_red_green_chronology` in `tests/unit/specfact_requirements/test_requirements_lifecycle.py`.
 - [ ] 1.12 Add `test_historical_capsule_cannot_substitute_for_missing_current_execution` in `tests/unit/specfact_requirements/test_requirements_lifecycle.py`.
 - [ ] 1.13 Add `test_code_review_accepts_current_execution_without_red_green_chronology` in `tests/unit/specfact_code_review/run/test_commands.py`; assert Requirements provenance is retained but does not calculate review findings, score, verdict, or exit code.
-- [ ] 1.14 Before any source edit, update `requirements-evidence.yaml` under the accepted mapping schema with the exact selectors from tasks 1.1–1.13, one stable opaque `expected_failure_id` per replayed selector, one accepted positive `checkpoint_attempt` incremented for every new R, and the governed pre-R readiness-evidence touchpoint; verify each selector collects once, define exactly one frozen failing marker pair and one frozen readiness marker pair, and freeze the accepted mapping, plan, failing-section, and readiness-section digests. Do not invent selectors on this planning-only branch.
+- [ ] 1.14 After authoring tasks 1.1–1.13 and before any production source edit, collect each named test, then update `requirements-evidence.yaml` under the accepted mapping schema with the exact observed selectors, one stable opaque `expected_failure_id` per replayed selector, one accepted positive `checkpoint_attempt` incremented for every new R, and the governed pre-R readiness-evidence touchpoint. Verify each selector collects once, define exactly one frozen failing marker pair and one frozen readiness marker pair, and freeze the accepted mapping, plan, failing-section, and readiness-section digests. Test names are planning inputs; the collected selectors are frozen only after the tests exist. Do not invent selectors on this planning-only branch.
 - [ ] 1.15 Record actual failing commands/results in `TDD_EVIDENCE.md` before source edits.
 
 ## 2. Minimal implementation
@@ -44,12 +44,15 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 
 ## 3. Verification and release
 
-- [ ] 3.1 Run format, type, lint, YAML, bundle imports, signature/version-bump verification, contracts, focused/full tests, strict OpenSpec, and explicit-range/full Code Review; resolve every finding.
+- [ ] 3.1 Run format, type, lint, YAML, bundle imports, contracts, focused/full tests, strict OpenSpec, and explicit-range/full Code Review on the behavior-ready tree; resolve every finding.
 - [ ] 3.2 Update `docs/bundles/requirements/overview.md`, `CHANGELOG.md`, and `packages/specfact-requirements/module-package.yaml`; update the Code Review manifest/docs only if its serialized proof context changes.
 - [ ] 3.3 Run `python scripts/publish_module.py --bundle specfact-requirements` as the publish pre-check, then use the existing release wrapper to generate `registry/index.json`, `registry/modules/specfact-requirements-<version>.tar.gz`, its `.sha256`, and `registry/signatures/specfact-requirements-<version>.tar.sig`. Never hand-edit archives, checksums, or signatures.
-- [ ] 3.4 Record immutable repository commit/tree, package/capsule-schema versions, manifest integrity, signer/signature identities, registry/archive/checksum identities, core compatibility, and passing verification evidence for the signed release supplied to core.
-- [ ] 3.5 After implementation and passing evidence are merged and rollout prerequisites hold, from the repository root run exactly `openspec archive requirements-08-bounded-red-green-proof`; never move the change directory manually.
-- [ ] 3.6 Remove the merged worktree/branch, run `git worktree prune`, and record the policy self-check.
+- [ ] 3.4 Re-run the complete mandatory quality sequence after all docs, manifests, registry entries, archives, checksums, and signatures exist, including `verify-modules-signature --payload-from-filesystem --enforce-version-bump`, focused/full tests, strict OpenSpec, and explicit-range/full Code Review. Resolve every fix-producing result before designating H.
+- [ ] 3.5 If chronology is claimed for this implementation, designate the exact stable release-ready tree as H only after task 3.4. Modules validate but do not issue core-owned checkpoints. After H, append only the governed `TDD_EVIDENCE.md` and `CHANGE_VALIDATION.md` delivery records outside their frozen markers to produce a distinct D; no docs, package metadata, changelog, registry, archive, checksum, signature, test, source, policy, or generated-artifact edit is permitted in H..D.
+- [ ] 3.6 At D, run only read-only final verification and replay. If any result requires a non-ledger or frozen-section edit, invalidate the checkpoint and establish a new R rather than mutating H..D.
+- [ ] 3.7 Record immutable H/D repository commit/tree, package/capsule-schema versions, manifest integrity, signer/signature identities, registry/archive/checksum identities, core compatibility, and passing verification evidence for the signed release supplied to core.
+- [ ] 3.8 After implementation and passing evidence are merged and rollout prerequisites hold, from the repository root run exactly `openspec archive requirements-08-bounded-red-green-proof`; never move the change directory manually.
+- [ ] 3.9 Remove the merged worktree/branch, run `git worktree prune`, and record the policy self-check.
 
 ## Prohibited shortcuts
 
@@ -64,7 +67,7 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 
 OpenSpec mapping and evidence records:
 
-- `openspec/changes/requirements-08-bounded-red-green-proof/requirements-evidence.yaml`: before source edits only, add the exact selectors from tasks 1.1–1.13, one stable opaque `expected_failure_id` per replayed selector, one accepted positive `checkpoint_attempt` incremented for every new R, map the governed pre-R readiness-validation evidence, define exactly one frozen failing marker pair and one frozen readiness marker pair, and freeze the accepted mapping/plan/failing-section/readiness-section digests.
+- `openspec/changes/requirements-08-bounded-red-green-proof/requirements-evidence.yaml`: after tasks 1.1–1.13 exist and collect, but before production source edits, add their exact observed selectors, one stable opaque `expected_failure_id` per replayed selector, one accepted positive `checkpoint_attempt` incremented for every new R, map the governed pre-R readiness-validation evidence, define exactly one frozen failing marker pair and one frozen readiness marker pair, and freeze the accepted mapping/plan/failing-section/readiness-section digests.
 - `openspec/changes/requirements-08-bounded-red-green-proof/TDD_EVIDENCE.md`: add failing-before evidence inside exactly one frozen marker pair before source edits; append passing-after only outside that marker after implementation passes.
 - `openspec/changes/requirements-08-bounded-red-green-proof/CHANGE_VALIDATION.md`: when used as replay-fixture data, preserve exactly one frozen pre-R readiness section and append final validation only outside its markers; the modules change's own final validation remains after implementation gates.
 

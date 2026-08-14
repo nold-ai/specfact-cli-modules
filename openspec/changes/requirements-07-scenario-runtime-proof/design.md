@@ -27,7 +27,7 @@ The previous schema used one linear maturity ladder where a final passing curren
 
 `current_execution` records status, mapping/plan/source identities, exact selectors, result digest, collection counts, outcome counts, runner identity, and environment provenance supplied by core.
 
-`red_green_chronology` records status and optional R08 attestation identity. Missing chronology is `unproven`/`not_evaluated` according to the versioned report contract and cannot erase or inflate current execution.
+`red_green_chronology` records status and optional R08 attestation identity. The versioned report always emits this claim object: when chronology was not requested and no capsule was supplied it uses `status: not_evaluated` with `reason: capsule_not_supplied`; when chronology was requested but evidence is missing or untrusted it uses `status: unknown` with deterministic diagnostics. `unproven` describes the assurance conclusion, not a second serialized status or an omitted field. Neither state can erase or inflate current execution.
 
 ### Current reconciliation needs only current evidence
 
@@ -61,5 +61,6 @@ Do not add Git orchestration, pytest execution, or static import/plugin/configur
 2. Dual-read old reports and dual-write the corrected fields during one compatibility release.
 3. Publish a signed release for core adoption.
 4. Remove generation of new legacy-ledger evidence after core migrates.
-5. Roll back by keeping the old reader while disabling the new writer; never collapse the two claims again.
+5. Roll back by disabling the new writer while preserving every already-written `current_execution` and `red_green_chronology` object byte-for-byte. The old reader must treat unknown corrected fields as opaque provenance and must never reinterpret them as legacy chronology.
+6. After the implementation and signed handoff merge, finalize the shipped change from the repository root with `openspec archive requirements-07-scenario-runtime-proof`; never move the change directory manually.
 

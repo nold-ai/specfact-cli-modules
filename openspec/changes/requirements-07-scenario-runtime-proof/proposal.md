@@ -27,7 +27,7 @@ This conflation pushed core toward static inference of every pytest-determining 
 - Planning artifacts only in this commit; no package source, tests, prompts, registry, version, signature, or generated docs change.
 - A later implementation requires a signed Requirements module release before core adopts the corrected schema.
 - Backward compatibility must preserve reading existing reports while making their historical basis explicit.
-- Rollback: retain the current report reader and disable the new fields; do not relabel current-run results as historical proof.
+- Rollback is lossless: disable only new-field writing, preserve already-written `current_execution` and `red_green_chronology` objects, and require an old-reader fixture proving they remain opaque rather than being reinterpreted as legacy chronology. Do not relabel current-run results as historical proof.
 
 ## Explicit Non-Goals
 
