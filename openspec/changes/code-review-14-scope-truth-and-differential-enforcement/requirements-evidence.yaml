@@ -151,12 +151,17 @@ requirements:
         scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
         method: test
         intent: "Migrate installed merge-quality guidance from changed/worktree scope to executable PR-range assurance."
-        observable: "Rules updater and bundled skill emit range/base/head/full guidance while local simplification preview remains worktree-scoped."
+        observable: "Rules updater and bundled skill emit protected range/base/head/context/full merge guidance, label local range as range_preview, and retain worktree-scoped simplification."
       - case_id: CR14-021
         scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
         method: test
         intent: "Keep canonical repository quality-gate, module/bundle, generated-instruction, and installed-skill guidance on the same assurance boundary."
-        observable: "Merge guidance requires complete range/base/head/full; staged positional and simplification worktree commands are explicitly non-PR; generated skill copies match their bundled source."
+        observable: "Protected CI merge guidance requires range/base/head/context/full and independent verification; local range is range_preview; staged positional and simplification worktree commands are non-PR; generated skill copies match their bundled source."
+      - case_id: CR14-032
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Make authenticated PR context an executable input without letting a local caller self-assert trust."
+        observable: "A safe event-derived context file plus consumer verification yields pr_range; absent/unverified context yields range_preview; unsafe/mismatched context yields UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
     rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."
     stakeholder_refs:

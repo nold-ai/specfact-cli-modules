@@ -90,14 +90,17 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **GIVEN** positional files are supplied to a consumer or policy that requires pull-request range assurance
 - **WHEN** the request is validated
 - **THEN** it is rejected before analysis because base, head, and merge-base evidence is absent
-- **AND** the supported alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref> --enforcement full`
+- **AND** the protected-CI alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref> --pr-context-file <runner-temp-file> --enforcement full`
+- **AND** the same local command without trusted context is `assurance_kind=range_preview`, not merge authority
 - **AND** positional files remain valid for explicitly labelled non-PR `assurance_kind=explicit_files` runs.
 
 #### Scenario: Canonical repository merge guidance uses complete PR range
 
 - **GIVEN** a developer or agent follows the mandatory repository quality gate, module/bundle guide, or generated Code Review instructions
 - **WHEN** the guidance describes merge or pull-request assurance
-- **THEN** it uses `--scope range`, full base/head identities, and `--enforcement full`
+- **THEN** protected CI uses `--scope range`, full base/head identities, an event-derived `--pr-context-file` outside the checkout, and `--enforcement full`
+- **AND** the consumer independently verifies the emitted context, expected/resolved target tip, merge base, and head against the protected event
+- **AND** manual guidance without trusted context is explicitly `assurance_kind=range_preview` and directs merge authority to the protected workflow
 - **AND** it does not use changed/worktree or positional branch-delta files as merge evidence
 - **AND** the local pre-commit positional gate and simplification worktree workflow are labelled non-PR assurance
 - **AND** tracked skill copies are regenerated from the bundled source and remain byte-consistent.

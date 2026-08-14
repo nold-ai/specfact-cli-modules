@@ -26,10 +26,10 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 1.9 Add `test_index_and_range_reject_fix_preview_and_mutation_options`.
 - [ ] 1.10 Add `test_index_scope_reads_staged_blobs_not_unstaged_worktree` with conflicting staged/unstaged bytes at the same path.
 - [ ] 1.11 Add `test_range_scope_omitted_enforcement_defaults_to_full` and update existing `test_review_run_instructions_prints_ai_workflow_without_running_review` to require the executable range/base/head/`--enforcement full` workflow; retain explicit range-plus-changed rejection.
-- [ ] 1.12 Add `test_installed_merge_quality_guidance_uses_pr_range`; prove rules updater output and the bundled skill use range/base/head/full for merge review while simplification preview remains worktree-scoped.
+- [ ] 1.12 Add `test_installed_merge_quality_guidance_uses_pr_range`; prove rules updater output and the bundled skill make protected range/base/head/context/full the merge authority, label local range preview-only, and retain worktree-scoped simplification.
 - [ ] 1.13 Add table-driven `test_range_scope_rejects_narrowing_filters_before_analysis` for `--exclude-tests`, `--focus source|tests|docs|simplify`, `--path`, `--no-tests`, and `--level`; no narrowed result may carry `assurance_kind=pr_range` or produce false NOT_APPLICABLE.
-- [ ] 1.14 Add `test_merge_quality_guidance_requires_complete_pr_range`; cover both agent-rule files, module/bundle guides, generated instructions, updater/bundled skill, and tracked skill copies. Assert local pre-commit positional and simplification worktree guidance is explicitly non-PR.
-- [ ] 1.15 Add `test_pr_range_rejects_base_ref_mismatching_authenticated_expected_target_tip` and `test_pr_range_consumer_rejects_untrusted_target_tip`; bind provider/repository/PR-or-queue/ref/commit/tree/context digest, reject caller self-assertion, and prove producer plus independent consumer equality.
+- [ ] 1.14 Add `test_merge_quality_guidance_requires_complete_pr_range`; cover both agent-rule files, module/bundle guides, generated instructions, updater/bundled skill, and tracked skill copies. Assert protected CI guidance includes the event-derived context file and independent verification, local range is preview-only, and local pre-commit positional/simplification worktree guidance is non-PR.
+- [ ] 1.15 Add `test_pr_range_rejects_base_ref_mismatching_authenticated_expected_target_tip`, `test_pr_range_consumer_rejects_untrusted_target_tip`, and `test_range_without_trusted_context_is_preview`; validate the outside-checkout regular `github-actions-pr-v1` context-file schema, bind provider/repository/PR-or-queue/ref/event/target/head commit/tree/context digest, reject unsafe/self-asserted context, prove producer plus independent consumer equality, and label a complete local range `range_preview`.
 
 ## 2. Failing differential/report tests
 
@@ -62,7 +62,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 Each item consumes only the named failing tests from Section 2 and must finish green before the next item starts.
 
 - [ ] 3.1 Add request/status types for worktree, index, range, full, and explicit-files scope; delegate all Git discovery from `run/commands.py` to `scope.py`.
-- [ ] 3.2 Resolve full base/head/merge-base identities and validate `expected_target_tip` plus trusted-context digest; mismatch is UNKNOWN.
+- [ ] 3.2 Parse/freeze the outside-checkout `github-actions-pr-v1` context file, resolve full base/head/merge-base identities, validate expected target/head plus trusted-context digest, emit range_preview without authenticated context, and make unsafe/mismatched context UNKNOWN.
 - [ ] 3.3 Materialize and manifest the exact index snapshot, including conflicts/intent-to-add/object failures and pre/post integrity checks.
 - [ ] 3.4 Materialize detached merge-base/head source roots plus rename/deletion facts and pre/post source manifests; clean roots or report UNKNOWN.
 - [ ] 3.5 Materialize the authorized target-tip policy bundle and its source digest; candidate head policy remains shadow-only.
@@ -84,7 +84,7 @@ Each item consumes only the named failing tests from Section 2 and must finish g
 - [ ] 3.21 Add and validate the closed consumer compatibility matrix package resource; bind its digest in package metadata/tests.
 - [ ] 3.22 Update ledger model/local persistence and neutral reward/streak behavior for UNKNOWN/NOT_APPLICABLE while retaining legacy reads.
 - [ ] 3.23 Migrate Supabase constraints and canonical `report_json`/`report_digest` persistence; preserve legacy rows.
-- [ ] 3.24 Update CLI contracts and canonical agent/module/bundle/generated/updater/skill guidance to complete PR range; keep staged positional and simplification worktree guidance explicitly non-PR.
+- [ ] 3.24 Update CLI contracts and canonical agent/module/bundle/generated/updater/skill guidance so protected CI range/base/head/context/full is merge authority, local range is preview-only, and staged positional/simplification worktree guidance is non-PR.
 
 ## 4. Release and adoption
 
@@ -94,7 +94,7 @@ Each item consumes only the named failing tests from Section 2 and must finish g
 - [ ] 4.4 Re-run the complete feature-branch gates and merge the reviewed implementation PR to `dev` only when schema 1.6 consumer compatibility is proven.
 - [ ] 4.5 Observe the canonical `.github/workflows/publish-modules.yml` run and review its `auto/publish-dev-<run-id>` PR.
 - [ ] 4.6 Require the generated signed manifest/archive/checksum/sidecar/index, filesystem signature/version-bump verification, and full quality matrix before merging the auto-publish PR.
-- [ ] 4.7 After the signed consumer compatibility matrix passes and a separate core adoption change is accepted, give core the final merged commit/tree, module version, schema 1.6 contract and compatibility-matrix digest, archive/checksum/signature, signer, workflow, and auto-publish PR identities. The core PR SHALL keep `scripts/pre_commit_code_review.py` limited to `explicit_files` but make it consume authoritative schema 1.6 status/exit fields; a separate PR-range consumer SHALL reject any report or code path that cannot consume them. Core PR CI SHALL pass full base/head refs plus the authenticated expected target-tip commit/tree/context from the trusted GitHub PR or merge-queue event, require the reported expected/resolved target-tip, merge-base, and head identities plus `assurance_kind=pr_range`, independently compare them to that event context, and migrate in shadow, warning, then enforce mode.
+- [ ] 4.7 After the signed consumer compatibility matrix passes and a separate core adoption change is accepted, give core the final merged commit/tree, module version, schema 1.6 contract and compatibility-matrix digest, archive/checksum/signature, signer, workflow, and auto-publish PR identities. The core PR SHALL keep `scripts/pre_commit_code_review.py` limited to `explicit_files` but make it consume authoritative schema 1.6 status/exit fields; a separate PR-range consumer SHALL reject any report or code path that cannot consume them. Core PR CI SHALL write the canonical context file under runner temp immediately before invocation, pass full base/head refs plus `--pr-context-file`, require the reported context digest, expected/resolved target-tip, merge-base, and head identities plus `assurance_kind=pr_range`, independently compare them to the trusted GitHub PR or merge-queue event, and migrate in shadow, warning, then enforce mode.
 - [ ] 4.8 After implementation and signed handoff merge, run exactly `openspec archive code-review-14-scope-truth-and-differential-enforcement` from the repository root; never move the change manually.
 
 ## Prohibited shortcuts
@@ -111,14 +111,14 @@ CLI/request parsing:
 
 - `packages/specfact-code-review/src/specfact_code_review/review/commands.py`.
 - `packages/specfact-code-review/src/specfact_code_review/run/commands.py` only for request translation/validation, consumption of `ScopeResolution`, and the existing post-analysis Requirements-evidence attachment model-copy so it preserves schema 1.6 truth without changing Requirements verdict semantics.
-- `tests/unit/specfact_code_review/review/test_commands.py` only to replace the obsolete positional-file PR instruction expectation with the executable range/base/head/full workflow.
+- `tests/unit/specfact_code_review/review/test_commands.py` only to replace the obsolete positional-file PR instruction expectation with the protected range/base/head/context/full workflow.
 - `tests/unit/specfact_code_review/run/test_commands.py` and `tests/cli-contracts/specfact-code-review-run.scenarios.yaml`.
 
 Canonical merge-quality guidance:
 
-- `docs/agent-rules/20-repository-context.md` and `docs/agent-rules/50-quality-gates-and-review.md` only to replace mandatory merge-review commands with complete range/base/head/full guidance and label the staged pre-commit helper non-PR.
+- `docs/agent-rules/20-repository-context.md` and `docs/agent-rules/50-quality-gates-and-review.md` only to replace mandatory merge-review commands with protected range/base/head/context/full guidance and label the staged pre-commit helper non-PR.
 - `docs/modules/code-review.md` and `docs/bundles/code-review/run.md` only to remove positional branch-delta/changed-worktree PR guidance, document the complete range contract, and retain clearly local examples.
-- `packages/specfact-code-review/src/specfact_code_review/rules/updater.py` only to replace merge-quality changed/worktree guidance with the executable range/base/head/full command; simplification preview remains worktree-scoped.
+- `packages/specfact-code-review/src/specfact_code_review/rules/updater.py` only to replace merge-quality changed/worktree guidance with the protected range/base/head/context/full command; simplification preview remains worktree-scoped.
 - `packages/specfact-code-review/src/specfact_code_review/resources/skills/specfact-code-review/SKILL.md` for the same merge-quality correction.
 - `skills/specfact-code-review/SKILL.md` and `.vibe/skills/specfact-code-review/SKILL.md` only as updater-generated tracked copies after the bundled source and tests pass; never hand-edit them independently.
 - `tests/unit/specfact_code_review/rules/test_updater.py` and `tests/unit/docs/test_code_review_docs_parity.py` only for focused guidance/parity regressions.
