@@ -44,7 +44,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 2.9 Add parameterized `test_required_analyzers_structurally_empty_snapshot_is_not_applicable` for add-only and delete-only governed Python ranges; assert manifest-bound per-side NOT_APPLICABLE, required execution on every non-empty side, applicable aggregate range status, and rejection of an unrecorded adapter empty-file return.
 - [ ] 2.10 Add `test_run_contract_check_reports_crosshair_process_error_for_mandatory_coverage`; cover documented CrossHair process-error exit code 2 with empty parsed findings, retained exit/stderr diagnostics, UNKNOWN coverage, and a control proving parsed counterexamples remain findings.
 - [ ] 2.11 Add `test_basedpyright_project_rebases_relative_paths_per_snapshot` and `test_basedpyright_project_rejects_unbound_paths`; use an imported dependency with different merge-base/head content, cover nested execution-environment paths plus `extraPaths` and `venvPath`/`venv`, prove the per-side projection/toolchain digests, and reject policy-bundle/worktree/escaping/missing paths as UNKNOWN.
-- [ ] 2.12 Add `test_import_capable_analyzers_use_snapshot_invocation_context`; parameterize Pylint init-hook, CrossHair, and targeted pytest over an imported dependency with distinct merge-base/head/worktree content. Assert snapshot-root cwd, sanitized PYTHONPATH/PYTHONHOME/user-site/startup/plugin state, sealed non-editable toolchain identity, external output root, context digest, correct side-specific import, and UNKNOWN on caller-source/context mismatch.
+- [ ] 2.12 Add `test_analyzer_subprocesses_use_snapshot_invocation_context`; parameterize Radon, Pylint init-hook, CrossHair, and targeted pytest. Assert snapshot-root cwd, sealed executable/environment, sanitized PYTHONPATH/PYTHONHOME/user-site/startup/plugin state, external output root, and context digest for every subprocess; use distinct merge-base/head/worktree imported content for import-capable adapters and require UNKNOWN on caller-source/context mismatch.
 - [ ] 2.13 Add `test_fixable_error_remains_blocking_until_applied` and update existing `test_score_review_single_fixable_error` to expect FAIL; production `scorer.py` remains unchanged.
 - [ ] 2.14 Add `test_report_never_says_all_passed_with_mandatory_unknown`.
 - [ ] 2.15 Add table-driven `test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix` for PASS/FAIL/UNKNOWN/NOT_APPLICABLE under strict and shadow modes, including enforce-to-full normalization, changed/worktree compatibility, and range-plus-changed rejection.
@@ -73,18 +73,19 @@ Each item consumes only the named failing tests from Section 2 and must finish g
 - [ ] 3.10 Define the exact runner-owned `pr-range-v1` membership and serialize per-snapshot required/conditional coverage facts.
 - [ ] 3.11 Make CrossHair timeout and documented process-error exits failed contracts coverage while retaining parsed counterexamples as findings.
 - [ ] 3.12 Execute targeted pytest/coverage per snapshot with production-derived plus changed-test selectors, exact selector-to-JUnit reconciliation, outcome counts, absent-side, FAIL/UNKNOWN policy, environment identity, JUnit digest, and coverage artifact evidence; test-only ranges cannot be NOT_APPLICABLE.
-- [ ] 3.13 Update Ruff invocation only for explicit target-policy config or isolated mode.
-- [ ] 3.14 Update Pylint invocation only for explicit target-policy rcfile/default plus snapshot invocation context.
-- [ ] 3.15 Update basedpyright invocation only for per-snapshot projected project files and sealed toolchain paths.
-- [ ] 3.16 Update both Semgrep passes only for explicit target-policy bundle roots and surfaced adapter failures.
-- [ ] 3.17 Implement stable base/head fingerprint classification, including one-to-one rename normalization and shared-identity validation.
-- [ ] 3.18 Separate finding lifecycle, differential state, autofix availability, waiver reference, and derived blocking policy in the canonical model.
-- [ ] 3.19 Add schema 1.6 authoritative status, legacy projection, normalized enforcement, and strict/shadow exit behavior.
-- [ ] 3.20 Preserve schema 1.6 fields through cleanup refresh and Requirements-context attachment without verdict fusion.
-- [ ] 3.21 Add and validate the closed consumer compatibility matrix package resource, including candidate/preview producer reports and trusted pr_range verification envelopes; bind its digest in package metadata/tests.
-- [ ] 3.22 Update ledger model/local persistence and neutral reward/streak behavior for UNKNOWN/NOT_APPLICABLE while retaining legacy reads.
-- [ ] 3.23 Migrate Supabase constraints and canonical `report_json`/`report_digest` persistence; preserve legacy rows.
-- [ ] 3.24 Update CLI contracts and canonical agent/module/bundle/generated/updater/skill guidance so protected CI range/base/head/context/full is merge authority, local range is preview-only, and staged positional/simplification worktree guidance is non-PR.
+- [ ] 3.13 Update Ruff invocation only for explicit target-policy config or isolated mode plus snapshot invocation context.
+- [ ] 3.14 Update Radon invocation only to consume the sealed executable, snapshot cwd/environment, outputs, and context digest; do not change metric semantics.
+- [ ] 3.15 Update Pylint invocation only for explicit target-policy rcfile/default plus snapshot invocation context.
+- [ ] 3.16 Update basedpyright invocation only for per-snapshot projected project files and sealed toolchain paths/context.
+- [ ] 3.17 Update both Semgrep passes only for explicit target-policy bundle roots, snapshot invocation context, and surfaced adapter failures.
+- [ ] 3.18 Implement stable base/head fingerprint classification, including one-to-one rename normalization and shared-identity validation.
+- [ ] 3.19 Separate finding lifecycle, differential state, autofix availability, waiver reference, and derived blocking policy in the canonical model.
+- [ ] 3.20 Add schema 1.6 authoritative status, legacy projection, normalized enforcement, and strict/shadow exit behavior.
+- [ ] 3.21 Preserve schema 1.6 fields through cleanup refresh and Requirements-context attachment without verdict fusion.
+- [ ] 3.22 Add and validate the closed consumer compatibility matrix package resource, including candidate/preview producer reports and trusted pr_range verification envelopes; bind its digest in package metadata/tests.
+- [ ] 3.23 Update ledger model/local persistence and neutral reward/streak behavior for UNKNOWN/NOT_APPLICABLE while retaining legacy reads.
+- [ ] 3.24 Migrate Supabase constraints and canonical `report_json`/`report_digest` persistence; preserve legacy rows.
+- [ ] 3.25 Update CLI contracts and canonical agent/module/bundle/generated/updater/skill guidance so protected CI range/base/head/context/full is merge authority, local range is preview-only, and staged positional/simplification worktree guidance is non-PR.
 
 ## 4. Release and adoption
 
@@ -138,6 +139,7 @@ Differential enforcement:
 
 Analyzer configuration and failure propagation:
 
+- `packages/specfact-code-review/src/specfact_code_review/tools/radon_runner.py` and `tests/unit/specfact_code_review/tools/test_radon_runner.py` only to consume the sealed executable, per-snapshot cwd/environment/output paths, and invocation-context digest; Radon thresholds/metrics/findings are unchanged.
 - `packages/specfact-code-review/src/specfact_code_review/tools/ruff_runner.py` and `tests/unit/specfact_code_review/tools/test_ruff_runner.py` only to accept the invocation context and use explicit baseline `--config` or `--isolated`.
 - `packages/specfact-code-review/src/specfact_code_review/tools/pylint_runner.py` and `tests/unit/specfact_code_review/tools/test_pylint_runner.py` only to use the explicit target-policy `--rcfile` or sealed pinned-default config and consume the snapshot-root cwd/import environment so init hooks cannot resolve caller/head source.
 - `packages/specfact-code-review/src/specfact_code_review/tools/basedpyright_runner.py` and `tests/unit/specfact_code_review/tools/test_basedpyright_runner.py` only to consume the per-snapshot projected `--project` artifact, remove `--project .`/direct policy-bundle use, and prove imported-path/toolchain binding; projection construction and path validation remain in `scope.py`.

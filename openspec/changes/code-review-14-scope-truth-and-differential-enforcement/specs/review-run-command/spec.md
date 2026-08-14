@@ -120,11 +120,11 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 #### Scenario: Import-capable analyzers stay inside each materialized snapshot
 
 - **GIVEN** an imported repository dependency has different content at merge base and head while caller/worktree source is also present
-- **WHEN** Pylint, CrossHair, targeted pytest, or another import-capable analyzer executes for each side
+- **WHEN** Radon or an import-capable Pylint, CrossHair, targeted pytest, or other analyzer subprocess executes for each side
 - **THEN** each process uses that side's materialized source root as `cwd`
 - **AND** its sanitized import environment contains only manifest-bound snapshot roots and the same sealed non-editable toolchain/dependency environment
 - **AND** pytest automatic plugin loading and caller/user startup paths are disabled
-- **AND** merge-base execution imports merge-base content while head execution imports head content
+- **AND** Radon uses the sealed executable/cwd/environment, and merge-base import-capable execution imports merge-base content while head execution imports head content
 - **AND** caller/worktree/policy-bundle source resolution or invocation-context mismatch yields UNKNOWN.
 
 #### Scenario: Analyzer identity mismatch is unknown

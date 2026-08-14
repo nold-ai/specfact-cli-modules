@@ -78,7 +78,12 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Bind every import-capable analyzer subprocess to the active materialized snapshot."
-        observable: "Pylint, CrossHair, and targeted pytest use snapshot cwd/import roots, sealed toolchain, sanitized environment, pinned plugins, and never resolve caller/head source during baseline analysis."
+        observable: "Radon, Pylint, CrossHair, and targeted pytest consume sealed snapshot cwd/executable/environment/output context; import-capable adapters never resolve caller/head source during baseline analysis."
+      - case_id: CR14-034
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Permit the mandatory Radon subprocess to consume the same per-snapshot invocation context."
+        observable: "Radon receives sealed executable, snapshot cwd/environment/output roots, and context digest without changing metric semantics."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:independent-finding-lifecycle-and-remediation:
     rationale: "Severity, resolution, autofix availability, and policy are distinct facts."
     stakeholder_refs:
