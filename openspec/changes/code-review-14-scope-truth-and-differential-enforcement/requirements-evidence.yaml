@@ -84,6 +84,11 @@ requirements:
         method: test
         intent: "Bind every import-capable analyzer subprocess to the active materialized snapshot."
         observable: "Every analyzer subprocess—including Ruff, Radon, Pylint, basedpyright, both Semgrep passes, CrossHair, and targeted pytest—consumes sealed snapshot cwd/executable/environment/output context; import-capable adapters never resolve caller/head source during baseline analysis."
+      - case_id: CR14-039
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent untrusted analyzer or imported candidate code from reading or modifying another evidence root."
+        observable: "The pinned `linux-bwrap-v1` capability-probed sandbox exposes only the active read-only snapshot, exact read-only config/toolchain inputs, and process-private writable outputs; cross-root, credential, descriptor, and network access is denied, artifacts are sealed after exit, and unavailable or failed isolation yields UNKNOWN."
       - case_id: CR14-034
         scenario_id: differential-base-head-enforcement
         method: test
