@@ -42,14 +42,14 @@ Range resolution records full base, head, and merge-base commit/tree SHAs; diff/
 
 For range mode it SHALL materialize fresh, detached baseline and head roots outside the caller worktree. The baseline root is the resolved merge-base commit/tree; the supplied base-ref tip is recorded only as a resolver input and SHALL NOT be analyzed as the PR baseline. The head root is the resolved head commit/tree. For each snapshot, `scope.py` SHALL build a manifest of repository-relative path, Git blob identity, and content digest for every selected analyzer input and every declared analyzer-configuration input. The runner receives only paths rooted in the appropriate materialization and runs the merge-base/head snapshots with the same pinned analyzer/toolchain and trusted policy/config digest.
 
-The trusted policy/config identity is resolved once from the merge-base policy epoch and applied to both range snapshots. `scope.py` materializes a sealed policy bundle separately from both source roots and records every selected config path/blob/digest. `runner.py` passes that bundle through one invocation context; configurable adapters MUST NOT discover policy from the analyzed head path, caller worktree, or process `.`.
+The trusted policy/config identity is resolved once from the exact authorized target base-ref tip and applied to both range source snapshots. The pull-request/CI context must bind that target identity; a moved, untrusted, missing, or unreadable target policy makes the run UNKNOWN. `scope.py` materializes the target-tip policy bundle separately from both source roots and records its commit/tree plus every selected config path/blob/digest. The merge base remains the source-code comparison baseline; using current target policy does not turn target-only source commits into differential inputs. `runner.py` passes the sealed bundle through one invocation context; configurable adapters MUST NOT discover policy from either analyzed source root, the caller worktree, or process `.`.
 
 The exact adapter boundary is:
 
-- Ruff receives the selected merge-base Ruff config with explicit `--config`, or `--isolated` when no governed config exists.
-- Pylint receives an explicit merge-base `--rcfile`; absence uses a sealed pinned-default config and disables source-tree discovery.
-- basedpyright receives an explicit merge-base `--project` artifact; it never uses `--project .`.
-- Semgrep and the conditional bug pass resolve only from the explicit merge-base policy bundle already represented by their `bundle_root` seam.
+- Ruff receives the selected target-policy Ruff config with explicit `--config`, or `--isolated` when no governed config exists.
+- Pylint receives an explicit target-policy `--rcfile`; absence uses a sealed pinned-default config and disables source-tree discovery.
+- basedpyright receives an explicit target-policy `--project` artifact; it never uses `--project .`.
+- Semgrep and the conditional bug pass resolve only from the explicit target-policy bundle already represented by their `bundle_root` seam.
 
 The same config artifacts and digests govern base and head. A missing/unreadable selected config or any adapter that cannot honor explicit configuration makes coverage `UNKNOWN`. Candidate analyzer-config changes remain visible in scope evidence but cannot authorize or weaken their own comparison; they run only as separately labelled shadow evidence until promoted.
 
@@ -74,7 +74,7 @@ The authoritative strict PR-range profile is the schema-versioned `pr-range-v1` 
 | `ruff` | required |
 | `radon` | required |
 | `semgrep` | required |
-| `semgrep-bugs` | required when the trusted merge-base policy snapshot contains the governed bugs configuration; otherwise NOT_APPLICABLE, never skipped |
+| `semgrep-bugs` | required when the trusted target-base-tip policy snapshot contains the governed bugs configuration; otherwise NOT_APPLICABLE, never skipped |
 | `ai-bloat-ast` | required |
 | `ast-clean-code` | required |
 | `basedpyright` | required |
@@ -82,7 +82,7 @@ The authoritative strict PR-range profile is the schema-versioned `pr-range-v1` 
 | `contracts` | required |
 | `targeted-pytest-coverage` | conditionally required when the complete range contains governed production Python; otherwise NOT_APPLICABLE |
 
-There are no optional analyzers in `pr-range-v1`. Future profile membership changes require a new profile ID/version and policy digest; an ad hoc extra analyzer may be advisory but cannot silently change this profile or assurance. The report lists every profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain/configuration digest, duration, and diagnostic. Missing, skipped, failed, timed-out, unparsable, or identity-mismatched required analysis yields `UNKNOWN`. A successful run with zero findings is still recorded as ran; it is not inferred from an empty finding list. `targeted-pytest-coverage` records the exact test paths/selectors, pytest/coverage versions, environment/config digest, outcome, and coverage artifact digest. Pytest unavailable, timeout, collection/internal/usage error, no collected tests, or missing/unreadable coverage is `UNKNOWN`; collected assertion failures are `FAIL`; a collected passing run records ran/pass plus its coverage findings. Range cannot use `--no-tests`.
+There are no optional analyzers in `pr-range-v1`. Future profile membership changes require a new profile ID/version and policy digest; an ad hoc extra analyzer may be advisory but cannot silently change this profile or assurance. The report lists every profile member with required/conditional status, per-snapshot ran/failed/NOT_APPLICABLE outcome, version, toolchain/configuration digest, duration, and diagnostic. Missing, skipped, failed, timed-out, unparsable, or identity-mismatched required analysis yields `UNKNOWN`. A successful run with zero findings is still recorded as ran; it is not inferred from an empty finding list. `targeted-pytest-coverage` records the exact test paths/selectors, pytest/coverage versions, environment/config digest, per-snapshot outcome, and coverage artifact digest. Each snapshot containing selected governed production input requires a valid run. The merge-base side alone may be NOT_APPLICABLE when immutable range evidence proves every selected production input or selector was introduced after the merge base; that record binds the absent paths/selectors and `absence_reason=not_present_at_merge_base`. This exception cannot excuse missing head tests. Unexpected no-tests-collected, unavailable pytest, timeout, collection/internal/usage error, or missing/unreadable coverage is `UNKNOWN`; a collected head assertion failure is `FAIL`; a collected passing run records ran/pass plus its coverage findings. Range cannot use `--no-tests`.
 
 Analyzer adapters SHALL surface timeout/unavailable/parse failures explicitly. In particular, the required `contracts` member includes its CrossHair subprocess and SHALL expose a CrossHair timeout as failed coverage rather than an empty successful result.
 

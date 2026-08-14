@@ -57,8 +57,13 @@ requirements:
       - case_id: CR14-019
         scenario_id: differential-base-head-enforcement
         method: test
-        intent: "Inject one sealed merge-base configuration bundle into both snapshot analyzer runs."
-        observable: "Head config cannot suppress its own finding; Ruff/Pylint/basedpyright/Semgrep never fall back to head/worktree/dot discovery; injection failure is UNKNOWN."
+        intent: "Inject one sealed authorized target-base-tip configuration bundle into both source-snapshot analyzer runs."
+        observable: "Head config cannot suppress its own finding; Ruff/Pylint/basedpyright/Semgrep never fall back to source/worktree/dot discovery; injection failure is UNKNOWN."
+      - case_id: CR14-022
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Apply policy already promoted at the authorized target tip without replacing the merge-base source baseline."
+        observable: "Both source snapshots use the frozen target-tip policy; moved, untrusted, missing, or unusable target policy yields UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:independent-finding-lifecycle-and-remediation:
     rationale: "Severity, resolution, autofix availability, and policy are distinct facts."
     stakeholder_refs:
@@ -154,8 +159,13 @@ requirements:
       - case_id: CR14-020
         scenario_id: mandatory-analyzer-coverage
         method: test
-        intent: "Represent targeted pytest/coverage as a conditional pr-range-v1 member with explicit execution truth."
-        observable: "Assertion failure is FAIL; unavailable/timeout/collection/internal/usage/no-tests-collected/coverage-artifact failures are UNKNOWN; no-tests cannot disable range coverage."
+        intent: "Represent targeted pytest/coverage as a conditional pr-range-v1 member with explicit per-snapshot execution truth."
+        observable: "Head assertion failure is FAIL; unavailable/timeout/collection/internal/usage/unexpected-no-tests/coverage-artifact failures are UNKNOWN; no-tests cannot disable range coverage."
+      - case_id: CR14-023
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Distinguish a structurally absent merge-base input/selector from an attempted empty pytest run."
+        observable: "A new-file range records manifest-bound merge-base-side NOT_APPLICABLE and still requires valid head collection/coverage; missing head tests remain UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:

@@ -4,7 +4,7 @@
 
 `specfact code review run` SHALL support unambiguous `worktree`, `index`, `range`, and `full` scopes plus explicit positional files. Index scope SHALL analyze the exact staged blob snapshot, not current worktree path content. Range scope SHALL require base and head refs, resolve full base/head and merge-base commit/tree SHAs, select the committed merge-base-to-head delta, and use the merge-base—not the supplied base-ref tip—as the differential baseline. Changed tests SHALL be included and `assurance_kind=pr_range` SHALL mean the complete governed merge-base-to-head Python selection. Range SHALL reject `--exclude-tests`, every `--focus` facet, `--path`, `--no-tests`, and `--level` before analysis; this change defines no filtered-range assurance. `changed` SHALL be a deprecated alias for `worktree`, not PR range. Positional files SHALL emit `assurance_kind=explicit_files` and SHALL NOT satisfy a consumer or policy requiring `pr_range` assurance.
 
-For index mode, `scope.py` SHALL materialize staged blobs outside the caller worktree and record the index tree/blob/content identities so later unstaged edits at the same path cannot affect analysis. For range mode, it SHALL materialize fresh detached merge-base/head roots from the resolved commit trees outside the caller worktree plus a separate sealed merge-base policy bundle. It SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; apply one trusted merge-base-policy analyzer/config identity to both range snapshots; pass explicit baseline config paths to configurable adapters; and verify every snapshot manifest before and after analysis. Ruff SHALL use explicit baseline `--config` or `--isolated`, Pylint explicit baseline `--rcfile` or a sealed pinned-default config, basedpyright explicit baseline `--project` rather than `.`, and Semgrep the explicit baseline policy `bundle_root`. Adapter/config injection failure SHALL yield UNKNOWN. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any index conflict/object failure, materialization failure, path-root violation, or content-integrity failure SHALL yield UNKNOWN.
+For index mode, `scope.py` SHALL materialize staged blobs outside the caller worktree and record the index tree/blob/content identities so later unstaged edits at the same path cannot affect analysis. For range mode, it SHALL materialize fresh detached merge-base/head roots from the resolved commit trees outside the caller worktree plus a separate sealed policy bundle from the resolved target base-ref tip. The supplied base-ref tip SHALL be authorized by the pull-request/CI context, and its exact commit/tree and policy/config manifest SHALL be frozen before analysis; an untrusted, moved, missing, or unreadable target policy identity SHALL yield UNKNOWN. The merge-base remains the source-code baseline, while the current authorized target-tip policy governs both source snapshots. The resolver SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; pass explicit target-policy config paths to configurable adapters; and verify every snapshot manifest before and after analysis. Ruff SHALL use explicit target-policy `--config` or `--isolated`, Pylint explicit target-policy `--rcfile` or a sealed pinned-default config, basedpyright explicit target-policy `--project` rather than `.`, and Semgrep the explicit target-policy `bundle_root`. Adapter/config injection failure SHALL yield UNKNOWN. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any index conflict/object failure, materialization failure, path-root violation, or content-integrity failure SHALL yield UNKNOWN.
 
 The report SHALL record requested/effective scope, assurance kind, repository root, index tree/blob identities when applicable, supplied base/head commit/tree SHAs, the analyzed merge-base commit/tree SHA, diff digest, selected files/lines and content manifests, rename/deletion facts, filters/facets, trusted policy/config identity, resolver identity, status, and diagnostics.
 
@@ -73,7 +73,9 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 - **WHEN** range differential analysis runs
 - **THEN** the baseline analyzer snapshot is the resolved merge-base SHA
 - **AND** target-only changes after divergence are not classified as feature-branch fixes or introductions
-- **AND** the supplied base-ref tip remains recorded as resolver evidence.
+- **AND** the supplied base-ref tip remains recorded as resolver evidence
+- **AND** its authorized target-tip policy/config bundle is applied identically to the merge-base and head source snapshots
+- **AND** an untrusted, moved, missing, or unusable target policy identity yields UNKNOWN.
 
 #### Scenario: Pure rename preserves an unchanged finding
 
@@ -85,12 +87,12 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 
 #### Scenario: Candidate config cannot suppress its own finding
 
-- **GIVEN** the head changes analyzer configuration to suppress a finding that the trusted merge-base policy would report
+- **GIVEN** the head changes analyzer configuration to suppress a finding that the trusted target-base-tip policy would report
 - **WHEN** merge-base and head snapshots are analyzed
-- **THEN** every configurable adapter receives the same explicit sealed merge-base policy bundle
-- **AND** no adapter discovers configuration from the head tree, caller worktree, or process current directory
+- **THEN** every configurable adapter receives the same explicit sealed policy bundle from the authorized target base-ref tip
+- **AND** no adapter discovers configuration from the merge-base source tree, head tree, caller worktree, or process current directory
 - **AND** the head-side candidate configuration remains scope/shadow evidence but cannot change differential enforcement
-- **AND** missing or unusable baseline configuration yields UNKNOWN rather than fallback discovery.
+- **AND** missing or unusable target-tip configuration yields UNKNOWN rather than fallback discovery.
 
 #### Scenario: Analyzer identity mismatch is unknown
 
@@ -123,9 +125,9 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 
 ### Requirement: Mandatory Analyzer Coverage
 
-Strict PR-range assurance SHALL use the closed schema-versioned `pr-range-v1` profile defined authoritatively in `run/runner.py` and bound in the report by profile ID and policy/config digest. Required analyzer IDs are `ruff`, `radon`, `semgrep`, `ai-bloat-ast`, `ast-clean-code`, `basedpyright`, `pylint`, and `contracts`. `semgrep-bugs` is conditionally required when the trusted merge-base policy snapshot contains the governed bugs configuration; `targeted-pytest-coverage` is conditionally required when the complete range contains governed production Python. When either condition is absent its outcome SHALL be NOT_APPLICABLE rather than skipped. The profile has no optional analyzers, and range cannot disable the targeted pytest member with `--no-tests`.
+Strict PR-range assurance SHALL use the closed schema-versioned `pr-range-v1` profile defined authoritatively in `run/runner.py` and bound in the report by profile ID and policy/config digest. Required analyzer IDs are `ruff`, `radon`, `semgrep`, `ai-bloat-ast`, `ast-clean-code`, `basedpyright`, `pylint`, and `contracts`. `semgrep-bugs` is conditionally required when the trusted target-base-tip policy snapshot contains the governed bugs configuration; `targeted-pytest-coverage` is conditionally required when the complete range contains governed production Python. When either condition is absent its outcome SHALL be NOT_APPLICABLE rather than skipped. The profile has no optional analyzers, and range cannot disable the targeted pytest member with `--no-tests`.
 
-The report SHALL list each profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain and configuration digests, duration, and diagnostics. A required analyzer that is unavailable, skipped, failed, timed out, unparsable, or identity-mismatched SHALL make assurance UNKNOWN. Zero findings SHALL count as successful coverage only when an explicit successful run record exists; an empty finding list alone is not analyzer evidence. Targeted pytest coverage SHALL bind exact test paths/selectors, pytest/coverage versions, environment/config digest, outcome, and coverage artifact digest. Pytest unavailability, timeout, collection/internal/usage error, no collected tests, or missing/unreadable coverage SHALL yield UNKNOWN; collected assertion failures SHALL yield FAIL; a collected passing run records ran/pass and its coverage findings. Analyzer adapters SHALL surface timeout, unavailable, and parse failures explicitly. The required `contracts` member includes the CrossHair subprocess; a CrossHair timeout SHALL record failed contracts coverage and make assurance UNKNOWN rather than returning an empty success.
+The report SHALL list each profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain and configuration digests, duration, and diagnostics. A required analyzer that is unavailable, skipped, failed, timed out, unparsable, or identity-mismatched SHALL make assurance UNKNOWN. Zero findings SHALL count as successful coverage only when an explicit successful run record exists; an empty finding list alone is not analyzer evidence. Targeted pytest coverage SHALL bind exact test paths/selectors, pytest/coverage versions, environment/config digest, per-snapshot outcome, and coverage artifact digest. It SHALL be evaluated separately for each snapshot. A snapshot containing any governed production input selected for this member requires a valid targeted run. The merge-base side MAY record NOT_APPLICABLE only when immutable range evidence proves that every selected production input or selector needed by the member is introduced after the merge base and therefore structurally absent there; the record SHALL bind the absent paths/selectors and `absence_reason=not_present_at_merge_base`. This explicit absent-side result is neither skipped coverage nor a no-tests-collected run, and the aggregate member remains required on the head. A head snapshot that still contains governed production input but has no selectable/collected tests is UNKNOWN; deletion or loss of head-side test coverage cannot use the baseline-absence exception. Pytest unavailability, timeout, collection/internal/usage error, unexpected no-tests-collected, or missing/unreadable coverage SHALL yield UNKNOWN; collected head assertion failures SHALL yield FAIL; a collected passing run records ran/pass and its coverage findings. Analyzer adapters SHALL surface timeout, unavailable, and parse failures explicitly. The required `contracts` member includes the CrossHair subprocess; a CrossHair timeout SHALL record failed contracts coverage and make assurance UNKNOWN rather than returning an empty success.
 
 #### Scenario: Default PR-range profile has closed membership
 
@@ -141,8 +143,18 @@ The report SHALL list each profile member with required/conditional status, ran/
 - **WHEN** targeted pytest coverage executes
 - **THEN** the profile records the exact test selection, runner/environment identities, outcome, and coverage artifact digest
 - **AND** collected assertion failures produce FAIL
-- **AND** unavailable pytest, timeout, collection/internal/usage error, no collected tests, or missing/unreadable coverage produce UNKNOWN
+- **AND** unavailable pytest, timeout, collection/internal/usage error, unexpected no collected tests, or missing/unreadable coverage produce UNKNOWN
+- **AND** only a merge-base-side input/selector absence proven by immutable range evidence produces NOT_APPLICABLE for that side
 - **AND** the stage cannot be omitted by `--no-tests`.
+
+#### Scenario: Targeted pytest handles inputs introduced after the merge base
+
+- **GIVEN** a range introduces governed production input and its targeted test or selector, so those exact inputs are absent from the merge-base tree
+- **WHEN** targeted pytest coverage is evaluated for both snapshots
+- **THEN** the merge-base side records NOT_APPLICABLE with the absent input/selector manifest and `absence_reason=not_present_at_merge_base`
+- **AND** it is not executed as an empty pytest selection and does not become UNKNOWN merely because the new files did not exist
+- **AND** the head side still requires collection and a valid coverage artifact
+- **AND** a head-side missing selection, no-tests-collected result, or coverage loss is UNKNOWN.
 
 #### Scenario: Contract subprocess timeout is unknown
 
