@@ -161,6 +161,11 @@ requirements:
         method: test
         intent: "Surface required contract/CrossHair timeout as failed analyzer coverage."
         observable: "A swallowed timeout cannot become an empty successful contracts run; strict assurance is UNKNOWN."
+      - case_id: CR14-026
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Surface a documented CrossHair tool/process-error exit without parsed findings as failed analyzer coverage."
+        observable: "Exit code 2 retains exit/stderr diagnostics and yields UNKNOWN, while parsed counterexamples remain findings."
       - case_id: CR14-020
         scenario_id: mandatory-analyzer-coverage
         method: test
