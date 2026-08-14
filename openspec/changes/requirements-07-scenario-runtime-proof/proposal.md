@@ -1,80 +1,47 @@
-# Change: Prove Requirement Scenarios with Runtime Test Evidence
+# Change: Separate Current-Run Scenario Evidence from Historical TDD Chronology
 
 ## Why
 
-The released Requirements evidence command proves source validity and declared
-test-link coverage, but it intentionally does not execute tests or claim
-behavioral satisfaction. A linked test file is therefore traceability evidence,
-not empirical proof that an exact scenario test was selected, executed, and
-passed in the current delivery run.
+The Requirements module currently places current execution and historical failing-first proof on one maturity ladder. Final reconciliation consequently requires prior-red or legacy-ledger evidence even when the bounded question is only whether exact mapped selectors passed in the current run.
+
+This conflation pushed core toward static inference of every pytest-determining input. The module contract must instead report current execution and historical chronology as independent claims.
 
 ## What Changes
 
-- Extend Requirements evidence with schema-v2 lifecycle maturity: mapped
-  proposal readiness, digest-bound acceptance, test-authored selection,
-  failing-first red proof, and final verified proof.
-- Require rationale, declared product touchpoints, verification cases, and
-  observables from proposal time; exact structured test selectors begin only
-  when test automation starts.
-- Add a deterministic two-phase public contract: emit a bounded test plan
-  before execution, then reconcile trusted JUnit results into the final
-  Requirements evidence report.
-- Extend the released Code Review public interface with an optional,
-  finalized Requirements-evidence context. The review report retains the
-  validated provenance separately and never uses the Requirements verdict to
-  calculate its own verdict.
-- Reject missing, ambiguous, stale, or unsafe selectors; never emit shell
-  command strings and never execute a test process from module code.
-- Preserve offline-first operation, read-only upstream sources, profile-aware
-  severity, deterministic report ordering, and backward-compatible report
-  evolution.
-- Keep proposal-ready success distinct from implementation proof: a passing
-  proposal report explicitly says that execution evidence is not yet available.
+- Preserve lifecycle planning, accepted mappings, deterministic exact selector plans, and current-run JUnit reconciliation.
+- Advance only the finalized Requirements report from schema v2 to v3; mapping sidecars remain schema v2. Finalized-report v2 uses the legacy reader, while v3 requires both corrected claim objects.
+- Add a first-class `current_execution` result that can be finalized from the current plan and JUnit without historical evidence.
+- Stop deriving `passing-after-red` from current-run pass or generic maturity.
+- Remove new use of the R07 legacy-ledger migration path; keep finalized-report v2 reading only for explicitly labelled compatibility and reject malformed v3 instead of treating it as legacy.
+- Accept finalized current-run Requirements evidence as Code Review provenance without requiring a historical proof basis.
+- Move trusted historical chronology to `requirements-08-bounded-red-green-proof`.
 
 ## Capabilities
 
-### New Capabilities
+### Modified Capabilities
 
-- `requirements-scenario-runtime-proof`: Produce deterministic scenario test
-  plans and reconcile current-run JUnit results into empirical proof states.
+- `requirements-scenario-runtime-proof`: Plan and reconcile exact current-run selector evidence independently from chronology.
+- `requirements-proof-review-context`: Require both finalized-report schema-v3 claim objects, preserve the chronology placeholder as provenance, and prevent verdict fusion.
 
 ## Impact
 
-- Affected packages: `packages/specfact-requirements` and
-  `packages/specfact-code-review`, including public CLI contracts, typed report
-  models, tests, version, manifest, registry artifacts, checksums, and
-  signatures.
-- Affected consumers: the paired core change executes module-produced plans
-  and returns JUnit evidence; no core component reimplements proof semantics.
-- Affected documentation: Requirements evidence guides on modules.specfact.io,
-  including a precise statement of declared versus executed proof.
-- Dependencies: extends the released `requirements-06-evidence-enforcement`
-  command contract and supplies a bounded input to, but does not implement,
-  `validation-02-full-chain-engine`.
-- Rollback: keep the existing evidence command/report behavior; no source
-  artifacts or tests are modified by evidence evaluation.
+- Planning artifacts only in this commit; no package source, tests, prompts, registry, version, signature, or generated docs change.
+- A later implementation requires a signed Requirements module release before core adopts finalized report schema v3.
+- Backward compatibility must preserve reading existing reports while making their historical basis explicit.
+- Rollback is lossless: disable only new-field writing, preserve already-written `current_execution` and `red_green_chronology` objects, and require an old-reader fixture proving they remain opaque rather than being reinterpreted as legacy chronology. Do not relabel current-run results as historical proof.
 
-## Quality Standards
+## Explicit Non-Goals
 
-- Use spec-first and strict failing-before TDD for every public behavior.
-- Keep public APIs typed and contract-decorated with deterministic schemas.
-- Validate fixture safety, test-plan determinism, JUnit provenance, report
-  compatibility, module versions, registry integrity, and signatures.
-- Run the full modules quality and fresh SpecFact code-review gates before the
-  implementation PR.
+- Execute tests or Git commands in the module.
+- Infer pytest/Python imports, plugins, configuration, data reads, or dependency closure.
+- Merge Requirements and Code Review verdicts.
+- Claim complete intent, correctness, or code quality.
 
 ## Source Tracking
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: [#368](https://github.com/nold-ai/specfact-cli-modules/issues/368)
-- **GitHub Type**: User Story
-- **Parent Feature**: [#161](https://github.com/nold-ai/specfact-cli-modules/issues/161)
-- **Parent Epic**: [#144](https://github.com/nold-ai/specfact-cli-modules/issues/144)
-- **Project**: SpecFact CLI (`Todo`)
-- **Extends**: `requirements-06-evidence-enforcement`
-- **Blocks**:
-  [nold-ai/specfact-cli#662](https://github.com/nold-ai/specfact-cli/issues/662)
-  (native GitHub dependency)
-- **Paired Core Change**: `requirements-07-runtime-proof-delivery`
-- **Repository**: nold-ai/specfact-cli-modules
-- **Last Synced Status**: proposed / Todo (2026-07-30)
+- **Paired Core Issue**: [nold-ai/specfact-cli#662](https://github.com/nold-ai/specfact-cli/issues/662)
+- **Follow-up**: `requirements-08-bounded-red-green-proof`
+- **Planning correction date**: 2026-08-13
+

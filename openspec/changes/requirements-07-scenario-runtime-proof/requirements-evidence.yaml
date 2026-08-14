@@ -12,8 +12,8 @@ requirements:
       - case_id: lifecycle-proposal-ready
         scenario_id: lifecycle-aware-requirements-readiness
         method: test
-        intent: Report proposal readiness without an execution claim.
-        observable: JSON report separates gate decision and implementation evidence.
+        intent: Require all planned schema-v2 mapping fields and report proposal readiness without an execution claim.
+        observable: Incomplete schema-v2 mappings are non-passing with named missing fields; corrected finalized report is schema v3 with separate gate, implementation, current_execution, and chronology fields.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:mapping-acceptance-provenance:
     rationale: Automation must begin from requirements accepted against their reviewed mapping.
     stakeholder_refs:
@@ -27,7 +27,7 @@ requirements:
         scenario_id: mapping-acceptance-provenance
         method: test
         intent: Reject stale or missing acceptance evidence.
-        observable: Digest-bound acceptance finding and maturity result.
+        observable: Acceptance requires the matching mapping digest, decision, stable reviewer identity, reviewer role, timestamp, and immutable reference; omission, rejection, or staleness remains blocking.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:deterministic-scenario-proof-plan:
     rationale: A test plan must be deterministic and safe before a delivery runner consumes it.
     stakeholder_refs:
@@ -43,7 +43,7 @@ requirements:
         intent: Validate exact structured selectors at test-authored maturity.
         observable: Deterministic normalized plan and selector findings.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:current-run-junit-reconciliation:
-    rationale: Requirements proof must be based on collected current-run results.
+    rationale: Requirements evidence must report collected current-run results independently from historical chronology.
     stakeholder_refs:
       - https://github.com/nold-ai/specfact-cli-modules/issues/368
     touchpoints:
@@ -54,10 +54,30 @@ requirements:
       - case_id: lifecycle-junit-reconcile
         scenario_id: current-run-junit-reconciliation
         method: test
-        intent: Distinguish a failing-first result from a final passing result.
-        observable: Red and verified maturity reports bound to exact selectors.
+        intent: Report exact current selector outcomes without implying failing-first chronology.
+        observable: Independent current_execution status bound to exact selectors and current JUnit.
+      - case_id: lifecycle-junit-nonpass-matrix
+        scenario_id: current-run-junit-reconciliation
+        method: test
+        intent: Reject every incomplete, non-pass, or non-canonical current selector result.
+        observable: Missing, duplicate, ambiguous, skipped, failed, errored, missing/mismatched specfact.selector, display/class-only, non-canonical, or mismatched mapping/plan/source/selector identities cannot produce current_execution pass.
+  openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:historical-chronology-is-a-separate-claim:
+    rationale: Historical TDD chronology is optional evidence owned by R08, not a prerequisite for current execution.
+    stakeholder_refs:
+      - https://github.com/nold-ai/specfact-cli-modules/issues/368
+      - https://github.com/nold-ai/specfact-cli/issues/662
+    touchpoints:
+      - id: requirements-chronology-state
+        kind: artifact
+        locator: specfact requirements reconcile
+    verification_cases:
+      - case_id: lifecycle-chronology-independent
+        scenario_id: historical-chronology-is-a-separate-claim
+        method: test
+        intent: Emit finalized report schema v3 with a valid current-run observation and mandatory chronology placeholder when no R08 replay capsule is supplied.
+        observable: current_execution is final while red_green_chronology is the canonical R07 not_evaluated/capsule_not_supplied placeholder; R07 exposes no chronology request/capsule input or other chronology status.
   openspec:requirements-07-scenario-runtime-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
-    rationale: Code Review must consume finalized Requirements proof as provenance without fusing delivery verdicts.
+    rationale: Code Review must consume finalized Requirements evidence as provenance without fusing delivery verdicts.
     stakeholder_refs:
       - https://github.com/nold-ai/specfact-cli/issues/662
     touchpoints:
@@ -71,35 +91,38 @@ requirements:
         selector:
           runner: pytest
           node_id: tests/unit/specfact_code_review/run/test_commands.py::test_run_command_retains_finalized_requirements_provenance_without_verdict_fusion
-        intent: Preserve finalized Requirements provenance while retaining an independent review verdict.
-        observable: Review JSON contains separate Requirements provenance even when its gate decision is fail.
+        intent: Preserve the top-level Requirements gate decision and finalized Requirements provenance while retaining an independent review verdict.
+        observable: Review JSON contains the independent Requirements gate decision and separate claim provenance even when that gate decision is fail.
       - case_id: review-context-rejection
         scenario_id: finalized-requirements-evidence-review-context
         method: test
         selector:
           runner: pytest
           node_id: tests/unit/specfact_code_review/run/test_commands.py::test_run_command_rejects_nonfinal_requirements_evidence_before_review
-        intent: Reject non-final proof before Code Review starts.
+        intent: Reject non-final current-execution evidence before Code Review starts.
         observable: Public CLI reports a finalized Requirements evidence validation error.
-      - case_id: review-context-proof-basis
+      - case_id: review-context-unreadable
         scenario_id: finalized-requirements-evidence-review-context
         method: test
-        selector:
-          runner: pytest
-          node_id: tests/unit/specfact_code_review/run/test_commands.py::test_requirements_evidence_context_rejects_passing_proof_without_basis
-        intent: Reject passing proof provenance that has no historical proof basis.
-        observable: Code Review rejects the proof before review execution.
-  openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:auditable-legacy-tdd-ledger-migration:
-    rationale: Legacy TDD evidence must remain explicit and never be mislabeled as red JUnit proof.
-    stakeholder_refs:
-      - https://github.com/nold-ai/specfact-cli-modules/issues/368
-    touchpoints:
-      - id: requirements-legacy-ledger-migration
-        kind: cli_command
-        locator: specfact requirements reconcile --legacy-tdd-evidence
-    verification_cases:
-      - case_id: lifecycle-legacy-tdd-ledger
-        scenario_id: auditable-legacy-tdd-ledger-migration
+        intent: Reject unreadable Requirements evidence before review execution.
+        observable: No Requirements-aware review report is emitted.
+      - case_id: review-context-malformed
+        scenario_id: finalized-requirements-evidence-review-context
         method: test
-        intent: Reject stale or misplaced legacy ledger records.
-        observable: Final reports label a valid ledger transition without claiming red proof.
+        intent: Reject malformed Requirements evidence before review execution.
+        observable: No Requirements-aware review report is emitted.
+      - case_id: review-context-unsupported
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        intent: Reject unsupported-schema Requirements evidence before review execution.
+        observable: No Requirements-aware review report is emitted.
+      - case_id: review-context-missing-chronology-claim
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        intent: Reject finalized report schema v3 Requirements evidence that omits the mandatory red_green_chronology claim object.
+        observable: Truly legacy payloads use the compatibility reader; schema v3 cannot omit the canonical not_evaluated claim; finalized report v2 is routed only through legacy compatibility.
+      - case_id: review-context-v2-proof-basis
+        scenario_id: finalized-requirements-evidence-review-context
+        method: test
+        intent: Preserve finalized report v2 source epoch and shipped passing proof-basis validation.
+        observable: Passing v2 context records source_schema_version 2 and requires red-junit or matching digest-bound legacy-tdd-ledger basis; missing or invalid basis is rejected and never reinterpreted as v3.
