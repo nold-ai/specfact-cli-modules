@@ -2,7 +2,7 @@
 
 ## 0. Planning-only correction
 
-- [x] 0.1 Define independent `current_execution` and `tdd_chronology` claims.
+- [x] 0.1 Define independent `current_execution` and `red_green_chronology` claims.
 - [x] 0.2 Move new historical proof to R08 and prohibit dependency-closure inference.
 - [x] 0.3 Create OpenSpec-only planning changes with no package or registry edits.
 
