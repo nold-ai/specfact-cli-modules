@@ -28,8 +28,8 @@ requirements:
       - case_id: CR14-018
         scenario_id: explicit-review-scope-evidence
         method: test
-        intent: "Reject simplification-filtered analysis from pull-request range assurance."
-        observable: "Range plus focus=simplify fails before analysis and cannot emit assurance_kind=pr_range."
+        intent: "Reserve pull-request range assurance for the complete governed Python selection."
+        observable: "Range rejects exclude-tests, every focus facet, path, no-tests, and level filters before analysis; narrowed runs cannot emit assurance_kind=pr_range or false NOT_APPLICABLE."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
     rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
     stakeholder_refs:
@@ -146,6 +146,11 @@ requirements:
         method: test
         intent: "Surface required contract/CrossHair timeout as failed analyzer coverage."
         observable: "A swallowed timeout cannot become an empty successful contracts run; strict assurance is UNKNOWN."
+      - case_id: CR14-020
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Represent targeted pytest/coverage as a conditional pr-range-v1 member with explicit execution truth."
+        observable: "Assertion failure is FAIL; unavailable/timeout/collection/internal/usage/no-tests-collected/coverage-artifact failures are UNKNOWN; no-tests cannot disable range coverage."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:

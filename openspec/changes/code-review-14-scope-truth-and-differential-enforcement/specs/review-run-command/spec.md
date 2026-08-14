@@ -2,7 +2,7 @@
 
 ### Requirement: Explicit Review Scope Evidence
 
-`specfact code review run` SHALL support unambiguous `worktree`, `index`, `range`, and `full` scopes plus explicit positional files. Index scope SHALL analyze the exact staged blob snapshot, not current worktree path content. Range scope SHALL require base and head refs, resolve full base/head and merge-base commit/tree SHAs, select the committed merge-base-to-head delta, and use the merge-base—not the supplied base-ref tip—as the differential baseline. Changed tests SHALL be included by default. `changed` SHALL be a deprecated alias for `worktree`, not PR range. Positional files SHALL emit `assurance_kind=explicit_files` and SHALL NOT satisfy a consumer or policy requiring `pr_range` assurance.
+`specfact code review run` SHALL support unambiguous `worktree`, `index`, `range`, and `full` scopes plus explicit positional files. Index scope SHALL analyze the exact staged blob snapshot, not current worktree path content. Range scope SHALL require base and head refs, resolve full base/head and merge-base commit/tree SHAs, select the committed merge-base-to-head delta, and use the merge-base—not the supplied base-ref tip—as the differential baseline. Changed tests SHALL be included and `assurance_kind=pr_range` SHALL mean the complete governed merge-base-to-head Python selection. Range SHALL reject `--exclude-tests`, every `--focus` facet, `--path`, `--no-tests`, and `--level` before analysis; this change defines no filtered-range assurance. `changed` SHALL be a deprecated alias for `worktree`, not PR range. Positional files SHALL emit `assurance_kind=explicit_files` and SHALL NOT satisfy a consumer or policy requiring `pr_range` assurance.
 
 For index mode, `scope.py` SHALL materialize staged blobs outside the caller worktree and record the index tree/blob/content identities so later unstaged edits at the same path cannot affect analysis. For range mode, it SHALL materialize fresh detached merge-base/head roots from the resolved commit trees outside the caller worktree plus a separate sealed merge-base policy bundle. It SHALL manifest each selected analyzer input and declared analyzer-config input by path, Git blob identity, and content digest; pass only materialized-root paths to analyzers; apply one trusted merge-base-policy analyzer/config identity to both range snapshots; pass explicit baseline config paths to configurable adapters; and verify every snapshot manifest before and after analysis. Ruff SHALL use explicit baseline `--config` or `--isolated`, Pylint explicit baseline `--rcfile` or a sealed pinned-default config, basedpyright explicit baseline `--project` rather than `.`, and Semgrep the explicit baseline policy `bundle_root`. Adapter/config injection failure SHALL yield UNKNOWN. Index and range modes SHALL reject `--fix`, `--preview-fixes`, and `--with-mutation`. Any index conflict/object failure, materialization failure, path-root violation, or content-integrity failure SHALL yield UNKNOWN.
 
@@ -39,13 +39,13 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 - **THEN** it fails before materialization with an explicit non-mutating range-mode error
 - **AND** the message directs the caller to a separate worktree or explicit-file run for mutation workflows.
 
-#### Scenario: Range assurance rejects simplification focus
+#### Scenario: Range assurance rejects every narrowing filter
 
-- **GIVEN** range scope is combined with `--focus simplify`
+- **GIVEN** range scope is combined with `--exclude-tests`, any `--focus` facet, `--path`, `--no-tests`, or `--level`
 - **WHEN** the request is validated
-- **THEN** it fails before analysis because the simplification queue filters unrelated findings
-- **AND** no report from that narrowed run carries `assurance_kind=pr_range`
-- **AND** the message directs the caller to a separate worktree or explicit-file simplification workflow.
+- **THEN** it fails before analysis because the requested run omits governed files, test/analyzer execution, or reported findings
+- **AND** no narrowed result carries `assurance_kind=pr_range` or turns a non-empty governed range into NOT_APPLICABLE
+- **AND** the message directs the caller to a separately labelled worktree or explicit-file workflow.
 
 #### Scenario: Scope failure is unknown
 
@@ -123,17 +123,26 @@ Range enforcement SHALL analyze the resolved merge-base and head with identical 
 
 ### Requirement: Mandatory Analyzer Coverage
 
-Strict PR-range assurance SHALL use the closed schema-versioned `pr-range-v1` profile defined authoritatively in `run/runner.py` and bound in the report by profile ID and policy/config digest. Required analyzer IDs are `ruff`, `radon`, `semgrep`, `ai-bloat-ast`, `ast-clean-code`, `basedpyright`, `pylint`, and `contracts`. `semgrep-bugs` is conditionally required when the trusted merge-base policy snapshot contains the governed bugs configuration; when that configuration is absent its outcome SHALL be NOT_APPLICABLE rather than skipped. The profile has no optional analyzers.
+Strict PR-range assurance SHALL use the closed schema-versioned `pr-range-v1` profile defined authoritatively in `run/runner.py` and bound in the report by profile ID and policy/config digest. Required analyzer IDs are `ruff`, `radon`, `semgrep`, `ai-bloat-ast`, `ast-clean-code`, `basedpyright`, `pylint`, and `contracts`. `semgrep-bugs` is conditionally required when the trusted merge-base policy snapshot contains the governed bugs configuration; `targeted-pytest-coverage` is conditionally required when the complete range contains governed production Python. When either condition is absent its outcome SHALL be NOT_APPLICABLE rather than skipped. The profile has no optional analyzers, and range cannot disable the targeted pytest member with `--no-tests`.
 
-The report SHALL list each profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain and configuration digests, duration, and diagnostics. A required analyzer that is unavailable, skipped, failed, timed out, unparsable, or identity-mismatched SHALL make assurance UNKNOWN. Zero findings SHALL count as successful coverage only when an explicit successful run record exists; an empty finding list alone is not analyzer evidence. Analyzer adapters SHALL surface timeout, unavailable, and parse failures explicitly. The required `contracts` member includes the CrossHair subprocess; a CrossHair timeout SHALL record failed contracts coverage and make assurance UNKNOWN rather than returning an empty success.
+The report SHALL list each profile member with required/conditional status, ran/failed/NOT_APPLICABLE outcome, version, toolchain and configuration digests, duration, and diagnostics. A required analyzer that is unavailable, skipped, failed, timed out, unparsable, or identity-mismatched SHALL make assurance UNKNOWN. Zero findings SHALL count as successful coverage only when an explicit successful run record exists; an empty finding list alone is not analyzer evidence. Targeted pytest coverage SHALL bind exact test paths/selectors, pytest/coverage versions, environment/config digest, outcome, and coverage artifact digest. Pytest unavailability, timeout, collection/internal/usage error, no collected tests, or missing/unreadable coverage SHALL yield UNKNOWN; collected assertion failures SHALL yield FAIL; a collected passing run records ran/pass and its coverage findings. Analyzer adapters SHALL surface timeout, unavailable, and parse failures explicitly. The required `contracts` member includes the CrossHair subprocess; a CrossHair timeout SHALL record failed contracts coverage and make assurance UNKNOWN rather than returning an empty success.
 
 #### Scenario: Default PR-range profile has closed membership
 
 - **GIVEN** strict range review resolves the `pr-range-v1` profile
 - **WHEN** analyzer coverage is planned
-- **THEN** the eight always-required analyzer IDs and conditional `semgrep-bugs` membership match the normative profile exactly
+- **THEN** the eight always-required analyzer IDs plus conditional `semgrep-bugs` and `targeted-pytest-coverage` memberships match the normative profile exactly
 - **AND** the profile ID, membership, required flags, versions, and policy/config digest are retained in the report
 - **AND** no implementation-specific optionality changes assurance.
+
+#### Scenario: Targeted pytest distinguishes product failure from infrastructure uncertainty
+
+- **GIVEN** a complete range contains governed production Python
+- **WHEN** targeted pytest coverage executes
+- **THEN** the profile records the exact test selection, runner/environment identities, outcome, and coverage artifact digest
+- **AND** collected assertion failures produce FAIL
+- **AND** unavailable pytest, timeout, collection/internal/usage error, no collected tests, or missing/unreadable coverage produce UNKNOWN
+- **AND** the stage cannot be omitted by `--no-tests`.
 
 #### Scenario: Contract subprocess timeout is unknown
 
