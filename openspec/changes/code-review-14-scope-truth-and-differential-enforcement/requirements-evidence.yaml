@@ -154,6 +154,11 @@ requirements:
         method: test
         intent: "Bind the suppression catalog identity across every module-owned trust boundary and hand off the live consumer comparison explicitly."
         observable: "Mapped module tests vary checkpoint/resource/package/profile/report/static-envelope catalog digests independently and reject every mismatch; task 4.7 separately requires the unmapped core consumer to load the approved signed catalog digest and reject report/envelope mismatch before pr_range promotion."
+      - case_id: CR14-114
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent basedpyright line-level pyright-ignore comments from erasing baseline diagnostics."
+        observable: "Both parser-recognized `pyright: ignore` and bracketed `pyright: ignore[reportRule,...]` forms are frozen in the signed suppression catalog; an introduced occurrence blocks before fingerprint classification, affected missing base findings stay unknown, and parser/catalog drift is UNKNOWN."
       - case_id: CR14-100
         scenario_id: differential-base-head-enforcement
         method: test
