@@ -641,11 +641,16 @@ requirements:
         method: test
         intent: "Prevent a repository collection hook from hiding one changed test inside an otherwise collected file."
         observable: "The frozen hook-disposition catalog rejects collection-shaping conftest hooks before execution; plugin/hook origins, raw-collected items, and pre/post registry digests are bound, so selective deselection is UNKNOWN rather than PASS."
+      - case_id: CR14-127
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent pytest's built-in __test__ control from hiding one changed test inside an otherwise collected file."
+        observable: "The sealed non-mutating collectstart/makeitem observer records each pinned-name-matching module/class/function before built-in filtering and makes a false runtime __test__ value UNKNOWN even when a sibling selector passes; observer or outcome drift is UNKNOWN."
       - case_id: CR14-126
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Admit exact target-tip pytest fixture plugins without ambient loading or unclassified parser and collection behavior."
-        observable: "The authenticated project-runtime descriptor binds plugin distribution, payload, dependency, pytest11 entry point, parser, and hook capabilities; a matching fixture-only plugin collects on both sides, while unlisted, snapshot/user, drifted, dynamic, or collection-shaping plugins are UNKNOWN."
+        observable: "The authenticated project-runtime descriptor binds plugin distribution, payload, dependency, pytest11 entry point, parser, and hook capabilities; a snapshot-free sandbox mounts only the analyzer capsule plus identical read-only project layer for exact entry-point preflight, and targeted pytest uses the same layer identity; a matching fixture-only plugin collects on both sides, while unlisted, snapshot/user, drifted, dynamic, or collection-shaping plugins are UNKNOWN."
       - case_id: CR14-116
         scenario_id: mandatory-analyzer-coverage
         method: test
