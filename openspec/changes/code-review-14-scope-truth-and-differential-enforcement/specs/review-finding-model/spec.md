@@ -21,6 +21,15 @@
 - **AND** lifecycle/policy do not treat it as an open blocker
 - **AND** aggregate status retains the baseline evidence but excludes that exact fixed baseline-only item from remaining blockers.
 
+#### Scenario: Rename without semantic-subject change cannot fix a finding
+
+- **GIVEN** a one-to-one rename has identical file bytes or an unchanged manifest-bound analyzer/rule-specific semantic-subject digest
+- **AND** the base finding is absent at head
+- **WHEN** differential classification runs
+- **THEN** the missing finding is unknown, never fixed
+- **AND** unrelated edits elsewhere in the renamed file do not satisfy subject change
+- **AND** unavailable or ambiguous subject derivation also yields unknown.
+
 #### Scenario: Matching fingerprint with changed severity is not unchanged
 
 - **GIVEN** base and head observations have the same stable identity fingerprint after rename normalization

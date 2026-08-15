@@ -223,6 +223,11 @@ requirements:
         method: test
         intent: "Prevent a matched fingerprint with changed severity from being treated as unchanged."
         observable: "Identity matching is followed by normalized severity and blocking-input comparison; any unclassified transition retains both observations as UNKNOWN and blocks strict PASS."
+      - case_id: CR14-096
+        scenario_id: independent-finding-lifecycle-and-remediation
+        method: test
+        intent: "Prevent any path-dependent analyzer behavior from turning an unchanged renamed subject into a claimed fix."
+        observable: "Every finding binds a semantic-subject digest or unavailable reason; missing findings across renames are fixed only after proven subject change, while identical blob/subject, unrelated edits, or ambiguity is UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:truthful-review-assurance-status:
     rationale: "Unknown and not-applicable are not green passes."
     stakeholder_refs:
@@ -416,6 +421,11 @@ requirements:
         method: test
         intent: "Prevent Ruff per-file target versions from changing rule semantics across a pure rename."
         observable: "Both projections retain one shared global target version and clear per-file-target-version; identical renamed bytes retain the same version-sensitive diagnostics, and effective mapping or catalog drift is UNKNOWN."
+      - case_id: CR14-095
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff namespace-package mappings from erasing diagnostics across a rename."
+        observable: "Both projections clear namespace-packages and bind snapshot-root src; identical bytes renamed into a configured namespace retain INP001/path-sensitive behavior, and effective mapping or catalog drift is UNKNOWN."
       - case_id: CR14-075
         scenario_id: mandatory-analyzer-coverage
         method: test
