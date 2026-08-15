@@ -466,6 +466,14 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** Ruff analyzes the explicit file without path-specific diagnostic suppression and no cache write targets the snapshot or read-only configuration roots
 - **AND** a write, skipped file, non-empty effective per-file map, ineffective transform/flag, or option-catalog drift yields UNKNOWN.
 
+#### Scenario: Ruff task tags cannot hide E501
+
+- **GIVEN** authorized Ruff policy enables `lint.pycodestyle.ignore-overlong-task-comments` and includes `TODO` in its task-tag list
+- **AND** a baseline overlong comment produces E501 while the otherwise identical head line adds only a `TODO:` prefix
+- **WHEN** the controller builds and runs both immutable-snapshot Ruff projections
+- **THEN** the original option and task-tag list remain bound as evidence, the effective projection forces `lint.pycodestyle.ignore-overlong-task-comments=false`, and native Ruff still emits E501 for both snapshots
+- **AND** an effective true value, missing result-control disposition, ineffective projection, or pinned Ruff schema/catalog drift yields `UNKNOWN`, never an empty PASS or a `fixed` finding.
+
 #### Scenario: Radon configuration cannot suppress a governed result
 
 - **GIVEN** the authorized target policy or either immutable snapshot contains a Radon source that sets `cc_min = F`, an exclude/ignore pattern, or an outside output file

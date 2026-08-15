@@ -636,6 +636,11 @@ requirements:
         method: test
         intent: "Prevent repository or admitted-plugin hooks from rewriting failures before the sealed outcome observer sees them."
         observable: "The total pinned hook-disposition catalog rejects execution/phase/TestReport/status/exit/artifact shaping hooks and wrappers—including a makereport hook that changes failed to passed—before execution; only exact controller observer/pytest-cov capabilities are admitted, and catalog drift is UNKNOWN."
+      - case_id: CR14-147
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff task-tag exemptions from hiding E501 without an inline suppression directive."
+        observable: "A baseline overlong comment and a head line differing only by an allowed TODO prefix both retain native E501 because the projection forces lint.pycodestyle.ignore-overlong-task-comments=false; an effective true value, ineffective projection, or catalog drift is UNKNOWN rather than fixed or PASS."
       - case_id: CR14-033
         scenario_id: mandatory-analyzer-coverage
         method: test
