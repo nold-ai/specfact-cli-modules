@@ -154,6 +154,11 @@ requirements:
         method: test
         intent: "Prevent basedpyright baseline slots from hiding a relocated or newly introduced diagnostic."
         observable: "Original baseline artifacts remain governed/digested, but generated projects remove every baselineFile and argv omits --baselinefile; baseline files are not mounted/read, the relocated diagnostic remains visible, and effective baseline injection is UNKNOWN."
+      - case_id: CR14-087
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent basedpyright include or exclude controls from dropping a governed input."
+        observable: "The generated flattened project binds original controls, sets include to the exact eligible snapshot-relative manifest, clears exclude and ignore, and uses only explicit --project; a previously excluded file remains analyzed and any include/effective-control mismatch is UNKNOWN."
       - case_id: CR14-029
         scenario_id: differential-base-head-enforcement
         method: test
@@ -345,7 +350,7 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Make fresh and offline OCI capsule acquisition resolvable, immutable, and fail closed."
-        observable: "The signed lock supplies an HTTPS registry/repository@manifest locator plus config/layer identities; a verified digest-keyed controller cache supports offline use, a fresh miss fetches only that source, and mutable/missing locators, partial cache, acquisition/digest/media/size/redirect/unsafe-extraction failures are UNKNOWN without host fallback."
+        observable: "The signed lock supplies one HTTPS registry/repository@manifest locator plus config/layer identities and a complete fixed wheelhouse manifest; a verified digest-keyed cache supports offline use, while a genuine fresh miss fetches only that artifact and installs every selected lock member offline with indexes disabled. Missing/extra/incompatible wheels, mutable/missing locators, partial cache, acquisition/digest/media/size/redirect/unsafe-extraction failures are UNKNOWN without another source or host fallback."
       - case_id: CR14-061
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -394,8 +399,8 @@ requirements:
       - case_id: CR14-076
         scenario_id: mandatory-analyzer-coverage
         method: test
-        intent: "Ensure basedpyright ignore cannot report diagnostic success for a wholly silenced governed input."
-        observable: "Each generated project binds and clears ignore while preserving other authorized settings and exact eligible/argv manifests; effective ignore or catalog/manifest drift is UNKNOWN."
+        intent: "Ensure basedpyright project-selection controls cannot omit or wholly silence a governed input."
+        observable: "Each generated flattened project binds original controls, sets include to the exact eligible snapshot-relative files, clears exclude and ignore, uses only explicit --project without positional sources, and preserves other authorized diagnostic settings; include/effective-control/catalog/manifest drift is UNKNOWN."
       - case_id: CR14-077
         scenario_id: mandatory-analyzer-coverage
         method: test
