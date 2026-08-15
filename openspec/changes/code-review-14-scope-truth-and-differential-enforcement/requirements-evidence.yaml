@@ -515,7 +515,12 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Prevent basedpyright path-scoped strictness or execution environments from weakening diagnostics across a rename."
-        observable: "Generated projects clear strict, reject target executionEnvironments, retain one shared global checking policy, and a renamed identical diagnostic retains severity; effective path-scoped control or transition mismatch is UNKNOWN."
+        observable: "Initial pr-range-v1 rejects non-empty target path-scoped strict and executionEnvironments before launch, emits empty strict only after proving the target array absent/canonically empty, preserves exact global checking/diagnostic settings, and prevents same-path or renamed strict diagnostics from disappearing into PASS."
+      - case_id: CR14-123
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Preserve diagnostics required by basedpyright path-scoped strict policy."
+        observable: "A basic-mode policy with strict=[a.py] that reports unknown-member diagnostics yields basedpyright_strict_projection_unsupported UNKNOWN before projection; the verifier never clears non-empty target strict, and global settings remain unchanged."
       - case_id: CR14-077
         scenario_id: mandatory-analyzer-coverage
         method: test
