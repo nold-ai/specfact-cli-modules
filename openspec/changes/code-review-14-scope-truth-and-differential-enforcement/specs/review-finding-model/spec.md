@@ -15,9 +15,20 @@
 #### Scenario: Finding is fixed at head
 
 - **GIVEN** a stable fingerprint exists at base and not at successfully analyzed head
+- **AND** no introduced inline suppression for the same analyzer/path can explain its absence
 - **WHEN** differential classification runs
 - **THEN** differential state is fixed
 - **AND** lifecycle/policy do not treat it as an open blocker.
+
+#### Scenario: Introduced inline suppression remains an open blocker
+
+- **GIVEN** the head adds, changes, or relocates a registered suppression directive
+- **WHEN** strict differential policy evaluates its immutable directive fingerprint
+- **THEN** a separate `introduced_inline_suppression` finding remains open and blocking
+- **AND** without a valid external waiver, any missing base finding for the same analyzer/path is unknown rather than fixed
+- **AND** with an exact external waiver, the base finding remains open with waiver and suppressed-at-head evidence, never fixed
+- **AND** remediation availability is independent from lifecycle status
+- **AND** only that governance overlay may alter blocking policy while retaining both findings and waiver evidence.
 
 #### Scenario: Waiver is governance evidence
 
