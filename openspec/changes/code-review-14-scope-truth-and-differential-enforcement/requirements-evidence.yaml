@@ -251,6 +251,16 @@ requirements:
         method: test
         intent: "Reconcile removed baseline selectors so partial test deletion or function rename cannot pass."
         observable: "Two-sided selector set difference is explicit; missing normalized baseline selectors yield removed_selector UNKNOWN while head-only selectors must pass."
+      - case_id: CR14-043
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep delete-only production changes bound to the tests selected for the deleted baseline source."
+        observable: "The effective head plan unions head, still-present baseline, and changed-test selectors; baseline selectors run at head, while a missing/unresolvable deletion plan is UNKNOWN rather than NOT_APPLICABLE."
+      - case_id: CR14-044
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Treat an exact baseline-fail/head-pass selector transition as repaired evidence."
+        observable: "The baseline non-passing result remains per-snapshot FAIL evidence, the exact head pass classifies the pair as fixed and non-blocking, and uncertainty on either side remains UNKNOWN."
       - case_id: CR14-023
         scenario_id: mandatory-analyzer-coverage
         method: test
