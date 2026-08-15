@@ -50,6 +50,11 @@ requirements:
         method: test
         intent: "Treat Ruff's target-tip transitive extend graph as governed sealed policy input."
         observable: "Every relative in-tree closure node/edge/blob/content digest is selected and materialized read-only; member changes are governed UNKNOWN, while escape, cycle, missing, unsupported, or over-bound graphs are UNKNOWN."
+      - case_id: CR14-056
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Treat basedpyright extends and baselineFile references as governed sealed policy inputs."
+        observable: "The complete relative in-tree config graph and baseline artifact are manifested; referenced-only changes are governed UNKNOWN and unsafe/cyclic/missing/unsupported graphs are UNKNOWN."
       - case_id: CR14-007
         scenario_id: explicit-review-scope-evidence
         method: test
@@ -109,6 +114,11 @@ requirements:
         method: test
         intent: "Apply policy already promoted at the authorized target tip without replacing the merge-base source baseline."
         observable: "Both source snapshots use the frozen target-tip policy; moved, untrusted, missing, or unusable target policy yields UNKNOWN."
+      - case_id: CR14-057
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Provide a deterministic basedpyright input when the target repository has no config."
+        observable: "basedpyright-default-v1 generates explicit side --project files from canonical logical JSON and bound snapshot substitutions; implicit project-dot discovery is impossible."
       - case_id: CR14-028
         scenario_id: differential-base-head-enforcement
         method: test
