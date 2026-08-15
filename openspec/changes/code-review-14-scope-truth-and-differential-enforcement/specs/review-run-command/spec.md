@@ -694,6 +694,15 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** `pytest-item-controls-disabled-v1` yields `pytest_item_control_unsupported` UNKNOWN even though the file and raw/final inventories contain another selector
 - **AND** the observer's hookwrapper is manifest-bound, cannot mutate the downstream result, and any observer/origin/outcome drift is UNKNOWN.
 
+#### Scenario: Built-in class constructors cannot hide a changed test in a collected file
+
+- **GIVEN** a candidate adds a failing name-matching test class with a custom `__init__` or custom `__new__` beside a visible passing selector in the same test-candidate file
+- **WHEN** pinned pytest 9.0.3 starts that class collector
+- **THEN** the sealed `pytest_collectstart` observer records the class identity plus exact `hasinit` and `hasnew` inputs and decisions before `Class.collect` can return an empty inventory
+- **AND** a truthy effective `__init__` different from `object.__init__`, or truthy effective `__new__` different from `object.__new__`, yields `pytest_item_control_unsupported` UNKNOWN
+- **AND** the visible sibling, class collection warning, and file-level selector reconciliation cannot convert the hidden class to PASS
+- **AND** inherited/default constructors remain supported and observer/origin/decision drift is UNKNOWN.
+
 #### Scenario: Attested fixture plugins extend the sealed pytest catalog without shaping collection
 
 - **GIVEN** the authenticated target-tip project-runtime descriptor declares an exact external pytest fixture plugin with distribution/version/payload/dependency closure, `pytest11` entry point, option/`addini` catalogs, and hook-capability manifest

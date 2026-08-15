@@ -651,6 +651,11 @@ requirements:
         method: test
         intent: "Prevent pytest's built-in __test__ control from hiding one changed test inside an otherwise collected file."
         observable: "The sealed non-mutating collectstart/makeitem observer records each pinned-name-matching module/class/function before built-in filtering and makes a false runtime __test__ value UNKNOWN even when a sibling selector passes; observer or outcome drift is UNKNOWN."
+      - case_id: CR14-129
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent pytest's built-in class-constructor controls from hiding one changed test inside an otherwise collected file."
+        observable: "Before Class.collect can return empty, the sealed collectstart observer records pinned hasinit/hasnew inputs and decisions; custom __init__ or __new__ on a name-matching class is UNKNOWN even when a sibling selector passes, while inherited defaults remain supported."
       - case_id: CR14-126
         scenario_id: mandatory-analyzer-coverage
         method: test
