@@ -356,11 +356,21 @@ requirements:
         method: test
         intent: "Close and sign the complete analyzer runtime dependency graph and provision it during implementation."
         observable: "For each supported Linux/CPython environment, the signed lock closes OCI base layers, the final runtime-root manifest, and every direct/transitive analyzer package, marker, edge, payload and digest while module-package pip_dependencies excludes the analyzer closure; host conflicts cannot preempt capsule provisioning, and missing/extra/bare/host-leaked/drift evidence is UNKNOWN."
+      - case_id: CR14-093
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Bind the generated signed analyzer lock exactly to the frozen pre-implementation checkpoint."
+        observable: "The checkpoint stores the complete canonical logical lock projection and SHA-256; regeneration compares every field/byte/digest, mismatch invalidates activation/signing, and TDD evidence records the result."
       - case_id: CR14-085
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Make fresh and offline OCI capsule acquisition resolvable, immutable, and fail closed."
-        observable: "The signed lock supplies one HTTPS registry/repository@manifest locator plus config/layer identities and a complete fixed wheelhouse manifest; a verified digest-keyed cache supports offline use, while a genuine fresh miss fetches only that artifact and installs every selected lock member offline with indexes disabled. Missing/extra/incompatible wheels, mutable/missing locators, partial cache, acquisition/digest/media/size/redirect/unsafe-extraction failures are UNKNOWN without another source or host fallback."
+        observable: "The signed lock supplies one HTTPS registry/repository@manifest locator plus config/layer identities and a complete fixed wheelhouse manifest; a verified digest-keyed cache supports offline use, while a genuine fresh miss fetches only that artifact through per-hop HTTPS+allowlist authorization with no credential forwarding before authorization, binds the full redirect/final-URL chain, and installs every selected lock member offline with indexes disabled. Missing/extra/incompatible wheels, mutable/missing locators, partial cache, acquisition/digest/media/size/redirect/downgrade/credential failures are UNKNOWN without another source or host fallback."
+      - case_id: CR14-094
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent OCI redirects from downgrading transport or forwarding controller credentials to an unauthorized target."
+        observable: "Every redirect target is HTTPS and signed-allowlisted before credentials are attached; credentials are stripped/re-authorized per hop, the complete ordered chain/final URL is evidence, and downgrade or unauthorized forwarding is UNKNOWN."
       - case_id: CR14-061
         scenario_id: mandatory-analyzer-coverage
         method: test
