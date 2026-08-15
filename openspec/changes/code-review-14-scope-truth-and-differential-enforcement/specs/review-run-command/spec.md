@@ -49,13 +49,21 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 - **AND** the unstaged bytes do not affect findings, score, or status
 - **AND** the report binds selected paths separately from the complete index tree/path/blob/content manifest.
 
-#### Scenario: Index selection is derived from the captured tree
+#### Scenario: Index selection and safety metadata share one captured snapshot
 
-- **GIVEN** the live Git index mutates between index-tree capture and later scope-processing steps
+- **GIVEN** the live Git index mutates between immutable index capture and later scope-processing steps
 - **WHEN** index scope resolves staged paths and statuses
-- **THEN** it derives them only from `HEAD` versus the already captured tree object and never rereads the live index for selection
-- **AND** the selected-path evidence, materialized bytes, object identities, statuses, and complete tree manifest all describe that same captured tree
-- **AND** a capture/diff/object mismatch or inability to preserve that identity yields `UNKNOWN` and non-zero strict enforcement rather than omitting or mixing staged paths.
+- **THEN** it derives the complete tree and canonical stage/flag metadata from the same stable captured index snapshot, derives ordinary paths/statuses from `HEAD` versus that tree, and never rereads the live index
+- **AND** the selected-path evidence, materialized bytes, object identities, statuses, index-metadata digest, and complete tree manifest all bind that one snapshot
+- **AND** a capture/metadata/tree/diff/object mismatch or inability to preserve that identity yields `UNKNOWN` and non-zero strict enforcement rather than omitting or mixing staged paths.
+
+#### Scenario: Intent-to-add cannot disappear during tree creation
+
+- **GIVEN** the captured index records a governed path with intent-to-add and `write-tree` omits that metadata-only entry from the resulting tree
+- **WHEN** index scope evaluates applicability
+- **THEN** it inspects the canonical metadata from the same captured snapshot before tree-only applicability
+- **AND** records `unsafe_governed_input` `UNKNOWN` with the path, stage/flag identity, captured-index digest, and tree digest
+- **AND** it cannot report NOT_APPLICABLE or PASS merely because the captured tree equals HEAD.
 
 #### Scenario: Index imports use HEAD-plus-index dependencies
 

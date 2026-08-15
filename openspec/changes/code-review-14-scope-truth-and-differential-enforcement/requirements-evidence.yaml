@@ -88,8 +88,13 @@ requirements:
       - case_id: CR14-137
         scenario_id: explicit-review-scope-evidence
         method: test
-        intent: "Prevent concurrent live-index mutation from mixing captured staged bytes with a different staged-path selection."
-        observable: "Index paths and statuses are derived only from HEAD versus the once-captured tree object; selected evidence and materialization bind that same tree, later index mutation is ignored, and capture/diff/object mismatch is UNKNOWN."
+        intent: "Prevent concurrent live-index mutation from mixing captured staged bytes or metadata with a different selection."
+        observable: "Tree and canonical stage/flag metadata derive from one stable immutable index snapshot; ordinary paths/statuses derive from HEAD versus that tree, all evidence binds the same snapshot, later live-index mutation is ignored, and capture/metadata/tree/diff/object mismatch is UNKNOWN."
+      - case_id: CR14-143
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Preserve intent-to-add and other unsafe metadata that write-tree omits."
+        observable: "A governed git add -N entry remains present in the captured index-metadata manifest even when the captured tree equals HEAD, producing unsafe_governed_input UNKNOWN before applicability rather than NOT_APPLICABLE or PASS."
       - case_id: CR14-018
         scenario_id: explicit-review-scope-evidence
         method: test
