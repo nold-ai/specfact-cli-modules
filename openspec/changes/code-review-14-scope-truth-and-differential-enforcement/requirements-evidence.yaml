@@ -680,7 +680,12 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Keep Python stubs in static analysis without demanding impossible runtime coverage."
-        observable: "A .pyi-only range records targeted-pytest-coverage as NOT_APPLICABLE with an empty runtime-measurable manifest while every applicable static analyzer still includes the stub; mixed .py/.pyi snapshots reconcile only .py coverage and bind the .pyi static-only manifest."
+        observable: "A .pyi-only range records targeted-pytest-coverage and contracts independently NOT_APPLICABLE with empty manifests and distinct bound reasons; Ruff, Radon, activated Semgrep passes, ai-bloat-ast, ast-clean-code, basedpyright, and Pylint still include the stub. Mixed snapshots use only regular production .py for Coverage/CrossHair and bind .pyi in the stub-capable manifests."
+      - case_id: CR14-133
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent standalone stubs from creating an impossible mandatory CrossHair execution."
+        observable: "analyzer-input-kinds-v1 excludes .pyi from contracts, records no_crosshair_executable_input NOT_APPLICABLE without launch for a stub-only side, and still requires every exact stub-capable member; catalog or manifest drift is UNKNOWN."
       - case_id: CR14-097
         scenario_id: mandatory-analyzer-coverage
         method: test
