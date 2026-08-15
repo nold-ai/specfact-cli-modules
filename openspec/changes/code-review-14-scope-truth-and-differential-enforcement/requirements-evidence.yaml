@@ -336,6 +336,11 @@ requirements:
         method: test
         intent: "Close and sign the complete analyzer runtime dependency graph and provision it during implementation."
         observable: "For each supported Linux/CPython environment, the signed lock closes OCI base layers, the final runtime-root manifest, and every direct/transitive analyzer package, marker, edge, payload and digest while module-package pip_dependencies excludes the analyzer closure; host conflicts cannot preempt capsule provisioning, and missing/extra/bare/host-leaked/drift evidence is UNKNOWN."
+      - case_id: CR14-085
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Make fresh and offline OCI capsule acquisition resolvable, immutable, and fail closed."
+        observable: "The signed lock supplies an HTTPS registry/repository@manifest locator plus config/layer identities; a verified digest-keyed controller cache supports offline use, a fresh miss fetches only that source, and mutable/missing locators, partial cache, acquisition/digest/media/size/redirect/unsafe-extraction failures are UNKNOWN without host fallback."
       - case_id: CR14-061
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -371,6 +376,11 @@ requirements:
         method: test
         intent: "Ensure Ruff force-exclude cannot silently remove an explicitly governed file."
         observable: "Pinned --no-force-exclude plus matching eligible/invoked manifests forces explicit governed inputs through Ruff; ineffective flags, skipped input, or option-catalog drift is UNKNOWN."
+      - case_id: CR14-084
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff per-file ignore mappings from wholly silencing an added or renamed governed input."
+        observable: "The generated projection binds and clears per-file-ignores plus extend-per-file-ignores while retaining other authorized rules; added/renamed eligible files remain invoked, and a non-empty effective map, ineffective transform, or catalog drift is UNKNOWN."
       - case_id: CR14-075
         scenario_id: mandatory-analyzer-coverage
         method: test
