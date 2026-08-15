@@ -487,7 +487,16 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **WHEN** the per-snapshot Pylint projection is built and invoked
 - **THEN** `ignore`, `ignore-patterns`, `ignore-paths`, `ignored-modules`, `ignored-classes`, `generated-members`, `ignore-none`, `ignore-on-opaque-inference`, `ignore-mixin-members`, `ignored-checks-for-mixins`, `mixin-class-rgx`, and `signature-mutators` are canonically empty/disabled, while `contextmanager-decorators` is exactly the pinned built-in allowlist and `confidence` is explicitly the complete pinned Pylint 4.0.7 set `HIGH`, `CONTROL_FLOW`, `INFERENCE`, `INFERENCE_FAILURE`, `UNDEFINED`; other non-exemption authorized settings remain bound
 - **AND** identical bytes renamed to a formerly ignored module and diagnostics at every pinned confidence level remain diagnostically visible, and the eligible/exact argv manifests match
-- **AND** a non-empty effective exemption, incomplete/duplicate/unknown effective confidence set, unclassified target-specific diagnostic bypass, catalog drift, or manifest mismatch yields UNKNOWN.
+- **AND** signed `pylint-result-controls-v1` gives every pinned option exactly one disposition—`finding_or_category_filter`, `input_source_or_discovery`, `output_exit_cache_control`, `trusted_rule_semantics`, or `rejected`—with no implicit-retain fallback
+- **AND** `errors-only=false`; only explicitly bound `enable`/`disable` target rule selection and other catalogued trusted rule semantics may retain target values
+- **AND** a non-empty effective exemption, incomplete/duplicate/unknown effective confidence set, effective `errors-only`, missing/duplicate/unclassified disposition, catalog drift, or manifest mismatch yields UNKNOWN.
+
+#### Scenario: Pylint errors-only mode cannot hide non-error findings
+
+- **GIVEN** authorized Pylint policy sets `errors-only=true` and an eligible file produces an enabled WARNING, REFACTOR, CONVENTION, or INFORMATION diagnostic
+- **WHEN** the per-snapshot projection and invocation are built
+- **THEN** the original value remains evidence, the effective projection forces `errors-only=false`, and the diagnostic remains in normalized output
+- **AND** an effective true value, omitted category, output/exit reinterpretation, or result-control catalog drift yields `UNKNOWN` rather than an empty PASS.
 
 #### Scenario: Pylint cannot replace governed inputs with stdin or discovery
 

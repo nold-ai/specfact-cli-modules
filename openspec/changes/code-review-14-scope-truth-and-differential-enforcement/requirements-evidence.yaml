@@ -531,6 +531,11 @@ requirements:
         method: test
         intent: "Prevent Pylint configuration from replacing exact governed file inputs with stdin or implicit recursive discovery."
         observable: "pylint-input-controls-v1 forces from-stdin=false and recursive=false, closes stdin, passes only the exact eligible positional manifest, and makes effective/new input overrides, stdin reads, or argv/manifest drift UNKNOWN instead of empty PASS."
+      - case_id: CR14-140
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Pylint errors-only mode or an unclassified option from suppressing required diagnostic categories."
+        observable: "The total no-fallthrough Pylint option catalog forces errors-only=false and maximally inclusive finding filters while only catalogued trusted rule semantics retain target values; a WARNING remains visible and missing/duplicate/unclassified/effective filtering is UNKNOWN."
       - case_id: CR14-076
         scenario_id: mandatory-analyzer-coverage
         method: test
