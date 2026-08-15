@@ -301,6 +301,11 @@ requirements:
         method: test
         intent: "Keep targeted coverage code identical by rejecting repository-loaded plugins."
         observable: "Every configured Coverage plugin is UNKNOWN under the initial empty signed manifest before launch; repository plugin code is never imported or statically inferred."
+      - case_id: CR14-064
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep Coverage data and report writes out of immutable snapshots and config mounts."
+        observable: "Every pinned-schema writable field, including relative data_file, is projected into a role-specific process-private output path with bound transformation evidence; escape, collision, or drift is UNKNOWN."
       - case_id: CR14-042
         scenario_id: mandatory-analyzer-coverage
         method: test
