@@ -233,7 +233,7 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Bind every import-capable analyzer subprocess to the active materialized snapshot."
-        observable: "Every analyzer subprocess—including Ruff, Radon, Pylint, basedpyright, both Semgrep passes, CrossHair, and targeted pytest—consumes sealed snapshot cwd/executable/environment/output context; import-capable adapters never resolve caller/head source during baseline analysis."
+        observable: "Every analyzer subprocess—including Ruff, Pylint, basedpyright, both Semgrep passes, CrossHair, and targeted pytest—consumes sealed snapshot cwd/executable/environment/output context; Radon consumes the same sealed snapshot identity through absolute inputs while using its empty control cwd; import-capable adapters never resolve caller/head source during baseline analysis."
       - case_id: CR14-062
         scenario_id: differential-base-head-enforcement
         method: test
@@ -258,7 +258,12 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Permit the mandatory Radon subprocess to consume the same per-snapshot invocation context."
-        observable: "Radon receives sealed executable, snapshot cwd/environment/output roots, and context digest without changing metric semantics."
+        observable: "Radon receives the sealed executable, absolute snapshot inputs, empty control cwd/private home/sanitized environment, private output root, and context digest without changing metric formulas."
+      - case_id: CR14-124
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent candidate or ambient Radon configuration from filtering a governed result."
+        observable: "Radon runs from an empty sealed control directory with private HOME and sanitized RADONCFG, receives absolute eligible snapshot inputs, forces CC A..F and MI A..C with empty exclude/ignore and private output, and reports UNKNOWN on discovery, narrowing, skipped input, or catalog drift."
       - case_id: CR14-036
         scenario_id: differential-base-head-enforcement
         method: test
