@@ -14,7 +14,17 @@ requirements:
         scenario_id: explicit-review-scope-evidence
         method: test
         intent: "Resolve worktree, index, range, full, or explicit-file scope without ambiguity."
-        observable: "Immutable scope evidence identifies the analyzed snapshot and files; only a successfully resolved unfiltered diff containing no governed Python is NOT_APPLICABLE, and rejected narrowing cannot manufacture that state."
+        observable: "Immutable scope evidence identifies the analyzed snapshot and files; only a successfully resolved unfiltered diff containing neither governed Python nor governed analyzer-policy input is NOT_APPLICABLE, and rejected narrowing cannot manufacture that state."
+      - case_id: CR14-047
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Treat candidate analyzer-policy/config changes as governed impact without self-authorization."
+        observable: "Closed policy paths/pyproject sections are selected and digested; a policy-only range is UNKNOWN under the target-tip policy, never NOT_APPLICABLE/PASS, until a separate trusted promotion contract exists."
+      - case_id: CR14-048
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Avoid classifying unrelated pyproject metadata as analyzer-policy impact."
+        observable: "Only canonical tool.ruff/tool.pylint/tool.pyright/tool.basedpyright section changes enter the governed policy digest; parse failure is UNKNOWN."
       - case_id: CR14-007
         scenario_id: explicit-review-scope-evidence
         method: test
