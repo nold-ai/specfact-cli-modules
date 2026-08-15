@@ -26,17 +26,18 @@
 - **GIVEN** the head adds, changes, or relocates a registered suppression directive
 - **WHEN** strict differential policy evaluates its immutable directive fingerprint
 - **THEN** a separate `introduced_inline_suppression` finding remains open and blocking
-- **AND** without a valid external waiver, any missing base finding for the same analyzer/path is unknown rather than fixed
-- **AND** with an exact external waiver, the base finding remains open with waiver and suppressed-at-head evidence, never fixed
+- **AND** any missing base finding for the same analyzer/path is unknown rather than fixed
+- **AND** CR14 accepts no suppression-waiver input or trusted flag and always leaves this finding blocking
 - **AND** remediation availability is independent from lifecycle status
-- **AND** only that governance overlay may alter blocking policy while retaining both findings and waiver evidence.
+- **AND** authenticated exception handling remains a separate `governance-02-exception-management` capability.
 
-#### Scenario: Waiver is governance evidence
+#### Scenario: Waiver field is reserved but inactive in C14
 
-- **GIVEN** a valid external waiver references an open finding fingerprint
-- **WHEN** policy is evaluated
-- **THEN** the report retains the detector finding and waiver reference separately
-- **AND** the verifier does not claim the finding itself passed.
+- **GIVEN** C14 derives an open finding under schema 1.6
+- **WHEN** lifecycle and blocking policy are evaluated
+- **THEN** nullable `waiver_reference` is unset and cannot change blocking
+- **AND** no CLI, report attachment, context, or injected trusted flag can populate an authenticated waiver
+- **AND** future signed ingestion/verification remains owned by `governance-02-exception-management`.
 
 ### Requirement: Ledger Preserves Authoritative Assurance Status
 
