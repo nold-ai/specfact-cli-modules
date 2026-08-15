@@ -35,6 +35,11 @@ requirements:
         method: test
         intent: "Govern every Pylint configuration source recognized by the pinned loader."
         observable: "pylintrc legacy/TOML variants and Pylint sections in pyproject/setup.cfg/tox.ini are selected; one target source is explicit --rcfile, multiple are UNKNOWN, and candidate-only weakening cannot pass."
+      - case_id: CR14-052
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Govern every pytest configuration source and section recognized by the pinned loader."
+        observable: "pytest TOML/INI variants plus native/legacy pyproject, tox.ini, and setup.cfg sections are manifested; selection follows the signed pytest 9.0.3 locator order, and ambiguity or loader-profile drift is UNKNOWN."
       - case_id: CR14-007
         scenario_id: explicit-review-scope-evidence
         method: test
@@ -261,6 +266,11 @@ requirements:
         method: test
         intent: "Prevent candidate pytest/coverage configuration from suppressing targeted measurement."
         observable: "Explicit sealed target-tip/default -c and --cov-config projections plus sanitized overrides defeat candidate exclude-all config; ambiguity/projection/effective-option drift is UNKNOWN."
+      - case_id: CR14-053
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Resolve pytest path settings against the immutable snapshot being measured."
+        observable: "Separate merge-base/head projections rebase every pinned-schema path field and pass explicit side rootdir; imported dependencies resolve to side-correct bytes, while escape/missing/unsupported paths are UNKNOWN."
       - case_id: CR14-020
         scenario_id: mandatory-analyzer-coverage
         method: test
