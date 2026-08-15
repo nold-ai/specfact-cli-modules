@@ -571,6 +571,11 @@ requirements:
         method: test
         intent: "Require Semgrep to prove it scanned every eligible governed input."
         observable: "A multi-rule bundle with any rule-level paths.include/paths.exclude is UNKNOWN before launch even when another rule makes pass-level paths.scanned look complete; accepted bundles then require normalized scanned paths to equal the eligible manifest, retain skipped reasons, and fail UNKNOWN on size/missing/extra/reconciliation gaps."
+      - case_id: CR14-144
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Semgrep native physical-line suppression from hiding findings outside Python comment tokens."
+        observable: "Both passes require effective controller-owned --disable-nosem; an eval finding remains visible when nosemgrep text occurs inside a Python string, and missing, overridden, duplicate, ineffective, or pinned-option drift is UNKNOWN while token detection remains defense-in-depth."
       - case_id: CR14-078
         scenario_id: mandatory-analyzer-coverage
         method: test
