@@ -526,6 +526,11 @@ requirements:
         method: test
         intent: "Prevent authorized Pylint confidence filtering from suppressing lower-confidence diagnostics."
         observable: "The projection binds the original filter and explicitly forces exactly HIGH, CONTROL_FLOW, INFERENCE, INFERENCE_FAILURE, UNDEFINED on both snapshots; an INFERENCE diagnostic remains visible, and incomplete, duplicate, unknown, ineffective, or drifted confidence controls are UNKNOWN."
+      - case_id: CR14-139
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Pylint configuration from replacing exact governed file inputs with stdin or implicit recursive discovery."
+        observable: "pylint-input-controls-v1 forces from-stdin=false and recursive=false, closes stdin, passes only the exact eligible positional manifest, and makes effective/new input overrides, stdin reads, or argv/manifest drift UNKNOWN instead of empty PASS."
       - case_id: CR14-076
         scenario_id: mandatory-analyzer-coverage
         method: test

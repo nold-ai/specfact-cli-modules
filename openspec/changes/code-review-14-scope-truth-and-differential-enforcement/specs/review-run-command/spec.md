@@ -489,6 +489,14 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** identical bytes renamed to a formerly ignored module and diagnostics at every pinned confidence level remain diagnostically visible, and the eligible/exact argv manifests match
 - **AND** a non-empty effective exemption, incomplete/duplicate/unknown effective confidence set, unclassified target-specific diagnostic bypass, catalog drift, or manifest mismatch yields UNKNOWN.
 
+#### Scenario: Pylint cannot replace governed inputs with stdin or discovery
+
+- **GIVEN** authorized Pylint policy enables `from-stdin`, recursive discovery, or another pinned input-source override
+- **WHEN** the per-snapshot Pylint projection and invocation are built
+- **THEN** signed `pylint-input-controls-v1` binds the original values, forces `from-stdin=false` and `recursive=false`, closes stdin, and supplies only the sorted exact eligible manifest as positional source arguments
+- **AND** the effective argv/source manifest is reconciled before findings are accepted
+- **AND** an effective or newly discovered input-source/discovery override, stdin read, missing/extra source argument, catalog drift, or manifest mismatch yields `UNKNOWN` rather than an empty PASS.
+
 #### Scenario: basedpyright cannot ignore a governed input
 
 - **GIVEN** authorized basedpyright policy has restrictive `include`, matching `exclude`, or `ignore` entries that would omit an eligible governed file
