@@ -23,9 +23,9 @@
 
 #### Scenario: Introduced result-control directive remains an open blocker
 
-- **GIVEN** the head adds, changes, or relocates a registered suppression or result-weakening directive
+- **GIVEN** the head adds, changes, or relocates a registered suppression or analyzer-result control directive
 - **WHEN** strict differential policy evaluates its immutable directive fingerprint
-- **THEN** a separate class-specific finding remains open and blocking: `introduced_inline_suppression` for diagnostic suppressions or `introduced_result_weakening_directive` for mode/timeout weakening
+- **THEN** a separate class-specific finding remains open and blocking: `introduced_inline_suppression` for diagnostic suppressions or `introduced_analyzer_result_control` for basedpyright mode or CrossHair analyzer-result controls
 - **AND** any missing base finding for the same analyzer/path is unknown rather than fixed
 - **AND** CR14 accepts no suppression-waiver input or trusted flag and always leaves this finding blocking
 - **AND** remediation availability is independent from lifecycle status

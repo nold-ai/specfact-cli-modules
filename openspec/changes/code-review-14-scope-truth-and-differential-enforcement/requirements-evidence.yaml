@@ -113,17 +113,17 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Prevent candidate-added inline suppressions from masquerading as repaired analyzer findings."
-        observable: "The signed comment-token registry—including Pylint disable-all/legacy disable-msg, basedpyright basic/standard mode directives, and CrossHair zero per-condition timeout—makes new/changed/relocated directives always-open class-specific blockers (`introduced_inline_suppression` or `introduced_result_weakening_directive`), changes affected missing base findings to unknown rather than fixed, rejects any purported waiver/trusted flag because CR14 has no authenticated ingestion path, retains pure-rename/unchanged controls, and fails UNKNOWN on manifest or directive-catalog parity uncertainty."
+        observable: "The signed comment-token registry—including Pylint disable-all/legacy disable-msg, basedpyright basic/standard mode directives, and the complete pinned CrossHair source-directive catalog—makes new/changed/relocated directives always-open class-specific blockers (`introduced_inline_suppression` or `introduced_analyzer_result_control`), changes affected missing base findings to unknown rather than fixed, rejects any purported waiver/trusted flag because CR14 has no authenticated ingestion path, retains pure-rename/unchanged controls, and fails UNKNOWN on manifest or directive-catalog parity uncertainty."
       - case_id: CR14-079
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Prevent a candidate basedpyright mode directive from weakening strict diagnostics and masquerading as a fix."
-        observable: "Introduced pyright basic or standard emits an open `introduced_result_weakening_directive` blocker before fingerprint classification; affected missing base findings are unknown, and catalog drift is UNKNOWN."
+        observable: "Introduced pyright basic or standard emits an open `introduced_analyzer_result_control` blocker before fingerprint classification; affected missing base findings are unknown, and catalog drift is UNKNOWN."
       - case_id: CR14-080
         scenario_id: differential-base-head-enforcement
         method: test
-        intent: "Prevent a candidate CrossHair zero-timeout directive from erasing a counterexample and masquerading as a fix."
-        observable: "Introduced crosshair per_condition_timeout=0 emits an open `introduced_result_weakening_directive` blocker before fingerprint classification; affected missing base findings are unknown, and catalog drift is UNKNOWN."
+        intent: "Prevent any candidate-local CrossHair analyzer-result directive from erasing a counterexample and masquerading as a fix."
+        observable: "Every source directive in pinned CrossHair 0.0.109's special on/off forms and `AnalysisOptionSet.directive_fields` catalog emits an open `introduced_analyzer_result_control` blocker; explicit false-enable and non-positive iteration/path/condition budget aliases are covered, affected missing base findings are unknown, and parser/catalog drift is UNKNOWN."
       - case_id: CR14-019
         scenario_id: differential-base-head-enforcement
         method: test
