@@ -45,6 +45,11 @@ requirements:
         method: test
         intent: "Govern every pytest configuration source and section recognized by the pinned loader."
         observable: "pytest TOML/INI variants plus native/legacy pyproject, tox.ini, and setup.cfg sections are manifested; selection follows the signed pytest 9.0.3 locator order, and ambiguity or loader-profile drift is UNKNOWN."
+      - case_id: CR14-103
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Mirror the pinned pytest 9.0.3 configuration locator exactly for empty and fallback sources."
+        observable: "Zero-byte pytest.toml/.pytest.toml and pytest.ini/.pytest.ini sources remain active and suppress lower sources; a bare pyproject.toml is only the final fallback; selected/ignored reasons are bound and loader drift is UNKNOWN."
       - case_id: CR14-054
         scenario_id: explicit-review-scope-evidence
         method: test
@@ -556,6 +561,11 @@ requirements:
         method: test
         intent: "Seal Bubblewrap's host-side runtime before it creates the analyzer namespace."
         observable: "The pinned launcher is a verified static Linux x86_64 ELF with no interpreter or needed libraries, executes from the verified descriptor with loader injection cleared, and exposes no unexpected pre-namespace mapped object; dynamic/host-dependent launch is UNKNOWN."
+      - case_id: CR14-104
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Run mandatory built-in analyzers from signed code inside the sealed capsule."
+        observable: "module-code-payload-v1 copies the complete signed specfact_code_review package archive into the capsule, binds every member/import/root identity, boots ai-bloat-ast and ast-clean-code without controller paths, and makes incomplete or drifted payload evidence UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:
