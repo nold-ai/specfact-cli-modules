@@ -526,6 +526,11 @@ requirements:
         method: test
         intent: "Prevent candidate Python startup hooks from running before import-capable analyzers initialize."
         observable: "The capsule interpreter uses -I -S and a sealed bootstrap; snapshot roots enter sys.path only after startup without site/.pth processing, candidate sitecustomize/usercustomize/site/.pth sentinels do not run, and any early exposure or bootstrap drift is UNKNOWN."
+      - case_id: CR14-117
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent reviewed snapshots or project dependencies from shadowing sealed analyzer/runtime modules."
+        observable: "capsule-reserved-imports-v1 preflights top-level module, stub, regular-package, and namespace-package collisions, keeps every reserved prefix and descendant capsule-only, records origin evidence, and returns UNKNOWN before dispatch; non-reserved imports still resolve snapshot before project runtime."
       - case_id: CR14-082
         scenario_id: mandatory-analyzer-coverage
         method: test
