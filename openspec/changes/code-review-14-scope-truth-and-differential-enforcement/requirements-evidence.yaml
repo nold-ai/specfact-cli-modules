@@ -595,7 +595,12 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Run mandatory built-in analyzers from signed code inside the sealed capsule."
-        observable: "module-code-payload-v1 copies the complete signed specfact_code_review package archive into the capsule, binds every member/import/root identity, boots ai-bloat-ast and ast-clean-code without controller paths, and makes incomplete or drifted payload evidence UNKNOWN."
+        observable: "module-code-payload-v1 re-verifies the complete loader-registered signed specfact_code_review installation, copies every canonical payload member into the capsule, binds loader/origin/key/full-payload-verification/import/root identities, boots ai-bloat-ast and ast-clean-code without controller paths, and makes incomplete or drifted evidence UNKNOWN."
+      - case_id: CR14-111
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Boot signed built-in analyzers after the marketplace discards the downloaded module archive."
+        observable: "A fresh official installation deletes its archive and archive cache, then verified-installed-module-payload-v1 revalidates checksum/signature/key/origin and descriptor-safely copies the canonical installed payload into the capsule; no reacquisition or host import occurs, while failed installation evidence is UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:
