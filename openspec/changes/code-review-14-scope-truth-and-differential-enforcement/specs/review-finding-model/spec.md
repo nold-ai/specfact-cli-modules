@@ -18,7 +18,8 @@
 - **AND** no introduced inline suppression for the same analyzer/path can explain its absence
 - **WHEN** differential classification runs
 - **THEN** differential state is fixed
-- **AND** lifecycle/policy do not treat it as an open blocker.
+- **AND** lifecycle/policy do not treat it as an open blocker
+- **AND** aggregate status retains the baseline evidence but excludes that exact fixed baseline-only item from remaining blockers.
 
 #### Scenario: Introduced inline suppression remains an open blocker
 
@@ -73,8 +74,8 @@ UNKNOWN and NOT_APPLICABLE SHALL be neutral audit events: the run metadata and f
 
 #### Scenario: Legacy ledger behavior remains readable
 
-- **GIVEN** a report older than schema 1.6 or an existing local/Supabase ledger record
-- **WHEN** the ledger reads PASS, PASS_WITH_ADVISORY, or FAIL
+- **GIVEN** a report older than schema 1.6, the exact schema-less `ledger update` payload with run_id/timestamp/score 85/empty findings/summary, or an existing local/Supabase ledger record
+- **WHEN** the ledger reads PASS, PASS_WITH_ADVISORY, or FAIL, or normalizes that schema-less fixture to legacy schema 1.0/reward delta 5/PASS/exit 0 while preserving its supplied fields
 - **THEN** the prior reward and streak behavior remains compatible
 - **AND** updated local models and Supabase check constraints also accept UNKNOWN and NOT_APPLICABLE
 - **AND** nullable report_json/report_digest columns keep existing Supabase rows readable

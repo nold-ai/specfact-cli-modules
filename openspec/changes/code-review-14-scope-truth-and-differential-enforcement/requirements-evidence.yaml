@@ -38,8 +38,8 @@ requirements:
       - case_id: CR14-059
         scenario_id: explicit-review-scope-evidence
         method: test
-        intent: "Keep analyzer code identical by rejecting unsealed Pylint hooks and plugins."
-        observable: "Any init-hook and every load-plugins entry under the initial empty signed plugin manifest is UNKNOWN before launch; repository analyzer-extension code is never imported or statically inferred."
+        intent: "Keep analyzer code identical by rejecting unsealed Pylint hooks, plugins, and extension packages."
+        observable: "Any init-hook, any non-empty extension-pkg allow-list/whitelist alias, and every load-plugins entry under the initial empty signed plugin manifest is UNKNOWN before applicability/launch; unsafe extension-only changes cannot become NOT_APPLICABLE, and repository analyzer-extension code is never imported or statically inferred."
       - case_id: CR14-052
         scenario_id: explicit-review-scope-evidence
         method: test
@@ -206,12 +206,12 @@ requirements:
         scenario_id: truthful-review-assurance-status
         method: test
         intent: "Resolve concurrent valid blocking evidence and required uncertainty without losing either fact."
-        observable: "A known blocker makes aggregate FAIL; the unknown flag/member diagnostics remain present; signed compatibility and ledger consumers preserve the same precedence."
+        observable: "Only blockers remaining open/unwaived after differential classification make aggregate FAIL; exact fixed baseline-only FAIL/head-PASS evidence is retained but excluded; concurrent required uncertainty remains present and signed compatibility/ledger consumers preserve the same precedence."
       - case_id: CR14-030
         scenario_id: truthful-review-assurance-status
         method: test
         intent: "Publish one signed machine-readable compatibility matrix before any core consumer adoption."
-        observable: "Four canonical statuses bind legacy projections, strict/shadow exits, runtime-trust fields, and static accepted/rejected envelope fixtures; hostile-candidate policy is UNKNOWN and mismatches are invalid. The module proves matrix integrity only; core runtime consumers must pass this exact digest in their own adoption tests."
+        observable: "Four canonical statuses bind legacy projections, strict/shadow exits, runtime-trust fields, and static accepted/rejected envelope fixtures; the exact schema-less ledger input maps to legacy schema 1.0/reward 5/PASS/exit 0 with preserved fields and no inferred authoritative status; hostile-candidate policy is UNKNOWN and mismatches are invalid. The module proves matrix integrity only; core runtime consumers must pass this exact digest in their own adoption tests."
       - case_id: CR14-013
         scenario_id: truthful-review-assurance-status
         method: test
