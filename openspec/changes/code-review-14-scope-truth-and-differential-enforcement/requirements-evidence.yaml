@@ -113,7 +113,17 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Prevent candidate-added inline suppressions from masquerading as repaired analyzer findings."
-        observable: "The signed comment-token registry—including Pylint disable-all and legacy disable-msg rule-list aliases—makes new/changed/relocated suppressions always-open blockers, changes affected missing base findings to unknown rather than fixed, rejects any purported waiver/trusted flag because CR14 has no authenticated ingestion path, retains pure-rename/unchanged controls, and fails UNKNOWN on manifest uncertainty."
+        observable: "The signed comment-token registry—including Pylint disable-all/legacy disable-msg, basedpyright basic/standard mode directives, and CrossHair zero per-condition timeout—makes new/changed/relocated directives always-open class-specific blockers (`introduced_inline_suppression` or `introduced_result_weakening_directive`), changes affected missing base findings to unknown rather than fixed, rejects any purported waiver/trusted flag because CR14 has no authenticated ingestion path, retains pure-rename/unchanged controls, and fails UNKNOWN on manifest or directive-catalog parity uncertainty."
+      - case_id: CR14-079
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent a candidate basedpyright mode directive from weakening strict diagnostics and masquerading as a fix."
+        observable: "Introduced pyright basic or standard emits an open `introduced_result_weakening_directive` blocker before fingerprint classification; affected missing base findings are unknown, and catalog drift is UNKNOWN."
+      - case_id: CR14-080
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent a candidate CrossHair zero-timeout directive from erasing a counterexample and masquerading as a fix."
+        observable: "Introduced crosshair per_condition_timeout=0 emits an open `introduced_result_weakening_directive` blocker before fingerprint classification; affected missing base findings are unknown, and catalog drift is UNKNOWN."
       - case_id: CR14-019
         scenario_id: differential-base-head-enforcement
         method: test
@@ -168,7 +178,7 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Permit both mandatory Semgrep subprocesses to consume the per-snapshot invocation context."
-        observable: "Semgrep receives sealed executable, snapshot cwd/environment/output roots, context digest, target-policy bundle, the authorized target-tip or exact signed-module-fallback AI-bloat pack, and explicit process/parse failures without rule changes."
+        observable: "Semgrep receives sealed executable, snapshot cwd/environment/output roots, context digest, target-policy bundle, the authorized target-tip or exact signed-module-fallback AI-bloat pack, exact normalized scanned/skipped-to-eligible input reconciliation, and explicit process/parse failures without rule changes."
       - case_id: CR14-072
         scenario_id: differential-base-head-enforcement
         method: test
@@ -366,6 +376,16 @@ requirements:
         method: test
         intent: "Ensure basedpyright ignore cannot report diagnostic success for a wholly silenced governed input."
         observable: "Each generated project binds and clears ignore while preserving other authorized settings and exact eligible/argv manifests; effective ignore or catalog/manifest drift is UNKNOWN."
+      - case_id: CR14-077
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Require Semgrep to prove it scanned every eligible governed input."
+        observable: "Normalized JSON paths.scanned equals the eligible manifest; paths.skipped is retained; rule exclusions, size skips, missing/extra paths, or reconciliation failure are UNKNOWN."
+      - case_id: CR14-078
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep the exact locked analyzer dependency set separate from the SpecFact core/controller environment."
+        observable: "A dedicated analyzer-only environment equals the signed lock plus bootstrap allowlist and is the only analyzer import/executable root; unrelated host packages are not extras, while any host-path leakage or analyzer-set drift is UNKNOWN."
       - case_id: CR14-042
         scenario_id: mandatory-analyzer-coverage
         method: test
