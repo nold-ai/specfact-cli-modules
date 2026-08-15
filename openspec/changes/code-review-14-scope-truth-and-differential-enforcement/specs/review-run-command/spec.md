@@ -460,11 +460,11 @@ The report SHALL list each profile member with required/conditional status; `exe
 
 #### Scenario: Ruff analyzes every governed input without cache or per-file silence
 
-- **GIVEN** authorized Ruff policy sets `cache-dir`, `force-exclude=true`, an exclude pattern, or `per-file-ignores`/`extend-per-file-ignores` matching an eligible added or renamed governed file
+- **GIVEN** authorized Ruff policy sets `cache-dir`, `force-exclude=true`, `fix=true`, `fix-only=true`, an exclude pattern, or `per-file-ignores`/`extend-per-file-ignores` matching an eligible added or renamed governed file
 - **WHEN** the Ruff projection and either immutable-snapshot invocation are built
-- **THEN** the controller passes pinned `--no-cache` and `--no-force-exclude`, binds original/effective per-file maps, canonically clears both maps while retaining other authorized rules, and binds projection/option-catalog plus eligible/invoked manifests
+- **THEN** the controller passes pinned `--no-cache` and `--no-force-exclude`, binds original/effective per-file maps and mutation/result controls, canonically clears both maps, forces `fix=false` and `fix-only=false`, retains other authorized rules, and binds projection/option-catalog plus eligible/invoked manifests
 - **AND** Ruff analyzes the explicit file without path-specific diagnostic suppression and no cache write targets the snapshot or read-only configuration roots
-- **AND** a write, skipped file, non-empty effective per-file map, ineffective transform/flag, or option-catalog drift yields UNKNOWN.
+- **AND** a write, skipped file, non-empty effective per-file map, effective true `fix`/`fix-only`, ineffective transform/flag, or option-catalog drift yields UNKNOWN.
 
 #### Scenario: Ruff task tags cannot hide E501
 
@@ -473,6 +473,13 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **WHEN** the controller builds and runs both immutable-snapshot Ruff projections
 - **THEN** the original option and task-tag list remain bound as evidence, the effective projection forces `lint.pycodestyle.ignore-overlong-task-comments=false`, and native Ruff still emits E501 for both snapshots
 - **AND** an effective true value, missing result-control disposition, ineffective projection, or pinned Ruff schema/catalog drift yields `UNKNOWN`, never an empty PASS or a `fixed` finding.
+
+#### Scenario: Ruff fix-only mode cannot hide unfixable findings
+
+- **GIVEN** authorized target-tip Ruff policy sets `fix=true`, `fix-only=true`, or both, and an eligible immutable-snapshot file contains an unfixable F821 diagnostic
+- **WHEN** the controller builds and runs both Ruff projections
+- **THEN** the original controls remain bound as evidence, the effective projection forces both `fix=false` and `fix-only=false`, the snapshot remains unmodified, and native Ruff JSON contains F821
+- **AND** an effective true value, attempted mutation, empty or malformed result artifact, ineffective projection, or pinned schema/catalog drift yields `UNKNOWN`, never an empty PASS.
 
 #### Scenario: Radon configuration cannot suppress a governed result
 
