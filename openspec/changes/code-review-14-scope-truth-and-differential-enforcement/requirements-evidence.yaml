@@ -40,6 +40,16 @@ requirements:
         method: test
         intent: "Govern every pytest configuration source and section recognized by the pinned loader."
         observable: "pytest TOML/INI variants plus native/legacy pyproject, tox.ini, and setup.cfg sections are manifested; selection follows the signed pytest 9.0.3 locator order, and ambiguity or loader-profile drift is UNKNOWN."
+      - case_id: CR14-054
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Govern every coverage configuration source recognized by the pinned loader."
+        observable: ".coveragerc.toml joins .coveragerc/shared-file sources; selection follows the signed Coverage 7.15.4 order, ignored lower-precedence sources remain evidence, and loader-profile drift is UNKNOWN."
+      - case_id: CR14-055
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Treat Ruff's target-tip transitive extend graph as governed sealed policy input."
+        observable: "Every relative in-tree closure node/edge/blob/content digest is selected and materialized read-only; member changes are governed UNKNOWN, while escape, cycle, missing, unsupported, or over-bound graphs are UNKNOWN."
       - case_id: CR14-007
         scenario_id: explicit-review-scope-evidence
         method: test
