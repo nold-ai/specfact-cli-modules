@@ -49,6 +49,14 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 - **AND** the unstaged bytes do not affect findings, score, or status
 - **AND** the report binds selected paths separately from the complete index tree/path/blob/content manifest.
 
+#### Scenario: Index selection is derived from the captured tree
+
+- **GIVEN** the live Git index mutates between index-tree capture and later scope-processing steps
+- **WHEN** index scope resolves staged paths and statuses
+- **THEN** it derives them only from `HEAD` versus the already captured tree object and never rereads the live index for selection
+- **AND** the selected-path evidence, materialized bytes, object identities, statuses, and complete tree manifest all describe that same captured tree
+- **AND** a capture/diff/object mismatch or inability to preserve that identity yields `UNKNOWN` and non-zero strict enforcement rather than omitting or mixing staged paths.
+
 #### Scenario: Index imports use HEAD-plus-index dependencies
 
 - **GIVEN** a staged module imports another tracked module whose index content differs from additional unstaged worktree edits

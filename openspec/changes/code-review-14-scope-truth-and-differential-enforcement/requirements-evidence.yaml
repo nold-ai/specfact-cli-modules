@@ -85,6 +85,11 @@ requirements:
         method: test
         intent: "Bind index-side imports and subprocess execution to the complete isolated index snapshot."
         observable: "Imported dependencies, cwd, configuration, and environment come from HEAD-plus-index SnapshotInvocationContext; caller-source resolution or manifest mismatch is UNKNOWN."
+      - case_id: CR14-137
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Prevent concurrent live-index mutation from mixing captured staged bytes with a different staged-path selection."
+        observable: "Index paths and statuses are derived only from HEAD versus the once-captured tree object; selected evidence and materialization bind that same tree, later index mutation is ignored, and capture/diff/object mismatch is UNKNOWN."
       - case_id: CR14-018
         scenario_id: explicit-review-scope-evidence
         method: test
