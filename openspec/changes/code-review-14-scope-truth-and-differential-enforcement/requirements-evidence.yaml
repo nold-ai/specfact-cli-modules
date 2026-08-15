@@ -606,6 +606,11 @@ requirements:
         method: test
         intent: "Eliminate unsound source-to-test inference from strict range assurance."
         observable: "complete-pytest-suite-v1 collects and runs every selector recognized by the sealed policy on both snapshots, including multiple and nonconventionally named tests; no production-name/import/coverage heuristic or candidate impact map can omit tests, and removed or uncollected changed tests are UNKNOWN."
+      - case_id: CR14-119
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent collection outcomes from reclassifying changed tests as support."
+        observable: "pytest-input-role-v1 binds roles before collection from immutable paths and the shared authorized testpaths/root-default plus python_files policy; an emptied, __test__-disabled, moved, or support-renamed previously collected test remains an uncollected test candidate and yields UNKNOWN, while only preclassified support may omit selectors."
       - case_id: CR14-116
         scenario_id: mandatory-analyzer-coverage
         method: test
