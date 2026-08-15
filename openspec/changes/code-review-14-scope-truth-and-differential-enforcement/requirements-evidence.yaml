@@ -83,8 +83,8 @@ requirements:
       - case_id: CR14-027
         scenario_id: explicit-review-scope-evidence
         method: test
-        intent: "Bind the producer and consumer to the independently authenticated expected PR target tip."
-        observable: "Producer emits only range_candidate/preview after structural checks; a protected consumer independently derives the complete governed diff/selection/lines/rename/deletion facts plus target/head, analyzed merge-base, selected policy/config, approved producer, and artifact identities, rejects any omission or mismatch as UNKNOWN, and alone emits the fully bound effective pr_range envelope."
+        intent: "Bind the module producer to the claimed expected PR target tip and publish the exact downstream consumer contract."
+        observable: "Module tests prove candidate/preview production and target-identity rejection; the signed static matrix fixes the core consumer inputs and mismatch cases. Workflow-native recomputation and envelope emission are proved only by paired core adoption tests and are excluded from module selectors."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
     rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
     stakeholder_refs:
@@ -206,7 +206,7 @@ requirements:
         scenario_id: truthful-review-assurance-status
         method: test
         intent: "Publish one signed machine-readable compatibility matrix before any core consumer adoption."
-        observable: "Four canonical statuses bind legacy projections, strict/shadow exits, and runtime-trust fields; hostile-candidate policy is UNKNOWN; mismatches are invalid; explicit-files and pr-range consumers must pass the exact matrix digest."
+        observable: "Four canonical statuses bind legacy projections, strict/shadow exits, runtime-trust fields, and static accepted/rejected envelope fixtures; hostile-candidate policy is UNKNOWN and mismatches are invalid. The module proves matrix integrity only; core runtime consumers must pass this exact digest in their own adoption tests."
       - case_id: CR14-013
         scenario_id: truthful-review-assurance-status
         method: test
@@ -251,7 +251,7 @@ requirements:
         scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
         method: test
         intent: "Make authenticated PR context an executable input without letting a local caller self-assert trust."
-        observable: "A matching claimed context yields producer range_candidate, absence yields range_preview, unsafe/mismatch yields UNKNOWN, and only a separate trusted consumer envelope yields effective pr_range."
+        observable: "Module tests prove a matching claimed context yields producer range_candidate, absence yields range_preview, and unsafe/mismatch yields UNKNOWN. The static matrix defines—but does not execute—the core-owned consumer envelope that alone yields effective pr_range."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
     rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."
     stakeholder_refs:
