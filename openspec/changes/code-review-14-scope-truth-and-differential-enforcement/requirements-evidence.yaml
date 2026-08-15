@@ -127,8 +127,13 @@ requirements:
       - case_id: CR14-012
         scenario_id: differential-base-head-enforcement
         method: test
-        intent: "Normalize stable file anchors through resolved one-to-one renames before base/head fingerprint comparison."
-        observable: "A pure file rename retains the blocker as unchanged while both paths and the rename fact remain evidence."
+        intent: "Normalize stable file anchors through deterministic tree-derived exact renames before base/head fingerprint comparison."
+        observable: "A unique identical-blob move retains the blocker as unchanged while both paths and canonical-exact-rename-v1 evidence remain bound."
+      - case_id: CR14-141
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Make rename-sensitive classification independent of ambient Git rename settings and heuristic thresholds."
+        observable: "Producer and consumer derive raw add/delete facts from captured trees, uniquely pair identical blob IDs, make duplicate-object groups UNKNOWN, and bind the same digest; diff.renames/threshold/limit changes have no effect, and modified delete/add cannot claim fixed."
       - case_id: CR14-067
         scenario_id: differential-base-head-enforcement
         method: test
@@ -307,7 +312,7 @@ requirements:
         scenario_id: independent-finding-lifecycle-and-remediation
         method: test
         intent: "Prevent any path-dependent analyzer behavior from turning a disappearance across a rename into a claimed fix."
-        observable: "Under rename-fix-policy-v1 every base finding missing across a one-to-one rename is UNKNOWN regardless of file-byte changes; matching findings may remain unchanged, head-only findings may be introduced, and no semantic-subject inference exists."
+        observable: "Under canonical-exact-rename-v1 and rename-fix-policy-v1 every base finding missing across a unique identical-blob move is UNKNOWN; a deleted-path finding is also UNKNOWN when any unpaired governed addition exists, while matching exact-move findings may remain unchanged and no heuristic/semantic-subject inference exists."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:truthful-review-assurance-status:
     rationale: "Unknown and not-applicable are not green passes."
     stakeholder_refs:

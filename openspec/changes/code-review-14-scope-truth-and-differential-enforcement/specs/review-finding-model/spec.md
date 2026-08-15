@@ -67,12 +67,13 @@
 
 #### Scenario: Missing finding across a rename is conservatively unknown
 
-- **GIVEN** a base finding belongs to the old side of a one-to-one rename
+- **GIVEN** a base finding belongs to the old side of a unique identical-object pair produced by `canonical-exact-rename-v1`, or belongs to an unpaired deleted governed path while an unpaired governed addition exists
 - **AND** its normalized fingerprint is absent at head
 - **WHEN** differential classification runs under `rename-fix-policy-v1`
-- **THEN** the missing finding is unknown, never fixed, regardless of whether the renamed file bytes changed
-- **AND** matching normalized findings may remain unchanged and head-only findings may be introduced
-- **AND** CR14 performs no semantic-subject inference.
+- **THEN** the missing finding is unknown, never fixed
+- **AND** ambient Git rename settings, thresholds, and limits cannot change that result because producer and consumer recompute the same tree-derived candidate/pair/ambiguity digest
+- **AND** matching exact-rename findings may remain unchanged and head-only findings may be introduced
+- **AND** CR14 performs no similarity or semantic-subject inference.
 
 #### Scenario: Matching fingerprint with changed severity is not unchanged
 
