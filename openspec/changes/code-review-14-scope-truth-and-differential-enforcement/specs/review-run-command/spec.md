@@ -697,13 +697,23 @@ The report SHALL list each profile member with required/conditional status; `exe
 #### Scenario: Complete built-in Python collection filters are classified
 
 - **GIVEN** a candidate adds a failing selection-eligible class or callable beside a visible passing selector, and candidate-controlled runtime state would make pinned pytest 9.0.3 drop it before `pytest_itemcollected`
-- **WHEN** the sealed observer evaluates `pytest-pycollect-decision-v1`
-- **THEN** the frozen catalog records and classifies every branch from `PyCollector.collect`, `istestclass`, `istestfunction`, `pytest_pycollect_makeitem`, and `Class.collect`
-- **AND** module/class namespace and MRO traversal, duplicate/import ownership, name or exact nose eligibility, class/function dispatch, static/class-method unwrapping, callable/real-function checks, fixture markers, abstractness, raw/final `__test__`, and `hasinit`/`hasnew` decisions are all bound
+- **WHEN** the sealed observer evaluates `pytest-builtin-collector-decision-v1`
+- **THEN** the closed catalog enumerates every activated built-in collector/hook implementation and records/classifies every branch; initial members cover `_pytest.python` `PyCollector.collect`, `istestclass`, `istestfunction`, `pytest_pycollect_makeitem`, and `Class.collect`, plus `_pytest.unittest.pytest_pycollect_makeitem` and `UnitTestCase.collect`
+- **AND** native module/class namespace and MRO traversal, duplicate/import ownership, name or exact nose eligibility, class/function dispatch, static/class-method unwrapping, callable/real-function checks, fixture markers, abstractness, raw/final `__test__`, and `hasinit`/`hasnew` decisions are bound
+- **AND** unittest TestCase recognition/abstractness, class `__test__`, exact `TestLoader.getTestCaseNames` inventory, inherited method origin, per-method `__test__`, and `runTest`/Twisted fallback are bound
 - **AND** a fixture-marked function or abstract class yields `pytest_item_control_unsupported` UNKNOWN even when the sibling passes
 - **AND** non-real callables, import-ownership manipulation, false `__test__`, and constructor controls have the same fail-closed disposition
 - **AND** ordinary nonmatching names, ignored framework attributes, and non-callable data remain `intentional_non_candidate`
-- **AND** any unclassified branch, pinned-source/catalog drift, observer mismatch, or changed decision yields UNKNOWN rather than PASS.
+- **AND** any activated built-in collector without an exact catalog member/observer, or any unclassified branch, pinned-source/catalog drift, observer mismatch, or changed decision yields UNKNOWN rather than PASS.
+
+#### Scenario: Unittest method controls cannot hide one test in a collected class
+
+- **GIVEN** a candidate adds a failing `unittest.TestCase.test_*` method with runtime `__test__ = False` beside a visible passing method in the same TestCase
+- **WHEN** pinned pytest 9.0.3 starts `UnitTestCase.collect`
+- **THEN** the sealed `pytest_collectstart` observer records the exact `TestLoader.getTestCaseNames` inventory, inherited method origin, and per-method `__test__` before the built-in loop can omit the failing method
+- **AND** `pytest-builtin-collector-decision-v1` yields `pytest_item_control_unsupported` UNKNOWN even though the sibling method is collected and passes
+- **AND** class `__test__`, abstractness, and `runTest`/Twisted fallback decisions remain bound
+- **AND** an unobserved unittest branch or activation/implementation drift is UNKNOWN.
 
 #### Scenario: Built-in class constructors cannot hide a changed test in a collected file
 

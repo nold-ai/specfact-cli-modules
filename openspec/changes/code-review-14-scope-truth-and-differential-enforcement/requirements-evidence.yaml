@@ -664,8 +664,13 @@ requirements:
       - case_id: CR14-131
         scenario_id: mandatory-analyzer-coverage
         method: test
-        intent: "Freeze a complete classified decision catalog instead of adding built-in pytest filters one edge case at a time."
-        observable: "pytest-pycollect-decision-v1 covers every pinned branch in PyCollector.collect, istestclass, istestfunction, pytest_pycollect_makeitem, and Class.collect; each outcome is intentional_non_candidate, collectable, or unsupported_candidate_control, and catalog/source/observer drift is UNKNOWN."
+        intent: "Freeze a closed classified registry of every activated built-in pytest collector instead of adding filters one edge case at a time."
+        observable: "pytest-builtin-collector-decision-v1 binds the activated implementation manifest and covers every pinned native-Python and unittest branch; each outcome is intentional_non_candidate, collectable, or unsupported_candidate_control, and a missing member/observer or catalog/source/activation drift is UNKNOWN."
+      - case_id: CR14-132
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent unittest method-level __test__ from hiding one changed failing method inside an otherwise collected TestCase."
+        observable: "Before UnitTestCase.collect can omit it, the sealed observer records the exact TestLoader method inventory and per-method __test__; a false method control is UNKNOWN even when a sibling method passes, and unittest activation/branch drift is UNKNOWN."
       - case_id: CR14-126
         scenario_id: mandatory-analyzer-coverage
         method: test
