@@ -681,6 +681,11 @@ requirements:
         method: test
         intent: "Prevent candidate metaclass or unittest loader controls from removing a failing method before TestLoader inventory evidence exists."
         observable: "The observer binds a descriptor-safe raw MRO callable manifest before dir(TestCase), sealed loader controls, and the final TestLoader inventory; custom metaclass filtering, loader mutation, raw/inventory omission, or resolved-object drift is UNKNOWN even when a sibling passes."
+      - case_id: CR14-136
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent native pytest module/class namespace controls from removing a failing candidate before makeitem evidence exists."
+        observable: "pytest-native-namespace-controls-v1 compares descriptor-safe raw module/class/MRO manifests with pytest-observed dictionaries and makeitem; metaclass or module-subtype filtering and any raw/observed omission are UNKNOWN even when a sibling passes."
       - case_id: CR14-116
         scenario_id: mandatory-analyzer-coverage
         method: test

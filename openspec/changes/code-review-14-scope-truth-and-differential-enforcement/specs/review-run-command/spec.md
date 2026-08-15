@@ -712,12 +712,21 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **GIVEN** a candidate adds a failing selection-eligible class or callable beside a visible passing selector, and candidate-controlled runtime state would make pinned pytest 9.0.3 drop it before `pytest_itemcollected`
 - **WHEN** the sealed observer evaluates `pytest-builtin-collector-decision-v1`
 - **THEN** the closed catalog enumerates every activated built-in collector/hook implementation and records/classifies every branch; initial members cover `_pytest.python` `PyCollector.collect`, `istestclass`, `istestfunction`, `pytest_pycollect_makeitem`, and `Class.collect`, plus `_pytest.unittest.pytest_pycollect_makeitem` and `UnitTestCase.collect`
-- **AND** native module/class namespace and MRO traversal, duplicate/import ownership, name or exact nose eligibility, class/function dispatch, static/class-method unwrapping, callable/real-function checks, fixture markers, abstractness, raw/final `__test__`, and `hasinit`/`hasnew` decisions are bound
+- **AND** native descriptor-safe raw module/class namespace and MRO manifests, module subtype/class metaclass namespace-control identities, raw-versus-observed-versus-makeitem reconciliation, duplicate/import ownership, name or exact nose eligibility, class/function dispatch, static/class-method unwrapping, callable/real-function checks, fixture markers, abstractness, raw/final `__test__`, and `hasinit`/`hasnew` decisions are bound
 - **AND** unittest TestCase recognition/abstractness, class `__test__`, descriptor-safe raw MRO name-prefix-eligible callable manifest, sealed TestLoader prefix/pattern/sort controls, exact `getTestCaseNames` inventory, inherited/resolved method identity, per-method `__test__`, metaclass filter identity, and `runTest`/Twisted fallback are bound
 - **AND** a fixture-marked function or abstract class yields `pytest_item_control_unsupported` UNKNOWN even when the sibling passes
 - **AND** non-real callables, import-ownership manipulation, false `__test__`, and constructor controls have the same fail-closed disposition
 - **AND** ordinary nonmatching names, ignored framework attributes, and non-callable data remain `intentional_non_candidate`
 - **AND** any activated built-in collector without an exact catalog member/observer, or any unclassified branch, pinned-source/catalog drift, observer mismatch, or changed decision yields UNKNOWN rather than PASS.
+
+#### Scenario: Native namespace controls cannot hide one test in a collected file or class
+
+- **GIVEN** a candidate defines a failing name-eligible native pytest function or method plus a visible passing sibling, and a module subtype or class metaclass filters `__dict__` before `PyCollector.collect`
+- **WHEN** signed `pytest-native-namespace-controls-v1` evaluates before native namespace traversal
+- **THEN** the observer builds a descriptor-safe raw module mapping through sealed `types.ModuleType` access or raw class/MRO mapping proxies through sealed `type` access
+- **AND** it binds module/class/metaclass `__dict__`, `__getattribute__`, `__getattr__`, and `__dir__` control identities and compares the raw eligible-callable manifest with pytest's observed dictionaries and makeitem stream
+- **AND** any filtered raw candidate, candidate-control override, unsafe raw access, or raw/observed/makeitem mismatch yields `pytest_item_control_unsupported` UNKNOWN even when the sibling passes
+- **AND** ordinary sealed namespace traversal with matching manifests remains collectable.
 
 #### Scenario: Unittest method controls cannot hide one test in a collected class
 
