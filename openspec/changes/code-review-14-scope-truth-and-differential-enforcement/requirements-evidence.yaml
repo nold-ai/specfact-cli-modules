@@ -143,7 +143,12 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Preserve diagnostic multiplicity without making raw line positions part of finding identity."
-        observable: "finding-multiset-v1 pairs exact normalized identity/outcome buckets deterministically; line-only shifts remain unchanged, duplicate head surplus is introduced, mixed residual transitions are unknown, and counts/pairs/surpluses/digests remain evidence."
+        observable: "finding-multiset-v1 pairs exact normalized identity/outcome buckets only after occurrence-continuity-v1 proves one physical source anchor per side; unrelated line shifts remain unchanged, duplicate head surplus is introduced, ambiguous anchors cannot pair, and identity/anchor/partition counts, decisions, pairs, surpluses, and digests remain evidence."
+      - case_id: CR14-105
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent an identity-equal diagnostic recreated at a different source location from masquerading as unchanged baseline debt."
+        observable: "Exact spanned-plus-adjacent-line continuity anchors distinguish unrelated replacements; a valid different head anchor is introduced, invalid/non-unique continuity is unknown, and a line shift with one exact continuous physical anchor remains unchanged."
       - case_id: CR14-079
         scenario_id: differential-base-head-enforcement
         method: test

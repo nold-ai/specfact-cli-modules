@@ -2,7 +2,7 @@
 
 ### Requirement: Independent Finding Lifecycle and Remediation
 
-`ReviewFinding` SHALL represent severity, lifecycle status, differential state, remediation availability, and blocking policy as separate fields. Schema 1.6 differential evidence SHALL also carry `identity_fingerprint`, `occurrence_evidence_digest`, and `differential_bucket_digest` from signed `finding-multiset-v1`; raw line/column/span is evidence only and never part of identity. `autofix_available=true` SHALL mean only that a remediation mechanism exists; it SHALL NOT mark an open finding fixed, waived, or non-blocking.
+`ReviewFinding` SHALL represent severity, lifecycle status, differential state, remediation availability, and blocking policy as separate fields. Schema 1.6 differential evidence SHALL also carry `identity_fingerprint`, `occurrence_evidence_digest`, `continuity_anchor_digest`, closed `continuity_status=proven|different|ambiguous|invalid`, and `differential_bucket_digest` from signed `finding-multiset-v1`; raw line/column/span is evidence only and never part of identity. `autofix_available=true` SHALL mean only that a remediation mechanism exists; it SHALL NOT mark an open finding fixed, waived, or non-blocking.
 
 #### Scenario: Fixable error remains open and blocking
 
@@ -14,19 +14,29 @@
 
 #### Scenario: Duplicate findings preserve multiplicity
 
-- **GIVEN** base has one finding and head has two findings with the same line-independent identity fingerprint and unchanged severity/blocking inputs
-- **WHEN** `finding-multiset-v1` pairs the bucket
-- **THEN** one occurrence is unchanged and the unmatched head occurrence is introduced
+- **GIVEN** base has one finding and head has two analyzer emissions at the same uniquely continuous physical source anchor, with the same line-independent identity fingerprint and unchanged severity/blocking inputs
+- **WHEN** `occurrence-continuity-v1` validates the anchor and `finding-multiset-v1` pairs the bucket
+- **THEN** one emission is unchanged and the unmatched head emission is introduced
 - **AND** base/head counts, deterministic pairing, head surplus, and bucket digest remain evidence
 - **AND** the duplicate cannot collapse into one unchanged set member or PASS.
 
 #### Scenario: Line-only shift preserves identity
 
-- **GIVEN** one base/head finding differs only in raw line or column after unrelated source insertion
+- **GIVEN** one base/head finding shifts line after an unrelated insertion before its otherwise exact source anchor
 - **WHEN** its analyzer/rule/path/symbol/precisely-normalized-message identity and severity/blocking partition match
+- **AND** `occurrence-continuity-v1` proves exactly one physical base/head location from identical spanned plus adjacent-line bytes
 - **THEN** the deterministic pair is unchanged
-- **AND** both raw spans remain occurrence evidence
+- **AND** both raw spans and the anchor evidence remain recorded
 - **AND** line movement alone does not create a false fixed/introduced pair.
+
+#### Scenario: Identity-equal replacement at a different source anchor is introduced
+
+- **GIVEN** a base diagnostic is removed and head produces the same analyzer/rule/path/symbol/message/severity/blocking identity at a different source context
+- **WHEN** `occurrence-continuity-v1` compares their immutable source anchors
+- **THEN** they are not paired unchanged
+- **AND** the unmatched head occurrence is introduced and blocks strict PASS
+- **AND** the base occurrence follows the ordinary fixed/suppression/rename policy
+- **AND** an invalid span or an anchor occurring at multiple physical locations records an invalid/ambiguous unknown transition rather than unchanged or introduced.
 
 #### Scenario: Finding is fixed at head
 
