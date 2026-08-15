@@ -454,8 +454,8 @@ requirements:
       - case_id: CR14-066
         scenario_id: mandatory-analyzer-coverage
         method: test
-        intent: "Reconcile targeted coverage against every governed production input present in each immutable snapshot."
-        observable: "The normalized coverage-file manifest contains each governed production path exactly once before threshold evaluation; target-policy exclusion, missing/duplicate/aliased/escaping/identity-mismatched paths are UNKNOWN even when tests and the reported threshold pass."
+        intent: "Reconcile targeted coverage against every runtime-measurable governed production input present in each immutable snapshot."
+        observable: "Under runtime-measurable-production-v1, the normalized Coverage manifest contains each tracked regular governed production .py path exactly once before threshold evaluation; target-policy exclusion, missing/duplicate/aliased/escaping/identity-mismatched runtime paths are UNKNOWN even when tests and the reported threshold pass, while governed .pyi stubs remain in a separate static-only manifest."
       - case_id: CR14-068
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -596,6 +596,11 @@ requirements:
         method: test
         intent: "Eliminate unsound source-to-test inference from strict range assurance."
         observable: "complete-pytest-suite-v1 collects and runs every selector recognized by the sealed policy on both snapshots, including multiple and nonconventionally named tests; no production-name/import/coverage heuristic or candidate impact map can omit tests, and removed or uncollected changed tests are UNKNOWN."
+      - case_id: CR14-116
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep Python stubs in static analysis without demanding impossible runtime coverage."
+        observable: "A .pyi-only range records targeted-pytest-coverage as NOT_APPLICABLE with an empty runtime-measurable manifest while every applicable static analyzer still includes the stub; mixed .py/.pyi snapshots reconcile only .py coverage and bind the .pyi static-only manifest."
       - case_id: CR14-097
         scenario_id: mandatory-analyzer-coverage
         method: test
