@@ -118,7 +118,7 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **GIVEN** positional files are supplied to a consumer or policy that requires pull-request range assurance
 - **WHEN** the request is validated
 - **THEN** it is rejected before analysis because base, head, and merge-base evidence is absent
-- **AND** the protected-CI alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref> --pr-context-file <runner-temp-file> --enforcement full`
+- **AND** the protected-CI alternative is `--scope range --base-ref <full-ref> --head-ref <full-ref> --pr-context-file <runner-temp-file> --enforcement full`, with any applicable target-tip project-runtime descriptor/attestation bound inside that immutable context
 - **AND** the producer result with matching claimed context is `range_candidate`, while the same local command without context is `range_preview`; neither is merge authority without the protected verification envelope
 - **AND** positional files remain valid for explicitly labelled non-PR `assurance_kind=explicit_files` runs.
 
@@ -126,10 +126,10 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 
 - **GIVEN** a developer or agent follows the mandatory repository quality gate, module/bundle guide, or generated Code Review instructions
 - **WHEN** the guidance describes merge or pull-request assurance
-- **THEN** protected CI uses `--scope range`, full base/head identities, an event-derived `--pr-context-file` outside the checkout, and `--enforcement full`
+- **THEN** protected CI uses `--scope range`, full base/head identities, an event-derived `--pr-context-file` outside the checkout that also binds any applicable authenticated target-tip project-runtime layer, and `--enforcement full`
 - **AND** the producer emits `assurance_kind=range_candidate`, never pr_range
-- **AND** the protected consumer independently enumerates all best merge bases, requires exactly one expected merge base, then derives the complete governed diff, selected Python files/lines, governed policy path/section manifests and candidate-policy-change digest, status/rename/deletion manifests, and authorized target-tip policy/config selection; requires approved signed producer module/schema/profile/toolchain plus workflow/job/artifact provenance; then compares every identity and digest with the immutable report
-- **AND** its envelope binds every compared identity/manifest/digest and rejects any omitted governed Python or policy input, or merge-base, diff, selection, rename/deletion, policy/config, producer, or artifact mismatch as UNKNOWN
+- **AND** the protected consumer independently enumerates all best merge bases, requires exactly one expected merge base, then derives the complete governed diff, selected Python files/lines, governed policy path/section manifests and candidate-policy-change digest, status/rename/deletion manifests, authorized target-tip policy/config selection, declared project-runtime source-lock inputs, and any applicable project-runtime builder/artifact attestation; requires approved signed producer module/schema/profile/toolchain plus workflow/job/artifact provenance; then compares every identity and digest with the immutable report
+- **AND** its envelope binds every compared identity/manifest/digest and rejects any omitted governed Python or policy input, or merge-base, diff, selection, rename/deletion, policy/config, project-runtime input/build/artifact, producer, or artifact mismatch as UNKNOWN
 - **AND** only its separate verification envelope emits `effective_assurance_kind=pr_range`
 - **AND** manual guidance without context is `assurance_kind=range_preview` and directs merge authority to that protected envelope
 - **AND** it does not use changed/worktree or positional branch-delta files as merge evidence

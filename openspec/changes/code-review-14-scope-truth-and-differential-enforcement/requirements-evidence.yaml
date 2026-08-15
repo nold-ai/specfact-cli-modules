@@ -526,6 +526,11 @@ requirements:
         method: test
         intent: "Represent structurally empty per-snapshot analyzer input truthfully for add-only and delete-only ranges."
         observable: "The empty side is manifest-bound NOT_APPLICABLE, the non-empty side still runs, unrecorded adapter early return is rejected, and aggregate range assurance remains applicable."
+      - case_id: CR14-097
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Execute dependency-bearing project tests without trusting candidate locks or ambient host packages."
+        observable: "A target-tip-attested project-runtime layer is reused for both snapshots, imports its exact dependency closure, rejects reserved analyzer/runner collisions and untrusted provenance, and makes missing/incomplete evidence UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:
