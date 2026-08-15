@@ -485,9 +485,9 @@ The report SHALL list each profile member with required/conditional status; `exe
 
 - **GIVEN** authorized Pylint policy has a whole-file ignore or a no-member exemption matching a governed path, module, class, member pattern, or mixin name
 - **WHEN** the per-snapshot Pylint projection is built and invoked
-- **THEN** `ignore`, `ignore-patterns`, `ignore-paths`, `ignored-modules`, `ignored-classes`, `generated-members`, `ignore-none`, `ignore-on-opaque-inference`, `ignore-mixin-members`, `ignored-checks-for-mixins`, `mixin-class-rgx`, and `signature-mutators` are canonically empty/disabled, while `contextmanager-decorators` is exactly the pinned built-in allowlist while other non-exemption authorized settings remain bound
-- **AND** identical bytes renamed to a formerly ignored module remain diagnostically visible, and the eligible/exact argv manifests match
-- **AND** a non-empty effective exemption, unclassified target-specific diagnostic bypass, catalog drift, or manifest mismatch yields UNKNOWN.
+- **THEN** `ignore`, `ignore-patterns`, `ignore-paths`, `ignored-modules`, `ignored-classes`, `generated-members`, `ignore-none`, `ignore-on-opaque-inference`, `ignore-mixin-members`, `ignored-checks-for-mixins`, `mixin-class-rgx`, and `signature-mutators` are canonically empty/disabled, while `contextmanager-decorators` is exactly the pinned built-in allowlist and `confidence` is explicitly the complete pinned Pylint 4.0.7 set `HIGH`, `CONTROL_FLOW`, `INFERENCE`, `INFERENCE_FAILURE`, `UNDEFINED`; other non-exemption authorized settings remain bound
+- **AND** identical bytes renamed to a formerly ignored module and diagnostics at every pinned confidence level remain diagnostically visible, and the eligible/exact argv manifests match
+- **AND** a non-empty effective exemption, incomplete/duplicate/unknown effective confidence set, unclassified target-specific diagnostic bypass, catalog drift, or manifest mismatch yields UNKNOWN.
 
 #### Scenario: basedpyright cannot ignore a governed input
 
