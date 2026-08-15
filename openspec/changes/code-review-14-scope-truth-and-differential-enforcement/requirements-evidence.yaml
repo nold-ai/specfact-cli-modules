@@ -23,8 +23,13 @@ requirements:
       - case_id: CR14-048
         scenario_id: explicit-review-scope-evidence
         method: test
-        intent: "Avoid classifying unrelated pyproject metadata as analyzer-policy impact."
-        observable: "Only canonical tool.ruff/tool.pylint/tool.pyright/tool.basedpyright section changes enter the governed policy digest; parse failure is UNKNOWN."
+        intent: "Avoid classifying unrelated shared-file metadata as review-policy impact."
+        observable: "Only canonical analyzer, coverage, and pytest sections in pyproject/setup.cfg/tox.ini enter the governed policy digest; parse failure is UNKNOWN."
+      - case_id: CR14-049
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Treat candidate pytest and coverage configuration as governed policy impact."
+        observable: ".coveragerc/pytest.ini and the closed shared-file sections are selected/digested; policy-only changes are UNKNOWN rather than NOT_APPLICABLE/PASS."
       - case_id: CR14-007
         scenario_id: explicit-review-scope-evidence
         method: test
@@ -246,6 +251,11 @@ requirements:
         method: test
         intent: "Keep valid failing behavioral evidence distinct from incomplete analyzer infrastructure."
         observable: "Completed blockers and collected assertion/skip/xfail/xpass evidence are FAIL; availability/process/timeout/parse/identity/artifact/reconciliation errors are UNKNOWN; legacy exit projection does not erase the distinction."
+      - case_id: CR14-050
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent candidate pytest/coverage configuration from suppressing targeted measurement."
+        observable: "Explicit sealed target-tip/default -c and --cov-config projections plus sanitized overrides defeat candidate exclude-all config; ambiguity/projection/effective-option drift is UNKNOWN."
       - case_id: CR14-020
         scenario_id: mandatory-analyzer-coverage
         method: test
