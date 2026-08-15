@@ -19,7 +19,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 - [ ] 1.1 Add `test_range_scope_includes_committed_files_on_clean_checkout`.
 - [ ] 1.2 Add `test_range_scope_uses_merge_base_not_head_worktree`.
 - [ ] 1.3 Add `test_scope_git_failure_is_unknown_and_blocks_enforcement`.
-- [ ] 1.4 Add `test_empty_resolved_range_is_not_applicable`.
+- [ ] 1.4 Add `test_empty_resolved_range_is_not_applicable`; use a successfully resolved unfiltered range whose diff contains only non-governed files, and prove rejected narrowing options cannot manufacture NOT_APPLICABLE.
 - [ ] 1.5 Add `test_range_scope_includes_changed_tests_by_default`.
 - [ ] 1.6 Add static CLI-contract red cases for required full refs, invalid combinations, deprecated changed alias, assurance/enforcement projection, and explicit positional files. Do not add Git setup to the argv-only contract harness; tasks 1.8, 1.10, 2.4, and 2.6 own stateful temporary-repository cases.
 - [ ] 1.7 Add `test_pr_assurance_rejects_positional_file_downgrade` while retaining local explicit-file enforcement.
@@ -62,7 +62,7 @@ Every implementation task targets at most two hours. Tests precede code. This pl
 
 ## 3. Minimal implementation
 
-Each item consumes only the named failing tests from Section 2 and must finish green before the next item starts.
+Each item consumes the applicable named failing tests from Sections 1 and 2. Before each production edit, record the exact mapped selector subset for that implementation item in `TDD_EVIDENCE.md`; run that subset red at the frozen checkpoint and green after the item. No Section 3 item may claim green while any mapped Section 1 or 2 selector remains outside its per-item gate.
 
 - [ ] 3.1 Add request/status types for worktree, index, range, full, and explicit-files scope; delegate all Git discovery from `run/commands.py` to `scope.py`.
 - [ ] 3.2 Parse/freeze the outside-checkout claimed context file, resolve full base/head/merge-base identities, validate expected target/head plus context digest, emit range_candidate or range_preview but never pr_range, and make unsafe/mismatched context UNKNOWN.

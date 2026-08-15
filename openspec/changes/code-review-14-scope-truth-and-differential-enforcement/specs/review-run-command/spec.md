@@ -80,10 +80,11 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 
 #### Scenario: Resolved empty range is not applicable
 
-- **GIVEN** range scope resolves successfully but selects no governed Python files after explicit filters
+- **GIVEN** range scope resolves successfully and the unfiltered merge-base-to-head diff contains only non-governed files, so the complete governed selection contains no Python files
 - **WHEN** the report finalizes
 - **THEN** status is NOT_APPLICABLE
-- **AND** the report retains the scope evidence and exclusions
+- **AND** the report retains the full scope evidence, diff digest, and governed-selection policy
+- **AND** rejected range-narrowing options cannot reach or manufacture this state
 - **AND** it does not claim code quality passed.
 
 ### Requirement: Differential Base-Head Enforcement
