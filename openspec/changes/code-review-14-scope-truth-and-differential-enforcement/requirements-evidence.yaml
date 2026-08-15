@@ -606,6 +606,11 @@ requirements:
         method: test
         intent: "Boot signed built-in analyzers after the marketplace discards the downloaded module archive."
         observable: "A fresh official installation deletes its archive and archive cache, then verified-installed-module-payload-v1 revalidates checksum/signature/key/origin and descriptor-safely copies the canonical installed payload into the capsule; no reacquisition or host import occurs, while failed installation evidence is UNKNOWN."
+      - case_id: CR14-113
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Use only metadata that a real marketplace installation persists when authenticating built-in code."
+        observable: "The installed-payload contract succeeds with module name/version, deterministic full-payload checksum/signature, loader origin/root, and protected key identity, and requires no unavailable source commit/tree or archive metadata; missing or mismatched real fields are UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:
