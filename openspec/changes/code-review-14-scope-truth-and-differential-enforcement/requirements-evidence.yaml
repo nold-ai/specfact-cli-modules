@@ -320,7 +320,7 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Provision the exact configuration-loader and analyzer versions claimed by pr-range-v1."
-        observable: "The signed module manifest has checkpoint-matching exact constraints, directly includes pytest 9.0.3 and Coverage 7.15.4, and a fresh-install version/digest mismatch makes profile activation UNKNOWN."
+        observable: "The signed analyzer-environment lock—not module-package host pip_dependencies—has checkpoint-matching exact entries, directly includes pytest 9.0.3 and Coverage 7.15.4, and a fresh analyzer-root version/digest mismatch makes profile activation UNKNOWN."
       - case_id: CR14-060
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -330,7 +330,7 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Close and sign the complete analyzer runtime dependency graph and provision it during implementation."
-        observable: "For each supported Linux/CPython environment, module-package PEP 508 names and exact constraints match every selected-lock direct/transitive package, marker, edge, payload and closure digest; a normalized-name guard retains required tool membership, and missing/extra/bare/drift is UNKNOWN."
+        observable: "For each supported Linux/CPython environment, the signed analyzer lock closes every direct/transitive package, marker, edge, payload and digest while module-package pip_dependencies excludes the analyzer closure; host conflicts cannot preempt isolated provisioning, and missing/extra/bare/host-leaked/drift evidence is UNKNOWN."
       - case_id: CR14-061
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -380,12 +380,12 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Require Semgrep to prove it scanned every eligible governed input."
-        observable: "Normalized JSON paths.scanned equals the eligible manifest; paths.skipped is retained; rule exclusions, size skips, missing/extra paths, or reconciliation failure are UNKNOWN."
+        observable: "A multi-rule bundle with any rule-level paths.include/paths.exclude is UNKNOWN before launch even when another rule makes pass-level paths.scanned look complete; accepted bundles then require normalized scanned paths to equal the eligible manifest, retain skipped reasons, and fail UNKNOWN on size/missing/extra/reconciliation gaps."
       - case_id: CR14-078
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Keep the exact locked analyzer dependency set separate from the SpecFact core/controller environment."
-        observable: "A dedicated analyzer-only environment equals the signed lock plus bootstrap allowlist and is the only analyzer import/executable root; unrelated host packages are not extras, while any host-path leakage or analyzer-set drift is UNKNOWN."
+        observable: "A dedicated analyzer-only environment equals the signed lock plus bootstrap allowlist and is the only analyzer import/executable root; the marketplace host manifest never receives analyzer-lock entries, unrelated host packages are not extras, and any host-path leakage or analyzer-set drift is UNKNOWN."
       - case_id: CR14-042
         scenario_id: mandatory-analyzer-coverage
         method: test
