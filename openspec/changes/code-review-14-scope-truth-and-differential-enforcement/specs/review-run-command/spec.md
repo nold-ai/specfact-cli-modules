@@ -95,7 +95,7 @@ The report SHALL record requested/effective scope, assurance kind, repository ro
 - **AND** the range is applicable and records `candidate_policy_change_status=UNKNOWN`, not NOT_APPLICABLE or PASS
 - **AND** both source snapshots continue to use the authorized target-tip policy
 - **AND** candidate policy is shadow-only and cannot authorize its own current or future assurance
-- **AND** `.coveragerc`/`pytest.ini`, governed coverage/pytest sections in `pyproject.toml`, `setup.cfg`, or `tox.ini`, and the analyzer-policy files are governed, while unrelated metadata in those shared files is not
+- **AND** `.coveragerc`/`pytest.ini`, every closed Pylint source (`pylintrc`, `.pylintrc`, `pylintrc.toml`, `.pylintrc.toml`, and pinned-loader Pylint sections in `pyproject.toml`/`setup.cfg`/`tox.ini`), governed coverage/pytest sections, and the other analyzer-policy files are governed, while unrelated metadata in shared files is not
 - **AND** strict merge authority requires a separate accepted policy-promotion/trust-epoch contract rather than a producer assertion.
 
 ### Requirement: Differential Base-Head Enforcement
@@ -307,6 +307,15 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** it is not executed as an empty pytest selection and does not become UNKNOWN merely because the new files did not exist
 - **AND** the head side still requires collection and a valid coverage artifact
 - **AND** a head-side missing selection, no-tests-collected result, or coverage loss is UNKNOWN.
+
+#### Scenario: Every pinned Pylint configuration source is governed
+
+- **GIVEN** the candidate changes any Pylint source recognized by the exact pinned loader, including setup.cfg/tox.ini sections or pylintrc TOML variants
+- **WHEN** policy impact and target-tip configuration are resolved
+- **THEN** the path/section change is present in the governed policy manifest and a policy-only range is UNKNOWN
+- **AND** exactly zero or one effective target-tip Pylint source is allowed; multiple sources are `pylint_config_ambiguous` UNKNOWN
+- **AND** the selected source or sealed default is passed explicitly through `--rcfile` with source discovery disabled
+- **AND** a candidate Pylint config cannot weaken current analysis or be misclassified NOT_APPLICABLE.
 
 #### Scenario: Candidate coverage configuration cannot suppress measurement
 

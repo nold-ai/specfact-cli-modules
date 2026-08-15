@@ -30,6 +30,11 @@ requirements:
         method: test
         intent: "Treat candidate pytest and coverage configuration as governed policy impact."
         observable: ".coveragerc/pytest.ini and the closed shared-file sections are selected/digested; policy-only changes are UNKNOWN rather than NOT_APPLICABLE/PASS."
+      - case_id: CR14-051
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Govern every Pylint configuration source recognized by the pinned loader."
+        observable: "pylintrc legacy/TOML variants and Pylint sections in pyproject/setup.cfg/tox.ini are selected; one target source is explicit --rcfile, multiple are UNKNOWN, and candidate-only weakening cannot pass."
       - case_id: CR14-007
         scenario_id: explicit-review-scope-evidence
         method: test
