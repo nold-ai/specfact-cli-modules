@@ -676,16 +676,26 @@ requirements:
         method: test
         intent: "Admit exact target-tip pytest fixture plugins without ambient loading or unclassified parser and collection behavior."
         observable: "The authenticated project-runtime descriptor binds plugin distribution, payload, dependency, pytest11 entry point, parser, and hook capabilities; a snapshot-free sandbox mounts only the analyzer capsule plus identical read-only project layer for exact entry-point preflight, and targeted pytest uses the same layer identity; a matching fixture-only plugin collects on both sides, while unlisted, snapshot/user, drifted, dynamic, or collection-shaping plugins are UNKNOWN."
+      - case_id: CR14-134
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent candidate metaclass or unittest loader controls from removing a failing method before TestLoader inventory evidence exists."
+        observable: "The observer binds a descriptor-safe raw MRO callable manifest before dir(TestCase), sealed loader controls, and the final TestLoader inventory; custom metaclass filtering, loader mutation, raw/inventory omission, or resolved-object drift is UNKNOWN even when a sibling passes."
       - case_id: CR14-116
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Keep Python stubs in static analysis without demanding impossible runtime coverage."
-        observable: "A .pyi-only range records targeted-pytest-coverage and contracts independently NOT_APPLICABLE with empty manifests and distinct bound reasons; Ruff, Radon, activated Semgrep passes, ai-bloat-ast, ast-clean-code, basedpyright, and Pylint still include the stub. Mixed snapshots use only regular production .py for Coverage/CrossHair and bind .pyi in the stub-capable manifests."
+        observable: "A .pyi-only range records targeted-pytest-coverage NOT_APPLICABLE; when the existing icontract-usage predicate activates, it keeps contracts active through its static scan and marks only contracts.crosshair NOT_APPLICABLE with a bound empty manifest/reason; Ruff, Radon, activated Semgrep passes, ai-bloat-ast, ast-clean-code, basedpyright, Pylint, and the contracts static component include the stub. Mixed snapshots use only regular production .py for Coverage/CrossHair."
       - case_id: CR14-133
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Prevent standalone stubs from creating an impossible mandatory CrossHair execution."
-        observable: "analyzer-input-kinds-v1 excludes .pyi from contracts, records no_crosshair_executable_input NOT_APPLICABLE without launch for a stub-only side, and still requires every exact stub-capable member; catalog or manifest drift is UNKNOWN."
+        observable: "analyzer-input-kinds-v1 excludes .pyi only from contracts.crosshair and records no_crosshair_executable_input NOT_APPLICABLE without launch for that sub-execution; signed icontract-static-activation-v1 preserves the existing usage predicate and, when true, keeps contracts.icontract-static-scan and the parent member active, and still requires every exact stub-capable member/component; catalog, aggregation, or manifest drift is UNKNOWN."
+      - case_id: CR14-135
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Preserve activated stub-capable AST contract findings while excluding only the impossible CrossHair sub-execution."
+        observable: "On a stub-only side with existing icontract usage, icontract-static-scan can emit MISSING_ICONTRACT and determine the parent contracts outcome; only contracts.crosshair is NOT_APPLICABLE. False activation preserves the prior rule boundary, and activation drift is UNKNOWN."
       - case_id: CR14-097
         scenario_id: mandatory-analyzer-coverage
         method: test
