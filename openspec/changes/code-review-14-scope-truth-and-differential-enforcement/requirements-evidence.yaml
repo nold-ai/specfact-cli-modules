@@ -149,6 +149,11 @@ requirements:
         method: test
         intent: "Project target-policy basedpyright paths independently onto each immutable source snapshot."
         observable: "Shared policy/toolchain/projection identities match while side-specific projected digests may differ only by recorded root bindings; relative imports stay inside the corresponding snapshot; true shared-identity drift or unsafe paths yield UNKNOWN."
+      - case_id: CR14-086
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent basedpyright baseline slots from hiding a relocated or newly introduced diagnostic."
+        observable: "Original baseline artifacts remain governed/digested, but generated projects remove every baselineFile and argv omits --baselinefile; baseline files are not mounted/read, the relocated diagnostic remains visible, and effective baseline injection is UNKNOWN."
       - case_id: CR14-029
         scenario_id: differential-base-head-enforcement
         method: test
@@ -158,7 +163,7 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Expose every sealed analyzer configuration input through the sandbox without exposing its source bundle."
-        observable: "config_roots contains exact read-only Ruff, generated Pylint, basedpyright baseline/reference, Semgrep bundle, and pytest/coverage projection mounts; omission, extra/writeable roots, or digest mismatch is UNKNOWN."
+        observable: "config_roots contains exact read-only Ruff, generated Pylint, basedpyright project/non-baseline reference, Semgrep bundle, and pytest/coverage projection mounts while baseline artifacts remain governed but unmounted; omission, extra/writeable roots, or digest mismatch is UNKNOWN."
       - case_id: CR14-039
         scenario_id: differential-base-head-enforcement
         method: test
