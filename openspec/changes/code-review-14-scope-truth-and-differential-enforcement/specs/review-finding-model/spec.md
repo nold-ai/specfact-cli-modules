@@ -21,14 +21,14 @@
 - **AND** lifecycle/policy do not treat it as an open blocker
 - **AND** aggregate status retains the baseline evidence but excludes that exact fixed baseline-only item from remaining blockers.
 
-#### Scenario: Rename without semantic-subject change cannot fix a finding
+#### Scenario: Missing finding across a rename is conservatively unknown
 
-- **GIVEN** a one-to-one rename has identical file bytes or an unchanged manifest-bound analyzer/rule-specific semantic-subject digest
-- **AND** the base finding is absent at head
-- **WHEN** differential classification runs
-- **THEN** the missing finding is unknown, never fixed
-- **AND** unrelated edits elsewhere in the renamed file do not satisfy subject change
-- **AND** unavailable or ambiguous subject derivation also yields unknown.
+- **GIVEN** a base finding belongs to the old side of a one-to-one rename
+- **AND** its normalized fingerprint is absent at head
+- **WHEN** differential classification runs under `rename-fix-policy-v1`
+- **THEN** the missing finding is unknown, never fixed, regardless of whether the renamed file bytes changed
+- **AND** matching normalized findings may remain unchanged and head-only findings may be introduced
+- **AND** CR14 performs no semantic-subject inference.
 
 #### Scenario: Matching fingerprint with changed severity is not unchanged
 

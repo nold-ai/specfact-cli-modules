@@ -226,8 +226,8 @@ requirements:
       - case_id: CR14-096
         scenario_id: independent-finding-lifecycle-and-remediation
         method: test
-        intent: "Prevent any path-dependent analyzer behavior from turning an unchanged renamed subject into a claimed fix."
-        observable: "Every finding binds a semantic-subject digest or unavailable reason; missing findings across renames are fixed only after proven subject change, while identical blob/subject, unrelated edits, or ambiguity is UNKNOWN."
+        intent: "Prevent any path-dependent analyzer behavior from turning a disappearance across a rename into a claimed fix."
+        observable: "Under rename-fix-policy-v1 every base finding missing across a one-to-one rename is UNKNOWN regardless of file-byte changes; matching findings may remain unchanged, head-only findings may be introduced, and no semantic-subject inference exists."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:truthful-review-assurance-status:
     rationale: "Unknown and not-applicable are not green passes."
     stakeholder_refs:
