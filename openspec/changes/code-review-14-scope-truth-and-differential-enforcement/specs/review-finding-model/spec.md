@@ -2,7 +2,7 @@
 
 ### Requirement: Independent Finding Lifecycle and Remediation
 
-`ReviewFinding` SHALL represent severity, lifecycle status, differential state, remediation availability, and blocking policy as separate fields. `autofix_available=true` SHALL mean only that a remediation mechanism exists; it SHALL NOT mark an open finding fixed, waived, or non-blocking.
+`ReviewFinding` SHALL represent severity, lifecycle status, differential state, remediation availability, and blocking policy as separate fields. Schema 1.6 differential evidence SHALL also carry `identity_fingerprint`, `occurrence_evidence_digest`, and `differential_bucket_digest` from signed `finding-multiset-v1`; raw line/column/span is evidence only and never part of identity. `autofix_available=true` SHALL mean only that a remediation mechanism exists; it SHALL NOT mark an open finding fixed, waived, or non-blocking.
 
 #### Scenario: Fixable error remains open and blocking
 
@@ -12,9 +12,25 @@
 - **AND** it blocks according to error policy
 - **AND** remediation availability is reported separately.
 
+#### Scenario: Duplicate findings preserve multiplicity
+
+- **GIVEN** base has one finding and head has two findings with the same line-independent identity fingerprint and unchanged severity/blocking inputs
+- **WHEN** `finding-multiset-v1` pairs the bucket
+- **THEN** one occurrence is unchanged and the unmatched head occurrence is introduced
+- **AND** base/head counts, deterministic pairing, head surplus, and bucket digest remain evidence
+- **AND** the duplicate cannot collapse into one unchanged set member or PASS.
+
+#### Scenario: Line-only shift preserves identity
+
+- **GIVEN** one base/head finding differs only in raw line or column after unrelated source insertion
+- **WHEN** its analyzer/rule/path/symbol/precisely-normalized-message identity and severity/blocking partition match
+- **THEN** the deterministic pair is unchanged
+- **AND** both raw spans remain occurrence evidence
+- **AND** line movement alone does not create a false fixed/introduced pair.
+
 #### Scenario: Finding is fixed at head
 
-- **GIVEN** a stable fingerprint exists at base and not at successfully analyzed head
+- **GIVEN** an unmatched base occurrence remains after complete `finding-multiset-v1` pairing at a successfully analyzed head
 - **AND** no introduced inline suppression for the same analyzer/path can explain its absence
 - **WHEN** differential classification runs
 - **THEN** differential state is fixed

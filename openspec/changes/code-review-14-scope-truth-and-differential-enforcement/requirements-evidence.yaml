@@ -134,6 +134,11 @@ requirements:
         method: test
         intent: "Select Ruff policy without implicit or implementation-dependent source precedence."
         observable: "Zero root Ruff sources uses explicit isolated mode, exactly one source is projected explicitly, and multiple .ruff.toml/ruff.toml/pyproject tool.ruff sources are ruff_config_ambiguous UNKNOWN before applicability or launch."
+      - case_id: CR14-101
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Preserve diagnostic multiplicity without making raw line positions part of finding identity."
+        observable: "finding-multiset-v1 pairs exact normalized identity/outcome buckets deterministically; line-only shifts remain unchanged, duplicate head surplus is introduced, mixed residual transitions are unknown, and counts/pairs/surpluses/digests remain evidence."
       - case_id: CR14-079
         scenario_id: differential-base-head-enforcement
         method: test
@@ -546,6 +551,11 @@ requirements:
         method: test
         intent: "Execute dependency-bearing project tests without trusting candidate locks or ambient host packages."
         observable: "A target-tip-attested project-runtime layer is reused for both snapshots, imports its exact dependency closure, rejects reserved analyzer/runner collisions and untrusted provenance, and makes missing/incomplete evidence UNKNOWN."
+      - case_id: CR14-102
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Seal Bubblewrap's host-side runtime before it creates the analyzer namespace."
+        observable: "The pinned launcher is a verified static Linux x86_64 ELF with no interpreter or needed libraries, executes from the verified descriptor with loader injection cleared, and exposes no unexpected pre-namespace mapped object; dynamic/host-dependent launch is UNKNOWN."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
     rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
     stakeholder_refs:
