@@ -630,12 +630,22 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Prevent authorized pytest addopts from filtering the complete suite."
-        observable: "pytest-selection-controls-disabled-v1 parses the complete pinned pytest/pytest-cov option catalog and makes positional selectors, -k/-m, ignore/deselect/cache selectors, short-circuits, discovery/plugin overrides, and coverage overrides UNKNOWN before collection; a production change with an ignored failing test cannot pass, while declarative suite identity and non-selecting options remain bound."
+        observable: "pytest-selection-controls-disabled-v1 parses the complete composed pytest/pytest-cov/admitted-plugin option catalog and makes positional selectors, -k/-m, ignore/deselect/cache selectors, short-circuits, discovery/plugin overrides, and coverage overrides UNKNOWN before collection; a production change with an ignored failing test cannot pass, while declarative suite identity and non-selecting options remain bound."
       - case_id: CR14-122
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Prevent effective pytest configuration fields from hiding whole test modules."
         observable: "The frozen pytest/pytest-cov addini catalog classifies non-empty norecursedirs and every other selection/discovery/plugin/coverage field as unsupported UNKNOWN; independently every test_candidate, changed or unchanged, must contribute a selector per side, so a production-only range with an ignored failing module cannot pass."
+      - case_id: CR14-125
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent a repository collection hook from hiding one changed test inside an otherwise collected file."
+        observable: "The frozen hook-disposition catalog rejects collection-shaping conftest hooks before execution; plugin/hook origins, raw-collected items, and pre/post registry digests are bound, so selective deselection is UNKNOWN rather than PASS."
+      - case_id: CR14-126
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Admit exact target-tip pytest fixture plugins without ambient loading or unclassified parser and collection behavior."
+        observable: "The authenticated project-runtime descriptor binds plugin distribution, payload, dependency, pytest11 entry point, parser, and hook capabilities; a matching fixture-only plugin collects on both sides, while unlisted, snapshot/user, drifted, dynamic, or collection-shaping plugins are UNKNOWN."
       - case_id: CR14-116
         scenario_id: mandatory-analyzer-coverage
         method: test
