@@ -320,17 +320,17 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Provision the exact configuration-loader and analyzer versions claimed by pr-range-v1."
-        observable: "The signed analyzer-environment lock—not module-package host pip_dependencies—has checkpoint-matching exact entries, directly includes pytest 9.0.3 and Coverage 7.15.4, and a fresh analyzer-root version/digest mismatch makes profile activation UNKNOWN."
+        observable: "The signed analyzer-environment lock—not module-package host pip_dependencies—binds an immutable OCI base/root schema plus checkpoint-matching exact analyzer entries, directly includes pytest 9.0.3 and Coverage 7.15.4, and any capsule version/root digest mismatch makes profile activation UNKNOWN."
       - case_id: CR14-060
         scenario_id: mandatory-analyzer-coverage
         method: test
-        intent: "Make Python distribution identity stable across virtual-environment roots."
-        observable: "Wheel/RECORD payload and normalized entry-point identities match across install roots; generated wrapper/shebang bytes are excluded, while payload or entry-point drift is UNKNOWN."
+        intent: "Make analyzer runtime and Python distribution identity stable across controller storage roots."
+        observable: "OCI/final-root/interpreter/stdlib/extension/loader/library/bootstrap plus wheel/RECORD payload and normalized entry-point identities match across capsule materialization roots; outside-root and generated-wrapper bytes are excluded, while runtime/payload/entry-point drift is UNKNOWN."
       - case_id: CR14-065
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Close and sign the complete analyzer runtime dependency graph and provision it during implementation."
-        observable: "For each supported Linux/CPython environment, the signed analyzer lock closes every direct/transitive package, marker, edge, payload and digest while module-package pip_dependencies excludes the analyzer closure; host conflicts cannot preempt isolated provisioning, and missing/extra/bare/host-leaked/drift evidence is UNKNOWN."
+        observable: "For each supported Linux/CPython environment, the signed lock closes OCI base layers, the final runtime-root manifest, and every direct/transitive analyzer package, marker, edge, payload and digest while module-package pip_dependencies excludes the analyzer closure; host conflicts cannot preempt capsule provisioning, and missing/extra/bare/host-leaked/drift evidence is UNKNOWN."
       - case_id: CR14-061
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -385,7 +385,17 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Keep the exact locked analyzer dependency set separate from the SpecFact core/controller environment."
-        observable: "A dedicated analyzer-only environment equals the signed lock plus bootstrap allowlist and is the only analyzer import/executable root; the marketplace host manifest never receives analyzer-lock entries, unrelated host packages are not extras, and any host-path leakage or analyzer-set drift is UNKNOWN."
+        observable: "A verified analyzer runtime capsule equals the signed OCI base plus analyzer lock/bootstrap allowlist and is the complete analyzer rootfs/import/native-runtime source; the marketplace host manifest never receives analyzer-lock entries, and any host path/runtime mount, missing runtime file, or analyzer-set drift is UNKNOWN."
+      - case_id: CR14-081
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent candidate Python startup hooks from running before import-capable analyzers initialize."
+        observable: "The capsule interpreter uses -I -S and a sealed bootstrap; snapshot roots enter sys.path only after startup without site/.pth processing, candidate sitecustomize/usercustomize/site/.pth sentinels do not run, and any early exposure or bootstrap drift is UNKNOWN."
+      - case_id: CR14-082
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prove the analyzer runtime is complete without unbound host interpreter or native-library mounts."
+        observable: "A synthetic analyzer boots from the sealed capsule in an empty Bubblewrap root; interpreter, stdlib, extensions, loader/libraries, analyzers and bootstrap are manifest-bound, while any host runtime mount, missing path, loader failure, or root drift is UNKNOWN."
       - case_id: CR14-042
         scenario_id: mandatory-analyzer-coverage
         method: test
