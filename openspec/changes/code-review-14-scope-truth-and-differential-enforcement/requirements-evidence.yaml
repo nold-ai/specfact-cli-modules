@@ -39,7 +39,7 @@ requirements:
         scenario_id: explicit-review-scope-evidence
         method: test
         intent: "Bind the producer and consumer to the independently authenticated expected PR target tip."
-        observable: "Producer emits only range_candidate/preview after structural checks; a protected consumer independently verifies the immutable report against workflow-native event data and alone emits the effective pr_range envelope."
+        observable: "Producer emits only range_candidate/preview after structural checks; a protected consumer independently derives and verifies target/head, analyzed merge-base, and selected policy/config identities against trusted data, rejects either mismatch as UNKNOWN, and alone emits the fully bound effective pr_range envelope."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
     rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
     stakeholder_refs:

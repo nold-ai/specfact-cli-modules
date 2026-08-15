@@ -101,7 +101,8 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **WHEN** the guidance describes merge or pull-request assurance
 - **THEN** protected CI uses `--scope range`, full base/head identities, an event-derived `--pr-context-file` outside the checkout, and `--enforcement full`
 - **AND** the producer emits `assurance_kind=range_candidate`, never pr_range
-- **AND** the protected consumer independently verifies the immutable report digest, context, expected/resolved target tip, merge base, and head against workflow-native event data
+- **AND** the protected consumer independently derives the expected merge base and authorized target-tip policy/config selection, then verifies the immutable report digest, context, expected/resolved target tip, analyzed merge-base commit/tree, head, and complete selected policy/config identity/digests against workflow-native trusted data
+- **AND** its envelope binds every compared identity and rejects any merge-base or policy/config mismatch as UNKNOWN
 - **AND** only its separate verification envelope emits `effective_assurance_kind=pr_range`
 - **AND** manual guidance without context is `assurance_kind=range_preview` and directs merge authority to that protected envelope
 - **AND** it does not use changed/worktree or positional branch-delta files as merge evidence
