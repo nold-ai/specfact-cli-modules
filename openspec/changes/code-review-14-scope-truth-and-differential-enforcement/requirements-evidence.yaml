@@ -410,7 +410,12 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Ensure Pylint whole-file ignore controls cannot silently remove a governed input."
-        observable: "The generated projection clears ignore, ignore-patterns, and ignore-paths while binding original/effective values and exact eligible/argv manifests; effective ignore or drift is UNKNOWN."
+        observable: "The generated projection clears the whole-file ignore and complete pinned no-member exemption families while binding original/effective values and exact eligible/argv manifests; effective exemption or catalog/manifest drift is UNKNOWN."
+      - case_id: CR14-092
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Pylint module/class/member/inference/mixin exemptions from hiding a diagnostic after a rename."
+        observable: "A renamed module matching target ignored-modules remains analyzed under the cleared pinned exemption catalog; every catalog entry has a retained/cleared/rejected disposition, and effective bypass or schema/help drift is UNKNOWN."
       - case_id: CR14-076
         scenario_id: mandatory-analyzer-coverage
         method: test
