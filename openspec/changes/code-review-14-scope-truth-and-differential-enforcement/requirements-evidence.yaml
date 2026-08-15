@@ -39,7 +39,7 @@ requirements:
         scenario_id: explicit-review-scope-evidence
         method: test
         intent: "Bind the producer and consumer to the independently authenticated expected PR target tip."
-        observable: "Producer emits only range_candidate/preview after structural checks; a protected consumer independently derives and verifies target/head, analyzed merge-base, and selected policy/config identities against trusted data, rejects either mismatch as UNKNOWN, and alone emits the fully bound effective pr_range envelope."
+        observable: "Producer emits only range_candidate/preview after structural checks; a protected consumer independently derives the complete governed diff/selection/lines/rename/deletion facts plus target/head, analyzed merge-base, selected policy/config, approved producer, and artifact identities, rejects any omission or mismatch as UNKNOWN, and alone emits the fully bound effective pr_range envelope."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
     rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
     stakeholder_refs:
@@ -94,6 +94,11 @@ requirements:
         method: test
         intent: "State the trust boundary for pytest, CrossHair, and other candidate-executing observations without inventing hostile-code proof."
         observable: "Runtime artifacts are labelled candidate-executed observations under the explicit non-adversarial-candidate assumption; sealing claims post-collection immutability only, and a consumer requiring adversarial runtime evidence receives UNKNOWN/no PASS."
+      - case_id: CR14-041
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Give reviewed Git inputs, signed module payloads, generated projections, and builtin analyzer modes unambiguous provenance."
+        observable: "The closed tagged input identity binds source-specific fields and materialized digests; only reviewed-tree inputs claim Git blobs, and producer/consumer canonical digests match."
       - case_id: CR14-034
         scenario_id: differential-base-head-enforcement
         method: test
@@ -221,6 +226,11 @@ requirements:
         method: test
         intent: "Keep mandatory Semgrep coverage usable when a consumer repository does not vendor the module clean-code policy."
         observable: "Both snapshots receive the same explicit clean-code payload from the exact signed installed module artifact with package and payload digests; source/worktree discovery is disabled, semgrep-bugs remains conditional on target policy, and missing or invalid fallback evidence yields UNKNOWN."
+      - case_id: CR14-042
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep valid failing behavioral evidence distinct from incomplete analyzer infrastructure."
+        observable: "Completed blockers and collected assertion/skip/xfail/xpass evidence are FAIL; availability/process/timeout/parse/identity/artifact/reconciliation errors are UNKNOWN; legacy exit projection does not erase the distinction."
       - case_id: CR14-020
         scenario_id: mandatory-analyzer-coverage
         method: test
