@@ -93,6 +93,15 @@
 - **AND** remediation availability is independent from lifecycle status
 - **AND** authenticated exception handling remains a separate `governance-02-exception-management` capability.
 
+#### Scenario: Unchanged suppression on a modified file is required uncertainty
+
+- **GIVEN** a governed Python file retains an unchanged registered directive while other committed bytes change
+- **WHEN** schema 1.6 derives differential lifecycle truth for an analyzer mapped to that directive
+- **THEN** `unchanged_suppression_on_changed_file` is a required UNKNOWN fact with immutable blob, directive-manifest, and changed-hunk evidence
+- **AND** zero emitted findings from the suppressed analyzer cannot turn that fact into PASS or NOT_APPLICABLE
+- **AND** an identical-blob pure rename does not create this fact
+- **AND** the fact remains distinct from an introduced directive's open FAIL blocker.
+
 #### Scenario: Waiver field is reserved but inactive in C14
 
 - **GIVEN** C14 derives an open finding under schema 1.6

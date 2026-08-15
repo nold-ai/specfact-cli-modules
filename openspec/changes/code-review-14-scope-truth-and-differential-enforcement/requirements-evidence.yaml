@@ -139,6 +139,11 @@ requirements:
         method: test
         intent: "Prevent Ruff range, line, and file suppression controls from erasing baseline evidence."
         observable: "Every pinned Ruff noqa, ignore, file-ignore, disable, and enable grammar form is parser-derived and detected before fingerprints; introduced controls block and affected missing baseline findings remain unknown, while parser/catalog drift is UNKNOWN."
+      - case_id: CR14-109
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent pre-existing unchanged suppressions from hiding defects introduced elsewhere in a modified file."
+        observable: "suppression-affected-edit-v1 makes every content-changed governed Python file retaining a mapped unchanged directive required UNKNOWN for the affected required/activated analyzer, with blob/directive-manifest/changed-hunk evidence; silent analyzer output cannot PASS, while an identical-blob pure rename is not quarantined and changed directives remain blocking."
       - case_id: CR14-100
         scenario_id: differential-base-head-enforcement
         method: test
