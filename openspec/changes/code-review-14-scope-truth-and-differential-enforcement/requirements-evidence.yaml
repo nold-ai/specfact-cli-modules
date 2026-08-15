@@ -611,6 +611,11 @@ requirements:
         method: test
         intent: "Prevent collection outcomes from reclassifying changed tests as support."
         observable: "pytest-input-role-v1 binds roles before collection from immutable paths and the shared authorized testpaths/root-default plus python_files policy; an emptied, __test__-disabled, moved, or support-renamed previously collected test remains an uncollected test candidate and yields UNKNOWN, while only preclassified support may omit selectors."
+      - case_id: CR14-120
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Match path-bearing python_files patterns exactly as pinned pytest does."
+        observable: "pytest-input-role-v1 reproduces pytest 9.0.3 fnmatch_ex on the same absolute materialized Path: separator-free patterns match basename, path-bearing relative patterns match the full path with */ prefixing, and an empty tests/unit/test_new.py under python_files=tests/unit/test_*.py remains an uncollected test candidate and yields UNKNOWN."
       - case_id: CR14-116
         scenario_id: mandatory-analyzer-coverage
         method: test
