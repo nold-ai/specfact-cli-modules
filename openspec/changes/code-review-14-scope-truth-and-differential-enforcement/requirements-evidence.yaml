@@ -299,8 +299,8 @@ requirements:
       - case_id: CR14-065
         scenario_id: mandatory-analyzer-coverage
         method: test
-        intent: "Close and sign the complete analyzer runtime dependency graph."
-        observable: "For each supported Linux/CPython environment, exact direct/transitive packages, markers, edges, payloads and closure digest match a fresh install; missing/extra/drift is UNKNOWN."
+        intent: "Close and sign the complete analyzer runtime dependency graph and provision it during implementation."
+        observable: "For each supported Linux/CPython environment, module-package PEP 508 names and exact constraints match every selected-lock direct/transitive package, marker, edge, payload and closure digest; a normalized-name guard retains required tool membership, and missing/extra/bare/drift is UNKNOWN."
       - case_id: CR14-061
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -311,6 +311,11 @@ requirements:
         method: test
         intent: "Keep Coverage data and report writes out of immutable snapshots and config mounts."
         observable: "Every pinned-schema writable field, including relative data_file, is projected into a role-specific process-private output path with bound transformation evidence; escape, collision, or drift is UNKNOWN."
+      - case_id: CR14-066
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Reconcile targeted coverage against every governed production input present in each immutable snapshot."
+        observable: "The normalized coverage-file manifest contains each governed production path exactly once before threshold evaluation; target-policy exclusion, missing/duplicate/aliased/escaping/identity-mismatched paths are UNKNOWN even when tests and the reported threshold pass."
       - case_id: CR14-042
         scenario_id: mandatory-analyzer-coverage
         method: test

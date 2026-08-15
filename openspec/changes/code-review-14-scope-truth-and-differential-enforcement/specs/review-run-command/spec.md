@@ -317,6 +317,16 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** only a manifest-proven absent-side input/selector produces NOT_APPLICABLE for that side
 - **AND** the stage cannot be omitted by `--no-tests`.
 
+#### Scenario: Coverage reconciles every governed production input
+
+- **GIVEN** an applicable snapshot contains governed production paths in its immutable selected-input manifest
+- **WHEN** targeted coverage produces a readable artifact under the authorized target policy
+- **THEN** the controller normalizes and binds a sorted coverage-file manifest of canonical repository-relative paths
+- **AND** every governed production path present in that snapshot appears exactly once before threshold evaluation
+- **AND** a target-policy `source`, `include`, or `omit` rule that leaves any such path absent produces `error/UNKNOWN`, even if tests pass and the reported threshold is satisfied
+- **AND** duplicate, escaping, ambiguously aliased, or path/content-mismatched entries also produce `error/UNKNOWN`
+- **AND** a governed path absent from that commit side is recorded with immutable absence evidence and is not required in that side's artifact.
+
 #### Scenario: Completed coverage-threshold failure is semantic FAIL
 
 - **GIVEN** every planned selector collects once and passes and the sealed coverage artifact is valid and reconciled
