@@ -616,6 +616,11 @@ requirements:
         method: test
         intent: "Match path-bearing python_files patterns exactly as pinned pytest does."
         observable: "pytest-input-role-v1 reproduces pytest 9.0.3 fnmatch_ex on the same absolute materialized Path: separator-free patterns match basename, path-bearing relative patterns match the full path with */ prefixing, and an empty tests/unit/test_new.py under python_files=tests/unit/test_*.py remains an uncollected test candidate and yields UNKNOWN."
+      - case_id: CR14-121
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent authorized pytest addopts from filtering the complete suite."
+        observable: "pytest-selection-controls-disabled-v1 parses the complete pinned pytest/pytest-cov option catalog and makes positional selectors, -k/-m, ignore/deselect/cache selectors, short-circuits, discovery/plugin overrides, and coverage overrides UNKNOWN before collection; a production change with an ignored failing test cannot pass, while declarative suite identity and non-selecting options remain bound."
       - case_id: CR14-116
         scenario_id: mandatory-analyzer-coverage
         method: test
