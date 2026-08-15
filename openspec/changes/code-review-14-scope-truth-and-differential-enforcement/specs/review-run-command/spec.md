@@ -219,9 +219,10 @@ Signed `occurrence-continuity-v1` SHALL validate each canonical source span agai
 #### Scenario: Import-capable analyzers stay inside each materialized snapshot
 
 - **GIVEN** an imported repository dependency has different content at merge base and head while caller/worktree source is also present
-- **WHEN** Ruff, Radon, Pylint, basedpyright, either Semgrep pass, CrossHair, targeted pytest, or any other analyzer subprocess executes for each side
-- **THEN** each process uses that side's materialized source root as OS `cwd`, but Python starts with the capsule interpreter's `-I -S` flags through the sealed bootstrap so cwd is absent from startup `sys.path`
-- **AND** its sanitized import environment initially contains only sealed capsule analyzer roots; validated snapshot roots are inserted by the bootstrap as data only after interpreter startup and without `site.addsitedir` or executable `.pth` processing
+- **WHEN** Ruff, Pylint, basedpyright, either Semgrep pass, CrossHair, targeted pytest, or any other snapshot-cwd analyzer subprocess executes for each side
+- **THEN** each listed process uses that side's materialized source root as OS `cwd`, but Python starts with the capsule interpreter's `-I -S` flags through the sealed bootstrap so cwd is absent from startup `sys.path`
+- **AND** Radon instead uses the same side's immutable snapshot identity through absolute manifest-bound inputs while its loader starts from the controller-owned empty control `cwd` with private `HOME` and sanitized `RADONCFG`
+- **AND** each sanitized import environment initially contains only sealed capsule analyzer roots; validated snapshot roots are inserted by the bootstrap as data only after interpreter startup and without `site.addsitedir` or executable `.pth` processing
 - **AND** pytest automatic plugin loading, startup `PYTHONPATH`, site/user-site processing, caller/user hooks, and candidate `sitecustomize.py`/`usercustomize.py` execution are disabled
 - **AND** every subprocess uses the sealed executable/cwd/environment/output context, and merge-base import-capable execution imports merge-base content while head execution imports head content
 - **AND** caller/worktree/policy-bundle source resolution or invocation-context mismatch yields UNKNOWN.
