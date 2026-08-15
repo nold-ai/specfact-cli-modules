@@ -51,6 +51,23 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** core's staged pre-commit helper remains `explicit_files` while consuming authoritative status
 - **AND** no core PR-range consumer is accepted unless it passes the exact released matrix digest.
 
+#### Scenario: Modules staged consumer preserves schema 1.6 UNKNOWN
+
+- **GIVEN** the modules repository staged explicit-files helper receives a valid schema 1.6 report with `assurance_status=UNKNOWN`, `ci_exit_code=1`, and no error finding on a staged changed line
+- **WHEN** `scripts/pre_commit_code_review.py` derives its hook exit
+- **THEN** authoritative schema 1.6 status and exit remain UNKNOWN/non-zero
+- **AND** changed-line blocker fallback is not applied to schema 1.6 or newer
+- **AND** only reports older than 1.6 retain the existing staged-line compatibility calculation
+- **AND** the helper remains `explicit_files` and does not claim `pr_range`.
+
+#### Scenario: Minimum advertised core runtime loads schema 1.6
+
+- **GIVEN** a candidate Code Review package proposes `core_compatibility: '>=0.56.0,<1.0.0'`
+- **WHEN** the pre-release compatibility gate runs in a fresh environment
+- **THEN** it checks out the immutable core 0.56.0 tag at the full commit/tree recorded in the checkpoint, installs that core plus the candidate module package, loads the module through core, and validates every schema 1.6 consumer-matrix status/projection
+- **AND** an unavailable or mismatched identity, branch fallback, install/load failure, or matrix failure blocks release and the compatibility declaration
+- **AND** this smoke proves minimum-version load/schema interoperability only; protected PR-context verification remains the separate downstream core adoption contract.
+
 #### Scenario: Legacy enforcement mode is policy, not scope
 
 - **GIVEN** schema 1.6 dual-writing is enabled
