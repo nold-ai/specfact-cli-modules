@@ -129,6 +129,11 @@ requirements:
         method: test
         intent: "Prevent Ruff range, line, and file suppression controls from erasing baseline evidence."
         observable: "Every pinned Ruff noqa, ignore, file-ignore, disable, and enable grammar form is parser-derived and detected before fingerprints; introduced controls block and affected missing baseline findings remain unknown, while parser/catalog drift is UNKNOWN."
+      - case_id: CR14-100
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Select Ruff policy without implicit or implementation-dependent source precedence."
+        observable: "Zero root Ruff sources uses explicit isolated mode, exactly one source is projected explicitly, and multiple .ruff.toml/ruff.toml/pyproject tool.ruff sources are ruff_config_ambiguous UNKNOWN before applicability or launch."
       - case_id: CR14-079
         scenario_id: differential-base-head-enforcement
         method: test
