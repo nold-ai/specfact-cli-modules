@@ -149,6 +149,11 @@ requirements:
         method: test
         intent: "Prevent suppression policy and analyzer mappings from drifting between the red checkpoint, package signature, producer, and protected consumer."
         observable: "The one signed pr-range-v1-suppression-catalog resource canonically binds both suppression-directives-v1 and suppression-affected-edit-v1, including parser/catalog versions, mappings, normalization, dispositions, and policy constants; missing, embedded-only, noncanonical, or checkpoint/package/profile/report/envelope drift is UNKNOWN before launch."
+      - case_id: CR14-112
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Bind the suppression catalog identity across every module-owned trust boundary and hand off the live consumer comparison explicitly."
+        observable: "Mapped module tests vary checkpoint/resource/package/profile/report/static-envelope catalog digests independently and reject every mismatch; task 4.7 separately requires the unmapped core consumer to load the approved signed catalog digest and reject report/envelope mismatch before pr_range promotion."
       - case_id: CR14-100
         scenario_id: differential-base-head-enforcement
         method: test
