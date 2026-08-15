@@ -97,7 +97,7 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 
 ### Requirement: Review CLI Contracts Cover Explicit Scope and Differential Evidence
 
-Static CLI contract fixtures SHALL cover argv parsing and serialized report/error contracts for worktree, index, range, full, positional files, deprecated changed alias, required full refs, assurance/enforcement status projection, positional PR-range downgrade rejection, and invalid option combinations. Stateful Git content/topology behavior—staged-versus-unstaged index content, merge-base selection with an advanced base-ref tip, changed-test inclusion, empty range, Git failure, immutable materialization, merge-base/head classifications, and analyzer identity/coverage—SHALL be proved only in the allowlisted scope/differential unit and end-to-end tests that create isolated temporary repositories.
+Static CLI contract fixtures SHALL cover argv parsing and serialized report/error contracts for worktree, index, range, full, positional files, deprecated changed alias, required full refs, assurance/enforcement status projection, positional PR-range downgrade rejection, and invalid option combinations. Stateful Git content/topology behavior—staged-versus-unstaged index content, unique merge-base selection with advanced-base-tip and criss-cross/multiple-best-base cases, changed-test inclusion, empty range, Git failure, immutable materialization, merge-base/head classifications, and analyzer identity/coverage—SHALL be proved only in the allowlisted scope/differential unit and end-to-end tests that create isolated temporary repositories.
 
 #### Scenario: Stateful Git setup is outside static CLI fixtures
 
@@ -128,7 +128,7 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **WHEN** the guidance describes merge or pull-request assurance
 - **THEN** protected CI uses `--scope range`, full base/head identities, an event-derived `--pr-context-file` outside the checkout, and `--enforcement full`
 - **AND** the producer emits `assurance_kind=range_candidate`, never pr_range
-- **AND** the protected consumer independently derives the expected merge base, complete governed diff, selected Python files/lines, governed policy path/section manifests and candidate-policy-change digest, status/rename/deletion manifests, and authorized target-tip policy/config selection; requires approved signed producer module/schema/profile/toolchain plus workflow/job/artifact provenance; then compares every identity and digest with the immutable report
+- **AND** the protected consumer independently enumerates all best merge bases, requires exactly one expected merge base, then derives the complete governed diff, selected Python files/lines, governed policy path/section manifests and candidate-policy-change digest, status/rename/deletion manifests, and authorized target-tip policy/config selection; requires approved signed producer module/schema/profile/toolchain plus workflow/job/artifact provenance; then compares every identity and digest with the immutable report
 - **AND** its envelope binds every compared identity/manifest/digest and rejects any omitted governed Python or policy input, or merge-base, diff, selection, rename/deletion, policy/config, producer, or artifact mismatch as UNKNOWN
 - **AND** only its separate verification envelope emits `effective_assurance_kind=pr_range`
 - **AND** manual guidance without context is `assurance_kind=range_preview` and directs merge authority to that protected envelope

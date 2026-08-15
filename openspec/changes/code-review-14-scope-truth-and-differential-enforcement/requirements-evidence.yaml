@@ -80,6 +80,11 @@ requirements:
         method: test
         intent: "Reserve pull-request range assurance for the complete governed Python selection."
         observable: "Range rejects exclude-tests, every focus facet, path, no-tests, and level filters before analysis; narrowed runs cannot emit range_candidate or an effective pr_range envelope or false NOT_APPLICABLE."
+      - case_id: CR14-083
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Reject ambiguous range baselines instead of choosing an arbitrary best merge base."
+        observable: "A synthetic criss-cross history retains the sorted candidate commit/tree list and digest, then yields UNKNOWN before diff/materialization/analyzers; producer and protected consumer both require exactly one and define no virtual-base fallback."
       - case_id: CR14-027
         scenario_id: explicit-review-scope-evidence
         method: test
