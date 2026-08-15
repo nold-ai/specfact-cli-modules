@@ -2,15 +2,24 @@
 
 ### Requirement: Truthful Review Assurance Status
 
-The governed review report schema `1.6` SHALL expose authoritative `assurance_status` as `PASS`, `FAIL`, `UNKNOWN`, or `NOT_APPLICABLE`. `WAIVED` SHALL be a governance overlay, not a verifier-produced status. A mandatory UNKNOWN SHALL prevent PASS. NOT_APPLICABLE SHALL require successfully resolved no-governed-impact evidence.
+The governed review report schema `1.6` SHALL expose authoritative `assurance_status` as `PASS`, `FAIL`, `UNKNOWN`, or `NOT_APPLICABLE` plus derived `has_unknown_required_evidence`. `WAIVED` SHALL be a governance overlay, not a verifier-produced status. NOT_APPLICABLE SHALL require successfully resolved no-governed-impact evidence. Otherwise aggregate precedence is FAIL for any validated blocker, UNKNOWN only when required uncertainty exists without a known blocker, and PASS only when neither exists. A mixed FAIL/UNKNOWN report SHALL retain every unknown member and set the derived flag while aggregate remains FAIL.
 
 #### Scenario: Mandatory evidence is unknown
 
-- **GIVEN** scope or a mandatory analyzer is unknown
+- **GIVEN** scope or a mandatory analyzer is unknown and no valid completed blocker already proves FAIL
 - **WHEN** enforce-mode reporting completes
 - **THEN** assurance is UNKNOWN and process exit is non-zero
 - **AND** partial facts/findings remain available
 - **AND** the human summary does not say all validations passed.
+
+#### Scenario: Mixed valid failure and uncertainty has deterministic precedence
+
+- **GIVEN** one required member has valid completed blocking evidence and another required member is UNKNOWN
+- **WHEN** schema 1.6 aggregate status is derived
+- **THEN** assurance_status is FAIL and non-shadow exit is 1
+- **AND** `has_unknown_required_evidence` is true
+- **AND** the UNKNOWN member and diagnostics remain in the report
+- **AND** ledger and compatibility consumers do not reinterpret the report as neutral UNKNOWN or complete FAIL evidence.
 
 #### Scenario: Schema 1.6 dual-writes a conservative legacy projection
 
@@ -37,7 +46,8 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **THEN** the checked-in signed consumer matrix contains canonical PASS, FAIL, UNKNOWN, and NOT_APPLICABLE reports
 - **AND** each case binds required authoritative fields—including runtime trust model, adversarial-runtime capability, and per-member observation trust—permitted legacy projection, and strict/shadow exit behavior
 - **AND** the matrix contains a hostile-candidate-policy case whose candidate-executing evidence and aggregate status are UNKNOWN
-- **AND** contradictory status, legacy verdict, or exit combinations are invalid cases
+- **AND** it contains a mixed valid-blocker/required-UNKNOWN case whose aggregate is FAIL, unknown flag is true, and member evidence is retained
+- **AND** contradictory status, precedence, legacy verdict, or exit combinations are invalid cases
 - **AND** core's staged pre-commit helper remains `explicit_files` while consuming authoritative status
 - **AND** no core PR-range consumer is accepted unless it passes the exact released matrix digest.
 

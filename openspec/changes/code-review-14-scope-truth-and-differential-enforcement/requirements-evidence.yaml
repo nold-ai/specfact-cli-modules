@@ -142,6 +142,11 @@ requirements:
         method: test
         intent: "Dual-write schema 1.6 assurance into the closed legacy verdict, normalized enforcement-mode, and exit-code projection."
         observable: "UNKNOWN is never green; old reports cannot imply UNKNOWN/NOT_APPLICABLE; malformed 1.6 reports cannot pass."
+      - case_id: CR14-045
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Resolve concurrent valid blocking evidence and required uncertainty without losing either fact."
+        observable: "A known blocker makes aggregate FAIL; the unknown flag/member diagnostics remain present; signed compatibility and ledger consumers preserve the same precedence."
       - case_id: CR14-030
         scenario_id: truthful-review-assurance-status
         method: test
@@ -286,4 +291,9 @@ requirements:
         method: test
         intent: "Persist schema 1.6 assurance directly and keep UNKNOWN/NOT_APPLICABLE neutral for rewards and streaks."
         observable: "Neutral states persist canonical report_json/report_digest without coins, pass bonuses, block penalties, or streak changes; legacy records remain readable."
+      - case_id: CR14-046
+        scenario_id: ledger-preserves-authoritative-assurance-status
+        method: test
+        intent: "Preserve deterministic mixed FAIL/UNKNOWN precedence at the ledger boundary."
+        observable: "The ledger consumes aggregate FAIL and its normal blocking policy while canonical report evidence retains has_unknown_required_evidence plus every UNKNOWN member diagnostic."
 

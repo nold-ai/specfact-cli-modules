@@ -42,6 +42,14 @@ UNKNOWN and NOT_APPLICABLE SHALL be neutral audit events: the run metadata and f
 - **AND** the legacy FAIL projection does not create a block-streak event
 - **AND** report_json and report_digest preserve the UNKNOWN scope/analyzer evidence even when findings are empty.
 
+#### Scenario: Mixed known failure and uncertainty remains a blocking ledger event
+
+- **GIVEN** a valid schema 1.6 report has aggregate assurance_status FAIL, `has_unknown_required_evidence=true`, one valid blocking finding, and one required UNKNOWN member
+- **WHEN** the ledger records it
+- **THEN** the persisted authoritative ledger verdict is FAIL and existing FAIL reward/streak policy applies
+- **AND** report_json and report_digest retain the unknown flag, member status, and diagnostics
+- **AND** the ledger does not reinterpret the aggregate as neutral UNKNOWN or claim analyzer coverage was complete.
+
 #### Scenario: Not-applicable review is neutral in the ledger
 
 - **GIVEN** a valid schema 1.6 report has assurance_status NOT_APPLICABLE and legacy overall_verdict PASS_WITH_ADVISORY
