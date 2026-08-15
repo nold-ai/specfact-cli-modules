@@ -213,6 +213,11 @@ requirements:
         method: test
         intent: "Keep open fixable errors blocking until actually fixed or waived."
         observable: "Separate fields and deterministic policy derivation."
+      - case_id: CR14-090
+        scenario_id: independent-finding-lifecycle-and-remediation
+        method: test
+        intent: "Prevent a matched fingerprint with changed severity from being treated as unchanged."
+        observable: "Identity matching is followed by normalized severity and blocking-input comparison; any unclassified transition retains both observations as UNKNOWN and blocks strict PASS."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:truthful-review-assurance-status:
     rationale: "Unknown and not-applicable are not green passes."
     stakeholder_refs:
@@ -391,6 +396,11 @@ requirements:
         method: test
         intent: "Prevent Ruff per-file ignore mappings from wholly silencing an added or renamed governed input."
         observable: "The generated projection binds and clears per-file-ignores plus extend-per-file-ignores while retaining other authorized rules; added/renamed eligible files remain invoked, and a non-empty effective map, ineffective transform, or catalog drift is UNKNOWN."
+      - case_id: CR14-088
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff per-file target versions from changing rule semantics across a pure rename."
+        observable: "Both projections retain one shared global target version and clear per-file-target-version; identical renamed bytes retain the same version-sensitive diagnostics, and effective mapping or catalog drift is UNKNOWN."
       - case_id: CR14-075
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -401,6 +411,11 @@ requirements:
         method: test
         intent: "Ensure basedpyright project-selection controls cannot omit or wholly silence a governed input."
         observable: "Each generated flattened project binds original controls, sets include to the exact eligible snapshot-relative files, clears exclude and ignore, uses only explicit --project without positional sources, and preserves other authorized diagnostic settings; include/effective-control/catalog/manifest drift is UNKNOWN."
+      - case_id: CR14-089
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent basedpyright path-scoped strictness or execution environments from weakening diagnostics across a rename."
+        observable: "Generated projects clear strict, reject target executionEnvironments, retain one shared global checking policy, and a renamed identical diagnostic retains severity; effective path-scoped control or transition mismatch is UNKNOWN."
       - case_id: CR14-077
         scenario_id: mandatory-analyzer-coverage
         method: test

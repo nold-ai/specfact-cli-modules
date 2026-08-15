@@ -21,6 +21,15 @@
 - **AND** lifecycle/policy do not treat it as an open blocker
 - **AND** aggregate status retains the baseline evidence but excludes that exact fixed baseline-only item from remaining blockers.
 
+#### Scenario: Matching fingerprint with changed severity is not unchanged
+
+- **GIVEN** base and head observations have the same stable identity fingerprint after rename normalization
+- **AND** their normalized severity or derived blocking inputs differ
+- **WHEN** differential classification runs
+- **THEN** both observations and the transition are retained
+- **AND** differential state is unknown under CR14, never unchanged or silently fixed
+- **AND** strict assurance cannot PASS until a later signed profile defines and validates that transition.
+
 #### Scenario: Introduced result-control directive remains an open blocker
 
 - **GIVEN** the head adds, changes, or relocates a registered suppression or analyzer-result control directive
