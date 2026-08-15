@@ -296,6 +296,11 @@ requirements:
         method: test
         intent: "Make Python distribution identity stable across virtual-environment roots."
         observable: "Wheel/RECORD payload and normalized entry-point identities match across install roots; generated wrapper/shebang bytes are excluded, while payload or entry-point drift is UNKNOWN."
+      - case_id: CR14-065
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Close and sign the complete analyzer runtime dependency graph."
+        observable: "For each supported Linux/CPython environment, exact direct/transitive packages, markers, edges, payloads and closure digest match a fresh install; missing/extra/drift is UNKNOWN."
       - case_id: CR14-061
         scenario_id: mandatory-analyzer-coverage
         method: test
