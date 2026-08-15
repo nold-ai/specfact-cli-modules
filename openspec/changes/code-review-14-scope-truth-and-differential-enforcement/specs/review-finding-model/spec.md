@@ -2,7 +2,7 @@
 
 ### Requirement: Independent Finding Lifecycle and Remediation
 
-`ReviewFinding` SHALL represent severity, lifecycle status, differential state, remediation availability, and blocking policy as separate fields. Schema 1.6 differential evidence SHALL also carry `identity_fingerprint`, `occurrence_evidence_digest`, `continuity_anchor_digest`, closed `continuity_status=proven|different|ambiguous|invalid`, and `differential_bucket_digest` from signed `finding-multiset-v1`; raw line/column/span is evidence only and never part of identity. `autofix_available=true` SHALL mean only that a remediation mechanism exists; it SHALL NOT mark an open finding fixed, waived, or non-blocking.
+`ReviewFinding` SHALL represent severity, lifecycle status, differential state, remediation availability, and blocking policy as separate fields. Schema 1.6 SHALL carry exactly one `location_kind=source_span|selector|non_source`. `source-span-v1` uses one-based inclusive start/end lines, zero-based UTF-8-byte start and exclusive end columns, `precision=exact|line`, and raw analyzer coordinate-system/conversion evidence; a line-only source result deterministically spans the entire LF-normalized physical line excluding its terminator. Selector locations retain exact selector identity and non-source infrastructure locations retain their typed diagnostic identity; neither enters source occurrence pairing. Differential evidence SHALL also carry `identity_fingerprint`, `occurrence_evidence_digest`, `continuity_anchor_digest`, closed `continuity_status=proven|different|ambiguous|invalid|unavailable`, `source_line_correspondence_digest`, and `differential_bucket_digest` from signed `finding-multiset-v1`; raw positions are evidence only and never part of identity. `autofix_available=true` SHALL mean only that a remediation mechanism exists; it SHALL NOT mark an open finding fixed, waived, or non-blocking.
 
 #### Scenario: Fixable error remains open and blocking
 
@@ -11,6 +11,15 @@
 - **THEN** lifecycle status remains open
 - **AND** it blocks according to error policy
 - **AND** remediation availability is reported separately.
+
+#### Scenario: Every profile finding has a canonical typed location
+
+- **GIVEN** a required or conditional profile member emits a finding
+- **WHEN** schema 1.6 normalizes it
+- **THEN** a source analyzer preserves exact endpoints when available or expands a valid line-only result to the complete physical-line UTF-8 byte span
+- **AND** raw coordinates, coordinate system, conversion identity, precision, and canonical span remain evidence
+- **AND** targeted-test selector findings and infrastructure findings use typed selector/non-source locations outside source continuity
+- **AND** an invalid/missing source path or line is invalid evidence and cannot be guessed or paired unchanged.
 
 #### Scenario: Duplicate findings preserve multiplicity
 
@@ -24,10 +33,19 @@
 
 - **GIVEN** one base/head finding shifts line after an unrelated insertion before its otherwise exact source anchor
 - **WHEN** its analyzer/rule/path/symbol/precisely-normalized-message identity and severity/blocking partition match
-- **AND** `occurrence-continuity-v1` proves exactly one physical base/head location from identical spanned plus adjacent-line bytes
+- **AND** `occurrence-continuity-v1` proves exactly one physical base/head anchor and `source-line-correspondence-v1` proves its forced edit correspondence is uniquely optimal
 - **THEN** the deterministic pair is unchanged
 - **AND** both raw spans and the anchor evidence remain recorded
 - **AND** line movement alone does not create a false fixed/introduced pair.
+
+#### Scenario: Identical block at a different edit location is not unchanged
+
+- **GIVEN** base and head each contain one identity-equal diagnostic with identical source-anchor bytes
+- **AND** the block was removed at one edit location and added at another
+- **WHEN** source-line-correspondence-v1 compares global, forced-anchor, and forbidden-anchor minimum edit costs
+- **THEN** a forced cost above the global optimum makes the head occurrence different/introduced
+- **AND** an alternate optimal mapping makes the transition ambiguous/UNKNOWN
+- **AND** neither outcome may be paired unchanged.
 
 #### Scenario: Identity-equal replacement at a different source anchor is introduced
 

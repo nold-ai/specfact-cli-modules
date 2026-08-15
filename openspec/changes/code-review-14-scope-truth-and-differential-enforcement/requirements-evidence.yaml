@@ -153,7 +153,12 @@ requirements:
         scenario_id: differential-base-head-enforcement
         method: test
         intent: "Prevent an identity-equal diagnostic recreated at a different source location from masquerading as unchanged baseline debt."
-        observable: "Exact spanned-plus-adjacent-line continuity anchors distinguish unrelated replacements; a valid different head anchor is introduced, invalid/non-unique continuity is unknown, and a line shift with one exact continuous physical anchor remains unchanged."
+        observable: "Canonical source spans and exact anchors distinguish unrelated replacements; a valid different/non-corresponding head anchor is introduced, invalid/non-unique/unavailable continuity is unknown, and a line shift is unchanged only when forced source-line correspondence is uniquely optimal."
+      - case_id: CR14-108
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent an identical source block moved between edit locations from being treated as the same unchanged diagnostic."
+        observable: "source-line-correspondence-v1 binds global/forced/forbidden exact-line edit costs: uniquely forced optimum is continuous, higher forced cost is different/introduced, alternate optima or exceeded bounds are UNKNOWN, and no move/fuzzy inference exists."
       - case_id: CR14-079
         scenario_id: differential-base-head-enforcement
         method: test
@@ -253,6 +258,11 @@ requirements:
         method: test
         intent: "Keep open fixable errors blocking until actually fixed or waived."
         observable: "Separate fields and deterministic policy derivation."
+      - case_id: CR14-107
+        scenario_id: independent-finding-lifecycle-and-remediation
+        method: test
+        intent: "Give every profile finding deterministic location evidence usable by differential continuity."
+        observable: "Schema 1.6 preserves exact adapter endpoints or emits a whole-physical-line UTF-8-byte fallback, binds raw coordinate conversion, and types selector/non-source findings outside source pairing; invalid location evidence cannot be guessed."
       - case_id: CR14-090
         scenario_id: independent-finding-lifecycle-and-remediation
         method: test
