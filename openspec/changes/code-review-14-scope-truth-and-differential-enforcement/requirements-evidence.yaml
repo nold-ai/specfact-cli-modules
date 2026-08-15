@@ -565,7 +565,7 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Execute governed changed tests even when a range changes no production Python."
-        observable: "Merge-base/head selector inventories are digested and rename-normalized; every head selector runs; removed baseline, deleted, or non-expandable test inputs are UNKNOWN; test-only range is never silently NOT_APPLICABLE."
+        observable: "Complete sealed-policy merge-base/head selector inventories are collected, digested, and pure-rename-normalized; every head selector runs; removed baseline or uncollected changed tests are UNKNOWN; a test-only range runs the full recognized suite and is never silently NOT_APPLICABLE."
       - case_id: CR14-035
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -574,8 +574,8 @@ requirements:
       - case_id: CR14-043
         scenario_id: mandatory-analyzer-coverage
         method: test
-        intent: "Keep delete-only production changes bound to the tests selected for the deleted baseline source."
-        observable: "The effective head plan unions head, still-present baseline, and changed-test selectors; baseline selectors run at head, while a missing/unresolvable deletion plan is UNKNOWN rather than NOT_APPLICABLE."
+        intent: "Keep delete-only production changes bound to the complete recognized pytest suite."
+        observable: "Delete-only production activates complete-pytest-suite-v1 at head with no per-source mapping; all head selectors run, removed normalized baseline selectors are UNKNOWN, and the member cannot become NOT_APPLICABLE merely because the source was deleted."
       - case_id: CR14-044
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -585,12 +585,17 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Distinguish a structurally absent merge-base input/selector from an attempted empty pytest run."
-        observable: "A new-file range records manifest-bound merge-base-side NOT_APPLICABLE and still requires valid head collection/coverage; missing head tests remain UNKNOWN."
+        observable: "Only a merge-base with no governed production/test/test-support input records manifest-bound NOT_APPLICABLE; otherwise its complete recognized suite runs. Head always requires complete collection/coverage and missing tests remain UNKNOWN."
       - case_id: CR14-024
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Represent structurally empty per-snapshot analyzer input truthfully for add-only and delete-only ranges."
         observable: "The empty side is manifest-bound NOT_APPLICABLE, the non-empty side still runs, unrecorded adapter early return is rejected, and aggregate range assurance remains applicable."
+      - case_id: CR14-115
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Eliminate unsound source-to-test inference from strict range assurance."
+        observable: "complete-pytest-suite-v1 collects and runs every selector recognized by the sealed policy on both snapshots, including multiple and nonconventionally named tests; no production-name/import/coverage heuristic or candidate impact map can omit tests, and removed or uncollected changed tests are UNKNOWN."
       - case_id: CR14-097
         scenario_id: mandatory-analyzer-coverage
         method: test
