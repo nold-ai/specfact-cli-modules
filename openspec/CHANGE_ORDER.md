@@ -58,6 +58,8 @@ This track is first because no changed-scope assurance claim is trustworthy unti
 |---:|---|---|---|---|
 | 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#413](https://github.com/nold-ai/specfact-cli-modules/pull/413) | Resolve worktree/index/range/full scope explicitly; compare pinned merge-base/head analyses; authenticate one target-tip project-runtime layer for both snapshots; fail closed on unknown scope, runtime provenance, or analyzer coverage | acceptance of this OpenSpec plan; paired core adoption is downstream after the signed release |
 
+The first signed C14 module release advertises only the exact core 0.56.0 identity proven by its immutable compatibility smoke. Paired core adoption remains downstream; after that core is released, a later module metadata release may advertise that new exact core version only after the same tag/commit/tree matrix smoke. No single lower-bound test authorizes a future-version range.
+
 Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
 
 ## Active Tracks

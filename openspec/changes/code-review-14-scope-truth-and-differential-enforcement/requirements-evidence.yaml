@@ -350,8 +350,8 @@ requirements:
       - case_id: CR14-071
         scenario_id: truthful-review-assurance-status
         method: test
-        intent: "Prove the advertised minimum core version can install, load, and validate the released schema before publishing compatibility metadata."
-        observable: "A fresh environment uses the checkpointed immutable core 0.56.0 tag/commit/tree plus candidate module package and exercises every consumer-matrix status/projection; missing identity, branch fallback, install/load failure, or mismatch blocks release without claiming protected PR assurance."
+        intent: "Prove every core version admitted by release metadata has immutable install, load, and schema evidence; the first C14 release admits only exact core 0.56.0."
+        observable: "A fresh environment uses the checkpointed immutable core 0.56.0 tag/commit/tree plus candidate module package and exercises every consumer-matrix status/projection; only core_compatibility ==0.56.0 is permitted. A range, wildcard, untested version, missing identity, branch fallback, install/load failure, or mismatch blocks release without claiming protected PR assurance."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:review-cli-contracts-cover-explicit-scope-and-differential-evidence:
     rationale: "The public CLI contract must prove every explicit scope and differential evidence path."
     stakeholder_refs:
