@@ -555,7 +555,9 @@ The report SHALL list each profile member with required/conditional status; `exe
 
 - **GIVEN** a complete range contains governed runtime-measurable production `.py` whose selected tests may import declared project/test dependencies
 - **WHEN** targeted pytest coverage executes with the sealed analyzer capsule plus the identical verified target-tip project-runtime layer on both snapshots
-- **THEN** the profile records the planned selector digest, exact per-selector JUnit outcomes/counts, runner/environment identities, JUnit digest, and coverage artifact digest
+- **THEN** signed controller-owned `pytest-outcome-observer-v1` records every `pytest_runtest_logreport` node ID, setup/call/teardown phase, passed/failed/skipped flags, `wasxfail`, duration, and normalized longrepr digest in a process-private artifact
+- **AND** after exit the controller seals that artifact, derives exact per-selector outcomes, and reconciles its selectors/phases/counts with collection, JUnit, process exit, and coverage
+- **AND** the profile records the planned selector digest, outcome-artifact/JUnit/process/per-selector counts and digests, runner/environment identities, and coverage artifact digest
 - **AND** only an exact head set where every selected test collects once, executes, and passes satisfies the member
 - **AND** assertion failure or selected head skip/xfail/xpass produces FAIL
 - **AND** missing/untrusted/mismatched project-runtime evidence, reserved runner collision, dependency import failure, ambient-host access, unavailable pytest, timeout, collection/internal/usage error, unexpected no collected tests, missing/duplicate/deselected selected tests, reconciliation mismatch, or missing/unreadable coverage produces UNKNOWN
@@ -639,8 +641,10 @@ The report SHALL list each profile member with required/conditional status; `exe
 #### Scenario: Head cannot neutralize selected tests with pytest outcomes
 
 - **GIVEN** a planned head selector is changed to skip, xfail, xpass, or become deselected
-- **WHEN** targeted pytest coverage reconciles the exact selector set with JUnit
+- **WHEN** targeted pytest coverage reconciles the exact selector set with the sealed outcome artifact, JUnit, and process counts
 - **THEN** skip, xfail, or xpass is FAIL rather than passing coverage
+- **AND** a non-strict XPASS is identified by a passed call report carrying `wasxfail` even if JUnit contains a bare passing testcase
+- **AND** missing/duplicate/malformed phase reports or outcome-artifact/JUnit/process disagreement is `UNKNOWN`.
 - **AND** deselected, missing, duplicate, or count-mismatched selectors are UNKNOWN
 - **AND** an exit-zero pytest process and readable coverage artifact cannot override those outcomes
 - **AND** only exactly-once collected and passed selectors satisfy the head member.
