@@ -35,6 +35,11 @@ requirements:
         method: test
         intent: "Govern every Pylint configuration source recognized by the pinned loader."
         observable: "pylintrc legacy/TOML variants and Pylint sections in pyproject/setup.cfg/tox.ini are selected; one target source is explicit --rcfile, multiple are UNKNOWN, and candidate-only weakening cannot pass."
+      - case_id: CR14-059
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Keep analyzer code identical by rejecting unsealed Pylint hooks and plugins."
+        observable: "Any init-hook and every load-plugins entry under the initial empty signed plugin manifest is UNKNOWN before launch; repository analyzer-extension code is never imported or statically inferred."
       - case_id: CR14-052
         scenario_id: explicit-review-scope-evidence
         method: test
@@ -129,6 +134,11 @@ requirements:
         method: test
         intent: "Bind every import-capable analyzer subprocess to the active materialized snapshot."
         observable: "Every analyzer subprocess—including Ruff, Radon, Pylint, basedpyright, both Semgrep passes, CrossHair, and targeted pytest—consumes sealed snapshot cwd/executable/environment/output context; import-capable adapters never resolve caller/head source during baseline analysis."
+      - case_id: CR14-062
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Expose every sealed analyzer configuration input through the sandbox without exposing its source bundle."
+        observable: "config_roots contains exact read-only Ruff, Pylint, basedpyright baseline/reference, Semgrep bundle, and pytest/coverage projection mounts; omission, extra/writeable roots, or digest mismatch is UNKNOWN."
       - case_id: CR14-039
         scenario_id: differential-base-head-enforcement
         method: test
@@ -281,6 +291,16 @@ requirements:
         method: test
         intent: "Provision the exact configuration-loader and analyzer versions claimed by pr-range-v1."
         observable: "The signed module manifest has checkpoint-matching exact constraints, directly includes pytest 9.0.3 and Coverage 7.15.4, and a fresh-install version/digest mismatch makes profile activation UNKNOWN."
+      - case_id: CR14-060
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Make Python distribution identity stable across virtual-environment roots."
+        observable: "Wheel/RECORD payload and normalized entry-point identities match across install roots; generated wrapper/shebang bytes are excluded, while payload or entry-point drift is UNKNOWN."
+      - case_id: CR14-061
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep targeted coverage code identical by rejecting repository-loaded plugins."
+        observable: "Every configured Coverage plugin is UNKNOWN under the initial empty signed manifest before launch; repository plugin code is never imported or statically inferred."
       - case_id: CR14-042
         scenario_id: mandatory-analyzer-coverage
         method: test
@@ -296,6 +316,11 @@ requirements:
         method: test
         intent: "Resolve pytest path settings against the immutable snapshot being measured."
         observable: "Separate merge-base/head projections rebase every pinned-schema path field and pass explicit side rootdir; imported dependencies resolve to side-correct bytes, while escape/missing/unsupported paths are UNKNOWN."
+      - case_id: CR14-063
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Classify a complete below-threshold coverage result as semantic failure rather than infrastructure uncertainty."
+        observable: "A valid measured result below the sealed threshold is ran/FAIL with threshold and measurement evidence; baseline fail/head pass is fixed, while missing or unreconciled coverage is error/UNKNOWN."
       - case_id: CR14-020
         scenario_id: mandatory-analyzer-coverage
         method: test
