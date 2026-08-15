@@ -631,6 +631,11 @@ requirements:
         method: test
         intent: "Detect non-strict XPASS even when pytest JUnit serializes it as a passing testcase."
         observable: "pytest-outcome-observer-v1 seals every runtest phase and wasxfail value, classifies a passed call report with wasxfail as XPASS/FAIL, and makes missing/malformed phases or collection/outcome/JUnit/process disagreement UNKNOWN."
+      - case_id: CR14-146
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent repository or admitted-plugin hooks from rewriting failures before the sealed outcome observer sees them."
+        observable: "The total pinned hook-disposition catalog rejects execution/phase/TestReport/status/exit/artifact shaping hooks and wrappers—including a makereport hook that changes failed to passed—before execution; only exact controller observer/pytest-cov capabilities are admitted, and catalog drift is UNKNOWN."
       - case_id: CR14-033
         scenario_id: mandatory-analyzer-coverage
         method: test
