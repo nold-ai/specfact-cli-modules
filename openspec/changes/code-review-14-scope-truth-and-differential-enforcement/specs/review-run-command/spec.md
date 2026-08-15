@@ -694,6 +694,17 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** `pytest-item-controls-disabled-v1` yields `pytest_item_control_unsupported` UNKNOWN even though the file and raw/final inventories contain another selector
 - **AND** the observer's hookwrapper is manifest-bound, cannot mutate the downstream result, and any observer/origin/outcome drift is UNKNOWN.
 
+#### Scenario: Complete built-in Python collection filters are classified
+
+- **GIVEN** a candidate adds a failing selection-eligible class or callable beside a visible passing selector, and candidate-controlled runtime state would make pinned pytest 9.0.3 drop it before `pytest_itemcollected`
+- **WHEN** the sealed observer evaluates `pytest-pycollect-decision-v1`
+- **THEN** the frozen catalog records and classifies every branch from `PyCollector.collect`, `istestclass`, `istestfunction`, `pytest_pycollect_makeitem`, and `Class.collect`
+- **AND** module/class namespace and MRO traversal, duplicate/import ownership, name or exact nose eligibility, class/function dispatch, static/class-method unwrapping, callable/real-function checks, fixture markers, abstractness, raw/final `__test__`, and `hasinit`/`hasnew` decisions are all bound
+- **AND** a fixture-marked function or abstract class yields `pytest_item_control_unsupported` UNKNOWN even when the sibling passes
+- **AND** non-real callables, import-ownership manipulation, false `__test__`, and constructor controls have the same fail-closed disposition
+- **AND** ordinary nonmatching names, ignored framework attributes, and non-callable data remain `intentional_non_candidate`
+- **AND** any unclassified branch, pinned-source/catalog drift, observer mismatch, or changed decision yields UNKNOWN rather than PASS.
+
 #### Scenario: Built-in class constructors cannot hide a changed test in a collected file
 
 - **GIVEN** a candidate adds a failing name-matching test class with a custom `__init__` or custom `__new__` beside a visible passing selector in the same test-candidate file

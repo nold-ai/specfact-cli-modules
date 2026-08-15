@@ -656,6 +656,16 @@ requirements:
         method: test
         intent: "Prevent pytest's built-in class-constructor controls from hiding one changed test inside an otherwise collected file."
         observable: "Before Class.collect can return empty, the sealed collectstart observer records pinned hasinit/hasnew inputs and decisions; custom __init__ or __new__ on a name-matching class is UNKNOWN even when a sibling selector passes, while inherited defaults remain supported."
+      - case_id: CR14-130
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent pytest's remaining built-in Python collection filters from hiding one changed test inside an otherwise collected file."
+        observable: "The sealed observer makes a selection-eligible abstract class or fixture-marked function UNKNOWN before item emission even when a sibling selector passes; non-real callables and import-ownership manipulation share the fail-closed disposition."
+      - case_id: CR14-131
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Freeze a complete classified decision catalog instead of adding built-in pytest filters one edge case at a time."
+        observable: "pytest-pycollect-decision-v1 covers every pinned branch in PyCollector.collect, istestclass, istestfunction, pytest_pycollect_makeitem, and Class.collect; each outcome is intentional_non_candidate, collectable, or unsupported_candidate_control, and catalog/source/observer drift is UNKNOWN."
       - case_id: CR14-126
         scenario_id: mandatory-analyzer-coverage
         method: test
