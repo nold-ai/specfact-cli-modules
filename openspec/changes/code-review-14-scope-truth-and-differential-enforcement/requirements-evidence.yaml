@@ -30,6 +30,11 @@ requirements:
         method: test
         intent: "Treat candidate pytest and coverage configuration as governed policy impact."
         observable: ".coveragerc/pytest.ini and the closed shared-file sections are selected/digested; policy-only changes are UNKNOWN rather than NOT_APPLICABLE/PASS."
+      - case_id: CR14-106
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Prevent a governed Python or policy path from being dereferenced through a Git symlink and falsely treated as analyzed committed code."
+        observable: "tracked-regular-governed-input-v1 binds object type/mode/blob/content, accepts only no-follow-opened regular blob modes 100644/100755, and makes symlink/gitlink/unsafe mode changes governed UNKNOWN before applicability or analysis."
       - case_id: CR14-051
         scenario_id: explicit-review-scope-evidence
         method: test
