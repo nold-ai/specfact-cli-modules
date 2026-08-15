@@ -545,7 +545,7 @@ requirements:
         scenario_id: mandatory-analyzer-coverage
         method: test
         intent: "Prevent reviewed snapshots or project dependencies from shadowing sealed analyzer/runtime modules."
-        observable: "capsule-reserved-imports-v1 preflights top-level module, stub, regular-package, and namespace-package collisions, keeps every reserved prefix and descendant capsule-only, records origin evidence, and returns UNKNOWN before dispatch; non-reserved imports still resolve snapshot before project runtime."
+        observable: "capsule-reserved-imports-v1 preflights top-level module, stub, regular-package, and namespace-package collisions, keeps every reserved prefix and descendant capsule-only, records origin evidence, and returns UNKNOWN before dispatch; for authorized project-layer consumers non-reserved imports resolve snapshot before project runtime, while Ruff, Radon, both Semgrep passes, and other non-consumers receive no project-layer mount."
       - case_id: CR14-082
         scenario_id: mandatory-analyzer-coverage
         method: test
