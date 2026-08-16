@@ -50,6 +50,18 @@ These archived specs are now the shipped basis for the flagship demo: run review
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
 AI IDE, rerun, and compare improved evidence.
 
+## Immediate Corrective Track
+
+This track is first because no changed-scope assurance claim is trustworthy until its Git boundary and unknown states are explicit.
+
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#413](https://github.com/nold-ai/specfact-cli-modules/pull/413) | Resolve worktree/index/range/full scope explicitly; compare pinned merge-base/head analyses; authenticate one target-tip project-runtime layer for both snapshots; fail closed on unknown scope, runtime provenance, or analyzer coverage | acceptance of this OpenSpec plan; paired core adoption is downstream after the signed release |
+
+The first signed C14 module release advertises only the exact core 0.56.0 identity proven by its immutable compatibility smoke. Paired core adoption remains downstream; after that core is released, a later module metadata release may advertise that new exact core version only after the same tag/commit/tree matrix smoke. The metadata uses strict `===0.56.0`; ordinary `==0.56.0` and local aliases such as `0.56.0+vendor` are rejected. No single lower-bound test authorizes a future-version range.
+
+Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
+
 ## Active Tracks
 
 ### Track A - Validation Runtime Spine
@@ -116,6 +128,7 @@ ceremony rather than validation evidence:
 
 ### Wave 1 - Cleanup and Scope Alignment
 
+- Accept and implement `code-review-14-scope-truth-and-differential-enforcement` before making changed-range assurance claims.
 - Archive completed/closed changes.
 - Park upstream ceremony expansions.
 - Update active proposals and wiki mirrors to validation positioning.

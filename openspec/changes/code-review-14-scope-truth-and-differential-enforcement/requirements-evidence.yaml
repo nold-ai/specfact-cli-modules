@@ -1,0 +1,814 @@
+schema_version: "2"
+requirements:
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:explicit-review-scope-evidence:
+    rationale: "A review verdict is meaningful only when the evaluated snapshot is known."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-scope-cli
+        kind: planned_cli_command
+        locator: "specfact code review run --scope"
+    verification_cases:
+      - case_id: CR14-001
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Resolve worktree, index, range, full, or explicit-file scope without ambiguity."
+        observable: "Immutable scope evidence identifies the analyzed snapshot and files; only a successfully resolved unfiltered diff containing neither governed Python nor governed analyzer-policy input is NOT_APPLICABLE, and rejected narrowing cannot manufacture that state."
+      - case_id: CR14-047
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Treat candidate analyzer-policy/config changes as governed impact without self-authorization."
+        observable: "Closed policy paths/pyproject sections are selected and digested; a policy-only range is UNKNOWN under the target-tip policy, never NOT_APPLICABLE/PASS, until a separate trusted promotion contract exists."
+      - case_id: CR14-048
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Avoid classifying unrelated shared-file metadata as review-policy impact."
+        observable: "Only canonical analyzer, coverage, and pytest sections in pyproject/setup.cfg/tox.ini enter the governed policy digest; parse failure is UNKNOWN."
+      - case_id: CR14-049
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Treat candidate pytest and coverage configuration as governed policy impact."
+        observable: ".coveragerc/pytest.ini and the closed shared-file sections are selected/digested; policy-only changes are UNKNOWN rather than NOT_APPLICABLE/PASS."
+      - case_id: CR14-106
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Prevent a governed Python or policy path from being dereferenced through a Git symlink and falsely treated as analyzed committed code."
+        observable: "tracked-regular-governed-input-v1 binds object type/mode/blob/content, accepts only no-follow-opened regular blob modes 100644/100755, and makes symlink/gitlink/unsafe mode changes governed UNKNOWN before applicability or analysis."
+      - case_id: CR14-051
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Govern every Pylint configuration source recognized by the pinned loader."
+        observable: "pylintrc legacy/TOML variants and Pylint sections in pyproject/setup.cfg/tox.ini are selected; one target source is explicit --rcfile, multiple are UNKNOWN, and candidate-only weakening cannot pass."
+      - case_id: CR14-059
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Keep analyzer code identical by rejecting unsealed Pylint hooks, plugins, and extension packages."
+        observable: "Any init-hook, any non-empty extension-pkg allow-list/whitelist alias, and every load-plugins entry under the initial empty signed plugin manifest is UNKNOWN before applicability/launch; unsafe extension-only changes cannot become NOT_APPLICABLE, and repository analyzer-extension code is never imported or statically inferred."
+      - case_id: CR14-052
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Govern every pytest configuration source and section recognized by the pinned loader."
+        observable: "pytest TOML/INI variants plus native/legacy pyproject, tox.ini, and setup.cfg sections are manifested; selection follows the signed pytest 9.0.3 locator order, and ambiguity or loader-profile drift is UNKNOWN."
+      - case_id: CR14-103
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Mirror the pinned pytest 9.0.3 configuration locator exactly for empty and fallback sources."
+        observable: "Zero-byte pytest.toml/.pytest.toml and pytest.ini/.pytest.ini sources remain active and suppress lower sources; a bare pyproject.toml is only the final fallback; selected/ignored reasons are bound and loader drift is UNKNOWN."
+      - case_id: CR14-054
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Govern every coverage configuration source recognized by the pinned loader."
+        observable: ".coveragerc.toml joins .coveragerc/shared-file sources; selection follows the signed Coverage 7.15.4 order, ignored lower-precedence sources remain evidence, and loader-profile drift is UNKNOWN."
+      - case_id: CR14-055
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Treat Ruff's target-tip transitive extend graph as governed sealed policy input."
+        observable: "Every relative in-tree closure node/edge/blob/content digest is selected and materialized read-only; member changes are governed UNKNOWN, while escape, cycle, missing, unsupported, or over-bound graphs are UNKNOWN."
+      - case_id: CR14-056
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Treat basedpyright extends and baselineFile references as governed sealed policy inputs."
+        observable: "The complete relative in-tree config graph and baseline artifact are manifested; referenced-only changes are governed UNKNOWN and unsafe/cyclic/missing/unsupported graphs are UNKNOWN."
+      - case_id: CR14-007
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Materialize base/head inputs from resolved commit trees and reject mutation-capable range options."
+        observable: "Caller-worktree mutation cannot affect range results; manifest mismatch yields UNKNOWN."
+      - case_id: CR14-009
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Analyze a complete materialized HEAD-plus-index tree even when selected or supporting paths have later unstaged edits."
+        observable: "Staged selection and complete index tree/path/blob/content identities are distinct evidence; caller-worktree bytes cannot affect findings, imports, score, or status."
+      - case_id: CR14-037
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Bind index-side imports and subprocess execution to the complete isolated index snapshot."
+        observable: "Imported dependencies, cwd, configuration, and environment come from HEAD-plus-index SnapshotInvocationContext; caller-source resolution or manifest mismatch is UNKNOWN."
+      - case_id: CR14-137
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Prevent concurrent live-index mutation from mixing captured staged bytes or metadata with a different selection."
+        observable: "Tree and canonical stage/flag metadata derive from one stable immutable index snapshot; ordinary paths/statuses derive from HEAD versus that tree, all evidence binds the same snapshot, later live-index mutation is ignored, and capture/metadata/tree/diff/object mismatch is UNKNOWN."
+      - case_id: CR14-143
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Preserve intent-to-add and other unsafe metadata that write-tree omits."
+        observable: "A governed git add -N entry remains present in the captured index-metadata manifest even when the captured tree equals HEAD, producing unsafe_governed_input UNKNOWN before applicability rather than NOT_APPLICABLE or PASS."
+      - case_id: CR14-018
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Reserve pull-request range assurance for the complete governed Python selection."
+        observable: "Range rejects exclude-tests, every focus facet, path, no-tests, and level filters before analysis; narrowed runs cannot emit range_candidate or an effective pr_range envelope or false NOT_APPLICABLE."
+      - case_id: CR14-083
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Reject ambiguous range baselines instead of choosing an arbitrary best merge base."
+        observable: "A synthetic criss-cross history retains the sorted candidate commit/tree list and digest, then yields UNKNOWN before diff/materialization/analyzers; producer and protected consumer both require exactly one and define no virtual-base fallback."
+      - case_id: CR14-027
+        scenario_id: explicit-review-scope-evidence
+        method: test
+        intent: "Bind the module producer to the claimed expected PR target tip and publish the exact downstream consumer contract."
+        observable: "Module tests prove candidate/preview production and target-identity rejection; the signed static matrix fixes the core consumer inputs and mismatch cases. Workflow-native recomputation and envelope emission are proved only by paired core adoption tests and are excluded from module selectors."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:differential-base-head-enforcement:
+    rationale: "Introduced findings require symmetric base/head evidence, not changed-line coincidence."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-differential-runner
+        kind: planned_component
+        locator: "specfact-code-review differential runner"
+    verification_cases:
+      - case_id: CR14-002
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Classify introduced, fixed, unchanged, and unknown findings only under identical immutable analyzer/toolchain/policy/config identities."
+        observable: "Introduced blockers block even away from added lines; baseline failures or analyzer-identity mismatch remain unknown."
+      - case_id: CR14-010
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Use the resolved merge-base rather than an advanced base-ref tip as the differential baseline."
+        observable: "Target-only post-divergence findings are not misclassified as feature-branch changes."
+      - case_id: CR14-012
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Normalize stable file anchors through deterministic tree-derived exact renames before base/head fingerprint comparison."
+        observable: "A unique identical-blob move retains the blocker as unchanged while both paths and canonical-exact-rename-v1 evidence remain bound."
+      - case_id: CR14-141
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Make rename-sensitive classification independent of ambient Git rename settings and heuristic thresholds."
+        observable: "Producer and consumer derive raw add/delete facts from captured trees, uniquely pair identical blob IDs, make duplicate-object groups UNKNOWN, and bind the same digest; diff.renames/threshold/limit changes have no effect, and modified delete/add cannot claim fixed."
+      - case_id: CR14-067
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent candidate-added inline suppressions from masquerading as repaired analyzer findings."
+        observable: "The signed comment-token registry—including Ruff's complete pinned noqa/ignore/file-ignore/disable/enable grammar and every isort action in both accepted prefix families, Pylint disable-all/legacy disable-msg/atomic skip-file, basedpyright basic/standard mode directives, and the complete pinned CrossHair source-directive catalog—makes new/changed/relocated directives always-open class-specific blockers (`introduced_inline_suppression` or `introduced_analyzer_result_control`), changes affected missing base findings to unknown rather than fixed, rejects any purported waiver/trusted flag because CR14 has no authenticated ingestion path, retains pure-rename/unchanged controls, and fails UNKNOWN on manifest or directive-catalog parity uncertainty."
+      - case_id: CR14-142
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prove ordinary Pylint disable and disable-next forms cannot disappear from the generated suppression catalog."
+        observable: "Separate disable=undefined-variable and disable-next=undefined-variable vectors start with a native baseline diagnostic, observe empty head Pylint JSON after suppression, still emit an introduced suppression blocker with the base finding UNKNOWN, and restore the diagnostic when the directive is removed."
+      - case_id: CR14-118
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent Pylint's atomic skip-file pragma from forging a repaired finding."
+        observable: "Adding # pylint: skip-file to a file with a baseline Pylint undefined-variable diagnostic emits an open introduced_inline_suppression blocker before fingerprinting; the vanished diagnostic is UNKNOWN rather than fixed, and the exact directive form is frozen in the signed catalog."
+      - case_id: CR14-098
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent Ruff isort action comments from erasing I001 evidence."
+        observable: "Each pinned isort:/ruff: isort: skip_file|on|off|skip|split form is detected from comment tokens before fingerprints; an introduced action is a blocking inline-suppression finding and the missing baseline I001 remains unknown rather than fixed."
+      - case_id: CR14-099
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent Ruff range, line, and file suppression controls from erasing baseline evidence."
+        observable: "Every pinned Ruff noqa, ignore, file-ignore, disable, and enable grammar form is parser-derived and detected before fingerprints; introduced controls block and affected missing baseline findings remain unknown, while parser/catalog drift is UNKNOWN."
+      - case_id: CR14-109
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent pre-existing unchanged suppressions from hiding defects introduced elsewhere in a modified file."
+        observable: "suppression-affected-edit-v1 makes every content-changed governed Python file retaining a mapped unchanged directive required UNKNOWN for the affected required/activated analyzer, with blob/directive-manifest/changed-hunk evidence; silent analyzer output cannot PASS, while an identical-blob pure rename is not quarantined and changed directives remain blocking."
+      - case_id: CR14-110
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent suppression policy and analyzer mappings from drifting between the red checkpoint, package signature, producer, and protected consumer."
+        observable: "The one signed pr-range-v1-suppression-catalog resource canonically binds both suppression-directives-v1 and suppression-affected-edit-v1, including parser/catalog versions, mappings, normalization, dispositions, and policy constants; missing, embedded-only, noncanonical, or checkpoint/package/profile/report/envelope drift is UNKNOWN before launch."
+      - case_id: CR14-112
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Bind the suppression catalog identity across every module-owned trust boundary and hand off the live consumer comparison explicitly."
+        observable: "Mapped module tests vary checkpoint/resource/package/profile/report/static-envelope catalog digests independently and reject every mismatch; task 4.7 separately requires the unmapped core consumer to load the approved signed catalog digest and reject report/envelope mismatch before pr_range promotion."
+      - case_id: CR14-114
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent basedpyright line-level pyright-ignore comments from erasing baseline diagnostics."
+        observable: "Both parser-recognized `pyright: ignore` and bracketed `pyright: ignore[reportRule,...]` forms are frozen in the signed suppression catalog; an introduced occurrence blocks before fingerprint classification, affected missing base findings stay unknown, and parser/catalog drift is UNKNOWN."
+      - case_id: CR14-100
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Select Ruff policy without implicit or implementation-dependent source precedence."
+        observable: "Zero root Ruff sources uses explicit isolated mode, exactly one source is projected explicitly, and multiple .ruff.toml/ruff.toml/pyproject tool.ruff sources are ruff_config_ambiguous UNKNOWN before applicability or launch."
+      - case_id: CR14-101
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Preserve diagnostic multiplicity without making raw line positions part of finding identity."
+        observable: "finding-multiset-v1 pairs exact normalized identity/outcome buckets only after occurrence-continuity-v1 proves one physical source anchor per side; unrelated line shifts remain unchanged, duplicate head surplus is introduced, ambiguous anchors cannot pair, and identity/anchor/partition counts, decisions, pairs, surpluses, and digests remain evidence."
+      - case_id: CR14-105
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent an identity-equal diagnostic recreated at a different source location from masquerading as unchanged baseline debt."
+        observable: "Canonical source spans and exact anchors distinguish unrelated replacements; a valid different/non-corresponding head anchor is introduced, invalid/non-unique/unavailable continuity is unknown, and a line shift is unchanged only when forced source-line correspondence is uniquely optimal."
+      - case_id: CR14-108
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent an identical source block moved between edit locations from being treated as the same unchanged diagnostic."
+        observable: "source-line-correspondence-v1 binds global/forced/forbidden exact-line edit costs: uniquely forced optimum is continuous, higher forced cost is different/introduced, alternate optima or exceeded bounds are UNKNOWN, and no move/fuzzy inference exists."
+      - case_id: CR14-079
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent a candidate basedpyright source directive from weakening diagnostics and masquerading as a fix."
+        observable: "Every introduced `pyright:` directive recognized by pinned basedpyright 1.39.10 emits an open `introduced_analyzer_result_control` blocker before fingerprint classification; the parser-derived catalog covers strict/basic/standard, all boolean settings and diagnostic-level rules/values, including analyzeUnannotatedFunctions=false; affected missing base findings are unknown, and catalog drift is UNKNOWN."
+      - case_id: CR14-091
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent any candidate-local basedpyright boolean or diagnostic-level source directive from erasing a diagnostic."
+        observable: "A mechanically extracted pinned parser catalog parameterizes every recognized setting/value; each introduced directive blocks regardless of inferred strength, and catalog/parser drift is UNKNOWN."
+      - case_id: CR14-080
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent any candidate-local CrossHair analyzer-result directive from erasing a counterexample and masquerading as a fix."
+        observable: "Every source directive in pinned CrossHair 0.0.109's special on/off forms and `AnalysisOptionSet.directive_fields` catalog emits an open `introduced_analyzer_result_control` blocker; explicit false-enable and non-positive iteration/path/condition budget aliases are covered, affected missing base findings are unknown, and parser/catalog drift is UNKNOWN."
+      - case_id: CR14-019
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Inject one sealed authorized target-base-tip configuration bundle into both source-snapshot analyzer runs."
+        observable: "Head config cannot suppress its own finding; Ruff/Pylint/basedpyright/Semgrep never fall back to source/worktree/dot discovery; injection failure is UNKNOWN."
+      - case_id: CR14-022
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Apply policy already promoted at the authorized target tip without replacing the merge-base source baseline."
+        observable: "Both source snapshots use the frozen target-tip policy; moved, untrusted, missing, or unusable target policy yields UNKNOWN."
+      - case_id: CR14-057
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Provide a deterministic basedpyright input when the target repository has no config."
+        observable: "basedpyright-default-v1 generates explicit side --project files from canonical logical JSON and bound snapshot substitutions; implicit project-dot discovery is impossible."
+      - case_id: CR14-028
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Project target-policy basedpyright paths independently onto each immutable source snapshot."
+        observable: "Shared policy/toolchain/projection identities match while side-specific projected digests may differ only by recorded root bindings; relative imports stay inside the corresponding snapshot; true shared-identity drift or unsafe paths yield UNKNOWN."
+      - case_id: CR14-086
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent basedpyright baseline slots from hiding a relocated or newly introduced diagnostic."
+        observable: "Original baseline artifacts remain governed/digested, but generated projects remove every baselineFile and argv omits --baselinefile; baseline files are not mounted/read, the relocated diagnostic remains visible, and effective baseline injection is UNKNOWN."
+      - case_id: CR14-087
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent basedpyright include or exclude controls from dropping a governed input."
+        observable: "The generated flattened project binds original controls, sets include to the exact eligible snapshot-relative manifest, clears exclude and ignore, and uses only explicit --project; a previously excluded file remains analyzed and any include/effective-control mismatch is UNKNOWN."
+      - case_id: CR14-029
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Bind every import-capable analyzer subprocess to the active materialized snapshot."
+        observable: "Every analyzer subprocess—including Ruff, Pylint, basedpyright, both Semgrep passes, CrossHair, and targeted pytest—consumes sealed snapshot cwd/executable/environment/output context; Radon consumes the same sealed snapshot identity through absolute inputs while using its empty control cwd; import-capable adapters never resolve caller/head source during baseline analysis."
+      - case_id: CR14-062
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Expose every sealed analyzer configuration input through the sandbox without exposing its source bundle."
+        observable: "config_roots contains exact read-only Ruff, generated Pylint, basedpyright project/non-baseline reference, Semgrep bundle, and pytest/coverage projection mounts while baseline artifacts remain governed but unmounted; omission, extra/writeable roots, or digest mismatch is UNKNOWN."
+      - case_id: CR14-039
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent untrusted analyzer or imported candidate code from reading or modifying another evidence root."
+        observable: "The pinned `linux-bwrap-v1` capability-probed sandbox exposes only the active read-only snapshot, exact read-only config/toolchain inputs, and process-private writable outputs; cross-root, credential, descriptor, and network access is denied, artifacts are sealed after exit, and unavailable or failed isolation yields UNKNOWN."
+      - case_id: CR14-040
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "State the trust boundary for pytest, CrossHair, and other candidate-executing observations without inventing hostile-code proof."
+        observable: "Runtime artifacts are labelled candidate-executed observations under the explicit non-adversarial-candidate assumption; sealing claims post-collection immutability only, and a consumer requiring adversarial runtime evidence receives UNKNOWN/no PASS."
+      - case_id: CR14-041
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Give reviewed Git inputs, signed module payloads, generated projections, and builtin analyzer modes unambiguous provenance."
+        observable: "The closed tagged input identity binds source-specific fields and materialized digests; only reviewed-tree inputs claim Git blobs, and producer/consumer canonical digests match."
+      - case_id: CR14-034
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Permit the mandatory Radon subprocess to consume the same per-snapshot invocation context."
+        observable: "Radon receives the sealed executable, absolute snapshot inputs, empty control cwd/private home/sanitized environment, private output root, and context digest without changing metric formulas."
+      - case_id: CR14-124
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Prevent candidate or ambient Radon configuration from filtering a governed result."
+        observable: "Radon runs from an empty sealed control directory with private HOME and sanitized RADONCFG, receives absolute eligible snapshot inputs, forces CC A..F and MI A..C with empty exclude/ignore and private output, and reports UNKNOWN on discovery, narrowing, skipped input, or catalog drift."
+      - case_id: CR14-036
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Permit both mandatory Semgrep subprocesses to consume the per-snapshot invocation context."
+        observable: "Semgrep receives sealed executable, snapshot cwd/environment/output roots, context digest, target-policy bundle, the authorized target-tip or exact signed-module-fallback AI-bloat pack, exact normalized scanned/skipped-to-eligible input reconciliation, and explicit process/parse failures without rule changes."
+      - case_id: CR14-072
+        scenario_id: differential-base-head-enforcement
+        method: test
+        intent: "Keep the existing AI-bloat Semgrep pack governed and present in symmetric sealed analysis."
+        observable: "A target-tip pack is governed and sealed; absence selects the exact signed-module payload; both sides use identical bound bytes; candidate change, missing fallback, or digest drift is UNKNOWN."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:independent-finding-lifecycle-and-remediation:
+    rationale: "Severity, resolution, autofix availability, and policy are distinct facts."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-finding-schema
+        kind: planned_schema
+        locator: "ReviewFinding"
+    verification_cases:
+      - case_id: CR14-003
+        scenario_id: independent-finding-lifecycle-and-remediation
+        method: test
+        intent: "Keep open fixable errors blocking until actually fixed or waived."
+        observable: "Separate fields and deterministic policy derivation."
+      - case_id: CR14-107
+        scenario_id: independent-finding-lifecycle-and-remediation
+        method: test
+        intent: "Give every profile finding deterministic location evidence usable by differential continuity."
+        observable: "Schema 1.6 preserves exact adapter endpoints or emits a whole-physical-line UTF-8-byte fallback, binds raw coordinate conversion, and types selector/non-source findings outside source pairing; invalid location evidence cannot be guessed."
+      - case_id: CR14-090
+        scenario_id: independent-finding-lifecycle-and-remediation
+        method: test
+        intent: "Prevent a matched fingerprint with changed severity from being treated as unchanged."
+        observable: "Identity matching is followed by normalized severity and blocking-input comparison; any unclassified transition retains both observations as UNKNOWN and blocks strict PASS."
+      - case_id: CR14-096
+        scenario_id: independent-finding-lifecycle-and-remediation
+        method: test
+        intent: "Prevent any path-dependent analyzer behavior from turning a disappearance across a rename into a claimed fix."
+        observable: "Under canonical-exact-rename-v1 and rename-fix-policy-v1 every base finding missing across a unique identical-blob move is UNKNOWN; a deleted-path finding is also UNKNOWN when any unpaired governed addition exists, while matching exact-move findings may remain unchanged and no heuristic/semantic-subject inference exists."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:truthful-review-assurance-status:
+    rationale: "Unknown and not-applicable are not green passes."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+    touchpoints:
+      - id: review-report-status
+        kind: planned_schema
+        locator: "ReviewReport"
+    verification_cases:
+      - case_id: CR14-004
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Expose PASS, FAIL, UNKNOWN, and NOT_APPLICABLE with analyzer coverage."
+        observable: "No all-passed summary when mandatory evidence is skipped or unknown."
+      - case_id: CR14-008
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Dual-write schema 1.6 assurance into the closed legacy verdict, normalized enforcement-mode, and exit-code projection."
+        observable: "UNKNOWN is never green; old reports cannot imply UNKNOWN/NOT_APPLICABLE; malformed 1.6 reports cannot pass."
+      - case_id: CR14-045
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Resolve concurrent valid blocking evidence and required uncertainty without losing either fact."
+        observable: "Only blockers remaining open after differential classification make aggregate FAIL; exact fixed baseline-only FAIL/head-PASS evidence is retained but excluded; concurrent required uncertainty remains present and signed compatibility/ledger consumers preserve the same precedence."
+      - case_id: CR14-030
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Publish one signed machine-readable compatibility matrix before any core consumer adoption."
+        observable: "Four canonical statuses bind legacy projections, strict/shadow exits, runtime-trust fields, and static accepted/rejected envelope fixtures; the exact schema-less ledger input maps to legacy schema 1.0/reward 5/PASS/exit 0 with preserved fields and no inferred authoritative status; hostile-candidate policy is UNKNOWN and mismatches are invalid. The module proves matrix integrity only; core runtime consumers must pass this exact digest in their own adoption tests."
+      - case_id: CR14-013
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Preserve schema 1.6 truth through every post-analysis enrichment path."
+        observable: "Cleanup forecast refresh retains schema, authoritative assurance, scope/analyzer evidence, legacy projection, and exit code unchanged."
+      - case_id: CR14-025
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Attach validated Requirements context without downgrading the Code Review report schema."
+        observable: "Requirements attachment preserves schema 1.6 assurance, scope/analyzer evidence, legacy projection, and exit code while adding only its context."
+      - case_id: CR14-070
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Prevent the modules repository staged consumer from turning schema 1.6 UNKNOWN into a green hook result."
+        observable: "Schema 1.6 authoritative assurance_status/ci_exit_code bypass legacy changed-line recomputation; UNKNOWN remains non-zero outside shadow even without a staged-line blocker, while old reports retain compatibility behavior."
+      - case_id: CR14-071
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Prove every core version admitted by release metadata has immutable install, load, and schema evidence; the first C14 release admits only exact core 0.56.0."
+        observable: "A fresh environment uses the checkpointed immutable core 0.56.0 tag/commit/tree plus candidate module package and exercises every consumer-matrix status/projection; only core_compatibility ===0.56.0 is permitted. Ordinary ==0.56.0, a local/alternate alias such as 0.56.0+vendor, a range, wildcard, untested identity, missing identity, branch fallback, install/load failure, or mismatch blocks release without claiming protected PR assurance."
+      - case_id: CR14-128
+        scenario_id: truthful-review-assurance-status
+        method: test
+        intent: "Reject PEP 440 local-version aliases that ordinary equality would admit without immutable smoke evidence."
+        observable: "The release validator accepts only strict core_compatibility ===0.56.0 for the frozen identity and rejects ==0.56.0, 0.56.0+vendor, wildcards, ranges, and alternate strings."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:review-cli-contracts-cover-explicit-scope-and-differential-evidence:
+    rationale: "The public CLI contract must prove every explicit scope and differential evidence path."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-cli-contract-fixtures
+        kind: planned_component
+        locator: "tests/cli-contracts/specfact-code-review-run.scenarios.yaml"
+    verification_cases:
+      - case_id: CR14-005
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Exercise static argv/report contracts for explicit scope sources, full-ref requirements, assurance/enforcement projection, positional-file PR downgrade rejection, and invalid combinations."
+        observable: "Static CLI fixtures reject ambiguous inputs without claiming stateful Git topology or analyzer evidence."
+      - case_id: CR14-014
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Make range defaults and generated AI instructions executable under the normalized enforcement contract."
+        observable: "Omitted range enforcement becomes strict full; explicit range-plus-changed is rejected; instructions use range refs and explicit full enforcement."
+      - case_id: CR14-016
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Migrate installed merge-quality guidance from changed/worktree scope to executable PR-range assurance."
+        observable: "Rules updater and bundled skill emit protected range/base/head/context/full merge guidance, label local range as range_preview, and retain worktree-scoped simplification."
+      - case_id: CR14-021
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Keep canonical repository quality-gate, module/bundle, generated-instruction, and installed-skill guidance on the same assurance boundary."
+        observable: "Protected CI merge guidance requires range/base/head/context/full and independent verification; local range is range_preview; staged positional and simplification worktree commands are non-PR; generated skill copies match their bundled source."
+      - case_id: CR14-032
+        scenario_id: review-cli-contracts-cover-explicit-scope-and-differential-evidence
+        method: test
+        intent: "Make authenticated PR context an executable input without letting a local caller self-assert trust."
+        observable: "Module tests prove a matching claimed context yields producer range_candidate, absence yields range_preview, and unsafe/mismatch yields UNKNOWN. The static matrix defines—but does not execute—the core-owned consumer envelope that alone yields effective pr_range."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-run-command:mandatory-analyzer-coverage:
+    rationale: "A review cannot claim assurance when a mandatory analyzer did not produce trustworthy evidence."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-analyzer-coverage
+        kind: planned_schema
+        locator: "ReviewReport.analyzer_coverage"
+    verification_cases:
+      - case_id: CR14-006
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Record each analyzer identity and outcome and fail closed when mandatory coverage is unavailable."
+        observable: "Skipped, failed, timed-out, or unparsable mandatory analyzer evidence yields UNKNOWN without an all-passed summary."
+      - case_id: CR14-015
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Freeze the pr-range-v1 analyzer membership and required/conditional statuses."
+        observable: "Eight analyzers are always required; semgrep-bugs is required when governed config exists and otherwise NOT_APPLICABLE; no member is silently optional."
+      - case_id: CR14-017
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Surface required contract/CrossHair timeout as failed analyzer coverage."
+        observable: "A swallowed timeout cannot become an empty successful contracts run; strict assurance is UNKNOWN."
+      - case_id: CR14-026
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Surface a documented CrossHair tool/process-error exit without parsed findings as failed analyzer coverage."
+        observable: "Exit code 2 retains exit/stderr diagnostics and yields UNKNOWN, while parsed counterexamples remain findings."
+      - case_id: CR14-038
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep mandatory Semgrep coverage usable when a consumer repository does not vendor the module clean-code policy."
+        observable: "Both snapshots receive the same explicit clean-code payload from the exact signed installed module artifact with package and payload digests; source/worktree discovery is disabled, semgrep-bugs remains conditional on target policy, and missing or invalid fallback evidence yields UNKNOWN."
+      - case_id: CR14-058
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Provision the exact configuration-loader and analyzer versions claimed by pr-range-v1."
+        observable: "The signed analyzer-environment lock—not module-package host pip_dependencies—binds an immutable OCI base/root schema plus checkpoint-matching exact analyzer entries, directly includes pytest 9.0.3 and Coverage 7.15.4, and any capsule version/root digest mismatch makes profile activation UNKNOWN."
+      - case_id: CR14-060
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Make analyzer runtime and Python distribution identity stable across controller storage roots."
+        observable: "OCI/final-root/interpreter/stdlib/extension/loader/library/bootstrap plus wheel/RECORD payload and normalized entry-point identities match across capsule materialization roots; outside-root and generated-wrapper bytes are excluded, while runtime/payload/entry-point drift is UNKNOWN."
+      - case_id: CR14-065
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Close and sign the complete analyzer runtime dependency graph and provision it during implementation."
+        observable: "For each supported Linux/CPython environment, the signed lock closes OCI base layers, the final runtime-root manifest, and every direct/transitive analyzer package, marker, edge, payload and digest while module-package pip_dependencies excludes the analyzer closure; host conflicts cannot preempt capsule provisioning, and missing/extra/bare/host-leaked/drift evidence is UNKNOWN."
+      - case_id: CR14-093
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Bind the generated signed analyzer lock exactly to the frozen pre-implementation checkpoint."
+        observable: "The checkpoint stores the complete canonical logical lock projection and SHA-256; regeneration compares every field/byte/digest, mismatch invalidates activation/signing, and TDD evidence records the result."
+      - case_id: CR14-085
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Make fresh and offline OCI capsule acquisition resolvable, immutable, and fail closed."
+        observable: "The signed lock supplies one HTTPS registry/repository@manifest locator plus config/layer identities and a complete fixed wheelhouse manifest; a verified digest-keyed cache supports offline use, while a genuine fresh miss fetches only that artifact through per-hop HTTPS+allowlist authorization with no credential forwarding before authorization, binds the full redirect/final-URL chain, and installs every selected lock member offline with indexes disabled. Missing/extra/incompatible wheels, mutable/missing locators, partial cache, acquisition/digest/media/size/redirect/downgrade/credential failures are UNKNOWN without another source or host fallback."
+      - case_id: CR14-094
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent OCI redirects from downgrading transport or forwarding controller credentials to an unauthorized target."
+        observable: "Every redirect target is HTTPS and signed-allowlisted before credentials are attached; credentials are stripped/re-authorized per hop, the complete ordered chain/final URL is evidence, and downgrade or unauthorized forwarding is UNKNOWN."
+      - case_id: CR14-061
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep targeted coverage code identical by rejecting repository-loaded plugins."
+        observable: "Every configured Coverage plugin is UNKNOWN under the initial empty signed manifest before launch; repository plugin code is never imported or statically inferred."
+      - case_id: CR14-064
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep Coverage data and report writes out of immutable snapshots and config mounts."
+        observable: "Every pinned-schema writable field, including relative data_file, is projected into a role-specific process-private output path with bound transformation evidence; escape, collision, or drift is UNKNOWN."
+      - case_id: CR14-066
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Reconcile targeted coverage against every runtime-measurable governed production input present in each immutable snapshot."
+        observable: "Under runtime-measurable-production-v1, the normalized Coverage manifest contains each tracked regular governed production .py path exactly once before threshold evaluation; target-policy exclusion, missing/duplicate/aliased/escaping/identity-mismatched runtime paths are UNKNOWN even when tests and the reported threshold pass, while governed .pyi stubs remain in a separate static-only manifest."
+      - case_id: CR14-068
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent authorized target Coverage regexes from suppressing candidate statements or branches."
+        observable: "Non-empty exclusion/partial-branch fields are UNKNOWN before launch; absent/empty fields produce a bound projection clearing pinned defaults/additions, so matching marker text cannot create a false threshold fix."
+      - case_id: CR14-069
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep every pytest cache/log/temp/JUnit write out of immutable snapshots and config mounts."
+        observable: "Pinned pytest config/addopts paths have closed read/write roles; writable destinations are rebound to deterministic process-private roots with controller-owned JUnit precedence, and unclassified/escaping/colliding/ineffective output projection is UNKNOWN."
+      - case_id: CR14-073
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff cache initialization from writing into immutable snapshots or turning ordinary execution into UNKNOWN."
+        observable: "Pinned --no-cache is effective, cache_mode=disabled is bound, no snapshot/config-root write occurs, and flag/catalog/write drift is UNKNOWN."
+      - case_id: CR14-074
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Ensure Ruff force-exclude cannot silently remove an explicitly governed file."
+        observable: "Pinned --no-force-exclude plus matching eligible/invoked manifests forces explicit governed inputs through Ruff; ineffective flags, skipped input, or option-catalog drift is UNKNOWN."
+      - case_id: CR14-084
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff per-file ignore mappings from wholly silencing an added or renamed governed input."
+        observable: "The generated projection binds and clears per-file-ignores plus extend-per-file-ignores while retaining other authorized rules; added/renamed eligible files remain invoked, and a non-empty effective map, ineffective transform, or catalog drift is UNKNOWN."
+      - case_id: CR14-088
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff per-file target versions from changing rule semantics across a pure rename."
+        observable: "Both projections retain one shared global target version and clear per-file-target-version; identical renamed bytes retain the same version-sensitive diagnostics, and effective mapping or catalog drift is UNKNOWN."
+      - case_id: CR14-095
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff namespace-package mappings from erasing diagnostics across a rename."
+        observable: "Both projections clear namespace-packages and bind snapshot-root src; identical bytes renamed into a configured namespace retain INP001/path-sensitive behavior, and effective mapping or catalog drift is UNKNOWN."
+      - case_id: CR14-075
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Ensure Pylint whole-file ignore controls cannot silently remove a governed input."
+        observable: "The generated projection clears the whole-file ignore and complete pinned no-member exemption families while binding original/effective values and exact eligible/argv manifests; effective exemption or catalog/manifest drift is UNKNOWN."
+      - case_id: CR14-092
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Pylint module/class/member/inference/mixin exemptions from hiding a diagnostic after a rename."
+        observable: "A renamed module matching target ignored-modules remains analyzed under the cleared pinned exemption catalog; every catalog entry has a retained/cleared/rejected disposition, and effective bypass or schema/help drift is UNKNOWN."
+      - case_id: CR14-138
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent authorized Pylint confidence filtering from suppressing lower-confidence diagnostics."
+        observable: "The projection binds the original filter and explicitly forces exactly HIGH, CONTROL_FLOW, INFERENCE, INFERENCE_FAILURE, UNDEFINED on both snapshots; an INFERENCE diagnostic remains visible, and incomplete, duplicate, unknown, ineffective, or drifted confidence controls are UNKNOWN."
+      - case_id: CR14-139
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Pylint configuration from replacing exact governed file inputs with stdin or implicit recursive discovery."
+        observable: "pylint-input-controls-v1 forces from-stdin=false and recursive=false, closes stdin, passes only the exact eligible positional manifest, and makes effective/new input overrides, stdin reads, or argv/manifest drift UNKNOWN instead of empty PASS."
+      - case_id: CR14-140
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Pylint errors-only mode or an unclassified option from suppressing required diagnostic categories."
+        observable: "The total no-fallthrough Pylint option catalog forces errors-only=false and maximally inclusive finding filters while only catalogued trusted rule semantics retain target values; a WARNING remains visible and missing/duplicate/unclassified/effective filtering is UNKNOWN."
+      - case_id: CR14-076
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Ensure basedpyright project-selection controls cannot omit or wholly silence a governed input."
+        observable: "Each generated flattened project binds original controls, sets include to the exact eligible snapshot-relative files, clears exclude and ignore, uses only explicit --project without positional sources, and preserves other authorized diagnostic settings; include/effective-control/catalog/manifest drift is UNKNOWN."
+      - case_id: CR14-089
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent basedpyright path-scoped strictness or execution environments from weakening diagnostics across a rename."
+        observable: "Initial pr-range-v1 rejects non-empty target path-scoped strict and executionEnvironments before launch, emits empty strict only after proving the target array absent/canonically empty, preserves exact global checking/diagnostic settings, and prevents same-path or renamed strict diagnostics from disappearing into PASS."
+      - case_id: CR14-123
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Preserve diagnostics required by basedpyright path-scoped strict policy."
+        observable: "A basic-mode policy with strict=[a.py] that reports unknown-member diagnostics yields basedpyright_strict_projection_unsupported UNKNOWN before projection; the verifier never clears non-empty target strict, and global settings remain unchanged."
+      - case_id: CR14-077
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Require Semgrep to prove it scanned every eligible governed input."
+        observable: "A multi-rule bundle with any rule-level paths.include/paths.exclude is UNKNOWN before launch even when another rule makes pass-level paths.scanned look complete; accepted bundles then require normalized scanned paths to equal the eligible manifest, retain skipped reasons, and fail UNKNOWN on size/missing/extra/reconciliation gaps."
+      - case_id: CR14-144
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Semgrep native physical-line suppression from hiding findings outside Python comment tokens."
+        observable: "Both passes require effective controller-owned --disable-nosem; an eval finding remains visible when nosemgrep text occurs inside a Python string, and missing, overridden, duplicate, ineffective, or pinned-option drift is UNKNOWN while token detection remains defense-in-depth."
+      - case_id: CR14-078
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep the exact locked analyzer dependency set separate from the SpecFact core/controller environment."
+        observable: "A verified analyzer runtime capsule equals the signed OCI base plus analyzer lock/bootstrap allowlist and is the complete analyzer rootfs/import/native-runtime source; the marketplace host manifest never receives analyzer-lock entries, and any host path/runtime mount, missing runtime file, or analyzer-set drift is UNKNOWN."
+      - case_id: CR14-081
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent candidate Python startup hooks from running before import-capable analyzers initialize."
+        observable: "The capsule interpreter uses -I -S and a sealed bootstrap; snapshot roots enter sys.path only after startup without site/.pth processing, candidate sitecustomize/usercustomize/site/.pth sentinels do not run, and any early exposure or bootstrap drift is UNKNOWN."
+      - case_id: CR14-117
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent reviewed snapshots or project dependencies from shadowing sealed analyzer/runtime modules."
+        observable: "capsule-reserved-imports-v1 preflights top-level module, stub, regular-package, and namespace-package collisions, keeps every reserved prefix and descendant capsule-only, records origin evidence, and returns UNKNOWN before dispatch; for authorized project-layer consumers non-reserved imports resolve snapshot before project runtime, while Ruff, Radon, both Semgrep passes, and other non-consumers receive no project-layer mount."
+      - case_id: CR14-082
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prove the analyzer runtime is complete without unbound host interpreter or native-library mounts."
+        observable: "A synthetic analyzer boots from the sealed capsule in an empty Bubblewrap root; interpreter, stdlib, extensions, loader/libraries, analyzers and bootstrap are manifest-bound, while any host runtime mount, missing path, loader failure, or root drift is UNKNOWN."
+      - case_id: CR14-042
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep valid failing behavioral evidence distinct from incomplete analyzer infrastructure."
+        observable: "Completed blockers and collected assertion/skip/xfail/xpass evidence are FAIL; availability/process/timeout/parse/identity/artifact/reconciliation errors are UNKNOWN; legacy exit projection does not erase the distinction."
+      - case_id: CR14-050
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent candidate pytest/coverage configuration from suppressing targeted measurement."
+        observable: "Explicit sealed target-tip/default -c and --cov-config projections plus sanitized overrides defeat candidate exclude-all config; ambiguity/projection/effective-option drift is UNKNOWN."
+      - case_id: CR14-053
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Resolve pytest path settings against the immutable snapshot being measured."
+        observable: "Separate merge-base/head projections rebase every pinned-schema path field and pass explicit side rootdir; imported dependencies resolve to side-correct bytes, while escape/missing/unsupported paths are UNKNOWN."
+      - case_id: CR14-063
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Classify a complete below-threshold coverage result as semantic failure rather than infrastructure uncertainty."
+        observable: "A valid measured result below the sealed threshold is ran/FAIL with threshold and measurement evidence; baseline fail/head pass is fixed, while missing or unreconciled coverage is error/UNKNOWN."
+      - case_id: CR14-020
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Represent targeted pytest/coverage as a conditional pr-range-v1 member with exact per-selector execution truth."
+        observable: "Only exactly-once all-selected-passed head outcomes satisfy coverage; assertion/skip/xfail/xpass is FAIL; missing/duplicate/deselected/reconciliation/infrastructure/coverage failures are UNKNOWN."
+      - case_id: CR14-031
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent an exit-zero head run from neutralizing selected tests through skip/xfail/xpass or deselection."
+        observable: "Selector/outcome-artifact/JUnit/process/count reconciliation overrides process success and readable coverage; non-passing selected outcomes cannot produce PASS."
+      - case_id: CR14-145
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Detect non-strict XPASS even when pytest JUnit serializes it as a passing testcase."
+        observable: "pytest-outcome-observer-v1 seals every runtest phase and wasxfail value, classifies a passed call report with wasxfail as XPASS/FAIL, and makes missing/malformed phases or collection/outcome/JUnit/process disagreement UNKNOWN."
+      - case_id: CR14-146
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent repository or admitted-plugin hooks from rewriting failures before the sealed outcome observer sees them."
+        observable: "The total pinned hook-disposition catalog rejects execution/phase/TestReport/status/exit/artifact shaping hooks and wrappers—including a makereport hook that changes failed to passed—before execution; only exact controller observer/pytest-cov capabilities are admitted, and catalog drift is UNKNOWN."
+      - case_id: CR14-147
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff task-tag exemptions from hiding E501 without an inline suppression directive."
+        observable: "A baseline overlong comment and a head line differing only by an allowed TODO prefix both retain native E501 because the projection forces lint.pycodestyle.ignore-overlong-task-comments=false; an effective true value, ineffective projection, or catalog drift is UNKNOWN rather than fixed or PASS."
+      - case_id: CR14-148
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent Ruff fix-only mode from suppressing unfixable diagnostics or enabling snapshot mutation."
+        observable: "Authorized fix/fix-only values remain evidence while both effective controls are forced false; an unfixable F821 remains in native JSON, the snapshot is unchanged, and any true effective value, attempted mutation, empty/malformed artifact, or catalog drift is UNKNOWN rather than PASS."
+      - case_id: CR14-149
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent unittest execution overrides from reporting a selected failing method as passed without invoking it."
+        observable: "Parameterized run/__call__ overrides make native pytest and JUnit falsely pass, but unittest-execution-controls-v1 binds the canonical pre-import TestCase dispatch path immediately before execution and returns pytest_execution_control_unsupported UNKNOWN for overrides, shadows, lookup redirection, base mutation, or drift; exact inherited dispatch remains supported."
+      - case_id: CR14-033
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Execute governed changed tests even when a range changes no production Python."
+        observable: "Complete sealed-policy merge-base/head selector inventories are collected, digested, and pure-rename-normalized; every head selector runs; removed baseline or uncollected changed tests are UNKNOWN; a test-only range runs the full recognized suite and is never silently NOT_APPLICABLE."
+      - case_id: CR14-035
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Reconcile removed baseline selectors so partial test deletion or function rename cannot pass."
+        observable: "Two-sided selector set difference is explicit; missing normalized baseline selectors yield removed_selector UNKNOWN while head-only selectors must pass."
+      - case_id: CR14-043
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep delete-only production changes bound to the complete recognized pytest suite."
+        observable: "Delete-only production activates complete-pytest-suite-v1 at head with no per-source mapping; all head selectors run, removed normalized baseline selectors are UNKNOWN, and the member cannot become NOT_APPLICABLE merely because the source was deleted."
+      - case_id: CR14-044
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Treat an exact baseline-fail/head-pass selector transition as repaired evidence."
+        observable: "The baseline non-passing result remains per-snapshot FAIL evidence, the exact head pass classifies the pair as fixed and non-blocking, and uncertainty on either side remains UNKNOWN."
+      - case_id: CR14-023
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Distinguish a structurally absent merge-base input/selector from an attempted empty pytest run."
+        observable: "Only a merge-base with no governed production/test/test-support input records manifest-bound NOT_APPLICABLE; otherwise its complete recognized suite runs. Head always requires complete collection/coverage and missing tests remain UNKNOWN."
+      - case_id: CR14-024
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Represent structurally empty per-snapshot analyzer input truthfully for add-only and delete-only ranges."
+        observable: "The empty side is manifest-bound NOT_APPLICABLE, the non-empty side still runs, unrecorded adapter early return is rejected, and aggregate range assurance remains applicable."
+      - case_id: CR14-115
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Eliminate unsound source-to-test inference from strict range assurance."
+        observable: "complete-pytest-suite-v1 collects and runs every selector recognized by the sealed policy on both snapshots, including multiple and nonconventionally named tests; no production-name/import/coverage heuristic or candidate impact map can omit tests, and removed or uncollected changed tests are UNKNOWN."
+      - case_id: CR14-119
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent collection outcomes from reclassifying changed tests as support."
+        observable: "pytest-input-role-v1 binds roles before collection from immutable paths and the shared authorized testpaths/root-default plus python_files policy; an emptied, __test__-disabled, moved, or support-renamed previously collected test remains an uncollected test candidate and yields UNKNOWN, while only preclassified support may omit selectors."
+      - case_id: CR14-120
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Match path-bearing python_files patterns exactly as pinned pytest does."
+        observable: "pytest-input-role-v1 reproduces pytest 9.0.3 fnmatch_ex on the same absolute materialized Path: separator-free patterns match basename, path-bearing relative patterns match the full path with */ prefixing, and an empty tests/unit/test_new.py under python_files=tests/unit/test_*.py remains an uncollected test candidate and yields UNKNOWN."
+      - case_id: CR14-121
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent authorized pytest addopts from filtering the complete suite."
+        observable: "pytest-selection-controls-disabled-v1 parses the complete composed pytest/pytest-cov/admitted-plugin option catalog and makes positional selectors, -k/-m, ignore/deselect/cache selectors, short-circuits, discovery/plugin overrides, and coverage overrides UNKNOWN before collection; a production change with an ignored failing test cannot pass, while declarative suite identity and non-selecting options remain bound."
+      - case_id: CR14-122
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent effective pytest configuration fields from hiding whole test modules."
+        observable: "The frozen pytest/pytest-cov addini catalog classifies non-empty norecursedirs and every other selection/discovery/plugin/coverage field as unsupported UNKNOWN; independently every test_candidate, changed or unchanged, must contribute a selector per side, so a production-only range with an ignored failing module cannot pass."
+      - case_id: CR14-125
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent a repository collection hook from hiding one changed test inside an otherwise collected file."
+        observable: "The frozen hook-disposition catalog rejects collection-shaping conftest hooks before execution; plugin/hook origins, raw-collected items, and pre/post registry digests are bound, so selective deselection is UNKNOWN rather than PASS."
+      - case_id: CR14-127
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent pytest's built-in __test__ control from hiding one changed test inside an otherwise collected file."
+        observable: "The sealed non-mutating collectstart/makeitem observer records each pinned-name-matching module/class/function before built-in filtering and makes a false runtime __test__ value UNKNOWN even when a sibling selector passes; observer or outcome drift is UNKNOWN."
+      - case_id: CR14-129
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent pytest's built-in class-constructor controls from hiding one changed test inside an otherwise collected file."
+        observable: "Before Class.collect can return empty, the sealed collectstart observer records pinned hasinit/hasnew inputs and decisions; custom __init__ or __new__ on a name-matching class is UNKNOWN even when a sibling selector passes, while inherited defaults remain supported."
+      - case_id: CR14-130
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent pytest's remaining built-in Python collection filters from hiding one changed test inside an otherwise collected file."
+        observable: "The sealed observer makes a selection-eligible abstract class or fixture-marked function UNKNOWN before item emission even when a sibling selector passes; non-real callables and import-ownership manipulation share the fail-closed disposition."
+      - case_id: CR14-131
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Freeze a closed classified registry of every activated built-in pytest collector instead of adding filters one edge case at a time."
+        observable: "pytest-builtin-collector-decision-v1 binds the activated implementation manifest and covers every pinned native-Python and unittest branch; each outcome is intentional_non_candidate, collectable, or unsupported_candidate_control, and a missing member/observer or catalog/source/activation drift is UNKNOWN."
+      - case_id: CR14-132
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent unittest method-level __test__ from hiding one changed failing method inside an otherwise collected TestCase."
+        observable: "Before UnitTestCase.collect can omit it, the sealed observer records the exact TestLoader method inventory and per-method __test__; a false method control is UNKNOWN even when a sibling method passes, and unittest activation/branch drift is UNKNOWN."
+      - case_id: CR14-126
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Admit exact target-tip pytest fixture plugins without ambient loading or unclassified parser and collection behavior."
+        observable: "The authenticated project-runtime descriptor binds plugin distribution, payload, dependency, pytest11 entry point, parser, and hook capabilities; a snapshot-free sandbox mounts only the analyzer capsule plus identical read-only project layer for exact entry-point preflight, and targeted pytest uses the same layer identity; a matching fixture-only plugin collects on both sides, while unlisted, snapshot/user, drifted, dynamic, or collection-shaping plugins are UNKNOWN."
+      - case_id: CR14-134
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent candidate metaclass or unittest loader controls from removing a failing method before TestLoader inventory evidence exists."
+        observable: "The observer binds a descriptor-safe raw MRO callable manifest before dir(TestCase), sealed loader controls, and the final TestLoader inventory; custom metaclass filtering, loader mutation, raw/inventory omission, or resolved-object drift is UNKNOWN even when a sibling passes."
+      - case_id: CR14-136
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent native pytest module/class namespace controls from removing a failing candidate before makeitem evidence exists."
+        observable: "pytest-native-namespace-controls-v1 compares descriptor-safe raw module/class/MRO manifests with pytest-observed dictionaries and makeitem; metaclass or module-subtype filtering and any raw/observed omission are UNKNOWN even when a sibling passes."
+      - case_id: CR14-116
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Keep Python stubs in static analysis without demanding impossible runtime coverage."
+        observable: "A .pyi-only range records targeted-pytest-coverage NOT_APPLICABLE; when the existing icontract-usage predicate activates, it keeps contracts active through its static scan and marks only contracts.crosshair NOT_APPLICABLE with a bound empty manifest/reason; Ruff, Radon, activated Semgrep passes, ai-bloat-ast, ast-clean-code, basedpyright, Pylint, and the contracts static component include the stub. Mixed snapshots use only regular production .py for Coverage/CrossHair."
+      - case_id: CR14-133
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent standalone stubs from creating an impossible mandatory CrossHair execution."
+        observable: "analyzer-input-kinds-v1 excludes .pyi only from contracts.crosshair and records no_crosshair_executable_input NOT_APPLICABLE without launch for that sub-execution; signed icontract-static-activation-v1 preserves the existing usage predicate and, when true, keeps contracts.icontract-static-scan and the parent member active, and still requires every exact stub-capable member/component; catalog, aggregation, or manifest drift is UNKNOWN."
+      - case_id: CR14-135
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Preserve activated stub-capable AST contract findings while excluding only the impossible CrossHair sub-execution."
+        observable: "On a stub-only side with existing icontract usage, icontract-static-scan can emit MISSING_ICONTRACT and determine the parent contracts outcome; only contracts.crosshair is NOT_APPLICABLE. False activation preserves the prior rule boundary, and activation drift is UNKNOWN."
+      - case_id: CR14-097
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Execute dependency-bearing project tests without trusting candidate locks or ambient host packages."
+        observable: "A target-tip-attested project-runtime layer is reused for both snapshots, imports its exact dependency closure, rejects reserved analyzer/runner collisions and untrusted provenance, and makes missing/incomplete evidence UNKNOWN."
+      - case_id: CR14-102
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Seal Bubblewrap's host-side runtime before it creates the analyzer namespace."
+        observable: "The pinned launcher is a verified static Linux x86_64 ELF with no interpreter or needed libraries, executes from the verified descriptor with loader injection cleared, and exposes no unexpected pre-namespace mapped object; dynamic/host-dependent launch is UNKNOWN."
+      - case_id: CR14-104
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Run mandatory built-in analyzers from signed code inside the sealed capsule."
+        observable: "module-code-payload-v1 re-verifies the complete loader-registered signed specfact_code_review installation, copies every canonical payload member into the capsule, binds loader/origin/key/full-payload-verification/import/root identities, boots ai-bloat-ast and ast-clean-code without controller paths, and makes incomplete or drifted evidence UNKNOWN."
+      - case_id: CR14-111
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Boot signed built-in analyzers after the marketplace discards the downloaded module archive."
+        observable: "A fresh official installation deletes its archive and archive cache, then verified-installed-module-payload-v1 revalidates checksum/signature/key/origin and descriptor-safely copies the canonical installed payload into the capsule; no reacquisition or host import occurs, while failed installation evidence is UNKNOWN."
+      - case_id: CR14-113
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Use only metadata that a real marketplace installation persists when authenticating built-in code."
+        observable: "The installed-payload contract succeeds with module name/version, deterministic full-payload checksum/signature, loader origin/root, and protected key identity, and requires no unavailable source commit/tree or archive metadata; missing or mismatched real fields are UNKNOWN."
+  openspec:code-review-14-scope-truth-and-differential-enforcement:review-finding-model:ledger-preserves-authoritative-assurance-status:
+    rationale: "A first-party consumer must not turn UNKNOWN or NOT_APPLICABLE compatibility projections into passing reward events."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli#665"
+      - "nold-ai/specfact-cli#671"
+    touchpoints:
+      - id: review-ledger-assurance
+        kind: planned_component
+        locator: "specfact-code-review ledger client"
+    verification_cases:
+      - case_id: CR14-011
+        scenario_id: ledger-preserves-authoritative-assurance-status
+        method: test
+        intent: "Persist schema 1.6 assurance directly and keep UNKNOWN/NOT_APPLICABLE neutral for rewards and streaks."
+        observable: "Neutral states persist canonical report_json/report_digest without coins, pass bonuses, block penalties, or streak changes; legacy records remain readable."
+      - case_id: CR14-046
+        scenario_id: ledger-preserves-authoritative-assurance-status
+        method: test
+        intent: "Preserve deterministic mixed FAIL/UNKNOWN precedence at the ledger boundary."
+        observable: "The ledger consumes aggregate FAIL and its normal blocking policy while canonical report evidence retains has_unknown_required_evidence plus every UNKNOWN member diagnostic."
+
