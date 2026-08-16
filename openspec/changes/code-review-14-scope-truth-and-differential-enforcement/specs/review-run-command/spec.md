@@ -763,9 +763,9 @@ The report SHALL list each profile member with required/conditional status; `exe
 
 - **GIVEN** a candidate adds a failing selection-eligible class or callable beside a visible passing selector, and candidate-controlled runtime state would make pinned pytest 9.0.3 drop it before `pytest_itemcollected`
 - **WHEN** the sealed observer evaluates `pytest-builtin-collector-decision-v1`
-- **THEN** the closed catalog enumerates every activated built-in collector/hook implementation and records/classifies every branch; initial members cover `_pytest.python` `PyCollector.collect`, `istestclass`, `istestfunction`, `pytest_pycollect_makeitem`, and `Class.collect`, plus `_pytest.unittest.pytest_pycollect_makeitem` and `UnitTestCase.collect`
+- **THEN** the closed catalog enumerates every activated built-in collector/hook implementation and records/classifies every branch; initial members cover `_pytest.python` `PyCollector.collect`, `istestclass`, `istestfunction`, `pytest_pycollect_makeitem`, and `Class.collect`, plus `_pytest.unittest.pytest_pycollect_makeitem`, `UnitTestCase.collect`, and the `TestCaseFunction.runtest`/`TestCase.__call__`/`TestCase.run` execution boundary
 - **AND** native descriptor-safe raw module/class namespace and MRO manifests, module subtype/class metaclass namespace-control identities, raw-versus-observed-versus-makeitem reconciliation, duplicate/import ownership, name or exact nose eligibility, class/function dispatch, static/class-method unwrapping, callable/real-function checks, fixture markers, abstractness, raw/final `__test__`, and `hasinit`/`hasnew` decisions are bound
-- **AND** unittest TestCase recognition/abstractness, class `__test__`, descriptor-safe raw MRO name-prefix-eligible callable manifest, sealed TestLoader prefix/pattern/sort controls, exact `getTestCaseNames` inventory, inherited/resolved method identity, per-method `__test__`, metaclass filter identity, and `runTest`/Twisted fallback are bound
+- **AND** unittest TestCase recognition/abstractness, class `__test__`, descriptor-safe raw MRO name-prefix-eligible callable manifest, sealed TestLoader prefix/pattern/sort controls, exact `getTestCaseNames` inventory, inherited/resolved method identity, per-method `__test__`, metaclass filter identity, `runTest`/Twisted fallback, and the canonical `TestCaseFunction.runtest` → `TestCase.__call__` → `TestCase.run` execution path are bound
 - **AND** a fixture-marked function or abstract class yields `pytest_item_control_unsupported` UNKNOWN even when the sibling passes
 - **AND** non-real callables, import-ownership manipulation, false `__test__`, and constructor controls have the same fail-closed disposition
 - **AND** ordinary nonmatching names, ignored framework attributes, and non-callable data remain `intentional_non_candidate`
@@ -789,6 +789,16 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** a custom metaclass `__dir__`, `__getattribute__`, or `__getattr__`, candidate-mutated loader control, raw eligible method missing from the loader inventory, or resolved-object mismatch is UNKNOWN
 - **AND** class `__test__`, abstractness, and `runTest`/Twisted fallback decisions remain bound
 - **AND** an unobserved unittest branch or activation/implementation drift is UNKNOWN.
+
+#### Scenario: Unittest execution overrides cannot bypass a selected failing method
+
+- **GIVEN** a candidate `unittest.TestCase` contains a selected method whose body fails, plus a visible passing sibling, and the class or an intermediate base overrides `run` or `__call__` to return without invoking the selected method
+- **AND** native pinned pytest 9.0.3 would otherwise report both selectors and JUnit testcases as passed
+- **WHEN** signed `unittest-execution-controls-v1` reaches the authoritative `_pytest.unittest.TestCaseFunction.runtest` boundary
+- **THEN** immediately before dispatch, with no candidate execution gap, the controller binds pinned pre-import `unittest.TestCase.__call__`/`run` descriptors, descriptor-safe raw class/MRO and instance-namespace entries, and effective default `__getattribute__`/`__getattr__` lookup controls
+- **AND** a subclass/intermediate override, instance shadow, lookup redirection, canonical-base mutation, identity mismatch, or catalog/source drift yields `pytest_execution_control_unsupported` UNKNOWN before the selected method can be accepted as passed
+- **AND** the passing sibling, zero process exit, internally consistent outcome artifact, and passing JUnit cannot convert that uncertainty to PASS
+- **AND** exact inherited canonical dispatch remains supported; CR14 does not emulate or infer arbitrary unittest execution semantics.
 
 #### Scenario: Built-in class constructors cannot hide a changed test in a collected file
 

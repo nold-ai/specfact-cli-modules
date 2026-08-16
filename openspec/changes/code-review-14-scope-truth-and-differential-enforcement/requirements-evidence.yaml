@@ -646,6 +646,11 @@ requirements:
         method: test
         intent: "Prevent Ruff fix-only mode from suppressing unfixable diagnostics or enabling snapshot mutation."
         observable: "Authorized fix/fix-only values remain evidence while both effective controls are forced false; an unfixable F821 remains in native JSON, the snapshot is unchanged, and any true effective value, attempted mutation, empty/malformed artifact, or catalog drift is UNKNOWN rather than PASS."
+      - case_id: CR14-149
+        scenario_id: mandatory-analyzer-coverage
+        method: test
+        intent: "Prevent unittest execution overrides from reporting a selected failing method as passed without invoking it."
+        observable: "Parameterized run/__call__ overrides make native pytest and JUnit falsely pass, but unittest-execution-controls-v1 binds the canonical pre-import TestCase dispatch path immediately before execution and returns pytest_execution_control_unsupported UNKNOWN for overrides, shadows, lookup redirection, base mutation, or drift; exact inherited dispatch remains supported."
       - case_id: CR14-033
         scenario_id: mandatory-analyzer-coverage
         method: test
