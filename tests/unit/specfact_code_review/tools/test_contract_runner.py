@@ -148,7 +148,7 @@ def test_run_contract_check_ignores_crosshair_side_effect_warnings(monkeypatch: 
     assert not findings
 
 
-def test_run_contract_check_ignores_crosshair_timeout(monkeypatch: MonkeyPatch) -> None:
+def test_run_contract_check_reports_crosshair_timeout_for_mandatory_coverage(monkeypatch: MonkeyPatch) -> None:
     file_path = FIXTURES_DIR / "public_with_contracts.py"
     monkeypatch.setattr(
         subprocess,
@@ -158,7 +158,28 @@ def test_run_contract_check_ignores_crosshair_timeout(monkeypatch: MonkeyPatch) 
 
     findings = run_contract_check([file_path])
 
-    assert not findings
+    assert len(findings) == 1
+    assert findings[0].tool == "crosshair"
+    assert findings[0].evidence_outcome == "UNKNOWN"
+    assert findings[0].execution_state == "error"
+
+
+def test_run_contract_check_reports_crosshair_process_error_for_mandatory_coverage(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    file_path = FIXTURES_DIR / "public_with_contracts.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("crosshair", stdout="", stderr="internal error", returncode=2)),
+    )
+
+    findings = run_contract_check([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].tool == "crosshair"
+    assert findings[0].evidence_outcome == "UNKNOWN"
+    assert findings[0].execution_state == "error"
 
 
 def test_run_contract_check_reports_unavailable_crosshair_but_keeps_ast_findings(monkeypatch: MonkeyPatch) -> None:

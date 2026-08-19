@@ -98,6 +98,50 @@ def test_record_run_without_supabase_writes_to_local_json(tmp_path: Path) -> Non
     assert status["coins"] == pytest.approx(0.5)
 
 
+@pytest.mark.parametrize(
+    ("assurance_status", "reward_delta", "pass_streak", "block_streak"),
+    [
+        ("PASS", 5, 1, 0),
+        ("FAIL", -5, 0, 1),
+        ("UNKNOWN", 0, 0, 0),
+        ("NOT_APPLICABLE", 0, 0, 0),
+    ],
+)
+def test_ledger_authoritative_assurance_controls_rewards_and_streaks(
+    tmp_path: Path,
+    assurance_status: str,
+    reward_delta: int,
+    pass_streak: int,
+    block_streak: int,
+) -> None:
+    ledger_path = tmp_path / "ledger.json"
+    report_type: Any = ReviewReport
+    report = report_type(
+        schema_version="1.6",
+        assurance_status=assurance_status,
+        run_id=f"run-{assurance_status.lower()}",
+        timestamp=datetime(2026, 8, 19, tzinfo=UTC),
+        score=85,
+        findings=[] if assurance_status != "FAIL" else [_blocking_finding()],
+        summary=f"{assurance_status} evidence",
+        overall_verdict="FAIL" if assurance_status in {"FAIL", "UNKNOWN"} else "PASS",
+        ci_exit_code=1 if assurance_status in {"FAIL", "UNKNOWN"} else 0,
+        scope_evidence={"assurance_kind": "range_candidate"},
+        analyzer_evidence=[{"id": "contracts", "evidence_outcome": assurance_status}],
+    )
+
+    LedgerClient(local_path=ledger_path).record_run(report)
+    payload = json.loads(ledger_path.read_text(encoding="utf-8"))
+    run = payload["runs"][0]
+
+    assert run["verdict"] == assurance_status
+    assert run["reward_delta"] == reward_delta
+    assert payload["streak_pass"] == pass_streak
+    assert payload["streak_block"] == block_streak
+    assert run["report_digest"].startswith("sha256:")
+    assert run["report_json"]["assurance_status"] == assurance_status
+
+
 def test_record_run_applies_pass_streak_bonus_at_five(tmp_path: Path) -> None:
     ledger_path = tmp_path / "ledger.json"
     _write_state(

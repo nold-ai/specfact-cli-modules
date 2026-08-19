@@ -54,6 +54,68 @@ AI_BLOAT_GOOD_FIXTURES = [
 ]
 
 
+def test_semgrep_uses_signed_module_fallback_without_target_config(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    target = tmp_path / "target"
+    module = tmp_path / "module"
+    target.mkdir()
+    (module / ".semgrep").mkdir(parents=True)
+    (module / "resources/semgrep-rules").mkdir(parents=True)
+    (module / ".semgrep/clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    (module / "resources/semgrep-rules/ai-bloat.yaml").write_text("rules: []\n", encoding="utf-8")
+
+    bundle = scope.resolve_semgrep_bundle(target, signed_module_root=module)
+
+    assert bundle.status == "PASS"
+    assert bundle.clean.identity_kind == "signed_module_payload"
+    assert bundle.ai_bloat.identity_kind == "signed_module_payload"
+
+
+def test_semgrep_scanned_paths_match_every_eligible_input() -> None:
+    from specfact_code_review.tools import semgrep_runner
+
+    result = semgrep_runner.reconcile_scanned_paths(
+        eligible=("src/a.py", "src/b.py"), scanned=("src/a.py", "src/b.py"), skipped=()
+    )
+
+    assert result.status == "PASS"
+
+
+def test_semgrep_rule_target_narrowing_is_unknown() -> None:
+    from specfact_code_review.tools import semgrep_runner
+
+    result = semgrep_runner.validate_rule_pack({"rules": [{"id": "x", "paths": {"exclude": ["tests"]}}]})
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "semgrep_rule_target_narrowing"
+
+
+def test_semgrep_pass_union_cannot_hide_rule_exclusion() -> None:
+    from specfact_code_review.tools import semgrep_runner
+
+    result = semgrep_runner.reconcile_passes(
+        eligible=("src/a.py",),
+        passes=(
+            {"id": "clean", "scanned": (), "skipped": ("src/a.py",)},
+            {"id": "ai-bloat", "scanned": ("src/a.py",), "skipped": ()},
+        ),
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+def test_semgrep_disable_nosem_preserves_string_literal_finding() -> None:
+    from specfact_code_review.tools import semgrep_runner
+
+    plan = semgrep_runner.build_snapshot_invocation(
+        eligible=("src/app.py",), source=b'VALUE = "nosemgrep"\neval("1")\n'
+    )
+
+    assert "--disable-nosem" in plan.argv
+    assert plan.expected_rules == ("python.lang.security.audit.eval-detected",)
+
+
 def test_ai_bloat_guidance_matches_ai_bloat_rule_categories() -> None:
     categorized_ai_bloat_rules = {rule for rule, category in SEMGREP_RULE_CATEGORY.items() if category == "ai_bloat"}
 

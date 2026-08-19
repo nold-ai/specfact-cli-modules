@@ -35,6 +35,27 @@ SAMPLE_FAIL_REVIEW_REPORT: dict[str, object] = {
 }
 
 
+def test_pre_commit_consumer_preserves_schema_1_6_unknown_exit() -> None:
+    module = _load_script_module()
+    report = {
+        "schema_version": "1.6",
+        "assurance_status": "UNKNOWN",
+        "overall_verdict": "FAIL",
+        "ci_exit_code": 1,
+        "findings": [],
+        "scope_evidence": {"assurance_kind": "explicit_files"},
+        "analyzer_evidence": [{"id": "contracts", "evidence_outcome": "UNKNOWN"}],
+    }
+
+    assert module._authoritative_report_exit_code(report, enforcement="changed") == 1
+    assert (
+        module._authoritative_report_exit_code(
+            {**report, "assurance_status": "NOT_APPLICABLE", "ci_exit_code": 0}, enforcement="changed"
+        )
+        == 0
+    )
+
+
 def test_specfact_review_paths_keeps_only_python_sources() -> None:
     module = _load_script_module()
     assert module._specfact_review_paths(

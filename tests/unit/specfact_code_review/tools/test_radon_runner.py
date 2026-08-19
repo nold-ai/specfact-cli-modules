@@ -12,6 +12,30 @@ from specfact_code_review.tools.radon_runner import run_radon
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
 
+def test_radon_snapshot_config_cannot_filter_complexity_results(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    (tmp_path / "radon.cfg").write_text("[radon]\nexclude=src/*\nignore=tests/*\n", encoding="utf-8")
+    projection = scope.project_radon_policy(tmp_path, expected_version="6.0.1")
+
+    assert projection.values["exclude"] == ""
+    assert projection.values["ignore"] == ""
+
+
+def test_radon_uses_sealed_full_result_options(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    projection = scope.project_radon_policy(tmp_path, expected_version="6.0.1")
+
+    assert projection.contract == "radon-full-result-v1"
+    assert projection.values["cc_ranks"] == ["A", "B", "C", "D", "E", "F"]
+    assert projection.values["mi_ranks"] == ["A", "B", "C"]
+    assert projection.values["output_file"] is None
+    assert projection.control_cwd_empty is True
+    assert projection.private_home is True
+    assert "RADONCFG" not in projection.environment
+
+
 def _parameter_count_rules(tmp_path: Path, monkeypatch: MonkeyPatch, source: str) -> set[str]:
     file_path = tmp_path / "commands.py"
     file_path.write_text(source, encoding="utf-8")

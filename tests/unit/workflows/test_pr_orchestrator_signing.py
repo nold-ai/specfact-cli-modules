@@ -49,6 +49,32 @@ def test_pr_orchestrator_installs_pinned_specfact_cli() -> None:
     assert "hatch run python specfact-cli/scripts/runtime_discovery_smoke.py" in workflow
 
 
+def test_pr_orchestrator_pins_exact_core_schema_smoke() -> None:
+    workflow = _workflow_text()
+
+    assert "exact-core-schema-compatibility" in workflow
+    assert '["3.11", "3.12", "3.13"]' in workflow
+    assert "refs/tags/v0.55.1" in workflow
+    assert "b1e517e60e669eaba15a18ecfa83ef5a9df65276" in workflow
+    assert "47984be5434d7ae65ed6908bf525a32053290337" in workflow
+    assert "===0.55.1" in workflow
+    assert "test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix" in workflow
+    assert "pip install" in workflow
+    assert "--no-cache-dir" in workflow
+
+
+def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
+    workflow = _workflow_text()
+
+    assert "0.55.1+vendor" in workflow
+    assert "==0.55.1" in workflow
+    assert "reject-core-version-alias" in workflow
+    exact_job = workflow.split("exact-core-schema-compatibility:", maxsplit=1)[1]
+    assert "ref: dev" not in exact_job
+    assert "ref: main" not in exact_job
+    assert "FALLBACK_REF" not in exact_job
+
+
 def test_pr_orchestrator_has_single_full_pytest_owner() -> None:
     workflow = _workflow_text()
     assert "hatch run contract-test-contracts" in workflow

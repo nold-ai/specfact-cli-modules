@@ -250,6 +250,34 @@ def test_requirements_evidence_context_canonicalizes_equivalent_json(tmp_path: P
     assert formatted_context.content_digest == f"sha256:{hashlib.sha256(canonical_payload).hexdigest()}"
 
 
+def test_requirements_evidence_attachment_preserves_schema_1_6_assurance_status(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
+    context = run_commands._requirements_evidence_context(proof_path)
+    report_type: Any = ReviewReport
+    report = report_type(
+        schema_version="1.6",
+        assurance_status="UNKNOWN",
+        run_id="unknown-review",
+        timestamp=datetime(2026, 8, 19, tzinfo=UTC),
+        score=100,
+        findings=[],
+        summary="Analyzer identity mismatch.",
+        overall_verdict="FAIL",
+        ci_exit_code=1,
+        scope_evidence={"assurance_kind": "range_candidate"},
+        analyzer_evidence=[{"id": "ruff", "evidence_outcome": "UNKNOWN"}],
+    )
+
+    attached = run_commands._attach_requirements_evidence(report, context)
+
+    assert attached.requirements_evidence == context
+    assert attached.schema_version == "1.6"
+    assert attached.assurance_status == "UNKNOWN"
+    assert attached.ci_exit_code == 1
+    assert attached.scope_evidence == report.scope_evidence
+    assert attached.analyzer_evidence == report.analyzer_evidence
+
+
 def test_run_command_rejects_incomplete_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:
     def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
         pytest.fail("Requirements evidence validation must run before review execution.")

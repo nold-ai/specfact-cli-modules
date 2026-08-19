@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import pytest
 from pytest import MonkeyPatch
@@ -1175,3 +1175,589 @@ def test_run_pytest_with_coverage_propagates_pythonpath(monkeypatch: MonkeyPatch
         str(tmp_path / "existing"),
         str(bundle_root.resolve()),
     ]
+
+
+def _c14_runner() -> Any:
+    from specfact_code_review.run import runner
+
+    return runner
+
+
+def test_default_pr_range_analyzer_profile_has_closed_membership() -> None:
+    runner_api = _c14_runner()
+    profile = runner_api.default_pr_range_profile()
+
+    assert profile.required_ids == (
+        "ruff",
+        "radon",
+        "semgrep-clean",
+        "ai-bloat-ast",
+        "ast-clean-code",
+        "basedpyright",
+        "pylint",
+        "contracts",
+    )
+    assert profile.conditional_ids == ("semgrep-bugs", "targeted-pytest-coverage")
+    assert profile.id == "pr-range-v1"
+
+
+def test_report_exposes_mandatory_analyzer_coverage() -> None:
+    runner_api = _c14_runner()
+    report = runner_api.aggregate_profile_evidence(runner_api.synthetic_complete_profile_evidence())
+
+    assert {member.id for member in report.analyzer_evidence} == set(runner_api.default_pr_range_profile().all_ids)
+    assert all(member.execution_state in {"ran", "not_applicable"} for member in report.analyzer_evidence)
+
+
+def test_analyzer_identity_mismatch_is_unknown() -> None:
+    runner_api = _c14_runner()
+    evidence = runner_api.synthetic_complete_profile_evidence()
+    evidence["ruff"]["version"] = "0.0.0"
+
+    report = runner_api.aggregate_profile_evidence(evidence)
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+
+
+def test_required_analyzer_infrastructure_error_is_unknown_not_fail() -> None:
+    runner_api = _c14_runner()
+    evidence = runner_api.synthetic_complete_profile_evidence()
+    evidence["contracts"] = {"execution_state": "error", "evidence_outcome": "UNKNOWN", "diagnostic": "timeout"}
+
+    report = runner_api.aggregate_profile_evidence(evidence)
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.overall_verdict == "FAIL"
+    assert report.has_unknown_required_evidence is True
+
+
+def test_generated_analyzer_inputs_use_typed_provenance(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    context = runner_api.synthetic_snapshot_context(tmp_path)
+
+    assert {identity.kind for identity in context.inputs} <= {
+        "git_blob",
+        "signed_module_payload",
+        "generated_projection",
+        "builtin_mode",
+    }
+    assert all(identity.digest.startswith("sha256:") for identity in context.inputs)
+
+
+def test_head_config_cannot_suppress_introduced_finding() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.apply_target_policy(
+        target_policy={"ruff": {"ignore": []}},
+        candidate_policy={"ruff": {"ignore": ["F401"]}},
+        base_findings=(),
+        head_findings=({"rule": "F401", "path": "src/app.py", "blocking": True},),
+    )
+
+    assert result.assurance_status == "UNKNOWN"
+    assert result.reason == "candidate_policy_change"
+
+
+def test_mandatory_analyzer_eligible_and_invoked_input_manifests_match(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    context = runner_api.synthetic_snapshot_context(tmp_path)
+    result = runner_api.validate_invocation_manifests(context)
+
+    assert result.status == "PASS"
+    assert all(member.eligible_digest == member.invoked_digest for member in result.members)
+
+
+def test_range_uses_authorized_base_tip_policy_when_target_advanced() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.select_range_policy(
+        merge_base="1" * 40,
+        target_tip="2" * 40,
+        head="3" * 40,
+        context_target_tip="2" * 40,
+    )
+
+    assert result.source_baseline == "1" * 40
+    assert result.policy_commit == "2" * 40
+    assert result.applies_to == ("merge_base", "head")
+
+
+def _suite_policy(**updates: object) -> dict[str, object]:
+    policy: dict[str, object] = {
+        "version": "9.0.3",
+        "testpaths": ["tests"],
+        "python_files": ["test_*.py", "*_test.py"],
+        "python_classes": ["Test*"],
+        "python_functions": ["test_*"],
+        "addopts": [],
+        "config": {},
+    }
+    policy.update(updates)
+    return policy
+
+
+def test_pr_range_collects_complete_pytest_suite_for_production_change(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests/test_a.py").write_text("def test_a(): pass\n", encoding="utf-8")
+    (tmp_path / "tests/test_b.py").write_text("def test_b(): pass\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(
+        snapshot_root=tmp_path,
+        policy=_suite_policy(),
+        changed_paths=("src/app.py",),
+    )
+
+    assert plan.selectors == ("tests/test_a.py::test_a", "tests/test_b.py::test_b")
+    assert plan.source_heuristics_used is False
+
+
+def test_complete_suite_includes_multiple_nonconventional_related_tests(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests/behavior_test.py").write_text("def test_behavior(): pass\n", encoding="utf-8")
+    (tmp_path / "tests/test_unrelated_name.py").write_text("def test_other(): pass\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/widget.py",))
+
+    assert len(plan.selectors) == 2
+
+
+def test_targeted_pytest_runs_complete_suite_in_test_only_range(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests/test_a.py").write_text("def test_a(): pass\n", encoding="utf-8")
+    (tmp_path / "tests/test_b.py").write_text("def test_b(): pass\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("tests/test_a.py",))
+
+    assert plan.selectors == ("tests/test_a.py::test_a", "tests/test_b.py::test_b")
+
+
+def test_targeted_pytest_reconciles_removed_baseline_selectors() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_inventories(base=("tests/test_a.py::test_a",), head=(), rename_facts={})
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "removed_selector"
+
+
+def test_targeted_pytest_delete_only_production_runs_complete_head_suite(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests/test_a.py").write_text("def test_a(): pass\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(
+        tmp_path, _suite_policy(), changed_paths=("src/deleted.py",), deleted_paths=("src/deleted.py",)
+    )
+
+    assert plan.selectors == ("tests/test_a.py::test_a",)
+
+
+def test_changed_test_not_collected_by_sealed_policy_is_unknown(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests/test_new.py").write_text("", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("tests/test_new.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "uncollected_changed_test"
+
+
+def test_empty_merge_base_input_class_is_not_applicable_for_that_side() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_snapshot_applicability(base_inputs=(), head_inputs=("src/new.py",))
+
+    assert result.base == "NOT_APPLICABLE"
+    assert result.head != "NOT_APPLICABLE"
+
+
+def test_test_role_is_frozen_before_collection() -> None:
+    runner_api = _c14_runner()
+    role = runner_api.classify_pytest_input_role(
+        "tests/unit/test_new.py",
+        policy=_suite_policy(testpaths=["tests/unit"], python_files=["test_*.py"]),
+    )
+
+    assert role.kind == "test_candidate"
+    assert role.inputs == ("path", "testpaths", "python_files", "pytest_version")
+
+
+def test_previously_collected_test_file_becoming_empty_is_unknown() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_test_candidate(
+        role="test_candidate", base_selectors=("tests/test_a.py::test_a",), head_selectors=()
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+def test_candidate_test_file_disabled_by_dunder_test_is_unknown() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_item_controls(
+        candidate_path="tests/test_a.py", namespace={"__test__": False}, collected=()
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "pytest_item_control_unsupported"
+
+
+def test_test_candidate_to_support_rename_is_unknown() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_test_roles(
+        base={"tests/test_a.py": "test_candidate"},
+        head={"tests/helper.py": "test_support"},
+        rename_facts={"tests/test_a.py": "tests/helper.py"},
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+@pytest.mark.parametrize(
+    ("pattern", "path", "expected"),
+    [
+        ("test_*.py", "/repo/tests/unit/test_a.py", True),
+        ("tests/unit/test_*.py", "/repo/tests/unit/test_a.py", True),
+        ("tests/**/test_*.py", "/repo/tests/unit/test_a.py", True),
+        ("test_*.py", "/repo/tests/unit/helper.py", False),
+    ],
+    ids=["basename-match", "rooted-match", "recursive-match", "basename-miss"],
+)
+def test_pytest_input_role_uses_pinned_fnmatch_ex_for_path_patterns(pattern: str, path: str, expected: bool) -> None:
+    runner_api = _c14_runner()
+
+    assert runner_api.pytest_path_matches_pattern(Path(path), pattern, platform="linux") is expected
+
+
+def test_pytest_projection_rebases_relative_paths_per_snapshot(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    policy = _suite_policy(config={"pythonpath": ["src"], "testpaths": ["tests"]})
+    base = runner_api.project_pytest_policy(policy, snapshot_root=tmp_path / "base", output_root=tmp_path / "out-base")
+    head = runner_api.project_pytest_policy(policy, snapshot_root=tmp_path / "head", output_root=tmp_path / "out-head")
+
+    assert base.values["pythonpath"] == [str(tmp_path / "base/src")]
+    assert head.values["pythonpath"] == [str(tmp_path / "head/src")]
+    assert base.logical_policy_digest == head.logical_policy_digest
+
+
+def test_pytest_projection_rejects_unbound_paths(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    result = runner_api.project_pytest_policy(
+        _suite_policy(config={"pythonpath": ["../escape"]}), snapshot_root=tmp_path, output_root=tmp_path / "out"
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+def test_pytest_projection_redirects_all_writable_paths_to_private_roots(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    projection = runner_api.project_pytest_policy(
+        _suite_policy(config={"cache_dir": ".cache", "log_file": "pytest.log"}),
+        snapshot_root=tmp_path / "snapshot",
+        output_root=tmp_path / "output",
+    )
+
+    assert all(str(value).startswith(str(tmp_path / "output")) for value in projection.writable_paths)
+    assert all(not str(value).startswith(str(tmp_path / "snapshot")) for value in projection.writable_paths)
+
+
+@pytest.mark.parametrize("option", ["-k", "-m", "--ignore", "--deselect", "--lf"])
+def test_sealed_pytest_policy_rejects_selection_filters(option: str) -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_selection_controls(_suite_policy(addopts=[option, "value"]))
+
+    assert result.status == "UNKNOWN"
+
+
+def test_production_change_cannot_hide_failing_test_with_authorized_ignore() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_selection_controls(_suite_policy(addopts=["--ignore", "tests/test_fail.py"]))
+
+    assert result.status == "UNKNOWN"
+
+
+@pytest.mark.parametrize(
+    "option",
+    ["--lf", "--last-failed", "-x", "--maxfail=1", "--stepwise"],
+    ids=["lf", "last-failed", "exit-first", "maxfail-one", "stepwise"],
+)
+def test_pytest_cache_and_short_circuit_controls_are_unknown(option: str) -> None:
+    runner_api = _c14_runner()
+    assert runner_api.validate_pytest_selection_controls(_suite_policy(addopts=[option])).status == "UNKNOWN"
+
+
+def test_pytest_selection_option_catalog_covers_pinned_help() -> None:
+    runner_api = _c14_runner()
+    catalog = runner_api.pytest_selection_option_catalog(version="9.0.3", pytest_cov_version="7.1.0")
+
+    assert catalog.unclassified_help_options == ()
+    assert {"-k", "-m", "--ignore", "--deselect", "--cov", "--cov-config"} <= set(catalog.options)
+
+
+def test_sealed_pytest_policy_rejects_norecursedirs() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_selection_controls(_suite_policy(config={"norecursedirs": ["tests/hidden"]}))
+
+    assert result.status == "UNKNOWN"
+
+
+def test_pytest_configuration_control_catalog_covers_pinned_ini() -> None:
+    runner_api = _c14_runner()
+    catalog = runner_api.pytest_configuration_catalog(version="9.0.3", pytest_cov_version="7.1.0")
+
+    assert catalog.unclassified_fields == ()
+    assert set(catalog.classifications) == set(catalog.fields)
+
+
+def test_pytest_hook_disposition_catalog_covers_execution_and_report_hooks() -> None:
+    runner_api = _c14_runner()
+    catalog = runner_api.pytest_hook_disposition_catalog(version="9.0.3")
+
+    assert catalog.unclassified_hooks == ()
+    assert {
+        "pytest_runtest_protocol",
+        "pytest_runtest_makereport",
+        "pytest_runtest_logreport",
+        "pytest_report_teststatus",
+    } <= set(catalog.hooks)
+
+
+def test_pytest_builtin_collector_decision_catalog_covers_pinned_branches() -> None:
+    runner_api = _c14_runner()
+    catalog = runner_api.pytest_builtin_collector_decision_catalog(version="9.0.3")
+
+    assert catalog.unclassified_branches == ()
+    assert {"PyCollector.collect", "istestclass", "istestfunction", "UnitTestCase.collect"} <= set(catalog.branches)
+
+
+@pytest.mark.parametrize(
+    "control",
+    [
+        {"module": {"__test__": False}},
+        {"class": {"__test__": False}},
+        {"function": {"__test__": False}},
+        {"class": {"__init__": object()}},
+    ],
+)
+def test_native_pytest_raw_namespace_cannot_hide_failing_candidate(control: dict[str, object]) -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_native_pytest_namespace(control)
+
+    assert result.status == "UNKNOWN"
+
+
+def test_same_file_builtin_pycollect_filter_is_unknown() -> None:
+    runner_api = _c14_runner()
+    assert runner_api.validate_native_pytest_namespace({"function": {"__test__": False}}).status == "UNKNOWN"
+
+
+def test_same_file_constructor_suppressed_test_class_is_unknown() -> None:
+    runner_api = _c14_runner()
+    assert runner_api.validate_native_pytest_namespace({"class": {"__init__": object()}}).status == "UNKNOWN"
+
+
+def test_same_file_item_level_dunder_test_false_is_unknown() -> None:
+    runner_api = _c14_runner()
+    assert runner_api.validate_native_pytest_namespace({"item": {"__test__": False}}).status == "UNKNOWN"
+
+
+def test_same_unittest_class_method_dunder_test_false_is_unknown() -> None:
+    runner_api = _c14_runner()
+    assert runner_api.validate_unittest_controls({"method": {"__test__": False}}).status == "UNKNOWN"
+
+
+def test_unittest_metaclass_dir_cannot_hide_failing_method() -> None:
+    runner_api = _c14_runner()
+    assert runner_api.validate_unittest_controls({"metaclass": {"__dir__": "override"}}).status == "UNKNOWN"
+
+
+def test_unittest_run_or_call_override_cannot_bypass_failing_method() -> None:
+    runner_api = _c14_runner()
+    for method in ("run", "__call__"):
+        assert runner_api.validate_unittest_controls({"class": {method: "override"}}).status == "UNKNOWN"
+
+
+def test_collection_shaping_repository_hook_is_unknown_before_collection() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_plugins(({"origin": "repository", "hooks": ["pytest_collection_modifyitems"]},))
+    assert result.status == "UNKNOWN"
+
+
+def test_plugin_collection_shaping_hook_is_unknown() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_plugins(
+        ({"origin": "attested-project", "hooks": ["pytest_collection_modifyitems"]},)
+    )
+    assert result.status == "UNKNOWN"
+
+
+def test_report_shaping_repository_hook_is_unknown_before_execution() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_plugins(({"origin": "repository", "hooks": ["pytest_runtest_makereport"]},))
+    assert result.status == "UNKNOWN"
+
+
+def test_changed_test_cannot_be_selectively_deselected_by_conftest() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_plugins(
+        ({"origin": "repository", "hooks": ["pytest_collection_modifyitems"], "path": "tests/conftest.py"},)
+    )
+    assert result.status == "UNKNOWN"
+
+
+def test_every_test_candidate_must_collect_even_when_unchanged() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_test_candidates(
+        candidates=("tests/test_a.py", "tests/test_b.py"), collected_paths=("tests/test_a.py",)
+    )
+    assert result.status == "UNKNOWN"
+    assert result.missing == ("tests/test_b.py",)
+
+
+def test_non_strict_xpass_is_fail_despite_passing_junit_testcase() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_outcomes(
+        observer=({"nodeid": "tests/test_a.py::test_a", "phase": "call", "passed": True, "wasxfail": "reason"},),
+        junit=({"nodeid": "tests/test_a.py::test_a", "outcome": "passed"},),
+        process_exit=0,
+    )
+    assert result.status == "FAIL"
+    assert result.outcomes[0].kind == "XPASS"
+
+
+@pytest.mark.parametrize("outcome", ["skip", "xfail", "xpass", "deselected"])
+def test_targeted_pytest_rejects_head_skip_xfail_xpass_and_deselection(outcome: str) -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_targeted_pytest(base_outcome="pass", head_outcome=outcome)
+    expected_status = "UNKNOWN" if outcome == "deselected" else "FAIL"
+    assert result.status == expected_status
+
+
+def test_targeted_pytest_baseline_failure_head_pass_is_fixed() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_targeted_pytest(base_outcome="fail", head_outcome="pass")
+    assert result.status == "PASS"
+    assert result.disposition == "fixed"
+
+
+@pytest.mark.parametrize(
+    ("head_outcome", "expected"),
+    [("assertion-fail", "FAIL"), ("timeout", "UNKNOWN"), ("collection-error", "UNKNOWN")],
+)
+def test_targeted_pytest_coverage_classifies_failure_vs_unknown(head_outcome: str, expected: str) -> None:
+    runner_api = _c14_runner()
+    assert runner_api.classify_targeted_pytest(base_outcome="pass", head_outcome=head_outcome).status == expected
+
+
+def test_targeted_pytest_imports_attested_external_dependency() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.build_pytest_import_order(
+        snapshot_root="/snapshot", project_runtime="/project/site-packages", attested=True
+    )
+    assert result.status == "PASS"
+    assert result.search_order == ("/snapshot", "/project/site-packages")
+
+
+def test_coverage_projection_redirects_all_writable_paths_to_output_root(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    projection = runner_api.project_coverage_policy(
+        {"run:data_file": ".coverage", "html:directory": "htmlcov", "xml:output": "coverage.xml"},
+        snapshot_root=tmp_path / "snapshot",
+        output_root=tmp_path / "output",
+    )
+    assert all(str(path).startswith(str(tmp_path / "output")) for path in projection.writable_paths)
+
+
+def test_coverage_repository_plugin_is_unknown() -> None:
+    runner_api = _c14_runner()
+    assert runner_api.project_coverage_policy({"run:plugins": ["candidate_plugin"]}).status == "UNKNOWN"
+
+
+def test_targeted_coverage_clears_default_exclusion_registry() -> None:
+    runner_api = _c14_runner()
+    projection = runner_api.project_coverage_policy({})
+    assert projection.values["report:exclude_lines"] == []
+    assert projection.values["report:partial_branches"] == []
+
+
+def test_targeted_coverage_rejects_custom_exclusion_regexes() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.project_coverage_policy({"report:exclude_lines": ["pragma: custom"]})
+    assert result.status == "UNKNOWN"
+
+
+def test_targeted_coverage_uses_sealed_target_config_and_rejects_candidate_suppression() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.select_coverage_policy(target={"run:branch": True}, candidate={"report:exclude_lines": [".*"]})
+    assert result.status == "UNKNOWN"
+    assert result.policy_source == "target_tip"
+
+
+def test_targeted_coverage_rejects_missing_runtime_measurable_production_path() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_coverage_manifest(required=("src/a.py", "src/b.py"), observed=("src/a.py",))
+    assert result.status == "UNKNOWN"
+
+
+def test_targeted_coverage_threshold_failure_is_fail_not_unknown() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_coverage(base=90, head=79, threshold=80)
+    assert result.status == "FAIL"
+    assert result.execution_state == "ran"
+
+
+def test_targeted_coverage_baseline_threshold_failure_head_pass_is_fixed() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_coverage(base=70, head=90, threshold=80)
+    assert result.status == "PASS"
+    assert result.disposition == "fixed"
+
+
+def test_coverage_manifest_excludes_pyi_but_static_analyzers_include_it() -> None:
+    runner_api = _c14_runner()
+    manifests = runner_api.classify_analyzer_input_kinds(("src/a.py", "src/a.pyi"))
+    assert manifests["targeted-pytest-coverage"] == ("src/a.py",)
+    assert "src/a.pyi" in manifests["ruff"]
+    assert "src/a.pyi" in manifests["contracts.icontract-static-scan"]
+
+
+def test_stub_only_range_is_static_and_coverage_not_applicable() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_snapshot_input_kinds(("src/a.pyi",))
+    assert result.member("targeted-pytest-coverage").status == "NOT_APPLICABLE"
+    assert result.member("ruff").status != "NOT_APPLICABLE"
+
+
+def test_stub_only_range_excludes_crosshair_but_requires_stub_capable_static_members() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_snapshot_input_kinds(("src/a.pyi",))
+    assert result.member("contracts.crosshair").status == "NOT_APPLICABLE"
+    assert result.member("basedpyright").required is True
+
+
+def test_stub_only_contracts_keeps_activated_static_scan_and_marks_only_crosshair_not_applicable() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_contract_components(("src/a.pyi",), icontract_usage=True)
+    assert result.static_scan.status != "NOT_APPLICABLE"
+    assert result.crosshair.status == "NOT_APPLICABLE"
+    assert result.parent.status != "NOT_APPLICABLE"
+
+
+def test_contract_static_activation_preserves_existing_icontract_usage_boundary() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.icontract_static_activation(b"from icontract import require\n")
+    assert result.active is True
+    assert result.contract == "icontract-static-activation-v1"
+
+
+def test_required_analyzers_structurally_empty_snapshot_is_not_applicable() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.classify_snapshot_input_kinds(())
+    assert all(member.status == "NOT_APPLICABLE" for member in result.members)
+
+
+def test_adversarial_runtime_policy_is_unknown() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.evaluate_runtime_policy(candidate_python_executes=True, hostile_candidate_claim=True)
+    assert result.status == "UNKNOWN"
+    assert result.assumption == "non_adversarial_candidate_runtime"

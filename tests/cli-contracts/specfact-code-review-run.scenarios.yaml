@@ -1,5 +1,84 @@
 command: specfact code review run
 scenarios:
+  - name: range-requires-full-base-and-head-refs
+    type: anti-pattern
+    argv:
+      - --scope
+      - range
+      - --base-ref
+      - dev
+      - --head-ref
+      - HEAD
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - full Git refs
+  - name: range-rejects-changed-enforcement
+    type: anti-pattern
+    argv:
+      - --scope
+      - range
+      - --base-ref
+      - refs/heads/dev
+      - --head-ref
+      - refs/heads/feature/example
+      - --enforcement
+      - changed
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - range cannot use changed enforcement
+  - name: range-rejects-positional-files
+    type: anti-pattern
+    argv:
+      - tests/fixtures/review/clean_module.py
+      - --scope
+      - range
+      - --base-ref
+      - refs/heads/dev
+      - --head-ref
+      - refs/heads/feature/example
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - positional files
+  - name: range-rejects-narrowing
+    type: anti-pattern
+    argv:
+      - --scope
+      - range
+      - --base-ref
+      - refs/heads/dev
+      - --head-ref
+      - refs/heads/feature/example
+      - --exclude-tests
+    expect:
+      exit_code: 2
+      stderr_contains:
+        - narrowing
+  - name: changed-scope-alias-is-deprecated
+    type: pattern
+    argv:
+      - --scope
+      - changed
+      - --enforcement
+      - shadow
+      - --json
+    expect:
+      exit_code: 0
+      stderr_contains:
+        - deprecated
+  - name: explicit-files-remain-local-assurance
+    type: pattern
+    argv:
+      - tests/fixtures/review/clean_module.py
+      - --enforcement
+      - full
+      - --json
+    expect:
+      exit_code: 0
+      stdout_contains:
+        - '"assurance_kind":"explicit_files"'
   - name: clean-json-pass
     type: pattern
     argv:
