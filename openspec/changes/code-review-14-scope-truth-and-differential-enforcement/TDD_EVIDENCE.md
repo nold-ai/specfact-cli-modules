@@ -30,3 +30,17 @@ The approved exact-core target changed from the unavailable planned 0.56.0 ident
 ### Readiness decision
 
 `READY FOR TEST AUTHORING`. `hatch run openspec validate code-review-14-scope-truth-and-differential-enforcement --strict` passed on 2026-08-19 against synchronized `origin/dev@c3eda08c732267dc3614130f5f36bcd473182d0b`. No named C14 tests or production sources have been edited or executed for implementation evidence yet. Production edits remain prohibited until every prescribed test is authored, every exact selector is collected, the implementation mapping and `IMPLEMENTATION_CHECKPOINT.json` are frozen, and actual failing evidence is recorded.
+
+## Frozen implementation red gate — 2026-08-20
+
+- Committed checkpoint: implementation branch commit `67f1aa0a879931c3098792747b12c8c115750e73`; checkpoint parent commit `dd7490f5a1829dc9fb5b411a33eaa68e97e9c947`, tree `20e6827ae49b62a7524587985cb91df544e20dd3`.
+- Verification command: `.venv/bin/python /private/tmp/verify_c14_checkpoint.py`. It verified the committed checkpoint against the frozen parent inputs, the non-empty and pairwise-disjoint 43-item assignment, exact global union, canonical mapping, immutable core identity, and all checkpoint digests.
+- Red command: `.venv/bin/python /private/tmp/run_c14_red.py`. The runner loaded the checkpoint's sorted 366 `pytest_args`, invoked that complete selector set without substitution, and rejected collection drift. The per-selector exact argv is therefore bound by the committed selector digest rather than duplicated in this evidence file.
+- Checkpoint file digest: `sha256:fb51280c67ea97962fce0af31227335bc00e0128cb4c30706294df3cf09ec7a6`.
+- Global selector and observed collection digest: `sha256:7e515d42b9b267eb503bdb98e0d73feae0293e13660ad88f826f055cbd907b68`; collected count `366`.
+- Implementation selector-map digest: `sha256:7f9a49abb646f5cc714ff2a1986503c868b4914ab3fbbc9479ec45d9380ee4e5`.
+- Pytest raw exit code: `1`. Exact outcomes: `365 failed`, `1 passed`; all `43/43` implementation tasks retained at least one independently failing frozen selector.
+- Canonical per-selector outcomes digest: `sha256:99e9392aa548da1aaf2a2c5feeb4cf2a2727e1a134bf7171f63d888c7d53be4b`; canonical per-task outcomes digest: `sha256:aaa7c5a1851afdba13e3578e94805933235818341ff5c88b2c526242c6346391`.
+- Representative red causes were the deliberately absent `scope`, `differential`, `sandbox`, and `toolchain` modules and the unimplemented schema/profile behavior in existing allowlisted sources. The single passing selector does not invalidate the gate because its mapped task also contains failing selectors and no Section 3 item is green.
+
+Decision: `RED GATE SATISFIED`. Production edits may begin only in the frozen Section 3 order and allowlist, with the checkpoint reverified and each item's identical mapped selector set taken from red to green.
