@@ -62,10 +62,10 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 
 #### Scenario: Exact advertised core runtime loads schema 1.6
 
-- **GIVEN** a candidate Code Review package proposes `core_compatibility: '===0.56.0'`
+- **GIVEN** a candidate Code Review package proposes `core_compatibility: '===0.55.1'`
 - **WHEN** the pre-release compatibility gate runs in a fresh environment
-- **THEN** it checks out the immutable core 0.56.0 tag at the full commit/tree recorded in the checkpoint, installs that core plus the candidate module package, loads the module through core, and validates every schema 1.6 consumer-matrix status/projection
-- **AND** the gate rejects ordinary `==0.56.0`, PEP 440 local/alternate strings such as `0.56.0+vendor`, `>=0.56.0,<1.0.0`, a wildcard, or any specifier admitting an untested core identity
+- **THEN** it checks out immutable lightweight core tag `v0.55.1` at full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276` and full tree `47984be5434d7ae65ed6908bf525a32053290337`, installs that core plus the candidate module package, loads the module through core, and validates every schema 1.6 consumer-matrix status/projection
+- **AND** the gate rejects ordinary `==0.55.1`, PEP 440 local/alternate strings such as `0.55.1+vendor`, `>=0.55.1,<1.0.0`, a wildcard, or any specifier admitting an untested core identity
 - **AND** an unavailable or mismatched identity, branch fallback, install/load failure, or matrix failure blocks release and the compatibility declaration
 - **AND** this smoke proves exact-version load/schema interoperability only; protected PR-context verification remains the separate downstream core adoption contract
 - **AND** a later module metadata release may advertise a newly released exact paired-core version only after its immutable tag/commit/tree passes the same matrix smoke.
@@ -146,4 +146,3 @@ Static CLI contract fixtures SHALL cover argv parsing and serialized report/erro
 - **AND** they do not present changed/worktree or positional files as pull-request assurance
 - **AND** simplification-preview guidance may retain worktree scope because it is a local mutation workflow
 - **AND** range plus any focus, exclude-tests, path filter, no-tests, or level filter is documented and tested as invalid for complete PR assurance.
-

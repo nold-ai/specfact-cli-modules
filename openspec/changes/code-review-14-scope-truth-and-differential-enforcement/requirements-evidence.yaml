@@ -370,13 +370,13 @@ requirements:
       - case_id: CR14-071
         scenario_id: truthful-review-assurance-status
         method: test
-        intent: "Prove every core version admitted by release metadata has immutable install, load, and schema evidence; the first C14 release admits only exact core 0.56.0."
-        observable: "A fresh environment uses the checkpointed immutable core 0.56.0 tag/commit/tree plus candidate module package and exercises every consumer-matrix status/projection; only core_compatibility ===0.56.0 is permitted. Ordinary ==0.56.0, a local/alternate alias such as 0.56.0+vendor, a range, wildcard, untested identity, missing identity, branch fallback, install/load failure, or mismatch blocks release without claiming protected PR assurance."
+        intent: "Prove every core version admitted by release metadata has immutable install, load, and schema evidence; the first C14 release admits only exact core 0.55.1."
+        observable: "A fresh environment uses lightweight tag v0.55.1 at full commit b1e517e60e669eaba15a18ecfa83ef5a9df65276 and full tree 47984be5434d7ae65ed6908bf525a32053290337 plus the candidate module package and exercises every consumer-matrix status/projection; only core_compatibility ===0.55.1 is permitted. Ordinary ==0.55.1, a local/alternate alias such as 0.55.1+vendor, a range, wildcard, untested identity, missing identity, branch fallback, install/load failure, or mismatch blocks release without claiming protected PR assurance."
       - case_id: CR14-128
         scenario_id: truthful-review-assurance-status
         method: test
         intent: "Reject PEP 440 local-version aliases that ordinary equality would admit without immutable smoke evidence."
-        observable: "The release validator accepts only strict core_compatibility ===0.56.0 for the frozen identity and rejects ==0.56.0, 0.56.0+vendor, wildcards, ranges, and alternate strings."
+        observable: "The release validator accepts only strict core_compatibility ===0.55.1 for the frozen v0.55.1/b1e517e60e669eaba15a18ecfa83ef5a9df65276/47984be5434d7ae65ed6908bf525a32053290337 identity and rejects ==0.55.1, 0.55.1+vendor, wildcards, ranges, and alternate strings."
   openspec:code-review-14-scope-truth-and-differential-enforcement:review-cli-contracts:review-cli-contracts-cover-explicit-scope-and-differential-evidence:
     rationale: "The public CLI contract must prove every explicit scope and differential evidence path."
     stakeholder_refs:
@@ -811,4 +811,3 @@ requirements:
         method: test
         intent: "Preserve deterministic mixed FAIL/UNKNOWN precedence at the ledger boundary."
         observable: "The ledger consumes aggregate FAIL and its normal blocking policy while canonical report evidence retains has_unknown_required_evidence plus every UNKNOWN member diagnostic."
-
