@@ -315,6 +315,7 @@ jobs:
           environment_id = environment["environment_id"]
           registry_actor = os.environ["REGISTRY_ACTOR"]
           registry_token = os.environ["REGISTRY_TOKEN"]
+          caller_identity = (int(os.environ["SUDO_UID"]), int(os.environ["SUDO_GID"]))
           runtime_root = Path(tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp"))
           storage_a = runtime_root / "storage-a"
           storage_b = runtime_root / "storage-b"
@@ -338,6 +339,7 @@ jobs:
               storage_root=runtime_root / "storage-a",
               empty_cache=True,
               credential=f"{registry_actor}:{registry_token}",
+              bubblewrap_child_identity=caller_identity,
           )
           assert first.status == "PASS", first.reason
           assert set(first.installed_distributions) == set(first.locked_distributions)
@@ -348,6 +350,7 @@ jobs:
                   environment_id=environment_id,
                   storage_root=runtime_root / "storage-b",
                   empty_cache=False,
+                  bubblewrap_child_identity=caller_identity,
               )
           assert second.status == "PASS", second.reason
           assert first.identity == second.identity
@@ -371,6 +374,10 @@ jobs:
               "--unshare-all",
               "--cap-drop",
               "ALL",
+              "--uid",
+              str(caller_identity[0]),
+              "--gid",
+              str(caller_identity[1]),
               "--die-with-parent",
               "--new-session",
               "--ro-bind",

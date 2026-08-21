@@ -681,11 +681,27 @@ def _open_verified_native_executable(path: Path, descriptor: dict[str, object]) 
         raise
 
 
-def _offline_install(root: Path, environment: dict[str, object], wheels: tuple[Path, ...]) -> None:
+def _offline_install(
+    root: Path,
+    environment: dict[str, object],
+    wheels: tuple[Path, ...],
+    *,
+    bubblewrap_child_identity: tuple[int, int] | None = None,
+) -> None:
     paths = cast(dict[str, object], environment["paths"])
     analyzer_path = str(paths["analyzers"])
     analyzer_root = root / analyzer_path.lstrip("/")
     analyzer_root.mkdir(parents=True, exist_ok=True)
+    identity_args: list[str] = []
+    if bubblewrap_child_identity is not None:
+        child_uid, child_gid = bubblewrap_child_identity
+        invalid_identity = any(
+            not isinstance(value, int) or isinstance(value, bool) or value <= 0 for value in bubblewrap_child_identity
+        )
+        if os.geteuid() != 0 or invalid_identity:
+            raise ValueError("elevated Bubblewrap child identity is invalid")
+        os.chown(analyzer_root, child_uid, child_gid)
+        identity_args = ["--uid", str(child_uid), "--gid", str(child_gid)]
     native_tools = cast(list[dict[str, object]], environment["native_tools"])
     bubblewrap = next((item for item in native_tools if item.get("id") == "bubblewrap-static"), None)
     if bubblewrap is None:
@@ -698,6 +714,7 @@ def _offline_install(root: Path, environment: dict[str, object], wheels: tuple[P
             "--unshare-all",
             "--cap-drop",
             "ALL",
+            *identity_args,
             "--die-with-parent",
             "--new-session",
             "--bind",
@@ -865,6 +882,7 @@ def materialize_capsule(
     storage_root: Path,
     empty_cache: bool = False,
     credential: str | None = None,
+    bubblewrap_child_identity: tuple[int, int] | None = None,
 ) -> CapsuleMaterialization:
     context = _capsule_context(lock, environment_id=environment_id, storage_root=storage_root)
     if isinstance(context, CapsuleMaterialization):
@@ -884,7 +902,12 @@ def materialize_capsule(
     )
     if acquisition.status != "PASS":
         return _capsule_result(context, status="UNKNOWN", reason=acquisition.reason)
-    installed, reason = _assemble_capsule_root(context, cache_root=cache_root, storage_root=storage_root)
+    installed, reason = _assemble_capsule_root(
+        context,
+        cache_root=cache_root,
+        storage_root=storage_root,
+        bubblewrap_child_identity=bubblewrap_child_identity,
+    )
     if installed is None:
         return _capsule_result(context, status="UNKNOWN", reason=reason)
     return _capsule_result(context, status="PASS", installed=installed)
@@ -895,6 +918,7 @@ def _assemble_capsule_root(
     *,
     cache_root: Path,
     storage_root: Path,
+    bubblewrap_child_identity: tuple[int, int] | None,
 ) -> tuple[tuple[str, ...] | None, str]:
     environment_id = str(context.selected.get("environment_id") or context.selected.get("id", "environment"))
     temporary = Path(tempfile.mkdtemp(prefix=f".{environment_id}-", dir=storage_root))
@@ -917,7 +941,12 @@ def _assemble_capsule_root(
                 max_unpacked_bytes=max_unpacked_bytes,
             )
         wheels = _verify_wheelhouse(temporary_root, context.selected)
-        _offline_install(temporary_root, context.selected, wheels)
+        _offline_install(
+            temporary_root,
+            context.selected,
+            wheels,
+            bubblewrap_child_identity=bubblewrap_child_identity,
+        )
         installed = _installed_distribution_set(temporary_root, context.selected)
         _verify_final_root_manifest(
             temporary_root / str(cast(dict[str, object], context.selected["paths"])["root"]).lstrip("/"),

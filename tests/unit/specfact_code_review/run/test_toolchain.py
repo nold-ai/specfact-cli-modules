@@ -213,6 +213,7 @@ def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(
         "https://ghcr.io/v2/nold-ai/specfact-review-runtime/manifests/sha256:" + "1" * 64
     )
     calls: list[str] = []
+    offline_identities: list[tuple[int, int] | None] = []
 
     monkeypatch.setattr(toolchain_api.platform, "system", lambda: "Linux")
     monkeypatch.setattr(toolchain_api.platform, "machine", lambda: "x86_64")
@@ -233,6 +234,7 @@ def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(
 
     def offline_install(*args: Any, **kwargs: Any) -> None:
         calls.append("offline-install")
+        offline_identities.append(kwargs.get("bubblewrap_child_identity"))
 
     def installed_set(*args: Any, **kwargs: Any) -> tuple[str, ...]:
         calls.append("installed-set")
@@ -253,6 +255,7 @@ def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(
         environment_id="linux-x86_64-cp312",
         storage_root=tmp_path,
         empty_cache=True,
+        bubblewrap_child_identity=(1001, 1002),
     )
 
     assert result.status == "PASS"
@@ -265,6 +268,7 @@ def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(
         "installed-set",
         "verify-final-root",
     ]
+    assert offline_identities == [(1001, 1002)]
 
 
 def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
@@ -309,6 +313,91 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
     assert observed_descriptors
     with pytest.raises(OSError):
         os.fstat(observed_descriptors[0])
+
+
+def test_offline_install_elevated_setup_runs_payload_as_explicit_non_root_identity(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = b"signed static bubblewrap"
+    bubblewrap = tmp_path / "opt/specfact/bin/bwrap-static"
+    bubblewrap.parent.mkdir(parents=True)
+    bubblewrap.write_bytes(payload)
+    bubblewrap.chmod(0o755)
+    environment = {
+        "paths": {
+            "analyzers": "/opt/specfact/analyzers",
+            "interpreter": "/opt/specfact/python/bin/python",
+            "loader": "/opt/specfact/lib/ld-linux-x86-64.so.2",
+            "libraries": "/opt/specfact/lib",
+            "wheelhouse": "/opt/specfact/wheelhouse",
+        },
+        "native_tools": [
+            {
+                "id": "bubblewrap-static",
+                "path": "/opt/specfact/bin/bwrap-static",
+                "launch_mode": "same-open-descriptor",
+                "executable_sha256": "sha256:" + hashlib.sha256(payload).hexdigest(),
+            }
+        ],
+    }
+    observed_chown: list[tuple[Path, int, int]] = []
+
+    def observe_launch(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        assert command[1:9] == [
+            "--unshare-all",
+            "--cap-drop",
+            "ALL",
+            "--uid",
+            "1001",
+            "--gid",
+            "1002",
+            "--die-with-parent",
+        ]
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(toolchain_api.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        toolchain_api.os,
+        "chown",
+        lambda path, uid, gid: observed_chown.append((Path(path), uid, gid)),
+    )
+    monkeypatch.setattr(toolchain_api.subprocess, "run", observe_launch)
+
+    toolchain_api._offline_install(
+        tmp_path,
+        environment,
+        (),
+        bubblewrap_child_identity=(1001, 1002),
+    )
+
+    assert observed_chown == [(tmp_path / "opt/specfact/analyzers", 1001, 1002)]
+
+
+@pytest.mark.parametrize(
+    ("identity", "effective_uid"),
+    [((True, 1002), 0), ((1001, 0), 0), ((1001, 1002), 1001)],
+)
+def test_offline_install_rejects_invalid_elevated_child_identity(
+    toolchain_api: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    identity: tuple[int, int],
+    effective_uid: int,
+) -> None:
+    environment = {
+        "paths": {"analyzers": "/opt/specfact/analyzers"},
+        "native_tools": [],
+    }
+    monkeypatch.setattr(toolchain_api.os, "geteuid", lambda: effective_uid)
+    monkeypatch.setattr(toolchain_api.os, "chown", lambda *args: None)
+
+    with pytest.raises(ValueError, match="elevated Bubblewrap child identity is invalid"):
+        toolchain_api._offline_install(
+            tmp_path,
+            environment,
+            (),
+            bubblewrap_child_identity=identity,
+        )
 
 
 @pytest.mark.parametrize("mutation", ["launch-mode", "digest", "non-executable", "symlink"])
