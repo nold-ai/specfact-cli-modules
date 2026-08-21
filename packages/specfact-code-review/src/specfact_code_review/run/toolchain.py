@@ -696,6 +696,8 @@ def _offline_install(root: Path, environment: dict[str, object], wheels: tuple[P
         command = [
             f"/proc/self/fd/{executable}",
             "--unshare-all",
+            "--cap-drop",
+            "ALL",
             "--die-with-parent",
             "--new-session",
             "--bind",

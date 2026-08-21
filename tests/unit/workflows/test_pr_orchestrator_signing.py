@@ -84,9 +84,16 @@ def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
 def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     workflow = _workflow_text()
     exact_job = _job_text(workflow, "exact-core-schema-compatibility")
+    capsule_step_name = "Run signed analyzer capsule cache-miss, cache-hit, and empty Bubblewrap smoke"
+    capsule_step_offset = exact_job.index(capsule_step_name)
+    capsule_step = exact_job[capsule_step_offset:]
+    elevated_python = (
+        "sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN,RUNNER_TEMP "
+        '"$PWD/.exact-core-venv/bin/python" -'
+    )
     required_fragments = (
         "packages: read",
-        "Run signed analyzer capsule cache-miss, cache-hit, and empty Bubblewrap smoke",
+        capsule_step_name,
         "REGISTRY_ACTOR: ${{ github.actor }}",
         "REGISTRY_TOKEN: ${{ github.token }}",
         "pr-range-v1-toolchain-lock.json",
@@ -98,7 +105,8 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         "verified_cache",
         "bubblewrap-static",
         '"--unshare-all"',
-        '"--unshare-net"',
+        '"--cap-drop"',
+        '"ALL"',
         '"--ro-bind"',
         '"--tmpfs"',
         "subprocess.run",
@@ -107,6 +115,9 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
 
     missing = tuple(fragment for fragment in required_fragments if fragment not in exact_job)
     assert not missing, f"missing protected C14 runtime workflow fragments: {missing}"
+    assert elevated_python in capsule_step
+    assert elevated_python not in exact_job[:capsule_step_offset]
+    assert '"--unshare-net"' not in capsule_step
 
 
 def test_exact_core_smoke_quotes_tree_revision_and_redacts_acquisition_urls() -> None:

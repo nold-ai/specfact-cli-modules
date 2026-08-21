@@ -287,7 +287,7 @@ jobs:
         run: |
           set -euo pipefail
           . .exact-core-venv/bin/activate
-          python - <<'PY'
+          sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN,RUNNER_TEMP "$PWD/.exact-core-venv/bin/python" - <<'PY'
           import hashlib
           import json
           import os
@@ -368,7 +368,8 @@ jobs:
           command = [
               str(bubblewrap_path),
               "--unshare-all",
-              "--unshare-net",
+              "--cap-drop",
+              "ALL",
               "--die-with-parent",
               "--new-session",
               "--ro-bind",

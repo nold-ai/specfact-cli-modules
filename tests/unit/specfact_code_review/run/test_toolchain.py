@@ -298,6 +298,7 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
         descriptor = kwargs["pass_fds"][0]
         observed_descriptors.append(descriptor)
         assert command[0] == f"/proc/self/fd/{descriptor}"
+        assert command[1:5] == ["--unshare-all", "--cap-drop", "ALL", "--die-with-parent"]
         os.lseek(descriptor, 0, os.SEEK_SET)
         assert os.read(descriptor, len(payload)) == payload
         return subprocess.CompletedProcess(command, 0, "", "")
