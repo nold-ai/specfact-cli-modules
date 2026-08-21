@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -212,6 +214,44 @@ def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(toolch
     assert result.status == "PASS"
     assert result.install_policy.indexes_enabled is False
     assert set(result.installed_distributions) == set(result.locked_distributions) | set(result.bootstrap_distributions)
+
+
+def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = b"signed static bubblewrap"
+    bubblewrap = tmp_path / "opt/specfact/bin/bwrap-static"
+    bubblewrap.parent.mkdir(parents=True)
+    bubblewrap.write_bytes(payload)
+    bubblewrap.chmod(0o755)
+    environment = {
+        "paths": {
+            "analyzers": "/opt/specfact/analyzers",
+            "interpreter": "/opt/specfact/python/bin/python",
+            "loader": "/opt/specfact/lib/ld-linux-x86-64.so.2",
+            "libraries": "/opt/specfact/lib",
+            "wheelhouse": "/opt/specfact/wheelhouse",
+        },
+        "native_tools": [
+            {
+                "id": "bubblewrap-static",
+                "path": "/opt/specfact/bin/bwrap-static",
+                "launch_mode": "same-open-descriptor",
+                "executable_sha256": "sha256:" + hashlib.sha256(payload).hexdigest(),
+            }
+        ],
+    }
+
+    def observe_launch(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        descriptor = kwargs["pass_fds"][0]
+        assert command[0] == f"/proc/self/fd/{descriptor}"
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        assert os.read(descriptor, len(payload)) == payload
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(toolchain_api.subprocess, "run", observe_launch)
+
+    toolchain_api._offline_install(tmp_path, environment, ())
 
 
 def test_checkpoint_binds_canonical_toolchain_lock_projection(toolchain_api: Any) -> None:

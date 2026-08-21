@@ -642,6 +642,42 @@ def _verify_wheelhouse(root: Path, environment: dict[str, object]) -> tuple[Path
     return tuple(present[name] for name in sorted(expected))
 
 
+def _open_verified_native_executable(path: Path, descriptor: dict[str, object]) -> int:
+    if descriptor.get("launch_mode") != "same-open-descriptor":
+        raise ValueError("native executable launch mode is not descriptor-bound")
+    file_descriptor = os.open(
+        path,
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+    )
+    try:
+        before = os.fstat(file_descriptor)
+        if not stat.S_ISREG(before.st_mode) or not before.st_mode & 0o111:
+            raise ValueError("signed native executable is not an executable regular file")
+        digest = hashlib.sha256()
+        while chunk := os.read(file_descriptor, 1_048_576):
+            digest.update(chunk)
+        after = os.fstat(file_descriptor)
+        if (
+            before.st_dev,
+            before.st_ino,
+            before.st_size,
+            before.st_mtime_ns,
+        ) != (
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
+        ):
+            raise ValueError("signed native executable changed during verification")
+        if f"sha256:{digest.hexdigest()}" != descriptor.get("executable_sha256"):
+            raise ValueError("signed static Bubblewrap payload mismatch")
+        os.lseek(file_descriptor, 0, os.SEEK_SET)
+        return file_descriptor
+    except Exception:
+        os.close(file_descriptor)
+        raise
+
+
 def _offline_install(root: Path, environment: dict[str, object], wheels: tuple[Path, ...]) -> None:
     paths = cast(dict[str, object], environment["paths"])
     analyzer_path = str(paths["analyzers"])
@@ -652,62 +688,68 @@ def _offline_install(root: Path, environment: dict[str, object], wheels: tuple[P
     if bubblewrap is None:
         raise ValueError("signed static Bubblewrap identity is missing")
     bubblewrap_path = root / str(bubblewrap["path"]).lstrip("/")
-    if (
-        not bubblewrap_path.is_file()
-        or bubblewrap_path.is_symlink()
-        or "sha256:" + hashlib.sha256(bubblewrap_path.read_bytes()).hexdigest() != bubblewrap["executable_sha256"]
-    ):
-        raise ValueError("signed static Bubblewrap payload mismatch")
-    command = [
-        str(bubblewrap_path),
-        "--unshare-all",
-        "--die-with-parent",
-        "--new-session",
-        "--bind",
-        str(root),
-        "/",
-        "--tmpfs",
-        "/tmp",
-        "--dir",
-        "/tmp/home",
-        "--clearenv",
-        "--setenv",
-        "HOME",
-        "/tmp/home",
-        "--setenv",
-        "PATH",
-        "",
-        "--setenv",
-        "PIP_CONFIG_FILE",
-        "/tmp/no-pip-config",
-        "--setenv",
-        "PIP_DISABLE_PIP_VERSION_CHECK",
-        "1",
-        "--setenv",
-        "PIP_NO_INDEX",
-        "1",
-        "--setenv",
-        "PYTHONHOME",
-        "/opt/specfact/python",
-        "--setenv",
-        "PYTHONNOUSERSITE",
-        "1",
-        str(paths["loader"]),
-        "--library-path",
-        str(paths["libraries"]),
-        str(paths["interpreter"]),
-        "-m",
-        "pip",
-        "install",
-        "--no-index",
-        "--no-deps",
-        "--no-compile",
-        "--no-warn-script-location",
-        "--target",
-        analyzer_path,
-        *(f"{paths['wheelhouse']}/{wheel.name}" for wheel in wheels),
-    ]
-    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=600, env={})
+    executable = _open_verified_native_executable(bubblewrap_path, bubblewrap)
+    try:
+        command = [
+            f"/proc/self/fd/{executable}",
+            "--unshare-all",
+            "--die-with-parent",
+            "--new-session",
+            "--bind",
+            str(root),
+            "/",
+            "--tmpfs",
+            "/tmp",
+            "--dir",
+            "/tmp/home",
+            "--clearenv",
+            "--setenv",
+            "HOME",
+            "/tmp/home",
+            "--setenv",
+            "PATH",
+            "",
+            "--setenv",
+            "PIP_CONFIG_FILE",
+            "/tmp/no-pip-config",
+            "--setenv",
+            "PIP_DISABLE_PIP_VERSION_CHECK",
+            "1",
+            "--setenv",
+            "PIP_NO_INDEX",
+            "1",
+            "--setenv",
+            "PYTHONHOME",
+            "/opt/specfact/python",
+            "--setenv",
+            "PYTHONNOUSERSITE",
+            "1",
+            str(paths["loader"]),
+            "--library-path",
+            str(paths["libraries"]),
+            str(paths["interpreter"]),
+            "-m",
+            "pip",
+            "install",
+            "--no-index",
+            "--no-deps",
+            "--no-compile",
+            "--no-warn-script-location",
+            "--target",
+            analyzer_path,
+            *(f"{paths['wheelhouse']}/{wheel.name}" for wheel in wheels),
+        ]
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=600,
+            env={},
+            pass_fds=(executable,),
+        )
+    finally:
+        os.close(executable)
     if result.returncode != 0:
         raise ValueError(f"offline analyzer installation failed: {result.stderr[-1000:]}")
 
