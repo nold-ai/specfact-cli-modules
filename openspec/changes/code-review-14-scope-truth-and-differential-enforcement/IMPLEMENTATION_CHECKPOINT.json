@@ -11339,7 +11339,7 @@
     }
   ],
   "builtin_analyzer_payload_contract": {
-    "digest": "sha256:1da84ea2c33173b97438de29fb510ad962adcafb1baf4d10cf5f074876ea216e",
+    "digest": "sha256:39f6c50bd71c73c8f7b851f0a00cfbed09ad8491379c0bd6d924214782732ca1",
     "document": {
       "payload": {
         "allowed_entries": [
@@ -11358,10 +11358,13 @@
         ],
         "archive_discarded_after_install": true,
         "archive_reacquisition_forbidden": true,
+        "base_root_identity_immutable": true,
         "bootstrap": "/opt/specfact/bootstrap/sealed_bootstrap.py",
+        "bootstrap_schema": "sealed-bootstrap-v2",
         "canonical_module": "specfact_code_review",
         "canonical_package_prefix": "specfact_code_review/",
         "capsule_destination": "/opt/specfact/builtin/specfact_code_review",
+        "composite_identity_schema": "capsule-composite-identity-v1",
         "future_release_bytes_frozen": false,
         "interpreter": "/opt/specfact/python/bin/python",
         "manifest_algorithm": "canonical-json+sha256",
@@ -11382,13 +11385,16 @@
         ],
         "release_report_fields": [
           "payload_digest",
+          "base_root_digest",
+          "bootstrap_digest",
+          "composite_root_digest",
           "root_manifest_digest",
           "package_checksum",
           "signature"
         ]
       },
       "roles": {
-        "producer": "verify installed payload then copy and seal",
+        "producer": "derive core-v0.55.1 handoff, verify payload, copy, generate bootstrap, and seal composite capsule",
         "protected_consumer": "recompute package/profile/report payload identity before assurance"
       },
       "schema": "module-code-payload-v1",
@@ -11396,6 +11402,7 @@
         "checksum_algorithm": "full-module-payload-manifest-v1+sha256",
         "protected_consumer_reverification_required": true,
         "result_fields": [
+          "core_artifact_verification_valid",
           "checksum_match",
           "signature_valid",
           "approved_key_match"
@@ -11404,26 +11411,91 @@
       },
       "verified_installed_module": {
         "allowed_origin_classes": [
-          "official-marketplace-signed-install"
+          "core-v0.55.1-official-marketplace-install",
+          "core-v0.55.1-official-user-install"
+        ],
+        "derivation_schema": "core-v0.55.1-installed-module-handoff-v1",
+        "rejected_discovery_sources": [
+          "builtin",
+          "custom",
+          "project"
         ],
         "required_identity_fields": [
+          "discovered_source",
+          "discovered_package_dir_descriptor_digest",
+          "metadata_digest",
           "module_name",
           "module_version",
           "package_checksum",
           "package_signature",
           "approved_key_fingerprint",
-          "loader_registration_digest",
-          "loader_origin",
+          "install_root_class",
+          "registry_id",
+          "install_verified_checksum",
+          "artifact_verification_result",
           "installed_root_descriptor_digest"
         ],
-        "source_commit_or_tree_required": false
+        "source_commit_or_tree_required": false,
+        "trust_surfaces": [
+          "DiscoveredModule.source",
+          "DiscoveredModule.package_dir",
+          "DiscoveredModule.metadata",
+          "USER_MODULES_ROOT|MARKETPLACE_MODULES_ROOT",
+          ".specfact-registry-id",
+          ".specfact-install-verified-checksum",
+          "module-package.yaml:integrity",
+          "bundled-public-key-fingerprint",
+          "verify_module_artifact"
+        ]
+      },
+      "verified_candidate_module": {
+        "allowed_use": "protected pre-release compatibility and materialization evidence only",
+        "forbidden_authorities": [
+          "official-install-provenance",
+          "producer-release-identity",
+          "pr_range"
+        ],
+        "required_identity_fields": [
+          "repository",
+          "commit_sha",
+          "tree_sha",
+          "module_package_digest",
+          "payload_manifest_digest",
+          "workflow",
+          "workflow_ref",
+          "run_id",
+          "run_attempt",
+          "job"
+        ],
+        "schema": "verified-candidate-module-payload-v1"
+      },
+      "post_base_composition": {
+        "bootstrap_inputs": [
+          "checkpoint-bootstrap-schema",
+          "verified-module-payload-identity",
+          "reserved-prefix-catalog",
+          "analyzer-root",
+          "builtin-root"
+        ],
+        "bootstrap_schema": "sealed-bootstrap-v2",
+        "composite_identity_fields": [
+          "immutable_base_root_digest",
+          "analyzer_installed_set_digest",
+          "module_payload_manifest_digest",
+          "bootstrap_source_digest",
+          "bootstrap_content_digest",
+          "native_launcher_digest",
+          "project_runtime_identity",
+          "final_composite_root_manifest_digest"
+        ],
+        "composite_schema": "capsule-composite-identity-v1"
       }
     }
   },
   "change_id": "code-review-14-scope-truth-and-differential-enforcement",
   "checkpoint_parent": {
-    "commit_sha": "dd7490f5a1829dc9fb5b411a33eaa68e97e9c947",
-    "tree_sha": "20e6827ae49b62a7524587985cb91df544e20dd3"
+    "commit_sha": "87f5db8854c2d9c34265f0d1b5a0fd34ee1f55f3",
+    "tree_sha": "ee91201bf31e55f53cf06b41a1def7b629c18a43"
   },
   "core_compatibility_evidence": {
     "commit_sha": "b1e517e60e669eaba15a18ecfa83ef5a9df65276",
@@ -11588,7 +11660,7 @@
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/CHANGE_VALIDATION.md",
-      "sha256": "sha256:d9ed0b85d125f88cac50404534d7f512b68f3388993f1fb5f383345525cd4463"
+      "sha256": "sha256:90d5635694abee7a9c3856f20380be29849935770e322438bdfee02f7fa3d237"
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/README.md",
@@ -11596,23 +11668,23 @@
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/TDD_EVIDENCE.md",
-      "sha256": "sha256:1dce9dc12890c868768af94b7559a59e54aa770b881b7a55cbfff8558455992b"
+      "sha256": "sha256:c976cabd62410438b79a406c4f115e24cb0a2d1d9ad42fee10097bbd1b983eff"
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/design.md",
-      "sha256": "sha256:598ce2fbcac43ff175731ab8619c7a711f3768d3add98982eea617035250e2f5"
+      "sha256": "sha256:bb592630f591b3e1bd2ae2da19593969f8875d5f1fdd68680c59312d876511fb"
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/proposal.md",
-      "sha256": "sha256:3ed39f5ea0afd35a2b5ad255c5191a3948816a40d8c43d6e40af5473a97445b6"
+      "sha256": "sha256:efc535f3c1e57b5e97f0a722675d244669b4235ff3d4b438eac1f1feaa0a8271"
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/requirements-evidence.yaml",
-      "sha256": "sha256:31187f7f3ac0e80585a0062cafae49535b5679d25cbb089d4dfbadd5e7c601b0"
+      "sha256": "sha256:85ac0d5ab31fc3a495391a1298f4283ad82bbd92137c2e985a69690e9d373afc"
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/specs/review-cli-contracts/spec.md",
-      "sha256": "sha256:1cb141b6db38f2ac189204b1b5065322c0dd4e581224c83c39859221fc191107"
+      "sha256": "sha256:fb9a10843569f5e728e4277c9d5bc818e1b4d8aa230d78fdb8109851a81f6cd3"
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/specs/review-finding-model/spec.md",
@@ -11620,11 +11692,11 @@
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/specs/review-run-command/spec.md",
-      "sha256": "sha256:60bbdfbcc11bc0f3061d2bd458c68c8d2ee7fa7ce30d2c83eab63db32947dc2d"
+      "sha256": "sha256:3a2789641d924358bde8d550a9c4b84654e1b4ea2210bbe566bda6493ff39210"
     },
     {
       "path": "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/tasks.md",
-      "sha256": "sha256:c7b11553df48f78c5a5502766fca9ae9884bd49fcb0d8f2b81180d562f2cc572"
+      "sha256": "sha256:52463e8702c74c9936061f6f1c02de56896764a98f3c407a67a3a522160b05b4"
     },
     {
       "path": "tests/e2e/specfact_code_review/test_review_run_e2e.py",
@@ -11684,7 +11756,7 @@
     },
     {
       "path": "tests/unit/specfact_code_review/run/test_toolchain.py",
-      "sha256": "sha256:9486ea4bb78dc22cba8ebfbac2fa868f26a298cee2b9e7cf4bcca1628733b39b"
+      "sha256": "sha256:0cefaff529200fdb60bf6119a539cad421ac2e1a6d863659d7fffe26922490da"
     },
     {
       "path": "tests/unit/specfact_code_review/test_review_tool_pip_manifest.py",
@@ -11715,7 +11787,7 @@
       "sha256": "sha256:9c67d0162f49943776c30a818a0b6a009f2a728bde7a3a0806ee11b7d88ccfe2"
     }
   ],
-  "frozen_input_manifest_digest": "sha256:2d4b13405eef8adacdebc5de1e936a53825a6868413cb15c246357da25cfa721",
+  "frozen_input_manifest_digest": "sha256:f733059ddd1a07954588ed8252a63067ded21ca325f55e2c758991fa63a35834",
   "frozen_input_paths": [
     "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/.openspec.yaml",
     "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/CHANGE_VALIDATION.md",
@@ -12047,14 +12119,16 @@
       "task_id": "3.12d"
     },
     {
-      "selector_digest": "sha256:0fb11957cea5b51368dbe39ae35368dcc439035d2138b702eed9f4335ca08179",
+      "selector_digest": "sha256:dee179d142ba9e535c86141f636b8d7c109857549e675735d6f2fcc9bbaea063",
       "selectors": [
         "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_module_payload_manifest_covers_complete_signed_package",
+        "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_derives_core_0_55_1_install_handoff",
         "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_rejects_untrusted_install_origin_or_key[checksum]",
         "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_rejects_untrusted_install_origin_or_key[key_fingerprint]",
         "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_rejects_untrusted_install_origin_or_key[loader_origin]",
         "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_rejects_untrusted_install_origin_or_key[signature]",
-        "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_uses_real_marketplace_install_metadata_shape"
+        "tests/unit/specfact_code_review/run/test_toolchain.py::test_candidate_payload_identity_is_not_official_install",
+        "tests/unit/specfact_code_review/run/test_toolchain.py::test_post_base_bootstrap_and_composite_identity_bind_copied_payload"
       ],
       "task_id": "3.12e"
     },
@@ -12377,11 +12451,16 @@
       "task_id": "3.28"
     }
   ],
-  "implementation_selector_map_digest": "sha256:7f9a49abb646f5cc714ff2a1986503c868b4914ab3fbbc9479ec45d9380ee4e5",
-  "mapping_digest": "sha256:4c3637ee80be2c7df4eda86984bf1192b8407e052e12b53f4aea7a6d9423f0ea",
+  "implementation_selector_map_digest": "sha256:c584fe454941d9728ab28b46c07e3a76e4fb7f47d50d5d341f49df0e734f30fb",
+  "mapping_digest": "sha256:18bac2ca8809f156c0bb12b226f0f0a03872c6bdc83559461e82c71f3398889d",
   "plan": {
-    "digest": "sha256:cf76873f94b32bb3de17a14919d299b397eedebf24c897bde3639f922874b19a",
-    "id": "sha256:c59385c6290556aa2b62b4064e8995834e6247c9003406f8c7104d217d94f56f"
+    "algorithm": "c14-implementation-plan-v2",
+    "digest": "sha256:895c76b898edc8d12a404dd1d739a37c50e26e370f2ff07190d0869eea1b6388",
+    "id": "sha256:8712eefe2f4b5762b1e3b6da1a2e54f01d0516c543b956a80701c134f50687cf",
+    "source_identity": {
+      "commit_sha": "87f5db8854c2d9c34265f0d1b5a0fd34ee1f55f3",
+      "tree_sha": "ee91201bf31e55f53cf06b41a1def7b629c18a43"
+    }
   },
   "project_runtime_contract": {
     "digest": "sha256:07c5ee03c66f90bacc816591b161d23288843a74be27abce12021fe133163fe3",
@@ -14945,7 +15024,7 @@
     }
   },
   "schema_version": 1,
-  "selector_digest": "sha256:7e515d42b9b267eb503bdb98e0d73feae0293e13660ad88f826f055cbd907b68",
+  "selector_digest": "sha256:366f737e16ccc0f61f0f3276d01b15d9bdff9458d39abd366c2912da5ff378fc",
   "selectors": [
     "tests/e2e/specfact_code_review/test_review_run_e2e.py::test_consumer_matrix_rejects_suppression_catalog_identity_mismatch",
     "tests/e2e/specfact_code_review/test_review_run_e2e.py::test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix",
@@ -15254,11 +15333,12 @@
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_analyzers_boot_from_signed_capsule_payload_without_controller_paths",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_module_payload_manifest_covers_complete_signed_package",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_boots_after_marketplace_archive_discard",
+    "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_derives_core_0_55_1_install_handoff",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_rejects_untrusted_install_origin_or_key[checksum]",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_rejects_untrusted_install_origin_or_key[key_fingerprint]",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_rejects_untrusted_install_origin_or_key[loader_origin]",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_rejects_untrusted_install_origin_or_key[signature]",
-    "tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_uses_real_marketplace_install_metadata_shape",
+    "tests/unit/specfact_code_review/run/test_toolchain.py::test_candidate_payload_identity_is_not_official_install",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_candidate_project_dependency_input_change_is_governed_unknown",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_checkpoint_binds_canonical_toolchain_lock_projection",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_locked_analyzer_environment_excludes_host_core_packages",
@@ -15268,6 +15348,7 @@
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_module_package_does_not_install_analyzer_lock_into_host",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_non_importing_member_cannot_mount_project_runtime_layer",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_non_reserved_snapshot_import_precedes_project_runtime",
+    "tests/unit/specfact_code_review/run/test_toolchain.py::test_post_base_bootstrap_and_composite_identity_bind_copied_payload",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_pr_range_rejects_unpinned_or_mismatched_loader_toolchain",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_project_runtime_layer_binds_target_tip_dependency_inputs",
     "tests/unit/specfact_code_review/run/test_toolchain.py::test_project_runtime_layer_cannot_shadow_reserved_runner_components[pytest]",
@@ -20502,7 +20583,7 @@
           },
           {
             "host": "pkg-containers.githubusercontent.com",
-            "path_prefix": "/ghcr1/"
+            "path_prefix": "/ghcr"
           }
         ],
         "registry": "https://ghcr.io",
@@ -28260,7 +28341,7 @@
           },
           {
             "host": "pkg-containers.githubusercontent.com",
-            "path_prefix": "/ghcr1/"
+            "path_prefix": "/ghcr"
           }
         ],
         "registry": "https://ghcr.io",
@@ -35977,7 +36058,7 @@
           },
           {
             "host": "pkg-containers.githubusercontent.com",
-            "path_prefix": "/ghcr1/"
+            "path_prefix": "/ghcr"
           }
         ],
         "registry": "https://ghcr.io",
@@ -43718,7 +43799,7 @@
             },
             {
               "host": "pkg-containers.githubusercontent.com",
-              "path_prefix": "/ghcr1/"
+              "path_prefix": "/ghcr"
             }
           ],
           "registry": "https://ghcr.io",
@@ -51476,7 +51557,7 @@
             },
             {
               "host": "pkg-containers.githubusercontent.com",
-              "path_prefix": "/ghcr1/"
+              "path_prefix": "/ghcr"
             }
           ],
           "registry": "https://ghcr.io",
@@ -59193,7 +59274,7 @@
             },
             {
               "host": "pkg-containers.githubusercontent.com",
-              "path_prefix": "/ghcr1/"
+              "path_prefix": "/ghcr"
             }
           ],
           "registry": "https://ghcr.io",
@@ -68084,9 +68165,9 @@
         "version": "0.11.0"
       }
     ],
-    "oci_facts_digest": "sha256:3d5b3058a7b14a7662b9b1560bfec63df4d6e34152b0f0fda8cb1df40d4d4efd",
+    "oci_facts_digest": "sha256:535506698029c2d6c28e5cce321a163815d18c7fcd662daabcf162cdb6c575e1",
     "profile": "pr-range-v1",
     "schema": "toolchain-lock-schema-1"
   },
-  "toolchain_lock_projection_digest": "sha256:5a6ad4c97100127634272670c09e14eff5fd149daee5d9c63efa5480731c8373"
+  "toolchain_lock_projection_digest": "sha256:11f82d29eb6a5e35ea8467b618c1627d6c6982d8e0bf1dbcdcb6d2f3020028c6"
 }
