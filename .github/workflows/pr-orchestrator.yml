@@ -315,11 +315,67 @@ jobs:
           environment_id = environment["environment_id"]
           registry_actor = os.environ["REGISTRY_ACTOR"]
           registry_token = os.environ["REGISTRY_TOKEN"]
-          caller_identity = (int(os.environ["SUDO_UID"]), int(os.environ["SUDO_GID"]))
           runtime_root = Path(tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp"))
           storage_a = runtime_root / "storage-a"
           storage_b = runtime_root / "storage-b"
           cache_a = storage_a / "oci-cache"
+
+          strict_manifest_verifier = toolchain._verify_final_root_manifest
+
+          def diagnostic_manifest_verifier(root: Path, selected: dict[str, object]) -> None:
+              expected = selected["final_root_manifest"]
+              entries, regular_bytes = toolchain._manifest_entries(root, include_root=False)
+              analyzer_prefix = Path(selected["paths"]["analyzers"]).relative_to(
+                  Path(selected["paths"]["root"])
+              ).as_posix()
+
+              def candidate_digest(strategy: str) -> str:
+                  candidate = []
+                  for original in entries:
+                      entry = dict(original)
+                      if entry["path"] == analyzer_prefix or entry["path"].startswith(analyzer_prefix + "/"):
+                          if strategy == "pip-standard":
+                              if entry["type"] == "directory":
+                                  entry["mode"] = 0o755
+                              elif entry["type"] == "regular_file":
+                                  entry["mode"] = 0o755 if int(entry["mode"]) & 0o111 else 0o644
+                              elif entry["type"] == "symlink":
+                                  entry["mode"] = 0o777
+                          elif strategy == "owner-writable":
+                              entry["mode"] = int(entry["mode"]) | 0o200
+                          elif strategy == "umask-022":
+                              entry["mode"] = int(entry["mode"]) & ~0o022
+                      candidate.append(entry)
+                  return toolchain.canonical_json_digest(candidate)
+
+              mode_counts: dict[str, int] = {}
+              for entry in entries:
+                  if entry["path"] == analyzer_prefix or entry["path"].startswith(analyzer_prefix + "/"):
+                      key = f'{entry["type"]}:{int(entry["mode"]):04o}'
+                      mode_counts[key] = mode_counts.get(key, 0) + 1
+              subroots = {}
+              for name in sorted(selected["final_root_manifest"]["subroots"]):
+                  subroot_entries, subroot_bytes = toolchain._manifest_entries(root / name, include_root=True)
+                  subroots[name] = {
+                      "digest": toolchain.canonical_json_digest(subroot_entries),
+                      "expected": selected["final_root_manifest"]["subroots"][name]["manifest_digest"],
+                      "regular_bytes": subroot_bytes,
+                  }
+              print("C14_MANIFEST_DIAGNOSTIC=" + json.dumps({
+                  "actual": toolchain.canonical_json_digest(entries),
+                  "candidates": {
+                      strategy: candidate_digest(strategy)
+                      for strategy in ("pip-standard", "owner-writable", "umask-022")
+                  },
+                  "entry_count": len(entries),
+                  "expected": expected["manifest_digest"],
+                  "mode_counts": mode_counts,
+                  "regular_bytes": regular_bytes,
+                  "subroots": subroots,
+              }, sort_keys=True), flush=True)
+              strict_manifest_verifier(root, selected)
+
+          toolchain._verify_final_root_manifest = diagnostic_manifest_verifier
 
           acquisition = toolchain.acquire_oci_distribution(
               environment["oci"],
@@ -339,7 +395,6 @@ jobs:
               storage_root=runtime_root / "storage-a",
               empty_cache=True,
               credential=f"{registry_actor}:{registry_token}",
-              bubblewrap_child_identity=caller_identity,
           )
           assert first.status == "PASS", first.reason
           assert set(first.installed_distributions) == set(first.locked_distributions)
@@ -350,7 +405,6 @@ jobs:
                   environment_id=environment_id,
                   storage_root=runtime_root / "storage-b",
                   empty_cache=False,
-                  bubblewrap_child_identity=caller_identity,
               )
           assert second.status == "PASS", second.reason
           assert first.identity == second.identity
@@ -374,10 +428,6 @@ jobs:
               "--unshare-all",
               "--cap-drop",
               "ALL",
-              "--uid",
-              str(caller_identity[0]),
-              "--gid",
-              str(caller_identity[1]),
               "--die-with-parent",
               "--new-session",
               "--ro-bind",

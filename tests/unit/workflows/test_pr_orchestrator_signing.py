@@ -98,8 +98,8 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         "REGISTRY_TOKEN: ${{ github.token }}",
         "import tempfile",
         'tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp")',
-        'caller_identity = (int(os.environ["SUDO_UID"]), int(os.environ["SUDO_GID"]))',
-        "bubblewrap_child_identity=caller_identity",
+        "C14_MANIFEST_DIAGNOSTIC",
+        "diagnostic_manifest_verifier",
         "pr-range-v1-toolchain-lock.json",
         'credential=f"{registry_actor}:{registry_token}"',
         "empty_cache=True",
@@ -111,8 +111,6 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         '"--unshare-all"',
         '"--cap-drop"',
         '"ALL"',
-        '"--uid"',
-        '"--gid"',
         '"--ro-bind"',
         '"--tmpfs"',
         "subprocess.run",
@@ -124,6 +122,10 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     assert elevated_python in capsule_step
     assert elevated_python not in exact_job[:capsule_step_offset]
     assert 'Path(os.environ["RUNNER_TEMP"])' not in capsule_step
+    assert "caller_identity" not in capsule_step
+    assert "bubblewrap_child_identity" not in capsule_step
+    assert '"--uid"' not in capsule_step
+    assert '"--gid"' not in capsule_step
     assert '"--unshare-net"' not in capsule_step
 
 
