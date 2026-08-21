@@ -75,6 +75,30 @@ def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
     assert "FALLBACK_REF" not in exact_job
 
 
+def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
+    workflow = _workflow_text()
+    exact_job = workflow.split("exact-core-schema-compatibility:", maxsplit=1)[1]
+    required_fragments = (
+        "Run signed analyzer capsule cache-miss, cache-hit, and empty Bubblewrap smoke",
+        "pr-range-v1-toolchain-lock.json",
+        "empty_cache=True",
+        "empty_cache=False",
+        'storage_root=runtime_root / "storage-a"',
+        'storage_root=runtime_root / "storage-b"',
+        "verified_cache",
+        "bubblewrap-static",
+        '"--unshare-all"',
+        '"--unshare-net"',
+        '"--ro-bind"',
+        '"--tmpfs"',
+        "subprocess.run",
+        "final_root_manifest_digest",
+    )
+
+    missing = tuple(fragment for fragment in required_fragments if fragment not in exact_job)
+    assert not missing, f"missing protected C14 runtime workflow fragments: {missing}"
+
+
 def test_pr_orchestrator_has_single_full_pytest_owner() -> None:
     workflow = _workflow_text()
     assert "hatch run contract-test-contracts" in workflow
