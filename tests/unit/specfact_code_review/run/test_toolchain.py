@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import subprocess
+import tarfile
 from pathlib import Path
 from typing import Any
 
@@ -252,6 +254,35 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
     monkeypatch.setattr(toolchain_api.subprocess, "run", observe_launch)
 
     toolchain_api._offline_install(tmp_path, environment, ())
+
+
+def test_oci_extraction_closes_temporary_creator_descriptor(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive_bytes = io.BytesIO()
+    with tarfile.open(fileobj=archive_bytes, mode="w:") as created:
+        member = tarfile.TarInfo("opt/specfact/bin/bwrap-static")
+        member.mode = 0o755
+        member.size = len(b"static executable")
+        created.addfile(member, io.BytesIO(b"static executable"))
+    archive_bytes.seek(0)
+    root = tmp_path / "root"
+    root.mkdir()
+    creator_descriptors: list[int] = []
+    original_mkstemp = toolchain_api.tempfile.mkstemp
+
+    def tracked_mkstemp(*args: Any, **kwargs: Any) -> tuple[int, str]:
+        descriptor, path = original_mkstemp(*args, **kwargs)
+        creator_descriptors.append(descriptor)
+        return descriptor, path
+
+    monkeypatch.setattr(toolchain_api.tempfile, "mkstemp", tracked_mkstemp)
+    with tarfile.open(fileobj=archive_bytes, mode="r:") as archive:
+        toolchain_api._apply_tar_member(root, archive, archive.getmembers()[0])
+
+    assert creator_descriptors
+    with pytest.raises(OSError):
+        os.fstat(creator_descriptors[0])
 
 
 def test_checkpoint_binds_canonical_toolchain_lock_projection(toolchain_api: Any) -> None:

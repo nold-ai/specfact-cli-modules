@@ -487,9 +487,10 @@ def _apply_tar_member(root: Path, archive: tarfile.TarFile, member: tarfile.TarI
         source = archive.extractfile(member)
         if source is None:
             raise ValueError(f"OCI regular member has no payload: {member.name}")
-        temporary = Path(tempfile.mkstemp(prefix=".specfact-layer-", dir=destination.parent)[1])
+        descriptor, temporary_name = tempfile.mkstemp(prefix=".specfact-layer-", dir=destination.parent)
+        temporary = Path(temporary_name)
         try:
-            with temporary.open("wb") as output:
+            with os.fdopen(descriptor, "wb") as output:
                 shutil.copyfileobj(source, output, length=1_048_576)
             temporary.chmod(member.mode & 0o7777)
             os.utime(temporary, (member.mtime, member.mtime), follow_symlinks=False)
@@ -1040,9 +1041,11 @@ def _verified_cached_blob(cache_root: Path, digest: str, *, size: int | None = N
 def _publish_cached_blob(cache_root: Path, digest: str, payload: bytes) -> None:
     destination = _cache_blob_path(cache_root, digest)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = Path(tempfile.mkstemp(prefix=".specfact-oci-", dir=destination.parent)[1])
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".specfact-oci-", dir=destination.parent)
+    temporary = Path(temporary_name)
     try:
-        temporary.write_bytes(payload)
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(payload)
         os.replace(temporary, destination)
     finally:
         temporary.unlink(missing_ok=True)
