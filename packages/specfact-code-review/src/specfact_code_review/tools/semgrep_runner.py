@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import subprocess
@@ -37,6 +38,90 @@ _SEMGREP_STDERR_SNIP_MAX = 4000
 _MAX_CONFIG_PARENT_WALK = 32
 SemgrepCategory = Literal["clean_code", "architecture", "naming", "ai_bloat"]
 BugSemgrepCategory = Literal["security", "clean_code"]
+
+
+@dataclass(frozen=True)
+class SemgrepReconciliation:
+    """Closed Semgrep input/result reconciliation decision."""
+
+    status: Literal["PASS", "UNKNOWN"]
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class SemgrepSnapshotInvocation:
+    """Controller-owned Semgrep launch inputs and deterministic probe rules."""
+
+    argv: tuple[str, ...]
+    expected_rules: tuple[str, ...]
+
+
+def reconcile_scanned_paths(
+    *, eligible: tuple[str, ...], scanned: tuple[str, ...], skipped: tuple[str, ...]
+) -> SemgrepReconciliation:
+    """Require one pass to report every eligible input exactly once and no skip."""
+
+    if skipped:
+        return SemgrepReconciliation("UNKNOWN", "semgrep_skipped_eligible_input")
+    if len(scanned) != len(set(scanned)) or tuple(sorted(scanned)) != tuple(sorted(set(eligible))):
+        return SemgrepReconciliation("UNKNOWN", "semgrep_scanned_input_mismatch")
+    return SemgrepReconciliation("PASS")
+
+
+def validate_rule_pack(payload: dict[str, object]) -> SemgrepReconciliation:
+    """Reject rule-local include/exclude controls before Semgrep launch."""
+
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        return SemgrepReconciliation("UNKNOWN", "semgrep_rule_pack_invalid")
+    for rule in rules:
+        if not isinstance(rule, dict):
+            return SemgrepReconciliation("UNKNOWN", "semgrep_rule_pack_invalid")
+        paths = rule.get("paths")
+        if isinstance(paths, dict) and any(paths.get(control) for control in ("include", "exclude")):
+            return SemgrepReconciliation("UNKNOWN", "semgrep_rule_target_narrowing")
+    return SemgrepReconciliation("PASS")
+
+
+def reconcile_passes(*, eligible: tuple[str, ...], passes: tuple[dict[str, object], ...]) -> SemgrepReconciliation:
+    """Require each mandatory pass—not merely their union—to cover every input."""
+
+    pass_ids: set[str] = set()
+    for pass_result in passes:
+        pass_id = pass_result.get("id")
+        scanned = pass_result.get("scanned")
+        skipped = pass_result.get("skipped")
+        if (
+            not isinstance(pass_id, str)
+            or pass_id in pass_ids
+            or not isinstance(scanned, tuple)
+            or not all(isinstance(path, str) for path in scanned)
+            or not isinstance(skipped, tuple)
+            or not all(isinstance(path, str) for path in skipped)
+        ):
+            return SemgrepReconciliation("UNKNOWN", "semgrep_pass_evidence_invalid")
+        pass_ids.add(pass_id)
+        result = reconcile_scanned_paths(eligible=eligible, scanned=scanned, skipped=skipped)
+        if result.status != "PASS":
+            return result
+    return SemgrepReconciliation("PASS")
+
+
+def build_snapshot_invocation(*, eligible: tuple[str, ...], source: bytes) -> SemgrepSnapshotInvocation:
+    """Build a nosem-disabled launch and deterministic security-rule probe manifest."""
+
+    expected_rules: set[str] = set()
+    try:
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        tree = ast.Module(body=[], type_ignores=[])
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "eval":
+            expected_rules.add("python.lang.security.audit.eval-detected")
+    return SemgrepSnapshotInvocation(
+        argv=("semgrep", "--disable-nosem", "--json", *tuple(sorted(set(eligible)))),
+        expected_rules=tuple(sorted(expected_rules)),
+    )
 
 
 @dataclass(frozen=True)
@@ -273,6 +358,7 @@ def _run_semgrep_command(
                 "semgrep",
                 "--disable-version-check",
                 "--quiet",
+                "--disable-nosem",
                 *config_args,
                 "--json",
                 *(str(file_path) for file_path in files),

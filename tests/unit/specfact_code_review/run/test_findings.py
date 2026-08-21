@@ -824,6 +824,22 @@ def test_schema_1_6_consumer_compatibility_matrix_is_closed() -> None:
         "NOT_APPLICABLE",
     }
     assert matrix["legacy_schema_less_ledger_fixture"]["normalized"]["reward_delta"] == 5
+    assert {case["disposition"] for case in matrix["finding_multiset_cases"]} == {
+        "fixed",
+        "introduced",
+        "unchanged",
+        "unknown",
+    }
+    assert {case["expected_status"] for case in matrix["project_runtime_cases"]} == {"PASS", "UNKNOWN"}
+    assert {case["dimension"] for case in matrix["pr_range_boundary_cases"]} == {
+        "accepted",
+        "analyzer_profile",
+        "merge_base",
+        "producer_identity",
+        "project_runtime",
+        "schema",
+        "suppression_catalog",
+    }
 
 
 def test_report_binds_suppression_catalog_identity() -> None:

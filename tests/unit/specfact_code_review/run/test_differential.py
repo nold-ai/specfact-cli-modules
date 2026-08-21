@@ -44,12 +44,15 @@ def _classify(
     after: str = "alpha\nunsafe value\nomega\n",
     **kwargs: Any,
 ) -> Any:
-    return api.classify_findings(
-        base_findings=base or [],
-        head_findings=head or [],
-        base_sources={"src/app.py": before.encode()},
-        head_sources={"src/app.py": after.encode()},
+    request = {
+        "base_findings": base or [],
+        "head_findings": head or [],
+        "base_sources": {"src/app.py": before.encode()},
+        "head_sources": {"src/app.py": after.encode()},
         **kwargs,
+    }
+    return api.classify_findings(
+        api.FindingClassificationRequest(**request),
     )
 
 
@@ -298,17 +301,17 @@ def test_unchanged_baseline_inline_suppression_is_retained(differential_api: Any
 
 
 def test_suppression_manifest_failure_is_unknown(differential_api: Any, monkeypatch: Any) -> None:
-    monkeypatch.setattr(differential_api, "_tokenize_comments", lambda *_args: (_ for _ in ()).throw(TokenError()))
+    monkeypatch.setattr(
+        differential_api,
+        "_tokenize_comments",
+        lambda *_args: (_ for _ in ()).throw(differential_api.tokenize.TokenError("invalid", (1, 0))),
+    )
 
     result = differential_api.classify_suppression_delta(
         base_sources={"src/app.py": b"x=1\n"}, head_sources={"src/app.py": b"x=2\n"}
     )
 
     assert result.status == "UNKNOWN"
-
-
-class TokenError(Exception):
-    pass
 
 
 def test_suppression_waiver_input_is_unsupported_in_cr14(differential_api: Any) -> None:
@@ -538,7 +541,7 @@ def test_line_only_finding_uses_full_physical_line_span_fallback(differential_ap
     location = differential_api.line_fallback_location("src/app.py", b"caf\xc3\xa9 = 1\n", line=1)
 
     assert location.start_column == 0
-    assert location.end_column == len("caf\xc3\xa9 = 1".encode())
+    assert location.end_column == len("caf\u00e9 = 1".encode("utf-8"))
     assert location.precision == "line"
 
 

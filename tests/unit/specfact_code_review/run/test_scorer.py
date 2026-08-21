@@ -84,7 +84,8 @@ def test_score_review_single_fixable_error() -> None:
 
     assert result.score == 95
     assert result.reward_delta == 15
-    assert result.overall_verdict == "PASS"
+    assert result.overall_verdict == "FAIL"
+    assert result.ci_exit_code == 1
 
 
 def test_score_review_warning_deductions() -> None:

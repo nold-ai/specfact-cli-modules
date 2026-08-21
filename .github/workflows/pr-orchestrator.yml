@@ -208,3 +208,69 @@ jobs:
       - name: Full Test Suite
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run test
+
+  exact-core-schema-compatibility:
+    name: exact-core-schema-compatibility (${{ matrix.python-version }})
+    needs: [changes]
+    if: needs.changes.outputs.code_changed == 'true' && needs.changes.outputs.skip_tests_dev_to_main != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout candidate modules
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout immutable core v0.55.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          path: exact-core
+          ref: refs/tags/v0.55.1
+          persist-credentials: false
+      - name: Verify immutable lightweight tag, commit, and tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C exact-core rev-parse HEAD)" = "b1e517e60e669eaba15a18ecfa83ef5a9df65276"
+          test "$(git -C exact-core rev-parse HEAD^{tree})" = "47984be5434d7ae65ed6908bf525a32053290337"
+          test "$(git ls-remote --tags https://github.com/nold-ai/specfact-cli.git refs/tags/v0.55.1 | cut -f1)" = "b1e517e60e669eaba15a18ecfa83ef5a9df65276"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install exact core and candidate module package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv .exact-core-venv
+          . .exact-core-venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir ./exact-core pytest pyyaml beartype icontract pydantic requests typer packaging
+          python scripts/link_dev_module.py specfact-code-review --shadow-root "${RUNNER_TEMP}/specfact-modules" --force
+      - name: reject-core-version-alias
+        shell: bash
+        run: |
+          set -euo pipefail
+          . .exact-core-venv/bin/activate
+          python - <<'PY'
+          import importlib.metadata
+          from packaging.specifiers import SpecifierSet
+
+          assert importlib.metadata.version("specfact-cli") == "0.55.1"
+          assert SpecifierSet("===0.55.1").contains("0.55.1")
+          assert not SpecifierSet("===0.55.1").contains("0.55.1+vendor")
+          assert SpecifierSet("==0.55.1").contains("0.55.1+vendor")
+          PY
+      - name: Run schema 1.6 exact-core compatibility smoke
+        shell: bash
+        env:
+          SPECFACT_MODULES_ROOTS: ${{ runner.temp }}/specfact-modules
+          SPECFACT_ALLOW_UNSIGNED: "1"
+          PYTHONPATH: ${{ github.workspace }}/packages/specfact-code-review/src
+        run: |
+          set -euo pipefail
+          . .exact-core-venv/bin/activate
+          python -m pytest -q --import-mode=importlib tests/e2e/specfact_code_review/test_review_run_e2e.py::test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix

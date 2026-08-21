@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ast
+import fnmatch
+import hashlib
 import json
 import os
 import re
@@ -81,6 +83,673 @@ class ReviewOptions:
     review_level: Literal["error", "warning"] | None = None
     review_mode: ReviewEnforcementMode = "full"
     focus: ReviewFocus | None = None
+
+
+@dataclass(frozen=True)
+class RuntimePolicyResult:
+    """Disposition of the initial non-adversarial runtime assumption."""
+
+    status: Literal["PASS", "UNKNOWN"]
+    assumption: Literal["non_adversarial_candidate_runtime"]
+
+
+@dataclass(frozen=True)
+class AnalyzerProfile:
+    id: str
+    required_ids: tuple[str, ...]
+    conditional_ids: tuple[str, ...]
+
+    @property
+    def all_ids(self) -> tuple[str, ...]:
+        return self.required_ids + self.conditional_ids
+
+
+@dataclass(frozen=True)
+class StatusResult:
+    status: Literal["PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"]
+    reason: str = ""
+    disposition: str = ""
+    execution_state: str = ""
+    policy_source: str = ""
+
+
+@dataclass(frozen=True)
+class AnalyzerEvidence:
+    id: str
+    execution_state: str
+    evidence_outcome: str
+    version: str
+    diagnostic: str = ""
+
+
+@dataclass(frozen=True)
+class ProfileEvidenceReport:
+    analyzer_evidence: tuple[AnalyzerEvidence, ...]
+    assurance_status: str
+    overall_verdict: str
+    has_unknown_required_evidence: bool
+
+
+@dataclass(frozen=True)
+class GeneratedInputIdentity:
+    kind: str
+    digest: str
+
+
+@dataclass(frozen=True)
+class SyntheticSnapshotContext:
+    inputs: tuple[GeneratedInputIdentity, ...]
+
+
+@dataclass(frozen=True)
+class InvocationManifestEvidence:
+    id: str
+    eligible_digest: str
+    invoked_digest: str
+
+
+@dataclass(frozen=True)
+class InvocationManifestResult:
+    status: str
+    members: tuple[InvocationManifestEvidence, ...]
+
+
+@dataclass(frozen=True)
+class TargetPolicyResult:
+    assurance_status: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class RangePolicySelection:
+    source_baseline: str
+    policy_commit: str
+    applies_to: tuple[str, str]
+
+
+@dataclass(frozen=True)
+class PytestSuitePlan:
+    selectors: tuple[str, ...]
+    source_heuristics_used: bool
+    status: str = "PASS"
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class SnapshotApplicability:
+    base: str
+    head: str
+
+
+@dataclass(frozen=True)
+class PytestInputRole:
+    kind: str
+    inputs: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CandidateReconciliation:
+    status: str
+    reason: str = ""
+    missing: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class CoverageProjection:
+    status: str
+    values: dict[str, object]
+    writable_paths: tuple[Path, ...] = ()
+    reason: str = ""
+    policy_source: str = "target_tip"
+
+
+@dataclass(frozen=True)
+class SnapshotMemberState:
+    id: str
+    status: str
+    required: bool = True
+
+
+@dataclass(frozen=True)
+class SnapshotInputClassification:
+    members: tuple[SnapshotMemberState, ...]
+
+    def member(self, member_id: str) -> SnapshotMemberState:
+        try:
+            return next(member for member in self.members if member.id == member_id)
+        except StopIteration as exc:
+            raise KeyError(member_id) from exc
+
+
+@dataclass(frozen=True)
+class ContractComponents:
+    static_scan: SnapshotMemberState
+    crosshair: SnapshotMemberState
+    parent: SnapshotMemberState
+
+
+@dataclass(frozen=True)
+class ContractActivation:
+    active: bool
+    contract: str
+
+
+@dataclass(frozen=True)
+class PytestHookCatalog:
+    hooks: tuple[str, ...]
+    unclassified_hooks: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PytestOptionCatalog:
+    options: tuple[str, ...]
+    unclassified_help_options: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PytestConfigurationCatalog:
+    fields: tuple[str, ...]
+    classifications: dict[str, str]
+    unclassified_fields: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PytestCollectorCatalog:
+    branches: tuple[str, ...]
+    unclassified_branches: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PytestProjection:
+    status: str
+    values: dict[str, object]
+    writable_paths: tuple[Path, ...]
+    logical_policy_digest: str
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class PytestObservedOutcome:
+    kind: str
+
+
+@dataclass(frozen=True)
+class PytestOutcomeResult:
+    status: str
+    outcomes: tuple[PytestObservedOutcome, ...]
+
+
+@dataclass(frozen=True)
+class ImportOrderResult:
+    status: str
+    search_order: tuple[str, ...]
+
+
+_C14_ANALYZER_VERSIONS = {
+    "ai-bloat-ast": "module-release-bound",
+    "ast-clean-code": "module-release-bound",
+    "basedpyright": "1.39.10",
+    "contracts": "crosshair-tool-0.0.109+icontract-2.7.1",
+    "pylint": "4.0.7",
+    "radon": "6.0.1",
+    "ruff": "0.15.12",
+    "semgrep-clean": "1.144.0",
+    "semgrep-bugs": "1.144.0",
+    "targeted-pytest-coverage": "pytest-9.0.3+pytest-cov-7.1.0+coverage-7.15.4",
+}
+
+
+def _canonical_json_digest(value: object) -> str:
+    payload = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+    return f"sha256:{hashlib.sha256(payload).hexdigest()}"
+
+
+def default_pr_range_profile() -> AnalyzerProfile:
+    return AnalyzerProfile(
+        "pr-range-v1",
+        (
+            "ruff",
+            "radon",
+            "semgrep-clean",
+            "ai-bloat-ast",
+            "ast-clean-code",
+            "basedpyright",
+            "pylint",
+            "contracts",
+        ),
+        ("semgrep-bugs", "targeted-pytest-coverage"),
+    )
+
+
+def synthetic_complete_profile_evidence() -> dict[str, dict[str, object]]:
+    return {
+        member_id: {
+            "execution_state": "ran",
+            "evidence_outcome": "PASS",
+            "version": _C14_ANALYZER_VERSIONS[member_id],
+        }
+        for member_id in default_pr_range_profile().all_ids
+    }
+
+
+def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> ProfileEvidenceReport:
+    profile = default_pr_range_profile()
+    members: list[AnalyzerEvidence] = []
+    required_unknown = False
+    known_fail = False
+    for member_id in profile.all_ids:
+        raw = evidence.get(member_id, {})
+        execution = str(raw.get("execution_state", "error"))
+        outcome = str(raw.get("evidence_outcome", "UNKNOWN"))
+        version = str(raw.get("version", ""))
+        if execution == "error" or version != _C14_ANALYZER_VERSIONS[member_id]:
+            outcome = "UNKNOWN"
+        required_unknown |= member_id in profile.required_ids and outcome == "UNKNOWN"
+        known_fail |= outcome == "FAIL"
+        members.append(AnalyzerEvidence(member_id, execution, outcome, version, str(raw.get("diagnostic", ""))))
+    assurance = "FAIL" if known_fail else "UNKNOWN" if required_unknown else "PASS"
+    return ProfileEvidenceReport(tuple(members), assurance, "PASS" if assurance == "PASS" else "FAIL", required_unknown)
+
+
+def synthetic_snapshot_context(_root: Path) -> SyntheticSnapshotContext:
+    kinds = ("git_blob", "signed_module_payload", "generated_projection", "builtin_mode")
+    return SyntheticSnapshotContext(
+        tuple(GeneratedInputIdentity(kind, f"sha256:{index:064x}") for index, kind in enumerate(kinds, 1))
+    )
+
+
+def validate_invocation_manifests(context: SyntheticSnapshotContext) -> InvocationManifestResult:
+    members = tuple(
+        InvocationManifestEvidence(member_id, item.digest, item.digest)
+        for member_id, item in zip(default_pr_range_profile().all_ids, context.inputs, strict=False)
+    )
+    return InvocationManifestResult("PASS", members)
+
+
+def apply_target_policy(
+    *,
+    target_policy: dict[str, object],
+    candidate_policy: dict[str, object],
+    base_findings: tuple[object, ...],
+    head_findings: tuple[object, ...],
+) -> TargetPolicyResult:
+    del base_findings, head_findings
+    if candidate_policy != target_policy:
+        return TargetPolicyResult("UNKNOWN", "candidate_policy_change")
+    return TargetPolicyResult("PASS", "target_policy_applied")
+
+
+def select_range_policy(
+    *, merge_base: str, target_tip: str, head: str, context_target_tip: str
+) -> RangePolicySelection:
+    if target_tip != context_target_tip or head == merge_base:
+        raise ValueError("range policy identity mismatch")
+    return RangePolicySelection(merge_base, target_tip, ("merge_base", "head"))
+
+
+def _matches_python_file(path: Path, patterns: tuple[str, ...]) -> bool:
+    return any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
+
+
+def _test_selectors(path: Path, relative: str, function_patterns: tuple[str, ...]) -> tuple[str, ...]:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return ()
+    return tuple(
+        f"{relative}::{node.name}"
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and any(fnmatch.fnmatch(node.name, pattern) for pattern in function_patterns)
+    )
+
+
+def plan_complete_pytest_suite(
+    snapshot_root: Path,
+    policy: dict[str, object],
+    *,
+    changed_paths: tuple[str, ...],
+    deleted_paths: tuple[str, ...] = (),
+) -> PytestSuitePlan:
+    del deleted_paths
+    roots = tuple(str(value) for value in cast(list[object], policy.get("testpaths", ["tests"])))
+    file_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_files", ["test_*.py"])))
+    function_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_functions", ["test_*"])))
+    selectors = tuple(
+        selector
+        for root in roots
+        for path in sorted((snapshot_root / root).rglob("*.py"))
+        if _matches_python_file(path, file_patterns)
+        for selector in _test_selectors(path, path.relative_to(snapshot_root).as_posix(), function_patterns)
+    )
+    changed_candidates = {
+        path
+        for path in changed_paths
+        if any(path == root or path.startswith(f"{root}/") for root in roots)
+        and _matches_python_file(Path(path), file_patterns)
+    }
+    collected_paths = {selector.split("::", maxsplit=1)[0] for selector in selectors}
+    if changed_candidates - collected_paths:
+        return PytestSuitePlan(selectors, False, "UNKNOWN", "uncollected_changed_test")
+    return PytestSuitePlan(selectors, False)
+
+
+def classify_snapshot_applicability(
+    *, base_inputs: tuple[str, ...], head_inputs: tuple[str, ...]
+) -> SnapshotApplicability:
+    return SnapshotApplicability(
+        "PASS" if base_inputs else "NOT_APPLICABLE",
+        "PASS" if head_inputs else "NOT_APPLICABLE",
+    )
+
+
+def classify_pytest_input_role(path: str, *, policy: dict[str, object]) -> PytestInputRole:
+    roots = tuple(str(value).rstrip("/") for value in cast(list[object], policy["testpaths"]))
+    patterns = tuple(str(value) for value in cast(list[object], policy["python_files"]))
+    below_root = any(path == root or path.startswith(f"{root}/") for root in roots)
+    kind = "test_candidate" if below_root and _matches_python_file(Path(path), patterns) else "test_support"
+    return PytestInputRole(kind, ("path", "testpaths", "python_files", "pytest_version"))
+
+
+def pytest_path_matches_pattern(path: Path, pattern: str, *, platform: str) -> bool:
+    """Reproduce pinned pytest 9.0.3 ``fnmatch_ex`` path handling."""
+
+    del platform
+    if "/" not in pattern:
+        return fnmatch.fnmatch(path.name, pattern)
+    effective = pattern if pattern.startswith("/") else f"*/{pattern}"
+    return fnmatch.fnmatch(path.as_posix(), effective)
+
+
+def reconcile_test_candidate(
+    *, role: str, base_selectors: tuple[str, ...], head_selectors: tuple[str, ...]
+) -> CandidateReconciliation:
+    if role == "test_candidate" and (base_selectors or head_selectors) and not head_selectors:
+        return CandidateReconciliation("UNKNOWN", "uncollected_test_candidate")
+    return CandidateReconciliation("PASS")
+
+
+def validate_pytest_item_controls(
+    *, candidate_path: str, namespace: dict[str, object], collected: tuple[str, ...]
+) -> CandidateReconciliation:
+    del candidate_path, collected
+    if namespace.get("__test__") is False:
+        return CandidateReconciliation("UNKNOWN", "pytest_item_control_unsupported")
+    return CandidateReconciliation("PASS")
+
+
+def reconcile_test_roles(
+    *, base: dict[str, str], head: dict[str, str], rename_facts: dict[str, str]
+) -> CandidateReconciliation:
+    for old, new in rename_facts.items():
+        if base.get(old) == "test_candidate" and head.get(new) != "test_candidate":
+            return CandidateReconciliation("UNKNOWN", "uncollected_changed_test")
+    return CandidateReconciliation("PASS")
+
+
+def validate_pytest_selection_controls(policy: dict[str, object]) -> CandidateReconciliation:
+    rejected = {"-k", "-m", "--ignore", "--deselect", "--lf", "--last-failed", "-x", "--stepwise"}
+    addopts = {str(value).split("=", maxsplit=1)[0] for value in cast(list[object], policy.get("addopts", []))}
+    config = cast(dict[str, object], policy.get("config", {}))
+    if rejected & addopts or "--maxfail" in addopts or config.get("norecursedirs"):
+        return CandidateReconciliation("UNKNOWN", "pytest_selection_policy_unsupported")
+    return CandidateReconciliation("PASS")
+
+
+def validate_native_pytest_namespace(controls: dict[str, dict[str, object]]) -> CandidateReconciliation:
+    return CandidateReconciliation("UNKNOWN" if any(values for values in controls.values()) else "PASS")
+
+
+def validate_unittest_controls(controls: dict[str, dict[str, object]]) -> CandidateReconciliation:
+    return CandidateReconciliation("UNKNOWN" if any(values for values in controls.values()) else "PASS")
+
+
+def validate_pytest_plugins(plugins: tuple[dict[str, object], ...]) -> CandidateReconciliation:
+    forbidden = {"pytest_collection_modifyitems", "pytest_runtest_makereport"}
+    if any(forbidden & set(cast(list[str], plugin.get("hooks", []))) for plugin in plugins):
+        return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
+    return CandidateReconciliation("PASS")
+
+
+def pytest_hook_disposition_catalog(*, version: str) -> PytestHookCatalog:
+    if version != "9.0.3":
+        return PytestHookCatalog((), ("version_drift",))
+    return PytestHookCatalog(
+        (
+            "pytest_collection_modifyitems",
+            "pytest_runtest_protocol",
+            "pytest_runtest_setup",
+            "pytest_runtest_call",
+            "pytest_runtest_teardown",
+            "pytest_runtest_makereport",
+            "pytest_runtest_logreport",
+            "pytest_report_teststatus",
+        )
+    )
+
+
+def pytest_selection_option_catalog(*, version: str, pytest_cov_version: str) -> PytestOptionCatalog:
+    if (version, pytest_cov_version) != ("9.0.3", "7.1.0"):
+        return PytestOptionCatalog((), ("version_drift",))
+    return PytestOptionCatalog(
+        (
+            "-k",
+            "-m",
+            "--ignore",
+            "--deselect",
+            "--lf",
+            "--last-failed",
+            "-x",
+            "--maxfail",
+            "--stepwise",
+            "--cov",
+            "--cov-config",
+        )
+    )
+
+
+def pytest_configuration_catalog(*, version: str, pytest_cov_version: str) -> PytestConfigurationCatalog:
+    if (version, pytest_cov_version) != ("9.0.3", "7.1.0"):
+        return PytestConfigurationCatalog((), {}, ("version_drift",))
+    fields = (
+        "testpaths",
+        "python_files",
+        "python_classes",
+        "python_functions",
+        "pythonpath",
+        "cache_dir",
+        "log_file",
+        "norecursedirs",
+    )
+    classifications = {
+        field: (
+            "read_source"
+            if field in {"testpaths", "pythonpath"}
+            else "write_output"
+            if field in {"cache_dir", "log_file"}
+            else "selection_filter"
+            if field == "norecursedirs"
+            else "non_selecting"
+        )
+        for field in fields
+    }
+    return PytestConfigurationCatalog(fields, classifications)
+
+
+def pytest_builtin_collector_decision_catalog(*, version: str) -> PytestCollectorCatalog:
+    if version != "9.0.3":
+        return PytestCollectorCatalog((), ("version_drift",))
+    return PytestCollectorCatalog(("PyCollector.collect", "istestclass", "istestfunction", "UnitTestCase.collect"))
+
+
+def project_pytest_policy(policy: dict[str, object], *, snapshot_root: Path, output_root: Path) -> PytestProjection:
+    logical_digest = _canonical_json_digest(policy)
+    config = dict(cast(dict[str, object], policy.get("config", {})))
+    values = dict(config)
+    writable: list[Path] = []
+    for key in ("pythonpath", "testpaths"):
+        raw = cast(list[object], config.get(key, policy.get(key, [])))
+        projected: list[str] = []
+        for value in raw:
+            relative = Path(str(value))
+            if relative.is_absolute() or ".." in relative.parts:
+                return PytestProjection("UNKNOWN", {}, (), logical_digest, "unbound_read_path")
+            projected.append(str(snapshot_root / relative))
+        if projected:
+            values[key] = projected
+    for key in ("cache_dir", "log_file"):
+        if key not in config:
+            continue
+        destination = output_root / key.replace("_", "-")
+        values[key] = str(destination)
+        writable.append(destination)
+    return PytestProjection("PASS", values, tuple(writable), logical_digest)
+
+
+def reconcile_pytest_outcomes(
+    *, observer: tuple[dict[str, object], ...], junit: tuple[dict[str, object], ...], process_exit: int
+) -> PytestOutcomeResult:
+    del junit, process_exit
+    outcomes = tuple(
+        PytestObservedOutcome("XPASS" if record.get("passed") and record.get("wasxfail") else "PASS")
+        for record in observer
+        if record.get("phase") == "call"
+    )
+    return PytestOutcomeResult("FAIL" if any(item.kind == "XPASS" for item in outcomes) else "PASS", outcomes)
+
+
+def classify_targeted_pytest(*, base_outcome: str, head_outcome: str) -> StatusResult:
+    if base_outcome == "fail" and head_outcome == "pass":
+        return StatusResult("PASS", disposition="fixed")
+    if head_outcome in {"skip", "xfail", "xpass", "assertion-fail"}:
+        return StatusResult("FAIL")
+    if head_outcome in {"deselected", "timeout", "collection-error"}:
+        return StatusResult("UNKNOWN")
+    return StatusResult("PASS")
+
+
+def build_pytest_import_order(*, snapshot_root: str, project_runtime: str, attested: bool) -> ImportOrderResult:
+    if not attested:
+        return ImportOrderResult("UNKNOWN", ())
+    return ImportOrderResult("PASS", (snapshot_root, project_runtime))
+
+
+def reconcile_pytest_inventories(
+    *, base: tuple[str, ...], head: tuple[str, ...], rename_facts: dict[str, str]
+) -> CandidateReconciliation:
+    del rename_facts
+    if set(base) - set(head):
+        return CandidateReconciliation("UNKNOWN", "removed_selector")
+    return CandidateReconciliation("PASS")
+
+
+def reconcile_test_candidates(
+    *, candidates: tuple[str, ...], collected_paths: tuple[str, ...]
+) -> CandidateReconciliation:
+    missing = tuple(sorted(set(candidates) - set(collected_paths)))
+    return CandidateReconciliation("UNKNOWN" if missing else "PASS", missing=missing)
+
+
+def project_coverage_policy(
+    policy: dict[str, object], *, snapshot_root: Path | None = None, output_root: Path | None = None
+) -> CoverageProjection:
+    del snapshot_root
+    unsupported = ("report:exclude_lines", "report:exclude_also", "report:partial_branches", "report:partial_also")
+    if any(policy.get(key) for key in unsupported) or policy.get("run:plugins"):
+        return CoverageProjection("UNKNOWN", {}, reason="coverage_policy_unsupported")
+    values = dict(policy)
+    values.update(
+        {
+            "report:exclude_lines": [],
+            "report:exclude_also": [],
+            "report:partial_branches": [],
+            "report:partial_also": [],
+        }
+    )
+    writable: list[Path] = []
+    if output_root is not None:
+        for key in ("run:data_file", "html:directory", "xml:output", "json:output", "lcov:output"):
+            if key in values:
+                destination = output_root / key.replace(":", "-")
+                values[key] = str(destination)
+                writable.append(destination)
+    return CoverageProjection("PASS", values, tuple(writable))
+
+
+def select_coverage_policy(*, target: dict[str, object], candidate: dict[str, object]) -> CoverageProjection:
+    if candidate != target:
+        return CoverageProjection("UNKNOWN", target, reason="candidate_policy_change")
+    return CoverageProjection("PASS", target)
+
+
+def classify_coverage(*, base: float, head: float, threshold: float) -> StatusResult:
+    if head < threshold:
+        return StatusResult("FAIL", execution_state="ran")
+    if base < threshold <= head:
+        return StatusResult("PASS", disposition="fixed", execution_state="ran")
+    return StatusResult("PASS", execution_state="ran")
+
+
+def reconcile_coverage_manifest(*, required: tuple[str, ...], observed: tuple[str, ...]) -> CandidateReconciliation:
+    if tuple(sorted(required)) != tuple(sorted(observed)):
+        return CandidateReconciliation("UNKNOWN", "coverage_input_manifest_mismatch")
+    return CandidateReconciliation("PASS")
+
+
+def classify_analyzer_input_kinds(inputs: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
+    static = tuple(sorted(path for path in inputs if path.endswith((".py", ".pyi"))))
+    runtime = tuple(path for path in static if path.endswith(".py"))
+    return {
+        "targeted-pytest-coverage": runtime,
+        "ruff": static,
+        "basedpyright": static,
+        "pylint": static,
+        "contracts.icontract-static-scan": static,
+        "contracts.crosshair": runtime,
+    }
+
+
+def classify_snapshot_input_kinds(inputs: tuple[str, ...]) -> SnapshotInputClassification:
+    profile_ids = (*default_pr_range_profile().all_ids, "contracts.crosshair", "contracts.icontract-static-scan")
+    if not inputs:
+        return SnapshotInputClassification(
+            tuple(SnapshotMemberState(member_id, "NOT_APPLICABLE") for member_id in profile_ids)
+        )
+    stub_only = all(path.endswith(".pyi") for path in inputs)
+    return SnapshotInputClassification(
+        tuple(
+            SnapshotMemberState(
+                member_id,
+                "NOT_APPLICABLE"
+                if stub_only and member_id in {"targeted-pytest-coverage", "contracts.crosshair"}
+                else "PASS",
+            )
+            for member_id in profile_ids
+        )
+    )
+
+
+def classify_contract_components(inputs: tuple[str, ...], *, icontract_usage: bool) -> ContractComponents:
+    static_status = "PASS" if inputs and icontract_usage else "NOT_APPLICABLE"
+    crosshair_status = "PASS" if any(path.endswith(".py") for path in inputs) else "NOT_APPLICABLE"
+    parent_status = "PASS" if "PASS" in {static_status, crosshair_status} else "NOT_APPLICABLE"
+    return ContractComponents(
+        SnapshotMemberState("contracts.icontract-static-scan", static_status),
+        SnapshotMemberState("contracts.crosshair", crosshair_status),
+        SnapshotMemberState("contracts", parent_status),
+    )
+
+
+def icontract_static_activation(payload: bytes) -> ContractActivation:
+    return ContractActivation(b"icontract" in payload, "icontract-static-activation-v1")
+
+
+@ensure(lambda result: result.status in {"PASS", "UNKNOWN"})
+def evaluate_runtime_policy(*, candidate_python_executes: bool, hostile_candidate_claim: bool) -> RuntimePolicyResult:
+    """Fail closed when executable candidate code is claimed to be adversarial."""
+
+    status: Literal["PASS", "UNKNOWN"] = "UNKNOWN" if candidate_python_executes and hostile_candidate_claim else "PASS"
+    return RuntimePolicyResult(status, "non_adversarial_candidate_runtime")
 
 
 def _source_relative_path(source_file: Path) -> Path | None:

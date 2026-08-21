@@ -50,6 +50,7 @@ apply_specfact_workspace_env = _dev_bootstrap.apply_specfact_workspace_env
 REVIEW_JSON_OUT = ".specfact/code-review.json"
 VALID_ENFORCEMENT_MODES = frozenset({"full", "changed", "shadow"})
 DEFAULT_ENFORCEMENT_MODE = "changed"
+# Staged positional-file review retains the legacy explicit_files assurance kind.
 
 
 def _is_review_gate_path(path: str) -> bool:
@@ -363,6 +364,28 @@ def _raw_ci_exit_code(report: dict[str, Any]) -> int:
     return 1 if report.get("overall_verdict") == "FAIL" else 0
 
 
+def _schema_version_at_least(value: object, required_minor: int) -> bool:
+    try:
+        major_text, minor_text, *_ = str(value).split(".")
+        major = int(major_text)
+        minor = int(minor_text)
+    except (ValueError, TypeError):
+        return False
+    return major > 1 or (major == 1 and minor >= required_minor)
+
+
+def _authoritative_report_exit_code(report: dict[str, Any], *, enforcement: str) -> int | None:
+    """Return schema 1.6 authoritative exit policy, or None for legacy reports."""
+
+    if not _schema_version_at_least(report.get("schema_version", "0"), 6):
+        return None
+    if enforcement == "shadow":
+        return 0
+    if report.get("assurance_status") in {"PASS", "NOT_APPLICABLE"}:
+        return 0
+    return 1
+
+
 def _changed_line_blockers(repo_root: Path, findings_raw: list[object]) -> list[object]:
     """Return blocking findings that point at staged changed lines."""
     changed_lines = _staged_changed_lines(repo_root)
@@ -443,9 +466,13 @@ def _print_review_findings_summary(repo_root: Path, *, enforcement: str) -> tupl
     total = len(findings_raw)
     verdict = data.get("overall_verdict", "?")
     raw_ci_exit_code = _raw_ci_exit_code(data)
-    ci_exit_code, blocking_changed_findings = _enforced_exit_code(
-        repo_root, findings_raw, enforcement=enforcement, raw_ci_exit_code=raw_ci_exit_code
-    )
+    authoritative_exit = _authoritative_report_exit_code(data, enforcement=enforcement)
+    if authoritative_exit is None:
+        ci_exit_code, blocking_changed_findings = _enforced_exit_code(
+            repo_root, findings_raw, enforcement=enforcement, raw_ci_exit_code=raw_ci_exit_code
+        )
+    else:
+        ci_exit_code, blocking_changed_findings = authoritative_exit, []
     summary = ", ".join(_finding_summary_parts(counts, ai_bloat_count=ai_bloat_count))
     sys.stderr.write(f"Code review summary: {total} finding(s) ({summary}); overall_verdict={verdict!r}.\n")
     _print_enforcement_summary(

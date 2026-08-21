@@ -37,6 +37,18 @@ The approved amendment replaces that assumption with derived `core-v0.55.1-insta
 
 `READY FOR TEST AUTHORING`. `hatch run openspec validate code-review-14-scope-truth-and-differential-enforcement --strict` passed on 2026-08-19 against synchronized `origin/dev@c3eda08c732267dc3614130f5f36bcd473182d0b`. No named C14 tests or production sources have been edited or executed for implementation evidence yet. Production edits remain prohibited until every prescribed test is authored, every exact selector is collected, the implementation mapping and `IMPLEMENTATION_CHECKPOINT.json` are frozen, and actual failing evidence is recorded.
 
+## Amended task 3.12e red gate — 2026-08-21
+
+- Checkpoint parent: commit `87f5db8854c2d9c34265f0d1b5a0fd34ee1f55f3`, tree `ee91201bf31e55f53cf06b41a1def7b629c18a43`; checkpoint commit `659c13e`.
+- Exact frozen task selector digest: `sha256:dee179d142ba9e535c86141f636b8d7c109857549e675735d6f2fcc9bbaea063`; selector count `8`.
+- Command: `.venv/bin/python` loaded task `3.12e` selectors from committed `IMPLEMENTATION_CHECKPOINT.json` and invoked that unchanged list through `python -m pytest -ra -v --import-mode=importlib -q --tb=short --disable-warnings`.
+- Outcome: `3 failed`, `5 passed` on Python 3.12.13. The exact missing production boundaries were `derive_core_0_55_1_install_handoff`, `verify_candidate_module_payload`, and `compose_post_base_capsule`; no failure was manufactured by changing assertions or selectors.
+- Decision: `RED`. Production edit authorization is `GRANTED` only for the amended task 3.12e handoff, candidate-provenance, bootstrap, and composite-capsule behavior. Earlier loader-DTO evidence remains superseded.
+
+Green command: the identical committed task `3.12e` selector list was loaded from `IMPLEMENTATION_CHECKPOINT.json` and invoked unchanged through pytest.
+
+Green outcome: `8 passed`, `0 failed` on Python 3.12.13. `derive_core_0_55_1_install_handoff` consumes the real core object/marker/integrity/key/verifier surfaces; `verify_candidate_module_payload` binds immutable pre-release evidence while granting neither official-install nor `pr_range` authority; and `compose_post_base_capsule` copies the verified payload, generates `sealed-bootstrap-v2`, preserves the immutable base-root identity, and emits `capsule-composite-identity-v1`. After formatting, the identical set remained `8 passed`; repository-wide type/lint reported `0 errors`, `0 warnings`, `0 notes`, Ruff passed, and Pylint scored `10.00/10`. Task decision: `GREEN`.
+
 ## Frozen implementation red gate — 2026-08-20
 
 - Committed checkpoint: implementation branch commit `67f1aa0a879931c3098792747b12c8c115750e73`; checkpoint parent commit `dd7490f5a1829dc9fb5b411a33eaa68e97e9c947`, tree `20e6827ae49b62a7524587985cb91df544e20dd3`.
@@ -613,3 +625,31 @@ Red outcome from the complete checkpoint run: `3 failed`, `0 passed`; the curren
 Green command: `.venv/bin/python -m pytest -ra -v --import-mode=importlib -q --tb=short --disable-warnings <the three unchanged task 3.28 selectors from IMPLEMENTATION_CHECKPOINT.json>` after installing local immutable core commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276` into the task environment.
 
 Green outcome: `3 passed`, `0 failed` on Python 3.12.13. The workflow now owns a dedicated Python 3.11–3.13 exact-core job, checks `refs/tags/v0.55.1`, commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, tree `47984be5434d7ae65ed6908bf525a32053290337`, creates a fresh environment, installs without cache, runs the schema 1.6 matrix selector, and proves `===0.55.1` rejects `0.55.1+vendor` whereas ordinary `==0.55.1` does not. Workflow YAML parsing, `hatch run format`, `hatch run lint`, and `git diff --check` passed; exact core 0.55.1 remained installed. Task decision: `GREEN`.
+
+## Release readiness evidence — 2026-08-21
+
+### Exact core 0.55.1 handoff matrix
+
+Fresh isolated CPython 3.11.15, 3.12.13, and 3.13.14 environments installed the immutable core tag from detached commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276` / tree `47984be5434d7ae65ed6908bf525a32053290337`. Each environment reported core package version `0.55.1` and passed the schema 1.6 end-to-end, installed-handoff derivation, and candidate-payload identity selectors (`3 passed` per interpreter). `===0.55.1` accepted only `0.55.1`; it rejected `0.55.1+vendor`, while ordinary `==0.55.1` admitted that local alias and is therefore not release-authoritative.
+
+The core trust surfaces required by the amended boundary are present in the tag. `module_discovery.py`, `module_installer.py`, and `module_package.py` are byte-identical between immutable v0.55.1 and the freshly fetched current core `origin/dev` observed during readiness validation. C14 derives a module-owned handoff from those existing granular records; it does not depend on an unpublished later core implementation.
+
+### Task 4.2 adjudicated benchmark
+
+Live GitHub bodies and states for core #665–#671 were refreshed on 2026-08-21. The retained #665 release corpus explicitly requires an exact range, unique merge base, changed-test/policy coverage, symmetric evidence, independent verdicts, and UNKNOWN for unresolved facts; #666–#671 remain historical remediation/forensic inputs rather than reusable proof.
+
+Command: `hatch run pytest -q` over the eight exact selectors for staged-versus-unstaged index content, positional downgrade rejection, candidate-policy self-authorization rejection, policy-only range UNKNOWN, advanced-base-tip merge-base selection, pure-rename continuity, off-added-line introduced blockers, and head-config false-green prevention.
+
+Outcome: `8 passed`, `0 failed` on Python 3.12.13. Task decision: `GREEN`.
+
+### Task 4.3 release metadata
+
+After the exact-core matrix passed, the permitted feature-branch release metadata was set to module version `0.49.0` and exact `core_compatibility: '===0.55.1'`; the changelog records the additive C14 range/differential/schema 1.6 release. The focused manifest, exact-core workflow, and schema consumer tests passed (`12 passed`, `2 deselected`). Archives, checksums, signatures, sidecars, and `registry/index.json` remain untouched for canonical post-merge generation. Final Linux cache-miss/cache-hit capsule and empty-Bubblewrap authority remains pending protected CI and canonical publication evidence; task 4.3 is not yet complete.
+
+### Final feature-branch gates — 2026-08-21
+
+After clean-code remediation, the candidate module's full local review completed in 39.11 seconds with `138 findings (0 blocking)`. The preceding runs reduced the blocker count from 40 to 14, then 1, then 0 without weakening any detector or accepted C14 behavior. Focused regression validation after the refactor passed `191` tests. The retained non-blocking review diagnostics are explicit pre-merge exceptions: `79` advisory contract-coverage findings across the frozen public C14 model/API surface; structural single-owner file-size/complexity diagnostics required by the closed C14 source allowlist; targeted local coverage warnings whose Linux capsule/cache/Bubblewrap paths are protected-CI owned; and one CrossHair environment error caused by its subprocess lacking `beartype`, while the canonical contract gate itself passed. Adding post-checkpoint decorators, splitting the mandated owner files, or pretending that macOS supplied Linux namespace authority would alter the accepted contract or evidence boundary. These exceptions grant no `pr_range` or Linux authority and remain visible in the JSON evidence.
+
+The final checksum-only dev-PR bridge set `specfact-code-review` `0.49.0` to `sha256:bc205355b32388d968ef30919bd57f30d147f46472c9099e8c19fc8f8b5d5470`; `core_compatibility` is exactly `===0.55.1`, and the registry remains untouched. Filesystem signature/version-bump verification accepted all seven manifests with the local missing-public-key allowance. `git diff --check`, format, type-check (`0` errors), Ruff/Pylint (`10.00/10`), YAML, bundle imports, strict OpenSpec, and contract tests (`28 passed`) all passed. Both `smart-test` and the complete test gate passed all `1344` tests; the only warnings were two third-party `lark` deprecations.
+
+The immutable core compatibility smoke was then repeated against the final candidate bytes under CPython `3.11.15`, `3.12.13`, and `3.13.14`. Each exact-core environment reported package version `0.55.1` and passed the same three schema-1.6/runtime-handoff/candidate-identity selectors (`3 passed` per interpreter). Each environment again proved `===0.55.1` accepts `0.55.1`, rejects `0.55.1+vendor`, and ordinary `==0.55.1` is too broad. Protected Linux cache-miss/cache-hit and empty-Bubblewrap evidence remains pending CI, so task 4.3 is not yet adjudicated complete.

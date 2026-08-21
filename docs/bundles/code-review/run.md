@@ -12,6 +12,8 @@ expertise_level: [intermediate, advanced]
 
 # Code review run
 
+For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local producer remains `range_preview`; only a protected consumer can independently verify and promote it to `pr_range`.
+
 `specfact code review run` executes the governed review pipeline for a set of files or for an auto-detected repo scope.
 
 The command prints **progress** to the terminal (spinner/status while the pipeline prepares and runs). With **`--json`**, it writes a machine-readable **`ReviewReport`** JSON file (defaulting to **`review-report.json`** in the working directory when **`--out`** is omitted).
@@ -51,6 +53,9 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 The command validates several incompatible flag mixes before the review pipeline runs.
 
 The Typer entrypoint validates **review flags** first: it raises **`typer.BadParameter`** when **`--include-tests`** is combined with **`--exclude-tests`**, or when **`--focus`** is combined with **`--include-tests`** or **`--exclude-tests`**. **Request validation** then rejects incompatible output modes (**`--json`** with **`--score-only`**, or **`--out`** without **`--json`**), and rules for **conflicting targeting styles** reject mixing positional **`FILES...`** with **`--scope`** or **`--path`**. Those deeper checks still surface as **`typer.BadParameter`** with the messages below.
+
+- `Do not combine positional FILES with --scope; choose one targeting style.`
+- `Do not combine positional FILES with --path; choose one targeting style.`
 
 - **Positional `FILES...` with `--scope` or `--path`**: when you pass explicit paths, do not also pass **`--scope`** or **`--path`** (those options apply only to auto-discovery). Runtime error: **`Choose positional files or auto-scope controls, not both.`**
 - **`--focus` with `--include-tests` or `--exclude-tests`**: use **`--focus`** *or* the include/exclude test flags, not both. Runtime error: **`Cannot combine --focus with --include-tests or --exclude-tests`**

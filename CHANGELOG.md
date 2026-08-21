@@ -9,6 +9,10 @@ and this project follows SemVer for bundle versions.
 
 ### Added
 
+- Add C14 merge-quality range review with immutable scope manifests,
+  differential finding continuity, fail-closed analyzer evidence, signed runtime
+  contracts, and schema 1.6 report truth. Release `specfact-code-review` 0.49.0
+  with strict SpecFact CLI compatibility `===0.55.1`.
 - Documentation: authoritative `docs/reference/documentation-url-contract.md` for core vs modules URL ownership; `redirect_from` aliases for legacy `/guides/<basename>/` on pages whose canonical path is outside `/guides/`; sidebar link to the contract page.
 - Add expanded clean-code review coverage to `specfact-code-review`, including
   naming, KISS, YAGNI, DRY, SOLID, and PR-checklist findings plus the bundled

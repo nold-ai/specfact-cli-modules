@@ -36,6 +36,10 @@ SpecFact code review instructions for AI assistants
 
 Use this when the user asks to remove AI bloat, simplify code, apply clean-code patterns, reduce boilerplate, or act on SpecFact review findings.
 
+For merge-quality authority, run:
+   specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full
+Local range execution remains range_preview; only the protected consumer can promote independently verified evidence to pr_range.
+
 1. Generate evidence first:
    specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review.json
 
@@ -80,8 +84,11 @@ class _ReviewRunCliInputs:
 class _ReviewRunCommandInputs:
     ctx: typer.Context
     files: list[Path] | None
-    scope: Literal["changed", "full"] | None
+    scope: Literal["changed", "index", "range", "full"] | None
     path: list[Path] | None
+    base_ref: str | None
+    head_ref: str | None
+    pr_context_file: Path | None
     include_tests: bool | None
     exclude_tests: bool | None
     focus: list[str] | None
@@ -209,6 +216,8 @@ def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
             interactive=inputs.interactive,
         )
     )
+    if inputs.scope == "range" and inputs.include_tests is None and inputs.exclude_tests is None:
+        resolved_include_tests = True
 
     try:
         exit_code, output = run_command(
@@ -216,6 +225,9 @@ def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
             include_tests=resolved_include_tests,
             scope=inputs.scope,
             path_filters=inputs.path,
+            base_ref=inputs.base_ref,
+            head_ref=inputs.head_ref,
+            pr_context_file=inputs.pr_context_file,
             focus_facets=tuple(focus_list),
             review_mode=_resolve_cli_enforcement(enforcement=inputs.enforcement, legacy_mode=inputs.mode),
             review_level=inputs.level,
@@ -243,8 +255,23 @@ def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
 def run(
     ctx: typer.Context,
     files: list[Path] = typer.Argument(None),
-    scope: Literal["changed", "full"] = typer.Option(None),
+    scope: Literal["changed", "index", "range", "full"] = typer.Option(None),
     path: list[Path] = typer.Option(None, "--path"),
+    base_ref: str | None = typer.Option(
+        None,
+        "--base-ref",
+        help="Full target/base ref for immutable range resolution.",
+    ),
+    head_ref: str | None = typer.Option(
+        None,
+        "--head-ref",
+        help="Full candidate/head ref for immutable range resolution.",
+    ),
+    pr_context_file: Path | None = typer.Option(
+        None,
+        "--pr-context-file",
+        help="Absolute, event-derived GitHub Actions PR/merge-queue context JSON.",
+    ),
     include_tests: bool | None = typer.Option(None, "--include-tests"),
     exclude_tests: bool | None = typer.Option(None, "--exclude-tests"),
     focus: list[str] | None = typer.Option(
@@ -304,6 +331,9 @@ def run(
             files=files,
             scope=scope,
             path=path,
+            base_ref=base_ref,
+            head_ref=head_ref,
+            pr_context_file=pr_context_file,
             include_tests=include_tests,
             exclude_tests=exclude_tests,
             focus=focus,

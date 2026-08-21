@@ -10,6 +10,8 @@ expertise_level: [intermediate, advanced]
 
 # specfact-code-review module notes
 
+For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local producer remains `range_preview`; only a protected consumer can independently verify and promote it to `pr_range`.
+
 ## Review run command
 
 `specfact code review run` executes the governed review pipeline end to end.

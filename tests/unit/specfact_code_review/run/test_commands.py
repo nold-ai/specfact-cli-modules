@@ -125,7 +125,7 @@ def test_code_review_manifest_declares_requirements_runtime_dependency() -> None
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
 
     assert "nold-ai/specfact-requirements" in manifest["bundle_dependencies"]
-    assert manifest["core_compatibility"] == ">=0.53.1,<1.0.0"
+    assert manifest["core_compatibility"] == "===0.55.1"
 
 
 def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:

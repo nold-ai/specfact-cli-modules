@@ -1,5 +1,5 @@
 name: nold-ai/specfact-code-review
-version: 0.48.15
+version: 0.49.0
 commands:
   - code
 tier: official
@@ -10,19 +10,23 @@ bundle_dependencies:
   - nold-ai/specfact-codebase
   - nold-ai/specfact-requirements
 pip_dependencies:
-  - basedpyright
-  - crosshair-tool
-  - pylint
-  - pytest
-  - pytest-cov
-  - radon
   - requests
-  - ruff
-  - semgrep
-core_compatibility: '>=0.53.1,<1.0.0'
+authenticated_resources:
+  resources/contracts/pr-range-v1-toolchain-lock.json:
+    digest: sha256:11f82d29eb6a5e35ea8467b618c1627d6c6982d8e0bf1dbcdcb6d2f3020028c6
+    checkpoint_contract: toolchain_lock_projection
+  resources/contracts/project-runtime-layer-v1.schema.json:
+    digest: sha256:07c5ee03c66f90bacc816591b161d23288843a74be27abce12021fe133163fe3
+    checkpoint_contract: project_runtime_contract
+  resources/contracts/pr-range-v1-suppression-catalog.json:
+    digest: sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375
+    checkpoint_contract: suppression_catalog_contract
+  resources/contracts/review-report-schema-1.6-consumer-matrix.json:
+    digest: sha256:bb826ae8317039eb5da7ce11822d5a54a2043af6341b4f6ec08b14eb4a5b52fc
+    checkpoint_contract: schema-1.6-consumer-matrix-v1
+core_compatibility: ===0.55.1
 description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:4fe9721bf68c2652df709e05ed67dbd4993d7a67bc49b7e03d10331d321c8972
-  signature: oVoWuWg14QEbQP+zF7N+qSxp58gCiu7W9oQkQ3ByA7Hn6A+AlMICWHLRar8TkReI4kzn9FwSLK+YZFU2SlzBBA==
+  checksum: sha256:bc205355b32388d968ef30919bd57f30d147f46472c9099e8c19fc8f8b5d5470

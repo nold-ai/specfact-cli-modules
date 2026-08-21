@@ -259,10 +259,20 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
     if skipped:
         return skipped
 
+    result = _execute_crosshair(files, bug_hunt=bug_hunt)
+    if isinstance(result, ReviewFinding):
+        return [result]
+    if result.returncode not in {0, 1}:
+        diagnostic = (result.stderr or result.stdout or f"process exit {result.returncode}").strip()
+        return [_crosshair_unknown(files[0], f"CrossHair process error: {diagnostic}")]
+    return _parse_crosshair_findings(result.stdout or "", files)
+
+
+def _execute_crosshair(files: list[Path], *, bug_hunt: bool) -> subprocess.CompletedProcess[str] | ReviewFinding:
     per_path_timeout = "10" if bug_hunt else "2"
     proc_timeout = 120 if bug_hunt else 30
     try:
-        result = subprocess.run(
+        return subprocess.run(
             ["crosshair", "check", "--per_path_timeout", per_path_timeout, *(str(file_path) for file_path in files)],
             capture_output=True,
             text=True,
@@ -270,20 +280,20 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
             timeout=proc_timeout,
         )
     except subprocess.TimeoutExpired:
-        return []
+        return _crosshair_unknown(files[0], "CrossHair timed out before mandatory evidence completed.")
     except (FileNotFoundError, OSError) as exc:
-        return [
-            tool_error(
-                tool="crosshair",
-                file_path=files[0],
-                message=f"Unable to execute CrossHair: {exc}",
-                severity="warning",
-            )
-        ]
+        return tool_error(
+            tool="crosshair",
+            file_path=files[0],
+            message=f"Unable to execute CrossHair: {exc}",
+            severity="warning",
+        )
 
+
+def _parse_crosshair_findings(output: str, files: list[Path]) -> list[ReviewFinding]:
     allowed_paths = _allowed_paths(files)
     findings: list[ReviewFinding] = []
-    for line in (result.stdout or "").splitlines():
+    for line in output.splitlines():
         match = _CROSSHAIR_LINE_RE.match(line.strip())
         if match is None:
             continue
@@ -306,6 +316,21 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
             )
         )
     return findings
+
+
+def _crosshair_unknown(file_path: Path, message: str) -> ReviewFinding:
+    return ReviewFinding(
+        category="tool_error",
+        severity="warning",
+        tool="crosshair",
+        rule="CROSSHAIR_INCOMPLETE_EVIDENCE",
+        file=str(file_path),
+        line=1,
+        message=message,
+        fixable=False,
+        execution_state="error",
+        evidence_outcome="UNKNOWN",
+    )
 
 
 @beartype

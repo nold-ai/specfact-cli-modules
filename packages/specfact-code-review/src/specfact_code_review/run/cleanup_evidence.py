@@ -47,6 +47,16 @@ def with_mutation_evidence(report: ReviewReport, files: list[Path]) -> ReviewRep
     return with_refreshed_cleanup_forecast(report.model_copy(update={"findings": findings}), files)
 
 
+def _schema_version_at_least(value: str, required_minor: int) -> bool:
+    try:
+        major_text, minor_text, *_ = value.split(".")
+        major = int(major_text)
+        minor = int(minor_text)
+    except (ValueError, TypeError):
+        return False
+    return major > 1 or (major == 1 and minor >= required_minor)
+
+
 @beartype
 @require(lambda files: isinstance(files, list), "files must be a list")
 @ensure(lambda result: isinstance(result, ReviewReport), "result must be a review report")
@@ -54,7 +64,7 @@ def with_refreshed_cleanup_forecast(report: ReviewReport, files: list[Path]) -> 
     return report.model_copy(
         update={
             "cleanup_forecast": build_cleanup_forecast(report.findings, files),
-            "schema_version": "1.3",
+            "schema_version": report.schema_version if _schema_version_at_least(report.schema_version, 3) else "1.3",
         }
     )
 

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Literal
 
 from beartype import beartype
@@ -42,6 +44,7 @@ PRESERVE_REASONS = (
 PASS = "PASS"
 PASS_WITH_ADVISORY = "PASS_WITH_ADVISORY"
 FAIL = "FAIL"
+AssuranceStatus = Literal["PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"]
 
 
 class EvidenceRef(BaseModel):
@@ -228,6 +231,34 @@ class ReviewFinding(BaseModel):
     line: int = Field(..., ge=1, description="1-based source line number.")
     message: str = Field(..., description="User-facing finding message.")
     fixable: bool = Field(default=False, description="Whether the finding can be automatically fixed.")
+    status: Literal["open", "fixed", "waived-by-reference"] = Field(
+        default="open",
+        description="Finding lifecycle, independent from severity and remediation availability.",
+    )
+    differential_state: Literal["introduced", "fixed", "unchanged", "unknown"] | None = Field(
+        default=None,
+        description="Range classification, independent from finding lifecycle.",
+    )
+    autofix_available: bool | None = Field(
+        default=None,
+        description="Whether a remediation mechanism exists; this never resolves a finding.",
+    )
+    blocking: bool | None = Field(
+        default=None,
+        description="Blocking decision derived from severity and lifecycle policy.",
+    )
+    waiver_reference: None = Field(
+        default=None,
+        description="Reserved for a future authenticated exception contract; always null in C14.",
+    )
+    execution_state: Literal["ran", "error", "not_applicable"] | None = Field(
+        default=None,
+        description="Authoritative analyzer execution state when this record carries profile evidence.",
+    )
+    evidence_outcome: Literal["PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"] | None = Field(
+        default=None,
+        description="Authoritative semantic evidence outcome when this record carries profile evidence.",
+    )
     evidence_refs: list[EvidenceRef] | None = Field(
         default=None,
         description="Optional supplemental references with stable file paths, line ranges, or artifact identifiers.",
@@ -369,6 +400,17 @@ class ReviewFinding(BaseModel):
             raise ValueError("preserve_reason is required for preserve guidance")
         return self
 
+    @model_validator(mode="after")
+    def _derive_c14_lifecycle_fields(self) -> ReviewFinding:
+        if self.autofix_available is not None and self.autofix_available != self.fixable:
+            raise ValueError("autofix_available must preserve the legacy fixable value")
+        self.autofix_available = self.fixable
+        expected_blocking = self.severity == "error" and self.status == "open"
+        if self.blocking is not None and self.blocking != expected_blocking:
+            raise ValueError("blocking must be derived from severity and lifecycle status")
+        self.blocking = expected_blocking
+        return self
+
     @beartype
     @ensure(lambda result: isinstance(result, bool))
     def has_simplification_metadata(self) -> bool:
@@ -434,10 +476,10 @@ class ReviewFinding(BaseModel):
         )
 
     @beartype
-    @ensure(lambda self, result: result == (self.severity == "error" and not self.fixable))
+    @ensure(lambda self, result: result is self.blocking)
     def is_blocking(self) -> bool:
         """Return whether this finding blocks a passing review verdict."""
-        return self.severity == "error" and not self.fixable
+        return bool(self.blocking)
 
 
 class SimplificationSummary(BaseModel):
@@ -472,6 +514,23 @@ class ReviewReport(BaseModel):
         description="Governance-aligned overall verdict.",
     )
     ci_exit_code: Literal[0, 1] | None = Field(default=None, description="Exit code suitable for CI enforcement.")
+    assurance_status: AssuranceStatus | None = Field(
+        default=None,
+        description="Authoritative schema 1.6 aggregate assurance status.",
+    )
+    has_unknown_required_evidence: bool | None = Field(
+        default=None,
+        description="Whether any required schema 1.6 evidence remains unknown.",
+    )
+    scope_evidence: dict[str, object] | None = Field(default=None, description="Canonical scope evidence.")
+    analyzer_evidence: list[dict[str, object]] | None = Field(
+        default=None,
+        description="Canonical analyzer-member evidence.",
+    )
+    suppression_catalog_digest: str | None = Field(
+        default=None,
+        description="Authenticated suppression-directive catalog identity.",
+    )
     score: int = Field(..., ge=0, le=120, description="Review score in the inclusive range 0..120.")
     reward_delta: int | None = Field(default=None, description="Reward delta derived from score - 80.")
     findings: list[ReviewFinding] = Field(default_factory=list, description="Structured review findings.")
@@ -514,6 +573,8 @@ class ReviewReport(BaseModel):
 
     def _schema_version(self) -> str:
         """Return the evidence schema version required by the present report fields."""
+        if _schema_version_at_least(self.schema_version, 6):
+            return self.schema_version
         if self.requirements_evidence is not None:
             return "1.5"
         if self.enforcement_mode is not None:
@@ -534,30 +595,301 @@ class ReviewReport(BaseModel):
             self.simplification_summary = _build_simplification_summary(self.findings)
         self.schema_version = self._schema_version()
         self.reward_delta = self.score - 80
-        if self.enforcement_mode is not None and self.overall_verdict is not None and self.ci_exit_code is not None:
+        if self._derive_authoritative_governance():
             return self
+        if self._has_explicit_legacy_governance():
+            return self
+        self._derive_score_governance()
+        return self
+
+    def _derive_authoritative_governance(self) -> bool:
+        if self.schema_version != "1.6" or self.assurance_status is None:
+            return False
+        self.has_unknown_required_evidence = bool(
+            self.has_unknown_required_evidence
+            or self.assurance_status == "UNKNOWN"
+            or any(item.get("evidence_outcome") == "UNKNOWN" for item in self.analyzer_evidence or [])
+        )
+        verdicts = {
+            "PASS": PASS,
+            "NOT_APPLICABLE": PASS_WITH_ADVISORY,
+            "FAIL": FAIL,
+            "UNKNOWN": FAIL,
+        }
+        self.overall_verdict = verdicts[self.assurance_status]
+        accepted = self.assurance_status in {"PASS", "NOT_APPLICABLE"}
+        self.ci_exit_code = 0 if self.enforcement_mode == "shadow" or accepted else 1
+        return True
+
+    def _has_explicit_legacy_governance(self) -> bool:
+        return self.enforcement_mode is not None and self.overall_verdict is not None and self.ci_exit_code is not None
+
+    def _derive_score_governance(self) -> None:
         blocking_error_present = any(finding.is_blocking() for finding in self.findings)
         if blocking_error_present:
             self.overall_verdict = FAIL
             self.ci_exit_code = 1
-            return self
+            return
         if self.score >= 70:
             self.overall_verdict = PASS
             self.ci_exit_code = 0
-            return self
+            return
         if self.score >= 50:
             self.overall_verdict = PASS_WITH_ADVISORY
             self.ci_exit_code = 0
-            return self
+            return
         self.overall_verdict = FAIL
         self.ci_exit_code = 1
-        return self
 
     @beartype
     @ensure(lambda result: isinstance(result, bool))
     def has_blocking_findings(self) -> bool:
         """Return whether the report contains any blocking findings."""
         return any(finding.is_blocking() for finding in self.findings)
+
+
+class AssuranceProjection(BaseModel):
+    """Schema 1.6 authoritative status projected to legacy fields and exit policy."""
+
+    assurance_status: AssuranceStatus
+    overall_verdict: Literal["PASS", "PASS_WITH_ADVISORY", "FAIL"]
+    ci_exit_code: Literal[0, 1]
+    enforcement_mode: Literal["full", "shadow"]
+
+
+class AssuranceMemberEvidence(BaseModel):
+    """Closed fields used by aggregate assurance derivation tests and consumers."""
+
+    id: str
+    outcome: AssuranceStatus | None = None
+    diagnostic: str | None = None
+    base: AssuranceStatus | None = None
+    head: AssuranceStatus | None = None
+    disposition: Literal["fixed", "introduced", "unchanged", "unknown"] | None = None
+
+
+class AssuranceReport(BaseModel):
+    """Minimal canonical schema 1.6 assurance envelope."""
+
+    schema_version: Literal["1.6"] = "1.6"
+    assurance_status: AssuranceStatus
+    has_unknown_required_evidence: bool
+    overall_verdict: Literal["PASS", "PASS_WITH_ADVISORY", "FAIL"]
+    ci_exit_code: Literal[0, 1]
+    enforcement_mode: Literal["full", "shadow"]
+    member_evidence: tuple[AssuranceMemberEvidence, ...]
+    aggregate_blockers: tuple[dict[str, str], ...]
+    summary: str
+    suppression_catalog_digest: str | None = None
+
+
+class ReviewReportReadResult(BaseModel):
+    """Conservative authoritative read result for one serialized review report."""
+
+    status: AssuranceStatus
+    ci_exit_code: Literal[0, 1]
+
+
+class ConsumerMatrixValidation(BaseModel):
+    """Validation result for the closed schema 1.6 consumer fixture matrix."""
+
+    status: Literal["PASS", "UNKNOWN"]
+    exercised_statuses: tuple[str, ...] = ()
+    reason: str = ""
+
+
+def project_assurance_status(*, status: str, enforcement: str) -> AssuranceProjection:
+    """Derive the compatibility verdict and non-shadow CI exit from authoritative status."""
+
+    if status not in {"PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"}:
+        raise ValueError(f"Unsupported assurance status: {status}")
+    if enforcement not in {"full", "shadow"}:
+        raise ValueError(f"Unsupported schema 1.6 enforcement mode: {enforcement}")
+    typed_status: AssuranceStatus = status  # type: ignore[assignment]
+    typed_enforcement: Literal["full", "shadow"] = enforcement  # type: ignore[assignment]
+    legacy: Literal["PASS", "PASS_WITH_ADVISORY", "FAIL"]
+    if typed_status == "PASS":
+        legacy = "PASS"
+    elif typed_status == "NOT_APPLICABLE":
+        legacy = "PASS_WITH_ADVISORY"
+    else:
+        legacy = "FAIL"
+    exit_code: Literal[0, 1] = 0 if typed_enforcement == "shadow" or typed_status in {"PASS", "NOT_APPLICABLE"} else 1
+    return AssuranceProjection(
+        assurance_status=typed_status,
+        overall_verdict=legacy,
+        ci_exit_code=exit_code,
+        enforcement_mode=typed_enforcement,
+    )
+
+
+def build_assurance_report(
+    *,
+    status: str | None,
+    enforcement: str,
+    member_evidence: tuple[dict[str, str], ...],
+    valid_blockers: tuple[dict[str, str], ...],
+    suppression_catalog_digest: str | None = None,
+) -> AssuranceReport:
+    """Derive aggregate status after lifecycle classification, with FAIL before UNKNOWN."""
+
+    members = tuple(AssuranceMemberEvidence.model_validate(item) for item in member_evidence)
+    has_unknown = any(member.outcome == "UNKNOWN" or member.disposition == "unknown" for member in members)
+    blockers = tuple(item for item in valid_blockers if item.get("status") == "open")
+    if status is None:
+        if blockers:
+            derived = "FAIL"
+        elif has_unknown:
+            derived = "UNKNOWN"
+        else:
+            derived = "PASS"
+    else:
+        derived = status
+    projection = project_assurance_status(status=derived, enforcement=enforcement)
+    if derived == "PASS":
+        summary = "All required validations passed."
+    elif derived == "FAIL":
+        summary = "Open blocking findings remain."
+        if has_unknown:
+            summary += " Required evidence also remains unknown."
+    elif derived == "NOT_APPLICABLE":
+        summary = "No governed impact is applicable to this review."
+    else:
+        summary = "Required validation evidence remains unknown."
+    return AssuranceReport(
+        assurance_status=projection.assurance_status,
+        has_unknown_required_evidence=has_unknown,
+        overall_verdict=projection.overall_verdict,
+        ci_exit_code=projection.ci_exit_code,
+        enforcement_mode=projection.enforcement_mode,
+        member_evidence=members,
+        aggregate_blockers=blockers,
+        summary=summary,
+        suppression_catalog_digest=suppression_catalog_digest,
+    )
+
+
+def read_review_report(payload: dict[str, object]) -> ReviewReportReadResult:
+    """Read schema 1.6 conservatively; missing authoritative status is UNKNOWN."""
+
+    schema_version = str(payload.get("schema_version", ""))
+    raw_status = payload.get("assurance_status")
+    if schema_version >= "1.6" and raw_status not in {"PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"}:
+        status: AssuranceStatus = "UNKNOWN"
+    elif raw_status in {"PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"}:
+        status = raw_status  # type: ignore[assignment]
+    else:
+        legacy = payload.get("overall_verdict")
+        status = "PASS" if legacy in {"PASS", "PASS_WITH_ADVISORY"} else "FAIL"
+    enforcement = str(payload.get("enforcement_mode", "full"))
+    if enforcement not in {"full", "shadow"}:
+        enforcement = "full"
+    projection = project_assurance_status(status=status, enforcement=enforcement)
+    return ReviewReportReadResult(status=status, ci_exit_code=projection.ci_exit_code)
+
+
+def _packaged_suppression_catalog_digest() -> str:
+    path = Path(__file__).resolve().parent.parent / "resources/contracts/pr-range-v1-suppression-catalog.json"
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _schema_version_at_least(value: str, required_minor: int) -> bool:
+    try:
+        major_text, minor_text, *_ = value.split(".")
+        major = int(major_text)
+        minor = int(minor_text)
+    except (ValueError, TypeError):
+        return False
+    return major > 1 or (major == 1 and minor >= required_minor)
+
+
+def _unknown_matrix(reason: str) -> ConsumerMatrixValidation:
+    return ConsumerMatrixValidation(status="UNKNOWN", reason=reason)
+
+
+def _validate_matrix_catalog_identity(matrix: dict[str, object], expected_digest: str) -> str | None:
+    envelope = matrix.get("accepted_pr_range_envelope")
+    if not isinstance(envelope, dict) or envelope.get("suppression_catalog_digest") != expected_digest:
+        return "suppression_catalog_identity_mismatch"
+    bindings = matrix.get("suppression_catalog_identity_bindings")
+    required = {"checkpoint", "resource", "package", "profile", "report", "static_envelope"}
+    if not isinstance(bindings, dict) or set(bindings) != required:
+        return "consumer_matrix_identity_bindings_invalid"
+    if any(bindings[name] != expected_digest for name in required):
+        return "suppression_catalog_identity_mismatch"
+    return None
+
+
+def _validated_matrix_statuses(matrix: dict[str, object], expected_digest: str) -> tuple[set[str], str | None]:
+    reports = matrix.get("canonical_status_reports")
+    if not isinstance(reports, list):
+        return set(), "consumer_matrix_status_reports_invalid"
+    statuses: set[str] = set()
+    for report in reports:
+        status, reason = _validated_matrix_status(report, expected_digest)
+        if reason is not None:
+            return set(), reason
+        statuses.add(status)
+    if statuses != {"PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"}:
+        return set(), "consumer_matrix_status_set_invalid"
+    return statuses, None
+
+
+def _validated_matrix_status(report: object, expected_digest: str) -> tuple[str, str | None]:
+    if not isinstance(report, dict) or not isinstance(report.get("assurance_status"), str):
+        return "", "consumer_matrix_status_reports_invalid"
+    status = str(report["assurance_status"])
+    try:
+        projection = project_assurance_status(status=status, enforcement="full")
+    except ValueError:
+        return "", "consumer_matrix_status_reports_invalid"
+    expected = (projection.overall_verdict, projection.ci_exit_code, expected_digest)
+    actual = (report.get("overall_verdict"), report.get("ci_exit_code"), report.get("suppression_catalog_digest"))
+    if actual != expected:
+        return "", "consumer_matrix_status_projection_mismatch"
+    return status, None
+
+
+def _matrix_case_values(matrix: dict[str, object], key: str, value_key: str) -> set[object] | None:
+    cases = matrix.get(key)
+    if not isinstance(cases, list):
+        return None
+    return {case.get(value_key) for case in cases if isinstance(case, dict)}
+
+
+def validate_consumer_matrix(matrix: object) -> ConsumerMatrixValidation:
+    """Validate the closed status matrix and every suppression-catalog identity binding."""
+
+    if not isinstance(matrix, dict):
+        return _unknown_matrix("consumer_matrix_invalid")
+    expected_catalog_digest = _packaged_suppression_catalog_digest()
+    identity_reason = _validate_matrix_catalog_identity(matrix, expected_catalog_digest)
+    if identity_reason is not None:
+        return _unknown_matrix(identity_reason)
+    statuses, status_reason = _validated_matrix_statuses(matrix, expected_catalog_digest)
+    if status_reason is not None:
+        return _unknown_matrix(status_reason)
+    if _matrix_case_values(matrix, "finding_multiset_cases", "disposition") != {
+        "fixed",
+        "introduced",
+        "unchanged",
+        "unknown",
+    }:
+        return _unknown_matrix("consumer_matrix_finding_multiset_invalid")
+    if _matrix_case_values(matrix, "project_runtime_cases", "expected_status") != {"PASS", "UNKNOWN"}:
+        return _unknown_matrix("consumer_matrix_project_runtime_invalid")
+    expected_boundaries = {
+        "accepted",
+        "analyzer_profile",
+        "merge_base",
+        "producer_identity",
+        "project_runtime",
+        "schema",
+        "suppression_catalog",
+    }
+    if _matrix_case_values(matrix, "pr_range_boundary_cases", "dimension") != expected_boundaries:
+        return _unknown_matrix("consumer_matrix_pr_range_boundaries_invalid")
+    return ConsumerMatrixValidation(status="PASS", exercised_statuses=tuple(sorted(statuses)))
 
 
 def _build_simplification_summary(findings: list[ReviewFinding]) -> SimplificationSummary | None:
