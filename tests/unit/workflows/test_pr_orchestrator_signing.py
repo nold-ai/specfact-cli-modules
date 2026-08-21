@@ -79,8 +79,12 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     workflow = _workflow_text()
     exact_job = workflow.split("exact-core-schema-compatibility:", maxsplit=1)[1]
     required_fragments = (
+        "packages: read",
         "Run signed analyzer capsule cache-miss, cache-hit, and empty Bubblewrap smoke",
+        "REGISTRY_ACTOR: ${{ github.actor }}",
+        "REGISTRY_TOKEN: ${{ github.token }}",
         "pr-range-v1-toolchain-lock.json",
+        'credential=f"{registry_actor}:{registry_token}"',
         "empty_cache=True",
         "empty_cache=False",
         'storage_root=runtime_root / "storage-a"',
