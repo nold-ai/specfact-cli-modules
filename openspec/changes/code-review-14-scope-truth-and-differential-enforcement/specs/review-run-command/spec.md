@@ -357,8 +357,8 @@ The report SHALL list each profile member with required/conditional status; `exe
 
 - **GIVEN** `ai-bloat-ast` and `ast-clean-code` are mandatory `pr-range-v1` members
 - **WHEN** the analyzer capsule is built and each member is launched
-- **THEN** `toolchain.py` re-verifies the loader-registered signed Code Review installation under `verified-installed-module-payload-v1` and materializes its complete canonical `specfact_code_review` package payload at `/opt/specfact/builtin/specfact_code_review`
-- **AND** `module-code-payload-v1` binds package/version/checksum/signature, protected key fingerprint, loader/origin/root identities and the real installed module name/version/checksum/signature fields, deterministic full-payload verification result, every canonical payload member and content digest, allowed entry modules/modes, sealed destination, payload-manifest digest, interpreter/bootstrap identity, and final-root digest
+- **THEN** `toolchain.py` derives `core-v0.55.1-installed-module-handoff-v1` from core's existing `DiscoveredModule` source/root/metadata, canonical install root, registry marker, install-verified checksum, manifest integrity, bundled approved-key fingerprint, and fresh artifact-verification result; under `verified-installed-module-payload-v1` it materializes the complete canonical `specfact_code_review` package payload at `/opt/specfact/builtin/specfact_code_review`
+- **AND** `module-code-payload-v1` binds package/version/checksum/signature, protected key fingerprint, core discovery/install/root identities, registry marker, install-verification record, deterministic full-payload verification result, every canonical payload member and content digest, allowed entry modules/modes, sealed destination, payload-manifest digest, `sealed-bootstrap-v2` source/content identity, immutable base-root digest, `capsule-composite-identity-v1`, and final composite-root digest
 - **AND** both members boot with controller/module host paths absent and only the sealed capsule payload satisfying package-local imports
 - **AND** a mode name alone, pair of runner-file hashes, partial inferred import closure, unverified installed-host import, or missing/extra/drifted payload yields UNKNOWN before analyzer execution.
 
@@ -367,9 +367,17 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **GIVEN** the official signed Code Review module was installed and enabled after full-payload checksum/signature verification
 - **AND** the downloaded archive and every archive cache entry were deleted as permitted by the marketplace contract
 - **WHEN** the analyzer capsule is materialized
-- **THEN** `toolchain.py` uses only the loader-registered installed root and re-verifies the identical canonical payload through protected-key and descriptor-relative checks
+- **THEN** `toolchain.py` uses only the canonical installed root and the core-v0.55.1 discovery/install records, then re-verifies the identical canonical payload through protected-key and descriptor-relative checks
 - **AND** both built-ins boot from the sealed copied payload with no archive fetch, controller-path mount, or host import
-- **AND** missing archive bytes do not cause UNKNOWN, while missing/failed loader, origin, checksum, signature, key, root, descriptor, or payload evidence does.
+- **AND** missing archive bytes do not cause UNKNOWN, while missing/failed discovery source, canonical install root, registry marker, install-verified checksum, manifest checksum/signature, key, verifier, descriptor, or payload evidence does.
+
+#### Scenario: Pre-release candidate identity cannot impersonate an official install
+
+- **GIVEN** a protected modules workflow builds a C14 candidate before marketplace publication
+- **WHEN** exact-core compatibility and capsule smoke run against that candidate
+- **THEN** `verified-candidate-module-payload-v1` binds its immutable repository commit/tree, canonical package and complete payload digests, and workflow/ref/run/attempt/job identity
+- **AND** the generated `sealed-bootstrap-v2` plus `capsule-composite-identity-v1` bind the same candidate payload copied into the post-base capsule while preserving the immutable OCI base-root digest
+- **AND** candidate evidence is accepted only for pre-release compatibility and materialization tests; it cannot satisfy released official-install provenance, producer release identity, or protected `pr_range` assurance.
 
 #### Scenario: Generated toolchain lock matches the frozen checkpoint
 
@@ -888,4 +896,3 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **WHEN** the report finalizes
 - **THEN** analyzer coverage identifies the gap
 - **AND** no all-passed summary is emitted.
-

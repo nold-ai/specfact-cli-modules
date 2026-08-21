@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -260,15 +261,42 @@ def _installed_payload(root: Path) -> dict[str, Any]:
     package.mkdir(parents=True)
     (package / "__init__.py").write_text("VERSION='1.0.0'\n", encoding="utf-8")
     (package / "builtin.py").write_text("def main(): return 0\n", encoding="utf-8")
+    resources = package / "resources"
+    resources.mkdir()
+    (resources / "policy.json").write_text('{"policy":"sealed"}\n', encoding="utf-8")
+    entries = []
+    for path in sorted(item for item in package.rglob("*") if item.is_file()):
+        relative = path.relative_to(root).as_posix()
+        entries.append(f"{relative}:{hashlib.sha256(path.read_bytes()).hexdigest()}")
+    checksum = "sha256:" + hashlib.sha256("\n".join(entries).encode()).hexdigest()
     return {
         "module_name": "nold-ai/specfact-code-review",
         "version": "1.0.0",
-        "checksum": _digest("a"),
+        "checksum": checksum,
         "signature": "signature",
         "key_fingerprint": _digest("b"),
         "loader_origin": "official-marketplace",
         "installed_root": str(root),
     }
+
+
+def _core_0_55_1_discovered_install(root: Path, *, user_modules_root: Path) -> tuple[Any, str, Path]:
+    from specfact_cli.models.module_package import IntegrityInfo, ModulePackageMetadata, PublisherInfo
+    from specfact_cli.registry.module_discovery import DiscoveredModule
+
+    metadata = _installed_payload(root)
+    registry_id = metadata["module_name"]
+    (root / ".specfact-registry-id").write_text(registry_id, encoding="utf-8")
+    (root / ".specfact-install-verified-checksum").write_text(metadata["checksum"], encoding="utf-8")
+    public_key = root.parent / "module-signing-public.pem"
+    public_key.write_text("approved public key bytes\n", encoding="utf-8")
+    package_metadata = ModulePackageMetadata(
+        name=registry_id,
+        version=metadata["version"],
+        publisher=PublisherInfo(name="nold-ai", email="security@nold.ai"),
+        integrity=IntegrityInfo(checksum=metadata["checksum"], signature=metadata["signature"]),
+    )
+    return DiscoveredModule(root, package_metadata, "user"), registry_id, public_key
 
 
 def test_builtin_module_payload_manifest_covers_complete_signed_package(toolchain_api: Any, tmp_path: Path) -> None:
@@ -280,6 +308,7 @@ def test_builtin_module_payload_manifest_covers_complete_signed_package(toolchai
     assert {entry.path for entry in result.manifest} == {
         "specfact_code_review/__init__.py",
         "specfact_code_review/builtin.py",
+        "specfact_code_review/resources/policy.json",
     }
 
 
@@ -337,27 +366,132 @@ def test_builtin_payload_rejects_untrusted_install_origin_or_key(
     assert toolchain_api.verify_installed_module_payload(metadata).status == "UNKNOWN"
 
 
-def test_builtin_payload_uses_real_marketplace_install_metadata_shape(toolchain_api: Any, tmp_path: Path) -> None:
-    metadata = _installed_payload(tmp_path / "installed")
+def test_builtin_payload_derives_core_0_55_1_install_handoff(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from specfact_cli.registry import module_installer
 
-    result = toolchain_api.verify_installed_module_payload(metadata)
+    user_root = tmp_path / "user-modules"
+    install_root = user_root / "nold-ai" / "specfact-code-review"
+    discovered, registry_id, public_key = _core_0_55_1_discovered_install(install_root, user_modules_root=user_root)
+    monkeypatch.setattr(module_installer, "verify_module_artifact", lambda *args, **kwargs: True)
+
+    result = toolchain_api.derive_core_0_55_1_install_handoff(
+        discovered,
+        expected_registry_id=registry_id,
+        user_modules_root=user_root,
+        marketplace_modules_root=tmp_path / "marketplace-modules",
+        public_key_path=public_key,
+    )
 
     assert result.status == "PASS"
-    assert not hasattr(result.identity, "source_commit")
-    assert not hasattr(result.identity, "archive_locator")
+    assert result.identity.derivation_schema == "core-v0.55.1-installed-module-handoff-v1"
+    assert result.identity.discovered_source == "user"
+    assert result.identity.install_root_class == "user"
+    assert result.identity.registry_id == registry_id
+    assert result.identity.install_verified_checksum == discovered.metadata.integrity.checksum
+    assert result.identity.artifact_verification_result is True
+    assert not hasattr(result.identity, "loader_registration_digest")
+
+
+def test_candidate_payload_identity_is_not_official_install(toolchain_api: Any) -> None:
+    result = toolchain_api.verify_candidate_module_payload(
+        {
+            "repository": "nold-ai/specfact-cli-modules",
+            "commit_sha": "1" * 40,
+            "tree_sha": "2" * 40,
+            "module_package_digest": _digest("3"),
+            "payload_manifest_digest": _digest("4"),
+            "workflow": "pr-orchestrator.yml",
+            "workflow_ref": "refs/heads/dev",
+            "run_id": "1234",
+            "run_attempt": "1",
+            "job": "exact-core-compatibility",
+        }
+    )
+
+    assert result.status == "PASS"
+    assert result.identity.schema == "verified-candidate-module-payload-v1"
+    assert result.identity.allowed_use == "protected-pre-release-only"
+    assert result.identity.official_install_provenance is False
+    assert result.identity.pr_range_authority is False
+
+
+def test_post_base_bootstrap_and_composite_identity_bind_copied_payload(toolchain_api: Any, tmp_path: Path) -> None:
+    payload = toolchain_api.verify_installed_module_payload(_installed_payload(tmp_path / "installed"))
+
+    result = toolchain_api.compose_post_base_capsule(
+        payload,
+        capsule_root=tmp_path / "capsule",
+        immutable_base_root_digest=_digest("5"),
+        analyzer_installed_set_digest=_digest("6"),
+        native_launcher_digest=_digest("7"),
+        project_runtime_identity="not-applicable",
+    )
+
+    assert result.status == "PASS"
+    assert result.bootstrap_schema == "sealed-bootstrap-v2"
+    assert result.composite_schema == "capsule-composite-identity-v1"
+    assert result.immutable_base_root_digest == _digest("5")
+    assert result.module_payload_manifest_digest == toolchain_api.canonical_json_digest(
+        [{"digest": entry.digest, "path": entry.path} for entry in payload.manifest]
+    )
+    assert result.bootstrap_digest.startswith("sha256:")
+    assert result.final_composite_root_manifest_digest.startswith("sha256:")
+    bootstrap = tmp_path / "capsule/opt/specfact/bootstrap/sealed_bootstrap.py"
+    assert bootstrap.is_file()
+    bootstrap_source = bootstrap.read_text(encoding="utf-8")
+    assert 'ANALYZER_ROOT = "/opt/specfact/analyzers"' in bootstrap_source
+    assert 'BUILTIN_ROOT = "/opt/specfact/builtin"' in bootstrap_source
 
 
 def _project_runtime_descriptor() -> dict[str, Any]:
     return {
         "schema": "project-runtime-layer-v1",
-        "target_commit": "1" * 40,
-        "target_tree": "2" * 40,
-        "source_lock_paths": [{"path": "uv.lock", "blob": "3" * 40, "digest": _digest("c")}],
-        "builder": {"workflow": "build-runtime", "run": 42, "artifact_digest": _digest("d")},
-        "oci": {"manifest": _digest("e"), "root_manifest": _digest("f")},
-        "site_packages": "/opt/specfact/project/site-packages",
-        "allowed_members": ["targeted-pytest-coverage", "pylint", "basedpyright"],
-        "distributions": [{"name": "consumer-dependency", "version": "1.0", "digest": _digest("a")}],
+        "target": {
+            "repository": "nold-ai/consumer",
+            "commit_sha": "1" * 40,
+            "tree_sha": "2" * 40,
+        },
+        "source_lock_paths": [{"path": "uv.lock", "blob_sha": "3" * 40, "content_sha256": _digest("c")}],
+        "distributions": [
+            {
+                "name": "consumer-dependency",
+                "version": "1.0",
+                "payload_digest": _digest("a"),
+                "dependencies": [],
+                "entry_points": [],
+            }
+        ],
+        "native_components": [],
+        "oci": {
+            "registry": "https://ghcr.io",
+            "repository": "nold-ai/consumer-runtime",
+            "manifest_digest": _digest("e"),
+            "config_digest": _digest("f"),
+            "layers": [{"digest": _digest("1"), "diff_id": _digest("2"), "size": 1024}],
+        },
+        "build": {
+            "workflow": "build-runtime",
+            "ref": "refs/heads/dev",
+            "run_id": 42,
+            "run_attempt": 1,
+            "artifact_id": 43,
+            "artifact_digest": _digest("d"),
+        },
+        "attestation": {
+            "predicate_type": "https://slsa.dev/provenance/v1",
+            "subject_digest": _digest("d"),
+            "builder_identity": "https://github.com/nold-ai/consumer/.github/workflows/runtime.yml@refs/heads/dev",
+            "signature": "signed-attestation",
+        },
+        "root_manifest": {
+            "algorithm": "canonical-json-v1",
+            "digest": _digest("9"),
+            "python_abi": "cp312",
+            "platform_tag": "linux-x86_64",
+            "site_packages": "/opt/specfact/project-runtime/site-packages",
+        },
     }
 
 
@@ -372,7 +506,15 @@ def test_project_runtime_layer_binds_target_tip_dependency_inputs(toolchain_api:
 @pytest.mark.parametrize("reserved", ["specfact_code_review", "pytest", "sitecustomize"])
 def test_project_runtime_layer_cannot_shadow_reserved_runner_components(toolchain_api: Any, reserved: str) -> None:
     descriptor = _project_runtime_descriptor()
-    descriptor["distributions"].append({"name": reserved, "version": "1", "digest": _digest("b")})
+    descriptor["distributions"].append(
+        {
+            "name": reserved,
+            "version": "1",
+            "payload_digest": _digest("b"),
+            "dependencies": [],
+            "entry_points": [],
+        }
+    )
 
     result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
 
@@ -392,13 +534,13 @@ def test_project_runtime_layer_is_identical_across_snapshots(toolchain_api: Any)
 def test_project_runtime_layer_rejects_untrusted_or_candidate_inputs(toolchain_api: Any, mutation: str) -> None:
     descriptor = _project_runtime_descriptor()
     if mutation == "candidate-target":
-        descriptor["target_commit"] = "9" * 40
+        descriptor["target"]["commit_sha"] = "9" * 40
     elif mutation == "missing-attestation":
-        descriptor.pop("builder")
+        descriptor.pop("attestation")
     elif mutation == "host-path":
-        descriptor["site_packages"] = "/usr/lib/python/site-packages"
+        descriptor["root_manifest"]["site_packages"] = "/usr/lib/python/site-packages"
     else:
-        descriptor["oci"]["manifest"] = "latest"
+        descriptor["oci"]["manifest_digest"] = "latest"
 
     assert toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40).status == "UNKNOWN"
 
@@ -436,13 +578,24 @@ def test_non_reserved_snapshot_import_precedes_project_runtime(toolchain_api: An
 
 def test_attested_pytest_plugin_identity_is_bound_by_project_runtime(toolchain_api: Any) -> None:
     descriptor = _project_runtime_descriptor()
+    descriptor["distributions"].append(
+        {
+            "name": "fixture-plugin",
+            "version": "1.0",
+            "payload_digest": _digest("a"),
+            "dependencies": [],
+            "entry_points": ["pytest11:fixture_plugin"],
+        }
+    )
     descriptor["pytest_plugins"] = [
         {
             "distribution": "fixture-plugin",
             "version": "1.0",
-            "entry_point": "fixture_plugin",
             "payload_digest": _digest("a"),
-            "hook_catalog_digest": _digest("b"),
+            "dependencies": [],
+            "pytest11_entry_point": "fixture_plugin",
+            "parser_catalog_digest": _digest("b"),
+            "hook_capability_digest": _digest("c"),
         }
     ]
 
@@ -454,15 +607,26 @@ def test_attested_pytest_plugin_identity_is_bound_by_project_runtime(toolchain_a
 
 def test_attested_fixture_plugin_extends_frozen_pytest_catalog(toolchain_api: Any) -> None:
     descriptor = _project_runtime_descriptor()
+    descriptor["distributions"].append(
+        {
+            "name": "fixture-plugin",
+            "version": "1.0",
+            "payload_digest": _digest("a"),
+            "dependencies": [],
+            "entry_points": ["pytest11:fixture_plugin"],
+        }
+    )
     descriptor["pytest_plugins"] = [
         {
             "distribution": "fixture-plugin",
             "version": "1.0",
-            "entry_point": "fixture_plugin",
             "payload_digest": _digest("a"),
+            "dependencies": [],
+            "pytest11_entry_point": "fixture_plugin",
             "options": ["--fixture-mode"],
             "ini_fields": ["fixture_mode"],
-            "hook_catalog_digest": _digest("b"),
+            "parser_catalog_digest": _digest("b"),
+            "hook_capability_digest": _digest("c"),
         }
     ]
 
@@ -475,7 +639,17 @@ def test_attested_fixture_plugin_extends_frozen_pytest_catalog(toolchain_api: An
 
 def test_unattested_pytest_plugin_is_unknown(toolchain_api: Any) -> None:
     descriptor = _project_runtime_descriptor()
-    descriptor["observed_pytest_plugins"] = ["unattested-plugin"]
+    descriptor["pytest_plugins"] = [
+        {
+            "distribution": "unattested-plugin",
+            "version": "1.0",
+            "payload_digest": _digest("a"),
+            "dependencies": [],
+            "pytest11_entry_point": "unattested_plugin",
+            "parser_catalog_digest": _digest("b"),
+            "hook_capability_digest": _digest("c"),
+        }
+    ]
 
     result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
 

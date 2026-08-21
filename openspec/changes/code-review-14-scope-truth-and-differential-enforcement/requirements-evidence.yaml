@@ -1858,8 +1858,9 @@ requirements:
       intent: Prove every core version admitted by release metadata has immutable install, load, and schema evidence; the
         first C14 release admits only exact core 0.55.1.
       observable: A fresh environment uses lightweight tag v0.55.1 at full commit b1e517e60e669eaba15a18ecfa83ef5a9df65276
-        and full tree 47984be5434d7ae65ed6908bf525a32053290337 plus the candidate module package and exercises every consumer-matrix
-        status/projection; only core_compatibility ===0.55.1 is permitted. Ordinary ==0.55.1, a local/alternate alias such
+        and full tree 47984be5434d7ae65ed6908bf525a32053290337 plus the candidate module package, derives verified-candidate-module-payload-v1
+        from immutable candidate git/package/workflow evidence without treating it as official-install or pr_range provenance,
+        and exercises every consumer-matrix status/projection; only core_compatibility ===0.55.1 is permitted. Ordinary ==0.55.1, a local/alternate alias such
         as 0.55.1+vendor, a range, wildcard, untested identity, missing identity, branch fallback, install/load failure, or
         mismatch blocks release without claiming protected PR assurance.
       selector:
@@ -2797,10 +2798,11 @@ requirements:
       scenario_id: mandatory-analyzer-coverage
       method: test
       intent: Run mandatory built-in analyzers from signed code inside the sealed capsule.
-      observable: module-code-payload-v1 re-verifies the complete loader-registered signed specfact_code_review installation,
-        copies every canonical payload member into the capsule, binds loader/origin/key/full-payload-verification/import/root
-        identities, boots ai-bloat-ast and ast-clean-code without controller paths, and makes incomplete or drifted evidence
-        UNKNOWN.
+      observable: module-code-payload-v1 derives core-v0.55.1-installed-module-handoff-v1 from DiscoveredModule, canonical
+        install root, registry marker, install-verified checksum, manifest integrity, bundled key, and fresh core verifier;
+        copies every canonical payload member into the capsule; binds immutable base-root, sealed-bootstrap-v2, composite-root,
+        origin/key/full-payload/import identities; boots ai-bloat-ast and ast-clean-code without controller paths; and makes
+        incomplete or drifted evidence UNKNOWN.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_analyzers_boot_from_signed_capsule_payload_without_controller_paths
@@ -2810,8 +2812,10 @@ requirements:
       method: test
       intent: Boot signed built-in analyzers after the marketplace discards the downloaded module archive.
       observable: A fresh official installation deletes its archive and archive cache, then verified-installed-module-payload-v1
-        revalidates checksum/signature/key/origin and descriptor-safely copies the canonical installed payload into the capsule;
-        no reacquisition or host import occurs, while failed installation evidence is UNKNOWN.
+        derives the canonical core-v0.55.1 discovery/install handoff, revalidates registry/install-checksum/manifest-signature/key/origin,
+        and descriptor-safely copies the canonical installed payload into the capsule; no reacquisition or host import occurs,
+        while failed installation evidence is UNKNOWN. A separately tagged candidate identity is test-only and cannot satisfy
+        official-install or protected pr_range provenance.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_runtime_capsule_acquires_pinned_oci_layers_from_registry_or_verified_cache[False]
@@ -2819,13 +2823,33 @@ requirements:
     - case_id: CR14-113
       scenario_id: mandatory-analyzer-coverage
       method: test
-      intent: Use only metadata that a real marketplace installation persists when authenticating built-in code.
-      observable: The installed-payload contract succeeds with module name/version, deterministic full-payload checksum/signature,
-        loader origin/root, and protected key identity, and requires no unavailable source commit/tree or archive metadata;
-        missing or mismatched real fields are UNKNOWN.
+      intent: Derive built-in code provenance only from trust records that exact core v0.55.1 persists.
+      observable: The installed-payload contract consumes a real DiscoveredModule plus canonical install root, registry marker,
+        install-verified checksum, manifest integrity, protected key, and fresh core verifier result. It requires no aggregate
+        loader DTO, unavailable source commit/tree, or archive metadata; missing or mismatched real fields are UNKNOWN.
       selector:
         runner: pytest
-        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_uses_real_marketplace_install_metadata_shape
+        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_payload_derives_core_0_55_1_install_handoff
+      implementation_task: 3.12e
+    - case_id: CR14-150
+      scenario_id: mandatory-analyzer-coverage
+      method: test
+      intent: Prevent a protected pre-release candidate identity from impersonating released official provenance.
+      observable: verified-candidate-module-payload-v1 binds immutable git, package, payload, and workflow identity, but exposes
+        neither official-install provenance nor protected pr_range authority.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_candidate_payload_identity_is_not_official_install
+      implementation_task: 3.12e
+    - case_id: CR14-151
+      scenario_id: mandatory-analyzer-coverage
+      method: test
+      intent: Bind generated built-in bootstrap bytes and post-base capsule composition without mutating the OCI base identity.
+      observable: sealed-bootstrap-v2 includes only the canonical analyzer/built-in roots and capsule-composite-identity-v1 binds
+        immutable base, analyzer set, copied module payload, bootstrap, native launcher, project runtime, and final composite root.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_post_base_bootstrap_and_composite_identity_bind_copied_payload
       implementation_task: 3.12e
     - case_id: CR14-SEL-1132
       scenario_id: mandatory-analyzer-coverage
