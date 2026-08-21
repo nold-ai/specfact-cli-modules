@@ -288,6 +288,7 @@ jobs:
           set -euo pipefail
           . .exact-core-venv/bin/activate
           sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN "$PWD/.exact-core-venv/bin/python" - <<'PY'
+          import gzip
           import hashlib
           import json
           import os
@@ -326,6 +327,10 @@ jobs:
           def diagnostic_manifest_verifier(root: Path, selected: dict[str, object]) -> None:
               expected = selected["final_root_manifest"]
               entries, regular_bytes = toolchain._manifest_entries(root, include_root=False)
+              diagnostic_path = Path(f"/tmp/c14-manifest-{abi}.json.gz")
+              with gzip.open(diagnostic_path, "wt", encoding="utf-8") as artifact:
+                  json.dump(entries, artifact, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+              diagnostic_path.chmod(0o644)
               analyzer_prefix = Path(selected["paths"]["analyzers"]).relative_to(
                   Path(selected["paths"]["root"])
               ).as_posix()
@@ -497,3 +502,12 @@ jobs:
               "redirects": [redact_url(hop.url) for hop in acquisition.redirect_chain],
           }, sort_keys=True))
           PY
+
+      - name: Upload failed C14 capsule manifest diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c14-manifest-${{ matrix.python }}.json.gz
+          path: /tmp/c14-manifest-*.json.gz
+          if-no-files-found: error
+          retention-days: 1
