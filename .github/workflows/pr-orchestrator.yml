@@ -294,6 +294,7 @@ jobs:
           import shutil
           import subprocess
           import tempfile
+          from itertools import permutations
           from pathlib import Path
           from unittest import mock
           from urllib.parse import urlsplit, urlunsplit
@@ -353,6 +354,25 @@ jobs:
                   if entry["path"] == analyzer_prefix or entry["path"].startswith(analyzer_prefix + "/"):
                       key = f'{entry["type"]}:{int(entry["mode"]):04o}'
                       mode_counts[key] = mode_counts.get(key, 0) + 1
+              serialized_subroots = {}
+              for name in selected["final_root_manifest"]["subroots"]:
+                  block = [
+                      entry
+                      for entry in entries
+                      if entry["path"] == name or entry["path"].startswith(name + "/")
+                  ]
+                  serialized_subroots[name] = json.dumps(
+                      block,
+                      ensure_ascii=False,
+                      separators=(",", ":"),
+                      sort_keys=True,
+                  ).encode()[1:-1]
+              matching_subroot_orders = []
+              for order in permutations(serialized_subroots):
+                  payload = b"[" + b",".join(serialized_subroots[name] for name in order) + b"]"
+                  digest = "sha256:" + hashlib.sha256(payload).hexdigest()
+                  if digest == expected["manifest_digest"]:
+                      matching_subroot_orders.append(order)
               subroots = {}
               for name in sorted(selected["final_root_manifest"]["subroots"]):
                   subroot_entries, subroot_bytes = toolchain._manifest_entries(root / name, include_root=True)
@@ -369,6 +389,7 @@ jobs:
                   },
                   "entry_count": len(entries),
                   "expected": expected["manifest_digest"],
+                  "matching_subroot_orders": matching_subroot_orders,
                   "mode_counts": mode_counts,
                   "regular_bytes": regular_bytes,
                   "subroots": subroots,

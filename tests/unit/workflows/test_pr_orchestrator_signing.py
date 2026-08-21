@@ -100,6 +100,8 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         'tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp")',
         "C14_MANIFEST_DIAGNOSTIC",
         "diagnostic_manifest_verifier",
+        "matching_subroot_orders",
+        "permutations",
         "pr-range-v1-toolchain-lock.json",
         'credential=f"{registry_actor}:{registry_token}"',
         "empty_cache=True",
