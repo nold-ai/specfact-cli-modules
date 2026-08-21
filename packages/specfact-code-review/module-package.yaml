@@ -10,6 +10,7 @@ bundle_dependencies:
   - nold-ai/specfact-codebase
   - nold-ai/specfact-requirements
 pip_dependencies:
+  - packaging
   - requests
 authenticated_resources:
   resources/contracts/pr-range-v1-toolchain-lock.json:
@@ -29,5 +30,4 @@ description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:b1adb6ba8f92960f02b89467d82f2e822c08ea64b8862d19c88a8968c67f23dd
-  signature: aVqvC7U5RsWlxrsiih1XFeViGwekACJljmDJB7bjrGWOY4afP30TnFuMMc2OaIaX+HrvlOC0ljfqf/utJjnlCg==
+  checksum: sha256:b52f8e20c45214352d1f62416f8c6941c5aef0fbce65939ac911ee5c30a2a942

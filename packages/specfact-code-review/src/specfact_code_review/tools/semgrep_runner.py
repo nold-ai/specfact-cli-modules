@@ -54,6 +54,7 @@ class SemgrepSnapshotInvocation:
 
     argv: tuple[str, ...]
     expected_rules: tuple[str, ...]
+    suppression_controls_disabled: bool
 
 
 def reconcile_scanned_paths(
@@ -121,6 +122,7 @@ def build_snapshot_invocation(*, eligible: tuple[str, ...], source: bytes) -> Se
     return SemgrepSnapshotInvocation(
         argv=("semgrep", "--disable-nosem", "--json", *tuple(sorted(set(eligible)))),
         expected_rules=tuple(sorted(expected_rules)),
+        suppression_controls_disabled=True,
     )
 
 

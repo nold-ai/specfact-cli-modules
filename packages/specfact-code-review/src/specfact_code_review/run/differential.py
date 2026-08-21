@@ -8,8 +8,8 @@ import json
 import re
 import tokenize
 from collections import Counter, defaultdict
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, field
+from importlib.resources import files
 from typing import Any, Literal
 
 from icontract import ensure, require
@@ -94,6 +94,10 @@ class _ClassificationState:
     unchanged: list[DifferentialFinding]
     unknown: list[DifferentialFinding]
     correspondence_evidence: list[dict[str, object]]
+    correspondence_matrices: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]] = field(
+        default_factory=dict
+    )
+    forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -244,10 +248,20 @@ def convert_exact_location(
     text_lines = source.decode("utf-8").splitlines()
     start_row, start_column = start
     end_row, end_column = end
+    if (
+        not 0 <= start_row < len(text_lines)
+        or not 0 <= end_row < len(text_lines)
+        or start_column < 0
+        or end_column < 0
+        or (end_row, end_column) < (start_row, start_column)
+    ):
+        raise ValueError("source coordinate is outside the decoded source")
     if coordinate_system == "utf16-code-units":
         canonical_start = _utf16_prefix_to_utf8_column(text_lines[start_row], start_column)
         canonical_end = _utf16_prefix_to_utf8_column(text_lines[end_row], end_column)
     else:
+        if start_column > len(text_lines[start_row]) or end_column > len(text_lines[end_row]):
+            raise ValueError("source column is outside the decoded line")
         canonical_start = len(text_lines[start_row][:start_column].encode())
         canonical_end = len(text_lines[end_row][:end_column].encode())
     return SourceSpan(
@@ -263,16 +277,21 @@ def convert_exact_location(
     )
 
 
-def normalize_location(*, analyzer: str, path: str, source: bytes, raw: dict[str, int]) -> LocatedFinding:
+def normalize_location(
+    *, analyzer: str, path: str, source: bytes, raw: dict[str, int]
+) -> LocatedFinding | ContinuityResult:
     """Normalize one adapter's exact row/column record."""
 
-    location = convert_exact_location(
-        path=path,
-        source=source,
-        coordinate_system="unicode-code-points",
-        start=(raw["row"] - 1, raw["column"]),
-        end=(raw["end_row"] - 1, raw["end_column"]),
-    )
+    try:
+        location = convert_exact_location(
+            path=path,
+            source=source,
+            coordinate_system="unicode-code-points",
+            start=(raw["row"] - 1, raw["column"]),
+            end=(raw["end_row"] - 1, raw["end_column"]),
+        )
+    except (IndexError, UnicodeDecodeError, ValueError):
+        return ContinuityResult("UNKNOWN", "invalid_source_coordinate")
     return LocatedFinding(analyzer, location)
 
 
@@ -363,6 +382,8 @@ def _continuity(
     *,
     base_source: bytes | None,
     head_source: bytes | None,
+    matrix_cache: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]],
+    forbidden_cache: dict[tuple[bytes, bytes, int, int], int],
 ) -> tuple[Literal["unchanged", "introduced", "unknown"], dict[str, object]]:
     evidence: dict[str, object] = {
         "algorithm": "source-line-correspondence-v1",
@@ -377,7 +398,15 @@ def _continuity(
     context, reason = _continuity_context(base, head, base_source=base_source, head_source=head_source)
     if context is None:
         return "unknown", {**evidence, **reason}
-    evidence.update(_continuity_cost_evidence(context))
+    assert base_source is not None and head_source is not None
+    evidence.update(
+        _continuity_cost_evidence(
+            context,
+            source_key=(base_source, head_source),
+            matrix_cache=matrix_cache,
+            forbidden_cache=forbidden_cache,
+        )
+    )
     evidence.update(_continuity_anchor_evidence(context))
     return _continuity_decision(context, evidence)
 
@@ -422,9 +451,21 @@ def _continuity_anchor_is_valid(context: _ContinuityContext) -> bool:
     return base_valid and head_valid
 
 
-def _continuity_cost_evidence(context: _ContinuityContext) -> dict[str, object]:
-    forward = _edit_costs(context.base_lines, context.head_lines)
-    suffix = _suffix_edit_costs(context.base_lines, context.head_lines)
+def _continuity_cost_evidence(
+    context: _ContinuityContext,
+    *,
+    source_key: tuple[bytes, bytes],
+    matrix_cache: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]],
+    forbidden_cache: dict[tuple[bytes, bytes, int, int], int],
+) -> dict[str, object]:
+    matrices = matrix_cache.get(source_key)
+    if matrices is None:
+        matrices = (
+            _edit_costs(context.base_lines, context.head_lines),
+            _suffix_edit_costs(context.base_lines, context.head_lines),
+        )
+        matrix_cache[source_key] = matrices
+    forward, suffix = matrices
     global_cost = forward[-1][-1]
     pair_cost = 0 if context.base_lines[context.base_index] == context.head_lines[context.head_index] else 2
     forced_cost = (
@@ -432,11 +473,15 @@ def _continuity_cost_evidence(context: _ContinuityContext) -> dict[str, object]:
         + pair_cost
         + suffix[context.base_index + 1][context.head_index + 1]
     )
-    forbidden_cost = _edit_costs(
-        context.base_lines,
-        context.head_lines,
-        forbidden_pair=(context.base_index, context.head_index),
-    )[-1][-1]
+    forbidden_key = (*source_key, context.base_index, context.head_index)
+    forbidden_cost = forbidden_cache.get(forbidden_key)
+    if forbidden_cost is None:
+        forbidden_cost = _edit_costs(
+            context.base_lines,
+            context.head_lines,
+            forbidden_pair=(context.base_index, context.head_index),
+        )[-1][-1]
+        forbidden_cache[forbidden_key] = forbidden_cost
     return {
         "cells": context.cells,
         "global_cost": global_cost,
@@ -629,6 +674,8 @@ def _classify_pair(
         head_item,
         base_source=_source_for(base_item.path, request.base_sources),
         head_source=_source_for(head_item.path, request.head_sources),
+        matrix_cache=state.correspondence_matrices,
+        forbidden_cache=state.forbidden_costs,
     )
     state.correspondence_evidence.append(
         {
@@ -953,31 +1000,21 @@ def _suppression_status(
     return "PASS"
 
 
-def _repository_root() -> Path:
-    return Path(__file__).resolve().parents[5]
-
-
 def _canonical_bytes(document: object) -> bytes:
     return json.dumps(document, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
 
 
 def load_suppression_catalog_and_checkpoint() -> tuple[SuppressionCatalogResource, C14Checkpoint]:
-    """Load the exact generated resource and independently derive its checkpoint contract."""
+    """Load the signed catalog and its checkpoint binding from installed resources."""
 
-    root = _repository_root()
-    checkpoint_path = (
-        root / "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json"
-    )
-    resource_path = (
-        root
-        / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-suppression-catalog.json"
-    )
-    checkpoint_document = json.loads(checkpoint_path.read_text(encoding="utf-8"))
-    contract = checkpoint_document["suppression_catalog_contract"]
-    canonical_bytes = _canonical_bytes(contract["document"])
-    resource_bytes = resource_path.read_bytes()
+    package = files("specfact_code_review")
+    contracts = package.joinpath("resources", "contracts")
+    resource_bytes = contracts.joinpath("pr-range-v1-suppression-catalog.json").read_bytes()
+    matrix = json.loads(contracts.joinpath("review-report-schema-1.6-consumer-matrix.json").read_text(encoding="utf-8"))
+    bindings = matrix["suppression_catalog_identity_bindings"]
+    canonical_bytes = _canonical_bytes(json.loads(resource_bytes))
     resource = SuppressionCatalogResource("sha256:" + hashlib.sha256(resource_bytes).hexdigest(), resource_bytes)
-    checkpoint = C14Checkpoint(SuppressionCatalogContract(str(contract["digest"]), canonical_bytes))
+    checkpoint = C14Checkpoint(SuppressionCatalogContract(str(bindings["checkpoint"]), canonical_bytes))
     return resource, checkpoint
 
 

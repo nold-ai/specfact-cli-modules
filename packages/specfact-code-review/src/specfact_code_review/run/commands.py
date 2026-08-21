@@ -37,6 +37,7 @@ from specfact_code_review.run.scope import (
     NoReviewableFilesError,
     RunCommandError,
     ScopeRequest,
+    ScopeResolution,
     discover_full_python_files,
     discover_worktree_python_files,
     filter_files_by_focus as _filter_files_by_focus,
@@ -752,28 +753,27 @@ def _render_review_result(report: ReviewReport, request: ReviewRunRequest) -> tu
     return report.ci_exit_code or 0, None
 
 
-def _scope_evidence(resolution: object) -> dict[str, object]:
+def _scope_evidence(resolution: ScopeResolution) -> dict[str, object]:
     """Serialize immutable scope identity without exposing materialization paths."""
 
-    values = cast(Any, resolution)
     return {
-        "status": values.status,
-        "reason": values.reason,
-        "assurance_kind": values.assurance_kind,
-        "effective_assurance_kind": values.effective_assurance_kind,
-        "selected_paths": list(values.selected_paths),
-        "merge_base_candidates": list(values.merge_base_candidates),
-        "merge_base_candidate_digest": values.merge_base_candidate_digest,
-        "context_digest": values.context_digest,
-        "resolved_target_commit": values.resolved_target_commit,
-        "resolved_target_tree": values.resolved_target_tree,
-        "resolved_head_commit": values.resolved_head_commit,
-        "resolved_head_tree": values.resolved_head_tree,
-        "exact_rename_digest": values.exact_rename_digest,
-        "base_source_manifest_digest": values.base_source_manifest_digest,
-        "head_source_manifest_digest": values.head_source_manifest_digest,
-        "policy_manifest_digest": values.policy_manifest_digest,
-        "candidate_policy_change_digest": values.candidate_policy_change_digest,
+        "status": resolution.status,
+        "reason": resolution.reason,
+        "assurance_kind": resolution.assurance_kind,
+        "effective_assurance_kind": resolution.effective_assurance_kind,
+        "selected_paths": list(resolution.selected_paths),
+        "merge_base_candidates": list(resolution.merge_base_candidates),
+        "merge_base_candidate_digest": resolution.merge_base_candidate_digest,
+        "context_digest": resolution.context_digest,
+        "resolved_target_commit": resolution.resolved_target_commit,
+        "resolved_target_tree": resolution.resolved_target_tree,
+        "resolved_head_commit": resolution.resolved_head_commit,
+        "resolved_head_tree": resolution.resolved_head_tree,
+        "exact_rename_digest": resolution.exact_rename_digest,
+        "base_source_manifest_digest": resolution.base_source_manifest_digest,
+        "head_source_manifest_digest": resolution.head_source_manifest_digest,
+        "policy_manifest_digest": resolution.policy_manifest_digest,
+        "candidate_policy_change_digest": resolution.candidate_policy_change_digest,
     }
 
 

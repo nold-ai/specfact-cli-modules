@@ -2,9 +2,9 @@
 
 ## Status
 
-`READY FOR TEST AUTHORING — NO IMPLEMENTATION EVIDENCE`
+`IMPLEMENTED — PROTECTED RELEASE EVIDENCE IN PROGRESS`
 
-The public scope semantics, report truth model, red-test names, implementation boundary, migration, benchmark, and rollback are defined. Existing green review reports do not prove these corrected semantics.
+The public scope semantics, report truth model, red-test names, implementation boundary, migration, benchmark, and rollback are implemented with tests-first evidence in `TDD_EVIDENCE.md`. Task 4.3 remains incomplete until the protected Linux matrix proves signed-registry cache miss, network-forbidden cache hit, and empty-root Bubblewrap boot on every supported Python version; `pr_range` promotion remains owned by the later protected core consumer in task 4.7.
 
 The approved compatibility dependency is immutable lightweight core tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, full tree `47984be5434d7ae65ed6908bf525a32053290337`, and strict specifier `===0.55.1`.
 

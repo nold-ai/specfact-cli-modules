@@ -143,7 +143,9 @@ def test_default_skill_content_stays_within_line_budget() -> None:
 
 def test_installed_merge_quality_guidance_uses_pr_range() -> None:
     """Protected merge guidance must request complete range evidence, not worktree inference."""
-    contents = (default_skill_content(updated_on=date(2026, 8, 19)), load_bundled_skill_content() or "")
+    bundled = load_bundled_skill_content()
+    assert bundled is not None
+    contents = (default_skill_content(updated_on=date(2026, 8, 19)), bundled)
 
     for content in contents:
         assert "--scope range" in content

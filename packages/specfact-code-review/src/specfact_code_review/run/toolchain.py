@@ -114,6 +114,7 @@ class InstalledModuleIdentity:
     registry_id: str = ""
     install_verified_checksum: str = ""
     artifact_verification_result: bool = False
+    payload_manifest_digest: str = ""
 
 
 @dataclass(frozen=True)
@@ -133,6 +134,7 @@ class CoreInstalledModuleIdentity:
     artifact_verification_result: bool
     installed_root: str
     installed_root_descriptor_digest: str
+    payload_manifest_digest: str
 
 
 @dataclass(frozen=True)
@@ -507,7 +509,7 @@ def _apply_tar_member(root: Path, archive: tarfile.TarFile, member: tarfile.TarI
         )
         if not logical_target.is_relative_to(root):
             raise ValueError(f"escaping OCI symbolic link: {member.name} -> {member.linkname}")
-        destination.symlink_to(member.linkname)
+        destination.symlink_to(os.path.relpath(logical_target, start=destination.parent))
         return
     if member.islnk():
         source = _safe_archive_path(root, member.linkname.lstrip("/"))
@@ -1269,7 +1271,9 @@ def derive_core_0_55_1_install_handoff(
             or not package_signature
         ):
             raise ValueError("core install records do not identify an approved signed module")
-        selected_key = public_key_path or module_installer._bundled_public_key_path()
+        if public_key_path is None:
+            raise ValueError("approved public key path is required")
+        selected_key = public_key_path
         public_key_pem = _read_stable_regular(Path(selected_key)).decode("utf-8")
         key_fingerprint = "sha256:" + hashlib.sha256(public_key_pem.encode("utf-8")).hexdigest()
         verified = bool(
@@ -1292,6 +1296,25 @@ def derive_core_0_55_1_install_handoff(
                 "relative_path": relative.as_posix(),
             }
         )
+        provisional = InstalledModuleIdentity(
+            module_name,
+            module_version,
+            package_checksum,
+            package_signature,
+            key_fingerprint,
+            f"official-{source}",
+            str(package_dir),
+            "core-v0.55.1-installed-module-handoff-v1",
+            source,
+            source,
+            registry_id,
+            install_checksum,
+            verified,
+        )
+        payload_manifest = _installed_payload_manifest(provisional)
+        payload_manifest_digest = canonical_json_digest(
+            [{"digest": entry.digest, "path": entry.path} for entry in payload_manifest]
+        )
         identity = CoreInstalledModuleIdentity(
             "core-v0.55.1-installed-module-handoff-v1",
             source,
@@ -1308,6 +1331,7 @@ def derive_core_0_55_1_install_handoff(
             verified,
             str(package_dir),
             root_descriptor,
+            payload_manifest_digest,
         )
     except (AttributeError, ImportError, OSError, TypeError, UnicodeDecodeError, ValueError):
         return CoreInstalledModuleHandoff("UNKNOWN", "invalid_core_0_55_1_install_handoff")
@@ -1358,6 +1382,7 @@ def _payload_identity(metadata: dict[str, object] | CoreInstalledModuleHandoff) 
             source.registry_id,
             source.install_verified_checksum,
             source.artifact_verification_result,
+            source.payload_manifest_digest,
         )
     return InstalledModuleIdentity(
         str(metadata.get("module_name", "")),
@@ -1377,6 +1402,7 @@ def _trusted_payload_identity(identity: InstalledModuleIdentity) -> bool:
         or not _valid_digest(identity.key_fingerprint)
         or identity.signature in {"", "untrusted"}
         or (identity.derivation_schema and not identity.artifact_verification_result)
+        or (identity.derivation_schema and not _valid_digest(identity.payload_manifest_digest))
     )
 
 
@@ -1434,6 +1460,9 @@ def verify_installed_module_payload(metadata: dict[str, object] | CoreInstalledM
         return InstalledPayload("UNKNOWN", "untrusted_installed_module", identity)
     try:
         manifest = _installed_payload_manifest(identity)
+        manifest_digest = canonical_json_digest([{"digest": entry.digest, "path": entry.path} for entry in manifest])
+        if identity.derivation_schema and manifest_digest != identity.payload_manifest_digest:
+            raise ValueError("installed payload manifest differs from the verified handoff")
         if not identity.derivation_schema and _legacy_payload_checksum(manifest) != identity.checksum:
             raise ValueError("payload checksum mismatch")
     except (OSError, ValueError):

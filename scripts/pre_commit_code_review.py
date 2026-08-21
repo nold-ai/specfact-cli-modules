@@ -473,6 +473,11 @@ def _print_review_findings_summary(repo_root: Path, *, enforcement: str) -> tupl
         )
     else:
         ci_exit_code, blocking_changed_findings = authoritative_exit, []
+        sys.stderr.write(
+            "Code review schema 1.6 authoritative decision: "
+            f"assurance_status={data.get('assurance_status')!r}, ci_exit_code={ci_exit_code}; "
+            "the changed-line finding filter does not override authoritative assurance.\n"
+        )
     summary = ", ".join(_finding_summary_parts(counts, ai_bloat_count=ai_bloat_count))
     sys.stderr.write(f"Code review summary: {total} finding(s) ({summary}); overall_verdict={verdict!r}.\n")
     _print_enforcement_summary(

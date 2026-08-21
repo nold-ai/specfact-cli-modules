@@ -26,6 +26,7 @@ def test_basedpyright_extends_and_baseline_files_are_governed_but_disabled(tmp_p
     projection = scope.project_basedpyright_policy(policy, snapshot_root=tmp_path, eligible_inputs=("src/app.py",))
 
     assert set(policy.reference_paths) == {"pyproject.toml", "base.json", "baseline.json"}
+    assert projection.status == "PASS"
     assert "baselineFile" not in projection.values
     assert "--baselinefile" not in projection.argv
 

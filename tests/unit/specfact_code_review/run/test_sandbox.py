@@ -67,6 +67,15 @@ def test_analyzer_subprocesses_use_snapshot_invocation_context(sandbox_api: Any,
     assert plan.argv[:4] == ("/opt/specfact/python/bin/python", "-I", "-S", "/opt/specfact/bootstrap/runner.py")
 
 
+def test_radon_uses_a_mounted_empty_control_working_directory(sandbox_api: Any, tmp_path: Path) -> None:
+    plan = sandbox_api.build_launch_plan(_context(tmp_path, sandbox_api, member="radon"))
+
+    assert plan.cwd == "/opt/specfact/control"
+    control = next(mount for mount in plan.mounts if mount.destination == plan.cwd)
+    assert control.role == "control"
+    assert control.read_only is True
+
+
 def test_snapshot_context_mounts_every_sealed_analyzer_config_root(sandbox_api: Any, tmp_path: Path) -> None:
     context = _context(tmp_path, sandbox_api)
     second = tmp_path / "coverage-policy"

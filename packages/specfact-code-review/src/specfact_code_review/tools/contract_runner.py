@@ -293,9 +293,14 @@ def _execute_crosshair(files: list[Path], *, bug_hunt: bool) -> subprocess.Compl
 def _parse_crosshair_findings(output: str, files: list[Path]) -> list[ReviewFinding]:
     allowed_paths = _allowed_paths(files)
     findings: list[ReviewFinding] = []
+    unrecognized: list[str] = []
     for line in output.splitlines():
-        match = _CROSSHAIR_LINE_RE.match(line.strip())
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = _CROSSHAIR_LINE_RE.match(stripped)
         if match is None:
+            unrecognized.append(stripped)
             continue
         filename = match.group("file")
         if normalize_path_variants(filename).isdisjoint(allowed_paths):
@@ -315,6 +320,9 @@ def _parse_crosshair_findings(output: str, files: list[Path]) -> list[ReviewFind
                 fixable=False,
             )
         )
+    if unrecognized:
+        diagnostic = "; ".join(unrecognized[:3])
+        findings.append(_crosshair_unknown(files[0], f"Unrecognized CrossHair output: {diagnostic}"))
     return findings
 
 

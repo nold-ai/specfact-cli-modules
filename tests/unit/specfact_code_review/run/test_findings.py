@@ -786,11 +786,12 @@ def test_fixed_baseline_failure_is_excluded_from_aggregate_blockers() -> None:
     assert report.member_evidence[0].disposition == "fixed"
 
 
-def test_schema_1_6_missing_assurance_status_is_unknown() -> None:
+@pytest.mark.parametrize("schema_version", ["1.6", "1.10", "2.0"])
+def test_schema_1_6_or_newer_missing_assurance_status_is_unknown(schema_version: str) -> None:
     from specfact_code_review.run import findings
 
     payload = {
-        "schema_version": "1.6",
+        "schema_version": schema_version,
         "overall_verdict": "PASS",
         "ci_exit_code": 0,
         "run_id": "missing-status",
@@ -840,6 +841,17 @@ def test_schema_1_6_consumer_compatibility_matrix_is_closed() -> None:
         "schema",
         "suppression_catalog",
     }
+
+
+def test_consumer_matrix_missing_packaged_catalog_is_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    from specfact_code_review.run import findings
+
+    monkeypatch.setattr(findings, "_packaged_suppression_catalog_digest", lambda: None)
+
+    result = findings.validate_consumer_matrix({})
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "suppression_catalog_resource_unavailable"
 
 
 def test_report_binds_suppression_catalog_identity() -> None:

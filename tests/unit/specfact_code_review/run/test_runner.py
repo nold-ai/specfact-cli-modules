@@ -57,6 +57,26 @@ def _finding(
     )
 
 
+def _synthetic_complete_profile_evidence(runner_api: Any) -> dict[str, dict[str, object]]:
+    return {
+        member_id: {
+            "execution_state": "ran",
+            "evidence_outcome": "PASS",
+            "version": runner_api._C14_ANALYZER_VERSIONS[member_id],
+        }
+        for member_id in runner_api.default_pr_range_profile().all_ids
+    }
+
+
+def _synthetic_snapshot_context(runner_api: Any) -> Any:
+    kinds = ("git_blob", "signed_module_payload", "generated_projection", "builtin_mode")
+    identities = tuple(
+        runner_api.GeneratedInputIdentity(kinds[index % len(kinds)], f"sha256:{index + 1:064x}")
+        for index, _member_id in enumerate(runner_api.default_pr_range_profile().all_ids)
+    )
+    return runner_api.SyntheticSnapshotContext(identities)
+
+
 def _simplification_finding(
     *,
     category: Literal["ai_bloat", "dry", "kiss"] = "ai_bloat",
@@ -1203,7 +1223,7 @@ def test_default_pr_range_analyzer_profile_has_closed_membership() -> None:
 
 def test_report_exposes_mandatory_analyzer_coverage() -> None:
     runner_api = _c14_runner()
-    report = runner_api.aggregate_profile_evidence(runner_api.synthetic_complete_profile_evidence())
+    report = runner_api.aggregate_profile_evidence(_synthetic_complete_profile_evidence(runner_api))
 
     assert {member.id for member in report.analyzer_evidence} == set(runner_api.default_pr_range_profile().all_ids)
     assert all(member.execution_state in {"ran", "not_applicable"} for member in report.analyzer_evidence)
@@ -1211,7 +1231,7 @@ def test_report_exposes_mandatory_analyzer_coverage() -> None:
 
 def test_analyzer_identity_mismatch_is_unknown() -> None:
     runner_api = _c14_runner()
-    evidence = runner_api.synthetic_complete_profile_evidence()
+    evidence = _synthetic_complete_profile_evidence(runner_api)
     evidence["ruff"]["version"] = "0.0.0"
 
     report = runner_api.aggregate_profile_evidence(evidence)
@@ -1222,7 +1242,7 @@ def test_analyzer_identity_mismatch_is_unknown() -> None:
 
 def test_required_analyzer_infrastructure_error_is_unknown_not_fail() -> None:
     runner_api = _c14_runner()
-    evidence = runner_api.synthetic_complete_profile_evidence()
+    evidence = _synthetic_complete_profile_evidence(runner_api)
     evidence["contracts"] = {"execution_state": "error", "evidence_outcome": "UNKNOWN", "diagnostic": "timeout"}
 
     report = runner_api.aggregate_profile_evidence(evidence)
@@ -1234,7 +1254,7 @@ def test_required_analyzer_infrastructure_error_is_unknown_not_fail() -> None:
 
 def test_generated_analyzer_inputs_use_typed_provenance(tmp_path: Path) -> None:
     runner_api = _c14_runner()
-    context = runner_api.synthetic_snapshot_context(tmp_path)
+    context = _synthetic_snapshot_context(runner_api)
 
     assert {identity.kind for identity in context.inputs} <= {
         "git_blob",
@@ -1260,11 +1280,23 @@ def test_head_config_cannot_suppress_introduced_finding() -> None:
 
 def test_mandatory_analyzer_eligible_and_invoked_input_manifests_match(tmp_path: Path) -> None:
     runner_api = _c14_runner()
-    context = runner_api.synthetic_snapshot_context(tmp_path)
+    context = _synthetic_snapshot_context(runner_api)
     result = runner_api.validate_invocation_manifests(context)
 
     assert result.status == "PASS"
     assert all(member.eligible_digest == member.invoked_digest for member in result.members)
+
+
+def test_incomplete_invocation_manifest_is_unknown() -> None:
+    runner_api = _c14_runner()
+    context = runner_api.SyntheticSnapshotContext(
+        (runner_api.GeneratedInputIdentity("git_blob", "sha256:" + "a" * 64),)
+    )
+
+    result = runner_api.validate_invocation_manifests(context)
+
+    assert result.status == "UNKNOWN"
+    assert {member.id for member in result.members} == set(runner_api.default_pr_range_profile().all_ids)
 
 
 def test_range_uses_authorized_base_tip_policy_when_target_advanced() -> None:
@@ -1623,6 +1655,55 @@ def test_non_strict_xpass_is_fail_despite_passing_junit_testcase() -> None:
     )
     assert result.status == "FAIL"
     assert result.outcomes[0].kind == "XPASS"
+
+
+def test_failed_pytest_call_cannot_reconcile_as_pass() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_outcomes(
+        observer=({"nodeid": "tests/test_a.py::test_a", "phase": "call", "passed": False},),
+        junit=({"nodeid": "tests/test_a.py::test_a", "outcome": "failed"},),
+        process_exit=1,
+    )
+
+    assert result.status == "FAIL"
+    assert result.outcomes[0].kind == "FAILED"
+
+
+def test_pytest_outcome_signal_disagreement_is_unknown() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_outcomes(
+        observer=({"nodeid": "tests/test_a.py::test_a", "phase": "call", "passed": True},),
+        junit=({"nodeid": "tests/test_a.py::test_a", "outcome": "failed"},),
+        process_exit=0,
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+def test_complete_suite_discovers_async_and_class_test_selectors(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_shapes.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "async def test_async_case():\n    pass\n\n"
+        "class TestCases:\n"
+        "    def test_method(self):\n        pass\n"
+        "    async def test_async_method(self):\n        pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(
+        tmp_path,
+        _suite_policy(),
+        changed_paths=("tests/test_shapes.py",),
+    )
+
+    assert plan.status == "PASS"
+    assert set(plan.selectors) == {
+        "tests/test_shapes.py::test_async_case",
+        "tests/test_shapes.py::TestCases::test_method",
+        "tests/test_shapes.py::TestCases::test_async_method",
+    }
 
 
 @pytest.mark.parametrize("outcome", ["skip", "xfail", "xpass", "deselected"])

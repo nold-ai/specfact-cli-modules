@@ -321,17 +321,6 @@ def default_pr_range_profile() -> AnalyzerProfile:
     )
 
 
-def synthetic_complete_profile_evidence() -> dict[str, dict[str, object]]:
-    return {
-        member_id: {
-            "execution_state": "ran",
-            "evidence_outcome": "PASS",
-            "version": _C14_ANALYZER_VERSIONS[member_id],
-        }
-        for member_id in default_pr_range_profile().all_ids
-    }
-
-
 def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> ProfileEvidenceReport:
     profile = default_pr_range_profile()
     members: list[AnalyzerEvidence] = []
@@ -351,17 +340,20 @@ def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> Profil
     return ProfileEvidenceReport(tuple(members), assurance, "PASS" if assurance == "PASS" else "FAIL", required_unknown)
 
 
-def synthetic_snapshot_context(_root: Path) -> SyntheticSnapshotContext:
-    kinds = ("git_blob", "signed_module_payload", "generated_projection", "builtin_mode")
-    return SyntheticSnapshotContext(
-        tuple(GeneratedInputIdentity(kind, f"sha256:{index:064x}") for index, kind in enumerate(kinds, 1))
-    )
-
-
 def validate_invocation_manifests(context: SyntheticSnapshotContext) -> InvocationManifestResult:
+    member_ids = default_pr_range_profile().all_ids
+    if len(context.inputs) != len(member_ids):
+        missing = tuple(
+            InvocationManifestEvidence(member_id, "", "") for member_id in member_ids[len(context.inputs) :]
+        )
+        present = tuple(
+            InvocationManifestEvidence(member_id, item.digest, item.digest)
+            for member_id, item in zip(member_ids, context.inputs, strict=False)
+        )
+        return InvocationManifestResult("UNKNOWN", present + missing)
     members = tuple(
         InvocationManifestEvidence(member_id, item.digest, item.digest)
-        for member_id, item in zip(default_pr_range_profile().all_ids, context.inputs, strict=False)
+        for member_id, item in zip(member_ids, context.inputs, strict=True)
     )
     return InvocationManifestResult("PASS", members)
 
@@ -391,17 +383,64 @@ def _matches_python_file(path: Path, patterns: tuple[str, ...]) -> bool:
     return any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
 
 
-def _test_selectors(path: Path, relative: str, function_patterns: tuple[str, ...]) -> tuple[str, ...]:
+def _test_selectors(
+    path: Path,
+    relative: str,
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> tuple[str, ...]:
     try:
         tree = ast.parse(path.read_bytes())
     except (OSError, SyntaxError):
         return ()
+    selectors: list[str] = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
+            fnmatch.fnmatch(node.name, pattern) for pattern in function_patterns
+        ):
+            selectors.append(f"{relative}::{node.name}")
+        if isinstance(node, ast.ClassDef) and any(fnmatch.fnmatch(node.name, pattern) for pattern in class_patterns):
+            selectors.extend(
+                f"{relative}::{node.name}::{child.name}"
+                for child in node.body
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and any(fnmatch.fnmatch(child.name, pattern) for pattern in function_patterns)
+            )
+    return tuple(selectors)
+
+
+def _collect_pytest_selectors(
+    snapshot_root: Path,
+    roots: tuple[str, ...],
+    file_patterns: tuple[str, ...],
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> tuple[str, ...]:
     return tuple(
-        f"{relative}::{node.name}"
-        for node in tree.body
-        if isinstance(node, ast.FunctionDef)
-        and any(fnmatch.fnmatch(node.name, pattern) for pattern in function_patterns)
+        selector
+        for root in roots
+        for path in sorted((snapshot_root / root).rglob("*.py"))
+        if _matches_python_file(path, file_patterns)
+        for selector in _test_selectors(
+            path,
+            path.relative_to(snapshot_root).as_posix(),
+            function_patterns,
+            class_patterns,
+        )
     )
+
+
+def _changed_pytest_candidates(
+    changed_paths: tuple[str, ...],
+    roots: tuple[str, ...],
+    file_patterns: tuple[str, ...],
+) -> set[str]:
+    return {
+        path
+        for path in changed_paths
+        if any(path == root or path.startswith(f"{root}/") for root in roots)
+        and _matches_python_file(Path(path), file_patterns)
+    }
 
 
 def plan_complete_pytest_suite(
@@ -414,20 +453,16 @@ def plan_complete_pytest_suite(
     del deleted_paths
     roots = tuple(str(value) for value in cast(list[object], policy.get("testpaths", ["tests"])))
     file_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_files", ["test_*.py"])))
+    class_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_classes", ["Test*"])))
     function_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_functions", ["test_*"])))
-    selectors = tuple(
-        selector
-        for root in roots
-        for path in sorted((snapshot_root / root).rglob("*.py"))
-        if _matches_python_file(path, file_patterns)
-        for selector in _test_selectors(path, path.relative_to(snapshot_root).as_posix(), function_patterns)
+    selectors = _collect_pytest_selectors(
+        snapshot_root,
+        roots,
+        file_patterns,
+        function_patterns,
+        class_patterns,
     )
-    changed_candidates = {
-        path
-        for path in changed_paths
-        if any(path == root or path.startswith(f"{root}/") for root in roots)
-        and _matches_python_file(Path(path), file_patterns)
-    }
+    changed_candidates = _changed_pytest_candidates(changed_paths, roots, file_patterns)
     collected_paths = {selector.split("::", maxsplit=1)[0] for selector in selectors}
     if changed_candidates - collected_paths:
         return PytestSuitePlan(selectors, False, "UNKNOWN", "uncollected_changed_test")
@@ -609,13 +644,29 @@ def project_pytest_policy(policy: dict[str, object], *, snapshot_root: Path, out
 def reconcile_pytest_outcomes(
     *, observer: tuple[dict[str, object], ...], junit: tuple[dict[str, object], ...], process_exit: int
 ) -> PytestOutcomeResult:
-    del junit, process_exit
-    outcomes = tuple(
-        PytestObservedOutcome("XPASS" if record.get("passed") and record.get("wasxfail") else "PASS")
-        for record in observer
-        if record.get("phase") == "call"
+    call_records = tuple(record for record in observer if record.get("phase") == "call")
+
+    def observed_kind(record: dict[str, object]) -> str:
+        if record.get("wasxfail"):
+            return "XPASS" if record.get("passed") else "XFAIL"
+        if record.get("skipped"):
+            return "SKIPPED"
+        return "PASS" if record.get("passed") else "FAILED"
+
+    outcomes = tuple(PytestObservedOutcome(observed_kind(record)) for record in call_records)
+    expected_junit = {"PASS": "passed", "XPASS": "passed", "FAILED": "failed", "XFAIL": "skipped", "SKIPPED": "skipped"}
+    junit_by_node = {str(record.get("nodeid", "")): str(record.get("outcome", "")) for record in junit}
+    signals_match = len(junit_by_node) == len(call_records) and all(
+        junit_by_node.get(str(record.get("nodeid", ""))) == expected_junit[outcome.kind]
+        for record, outcome in zip(call_records, outcomes, strict=True)
     )
-    return PytestOutcomeResult("FAIL" if any(item.kind == "XPASS" for item in outcomes) else "PASS", outcomes)
+    process_matches = (process_exit != 0) == any(outcome.kind == "FAILED" for outcome in outcomes)
+    if not signals_match or not process_matches:
+        return PytestOutcomeResult("UNKNOWN", outcomes)
+    return PytestOutcomeResult(
+        "FAIL" if any(outcome.kind != "PASS" for outcome in outcomes) else "PASS",
+        outcomes,
+    )
 
 
 def classify_targeted_pytest(*, base_outcome: str, head_outcome: str) -> StatusResult:

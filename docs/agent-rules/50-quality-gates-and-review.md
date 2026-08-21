@@ -36,7 +36,7 @@ depends_on:
 
 # Agent quality gates and review
 
-For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local producer remains `range_preview`; only a protected consumer can independently verify and promote it to `pr_range`.
+For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local range run without matching claimed context is `range_preview`; one with matching claimed context is `range_candidate`. Neither is `pr_range` until a protected consumer independently verifies and promotes the evidence.
 
 ## Quality gate order
 

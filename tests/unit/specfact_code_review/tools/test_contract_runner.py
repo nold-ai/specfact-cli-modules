@@ -160,6 +160,8 @@ def test_run_contract_check_reports_crosshair_timeout_for_mandatory_coverage(mon
 
     assert len(findings) == 1
     assert findings[0].tool == "crosshair"
+    assert findings[0].category == "tool_error"
+    assert findings[0].severity == "warning"
     assert findings[0].evidence_outcome == "UNKNOWN"
     assert findings[0].execution_state == "error"
 
@@ -178,8 +180,25 @@ def test_run_contract_check_reports_crosshair_process_error_for_mandatory_covera
 
     assert len(findings) == 1
     assert findings[0].tool == "crosshair"
+    assert findings[0].category == "tool_error"
+    assert findings[0].severity == "warning"
     assert findings[0].evidence_outcome == "UNKNOWN"
     assert findings[0].execution_state == "error"
+
+
+def test_run_contract_check_rejects_unrecognized_crosshair_output(monkeypatch: MonkeyPatch) -> None:
+    file_path = FIXTURES_DIR / "public_with_contracts.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("crosshair", stdout="unexpected output schema\n", returncode=0)),
+    )
+
+    findings = run_contract_check([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].rule == "CROSSHAIR_INCOMPLETE_EVIDENCE"
+    assert findings[0].evidence_outcome == "UNKNOWN"
 
 
 def test_run_contract_check_reports_unavailable_crosshair_but_keeps_ast_findings(monkeypatch: MonkeyPatch) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -134,7 +135,7 @@ _CONTINUITY_CASES: dict[str, _ContinuityCase] = {
         (_finding(path="src/old.py"),),
         (),
         "alpha\nunsafe value\nomega\n",
-        "alpha\nsafe value\nomega\n",
+        "alpha\nunsafe value\nomega\n",
         "UNKNOWN",
         "unknown",
         {"rename_facts": {"src/old.py": "src/new.py"}},
@@ -252,6 +253,29 @@ def _make_continuity_test(name: str, case: _ContinuityCase) -> Callable[[Any], N
 
 
 globals().update({name: _make_continuity_test(name, case) for name, case in _CONTINUITY_CASES.items()})
+
+
+def test_correspondence_reuses_source_pair_matrices(differential_api: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    original = differential_api._edit_costs
+    calls = 0
+
+    def counted(*args: Any, **kwargs: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(differential_api, "_edit_costs", counted)
+    source = "first\nsecond\nthird\n"
+    result = _classify(
+        differential_api,
+        base=[_finding(rule="R1", line=1), _finding(rule="R2", line=2)],
+        head=[_finding(rule="R1", line=1), _finding(rule="R2", line=2)],
+        before=source,
+        after=source,
+    )
+
+    assert result.status == "FAIL"
+    assert calls == 4
 
 
 def test_rename_facts_ignore_ambient_git_config(differential_api: Any, monkeypatch: Any) -> None:
@@ -559,6 +583,26 @@ def test_exact_adapter_coordinates_convert_to_utf8_byte_half_open_span(different
     assert location.precision == "exact"
 
 
+@pytest.mark.parametrize(
+    "raw",
+    [
+        {"row": 0, "column": 0, "end_row": 1, "end_column": 1},
+        {"row": 2, "column": 0, "end_row": 2, "end_column": 1},
+        {"row": 1, "column": 99, "end_row": 1, "end_column": 100},
+    ],
+)
+def test_out_of_range_adapter_coordinates_fail_closed(differential_api: Any, raw: dict[str, int]) -> None:
+    result = differential_api.normalize_location(
+        analyzer="ruff",
+        path="src/app.py",
+        source=b"value = 1\n",
+        raw=raw,
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "invalid_source_coordinate"
+
+
 def test_selector_and_non_source_locations_do_not_enter_source_continuity(differential_api: Any) -> None:
     for kind in ("selector", "infrastructure"):
         result = differential_api.source_continuity(location={"kind": kind, "value": "node-or-tool"})
@@ -571,6 +615,20 @@ def test_suppression_catalog_resource_matches_checkpoint(differential_api: Any) 
 
     assert resource.digest == checkpoint.suppression_catalog_contract.digest
     assert resource.canonical_bytes == checkpoint.suppression_catalog_contract.canonical_bytes
+
+
+def test_suppression_checkpoint_binding_is_available_from_installed_resources(
+    differential_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        differential_api,
+        "__file__",
+        str(tmp_path / "site-packages/specfact_code_review/run/differential.py"),
+    )
+
+    resource, checkpoint = differential_api.load_suppression_catalog_and_checkpoint()
+
+    assert resource.digest == checkpoint.suppression_catalog_contract.digest
 
 
 def test_suppression_catalog_drift_is_unknown_before_profile_activation(differential_api: Any) -> None:

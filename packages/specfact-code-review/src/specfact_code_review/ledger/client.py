@@ -15,7 +15,7 @@ from beartype import beartype
 from icontract import ensure, require
 from pydantic import BaseModel, Field, ValidationError
 
-from specfact_code_review.run.findings import FAIL, ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import FAIL, ReviewFinding, ReviewReport, schema_version_at_least
 
 
 LedgerVerdict = Literal["PASS", "PASS_WITH_ADVISORY", "FAIL", "UNKNOWN", "NOT_APPLICABLE"]
@@ -172,19 +172,15 @@ class LedgerClient:
         return sorted({finding.file for finding in report.findings if finding.file})
 
     def _verdict_for(self, report: ReviewReport) -> LedgerVerdict:
-        if report.schema_version == "1.6" and report.assurance_status is not None:
-            return report.assurance_status
+        if schema_version_at_least(report.schema_version, 6):
+            return report.assurance_status or "UNKNOWN"
         if report.overall_verdict is None:
             return "PASS_WITH_ADVISORY"
         return report.overall_verdict
 
     def _reward_delta_for(self, report: ReviewReport) -> int:
-        if report.schema_version == "1.6" and report.assurance_status == "PASS":
-            return 5
-        if report.schema_version == "1.6" and report.assurance_status == "FAIL":
-            return -5
-        if report.schema_version == "1.6" and report.assurance_status in {"UNKNOWN", "NOT_APPLICABLE"}:
-            return 0
+        if schema_version_at_least(report.schema_version, 6):
+            return {"PASS": 5, "FAIL": -5}.get(report.assurance_status or "UNKNOWN", 0)
         return report.reward_delta or 0
 
     def _rule_counts(self, findings: list[ReviewFinding]) -> Counter[str]:

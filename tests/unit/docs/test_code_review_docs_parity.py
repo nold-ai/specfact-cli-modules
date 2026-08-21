@@ -49,8 +49,9 @@ def test_merge_quality_guidance_requires_complete_pr_range() -> None:
         assert "protected consumer" in text, path
 
     staged_helper = (MODULES_REPO_ROOT / "scripts/pre_commit_code_review.py").read_text(encoding="utf-8")
-    assert "explicit_files" in staged_helper
-    assert "pr_range" not in staged_helper
+    staged_command = staged_helper.split("def build_review_command", 1)[1].split("\ndef ", 1)[0]
+    assert "*files" in staged_command
+    assert '"--scope"' not in staged_command
 
 
 def _review_run_click_command() -> click.Command:

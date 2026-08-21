@@ -11,6 +11,12 @@ def _workflow_text() -> str:
     return (REPO_ROOT / ".github" / "workflows" / "pr-orchestrator.yml").read_text(encoding="utf-8")
 
 
+def _job_text(workflow: str, job_name: str) -> str:
+    match = re.search(rf"(?ms)^  {re.escape(job_name)}:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n|\Z)", workflow)
+    assert match is not None, f"missing workflow job: {job_name}"
+    return match.group(0)
+
+
 def test_pr_orchestrator_verify_has_core_verifier_flags() -> None:
     workflow = _workflow_text()
     assert "verify-module-signatures" in workflow
@@ -69,7 +75,7 @@ def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
     assert "0.55.1+vendor" in workflow
     assert "==0.55.1" in workflow
     assert "reject-core-version-alias" in workflow
-    exact_job = workflow.split("exact-core-schema-compatibility:", maxsplit=1)[1]
+    exact_job = _job_text(workflow, "exact-core-schema-compatibility")
     assert "ref: dev" not in exact_job
     assert "ref: main" not in exact_job
     assert "FALLBACK_REF" not in exact_job
@@ -77,7 +83,7 @@ def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
 
 def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     workflow = _workflow_text()
-    exact_job = workflow.split("exact-core-schema-compatibility:", maxsplit=1)[1]
+    exact_job = _job_text(workflow, "exact-core-schema-compatibility")
     required_fragments = (
         "packages: read",
         "Run signed analyzer capsule cache-miss, cache-hit, and empty Bubblewrap smoke",
@@ -101,6 +107,16 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
 
     missing = tuple(fragment for fragment in required_fragments if fragment not in exact_job)
     assert not missing, f"missing protected C14 runtime workflow fragments: {missing}"
+
+
+def test_exact_core_smoke_quotes_tree_revision_and_redacts_acquisition_urls() -> None:
+    exact_job = _job_text(_workflow_text(), "exact-core-schema-compatibility")
+
+    assert "rev-parse 'HEAD^{tree}'" in exact_job
+    assert "urlsplit" in exact_job
+    assert "urlunsplit" in exact_job
+    assert '"acquisition_final_url": acquisition.final_url' not in exact_job
+    assert '"redirects": [hop.url' not in exact_job
 
 
 def test_pr_orchestrator_has_single_full_pytest_owner() -> None:

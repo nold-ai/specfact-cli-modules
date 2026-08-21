@@ -12,7 +12,7 @@ expertise_level: [intermediate, advanced]
 
 # Code review run
 
-For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local producer remains `range_preview`; only a protected consumer can independently verify and promote it to `pr_range`.
+For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local run without matching claimed context is `range_preview`; matching claimed context produces `range_candidate`. Only a protected consumer can independently verify and promote it to `pr_range`.
 
 `specfact code review run` executes the governed review pipeline for a set of files or for an auto-detected repo scope.
 
@@ -28,7 +28,9 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 
 | Option | Purpose |
 |--------|---------|
-| `--scope changed\|full` | Review changed files or the full repository when no positional files are provided |
+| `--scope changed\|full\|index\|range` | Review changed files, the full repository, a captured index, or an immutable commit range when no positional files are provided |
+| `--base-ref <commit>`, `--head-ref <commit>` | Bind the immutable range endpoints for `--scope range` |
+| `--pr-context-file <path>` | Bind claimed pull-request target/head context; matching context produces `range_candidate`, not protected `pr_range` |
 | `--path <prefix>` | Narrow auto-discovered review files to one or more repo-relative prefixes |
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
 | `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
@@ -53,9 +55,6 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 The command validates several incompatible flag mixes before the review pipeline runs.
 
 The Typer entrypoint validates **review flags** first: it raises **`typer.BadParameter`** when **`--include-tests`** is combined with **`--exclude-tests`**, or when **`--focus`** is combined with **`--include-tests`** or **`--exclude-tests`**. **Request validation** then rejects incompatible output modes (**`--json`** with **`--score-only`**, or **`--out`** without **`--json`**), and rules for **conflicting targeting styles** reject mixing positional **`FILES...`** with **`--scope`** or **`--path`**. Those deeper checks still surface as **`typer.BadParameter`** with the messages below.
-
-- `Do not combine positional FILES with --scope; choose one targeting style.`
-- `Do not combine positional FILES with --path; choose one targeting style.`
 
 - **Positional `FILES...` with `--scope` or `--path`**: when you pass explicit paths, do not also pass **`--scope`** or **`--path`** (those options apply only to auto-discovery). Runtime error: **`Choose positional files or auto-scope controls, not both.`**
 - **`--focus` with `--include-tests` or `--exclude-tests`**: use **`--focus`** *or* the include/exclude test flags, not both. Runtime error: **`Cannot combine --focus with --include-tests or --exclude-tests`**

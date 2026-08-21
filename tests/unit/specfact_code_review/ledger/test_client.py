@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from specfact_code_review.ledger.client import LedgerClient, _default_local_path
-from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import AssuranceStatus, ReviewFinding, ReviewReport
 
 
 class _Response:
@@ -109,14 +109,13 @@ def test_record_run_without_supabase_writes_to_local_json(tmp_path: Path) -> Non
 )
 def test_ledger_authoritative_assurance_controls_rewards_and_streaks(
     tmp_path: Path,
-    assurance_status: str,
+    assurance_status: AssuranceStatus,
     reward_delta: int,
     pass_streak: int,
     block_streak: int,
 ) -> None:
     ledger_path = tmp_path / "ledger.json"
-    report_type: Any = ReviewReport
-    report = report_type(
+    report = ReviewReport(
         schema_version="1.6",
         assurance_status=assurance_status,
         run_id=f"run-{assurance_status.lower()}",
@@ -140,6 +139,20 @@ def test_ledger_authoritative_assurance_controls_rewards_and_streaks(
     assert payload["streak_block"] == block_streak
     assert run["report_digest"].startswith("sha256:")
     assert run["report_json"]["assurance_status"] == assurance_status
+
+
+def test_schema_1_6_missing_assurance_status_defaults_to_unknown(tmp_path: Path) -> None:
+    report = ReviewReport.model_construct(
+        schema_version="1.6",
+        assurance_status=None,
+        overall_verdict="PASS",
+        findings=[],
+    )
+
+    client = LedgerClient(local_path=tmp_path / "ledger.json")
+
+    assert client._verdict_for(report) == "UNKNOWN"
+    assert client._reward_delta_for(report) == 0
 
 
 def test_record_run_applies_pass_streak_bonus_at_five(tmp_path: Path) -> None:

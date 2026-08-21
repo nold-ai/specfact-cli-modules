@@ -44,8 +44,9 @@ DEFAULT_DO_RULES = (
     "- In headless mode, process one file at a time and emit an action table: file, line, rule, guidance_kind, "
     "recommended_action, action_status, evidence",
     "- For merge-quality review, run `specfact code review run --scope range --base-ref <full-base-ref> "
-    "--head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`; local output is "
-    "range_preview until a protected consumer verifies and promotes it",
+    "--head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`; output is "
+    "range_preview without matching claimed context and range_candidate with it; neither is pr_range until a "
+    "protected consumer verifies and promotes it",
     "- Verify an active OpenSpec change covers the requested scope and follow the sequence: spec delta "
     "→ failing tests → implementation → passing tests → quality gates",
     "- Ask whether tests should be included before repo-wide review; "

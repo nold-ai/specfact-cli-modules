@@ -23,7 +23,7 @@ ANALYZER_COMPONENTS = {
     "ruff": "0.15.12",
     "crosshair-tool": "0.0.109",
     "radon": "6.0.1",
-    "semgrep": "1.136.0",
+    "semgrep": "1.144.0",
 }
 
 
@@ -205,9 +205,51 @@ def test_runtime_capsule_acquires_pinned_oci_layers_from_registry_or_verified_ca
     assert all(record.digest.startswith("sha256:") for record in result.records)
 
 
-def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(toolchain_api: Any, tmp_path: Path) -> None:
+def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lock = _valid_lock()
+    lock["environments"][1]["oci"]["locator"] = (
+        "https://ghcr.io/v2/nold-ai/specfact-review-runtime/manifests/sha256:" + "1" * 64
+    )
+    calls: list[str] = []
+
+    monkeypatch.setattr(toolchain_api.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(toolchain_api.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(
+        toolchain_api,
+        "acquire_oci_distribution",
+        lambda *args, **kwargs: toolchain_api.AcquisitionResult("PASS", "signed_registry"),
+    )
+    monkeypatch.setattr(toolchain_api, "_verified_cached_blob", lambda *args, **kwargs: b"layer")
+
+    def apply_layer(root: Path, *args: Any, **kwargs: Any) -> None:
+        calls.append("apply-layer")
+        (root / "opt/specfact").mkdir(parents=True)
+
+    def verify_wheelhouse(*args: Any, **kwargs: Any) -> tuple[Path, ...]:
+        calls.append("verify-wheelhouse")
+        return ()
+
+    def offline_install(*args: Any, **kwargs: Any) -> None:
+        calls.append("offline-install")
+
+    def installed_set(*args: Any, **kwargs: Any) -> tuple[str, ...]:
+        calls.append("installed-set")
+        return tuple(sorted({*ANALYZER_COMPONENTS, "pip", "setuptools", "wheel"}))
+
+    def verify_root(root: Path, *args: Any, **kwargs: Any) -> None:
+        calls.append("verify-final-root")
+        assert root.is_dir()
+
+    monkeypatch.setattr(toolchain_api, "_apply_oci_layer", apply_layer)
+    monkeypatch.setattr(toolchain_api, "_verify_wheelhouse", verify_wheelhouse)
+    monkeypatch.setattr(toolchain_api, "_offline_install", offline_install)
+    monkeypatch.setattr(toolchain_api, "_installed_distribution_set", installed_set)
+    monkeypatch.setattr(toolchain_api, "_verify_final_root_manifest", verify_root)
+
     result = toolchain_api.materialize_capsule(
-        _valid_lock(),
+        lock,
         environment_id="linux-x86_64-cp312",
         storage_root=tmp_path,
         empty_cache=True,
@@ -216,6 +258,13 @@ def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(toolch
     assert result.status == "PASS"
     assert result.install_policy.indexes_enabled is False
     assert set(result.installed_distributions) == set(result.locked_distributions) | set(result.bootstrap_distributions)
+    assert calls == [
+        "apply-layer",
+        "verify-wheelhouse",
+        "offline-install",
+        "installed-set",
+        "verify-final-root",
+    ]
 
 
 def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
@@ -243,9 +292,11 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
             }
         ],
     }
+    observed_descriptors: list[int] = []
 
     def observe_launch(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         descriptor = kwargs["pass_fds"][0]
+        observed_descriptors.append(descriptor)
         assert command[0] == f"/proc/self/fd/{descriptor}"
         os.lseek(descriptor, 0, os.SEEK_SET)
         assert os.read(descriptor, len(payload)) == payload
@@ -254,6 +305,74 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
     monkeypatch.setattr(toolchain_api.subprocess, "run", observe_launch)
 
     toolchain_api._offline_install(tmp_path, environment, ())
+    assert observed_descriptors
+    with pytest.raises(OSError):
+        os.fstat(observed_descriptors[0])
+
+
+@pytest.mark.parametrize("mutation", ["launch-mode", "digest", "non-executable", "symlink"])
+def test_verified_bubblewrap_descriptor_rejects_invalid_launch_identity(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+) -> None:
+    payload = b"signed static bubblewrap"
+    bubblewrap = tmp_path / "bwrap-static"
+    bubblewrap.write_bytes(payload)
+    bubblewrap.chmod(0o755)
+    descriptor = {
+        "launch_mode": "same-open-descriptor",
+        "executable_sha256": "sha256:" + hashlib.sha256(payload).hexdigest(),
+    }
+    if mutation == "launch-mode":
+        descriptor["launch_mode"] = "path"
+        monkeypatch.setattr(toolchain_api.os, "open", lambda *args, **kwargs: pytest.fail("os.open called"))
+    elif mutation == "digest":
+        descriptor["executable_sha256"] = _digest("f")
+    elif mutation == "non-executable":
+        bubblewrap.chmod(0o644)
+    else:
+        target = tmp_path / "real-bwrap"
+        target.write_bytes(payload)
+        target.chmod(0o755)
+        bubblewrap.unlink()
+        bubblewrap.symlink_to(target)
+
+    with pytest.raises((OSError, ValueError)):
+        toolchain_api._open_verified_native_executable(bubblewrap, descriptor)
+
+
+def test_offline_install_rejects_nonzero_bubblewrap_exit(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = b"signed static bubblewrap"
+    bubblewrap = tmp_path / "opt/specfact/bin/bwrap-static"
+    bubblewrap.parent.mkdir(parents=True)
+    bubblewrap.write_bytes(payload)
+    bubblewrap.chmod(0o755)
+    environment = {
+        "paths": {
+            "analyzers": "/opt/specfact/analyzers",
+            "interpreter": "/opt/specfact/python/bin/python",
+            "loader": "/opt/specfact/lib/ld-linux-x86-64.so.2",
+            "libraries": "/opt/specfact/lib",
+            "wheelhouse": "/opt/specfact/wheelhouse",
+        },
+        "native_tools": [
+            {
+                "id": "bubblewrap-static",
+                "path": "/opt/specfact/bin/bwrap-static",
+                "launch_mode": "same-open-descriptor",
+                "executable_sha256": "sha256:" + hashlib.sha256(payload).hexdigest(),
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        toolchain_api.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 1, "", "sandbox failed"),
+    )
+
+    with pytest.raises(ValueError, match="offline analyzer installation failed"):
+        toolchain_api._offline_install(tmp_path, environment, ())
 
 
 def test_oci_extraction_closes_temporary_creator_descriptor(
@@ -283,6 +402,30 @@ def test_oci_extraction_closes_temporary_creator_descriptor(
     assert creator_descriptors
     with pytest.raises(OSError):
         os.fstat(creator_descriptors[0])
+
+
+def test_oci_absolute_symlink_is_rewritten_inside_capsule_root(toolchain_api: Any, tmp_path: Path) -> None:
+    archive_bytes = io.BytesIO()
+    with tarfile.open(fileobj=archive_bytes, mode="w:") as created:
+        directory = tarfile.TarInfo("opt/specfact/bin")
+        directory.type = tarfile.DIRTYPE
+        directory.mode = 0o755
+        created.addfile(directory)
+        member = tarfile.TarInfo("opt/specfact/bin/python")
+        member.type = tarfile.SYMTYPE
+        member.linkname = "/opt/specfact/python/bin/python"
+        created.addfile(member)
+    archive_bytes.seek(0)
+    root = tmp_path / "root"
+    root.mkdir()
+
+    with tarfile.open(fileobj=archive_bytes, mode="r:") as archive:
+        for member in archive.getmembers():
+            toolchain_api._apply_tar_member(root, archive, member)
+
+    link = root / "opt/specfact/bin/python"
+    assert os.readlink(link) == "../python/bin/python"
+    assert link.resolve(strict=False).is_relative_to(root)
 
 
 def test_checkpoint_binds_canonical_toolchain_lock_projection(toolchain_api: Any) -> None:
@@ -351,7 +494,7 @@ def _installed_payload(root: Path) -> dict[str, Any]:
     }
 
 
-def _core_0_55_1_discovered_install(root: Path, *, user_modules_root: Path) -> tuple[Any, str, Path]:
+def _core_0_55_1_discovered_install(root: Path) -> tuple[Any, str, Path]:
     from specfact_cli.models.module_package import IntegrityInfo, ModulePackageMetadata, PublisherInfo
     from specfact_cli.registry.module_discovery import DiscoveredModule
 
@@ -444,7 +587,7 @@ def test_builtin_payload_derives_core_0_55_1_install_handoff(
 
     user_root = tmp_path / "user-modules"
     install_root = user_root / "nold-ai" / "specfact-code-review"
-    discovered, registry_id, public_key = _core_0_55_1_discovered_install(install_root, user_modules_root=user_root)
+    discovered, registry_id, public_key = _core_0_55_1_discovered_install(install_root)
     monkeypatch.setattr(module_installer, "verify_module_artifact", lambda *args, **kwargs: True)
 
     result = toolchain_api.derive_core_0_55_1_install_handoff(
@@ -463,6 +606,56 @@ def test_builtin_payload_derives_core_0_55_1_install_handoff(
     assert result.identity.install_verified_checksum == discovered.metadata.integrity.checksum
     assert result.identity.artifact_verification_result is True
     assert not hasattr(result.identity, "loader_registration_digest")
+
+
+def test_core_handoff_requires_explicit_approved_public_key(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from specfact_cli.registry import module_installer
+
+    user_root = tmp_path / "user-modules"
+    discovered, registry_id, _public_key = _core_0_55_1_discovered_install(
+        user_root / "nold-ai" / "specfact-code-review"
+    )
+    monkeypatch.setattr(module_installer, "verify_module_artifact", lambda *args, **kwargs: True)
+
+    result = toolchain_api.derive_core_0_55_1_install_handoff(
+        discovered,
+        expected_registry_id=registry_id,
+        user_modules_root=user_root,
+        marketplace_modules_root=tmp_path / "marketplace-modules",
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+@pytest.mark.parametrize("mutation", ["added", "removed", "changed"])
+def test_core_handoff_payload_mutation_is_unknown(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+) -> None:
+    from specfact_cli.registry import module_installer
+
+    user_root = tmp_path / "user-modules"
+    install_root = user_root / "nold-ai" / "specfact-code-review"
+    discovered, registry_id, public_key = _core_0_55_1_discovered_install(install_root)
+    monkeypatch.setattr(module_installer, "verify_module_artifact", lambda *args, **kwargs: True)
+    handoff = toolchain_api.derive_core_0_55_1_install_handoff(
+        discovered,
+        expected_registry_id=registry_id,
+        user_modules_root=user_root,
+        marketplace_modules_root=tmp_path / "marketplace-modules",
+        public_key_path=public_key,
+    )
+    assert handoff.status == "PASS"
+    target = install_root / "specfact_code_review/builtin.py"
+    if mutation == "added":
+        (install_root / "specfact_code_review/added.py").write_text("ADDED = True\n", encoding="utf-8")
+    elif mutation == "removed":
+        target.unlink()
+    else:
+        target.write_text("CHANGED = True\n", encoding="utf-8")
+
+    assert toolchain_api.verify_installed_module_payload(handoff).status == "UNKNOWN"
 
 
 def test_candidate_payload_identity_is_not_official_install(toolchain_api: Any) -> None:

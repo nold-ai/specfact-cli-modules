@@ -18,7 +18,13 @@ def _git(repo: Path, *args: str) -> str:
         check=True,
         capture_output=True,
         text=True,
-        env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1"},
+        env={
+            **os.environ,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_SYSTEM": os.devnull,
+            "GIT_TERMINAL_PROMPT": "0",
+        },
     )
     return result.stdout.strip()
 
@@ -36,6 +42,9 @@ def git_repo(tmp_path: Path) -> Path:
     _git(repo, "init", "-b", "main")
     _git(repo, "config", "user.name", "C14 Tests")
     _git(repo, "config", "user.email", "c14@example.invalid")
+    _git(repo, "config", "commit.gpgsign", "false")
+    _git(repo, "config", "core.autocrlf", "false")
+    _git(repo, "config", "core.symlinks", "true")
     (repo / "src").mkdir()
     (repo / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
     (repo / "tests").mkdir()

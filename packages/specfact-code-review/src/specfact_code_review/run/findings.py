@@ -573,7 +573,7 @@ class ReviewReport(BaseModel):
 
     def _schema_version(self) -> str:
         """Return the evidence schema version required by the present report fields."""
-        if _schema_version_at_least(self.schema_version, 6):
+        if schema_version_at_least(self.schema_version, 6):
             return self.schema_version
         if self.requirements_evidence is not None:
             return "1.5"
@@ -603,7 +603,7 @@ class ReviewReport(BaseModel):
         return self
 
     def _derive_authoritative_governance(self) -> bool:
-        if self.schema_version != "1.6" or self.assurance_status is None:
+        if not schema_version_at_least(self.schema_version, 6) or self.assurance_status is None:
             return False
         self.has_unknown_required_evidence = bool(
             self.has_unknown_required_evidence
@@ -774,7 +774,12 @@ def read_review_report(payload: dict[str, object]) -> ReviewReportReadResult:
 
     schema_version = str(payload.get("schema_version", ""))
     raw_status = payload.get("assurance_status")
-    if schema_version >= "1.6" and raw_status not in {"PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"}:
+    if schema_version_at_least(schema_version, 6) and raw_status not in {
+        "PASS",
+        "FAIL",
+        "UNKNOWN",
+        "NOT_APPLICABLE",
+    }:
         status: AssuranceStatus = "UNKNOWN"
     elif raw_status in {"PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"}:
         status = raw_status  # type: ignore[assignment]
@@ -788,12 +793,16 @@ def read_review_report(payload: dict[str, object]) -> ReviewReportReadResult:
     return ReviewReportReadResult(status=status, ci_exit_code=projection.ci_exit_code)
 
 
-def _packaged_suppression_catalog_digest() -> str:
+def _packaged_suppression_catalog_digest() -> str | None:
     path = Path(__file__).resolve().parent.parent / "resources/contracts/pr-range-v1-suppression-catalog.json"
-    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    try:
+        payload = path.read_bytes()
+    except OSError:
+        return None
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
-def _schema_version_at_least(value: str, required_minor: int) -> bool:
+def schema_version_at_least(value: str, required_minor: int) -> bool:
     try:
         major_text, minor_text, *_ = value.split(".")
         major = int(major_text)
@@ -863,6 +872,8 @@ def validate_consumer_matrix(matrix: object) -> ConsumerMatrixValidation:
     if not isinstance(matrix, dict):
         return _unknown_matrix("consumer_matrix_invalid")
     expected_catalog_digest = _packaged_suppression_catalog_digest()
+    if expected_catalog_digest is None:
+        return _unknown_matrix("suppression_catalog_resource_unavailable")
     identity_reason = _validate_matrix_catalog_identity(matrix, expected_catalog_digest)
     if identity_reason is not None:
         return _unknown_matrix(identity_reason)

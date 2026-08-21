@@ -238,7 +238,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C exact-core rev-parse HEAD)" = "b1e517e60e669eaba15a18ecfa83ef5a9df65276"
-          test "$(git -C exact-core rev-parse HEAD^{tree})" = "47984be5434d7ae65ed6908bf525a32053290337"
+          test "$(git -C exact-core rev-parse 'HEAD^{tree}')" = "47984be5434d7ae65ed6908bf525a32053290337"
           test "$(git ls-remote --tags https://github.com/nold-ai/specfact-cli.git refs/tags/v0.55.1 | cut -f1)" = "b1e517e60e669eaba15a18ecfa83ef5a9df65276"
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -251,7 +251,7 @@ jobs:
           python -m venv .exact-core-venv
           . .exact-core-venv/bin/activate
           python -m pip install --upgrade pip
-          python -m pip install --no-cache-dir ./exact-core pytest pyyaml beartype icontract pydantic requests typer packaging
+          python -m pip install --no-cache-dir ./exact-core pytest==9.1.1 PyYAML==6.0.3 beartype==0.22.9 icontract==2.7.3 pydantic==2.13.4 requests==2.34.2 typer==0.27.1 packaging==26.3
           python scripts/link_dev_module.py specfact-code-review --shadow-root "${RUNNER_TEMP}/specfact-modules" --force
       - name: reject-core-version-alias
         shell: bash
@@ -295,6 +295,7 @@ jobs:
           import subprocess
           from pathlib import Path
           from unittest import mock
+          from urllib.parse import urlsplit, urlunsplit
 
           from specfact_code_review.run import toolchain
 
@@ -400,14 +401,19 @@ jobs:
           boot = subprocess.run(command, capture_output=True, text=True, check=False, timeout=60, env={})
           assert boot.returncode == 0, boot.stderr
           assert boot.stdout.strip() == "c14-capsule-ok"
+
+          def redact_url(url: str) -> str:
+              parsed = urlsplit(url)
+              return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+
           print(json.dumps({
               "abi": abi,
-              "acquisition_final_url": acquisition.final_url,
+              "acquisition_final_url": redact_url(acquisition.final_url),
               "cache_hit_source": "verified_cache",
               "closure_digest": environment["closure_digest"],
               "final_root_manifest_digest": final_root_manifest_digest,
               "identity": first.identity.digest,
               "installed_count": len(first.installed_distributions),
-              "redirects": [hop.url for hop in acquisition.redirect_chain],
+              "redirects": [redact_url(hop.url) for hop in acquisition.redirect_chain],
           }, sort_keys=True))
           PY

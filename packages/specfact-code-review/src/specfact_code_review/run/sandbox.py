@@ -208,6 +208,14 @@ def _mounts(context: SnapshotInvocationContext) -> tuple[SandboxMount, ...]:
         SandboxMount("output", "output", context.output_root, "/opt/specfact/output", False),
         SandboxMount("temporary", "temporary", context.temporary_root, "/opt/specfact/tmp", False),
     ]
+    if context.member == "radon":
+        control_root = context.temporary_root.parent / "radon-control"
+        if control_root.is_symlink() or (
+            control_root.exists() and (not control_root.is_dir() or any(control_root.iterdir()))
+        ):
+            raise ValueError("Radon control root must be an empty real directory")
+        control_root.mkdir(exist_ok=True)
+        mounts.append(SandboxMount("control", "control", control_root, "/opt/specfact/control", True))
     if context.project_runtime_root is not None and context.member in _PROJECT_RUNTIME_MEMBERS:
         mounts.append(
             SandboxMount(

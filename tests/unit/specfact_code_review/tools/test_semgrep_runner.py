@@ -113,6 +113,7 @@ def test_semgrep_disable_nosem_preserves_string_literal_finding() -> None:
     )
 
     assert "--disable-nosem" in plan.argv
+    assert plan.suppression_controls_disabled is True
     assert plan.expected_rules == ("python.lang.security.audit.eval-detected",)
 
 

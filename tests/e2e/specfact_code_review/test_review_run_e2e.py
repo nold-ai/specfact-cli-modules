@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib.metadata
+import importlib.resources
 import json
 import shutil
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -17,16 +19,19 @@ FIXTURE_ROOT = Path(__file__).resolve().parents[2] / "fixtures" / "review"
 REQUIRED_TOOLS = ("ruff", "radon", "basedpyright", "pylint", "semgrep")
 
 
+def _consumer_matrix() -> dict[str, Any]:
+    resource = importlib.resources.files("specfact_code_review").joinpath(
+        "resources", "contracts", "review-report-schema-1.6-consumer-matrix.json"
+    )
+    return json.loads(resource.read_text(encoding="utf-8"))
+
+
 @pytest.mark.e2e
 def test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix() -> None:
     from specfact_code_review.run import findings
 
     assert importlib.metadata.version("specfact-cli") == "0.55.1"
-    resource = (
-        Path(__file__).resolve().parents[3]
-        / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/review-report-schema-1.6-consumer-matrix.json"
-    )
-    matrix = json.loads(resource.read_text(encoding="utf-8"))
+    matrix = _consumer_matrix()
 
     result = findings.validate_consumer_matrix(matrix)
 
@@ -34,14 +39,11 @@ def test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix() -> None:
     assert result.exercised_statuses == ("FAIL", "NOT_APPLICABLE", "PASS", "UNKNOWN")
 
 
+@pytest.mark.e2e
 def test_consumer_matrix_rejects_suppression_catalog_identity_mismatch() -> None:
     from specfact_code_review.run import findings
 
-    resource = (
-        Path(__file__).resolve().parents[3]
-        / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/review-report-schema-1.6-consumer-matrix.json"
-    )
-    matrix = json.loads(resource.read_text(encoding="utf-8"))
+    matrix = _consumer_matrix()
     matrix["accepted_pr_range_envelope"]["suppression_catalog_digest"] = "sha256:" + "f" * 64
 
     result = findings.validate_consumer_matrix(matrix)
