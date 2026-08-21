@@ -287,12 +287,13 @@ jobs:
         run: |
           set -euo pipefail
           . .exact-core-venv/bin/activate
-          sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN,RUNNER_TEMP "$PWD/.exact-core-venv/bin/python" - <<'PY'
+          sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN "$PWD/.exact-core-venv/bin/python" - <<'PY'
           import hashlib
           import json
           import os
           import shutil
           import subprocess
+          import tempfile
           from pathlib import Path
           from unittest import mock
           from urllib.parse import urlsplit, urlunsplit
@@ -314,7 +315,7 @@ jobs:
           environment_id = environment["environment_id"]
           registry_actor = os.environ["REGISTRY_ACTOR"]
           registry_token = os.environ["REGISTRY_TOKEN"]
-          runtime_root = Path(os.environ["RUNNER_TEMP"]) / f"c14-capsule-{abi}"
+          runtime_root = Path(tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp"))
           storage_a = runtime_root / "storage-a"
           storage_b = runtime_root / "storage-b"
           cache_a = storage_a / "oci-cache"

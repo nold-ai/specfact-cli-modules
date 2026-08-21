@@ -88,7 +88,7 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     capsule_step_offset = exact_job.index(capsule_step_name)
     capsule_step = exact_job[capsule_step_offset:]
     elevated_python = (
-        "sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN,RUNNER_TEMP "
+        "sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN "
         '"$PWD/.exact-core-venv/bin/python" -'
     )
     required_fragments = (
@@ -96,6 +96,8 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         capsule_step_name,
         "REGISTRY_ACTOR: ${{ github.actor }}",
         "REGISTRY_TOKEN: ${{ github.token }}",
+        "import tempfile",
+        'tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp")',
         "pr-range-v1-toolchain-lock.json",
         'credential=f"{registry_actor}:{registry_token}"',
         "empty_cache=True",
@@ -117,6 +119,7 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     assert not missing, f"missing protected C14 runtime workflow fragments: {missing}"
     assert elevated_python in capsule_step
     assert elevated_python not in exact_job[:capsule_step_offset]
+    assert 'Path(os.environ["RUNNER_TEMP"])' not in capsule_step
     assert '"--unshare-net"' not in capsule_step
 
 
