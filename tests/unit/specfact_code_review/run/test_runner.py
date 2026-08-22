@@ -294,6 +294,31 @@ def test_capsule_member_passes_explicit_target_policy_to_adapter(monkeypatch: Mo
     assert observed["extra_args"] == ("--config", "/opt/specfact/config/1/ruff.toml", "--no-cache")
 
 
+def test_capsule_radon_member_activates_bound_full_result_contract(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    observed: dict[str, object] = {}
+
+    def run_radon_with_contract(files: list[Path], *, full_result: bool = False) -> list[ReviewFinding]:
+        observed["files"] = files
+        observed["full_result"] = full_result
+        return []
+
+    monkeypatch.setattr(runner_api, "run_radon", run_radon_with_contract)
+
+    findings = runner_api._member_findings(
+        "radon",
+        [Path("/opt/specfact/snapshot/src/app.py")],
+        bug_hunt=False,
+        adapter_argv=("radon-full-result-v1",),
+    )
+
+    assert findings == []
+    assert observed == {
+        "files": [Path("/opt/specfact/snapshot/src/app.py")],
+        "full_result": True,
+    }
+
+
 def test_capsule_targeted_pytest_executes_supplied_complete_inventory(monkeypatch: MonkeyPatch) -> None:
     runner_api = _c14_runner()
     observed: list[tuple[str, ...]] = []
@@ -430,6 +455,7 @@ def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path:
         assert bindings.member_argv["basedpyright"][1].endswith("/basedpyright.json")
         assert bindings.member_argv["pylint"][0] == "--rcfile"
         assert bindings.member_argv["pylint"][1].endswith("/pylintrc")
+        assert bindings.member_argv["radon"] == ("radon-full-result-v1",)
         assert all(
             not argument.startswith(str(snapshot_root)) for argv in bindings.member_argv.values() for argument in argv
         )
@@ -1702,6 +1728,16 @@ def test_run_tdd_gate_warns_when_coverage_is_below_threshold(monkeypatch: Monkey
         coverage_arg = next(arg for arg in command if arg.startswith("--cov-report=json:"))
         coverage_path = Path(coverage_arg.split(":", 1)[1])
         coverage_path.write_text(json.dumps(coverage_payload), encoding="utf-8")
+        Path(command[3]).write_text(
+            json.dumps([{"nodeid": "tests/test_scorer.py::test_placeholder", "phase": "call", "passed": True}]),
+            encoding="utf-8",
+        )
+        junit_arg = next(arg for arg in command if arg.startswith("--junitxml="))
+        Path(junit_arg.split("=", 1)[1]).write_text(
+            '<testsuites><testsuite><testcase classname="tests.test_scorer" name="test_placeholder" />'
+            "</testsuite></testsuites>",
+            encoding="utf-8",
+        )
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
@@ -1749,6 +1785,16 @@ def test_run_tdd_gate_returns_no_finding_for_passing_tests_with_sufficient_cover
         coverage_arg = next(arg for arg in command if arg.startswith("--cov-report=json:"))
         coverage_path = Path(coverage_arg.split(":", 1)[1])
         coverage_path.write_text(json.dumps(coverage_payload), encoding="utf-8")
+        Path(command[3]).write_text(
+            json.dumps([{"nodeid": "tests/test_scorer.py::test_placeholder", "phase": "call", "passed": True}]),
+            encoding="utf-8",
+        )
+        junit_arg = next(arg for arg in command if arg.startswith("--junitxml="))
+        Path(junit_arg.split("=", 1)[1]).write_text(
+            '<testsuites><testsuite><testcase classname="tests.test_scorer" name="test_placeholder" />'
+            "</testsuite></testsuites>",
+            encoding="utf-8",
+        )
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
@@ -1818,7 +1864,7 @@ def test_run_complete_pytest_inventory_preserves_exact_node_ids(monkeypatch: Mon
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
 
-    _result, coverage_path = runner_api._run_pytest_inventory_with_coverage(selectors)
+    _result, coverage_path, observer_path, junit_path = runner_api._run_pytest_inventory_with_coverage(selectors)
 
     try:
         command = cast(list[str], recorded["command"])
@@ -1826,6 +1872,8 @@ def test_run_complete_pytest_inventory_preserves_exact_node_ids(monkeypatch: Mon
         assert command[command.index("--cov") + 1] == "/opt/specfact/snapshot"
     finally:
         coverage_path.unlink(missing_ok=True)
+        observer_path.unlink(missing_ok=True)
+        junit_path.unlink(missing_ok=True)
 
 
 def test_run_complete_pytest_inventory_applies_sealed_policy_argv(monkeypatch: MonkeyPatch) -> None:
@@ -1846,17 +1894,19 @@ def test_run_complete_pytest_inventory_applies_sealed_policy_argv(monkeypatch: M
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
 
-    _result, coverage_path = runner_api._run_pytest_inventory_with_coverage(
+    _result, coverage_path, observer_path, junit_path = runner_api._run_pytest_inventory_with_coverage(
         ("tests/test_a.py::test_a",),
         policy_argv=policy_argv,
     )
 
     try:
         command = cast(list[str], recorded["command"])
-        assert command[3 : 3 + len(policy_argv)] == list(policy_argv)
+        assert command[4 : 4 + len(policy_argv)] == list(policy_argv)
         assert command[-1] == "tests/test_a.py::test_a"
     finally:
         coverage_path.unlink(missing_ok=True)
+        observer_path.unlink(missing_ok=True)
+        junit_path.unlink(missing_ok=True)
 
 
 def test_pytest_python_executable_uses_current_interpreter() -> None:
@@ -2162,6 +2212,33 @@ def test_complete_suite_collects_inherited_unittest_selector(tmp_path: Path) -> 
     assert plan.selectors == (
         "tests/test_inherited.py::SharedCase::test_inherited",
         "tests/test_inherited.py::TestChild::test_inherited",
+    )
+
+
+def test_complete_suite_uses_unittest_loader_method_prefix_independently_of_pytest_policy(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_mixed.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "import unittest\n\n"
+        "def check_smoke():\n"
+        "    pass\n\n"
+        "class RegressionCase(unittest.TestCase):\n"
+        "    def test_failure(self):\n"
+        "        pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(
+        tmp_path,
+        _suite_policy(python_functions=["check_*"]),
+        changed_paths=("src/app.py",),
+    )
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "tests/test_mixed.py::check_smoke",
+        "tests/test_mixed.py::RegressionCase::test_failure",
     )
 
 
@@ -2545,6 +2622,83 @@ def test_pytest_outcome_signal_disagreement_is_unknown() -> None:
     )
 
     assert result.status == "UNKNOWN"
+
+
+def _write_complete_pytest_evidence(
+    tmp_path: Path,
+    source_file: Path,
+    observer: list[dict[str, object]],
+    junit: str,
+) -> tuple[Path, Path, Path]:
+    coverage_path = tmp_path / "coverage.json"
+    coverage_path.write_text(
+        json.dumps({"files": {str(source_file): {"summary": {"percent_covered": 100.0}}}}),
+        encoding="utf-8",
+    )
+    observer_path = tmp_path / "observer.json"
+    observer_path.write_text(json.dumps(observer), encoding="utf-8")
+    junit_path = tmp_path / "junit.xml"
+    junit_path.write_text(junit, encoding="utf-8")
+    return coverage_path, observer_path, junit_path
+
+
+def test_complete_pytest_execution_rejects_non_strict_xpass_before_coverage(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    source_file = tmp_path / "src/app.py"
+    source_file.parent.mkdir()
+    source_file.write_text("VALUE = 1\n", encoding="utf-8")
+    coverage_path, observer_path, junit_path = _write_complete_pytest_evidence(
+        tmp_path,
+        source_file,
+        [
+            {
+                "nodeid": "tests/test_app.py::test_app",
+                "phase": "call",
+                "passed": True,
+                "skipped": False,
+                "wasxfail": "known bug",
+            }
+        ],
+        '<testsuites><testsuite><testcase classname="tests.test_app" name="test_app" /></testsuite></testsuites>',
+    )
+
+    findings, coverage = runner_api._evaluate_pytest_execution(
+        [source_file],
+        lambda: (
+            subprocess.CompletedProcess(["pytest"], 0, "", ""),
+            coverage_path,
+            observer_path,
+            junit_path,
+        ),
+    )
+
+    assert coverage is None
+    assert [finding.rule for finding in findings] == ["TEST_OUTCOME_NOT_PASS"]
+
+
+def test_complete_pytest_execution_observes_non_strict_xpass_from_real_pytest(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    source_file = tmp_path / "src/app.py"
+    source_file.parent.mkdir()
+    source_file.write_text("VALUE = 1\n", encoding="utf-8")
+    test_file = tmp_path / "tests/test_app.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "import pytest\n\n@pytest.mark.xfail(reason='known bug', strict=False)\ndef test_app():\n    assert True\n",
+        encoding="utf-8",
+    )
+
+    findings, coverage = runner_api._evaluate_pytest_execution(
+        [source_file],
+        lambda: runner_api._run_pytest_selection_with_coverage(
+            (f"{test_file}::test_app",),
+            coverage_source=tmp_path,
+            policy_argv=("--rootdir", str(tmp_path)),
+        ),
+    )
+
+    assert coverage is None
+    assert [finding.rule for finding in findings] == ["TEST_OUTCOME_NOT_PASS"]
 
 
 def test_complete_suite_discovers_async_and_class_test_selectors(tmp_path: Path) -> None:

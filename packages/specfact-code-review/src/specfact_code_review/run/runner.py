@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+import xml.etree.ElementTree as ET
 from collections.abc import Callable, Iterable
 from contextlib import ExitStack, suppress
 from dataclasses import dataclass, field
@@ -692,6 +693,12 @@ def _prepare_capsule_runtime(*, project_runtime_identity: str = "not-applicable"
         return None, f"capsule_runtime_unavailable:{exc}"
 
 
+def _radon_member_findings(files: list[Path], *, adapter_argv: tuple[str, ...]) -> list[ReviewFinding]:
+    if adapter_argv and adapter_argv != ("radon-full-result-v1",):
+        raise ValueError("unsupported Radon adapter contract")
+    return run_radon(files, full_result=bool(adapter_argv))
+
+
 def _member_findings(
     member: str,
     files: list[Path],
@@ -702,7 +709,7 @@ def _member_findings(
 ) -> list[ReviewFinding]:
     runners: dict[str, Callable[[list[Path]], list[ReviewFinding]]] = {
         "ruff": run_ruff,
-        "radon": run_radon,
+        "radon": partial(_radon_member_findings, adapter_argv=adapter_argv),
         "semgrep-clean": run_semgrep,
         "semgrep-bugs": run_semgrep_bugs,
         "ai-bloat-ast": run_ai_bloat,
@@ -1098,6 +1105,13 @@ def _bind_pylint_policy(builder: _PolicyBindingBuilder, policy_root: Path) -> No
     builder.member_argv["pylint"] = _pylint_projection_argv(policy, config_path=mounted)
 
 
+def _bind_radon_policy(builder: _PolicyBindingBuilder) -> None:
+    projection = scope.project_radon_policy(Path("/opt/specfact/snapshot"), expected_version="6.0.1")
+    if projection.status != "PASS" or projection.contract != "radon-full-result-v1":
+        raise ValueError(projection.reason or "radon_projection_missing")
+    builder.member_argv["radon"] = (projection.contract,)
+
+
 def _bind_semgrep_policy(builder: _PolicyBindingBuilder, policy_root: Path) -> None:
     if not (policy_root / ".semgrep").is_dir():
         return
@@ -1197,6 +1211,7 @@ def _snapshot_policy_bindings(
 ) -> SnapshotPolicyBindings:
     builder = _PolicyBindingBuilder()
     _bind_pytest_coverage_policy(builder, policy_bundle)
+    _bind_radon_policy(builder)
     if policy_bundle is None:
         return builder.result()
     policy_root = cast(Path, cast(Any, policy_bundle).root)
@@ -1277,21 +1292,39 @@ def _test_selectors(
             fnmatch.fnmatch(node.name, pattern) for pattern in function_patterns
         ):
             selectors.append(f"{relative}::{node.name}")
-        if isinstance(node, ast.ClassDef) and (
-            any(fnmatch.fnmatch(node.name, pattern) for pattern in class_patterns)
-            or _is_unittest_case(
-                node,
-                classes,
-                unittest_modules,
-                unittest_cases,
-                visiting=frozenset(),
-            )
-        ):
+        if isinstance(node, ast.ClassDef):
             selectors.extend(
                 f"{relative}::{node.name}::{method}"
-                for method in _class_test_methods(node, classes, function_patterns, visiting=frozenset())
+                for method in _pytest_class_test_methods(
+                    node,
+                    classes,
+                    (unittest_modules, unittest_cases),
+                    function_patterns,
+                    class_patterns,
+                )
             )
     return tuple(selectors)
+
+
+def _pytest_class_test_methods(
+    node: ast.ClassDef,
+    classes: dict[str, ast.ClassDef],
+    unittest_aliases: tuple[set[str], set[str]],
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> tuple[str, ...]:
+    module_aliases, case_aliases = unittest_aliases
+    is_unittest_case = _is_unittest_case(
+        node,
+        classes,
+        module_aliases,
+        case_aliases,
+        visiting=frozenset(),
+    )
+    if not any(fnmatch.fnmatch(node.name, pattern) for pattern in class_patterns) and not is_unittest_case:
+        return ()
+    method_patterns = ("test*",) if is_unittest_case else function_patterns
+    return _class_test_methods(node, classes, method_patterns, visiting=frozenset())
 
 
 def _unittest_aliases(tree: ast.Module) -> tuple[set[str], set[str]]:
@@ -1787,24 +1820,44 @@ def project_pytest_policy(policy: dict[str, object], *, snapshot_root: Path, out
     return PytestProjection("PASS", values, tuple(writable), logical_digest)
 
 
+def _pytest_call_outcome(call_record: dict[str, object], records: list[dict[str, object]]) -> str:
+    if call_record.get("wasxfail"):
+        return "XPASS" if call_record.get("passed") else "XFAIL"
+    if call_record.get("skipped"):
+        return "SKIPPED"
+    if not call_record.get("passed"):
+        return "FAILED"
+    return "FAILED" if any(not record.get("passed") and not record.get("skipped") for record in records) else "PASS"
+
+
+def _pytest_no_call_outcome(records: list[dict[str, object]]) -> str:
+    skipped_record = next((record for record in records if record.get("skipped")), None)
+    if skipped_record is not None:
+        return "XFAIL" if skipped_record.get("wasxfail") else "SKIPPED"
+    return "FAILED" if any(not record.get("passed") for record in records) else "UNKNOWN"
+
+
+def _pytest_observed_outcome(records: list[dict[str, object]]) -> str:
+    call_record = next((record for record in records if record.get("phase") == "call"), None)
+    return _pytest_call_outcome(call_record, records) if call_record is not None else _pytest_no_call_outcome(records)
+
+
 def reconcile_pytest_outcomes(
     *, observer: tuple[dict[str, object], ...], junit: tuple[dict[str, object], ...], process_exit: int
 ) -> PytestOutcomeResult:
-    call_records = tuple(record for record in observer if record.get("phase") == "call")
+    records_by_node: dict[str, list[dict[str, object]]] = {}
+    for record in observer:
+        records_by_node.setdefault(str(record.get("nodeid", "")), []).append(record)
 
-    def observed_kind(record: dict[str, object]) -> str:
-        if record.get("wasxfail"):
-            return "XPASS" if record.get("passed") else "XFAIL"
-        if record.get("skipped"):
-            return "SKIPPED"
-        return "PASS" if record.get("passed") else "FAILED"
-
-    outcomes = tuple(PytestObservedOutcome(observed_kind(record)) for record in call_records)
+    observed_nodes = tuple(records_by_node)
+    outcomes = tuple(
+        PytestObservedOutcome(_pytest_observed_outcome(records_by_node[nodeid])) for nodeid in observed_nodes
+    )
     expected_junit = {"PASS": "passed", "XPASS": "passed", "FAILED": "failed", "XFAIL": "skipped", "SKIPPED": "skipped"}
     junit_by_node = {str(record.get("nodeid", "")): str(record.get("outcome", "")) for record in junit}
-    signals_match = len(junit_by_node) == len(call_records) and all(
-        junit_by_node.get(str(record.get("nodeid", ""))) == expected_junit[outcome.kind]
-        for record, outcome in zip(call_records, outcomes, strict=True)
+    signals_match = len(junit_by_node) == len(observed_nodes) and all(
+        outcome.kind in expected_junit and junit_by_node.get(nodeid) == expected_junit[outcome.kind]
+        for nodeid, outcome in zip(observed_nodes, outcomes, strict=True)
     )
     process_matches = (process_exit != 0) == any(outcome.kind == "FAILED" for outcome in outcomes)
     if not signals_match or not process_matches:
@@ -2049,32 +2102,65 @@ def _pytest_python_executable() -> str:
     return sys.executable
 
 
+def _pytest_observer_script() -> str:
+    source_root = str(_SOURCE_ROOT.resolve())
+    repo_root = str(Path.cwd().resolve())
+    return (
+        "import json, pathlib, sys, pytest\n"
+        "class Observer:\n"
+        "    def __init__(self, path):\n"
+        "        self.path = pathlib.Path(path)\n"
+        "        self.records = []\n"
+        "    def pytest_runtest_logreport(self, report):\n"
+        "        self.records.append({\n"
+        "            'nodeid': report.nodeid,\n"
+        "            'phase': report.when,\n"
+        "            'passed': report.passed,\n"
+        "            'skipped': report.skipped,\n"
+        "            'wasxfail': getattr(report, 'wasxfail', ''),\n"
+        "        })\n"
+        "    def pytest_sessionfinish(self, session, exitstatus):\n"
+        "        self.path.write_text(json.dumps(self.records), encoding='utf-8')\n"
+        "observer_path = sys.argv.pop(1)\n"
+        f"sys.path[:0] = [{source_root!r}, {repo_root!r}]\n"
+        "import specfact_code_review\n"
+        "raise SystemExit(pytest.main(sys.argv[1:], plugins=[Observer(observer_path)]))\n"
+    )
+
+
+def _temporary_pytest_evidence_path(suffix: str) -> Path:
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as evidence_file:
+        return Path(evidence_file.name)
+
+
+def _temporary_pytest_evidence_paths() -> tuple[Path, Path, Path]:
+    coverage_path = _temporary_pytest_evidence_path(".json")
+    observer_path = _temporary_pytest_evidence_path(".json")
+    junit_path = _temporary_pytest_evidence_path(".xml")
+    observer_path.unlink(missing_ok=True)
+    junit_path.unlink(missing_ok=True)
+    return coverage_path, observer_path, junit_path
+
+
 def _run_pytest_selection_with_coverage(
     selectors: tuple[str, ...],
     *,
     coverage_source: Path,
     policy_argv: tuple[str, ...] = (),
-) -> tuple[subprocess.CompletedProcess[str], Path]:
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as coverage_file:
-        coverage_path = Path(coverage_file.name)
-
-    source_root = str(_SOURCE_ROOT.resolve())
-    repo_root = str(Path.cwd().resolve())
+) -> tuple[subprocess.CompletedProcess[str], Path, Path, Path]:
+    coverage_path, observer_path, junit_path = _temporary_pytest_evidence_paths()
     command = [
         _pytest_python_executable(),
         "-c",
-        (
-            "import pathlib, sys, pytest; "
-            f"sys.path[:0] = [{source_root!r}, {repo_root!r}]; "
-            "import specfact_code_review; "
-            "raise SystemExit(pytest.main(sys.argv[1:]))"
-        ),
+        _pytest_observer_script(),
+        str(observer_path),
         *policy_argv,
         "--import-mode=importlib",
         "--cov",
         str(coverage_source),
         "--cov-fail-under=0",
         f"--cov-report=json:{coverage_path}",
+        f"--junitxml={junit_path}",
         *selectors,
     ]
     result = subprocess.run(
@@ -2085,10 +2171,10 @@ def _run_pytest_selection_with_coverage(
         timeout=_TARGETED_TEST_TIMEOUT,
         env=_pytest_env(),
     )
-    return result, coverage_path
+    return result, coverage_path, observer_path, junit_path
 
 
-def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.CompletedProcess[str], Path]:
+def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.CompletedProcess[str], Path, Path, Path]:
     test_targets = tuple(str(test_target) for test_target in _pytest_targets(test_files))
     return _run_pytest_selection_with_coverage(test_targets, coverage_source=_PACKAGE_ROOT)
 
@@ -2097,7 +2183,7 @@ def _run_pytest_inventory_with_coverage(
     selectors: tuple[str, ...],
     *,
     policy_argv: tuple[str, ...] = (),
-) -> tuple[subprocess.CompletedProcess[str], Path]:
+) -> tuple[subprocess.CompletedProcess[str], Path, Path, Path]:
     return _run_pytest_selection_with_coverage(
         selectors,
         coverage_source=Path("/opt/specfact/snapshot"),
@@ -2773,9 +2859,73 @@ def _coverage_findings(
     return findings, coverage_by_source
 
 
+def _pytest_junit_identities(observer: tuple[dict[str, object], ...]) -> dict[tuple[str, str], list[str]]:
+    observed_nodes = tuple(dict.fromkeys(str(record.get("nodeid", "")) for record in observer))
+    junit_identities: dict[tuple[str, str], list[str]] = {}
+    for nodeid in observed_nodes:
+        path, *qualifiers = nodeid.split("::")
+        if not qualifiers or not path.endswith(".py"):
+            continue
+        classname_parts = [path[:-3].replace("/", "."), *qualifiers[:-1]]
+        identity = (".".join(classname_parts), qualifiers[-1])
+        junit_identities.setdefault(identity, []).append(nodeid)
+    return junit_identities
+
+
+def _pytest_junit_outcome(case: ET.Element) -> str:
+    child_tags = {child.tag.rsplit("}", maxsplit=1)[-1] for child in case}
+    if child_tags & {"error", "failure"}:
+        return "failed"
+    return "skipped" if "skipped" in child_tags else "passed"
+
+
+def _pytest_junit_records(
+    root: ET.Element,
+    identities: dict[tuple[str, str], list[str]],
+) -> tuple[dict[str, object], ...]:
+    cases = tuple(element for element in root.iter() if element.tag.rsplit("}", maxsplit=1)[-1] == "testcase")
+    junit: list[dict[str, object]] = []
+    for index, case in enumerate(cases):
+        candidates = identities.get((case.get("classname", ""), case.get("name", "")), [])
+        nodeid = candidates[0] if len(candidates) == 1 else f"__unmatched_junit_{index}"
+        junit.append({"nodeid": nodeid, "outcome": _pytest_junit_outcome(case)})
+    return tuple(junit)
+
+
+def _load_pytest_outcome_evidence(
+    observer_path: Path,
+    junit_path: Path,
+) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
+    observer_payload = json.loads(observer_path.read_text(encoding="utf-8"))
+    if not isinstance(observer_payload, list) or not all(isinstance(record, dict) for record in observer_payload):
+        raise ValueError("pytest observer artifact must be a list of objects")
+    observer = tuple(cast(list[dict[str, object]], observer_payload))
+    junit_root = ET.parse(junit_path).getroot()
+    return observer, _pytest_junit_records(junit_root, _pytest_junit_identities(observer))
+
+
+def _pytest_outcome_finding(anchor: Path, *, status: str) -> ReviewFinding:
+    if status == "FAIL":
+        return ReviewFinding(
+            category="testing",
+            severity="error",
+            tool="pytest",
+            rule="TEST_OUTCOME_NOT_PASS",
+            file=str(anchor),
+            line=1,
+            message="At least one targeted pytest selector skipped, xfailed, xpassed, or failed.",
+            fixable=False,
+        )
+    return tool_error(
+        tool="pytest",
+        file_path=anchor,
+        message="Targeted pytest observer, JUnit, and process outcomes could not be reconciled.",
+    )
+
+
 def _evaluate_pytest_execution(
     source_files: list[Path],
-    execute: Callable[[], tuple[subprocess.CompletedProcess[str], Path]],
+    execute: Callable[[], tuple[subprocess.CompletedProcess[str], Path, Path, Path]],
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
     pytest_skip = skip_if_pytest_unavailable(anchor)
@@ -2783,7 +2933,7 @@ def _evaluate_pytest_execution(
         return pytest_skip, None
 
     try:
-        test_result, coverage_path = execute()
+        test_result, coverage_path, observer_path, junit_path = execute()
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
         return [
             tool_error(
@@ -2793,32 +2943,24 @@ def _evaluate_pytest_execution(
             )
         ], None
 
-    if test_result.returncode != 0:
-        return [
-            ReviewFinding(
-                category="testing",
-                severity="error",
-                tool="pytest",
-                rule="TEST_FAILURE",
-                file=str(anchor),
-                line=1,
-                message="Targeted tests failed for the reviewed source files.",
-                fixable=False,
-            )
-        ], None
-
     try:
+        observer, junit = _load_pytest_outcome_evidence(observer_path, junit_path)
+        outcome = reconcile_pytest_outcomes(observer=observer, junit=junit, process_exit=test_result.returncode)
+        if outcome.status != "PASS":
+            return [_pytest_outcome_finding(anchor, status=outcome.status)], None
         coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, ET.ParseError) as exc:
         return [
             tool_error(
                 tool="pytest",
                 file_path=anchor,
-                message=f"Unable to read coverage report: {exc}",
+                message=f"Unable to read targeted pytest evidence: {exc}",
             )
         ], None
     finally:
         coverage_path.unlink(missing_ok=True)
+        observer_path.unlink(missing_ok=True)
+        junit_path.unlink(missing_ok=True)
 
     return _coverage_findings(source_files, coverage_payload)
 

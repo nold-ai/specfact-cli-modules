@@ -88,6 +88,36 @@ def test_run_radon_maps_complexity_thresholds_and_filters_files(tmp_path: Path, 
     assert_tool_run(run_mock, ["radon", "cc", "-j", str(file_path)])
 
 
+def test_run_radon_full_result_executes_and_reconciles_every_sealed_metric_pass(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    file_path = (tmp_path / "target.py").resolve()
+    file_path.write_text("VALUE = 1\n", encoding="utf-8")
+    payloads = {
+        "cc": {str(file_path): []},
+        "mi": {str(file_path): {"mi": 100.0, "rank": "A"}},
+        "raw": {str(file_path): {"loc": 1, "lloc": 1, "sloc": 1}},
+        "hal": {str(file_path): {"total": {"h1": 0, "h2": 0}}},
+    }
+
+    def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return completed_process("radon", stdout=json.dumps(payloads[command[1]]))
+
+    run_mock = Mock(side_effect=_fake_run)
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    findings = run_radon([file_path], full_result=True)
+
+    assert not findings
+    assert [call.args[0][1] for call in run_mock.call_args_list] == ["cc", "mi", "raw", "hal"]
+    for call in run_mock.call_args_list:
+        command = call.args[0]
+        assert "-j" in command
+        assert command[command.index("-e") + 1] == ""
+        assert command[command.index("-i") + 1] == ""
+        assert command[-1] == str(file_path)
+
+
 def test_run_radon_returns_no_findings_for_complexity_twelve_or_below(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     payload = {
