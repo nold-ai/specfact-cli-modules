@@ -12463,7 +12463,7 @@
     }
   },
   "project_runtime_contract": {
-    "digest": "sha256:07c5ee03c66f90bacc816591b161d23288843a74be27abce12021fe133163fe3",
+    "digest": "sha256:006338a430d3b11be510fe10e2998245e00554ebe05fc628c2c4c0217f95a725",
     "document": {
       "$id": "urn:specfact:project-runtime-layer-v1",
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -12473,7 +12473,8 @@
           "basedpyright",
           "contracts",
           "pylint",
-          "targeted-pytest-coverage"
+          "targeted-pytest-coverage",
+          "targeted-pytest-plugin-preflight"
         ],
         "authority": "protected-consumer",
         "candidate_inputs_forbidden": true,
@@ -12535,6 +12536,9 @@
               "payload_digest",
               "dependencies",
               "pytest11_entry_point",
+              "options",
+              "ini_fields",
+              "hooks",
               "parser_catalog_digest",
               "hook_capability_digest"
             ]
@@ -14294,12 +14298,12 @@
       "type": "object"
     },
     "future_consumer_layer_bytes_frozen": false,
-    "policy_digest": "sha256:26a60797a07816cc344f491e83610c9d8527b03ce46e4c7527df18078d5f0b5f",
+    "policy_digest": "sha256:7db31f7f667d90cabde2b524a38e78cf24c885495e781e2ef93acfab7683409f",
     "pytest_selection_controls_digest": "sha256:80706e2477ed06a69e9ab3cc51db782f670c2b064a38800f902101f65ecdfc1e",
     "reserved_component_catalog_digest": "sha256:e7be51f36eac3af60f4641dffd2e520595863a0c838e7bba81ef2575b57db781"
   },
   "pytest_plugin_capability_contract": {
-    "digest": "sha256:a47b9569763eb5d4be14163496f68010f92b8843c0d1ffec9174103bfbc0485c",
+    "digest": "sha256:af2fa4cfe64f525250e154e5729038cdd12eb4c2f81c96b5c5545b57a900d32f",
     "document": {
       "catalog_composition": [
         "pytest-help",
@@ -14954,6 +14958,9 @@
         "wheel_or_record_digest",
         "dependencies",
         "pytest11_entry_point",
+        "options",
+        "ini_fields",
+        "hooks",
         "parser_catalog_digest",
         "hook_capability_digest"
       ]
@@ -20439,7 +20446,7 @@
             "version": "4.1.0"
           }
         ],
-        "manifest_digest": "sha256:d5b29b3f4737c634c17d15b8e020ef8cf50cf46aec3b6eaf0b9bdfaae4ea1d94",
+        "manifest_digest": "sha256:0ef5a7f31989788b1590910cc7f511710a0e9c891c4f9d67d7ea8aacd8a6ce83",
         "platform": "linux-x86_64",
         "python_abi": "cp311",
         "python_version": "3.11.14",
@@ -21006,7 +21013,7 @@
       "two_storage_root_materialization": {
         "first": "controller-storage-root-a",
         "identical_manifest": true,
-        "manifest_digest": "sha256:d5b29b3f4737c634c17d15b8e020ef8cf50cf46aec3b6eaf0b9bdfaae4ea1d94",
+        "manifest_digest": "sha256:0ef5a7f31989788b1590910cc7f511710a0e9c891c4f9d67d7ea8aacd8a6ce83",
         "second": "controller-storage-root-b"
       },
       "wheelhouse": {
@@ -28197,7 +28204,7 @@
             "version": "4.1.0"
           }
         ],
-        "manifest_digest": "sha256:2335bf98d393cf99b544df7abc35c7651acff55d0b83e1f8b65df2a4db3cb0ba",
+        "manifest_digest": "sha256:b86a739bbf38b1b8c1344cee5711d8804f1364c86c3d1dd726a578d4629261cb",
         "platform": "linux-x86_64",
         "python_abi": "cp312",
         "python_version": "3.12.13",
@@ -28759,7 +28766,7 @@
       "two_storage_root_materialization": {
         "first": "controller-storage-root-a",
         "identical_manifest": true,
-        "manifest_digest": "sha256:2335bf98d393cf99b544df7abc35c7651acff55d0b83e1f8b65df2a4db3cb0ba",
+        "manifest_digest": "sha256:b86a739bbf38b1b8c1344cee5711d8804f1364c86c3d1dd726a578d4629261cb",
         "second": "controller-storage-root-b"
       },
       "wheelhouse": {
@@ -35914,7 +35921,7 @@
             "version": "4.1.0"
           }
         ],
-        "manifest_digest": "sha256:880bf086c7708e5ae2ca734ab483bc99a96f2f63ec49db36d5d8557bbd19deff",
+        "manifest_digest": "sha256:772ce20a7f392f00ad42a07d092b0826f5a6ba780ad69e43f8df610db744bb02",
         "platform": "linux-x86_64",
         "python_abi": "cp313",
         "python_version": "3.13.11",
@@ -36465,7 +36472,7 @@
       "two_storage_root_materialization": {
         "first": "controller-storage-root-a",
         "identical_manifest": true,
-        "manifest_digest": "sha256:880bf086c7708e5ae2ca734ab483bc99a96f2f63ec49db36d5d8557bbd19deff",
+        "manifest_digest": "sha256:772ce20a7f392f00ad42a07d092b0826f5a6ba780ad69e43f8df610db744bb02",
         "second": "controller-storage-root-b"
       },
       "wheelhouse": {
@@ -43655,7 +43662,7 @@
               "version": "4.1.0"
             }
           ],
-          "manifest_digest": "sha256:d5b29b3f4737c634c17d15b8e020ef8cf50cf46aec3b6eaf0b9bdfaae4ea1d94",
+          "manifest_digest": "sha256:0ef5a7f31989788b1590910cc7f511710a0e9c891c4f9d67d7ea8aacd8a6ce83",
           "platform": "linux-x86_64",
           "python_abi": "cp311",
           "python_version": "3.11.14",
@@ -44222,7 +44229,7 @@
         "two_storage_root_materialization": {
           "first": "controller-storage-root-a",
           "identical_manifest": true,
-          "manifest_digest": "sha256:d5b29b3f4737c634c17d15b8e020ef8cf50cf46aec3b6eaf0b9bdfaae4ea1d94",
+          "manifest_digest": "sha256:0ef5a7f31989788b1590910cc7f511710a0e9c891c4f9d67d7ea8aacd8a6ce83",
           "second": "controller-storage-root-b"
         },
         "wheelhouse": {
@@ -51413,7 +51420,7 @@
               "version": "4.1.0"
             }
           ],
-          "manifest_digest": "sha256:2335bf98d393cf99b544df7abc35c7651acff55d0b83e1f8b65df2a4db3cb0ba",
+          "manifest_digest": "sha256:b86a739bbf38b1b8c1344cee5711d8804f1364c86c3d1dd726a578d4629261cb",
           "platform": "linux-x86_64",
           "python_abi": "cp312",
           "python_version": "3.12.13",
@@ -51975,7 +51982,7 @@
         "two_storage_root_materialization": {
           "first": "controller-storage-root-a",
           "identical_manifest": true,
-          "manifest_digest": "sha256:2335bf98d393cf99b544df7abc35c7651acff55d0b83e1f8b65df2a4db3cb0ba",
+          "manifest_digest": "sha256:b86a739bbf38b1b8c1344cee5711d8804f1364c86c3d1dd726a578d4629261cb",
           "second": "controller-storage-root-b"
         },
         "wheelhouse": {
@@ -59130,7 +59137,7 @@
               "version": "4.1.0"
             }
           ],
-          "manifest_digest": "sha256:880bf086c7708e5ae2ca734ab483bc99a96f2f63ec49db36d5d8557bbd19deff",
+          "manifest_digest": "sha256:772ce20a7f392f00ad42a07d092b0826f5a6ba780ad69e43f8df610db744bb02",
           "platform": "linux-x86_64",
           "python_abi": "cp313",
           "python_version": "3.13.11",
@@ -59681,7 +59688,7 @@
         "two_storage_root_materialization": {
           "first": "controller-storage-root-a",
           "identical_manifest": true,
-          "manifest_digest": "sha256:880bf086c7708e5ae2ca734ab483bc99a96f2f63ec49db36d5d8557bbd19deff",
+          "manifest_digest": "sha256:772ce20a7f392f00ad42a07d092b0826f5a6ba780ad69e43f8df610db744bb02",
           "second": "controller-storage-root-b"
         },
         "wheelhouse": {
@@ -68169,5 +68176,5 @@
     "profile": "pr-range-v1",
     "schema": "toolchain-lock-schema-1"
   },
-  "toolchain_lock_projection_digest": "sha256:11f82d29eb6a5e35ea8467b618c1627d6c6982d8e0bf1dbcdcb6d2f3020028c6"
+  "toolchain_lock_projection_digest": "sha256:65e686167a866116aeff86c522d9952d170ee1a1cb947941e2cad55a548afa9d"
 }

@@ -134,6 +134,39 @@ def test_snapshot_cannot_shadow_capsule_reserved_imports(sandbox_api: Any, tmp_p
     assert result.reason == "reserved_import_collision"
 
 
+def test_project_runtime_site_packages_cannot_shadow_environment_reserved_imports(
+    sandbox_api: Any, tmp_path: Path
+) -> None:
+    context = _context(tmp_path, sandbox_api, member="targeted-pytest-coverage")
+    runtime_root = tmp_path / "project-runtime"
+    site_packages = runtime_root / "site-packages"
+    site_packages.mkdir(parents=True)
+    (site_packages / "json.py").write_text("VALUE = 'shadowed'\n", encoding="utf-8")
+    context = sandbox_api.replace(
+        context,
+        project_runtime_root=runtime_root,
+        environment_id="linux-x86_64-cp311",
+    )
+
+    result = sandbox_api.preflight_reserved_imports(context)
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "reserved_import_collision"
+    assert any(collision.endswith(":json") for collision in result.collisions)
+
+
+def test_plugin_preflight_launch_plan_exposes_no_snapshot_mount(sandbox_api: Any, tmp_path: Path) -> None:
+    context = _context(tmp_path, sandbox_api, member="targeted-pytest-plugin-preflight")
+    runtime_root = tmp_path / "project-runtime"
+    (runtime_root / "site-packages").mkdir(parents=True)
+    context = sandbox_api.replace(context, project_runtime_root=runtime_root)
+
+    plan = sandbox_api.build_launch_plan(context)
+
+    assert all(mount.role != "snapshot" for mount in plan.mounts)
+    assert plan.cwd == "/opt/specfact/tmp"
+
+
 def test_runtime_capsule_boots_in_empty_bwrap_root_without_host_mounts(sandbox_api: Any, tmp_path: Path) -> None:
     plan = sandbox_api.build_launch_plan(_context(tmp_path, sandbox_api))
 

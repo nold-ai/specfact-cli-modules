@@ -1090,8 +1090,11 @@ def test_attested_pytest_plugin_identity_is_bound_by_project_runtime(toolchain_a
             "payload_digest": _digest("a"),
             "dependencies": [],
             "pytest11_entry_point": "fixture_plugin",
-            "parser_catalog_digest": _digest("b"),
-            "hook_capability_digest": _digest("c"),
+            "options": [],
+            "ini_fields": [],
+            "hooks": ["pytest_fixture_setup"],
+            "parser_catalog_digest": toolchain_api.pytest_parser_catalog_digest(options=(), ini_fields=()),
+            "hook_capability_digest": toolchain_api.pytest_hook_capability_digest(("pytest_fixture_setup",)),
         }
     ]
 
@@ -1099,6 +1102,37 @@ def test_attested_pytest_plugin_identity_is_bound_by_project_runtime(toolchain_a
 
     assert result.status == "PASS"
     assert result.pytest_plugins[0].distribution == "fixture-plugin"
+
+
+def test_attested_pytest_plugin_manifest_digest_must_match_declared_hooks(toolchain_api: Any) -> None:
+    descriptor = _project_runtime_descriptor()
+    descriptor["distributions"].append(
+        {
+            "name": "fixture-plugin",
+            "version": "1.0",
+            "payload_digest": _digest("a"),
+            "dependencies": [],
+            "entry_points": ["pytest11:fixture_plugin"],
+        }
+    )
+    descriptor["pytest_plugins"] = [
+        {
+            "distribution": "fixture-plugin",
+            "version": "1.0",
+            "payload_digest": _digest("a"),
+            "dependencies": [],
+            "pytest11_entry_point": "fixture_plugin",
+            "options": [],
+            "ini_fields": [],
+            "hooks": ["pytest_pyfunc_call"],
+            "parser_catalog_digest": toolchain_api.pytest_parser_catalog_digest(options=(), ini_fields=()),
+            "hook_capability_digest": _digest("c"),
+        }
+    ]
+
+    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
+
+    assert result.status == "UNKNOWN"
 
 
 def test_attested_fixture_plugin_extends_frozen_pytest_catalog(toolchain_api: Any) -> None:

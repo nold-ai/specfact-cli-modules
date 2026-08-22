@@ -83,7 +83,9 @@ _PR_CONTEXT_ENVS = (
 )
 _CLEAN_CODE_CONTEXT_HINTS = ("clean code", "naming", "kiss", "yagni", "dry", "solid", "complexity")
 _TARGETED_TEST_TIMEOUT = int(os.environ.get("SPECFACT_CODE_REVIEW_TARGETED_TEST_TIMEOUT", "120"))
-_PROJECT_RUNTIME_MEMBERS = frozenset({"basedpyright", "contracts", "pylint", "targeted-pytest-coverage"})
+_PROJECT_RUNTIME_MEMBERS = frozenset(
+    {"basedpyright", "contracts", "pylint", "targeted-pytest-coverage", "targeted-pytest-plugin-preflight"}
+)
 _GIT_LOCAL_ENV_VARS = frozenset(
     {
         "GIT_ALTERNATE_OBJECT_DIRECTORIES",
@@ -729,6 +731,120 @@ def _member_findings(
     return runner(files)
 
 
+def _pytest_plugin_manifest(adapter_argv: tuple[str, ...]) -> tuple[dict[str, object], ...]:
+    if len(adapter_argv) != 1:
+        raise ValueError("plugin manifest argv is invalid")
+    manifest = json.loads(adapter_argv[0])
+    if not isinstance(manifest, list) or not all(isinstance(item, dict) for item in manifest):
+        raise ValueError("plugin manifest must be a list of objects")
+    return tuple(cast(list[dict[str, object]], manifest))
+
+
+def _pytest_plugin_manifest_string(raw: dict[str, object], field: str) -> str:
+    value = raw.get(field)
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"plugin {field} is invalid")
+    return value
+
+
+def _pytest_plugin_manifest_strings(raw: dict[str, object], field: str) -> tuple[str, ...]:
+    value = raw.get(field)
+    if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+        raise ValueError(f"plugin {field} catalog is invalid")
+    return tuple(cast(list[str], value))
+
+
+def _pytest_plugin_parser_catalog(manager: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    from _pytest.config.argparsing import Parser
+
+    parser = cast(Any, Parser(_ispytest=True))
+    manager.hook.pytest_addoption.call_historic(kwargs={"parser": parser, "pluginmanager": manager})
+    groups = (parser._anonymous, *parser._groups)
+    options = tuple(sorted({name for group in groups for option in group.options for name in option.names()}))
+    return options, tuple(sorted(parser._inidict))
+
+
+def _pytest_plugin_entry_point(raw: dict[str, object]) -> str:
+    import importlib.metadata
+
+    distribution_name = _pytest_plugin_manifest_string(raw, "distribution")
+    version = _pytest_plugin_manifest_string(raw, "version")
+    entry_point = _pytest_plugin_manifest_string(raw, "entry_point")
+    distribution = importlib.metadata.distribution(distribution_name)
+    if distribution.version != version:
+        raise ValueError("plugin distribution version differs from its attested manifest")
+    pytest_entry_points = tuple(item.value for item in distribution.entry_points if item.group == "pytest11")
+    if entry_point not in pytest_entry_points:
+        raise ValueError("plugin pytest11 entry point differs from its attested manifest")
+    return entry_point
+
+
+def _load_pytest_plugin(entry_point: str, *, runtime_root: Path) -> tuple[Any, object, set[str]]:
+    from _pytest.config import PytestPluginManager
+
+    manager = PytestPluginManager()
+    initial_names = {name for name, _plugin in manager.list_name_plugin()}
+    manager.import_plugin(entry_point)
+    plugin = manager.get_plugin(entry_point)
+    origin_value = getattr(plugin, "__file__", "")
+    if plugin is None or not origin_value or not Path(str(origin_value)).resolve().is_relative_to(runtime_root):
+        raise ValueError("plugin origin is outside the verified project runtime")
+    return manager, plugin, initial_names
+
+
+def _pytest_plugin_observed_hooks(raw: dict[str, object], *, manager: Any, plugin: object) -> tuple[str, ...]:
+    hooks = tuple(sorted(caller.name for caller in manager.get_hookcallers(plugin) or []))
+    if hooks != _pytest_plugin_manifest_strings(raw, "hooks"):
+        raise ValueError("plugin hook registry differs from its attested manifest")
+    if toolchain.pytest_hook_capability_digest(hooks) != raw.get("hook_capability_digest"):
+        raise ValueError("plugin hook capability digest differs from observation")
+    return hooks
+
+
+def _validate_pytest_plugin_parser(raw: dict[str, object], *, manager: Any) -> None:
+    options, ini_fields = _pytest_plugin_parser_catalog(manager)
+    if options != _pytest_plugin_manifest_strings(raw, "options") or ini_fields != _pytest_plugin_manifest_strings(
+        raw, "ini_fields"
+    ):
+        raise ValueError("plugin parser catalog differs from its attested manifest")
+    if toolchain.pytest_parser_catalog_digest(options=options, ini_fields=ini_fields) != raw.get(
+        "parser_catalog_digest"
+    ):
+        raise ValueError("plugin parser catalog digest differs from observation")
+
+
+def _validate_pytest_plugin_registry(manager: Any, *, initial_names: set[str], entry_point: str) -> None:
+    registered_names = {name for name, _plugin in manager.list_name_plugin()} - initial_names
+    if registered_names != {entry_point}:
+        raise ValueError("plugin registry differs from its attested manifest")
+
+
+def _observe_pytest_plugin(raw: dict[str, object], *, runtime_root: Path) -> dict[str, object]:
+    entry_point = _pytest_plugin_entry_point(raw)
+    manager, plugin, initial_names = _load_pytest_plugin(entry_point, runtime_root=runtime_root)
+    hooks = _pytest_plugin_observed_hooks(raw, manager=manager, plugin=plugin)
+    _validate_pytest_plugin_parser(raw, manager=manager)
+    _validate_pytest_plugin_registry(manager, initial_names=initial_names, entry_point=entry_point)
+    return {"origin": "attested-project", "hooks": list(hooks)}
+
+
+def _pytest_plugin_preflight_findings(adapter_argv: tuple[str, ...]) -> list[ReviewFinding]:
+    anchor = Path("/opt/specfact/project-runtime")
+    try:
+        runtime_root = anchor / "site-packages"
+        observed = tuple(
+            _observe_pytest_plugin(raw, runtime_root=runtime_root) for raw in _pytest_plugin_manifest(adapter_argv)
+        )
+        validation = validate_pytest_plugins(observed)
+        if validation.status != "PASS":
+            raise ValueError(validation.reason)
+    except (ImportError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        return [
+            tool_error(tool="pytest", file_path=anchor, message=f"Pytest plugin capability preflight failed: {exc}")
+        ]
+    return []
+
+
 def _configured_member_findings(
     member: str,
     files: list[Path],
@@ -737,6 +853,8 @@ def _configured_member_findings(
     adapter_argv: tuple[str, ...],
     complete_pytest_inventory: bool,
 ) -> list[ReviewFinding] | None:
+    if member == "targeted-pytest-plugin-preflight":
+        return _pytest_plugin_preflight_findings(adapter_argv)
     if member == "targeted-pytest-coverage":
         findings, _coverage = (
             _evaluate_complete_tdd_gate(files, adapter_argv) if complete_pytest_inventory else _evaluate_tdd_gate(files)
@@ -824,9 +942,13 @@ def _is_below_any_root(path: Path, roots: tuple[Path, ...]) -> bool:
     return any(path == root or path.is_relative_to(root) for root in roots)
 
 
-def _capsule_snapshot_files(request: dict[str, object]) -> list[Path]:
+def _capsule_snapshot_files(request: dict[str, object], *, member: str) -> list[Path]:
     raw_paths = request["paths"]
-    if not isinstance(raw_paths, list) or not raw_paths or not all(isinstance(path, str) for path in raw_paths):
+    if (
+        not isinstance(raw_paths, list)
+        or (not raw_paths and member != "targeted-pytest-plugin-preflight")
+        or not all(isinstance(path, str) for path in raw_paths)
+    ):
         raise ValueError("capsule paths are invalid")
     relative_paths = [Path(cast(str, path)) for path in raw_paths]
     if any(path.is_absolute() or ".." in path.parts for path in relative_paths):
@@ -859,7 +981,7 @@ def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tu
     adapter_argv, complete_pytest_inventory = _capsule_adapter_request(request, member=member)
     return (
         member,
-        _capsule_snapshot_files(request),
+        _capsule_snapshot_files(request, member=member),
         bool(request.get("bug_hunt", False)),
         adapter_argv,
         complete_pytest_inventory,
@@ -955,6 +1077,7 @@ def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str,
             project_runtime_root=request.project_runtime_root,
             network="none",
             control_root=control_root,
+            environment_id=request.runtime.environment_id,
         )
         preflight = preflight_reserved_imports(context)
         if preflight.status != "PASS":
@@ -2044,7 +2167,17 @@ def _pytest_observed_outcome(records: list[dict[str, object]]) -> str:
 
 
 def _pytest_planned_nodes_match(*, planned: tuple[str, ...], observed: tuple[str, ...]) -> bool:
-    return not planned or (len(observed) == len(planned) and set(observed) == set(planned))
+    if not planned:
+        return True
+    if len(set(planned)) != len(planned):
+        return False
+    matched: list[str] = []
+    for nodeid in observed:
+        candidates = tuple(selector for selector in planned if nodeid == selector or nodeid.startswith(f"{selector}["))
+        if len(candidates) != 1:
+            return False
+        matched.append(candidates[0])
+    return set(matched) == set(planned)
 
 
 def reconcile_pytest_outcomes(
@@ -3036,6 +3169,8 @@ def _is_coverage_omitted_init_by_project_policy(source_file: Path) -> bool:
 def _coverage_findings(
     source_files: list[Path],
     coverage_payload: dict[str, object],
+    *,
+    allow_project_omitted_initializers: bool = True,
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     findings: list[ReviewFinding] = []
     coverage_by_source: dict[str, float] = {}
@@ -3044,7 +3179,7 @@ def _coverage_findings(
         if percent_covered is None:
             if source_file.name == "__init__.py" and _is_empty_init_file(source_file):
                 continue  # Exempt empty __init__.py files
-            if _is_coverage_omitted_init_by_project_policy(source_file):
+            if allow_project_omitted_initializers and _is_coverage_omitted_init_by_project_policy(source_file):
                 continue
             return [
                 tool_error(
@@ -3142,6 +3277,7 @@ def _evaluate_pytest_execution(
     execute: Callable[[], tuple[subprocess.CompletedProcess[str], Path, Path, Path]],
     *,
     planned: tuple[str, ...] = (),
+    allow_project_omitted_initializers: bool = True,
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
     pytest_skip = skip_if_pytest_unavailable(anchor)
@@ -3183,7 +3319,11 @@ def _evaluate_pytest_execution(
         observer_path.unlink(missing_ok=True)
         junit_path.unlink(missing_ok=True)
 
-    return _coverage_findings(source_files, coverage_payload)
+    return _coverage_findings(
+        source_files,
+        coverage_payload,
+        allow_project_omitted_initializers=allow_project_omitted_initializers,
+    )
 
 
 def _evaluate_complete_tdd_gate(
@@ -3208,6 +3348,7 @@ def _evaluate_complete_tdd_gate(
         source_files,
         lambda: _run_pytest_inventory_with_coverage(selectors, policy_argv=policy_argv),
         planned=selectors,
+        allow_project_omitted_initializers=False,
     )
 
 
@@ -3838,12 +3979,12 @@ def _with_pytest_inventory(
     bindings: SnapshotPolicyBindings,
     selectors: tuple[str, ...],
     *,
-    pytest_plugins: tuple[str, ...] = (),
+    pytest_plugins: tuple[toolchain.PytestPluginIdentity, ...] = (),
 ) -> SnapshotPolicyBindings:
     member_argv = dict(bindings.member_argv)
     member_argv["targeted-pytest-coverage"] = (
         *member_argv.get("targeted-pytest-coverage", ()),
-        *(value for plugin in pytest_plugins for value in ("-p", plugin)),
+        *(value for plugin in pytest_plugins for value in ("-p", plugin.entry_point)),
         "--",
         *selectors,
     )
@@ -3852,7 +3993,11 @@ def _with_pytest_inventory(
 
 def _materialize_claimed_project_runtime(
     resolution: object,
-) -> tuple[toolchain.ProjectRuntimeMaterialization | None, tuple[str, ...], str]:
+) -> tuple[
+    toolchain.ProjectRuntimeMaterialization | None,
+    tuple[toolchain.PytestPluginIdentity, ...],
+    str,
+]:
     context = getattr(resolution, "claimed_context", None)
     if not isinstance(context, dict):
         return None, (), ""
@@ -3877,8 +4022,57 @@ def _materialize_claimed_project_runtime(
         storage_root=storage_root,
         credential=_capsule_credential(),
     )
-    plugins = tuple(plugin.entry_point for plugin in layer.pytest_plugins)
-    return (materialized, plugins, "") if materialized.status == "PASS" else (None, (), materialized.reason)
+    return (
+        (materialized, layer.pytest_plugins, "") if materialized.status == "PASS" else (None, (), materialized.reason)
+    )
+
+
+def _pytest_plugin_preflight_manifest(plugins: tuple[toolchain.PytestPluginIdentity, ...]) -> str:
+    return json.dumps(
+        [
+            {
+                "distribution": plugin.distribution,
+                "version": plugin.version,
+                "entry_point": plugin.entry_point,
+                "options": list(plugin.options),
+                "ini_fields": list(plugin.ini_fields),
+                "hooks": list(plugin.hooks),
+                "parser_catalog_digest": plugin.parser_catalog_digest,
+                "hook_capability_digest": plugin.hook_capability_digest,
+            }
+            for plugin in plugins
+        ],
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+def _preflight_project_runtime_pytest_plugins(
+    runtime: CapsuleRuntime,
+    project_runtime: toolchain.ProjectRuntimeMaterialization | None,
+    plugins: tuple[toolchain.PytestPluginIdentity, ...],
+) -> CandidateReconciliation:
+    if not plugins:
+        return CandidateReconciliation("PASS")
+    if project_runtime is None:
+        return CandidateReconciliation("UNKNOWN", "project_runtime_required")
+    with tempfile.TemporaryDirectory(prefix="specfact-pytest-plugin-preflight-") as root:
+        raw = _execute_capsule_member(
+            CapsuleMemberExecutionRequest(
+                runtime=runtime,
+                member="targeted-pytest-plugin-preflight",
+                invocation_id=str(uuid4()),
+                snapshot_root=Path(root),
+                files=[],
+                options=ReviewOptions(no_tests=False),
+                adapter_argv=(_pytest_plugin_preflight_manifest(plugins),),
+                project_runtime_root=project_runtime.root,
+            )
+        )
+    if raw.get("evidence_outcome") != "PASS":
+        return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_mismatch")
+    return CandidateReconciliation("PASS")
 
 
 def _trusted_policy_bundle(resolution: object) -> object | None:
@@ -3909,6 +4103,13 @@ def run_immutable_scope_review(
     if base_snapshot is None or head_snapshot is None:
         return _unknown_capsule_report(
             "immutable_snapshot_missing",
+            options=options,
+            scope_evidence=scope_evidence,
+        )
+    plugin_preflight = _preflight_project_runtime_pytest_plugins(runtime, project_runtime, pytest_plugins)
+    if plugin_preflight.status != "PASS":
+        return _unknown_capsule_report(
+            plugin_preflight.reason,
             options=options,
             scope_evidence=scope_evidence,
         )

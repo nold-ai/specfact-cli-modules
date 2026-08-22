@@ -196,6 +196,11 @@ class PytestPluginIdentity:
     distribution: str
     version: str
     entry_point: str
+    options: tuple[str, ...]
+    ini_fields: tuple[str, ...]
+    hooks: tuple[str, ...]
+    parser_catalog_digest: str
+    hook_capability_digest: str
 
 
 @dataclass(frozen=True)
@@ -1718,6 +1723,14 @@ def compose_pytest_catalog(descriptor: dict[str, object]) -> PytestCatalog:
     return PytestCatalog(options, fields, canonical_json_digest({"options": options, "ini_fields": fields}))
 
 
+def pytest_parser_catalog_digest(*, options: tuple[str, ...], ini_fields: tuple[str, ...]) -> str:
+    return canonical_json_digest({"options": sorted(set(options)), "ini_fields": sorted(set(ini_fields))})
+
+
+def pytest_hook_capability_digest(hooks: tuple[str, ...]) -> str:
+    return canonical_json_digest({"hooks": sorted(set(hooks))})
+
+
 def _project_runtime_parts(descriptor: dict[str, object]) -> _ProjectRuntimeParts | None:
     required_top_level = {
         "schema",
@@ -1810,6 +1823,7 @@ def _valid_runtime_provenance(build: dict[str, object], attestation: dict[str, o
 
 
 def _valid_project_runtime_parts(parts: _ProjectRuntimeParts, *, expected_target: str) -> bool:
+    plugin_names = [re.sub(r"[-_.]+", "-", str(plugin.get("distribution", ""))).lower() for plugin in parts.plugins]
     return all(
         (
             _valid_runtime_target(parts.target, expected_target),
@@ -1818,6 +1832,7 @@ def _valid_project_runtime_parts(parts: _ProjectRuntimeParts, *, expected_target
             _valid_project_runtime_oci(parts.oci),
             _valid_runtime_provenance(parts.build, parts.attestation),
             _valid_root_manifest(parts.root_manifest),
+            plugin_names == sorted(set(plugin_names)),
             all(_valid_pytest_plugin(plugin, parts.distributions) for plugin in parts.plugins),
         )
     )
@@ -1839,6 +1854,11 @@ def validate_project_runtime_layer(descriptor: dict[str, object], *, expected_ta
             str(plugin.get("distribution", "")),
             str(plugin.get("version", "")),
             str(plugin.get("pytest11_entry_point", "")),
+            tuple(cast(list[str], plugin.get("options", []))),
+            tuple(cast(list[str], plugin.get("ini_fields", []))),
+            tuple(cast(list[str], plugin.get("hooks", []))),
+            str(plugin.get("parser_catalog_digest", "")),
+            str(plugin.get("hook_capability_digest", "")),
         )
         for plugin in parts.plugins
     )
@@ -2023,22 +2043,43 @@ def _valid_root_manifest(value: dict[str, object]) -> bool:
     )
 
 
+def _pytest_plugin_string_catalog(plugin: dict[str, object], field: str) -> tuple[str, ...] | None:
+    values = plugin.get(field, [])
+    if not isinstance(values, list) or not all(isinstance(value, str) and value for value in values):
+        return None
+    catalog = tuple(cast(list[str], values))
+    return catalog if catalog == tuple(sorted(set(catalog))) else None
+
+
+def _pytest_plugin_distribution(
+    plugin: dict[str, object], distributions: list[dict[str, object]]
+) -> dict[str, object] | None:
+    expected = re.sub(r"[-_.]+", "-", str(plugin.get("distribution", ""))).lower()
+    matching = [item for item in distributions if re.sub(r"[-_.]+", "-", str(item.get("name", ""))).lower() == expected]
+    return matching[0] if len(matching) == 1 else None
+
+
 def _valid_pytest_plugin(plugin: dict[str, object], distributions: list[dict[str, object]]) -> bool:
-    matching = [
-        item
-        for item in distributions
-        if re.sub(r"[-_.]+", "-", str(item.get("name", ""))).lower()
-        == re.sub(r"[-_.]+", "-", str(plugin.get("distribution", ""))).lower()
-    ]
+    distribution = _pytest_plugin_distribution(plugin, distributions)
+    options = _pytest_plugin_string_catalog(plugin, "options")
+    ini_fields = _pytest_plugin_string_catalog(plugin, "ini_fields")
+    hooks = _pytest_plugin_string_catalog(plugin, "hooks")
+    entry_point = plugin.get("pytest11_entry_point")
+    if distribution is None or options is None or ini_fields is None or hooks is None:
+        return False
+    distribution_entry_points = distribution.get("entry_points")
+    if not isinstance(distribution_entry_points, list):
+        return False
     return (
-        len(matching) == 1
-        and plugin.get("version") == matching[0].get("version")
-        and plugin.get("payload_digest") == matching[0].get("payload_digest")
+        plugin.get("version") == distribution.get("version")
+        and plugin.get("payload_digest") == distribution.get("payload_digest")
         and isinstance(plugin.get("dependencies"), list)
-        and isinstance(plugin.get("pytest11_entry_point"), str)
-        and bool(plugin["pytest11_entry_point"])
-        and _valid_digest(plugin.get("parser_catalog_digest"))
-        and _valid_digest(plugin.get("hook_capability_digest"))
+        and plugin.get("dependencies") == distribution.get("dependencies")
+        and isinstance(entry_point, str)
+        and bool(entry_point)
+        and f"pytest11:{entry_point}" in cast(list[object], distribution_entry_points)
+        and plugin.get("parser_catalog_digest") == pytest_parser_catalog_digest(options=options, ini_fields=ini_fields)
+        and plugin.get("hook_capability_digest") == pytest_hook_capability_digest(hooks)
     )
 
 

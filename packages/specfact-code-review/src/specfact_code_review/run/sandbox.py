@@ -47,6 +47,7 @@ class SnapshotInvocationContext:
     project_runtime_root: Path | None
     network: Literal["none"]
     control_root: Path | None
+    environment_id: str = ""
     reserved_import_prefixes: tuple[str, ...] = _DEFAULT_RESERVED_IMPORT_PREFIXES
 
     @property
@@ -58,6 +59,7 @@ class SnapshotInvocationContext:
                 "config_roots": [str(path) for path in self.config_roots],
                 "control_root": None if self.control_root is None else str(self.control_root),
                 "interpreter": self.interpreter,
+                "environment_id": self.environment_id,
                 "member": self.member,
                 "network": self.network,
                 "output_root": str(self.output_root),
@@ -215,7 +217,6 @@ def runtime_observation_scope(context: SnapshotInvocationContext) -> RuntimeObse
 
 def _mounts(context: SnapshotInvocationContext) -> tuple[SandboxMount, ...]:
     mounts = [
-        SandboxMount("snapshot", "snapshot", context.snapshot_root, "/opt/specfact/snapshot", True),
         *(
             SandboxMount(
                 "policy" if index == 0 else f"policy-{index}",
@@ -229,6 +230,8 @@ def _mounts(context: SnapshotInvocationContext) -> tuple[SandboxMount, ...]:
         SandboxMount("output", "output", context.output_root, "/opt/specfact/output", False),
         SandboxMount("temporary", "temporary", context.temporary_root, "/opt/specfact/tmp", False),
     ]
+    if context.member != "targeted-pytest-plugin-preflight":
+        mounts.insert(0, SandboxMount("snapshot", "snapshot", context.snapshot_root, "/opt/specfact/snapshot", True))
     if context.member == "radon":
         control_root = context.control_root
         if (
@@ -258,7 +261,13 @@ def _mounts(context: SnapshotInvocationContext) -> tuple[SandboxMount, ...]:
 def build_launch_plan(context: SnapshotInvocationContext) -> SandboxLaunchPlan:
     """Build isolated Python bootstrap launch data without importing snapshot code."""
 
-    cwd = "/opt/specfact/control" if context.member == "radon" else "/opt/specfact/snapshot"
+    cwd = (
+        "/opt/specfact/control"
+        if context.member == "radon"
+        else "/opt/specfact/tmp"
+        if context.member == "targeted-pytest-plugin-preflight"
+        else "/opt/specfact/snapshot"
+    )
     return SandboxLaunchPlan(
         context_digest=context.digest,
         cwd=cwd,
@@ -402,12 +411,34 @@ def _reserved_collision_paths(root: Path, prefixes: frozenset[str]) -> tuple[str
     return tuple(collisions)
 
 
+def _signed_reserved_import_prefixes(environment_id: str) -> frozenset[str]:
+    schema_path = Path(__file__).parents[1] / "resources/contracts/project-runtime-layer-v1.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    catalog = schema["reserved_component_catalog"]
+    if environment_id:
+        environments = catalog["prefixes_by_environment"]
+        selected = next(item for item in environments if item["environment_id"] == environment_id)
+        values = selected["prefixes"]
+    else:
+        values = catalog["prefixes"]
+    if not isinstance(values, list) or not values or not all(isinstance(value, str) and value for value in values):
+        raise ValueError("reserved import catalog is invalid")
+    return frozenset(values)
+
+
 @ensure(lambda result: result.status in {"PASS", "UNKNOWN"})
 def preflight_reserved_imports(context: SnapshotInvocationContext) -> PreflightResult:
     """Reject top-level module, stub, package, or namespace-package collisions."""
 
-    prefixes = frozenset(context.reserved_import_prefixes)
-    roots = (context.snapshot_root,) + (() if context.project_runtime_root is None else (context.project_runtime_root,))
+    try:
+        prefixes = _signed_reserved_import_prefixes(context.environment_id) | frozenset(
+            context.reserved_import_prefixes
+        )
+    except (KeyError, OSError, StopIteration, TypeError, ValueError, json.JSONDecodeError):
+        return PreflightResult("UNKNOWN", "reserved_import_catalog_unavailable")
+    roots = () if context.member == "targeted-pytest-plugin-preflight" else (context.snapshot_root,)
+    if context.project_runtime_root is not None:
+        roots = (*roots, context.project_runtime_root / "site-packages")
     collisions = tuple(f"{root}:{prefix}" for root in roots for prefix in _reserved_collision_paths(root, prefixes))
     if collisions:
         return PreflightResult("UNKNOWN", "reserved_import_collision", collisions)

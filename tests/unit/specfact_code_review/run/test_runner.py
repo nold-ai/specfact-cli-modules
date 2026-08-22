@@ -391,12 +391,14 @@ def test_complete_tdd_gate_excludes_sealed_custom_test_root_from_coverage(
     )
     observed: list[Path] = []
     observed_plans: list[tuple[str, ...]] = []
+    observed_omission_policies: list[bool] = []
 
     def evaluate(
         source_files: list[Path], _execute: object, **kwargs: object
     ) -> tuple[list[ReviewFinding], dict[str, float]]:
         observed.extend(source_files)
         observed_plans.append(cast(tuple[str, ...], kwargs["planned"]))
+        observed_omission_policies.append(cast(bool, kwargs["allow_project_omitted_initializers"]))
         return [], {}
 
     monkeypatch.setattr(runner_api, "_evaluate_pytest_execution", evaluate)
@@ -419,6 +421,7 @@ def test_complete_tdd_gate_excludes_sealed_custom_test_root_from_coverage(
     assert coverage == {}
     assert observed == [Path("/opt/specfact/snapshot/src/app.py")]
     assert observed_plans == [("integration/test_app.py::test_app",)]
+    assert observed_omission_policies == [False]
 
 
 def test_sealed_target_bugs_policy_activates_semgrep_bugs_without_bug_hunt(monkeypatch: MonkeyPatch) -> None:
@@ -627,6 +630,11 @@ def test_immutable_review_explicitly_loads_only_authenticated_project_pytest_plu
             ("tests/test_app.py::test_app",),
         ),
     )
+    monkeypatch.setattr(
+        runner_api,
+        "_preflight_project_runtime_pytest_plugins",
+        lambda *_args, **_kwargs: runner_api.CandidateReconciliation("PASS"),
+    )
 
     def run_snapshot(*_args: object, **kwargs: object) -> Any:
         observed_argv.append(cast(dict[str, tuple[str, ...]], kwargs["member_argv"])["targeted-pytest-coverage"])
@@ -657,6 +665,89 @@ def test_immutable_review_explicitly_loads_only_authenticated_project_pytest_plu
     assert len(observed_argv) == 2
     assert all(argv.count("-p") == 1 for argv in observed_argv)
     assert all(argv[argv.index("-p") + 1] == "fixture_plugin" for argv in observed_argv)
+
+
+def test_immutable_review_rejects_plugin_preflight_before_snapshot_execution(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    runtime_root = tmp_path / "project-runtime"
+    runtime_root.mkdir()
+    capsule = SimpleNamespace(identity="sha256:" + "a" * 64)
+    descriptor = {"schema": "project-runtime-layer-v1"}
+    plugin = SimpleNamespace(entry_point="fixture_plugin")
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda **_kwargs: (capsule, ""))
+    monkeypatch.setattr(
+        runner_api.toolchain,
+        "validate_project_runtime_layer",
+        lambda *_args, **_kwargs: SimpleNamespace(status="PASS", reason="", pytest_plugins=(plugin,)),
+    )
+    monkeypatch.setattr(
+        runner_api.toolchain,
+        "materialize_project_runtime",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            status="PASS", root=runtime_root, identity="sha256:" + "b" * 64, reason=""
+        ),
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_preflight_project_runtime_pytest_plugins",
+        lambda *_args, **_kwargs: runner_api.CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_mismatch"),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_run_capsule_snapshot",
+        lambda *_args, **_kwargs: pytest.fail("snapshot analyzers must not run after plugin preflight failure"),
+    )
+    snapshot = SimpleNamespace(root=tmp_path, contents={})
+    resolution = SimpleNamespace(
+        base_snapshot=snapshot,
+        head_snapshot=snapshot,
+        policy_bundle=None,
+        resolved_target_commit="1" * 40,
+        claimed_context={"project_runtime": descriptor},
+    )
+
+    report = runner_api.run_immutable_scope_review(
+        resolution,
+        options=runner_api.ReviewOptions(no_tests=False),
+        scope_evidence={"assurance_kind": "range_candidate"},
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert {item["diagnostic"] for item in report.analyzer_evidence} == {"pytest_plugin_capability_mismatch"}
+
+
+def test_plugin_preflight_uses_snapshot_free_dedicated_capsule_member(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    runtime = SimpleNamespace()
+    project_runtime = SimpleNamespace(root=tmp_path / "project-runtime")
+    plugin = runner_api.toolchain.PytestPluginIdentity(
+        distribution="fixture-plugin",
+        version="1.0",
+        entry_point="fixture_plugin",
+        options=(),
+        ini_fields=(),
+        hooks=("pytest_fixture_setup",),
+        parser_catalog_digest=runner_api.toolchain.pytest_parser_catalog_digest(options=(), ini_fields=()),
+        hook_capability_digest=runner_api.toolchain.pytest_hook_capability_digest(("pytest_fixture_setup",)),
+    )
+    observed: list[Any] = []
+
+    def execute(request: Any) -> dict[str, object]:
+        observed.append(request)
+        return {"evidence_outcome": "PASS"}
+
+    monkeypatch.setattr(runner_api, "_execute_capsule_member", execute)
+
+    result = runner_api._preflight_project_runtime_pytest_plugins(runtime, project_runtime, (plugin,))
+
+    assert result.status == "PASS"
+    assert len(observed) == 1
+    assert observed[0].member == "targeted-pytest-plugin-preflight"
+    assert observed[0].files == []
+    assert observed[0].project_runtime_root == project_runtime.root
 
 
 def test_index_review_uses_head_policy_for_both_immutable_snapshots(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
@@ -2026,6 +2117,21 @@ def test_coverage_findings_skips_package_initializers_omitted_from_coverage_repo
     assert coverage_by_source == {}
 
 
+def test_complete_coverage_requires_nonempty_package_initializer_record(tmp_path: Path) -> None:
+    source_file = tmp_path / "packages/example/src/example/__init__.py"
+    source_file.parent.mkdir(parents=True)
+    source_file.write_text("VERSION = '1.0'\n", encoding="utf-8")
+
+    findings, coverage_by_source = _coverage_findings(
+        [source_file],
+        {"files": {}},
+        allow_project_omitted_initializers=False,
+    )
+
+    assert coverage_by_source is None
+    assert [finding.category for finding in findings] == ["tool_error"]
+
+
 def test_run_pytest_with_coverage_disables_global_fail_under(monkeypatch: MonkeyPatch) -> None:
     recorded: dict[str, object] = {}
 
@@ -2870,6 +2976,36 @@ def test_pytest_outcome_reconciliation_rejects_missing_planned_selector() -> Non
         junit=({"nodeid": "tests/test_app.py::test_visible", "outcome": "passed"},),
         process_exit=0,
         planned=("tests/test_app.py::test_visible", "tests/test_app.py::test_hidden_by_conftest"),
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+def test_pytest_outcome_reconciliation_accepts_complete_parametrized_expansion() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_outcomes(
+        observer=(
+            {"nodeid": "tests/test_app.py::test_value[one]", "phase": "call", "passed": True},
+            {"nodeid": "tests/test_app.py::test_value[two]", "phase": "call", "passed": True},
+        ),
+        junit=(
+            {"nodeid": "tests/test_app.py::test_value[one]", "outcome": "passed"},
+            {"nodeid": "tests/test_app.py::test_value[two]", "outcome": "passed"},
+        ),
+        process_exit=0,
+        planned=("tests/test_app.py::test_value",),
+    )
+
+    assert result.status == "PASS"
+
+
+def test_pytest_outcome_reconciliation_rejects_unrelated_parameterized_prefix() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_outcomes(
+        observer=({"nodeid": "tests/test_app.py::test_value_extra[one]", "phase": "call", "passed": True},),
+        junit=({"nodeid": "tests/test_app.py::test_value_extra[one]", "outcome": "passed"},),
+        process_exit=0,
+        planned=("tests/test_app.py::test_value",),
     )
 
     assert result.status == "UNKNOWN"
