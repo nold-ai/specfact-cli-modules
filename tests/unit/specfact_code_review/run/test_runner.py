@@ -1443,6 +1443,16 @@ def test_test_role_is_frozen_before_collection() -> None:
     assert role.inputs == ("path", "testpaths", "python_files", "pytest_version")
 
 
+def test_test_shaped_path_outside_collection_roots_is_not_support() -> None:
+    runner_api = _c14_runner()
+    role = runner_api.classify_pytest_input_role(
+        "integration/test_new.py",
+        policy=_suite_policy(testpaths=["tests"], python_files=["test_*.py"]),
+    )
+
+    assert role.kind == "test_candidate_outside_root"
+
+
 def test_previously_collected_test_file_becoming_empty_is_unknown() -> None:
     runner_api = _c14_runner()
     result = runner_api.reconcile_test_candidate(
@@ -1450,6 +1460,14 @@ def test_previously_collected_test_file_becoming_empty_is_unknown() -> None:
     )
 
     assert result.status == "UNKNOWN"
+
+
+def test_new_test_candidate_without_head_selectors_is_unknown() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_test_candidate(role="test_candidate", base_selectors=(), head_selectors=())
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "uncollected_test_candidate"
 
 
 def test_candidate_test_file_disabled_by_dunder_test_is_unknown() -> None:

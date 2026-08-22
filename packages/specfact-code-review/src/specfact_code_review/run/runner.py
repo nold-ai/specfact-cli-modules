@@ -475,7 +475,11 @@ def classify_pytest_input_role(path: str, *, policy: dict[str, object]) -> Pytes
     roots = tuple(str(value).rstrip("/") for value in cast(list[object], policy["testpaths"]))
     patterns = tuple(str(value) for value in cast(list[object], policy["python_files"]))
     below_root = any(path == root or path.startswith(f"{root}/") for root in roots)
-    kind = "test_candidate" if below_root and _matches_python_file(Path(path), patterns) else "test_support"
+    matches_test_pattern = _matches_python_file(Path(path), patterns)
+    if below_root:
+        kind = "test_candidate" if matches_test_pattern else "test_support"
+    else:
+        kind = "test_candidate_outside_root" if matches_test_pattern else "test_support"
     return PytestInputRole(kind, ("path", "testpaths", "python_files", "pytest_version"))
 
 
@@ -492,7 +496,8 @@ def pytest_path_matches_pattern(path: Path, pattern: str, *, platform: str) -> b
 def reconcile_test_candidate(
     *, role: str, base_selectors: tuple[str, ...], head_selectors: tuple[str, ...]
 ) -> CandidateReconciliation:
-    if role == "test_candidate" and (base_selectors or head_selectors) and not head_selectors:
+    del base_selectors
+    if role == "test_candidate" and not head_selectors:
         return CandidateReconciliation("UNKNOWN", "uncollected_test_candidate")
     return CandidateReconciliation("PASS")
 
