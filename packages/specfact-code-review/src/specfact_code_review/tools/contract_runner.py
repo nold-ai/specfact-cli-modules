@@ -344,7 +344,12 @@ def _crosshair_unknown(file_path: Path, message: str) -> ReviewFinding:
     lambda result: all(isinstance(finding, ReviewFinding) for finding in result),
     "result must contain ReviewFinding instances",
 )
-def run_contract_check(files: list[Path], *, bug_hunt: bool = False) -> list[ReviewFinding]:
+def run_contract_check(
+    files: list[Path],
+    *,
+    bug_hunt: bool = False,
+    crosshair_files: list[Path] | None = None,
+) -> list[ReviewFinding]:
     """Run AST-based contract checks and a CrossHair fast pass for the provided files."""
     py_files = python_source_paths_for_tools(files)
     if not py_files:
@@ -354,5 +359,6 @@ def run_contract_check(files: list[Path], *, bug_hunt: bool = False) -> list[Rev
     if _has_icontract_usage(py_files):
         for file_path in py_files:
             findings.extend(_scan_file(file_path))
-    findings.extend(_run_crosshair(py_files, bug_hunt=bug_hunt))
+    runtime_files = py_files if crosshair_files is None else python_source_paths_for_tools(crosshair_files)
+    findings.extend(_run_crosshair(runtime_files, bug_hunt=bug_hunt))
     return findings

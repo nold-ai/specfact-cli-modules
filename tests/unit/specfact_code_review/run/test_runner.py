@@ -319,6 +319,36 @@ def test_capsule_radon_member_activates_bound_full_result_contract(monkeypatch: 
     }
 
 
+def test_capsule_contract_member_routes_static_and_crosshair_input_manifests(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    files = [
+        Path("/opt/specfact/snapshot/src/app.py"),
+        Path("/opt/specfact/snapshot/src/types.pyi"),
+        Path("/opt/specfact/snapshot/tests/test_app.py"),
+        Path("/opt/specfact/snapshot/tests/helpers.py"),
+    ]
+    observed: dict[str, object] = {}
+
+    def run_contracts(static_files: list[Path], **kwargs: object) -> list[ReviewFinding]:
+        observed["static"] = static_files
+        observed.update(kwargs)
+        return []
+
+    monkeypatch.setattr(runner_api, "run_contract_check", run_contracts)
+
+    assert (
+        runner_api._member_findings(
+            "contracts",
+            files,
+            bug_hunt=False,
+            adapter_argv=("contract-inputs-v1", "--test-root", "tests"),
+        )
+        == []
+    )
+    assert observed["static"] == files
+    assert observed["crosshair_files"] == [Path("/opt/specfact/snapshot/src/app.py")]
+
+
 def test_capsule_targeted_pytest_executes_supplied_complete_inventory(monkeypatch: MonkeyPatch) -> None:
     runner_api = _c14_runner()
     observed: list[tuple[str, ...]] = []
@@ -873,6 +903,38 @@ def test_immutable_range_classifies_introduced_findings_with_existing_differenti
         "unknown": 0,
     }
     assert findings["ruff"][0].differential_state == "introduced"
+
+
+def test_immutable_range_blocks_introduced_suppression_even_when_analyzers_report_no_findings(
+    tmp_path: Path,
+) -> None:
+    runner_api = _c14_runner()
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    (base_root / "src").mkdir(parents=True)
+    (head_root / "src").mkdir(parents=True)
+    base_source = b"import os\n"
+    head_source = b"import os  # noqa: F401\n"
+    (base_root / "src/app.py").write_bytes(base_source)
+    (head_root / "src/app.py").write_bytes(head_source)
+    resolution = SimpleNamespace(
+        base_snapshot=SimpleNamespace(root=base_root, contents={"src/app.py": base_source}),
+        head_snapshot=SimpleNamespace(root=head_root, contents={"src/app.py": head_source}),
+        exact_renames=(),
+        path_statuses={"src/app.py": "M"},
+    )
+
+    evidence, findings = runner_api._classify_range_findings(
+        resolution,
+        runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {}),
+        runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {}),
+    )
+
+    assert evidence["ruff"]["evidence_outcome"] == "FAIL"
+    assert evidence["ruff"]["diagnostic"] == "introduced_inline_suppression"
+    assert findings["ruff"][0].rule == "introduced_inline_suppression"
+    assert findings["ruff"][0].differential_state == "introduced"
+    assert findings["ruff"][0].is_blocking() is True
 
 
 def test_immutable_range_preserves_fixed_findings_without_blocking(tmp_path: Path) -> None:
@@ -2242,6 +2304,40 @@ def test_complete_suite_uses_unittest_loader_method_prefix_independently_of_pyte
     )
 
 
+def test_complete_suite_collects_imported_pytest_and_unittest_objects(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "support.py").write_text(
+        "import unittest\n\n"
+        "class SharedCase(unittest.TestCase):\n"
+        "    def test_inherited(self):\n"
+        "        pass\n\n"
+        "def test_imported():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_imported.py").write_text(
+        "from tests.support import SharedCase, test_imported\n\n"
+        "def test_smoke():\n"
+        "    pass\n\n"
+        "class TestChild(SharedCase):\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "tests/test_imported.py::SharedCase::test_inherited",
+        "tests/test_imported.py::test_imported",
+        "tests/test_imported.py::test_smoke",
+        "tests/test_imported.py::TestChild::test_inherited",
+    )
+
+
 def test_complete_suite_matches_path_qualified_python_file_patterns(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     smoke = tmp_path / "tests/test_smoke.py"
@@ -2601,6 +2697,13 @@ def test_non_strict_xpass_is_fail_despite_passing_junit_testcase() -> None:
     assert result.outcomes[0].kind == "XPASS"
 
 
+def test_targeted_pytest_disables_ambient_plugin_autoload_and_loads_controller_coverage() -> None:
+    runner_api = _c14_runner()
+
+    assert runner_api._pytest_env()["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] == "1"
+    assert "pytest_cov.plugin" in runner_api._pytest_observer_script()
+
+
 def test_failed_pytest_call_cannot_reconcile_as_pass() -> None:
     runner_api = _c14_runner()
     result = runner_api.reconcile_pytest_outcomes(
@@ -2828,6 +2931,35 @@ def test_stub_only_range_is_static_and_coverage_not_applicable() -> None:
     result = runner_api.classify_snapshot_input_kinds(("src/a.pyi",))
     assert result.member("targeted-pytest-coverage").status == "NOT_APPLICABLE"
     assert result.member("ruff").status != "NOT_APPLICABLE"
+
+
+def test_capsule_snapshot_does_not_launch_targeted_pytest_for_stub_only_input(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    runner_api = _c14_runner()
+    stub = tmp_path / "src/app.pyi"
+    stub.parent.mkdir()
+    stub.write_text("VALUE: int\n", encoding="utf-8")
+    launched: list[str] = []
+
+    def execute(request: Any) -> dict[str, object]:
+        launched.append(request.member)
+        return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": [], "diagnostic": ""}
+
+    monkeypatch.setattr(runner_api, "_execute_capsule_member", execute)
+    result = runner_api._run_capsule_snapshot(
+        SimpleNamespace(identity="sha256:" + "a" * 64),
+        snapshot_root=tmp_path,
+        files=[stub],
+        options=runner_api.ReviewOptions(),
+        member_argv={"targeted-pytest-coverage": ("--",)},
+    )
+
+    assert "targeted-pytest-coverage" not in launched
+    assert "ruff" in launched
+    assert result.evidence["targeted-pytest-coverage"]["evidence_outcome"] == "NOT_APPLICABLE"
+    assert result.evidence["targeted-pytest-coverage"]["diagnostic"] == "member_input_not_applicable"
 
 
 def test_stub_only_range_excludes_crosshair_but_requires_stub_capable_static_members() -> None:

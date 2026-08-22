@@ -707,39 +707,83 @@ def _member_findings(
     adapter_argv: tuple[str, ...] = (),
     complete_pytest_inventory: bool = False,
 ) -> list[ReviewFinding]:
+    configured = _configured_member_findings(
+        member,
+        files,
+        bug_hunt=bug_hunt,
+        adapter_argv=adapter_argv,
+        complete_pytest_inventory=complete_pytest_inventory,
+    )
+    if configured is not None:
+        return configured
     runners: dict[str, Callable[[list[Path]], list[ReviewFinding]]] = {
-        "ruff": run_ruff,
         "radon": partial(_radon_member_findings, adapter_argv=adapter_argv),
-        "semgrep-clean": run_semgrep,
-        "semgrep-bugs": run_semgrep_bugs,
         "ai-bloat-ast": run_ai_bloat,
         "ast-clean-code": run_ast_clean_code,
-        "basedpyright": run_basedpyright,
-        "pylint": run_pylint,
         "contracts": partial(run_contract_check, bug_hunt=bug_hunt),
     }
-    if member == "targeted-pytest-coverage":
-        findings, _coverage = (
-            _evaluate_complete_tdd_gate(files, adapter_argv) if complete_pytest_inventory else _evaluate_tdd_gate(files)
-        )
-        return findings
-    if member == "ruff":
-        return run_ruff(files, extra_args=adapter_argv) if adapter_argv else run_ruff(files)
-    if member == "basedpyright":
-        return run_basedpyright(files, extra_args=adapter_argv) if adapter_argv else run_basedpyright(files)
-    if member == "pylint":
-        return run_pylint(files, extra_args=adapter_argv) if adapter_argv else run_pylint(files)
-    if member == "semgrep-clean":
-        bundle_root = Path(adapter_argv[0]) if adapter_argv else None
-        return run_semgrep(files, bundle_root=bundle_root)
-    if member == "semgrep-bugs":
-        bundle_root = Path(adapter_argv[0]) if adapter_argv else None
-        return run_semgrep_bugs(files, bundle_root=bundle_root)
     try:
         runner = runners[member]
     except KeyError as exc:
         raise ValueError(f"unsupported capsule member: {member}") from exc
     return runner(files)
+
+
+def _configured_member_findings(
+    member: str,
+    files: list[Path],
+    *,
+    bug_hunt: bool,
+    adapter_argv: tuple[str, ...],
+    complete_pytest_inventory: bool,
+) -> list[ReviewFinding] | None:
+    if member == "targeted-pytest-coverage":
+        findings, _coverage = (
+            _evaluate_complete_tdd_gate(files, adapter_argv) if complete_pytest_inventory else _evaluate_tdd_gate(files)
+        )
+        return findings
+    configurable = {"ruff": run_ruff, "basedpyright": run_basedpyright, "pylint": run_pylint}
+    if member in configurable:
+        runner = configurable[member]
+        return runner(files, extra_args=adapter_argv) if adapter_argv else runner(files)
+    semgrep_runners = {"semgrep-clean": run_semgrep, "semgrep-bugs": run_semgrep_bugs}
+    if member in semgrep_runners:
+        bundle_root = Path(adapter_argv[0]) if adapter_argv else None
+        return semgrep_runners[member](files, bundle_root=bundle_root)
+    if member == "contracts" and adapter_argv:
+        return _sealed_contract_findings(files, bug_hunt=bug_hunt, adapter_argv=adapter_argv)
+    return None
+
+
+def _sealed_contract_findings(
+    files: list[Path],
+    *,
+    bug_hunt: bool,
+    adapter_argv: tuple[str, ...],
+) -> list[ReviewFinding]:
+    test_roots = _contract_test_roots(adapter_argv)
+    crosshair_files = [
+        path for path in files if path.suffix == ".py" and not _path_is_below_test_root(path, test_roots)
+    ]
+    return run_contract_check(files, bug_hunt=bug_hunt, crosshair_files=crosshair_files)
+
+
+def _contract_test_roots(adapter_argv: tuple[str, ...]) -> tuple[Path, ...]:
+    if not adapter_argv or adapter_argv[0] != "contract-inputs-v1" or len(adapter_argv[1:]) % 2:
+        raise ValueError("unsupported contracts adapter contract")
+    pairs = tuple(zip(adapter_argv[1::2], adapter_argv[2::2], strict=True))
+    if not pairs or any(flag != "--test-root" for flag, _value in pairs):
+        raise ValueError("contracts test-root manifest is invalid")
+    roots = tuple(Path(value) for _flag, value in pairs)
+    if any(root.is_absolute() or ".." in root.parts for root in roots):
+        raise ValueError("contracts test root escapes snapshot")
+    return roots
+
+
+def _path_is_below_test_root(path: Path, roots: tuple[Path, ...]) -> bool:
+    snapshot_root = Path("/opt/specfact/snapshot")
+    relative = path.relative_to(snapshot_root) if path.is_absolute() and path.is_relative_to(snapshot_root) else path
+    return any(relative == root or relative.is_relative_to(root) for root in roots)
 
 
 def _validate_pytest_inventory(selectors: tuple[str, ...]) -> None:
@@ -964,6 +1008,23 @@ def _not_applicable_member(reason: str) -> dict[str, object]:
     }
 
 
+def _dispatch_capsule_member(
+    request: CapsuleMemberExecutionRequest,
+    *,
+    applicability: SnapshotInputClassification,
+    sealed_bugs_policy: bool,
+) -> dict[str, object]:
+    if not request.files:
+        return _not_applicable_member("empty_snapshot_input")
+    if applicability.member(request.member).status == "NOT_APPLICABLE":
+        return _not_applicable_member("member_input_not_applicable")
+    if request.member == "semgrep-bugs" and not (request.options.bug_hunt or sealed_bugs_policy):
+        return _not_applicable_member("conditional_member_not_activated")
+    if request.member == "targeted-pytest-coverage" and request.options.no_tests:
+        return _not_applicable_member("tests_explicitly_disabled_for_legacy_scope")
+    return _execute_capsule_member(request)
+
+
 def _run_capsule_snapshot(
     runtime: CapsuleRuntime,
     *,
@@ -976,31 +1037,33 @@ def _run_capsule_snapshot(
 ) -> CapsuleSnapshotResult:
     evidence: dict[str, dict[str, object]] = {}
     findings_by_member: dict[str, list[ReviewFinding]] = {}
+    resolved_snapshot = snapshot_root.resolve()
+    resolved_inputs = tuple(path.resolve() for path in files)
+    relative_inputs = tuple(
+        path.relative_to(resolved_snapshot).as_posix() if path.is_relative_to(resolved_snapshot) else path.as_posix()
+        for path in resolved_inputs
+    )
+    applicability = classify_snapshot_input_kinds(relative_inputs)
     for member in default_pr_range_profile().all_ids:
         sealed_bugs_policy = member_argv is not None and "semgrep-bugs" in member_argv
-        if not files:
-            raw = _not_applicable_member("empty_snapshot_input")
-        elif member == "semgrep-bugs" and not (options.bug_hunt or sealed_bugs_policy):
-            raw = _not_applicable_member("conditional_member_not_activated")
-        elif member == "targeted-pytest-coverage" and options.no_tests:
-            raw = _not_applicable_member("tests_explicitly_disabled_for_legacy_scope")
-        else:
-            raw = _execute_capsule_member(
-                CapsuleMemberExecutionRequest(
-                    runtime=runtime,
-                    member=member,
-                    invocation_id=str(uuid4()),
-                    snapshot_root=snapshot_root,
-                    files=files,
-                    options=options,
-                    config_roots=config_roots,
-                    adapter_argv=(member_argv or {}).get(member, ()),
-                    complete_pytest_inventory=(
-                        member == "targeted-pytest-coverage" and member_argv is not None and member in member_argv
-                    ),
-                    project_runtime_root=(project_runtime_root if member in _PROJECT_RUNTIME_MEMBERS else None),
-                )
-            )
+        raw = _dispatch_capsule_member(
+            CapsuleMemberExecutionRequest(
+                runtime=runtime,
+                member=member,
+                invocation_id=str(uuid4()),
+                snapshot_root=snapshot_root,
+                files=files,
+                options=options,
+                config_roots=config_roots,
+                adapter_argv=(member_argv or {}).get(member, ()),
+                complete_pytest_inventory=(
+                    member == "targeted-pytest-coverage" and member_argv is not None and member in member_argv
+                ),
+                project_runtime_root=(project_runtime_root if member in _PROJECT_RUNTIME_MEMBERS else None),
+            ),
+            applicability=applicability,
+            sealed_bugs_policy=sealed_bugs_policy,
+        )
         raw_findings = raw.get("findings", [])
         findings = [ReviewFinding.model_validate(value) for value in cast(list[object], raw_findings)]
         findings_by_member[member] = findings
@@ -1201,6 +1264,11 @@ def _bind_pytest_coverage_policy(
         "--cov-config",
         coverage_config,
     )
+    test_roots = tuple(str(value) for value in cast(list[object], pytest_policy["testpaths"]))
+    builder.member_argv["contracts"] = (
+        "contract-inputs-v1",
+        *(value for root in test_roots for value in ("--test-root", root)),
+    )
 
 
 def _snapshot_policy_bindings(
@@ -1272,11 +1340,31 @@ def _matches_python_file(path: Path, patterns: tuple[str, ...]) -> bool:
     return any(pytest_path_matches_pattern(match_path, pattern, platform="linux") for pattern in patterns)
 
 
+ImportedPytestDefinition = tuple[
+    str,
+    ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+    tuple[set[str], set[str]],
+]
+
+
+@dataclass(frozen=True)
+class _PytestSelectorContext:
+    relative: str
+    imported: tuple[ImportedPytestDefinition, ...]
+    classes: dict[str, ast.ClassDef]
+    unittest_aliases: tuple[set[str], set[str]]
+    imported_unittest_cases: frozenset[str]
+    function_patterns: tuple[str, ...]
+    class_patterns: tuple[str, ...]
+
+
 def _test_selectors(
     path: Path,
     relative: str,
     function_patterns: tuple[str, ...],
     class_patterns: tuple[str, ...],
+    *,
+    snapshot_root: Path,
 ) -> tuple[str, ...]:
     try:
         tree = ast.parse(path.read_bytes())
@@ -1284,25 +1372,130 @@ def _test_selectors(
         return ()
     if _module_disables_pytest_collection(tree):
         return ()
+    imported = _imported_pytest_definitions(tree, path=path, snapshot_root=snapshot_root)
     classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
-    unittest_modules, unittest_cases = _unittest_aliases(tree)
+    classes.update({name: node for name, node, _aliases in imported if isinstance(node, ast.ClassDef)})
+    imported_unittest_cases = {
+        name
+        for name, node, aliases in imported
+        if isinstance(node, ast.ClassDef)
+        and _is_unittest_case(node, classes, *aliases, direct_unittest_classes=frozenset(), visiting=frozenset())
+    }
+    context = _PytestSelectorContext(
+        relative,
+        imported,
+        classes,
+        _unittest_aliases(tree),
+        frozenset(imported_unittest_cases),
+        function_patterns,
+        class_patterns,
+    )
+    return tuple(selector for node in tree.body for selector in _node_test_selectors(node, context))
+
+
+def _node_test_selectors(node: ast.stmt, context: _PytestSelectorContext) -> tuple[str, ...]:
+    if isinstance(node, ast.ImportFrom):
+        return _imported_test_selectors(
+            context.relative,
+            context.imported,
+            set(context.imported_unittest_cases),
+            context.function_patterns,
+            context.class_patterns,
+            selected_names={alias.asname or alias.name for alias in node.names},
+        )
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
+        fnmatch.fnmatch(node.name, pattern) for pattern in context.function_patterns
+    ):
+        return (f"{context.relative}::{node.name}",)
+    if not isinstance(node, ast.ClassDef):
+        return ()
+    methods = _pytest_class_test_methods(
+        node,
+        context.classes,
+        context.unittest_aliases,
+        context.function_patterns,
+        context.class_patterns,
+        direct_unittest_classes=context.imported_unittest_cases,
+    )
+    return tuple(f"{context.relative}::{node.name}::{method}" for method in methods)
+
+
+def _imported_module_path(statement: ast.ImportFrom, *, path: Path, snapshot_root: Path) -> Path | None:
+    relative_parent = path.relative_to(snapshot_root).parent
+    if statement.level:
+        if statement.level > len(relative_parent.parts) + 1:
+            return None
+        prefix = relative_parent.parts[: len(relative_parent.parts) - statement.level + 1]
+        module_parts = (*prefix, *(statement.module or "").split("."))
+    else:
+        module_parts = tuple((statement.module or "").split("."))
+    module_parts = tuple(part for part in module_parts if part)
+    candidates = (
+        snapshot_root.joinpath(*module_parts).with_suffix(".py"),
+        snapshot_root.joinpath(*module_parts, "__init__.py"),
+    )
+    return next((candidate for candidate in candidates if candidate.is_file()), None)
+
+
+def _imported_pytest_definitions(
+    tree: ast.Module,
+    *,
+    path: Path,
+    snapshot_root: Path,
+) -> tuple[ImportedPytestDefinition, ...]:
+    definitions: list[ImportedPytestDefinition] = []
+    for statement in tree.body:
+        if not isinstance(statement, ast.ImportFrom) or any(alias.name == "*" for alias in statement.names):
+            continue
+        module_path = _imported_module_path(statement, path=path, snapshot_root=snapshot_root)
+        if module_path is None:
+            continue
+        try:
+            imported_tree = ast.parse(module_path.read_bytes())
+        except (OSError, SyntaxError):
+            continue
+        aliases = _unittest_aliases(imported_tree)
+        exported = {
+            node.name: node
+            for node in imported_tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        }
+        definitions.extend(
+            (alias.asname or alias.name, exported[alias.name], aliases)
+            for alias in statement.names
+            if alias.name in exported
+        )
+    return tuple(definitions)
+
+
+def _imported_test_selectors(
+    relative: str,
+    imported: tuple[ImportedPytestDefinition, ...],
+    imported_unittest_cases: set[str],
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+    *,
+    selected_names: set[str],
+) -> tuple[str, ...]:
     selectors: list[str] = []
-    for node in tree.body:
+    for name, node, _aliases in imported:
+        if name not in selected_names:
+            continue
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
-            fnmatch.fnmatch(node.name, pattern) for pattern in function_patterns
+            fnmatch.fnmatch(name, pattern) for pattern in function_patterns
         ):
-            selectors.append(f"{relative}::{node.name}")
-        if isinstance(node, ast.ClassDef):
-            selectors.extend(
-                f"{relative}::{node.name}::{method}"
-                for method in _pytest_class_test_methods(
-                    node,
-                    classes,
-                    (unittest_modules, unittest_cases),
-                    function_patterns,
-                    class_patterns,
-                )
+            selectors.append(f"{relative}::{name}")
+        elif isinstance(node, ast.ClassDef):
+            is_unittest = name in imported_unittest_cases
+            if not is_unittest and not any(fnmatch.fnmatch(name, pattern) for pattern in class_patterns):
+                continue
+            methods = _class_test_methods(
+                node,
+                {child.name: child for child in ast.walk(node) if isinstance(child, ast.ClassDef)},
+                ("test*",) if is_unittest else function_patterns,
+                visiting=frozenset(),
             )
+            selectors.extend(f"{relative}::{name}::{method}" for method in methods)
     return tuple(selectors)
 
 
@@ -1312,6 +1505,8 @@ def _pytest_class_test_methods(
     unittest_aliases: tuple[set[str], set[str]],
     function_patterns: tuple[str, ...],
     class_patterns: tuple[str, ...],
+    *,
+    direct_unittest_classes: frozenset[str] = frozenset(),
 ) -> tuple[str, ...]:
     module_aliases, case_aliases = unittest_aliases
     is_unittest_case = _is_unittest_case(
@@ -1319,6 +1514,7 @@ def _pytest_class_test_methods(
         classes,
         module_aliases,
         case_aliases,
+        direct_unittest_classes=direct_unittest_classes,
         visiting=frozenset(),
     )
     if not any(fnmatch.fnmatch(node.name, pattern) for pattern in class_patterns) and not is_unittest_case:
@@ -1344,6 +1540,7 @@ def _is_unittest_case(
     module_aliases: set[str],
     case_aliases: set[str],
     *,
+    direct_unittest_classes: frozenset[str],
     visiting: frozenset[str],
 ) -> bool:
     if node.name in visiting:
@@ -1359,6 +1556,8 @@ def _is_unittest_case(
             return True
         if isinstance(base, ast.Name) and base.id in case_aliases:
             return True
+        if isinstance(base, ast.Name) and base.id in direct_unittest_classes:
+            return True
         if (
             isinstance(base, ast.Name)
             and base.id in classes
@@ -1367,6 +1566,7 @@ def _is_unittest_case(
                 classes,
                 module_aliases,
                 case_aliases,
+                direct_unittest_classes=direct_unittest_classes,
                 visiting=active,
             )
         ):
@@ -1444,6 +1644,7 @@ def _collect_pytest_selectors(
             path.relative_to(snapshot_root).as_posix(),
             function_patterns,
             class_patterns,
+            snapshot_root=snapshot_root,
         )
     )
 
@@ -2064,6 +2265,7 @@ def _pytest_env() -> dict[str, str]:
         (str(Path(entry).resolve()) for entry in sys.path if entry and Path(entry).exists()),
     )
     env["PYTHONPATH"] = os.pathsep.join(pythonpath_entries)
+    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
     return env
 
 
@@ -2106,7 +2308,7 @@ def _pytest_observer_script() -> str:
     source_root = str(_SOURCE_ROOT.resolve())
     repo_root = str(Path.cwd().resolve())
     return (
-        "import json, pathlib, sys, pytest\n"
+        "import json, pathlib, sys, pytest, pytest_cov.plugin as pytest_cov_plugin\n"
         "class Observer:\n"
         "    def __init__(self, path):\n"
         "        self.path = pathlib.Path(path)\n"
@@ -2124,7 +2326,7 @@ def _pytest_observer_script() -> str:
         "observer_path = sys.argv.pop(1)\n"
         f"sys.path[:0] = [{source_root!r}, {repo_root!r}]\n"
         "import specfact_code_review\n"
-        "raise SystemExit(pytest.main(sys.argv[1:], plugins=[Observer(observer_path)]))\n"
+        "raise SystemExit(pytest.main(sys.argv[1:], plugins=[pytest_cov_plugin, Observer(observer_path)]))\n"
     )
 
 
@@ -3389,7 +3591,99 @@ def _classify_range_findings(
             base_findings=base.findings_by_member.get(member, []),
             head_findings=head.findings_by_member.get(member, []),
         )
+    suppression = differential.classify_suppression_delta(
+        base_sources=context.base_sources,
+        head_sources=context.head_sources,
+        rename_facts=context.rename_facts,
+        missing_base_findings=[
+            _differential_finding_projection(finding)
+            for findings in base.findings_by_member.values()
+            for finding in findings
+        ],
+    )
+    _apply_suppression_delta(suppression, combined=combined, findings_by_member=classified_by_member)
     return combined, classified_by_member
+
+
+def _suppression_finding_category(member: str) -> str:
+    return {
+        "basedpyright": "type_safety",
+        "contracts": "contracts",
+        "pylint": "clean_code",
+        "ruff": "style",
+        "semgrep": "security",
+        "semgrep-bugs": "security",
+        "targeted-pytest-coverage": "testing",
+    }[member]
+
+
+def _suppression_review_finding(
+    finding: differential.SuppressionFinding,
+    *,
+    member: str,
+) -> ReviewFinding:
+    state = "unknown" if finding.kind == "unchanged_suppression_on_changed_file" else "introduced"
+    return ReviewFinding(
+        category=cast(Any, _suppression_finding_category(member)),
+        severity="error",
+        tool=member,
+        rule=finding.kind,
+        file=finding.path,
+        line=finding.line,
+        message=f"C14 suppression control requires {state} disposition for {member}.",
+        fixable=False,
+        differential_state=cast(Any, state),
+        blocking=finding.blocking,
+        evidence_refs=[
+            EvidenceRef(
+                path=finding.path,
+                start_line=finding.line,
+                end_line=finding.line,
+                artifact_id=finding.evidence.occurrence_digest,
+                description=(
+                    f"{finding.evidence.family}; base={finding.evidence.base_blob_digest or 'absent'}; "
+                    f"head={finding.evidence.head_blob_digest or 'absent'}; "
+                    f"change={finding.evidence.changed_hunk_digest}"
+                ),
+            )
+        ],
+    )
+
+
+def _apply_suppression_delta(
+    suppression: differential.SuppressionClassification,
+    *,
+    combined: dict[str, dict[str, object]],
+    findings_by_member: dict[str, list[ReviewFinding]],
+) -> None:
+    if suppression.status == "UNKNOWN" and not suppression.findings:
+        for member in default_pr_range_profile().all_ids:
+            combined[member] = {
+                **combined[member],
+                "evidence_outcome": "UNKNOWN",
+                "diagnostic": suppression.reason or "suppression_manifest_unknown",
+                "disposition": "unknown",
+            }
+        return
+    for finding in suppression.findings:
+        for member in finding.evidence.analyzers:
+            if member not in combined or combined[member].get("evidence_outcome") == "NOT_APPLICABLE":
+                continue
+            state = "UNKNOWN" if finding.kind == "unchanged_suppression_on_changed_file" else "FAIL"
+            findings_by_member.setdefault(member, []).append(_suppression_review_finding(finding, member=member))
+            combined[member] = {
+                **combined[member],
+                "evidence_outcome": state,
+                "diagnostic": finding.kind,
+                "disposition": "unknown" if state == "UNKNOWN" else "introduced",
+            }
+            if suppression.missing_base_disposition == "unknown":
+                findings_by_member[member] = [
+                    item.model_copy(update={"differential_state": "unknown", "status": "open", "blocking": True})
+                    if item.file == finding.path and item.differential_state == "fixed"
+                    else item
+                    for item in findings_by_member[member]
+                ]
 
 
 def _pytest_toml_values(path: Path, payload: bytes) -> dict[str, object]:
