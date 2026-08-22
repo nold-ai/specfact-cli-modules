@@ -610,6 +610,8 @@ class ReviewReport(BaseModel):
             or self.assurance_status == "UNKNOWN"
             or any(item.get("evidence_outcome") == "UNKNOWN" for item in self.analyzer_evidence or [])
         )
+        if self.has_unknown_required_evidence and self.assurance_status in {"PASS", "NOT_APPLICABLE"}:
+            self.assurance_status = "UNKNOWN"
         verdicts = {
             "PASS": PASS,
             "NOT_APPLICABLE": PASS_WITH_ADVISORY,
