@@ -1842,6 +1842,7 @@ def project_basedpyright_policy(
         {
             "include": include_values,
             "exclude": [],
+            "extraPaths": [project_runtime_site_packages],
             "ignore": [],
             "strict": [],
             "venvPath": str(PurePosixPath(project_runtime_site_packages).parent),

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -838,6 +839,34 @@ def test_basedpyright_include_exclude_cannot_drop_governed_input(scope_api: Any,
 
     assert projection.values["include"] == [str(tmp_path / "one.py"), str(tmp_path / "two.py")]
     assert projection.values["exclude"] == []
+
+
+def test_basedpyright_projection_exposes_flat_project_runtime_site_packages(scope_api: Any, tmp_path: Path) -> None:
+    snapshot = tmp_path / "snapshot"
+    runtime = tmp_path / "project-runtime/site-packages"
+    snapshot.mkdir()
+    (runtime / "consumer_dependency").mkdir(parents=True)
+    (runtime / "consumer_dependency/__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (snapshot / "app.py").write_text("from consumer_dependency import VALUE\nRESULT = VALUE\n", encoding="utf-8")
+    policy = scope_api.BasedPyrightPolicy(values={"extraPaths": ["candidate-controlled"]})
+
+    projection = scope_api.project_basedpyright_policy(
+        policy,
+        snapshot_root=snapshot,
+        eligible_inputs=("app.py",),
+        project_runtime_site_packages=str(runtime),
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "basedpyright", "--project", str(projection.config_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert projection.status == "PASS"
+    assert projection.values["extraPaths"] == [str(runtime)]
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "reportMissingImports" not in result.stdout
 
 
 def test_context_requires_target_and_head_tree_identities(scope_api: Any, git_repo: Path, tmp_path: Path) -> None:
