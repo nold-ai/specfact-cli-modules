@@ -2734,6 +2734,57 @@ def test_complete_suite_resolves_imported_test_through_project_pythonpath(tmp_pa
     )
 
 
+def test_complete_suite_resolves_imported_test_through_project_runtime(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    runtime_root = tmp_path / "project-runtime"
+    site_packages = runtime_root / "site-packages"
+    tests_root.mkdir()
+    site_packages.mkdir(parents=True)
+    (site_packages / "runtime_dep.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+    (tests_root / "test_case.py").write_text(
+        "from runtime_dep import test_failure\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(
+        tmp_path,
+        _suite_policy(),
+        changed_paths=("src/app.py",),
+        project_runtime_root=runtime_root,
+    )
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "tests/test_case.py::test_failure",
+        "tests/test_case.py::test_smoke",
+    )
+
+
+def test_complete_suite_rejects_test_body_replacing_decorator(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_decorated.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "def replace(function):\n"
+        "    del function\n"
+        "    def passing():\n"
+        "        pass\n"
+        "    return passing\n\n"
+        "@replace\n"
+        "def test_failure():\n"
+        "    assert False\n\n"
+        "def test_smoke():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "test_execution_decorator_unsupported"
+
+
 def test_complete_suite_fails_closed_for_wildcard_imported_tests(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"

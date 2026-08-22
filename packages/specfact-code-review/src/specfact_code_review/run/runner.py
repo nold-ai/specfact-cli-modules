@@ -1480,6 +1480,12 @@ class _PytestDiscoveryPolicy:
 
 
 @dataclass(frozen=True)
+class _ModeledTestDecorators:
+    pytest_prefixes: tuple[str, ...]
+    unittest_names: frozenset[str]
+
+
+@dataclass(frozen=True)
 class _PytestSelectorContext:
     relative: str
     imported: tuple[ImportedPytestDefinition, ...]
@@ -1573,16 +1579,10 @@ def _imported_module_path(
     snapshot_root: Path,
     import_roots: tuple[Path, ...],
 ) -> Path | None:
-    relative_parent = path.relative_to(snapshot_root).parent
-    if statement.level:
-        if statement.level > len(relative_parent.parts) + 1:
-            return None
-        prefix = relative_parent.parts[: len(relative_parent.parts) - statement.level + 1]
-        module_parts = (*prefix, *(statement.module or "").split("."))
-        search_roots = (snapshot_root,)
-    else:
-        module_parts = tuple((statement.module or "").split("."))
-        search_roots = tuple(dict.fromkeys((*import_roots, snapshot_root)))
+    search = _import_search(statement, path=path, snapshot_root=snapshot_root, import_roots=import_roots)
+    if search is None:
+        return None
+    module_parts, search_roots = search
     module_parts = tuple(part for part in module_parts if part)
     candidates = tuple(
         candidate
@@ -1593,6 +1593,23 @@ def _imported_module_path(
         )
     )
     return next((candidate for candidate in candidates if candidate.is_file()), None)
+
+
+def _import_search(
+    statement: ast.ImportFrom,
+    *,
+    path: Path,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> tuple[tuple[str, ...], tuple[Path, ...]] | None:
+    if not statement.level:
+        return tuple((statement.module or "").split(".")), import_roots
+    owning_root = next((root for root in import_roots if path.is_relative_to(root)), snapshot_root)
+    relative_parent = path.relative_to(owning_root).parent
+    if statement.level > len(relative_parent.parts) + 1:
+        return None
+    prefix = relative_parent.parts[: len(relative_parent.parts) - statement.level + 1]
+    return (*prefix, *(statement.module or "").split(".")), (owning_root,)
 
 
 def _imported_pytest_definitions(
@@ -2064,6 +2081,77 @@ def _module_has_test_execution_override(
     )
 
 
+def _module_has_unsupported_test_decorator(tree: ast.Module, *, function_patterns: tuple[str, ...]) -> bool:
+    modeled = _modeled_test_decorators(tree)
+    return any(
+        any(not _is_modeled_test_decorator(decorator, modeled) for decorator in definition.decorator_list)
+        for definition in _test_definitions(tree, function_patterns)
+    )
+
+
+def _modeled_test_decorators(tree: ast.Module) -> _ModeledTestDecorators:
+    pytest_modules = _imported_module_aliases(tree, "pytest")
+    pytest_marks = _imported_member_aliases(tree, "pytest", frozenset({"mark"}))
+    unittest_members = frozenset({"expectedFailure", "skip", "skipIf", "skipUnless"})
+    unittest_modules = _imported_module_aliases(tree, "unittest")
+    unittest_decorators = _imported_member_aliases(tree, "unittest", unittest_members)
+    pytest_prefixes = tuple(f"{module}.mark." for module in pytest_modules) + tuple(f"{mark}." for mark in pytest_marks)
+    unittest_names = {
+        *(f"{module}.{member}" for module in unittest_modules for member in unittest_members),
+        *unittest_decorators,
+    }
+    return _ModeledTestDecorators(pytest_prefixes, frozenset(unittest_names))
+
+
+def _imported_module_aliases(tree: ast.Module, module: str) -> set[str]:
+    return {
+        alias.asname or alias.name
+        for node in tree.body
+        if isinstance(node, ast.Import)
+        for alias in node.names
+        if alias.name == module
+    }
+
+
+def _imported_member_aliases(tree: ast.Module, module: str, members: frozenset[str]) -> set[str]:
+    return {
+        alias.asname or alias.name
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom) and node.module == module
+        for alias in node.names
+        if alias.name in members
+    }
+
+
+def _test_definitions(
+    tree: ast.Module,
+    function_patterns: tuple[str, ...],
+) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef, ...]:
+    return tuple(
+        node
+        for parent in tree.body
+        for node in ((parent,) if not isinstance(parent, ast.ClassDef) else tuple(parent.body))
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(fnmatch.fnmatch(node.name, pattern) for pattern in function_patterns)
+    )
+
+
+def _path_has_unsupported_test_decorator(path: Path, *, function_patterns: tuple[str, ...]) -> bool:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+    return _module_has_unsupported_test_decorator(tree, function_patterns=function_patterns)
+
+
+def _is_modeled_test_decorator(
+    decorator: ast.expr,
+    modeled: _ModeledTestDecorators,
+) -> bool:
+    name = _decorator_full_name(decorator.func if isinstance(decorator, ast.Call) else decorator)
+    return name.startswith(modeled.pytest_prefixes) or name in modeled.unittest_names
+
+
 def _class_has_test_execution_override(
     name: str,
     node: ast.ClassDef,
@@ -2313,6 +2401,8 @@ def _pytest_candidate_rejection_reason(
         for path in paths
     ):
         return "dynamic_test_assignment_unsupported"
+    if any(_path_has_unsupported_test_decorator(path, function_patterns=function_patterns) for path in paths):
+        return "test_execution_decorator_unsupported"
     if any(
         _module_has_test_execution_override(
             path,
@@ -2350,15 +2440,18 @@ def plan_complete_pytest_suite(
     *,
     changed_paths: tuple[str, ...],
     deleted_paths: tuple[str, ...] = (),
+    project_runtime_root: Path | None = None,
 ) -> PytestSuitePlan:
     del deleted_paths
     roots = tuple(str(value) for value in cast(list[object], policy.get("testpaths", ["."])))
     file_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_files", ["test_*.py"])))
     class_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_classes", ["Test*"])))
     function_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_functions", ["test_*"])))
-    import_roots, projection_reason = _projected_pytest_import_roots(policy, snapshot_root=snapshot_root)
+    projected_roots, projection_reason = _projected_pytest_import_roots(policy, snapshot_root=snapshot_root)
     if projection_reason:
         return PytestSuitePlan((), False, "UNKNOWN", projection_reason)
+    runtime_roots = () if project_runtime_root is None else (project_runtime_root / "site-packages",)
+    import_roots = tuple(dict.fromkeys((*projected_roots, snapshot_root, *runtime_roots)))
     discovery_policy = _PytestDiscoveryPolicy(function_patterns, class_patterns, import_roots)
     plugin_validation = _repository_pytest_hook_validation(snapshot_root, roots)
     if plugin_validation.status != "PASS":
@@ -4560,15 +4653,27 @@ def _coverage_policy_values(policy_bundle: object | None) -> dict[str, object]:
     return values
 
 
-def _reconcile_immutable_pytest_inventory(resolution: object, *, options: ReviewOptions) -> ImmutablePytestInventory:
+def _reconcile_immutable_pytest_inventory(
+    resolution: object,
+    *,
+    options: ReviewOptions,
+    project_runtime_root: Path | None = None,
+) -> ImmutablePytestInventory:
     if options.no_tests:
         return ImmutablePytestInventory(CandidateReconciliation("PASS"))
     base_snapshot = cast(Any, resolution).base_snapshot
     head_snapshot = cast(Any, resolution).head_snapshot
     policy = _pytest_policy_values(_trusted_policy_bundle(resolution))
     changed_paths = tuple(sorted(cast(dict[str, str], getattr(resolution, "path_statuses", {}))))
-    base_plan = plan_complete_pytest_suite(base_snapshot.root, policy, changed_paths=changed_paths)
-    head_plan = plan_complete_pytest_suite(head_snapshot.root, policy, changed_paths=changed_paths)
+    base_plan, head_plan = (
+        plan_complete_pytest_suite(
+            snapshot.root,
+            policy,
+            changed_paths=changed_paths,
+            project_runtime_root=project_runtime_root,
+        )
+        for snapshot in (base_snapshot, head_snapshot)
+    )
     if base_plan.status != "PASS":
         return ImmutablePytestInventory(CandidateReconciliation("UNKNOWN", base_plan.reason))
     if head_plan.status != "PASS":
@@ -4699,6 +4804,61 @@ def _trusted_policy_bundle(resolution: object) -> object | None:
     return None if base_snapshot is None else base_snapshot
 
 
+def _prepare_immutable_pytest_inventory(
+    resolution: object,
+    options: ReviewOptions,
+    runtime: CapsuleRuntime,
+    project_runtime: toolchain.ProjectRuntimeMaterialization | None,
+    pytest_plugins: tuple[toolchain.PytestPluginIdentity, ...],
+) -> tuple[ImmutablePytestInventory | None, str]:
+    plugin_preflight = _preflight_project_runtime_pytest_plugins(runtime, project_runtime, pytest_plugins)
+    if plugin_preflight.status != "PASS":
+        return None, plugin_preflight.reason
+    try:
+        inventory = _reconcile_immutable_pytest_inventory(
+            resolution,
+            options=options,
+            project_runtime_root=cast(Path | None, getattr(project_runtime, "root", None)),
+        )
+    except (OSError, TypeError, ValueError, configparser.Error, tomllib.TOMLDecodeError) as exc:
+        return None, f"pytest_config_ambiguous:{exc}"
+    if inventory.reconciliation.status != "PASS":
+        return None, inventory.reconciliation.reason
+    return inventory, ""
+
+
+@dataclass(frozen=True)
+class _BoundSnapshotRun:
+    root: Path
+    files: list[Path]
+    bindings: SnapshotPolicyBindings
+
+
+def _run_bound_snapshot_pair(
+    runtime: CapsuleRuntime,
+    options: ReviewOptions,
+    project_runtime_root: Path | None,
+    base: _BoundSnapshotRun,
+    head: _BoundSnapshotRun,
+) -> tuple[CapsuleSnapshotResult, CapsuleSnapshotResult]:
+    with ExitStack() as cleanup:
+        for root in (*base.bindings.cleanup_roots, *head.bindings.cleanup_roots):
+            cleanup.callback(shutil.rmtree, root, ignore_errors=True)
+        base_result, head_result = tuple(
+            _run_capsule_snapshot(
+                runtime,
+                snapshot_root=side.root,
+                files=side.files,
+                options=options,
+                config_roots=side.bindings.config_roots,
+                member_argv=side.bindings.member_argv,
+                project_runtime_root=project_runtime_root,
+            )
+            for side in (base, head)
+        )
+    return base_result, head_result
+
+
 def run_immutable_scope_review(
     resolution: object,
     *,
@@ -4722,24 +4882,16 @@ def run_immutable_scope_review(
             options=options,
             scope_evidence=scope_evidence,
         )
-    plugin_preflight = _preflight_project_runtime_pytest_plugins(runtime, project_runtime, pytest_plugins)
-    if plugin_preflight.status != "PASS":
+    pytest_inventory, reason = _prepare_immutable_pytest_inventory(
+        resolution,
+        options,
+        runtime,
+        project_runtime,
+        pytest_plugins,
+    )
+    if pytest_inventory is None:
         return _unknown_capsule_report(
-            plugin_preflight.reason,
-            options=options,
-            scope_evidence=scope_evidence,
-        )
-    try:
-        pytest_inventory = _reconcile_immutable_pytest_inventory(resolution, options=options)
-    except (OSError, TypeError, ValueError, configparser.Error, tomllib.TOMLDecodeError) as exc:
-        return _unknown_capsule_report(
-            f"pytest_config_ambiguous:{exc}",
-            options=options,
-            scope_evidence=scope_evidence,
-        )
-    if pytest_inventory.reconciliation.status != "PASS":
-        return _unknown_capsule_report(
-            pytest_inventory.reconciliation.reason,
+            reason,
             options=options,
             scope_evidence=scope_evidence,
         )
@@ -4771,28 +4923,13 @@ def run_immutable_scope_review(
             options=options,
             scope_evidence=scope_evidence,
         )
-    with ExitStack() as cleanup:
-        for root in (*base_bindings.cleanup_roots, *head_bindings.cleanup_roots):
-            cleanup.callback(shutil.rmtree, root, ignore_errors=True)
-        project_runtime_root = None if project_runtime is None else project_runtime.root
-        base = _run_capsule_snapshot(
-            runtime,
-            snapshot_root=base_snapshot.root,
-            files=base_files,
-            options=options,
-            config_roots=base_bindings.config_roots,
-            member_argv=base_bindings.member_argv,
-            project_runtime_root=project_runtime_root,
-        )
-        head = _run_capsule_snapshot(
-            runtime,
-            snapshot_root=head_snapshot.root,
-            files=head_files,
-            options=options,
-            config_roots=head_bindings.config_roots,
-            member_argv=head_bindings.member_argv,
-            project_runtime_root=project_runtime_root,
-        )
+    base, head = _run_bound_snapshot_pair(
+        runtime,
+        options,
+        cast(Path | None, getattr(project_runtime, "root", None)),
+        _BoundSnapshotRun(base_snapshot.root, base_files, base_bindings),
+        _BoundSnapshotRun(head_snapshot.root, head_files, head_bindings),
+    )
     combined, classified_findings = _classify_range_findings(resolution, base, head)
     return _capsule_report(
         combined,
