@@ -2768,6 +2768,137 @@ def test_complete_suite_rejects_dynamic_test_member_assignment(tmp_path: Path) -
     assert plan.reason == "dynamic_test_assignment_unsupported"
 
 
+def test_complete_suite_rejects_assigned_pytest_hook_alias(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tmp_path / "conftest.py").write_text(
+        "def bypass(pyfuncitem):\n    del pyfuncitem\n    return True\n\npytest_pyfunc_call = bypass\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_module_test_callable_alias(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_dynamic.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "def failing_function():\n    assert False\n\ntest_failure = failing_function\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_test_assignment_unsupported"
+
+
+def test_complete_suite_rejects_transitive_imported_class_base(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "base.py").write_text(
+        "class Base:\n    def test_inherited(self):\n        assert False\n",
+        encoding="utf-8",
+    )
+    (tests_root / "shared.py").write_text(
+        "from .base import Base\n\nclass TestChild(Base):\n    pass\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_candidate.py").write_text(
+        "from .shared import TestChild\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "imported_test_base_unsupported"
+
+
+def test_complete_suite_preserves_local_base_when_imported_module_reuses_name(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "shared.py").write_text(
+        "class Base:\n    pass\n\nclass TestImported(Base):\n    def test_imported(self):\n        pass\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_collision.py").write_text(
+        "from .shared import TestImported\n\n"
+        "class Base:\n"
+        "    def test_inherited(self):\n"
+        "        assert False\n\n"
+        "class TestLocal(Base):\n"
+        "    pass\n\n"
+        "def test_smoke():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "tests/test_collision.py::TestImported::test_imported",
+        "tests/test_collision.py::TestLocal::test_inherited",
+        "tests/test_collision.py::test_smoke",
+    )
+
+
+def test_complete_suite_rejects_dynamic_test_class_factory(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_dynamic.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "def failing_function(self):\n"
+        "    assert False\n\n"
+        "TestDynamic = type(\n"
+        "    'TestDynamic',\n"
+        "    (),\n"
+        "    {'__module__': __name__, 'test_failure': failing_function},\n"
+        ")\n\n"
+        "def test_smoke():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_test_assignment_unsupported"
+
+
+def test_complete_suite_rejects_unittest_attribute_dispatch_override(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_override.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "import unittest\n\n"
+        "class TestBypass(unittest.TestCase):\n"
+        "    def __getattribute__(self, name):\n"
+        "        if name.startswith('test_'):\n"
+        "            return lambda: None\n"
+        "        return super().__getattribute__(name)\n\n"
+        "    def test_failure(self):\n"
+        "        assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "unittest_execution_override"
+
+
 def test_config_free_pytest_policy_discovers_from_repository_root(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     unit = tmp_path / "tests/test_smoke.py"

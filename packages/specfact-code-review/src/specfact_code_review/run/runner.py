@@ -1468,6 +1468,7 @@ ImportedPytestDefinition = tuple[
     ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
     tuple[set[str], set[str]],
     dict[str, ast.ClassDef],
+    frozenset[str],
 ]
 
 
@@ -1498,15 +1499,22 @@ def _test_selectors(
         return ()
     imported = _imported_pytest_definitions(tree, path=path, snapshot_root=snapshot_root)
     classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
-    for name, node, _aliases, module_classes in imported:
-        classes.update(module_classes)
+    for name, node, _aliases, module_classes, _unsupported_bases in imported:
+        for class_name, class_node in module_classes.items():
+            classes.setdefault(class_name, class_node)
         if isinstance(node, ast.ClassDef):
-            classes[name] = node
+            classes.setdefault(name, node)
     imported_unittest_cases = {
         name
-        for name, node, aliases, _module_classes in imported
+        for name, node, aliases, module_classes, _unsupported_bases in imported
         if isinstance(node, ast.ClassDef)
-        and _is_unittest_case(node, classes, *aliases, direct_unittest_classes=frozenset(), visiting=frozenset())
+        and _is_unittest_case(
+            node,
+            module_classes,
+            *aliases,
+            direct_unittest_classes=frozenset(),
+            visiting=frozenset(),
+        )
     }
     context = _PytestSelectorContext(
         relative,
@@ -1600,6 +1608,7 @@ def _resolve_imported_pytest_definition(
         ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
         tuple[set[str], set[str]],
         dict[str, ast.ClassDef],
+        frozenset[str],
     ]
     | None
 ):
@@ -1612,7 +1621,8 @@ def _resolve_imported_pytest_definition(
         return None
     direct = _direct_pytest_definition(tree, export_name)
     if direct is not None:
-        return direct, _unittest_aliases(tree), _module_class_definitions(tree)
+        module_classes = _module_class_definitions(tree)
+        return direct, _unittest_aliases(tree), module_classes, _unsupported_imported_bases(tree, module_classes)
     reexport = _pytest_reexport(tree, export_name)
     if reexport is None:
         return None
@@ -1646,6 +1656,22 @@ def _module_class_definitions(tree: ast.Module) -> dict[str, ast.ClassDef]:
     return {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
 
 
+def _unsupported_imported_bases(tree: ast.Module, module_classes: dict[str, ast.ClassDef]) -> frozenset[str]:
+    imported_names = {
+        alias.asname or alias.name
+        for statement in tree.body
+        if isinstance(statement, ast.ImportFrom) and statement.module != "unittest"
+        for alias in statement.names
+        if alias.name != "*"
+    }
+    return frozenset(
+        base.id
+        for node in module_classes.values()
+        for base in node.bases
+        if isinstance(base, ast.Name) and base.id in imported_names and base.id not in module_classes
+    )
+
+
 def _pytest_reexport(tree: ast.Module, export_name: str) -> tuple[ast.ImportFrom, str] | None:
     for statement in tree.body:
         if not isinstance(statement, ast.ImportFrom):
@@ -1666,7 +1692,7 @@ def _imported_test_selectors(
     selected_names: set[str],
 ) -> tuple[str, ...]:
     selectors: list[str] = []
-    for name, node, _aliases, module_classes in imported:
+    for name, node, _aliases, module_classes, _unsupported_bases in imported:
         if name not in selected_names:
             continue
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
@@ -1825,10 +1851,26 @@ def _module_uses_wildcard_import(path: Path) -> bool:
     )
 
 
+def _module_has_unsupported_imported_test_base(path: Path, *, snapshot_root: Path) -> bool:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+    return any(
+        unsupported_bases
+        for _name, _node, _aliases, _module_classes, unsupported_bases in _imported_pytest_definitions(
+            tree,
+            path=path,
+            snapshot_root=snapshot_root,
+        )
+    )
+
+
 def _module_has_dynamic_test_members(
     path: Path,
     *,
     function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
 ) -> bool:
     try:
         tree = ast.parse(path.read_bytes())
@@ -1838,7 +1880,11 @@ def _module_has_dynamic_test_members(
     for node in ast.walk(tree):
         if (
             _class_uses_metaclass(node)
-            or _assignment_sets_dynamic_test_member(node, function_patterns=function_patterns)
+            or _assignment_sets_dynamic_test_member(
+                node,
+                function_patterns=function_patterns,
+                class_patterns=class_patterns,
+            )
             or _call_sets_dynamic_test_member(node, function_patterns=function_patterns)
         ):
             return True
@@ -1853,20 +1899,34 @@ def _class_uses_metaclass(node: ast.AST) -> bool:
     return isinstance(node, ast.ClassDef) and any(keyword.arg == "metaclass" for keyword in node.keywords)
 
 
-def _assignment_sets_dynamic_test_member(node: ast.AST, *, function_patterns: tuple[str, ...]) -> bool:
+def _assignment_sets_dynamic_test_member(
+    node: ast.AST,
+    *,
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> bool:
     if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
         return False
     targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+    value = node.value
     return any(
-        isinstance(target, ast.Attribute) and _test_name_matches(target.attr, function_patterns) for target in targets
+        (isinstance(target, ast.Attribute) and _test_name_matches(target.attr, function_patterns))
+        or (
+            isinstance(target, ast.Name)
+            and (_test_name_matches(target.id, function_patterns) or _test_name_matches(target.id, class_patterns))
+            and isinstance(value, (ast.Name, ast.Attribute, ast.Lambda, ast.Call, ast.Subscript, ast.IfExp))
+        )
+        for target in targets
     )
 
 
 def _call_sets_dynamic_test_member(node: ast.AST, *, function_patterns: tuple[str, ...]) -> bool:
     return (
         isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "setattr"
+        and (
+            (isinstance(node.func, ast.Name) and node.func.id == "setattr")
+            or (isinstance(node.func, ast.Attribute) and node.func.attr == "setattr")
+        )
         and len(node.args) >= 2
         and isinstance(node.args[1], ast.Constant)
         and _test_name_matches(node.args[1].value, function_patterns)
@@ -1880,19 +1940,26 @@ def _module_has_unittest_execution_override(path: Path, *, snapshot_root: Path) 
         return False
     imported = _imported_pytest_definitions(tree, path=path, snapshot_root=snapshot_root)
     classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
-    for name, node, _aliases, module_classes in imported:
-        classes.update(module_classes)
+    for name, node, _aliases, module_classes, _unsupported_bases in imported:
+        for class_name, class_node in module_classes.items():
+            classes.setdefault(class_name, class_node)
         if isinstance(node, ast.ClassDef):
-            classes[name] = node
+            classes.setdefault(name, node)
     imported_cases = frozenset(
         name
-        for name, node, aliases, _module_classes in imported
+        for name, node, aliases, module_classes, _unsupported_bases in imported
         if isinstance(node, ast.ClassDef)
-        and _is_unittest_case(node, classes, *aliases, direct_unittest_classes=frozenset(), visiting=frozenset())
+        and _is_unittest_case(
+            node,
+            module_classes,
+            *aliases,
+            direct_unittest_classes=frozenset(),
+            visiting=frozenset(),
+        )
     )
     module_aliases, case_aliases = _unittest_aliases(tree)
     return any(
-        {"run", "__call__", "_callTestMethod"} & _class_declared_names(node)
+        {"run", "__call__", "_callTestMethod", "__getattribute__", "__getattr__"} & _class_declared_names(node)
         and (
             name in imported_cases
             or _is_unittest_case(
@@ -1934,16 +2001,31 @@ def _decorated_pytest_hook_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -
     }
 
 
-def _conftest_hook_names(tree: ast.Module) -> set[str]:
-    functions = tuple(node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)))
-    hooks = {node.name for node in functions if node.name.startswith("pytest_")}
-    hooks.update(
+def _imported_pytest_hook_names(tree: ast.Module) -> set[str]:
+    return {
         alias.asname or alias.name
         for node in tree.body
         if isinstance(node, ast.ImportFrom)
         for alias in node.names
         if (alias.asname or alias.name).startswith("pytest_")
-    )
+    }
+
+
+def _assigned_pytest_hook_names(tree: ast.Module) -> set[str]:
+    return {
+        target.id
+        for node in tree.body
+        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
+        for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+        if isinstance(target, ast.Name) and target.id.startswith("pytest_")
+    }
+
+
+def _conftest_hook_names(tree: ast.Module) -> set[str]:
+    functions = tuple(node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)))
+    hooks = {node.name for node in functions if node.name.startswith("pytest_")}
+    hooks.update(_imported_pytest_hook_names(tree))
+    hooks.update(_assigned_pytest_hook_names(tree))
     for function in functions:
         hooks.update(_decorated_pytest_hook_names(function))
     return hooks
@@ -2021,6 +2103,32 @@ def _pytest_candidates(
     }
 
 
+def _pytest_candidate_rejection_reason(
+    snapshot_root: Path,
+    candidates: set[str],
+    *,
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> str:
+    paths = tuple(snapshot_root / candidate for candidate in candidates)
+    if any(_module_uses_wildcard_import(path) for path in paths):
+        return "wildcard_import_unsupported"
+    if any(_module_has_unsupported_imported_test_base(path, snapshot_root=snapshot_root) for path in paths):
+        return "imported_test_base_unsupported"
+    if any(
+        _module_has_dynamic_test_members(
+            path,
+            function_patterns=function_patterns,
+            class_patterns=class_patterns,
+        )
+        for path in paths
+    ):
+        return "dynamic_test_assignment_unsupported"
+    if any(_module_has_unittest_execution_override(path, snapshot_root=snapshot_root) for path in paths):
+        return "unittest_execution_override"
+    return ""
+
+
 def plan_complete_pytest_suite(
     snapshot_root: Path,
     policy: dict[str, object],
@@ -2045,21 +2153,14 @@ def plan_complete_pytest_suite(
     )
     changed_candidates = _changed_pytest_candidates(changed_paths, roots, file_patterns)
     candidates = _pytest_candidates(snapshot_root, roots, file_patterns)
-    if any(_module_uses_wildcard_import(snapshot_root / candidate) for candidate in candidates):
-        return PytestSuitePlan(selectors, False, "UNKNOWN", "wildcard_import_unsupported")
-    if any(
-        _module_has_dynamic_test_members(
-            snapshot_root / candidate,
-            function_patterns=function_patterns,
-        )
-        for candidate in candidates
-    ):
-        return PytestSuitePlan(selectors, False, "UNKNOWN", "dynamic_test_assignment_unsupported")
-    if any(
-        _module_has_unittest_execution_override(snapshot_root / candidate, snapshot_root=snapshot_root)
-        for candidate in candidates
-    ):
-        return PytestSuitePlan(selectors, False, "UNKNOWN", "unittest_execution_override")
+    rejection_reason = _pytest_candidate_rejection_reason(
+        snapshot_root,
+        candidates,
+        function_patterns=function_patterns,
+        class_patterns=class_patterns,
+    )
+    if rejection_reason:
+        return PytestSuitePlan(selectors, False, "UNKNOWN", rejection_reason)
     collected_paths = {selector.split("::", maxsplit=1)[0] for selector in selectors}
     uncollected = candidates - collected_paths
     if uncollected:
