@@ -24,11 +24,21 @@ PR_RANGE_REQUIRED_ANALYZERS = (
 )
 PR_RANGE_CONDITIONAL_ANALYZERS = ("semgrep-bugs", "targeted-pytest-coverage")
 PR_RANGE_ANALYZERS = PR_RANGE_REQUIRED_ANALYZERS + PR_RANGE_CONDITIONAL_ANALYZERS
+PASSING_ANALYZER_OUTCOMES = frozenset({"PASS", "NOT_APPLICABLE"})
+VALID_ANALYZER_OUTCOMES = PASSING_ANALYZER_OUTCOMES | {"FAIL", "UNKNOWN"}
 
 
-def _complete_pr_range_analyzer_profile(evidence: list[dict[str, object]] | None) -> bool:
+def _passing_pr_range_analyzer_profile(evidence: list[dict[str, object]] | None) -> bool:
     evidence_ids = [str(item.get("id", "")) for item in evidence or []]
-    return len(evidence_ids) == len(PR_RANGE_ANALYZERS) and set(evidence_ids) == set(PR_RANGE_ANALYZERS)
+    return (
+        len(evidence_ids) == len(PR_RANGE_ANALYZERS)
+        and set(evidence_ids) == set(PR_RANGE_ANALYZERS)
+        and all(item.get("evidence_outcome") in PASSING_ANALYZER_OUTCOMES for item in evidence or [])
+    )
+
+
+def _has_untrusted_analyzer_outcome(evidence: list[dict[str, object]] | None) -> bool:
+    return any(item.get("evidence_outcome") not in VALID_ANALYZER_OUTCOMES for item in evidence or [])
 
 
 VALID_CATEGORIES = (
@@ -624,13 +634,14 @@ class ReviewReport(BaseModel):
     def _derive_authoritative_governance(self) -> bool:
         if not schema_version_at_least(self.schema_version, 6) or self.assurance_status is None:
             return False
-        profile_incomplete = self.assurance_status == "PASS" and not _complete_pr_range_analyzer_profile(
+        profile_incomplete = self.assurance_status == "PASS" and not _passing_pr_range_analyzer_profile(
             self.analyzer_evidence
         )
         self.has_unknown_required_evidence = bool(
             self.has_unknown_required_evidence
             or self.assurance_status == "UNKNOWN"
             or profile_incomplete
+            or _has_untrusted_analyzer_outcome(self.analyzer_evidence)
             or any(item.get("evidence_outcome") == "UNKNOWN" for item in self.analyzer_evidence or [])
         )
         if self.has_unknown_required_evidence and self.assurance_status in {"PASS", "NOT_APPLICABLE"}:

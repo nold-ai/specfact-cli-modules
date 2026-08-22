@@ -790,6 +790,54 @@ def test_schema_1_6_json_pass_with_missing_profile_members_is_demoted(
     assert report.ci_exit_code == 1
 
 
+@pytest.mark.parametrize("untrusted_outcome", [None, "UNRECOGNIZED"])
+def test_schema_1_6_json_pass_with_untrusted_analyzer_outcome_is_demoted(
+    untrusted_outcome: str | None,
+) -> None:
+    analyzer_evidence = [
+        {"id": analyzer_id, "execution_state": "ran", "evidence_outcome": "PASS"}
+        for analyzer_id in (
+            "ruff",
+            "radon",
+            "semgrep-clean",
+            "ai-bloat-ast",
+            "ast-clean-code",
+            "basedpyright",
+            "pylint",
+            "contracts",
+            "semgrep-bugs",
+            "targeted-pytest-coverage",
+        )
+    ]
+    if untrusted_outcome is None:
+        analyzer_evidence[0].pop("evidence_outcome")
+    else:
+        analyzer_evidence[0]["evidence_outcome"] = untrusted_outcome
+
+    report = ReviewReport.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": "1.6",
+                "assurance_status": "PASS",
+                "run_id": "untrusted-outcome-pass",
+                "timestamp": "2026-08-22T00:00:00Z",
+                "score": 120,
+                "findings": [],
+                "summary": "Untrusted producer omitted an authoritative outcome.",
+                "overall_verdict": "PASS",
+                "ci_exit_code": 0,
+                "enforcement_mode": "full",
+                "analyzer_evidence": analyzer_evidence,
+            }
+        )
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+    assert report.overall_verdict == "FAIL"
+    assert report.ci_exit_code == 1
+
+
 @pytest.mark.parametrize(
     ("status", "enforcement", "legacy_verdict", "exit_code"),
     [

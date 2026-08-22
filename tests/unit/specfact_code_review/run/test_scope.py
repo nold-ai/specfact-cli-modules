@@ -312,6 +312,30 @@ def test_index_scope_reads_staged_blobs_not_unstaged_worktree(scope_api: Any, gi
     assert result.head_snapshot.read_bytes("src/app.py") == b"VALUE = 2\n"
 
 
+def test_index_scope_removes_captured_index_root_after_materialization(
+    scope_api: Any, git_repo: Path, monkeypatch: Any
+) -> None:
+    real_mkdtemp = scope_api.tempfile.mkdtemp
+    capture_roots: list[Path] = []
+
+    def tracked_mkdtemp(*args: Any, **kwargs: Any) -> str:
+        root = Path(real_mkdtemp(*args, **kwargs))
+        if kwargs.get("prefix") == "specfact-index-":
+            capture_roots.append(root)
+        return str(root)
+
+    monkeypatch.setattr(scope_api.tempfile, "mkdtemp", tracked_mkdtemp)
+    (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+    _git(git_repo, "add", "src/app.py")
+
+    result = scope_api.resolve_scope(scope_api.ScopeRequest(repository=git_repo, scope="index"))
+    try:
+        assert capture_roots
+        assert all(not root.exists() for root in capture_roots)
+    finally:
+        scope_api.cleanup_scope_resolution(result)
+
+
 def test_index_scope_imports_dependency_from_complete_index_tree(scope_api: Any, git_repo: Path) -> None:
     (git_repo / "src/dependency.py").write_text("TOKEN = 'committed'\n", encoding="utf-8")
     _commit(git_repo, "dependency")

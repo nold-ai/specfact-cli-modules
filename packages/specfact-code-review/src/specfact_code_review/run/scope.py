@@ -2317,18 +2317,22 @@ def _capture_index(repository: Path) -> _IndexCapture:
     capture_root = Path(tempfile.mkdtemp(prefix="specfact-index-"))
     captured_index = capture_root / "index"
     last_error = "index capture did not run"
-    for _attempt in range(3):
-        try:
-            payload = _stable_regular_bytes(live_index, max_size=512 * 1024 * 1024)
-        except GitResolutionError as exc:
-            last_error = str(exc)
-            continue
-        captured_index.write_bytes(payload)
-        for shared_index in sorted(common_git.glob("sharedindex.*")):
-            shared_payload = _stable_regular_bytes(shared_index, max_size=512 * 1024 * 1024)
-            (capture_root / shared_index.name).write_bytes(shared_payload)
-        return _IndexCapture(path=captured_index, digest=sha256_bytes(payload))
-    raise GitResolutionError(f"Unable to capture a stable Git index after three attempts: {last_error}")
+    try:
+        for _attempt in range(3):
+            try:
+                payload = _stable_regular_bytes(live_index, max_size=512 * 1024 * 1024)
+            except GitResolutionError as exc:
+                last_error = str(exc)
+                continue
+            captured_index.write_bytes(payload)
+            for shared_index in sorted(common_git.glob("sharedindex.*")):
+                shared_payload = _stable_regular_bytes(shared_index, max_size=512 * 1024 * 1024)
+                (capture_root / shared_index.name).write_bytes(shared_payload)
+            return _IndexCapture(path=captured_index, digest=sha256_bytes(payload))
+        raise GitResolutionError(f"Unable to capture a stable Git index after three attempts: {last_error}")
+    except Exception:
+        shutil.rmtree(capture_root, ignore_errors=True)
+        raise
 
 
 def _after_index_capture() -> None:
@@ -2489,6 +2493,15 @@ def _resolve_index(request: ScopeRequest) -> ScopeResolution:
 
 def _materialized_index_context(repository: Path) -> _IndexResolutionContext | ScopeResolution:
     capture = _capture_index(repository)
+    try:
+        return _materialized_index_context_from_capture(repository, capture)
+    finally:
+        shutil.rmtree(capture.path.parent, ignore_errors=True)
+
+
+def _materialized_index_context_from_capture(
+    repository: Path, capture: _IndexCapture
+) -> _IndexResolutionContext | ScopeResolution:
     _after_index_capture()
     stage_entries = _index_stage_entries(repository, capture)
     if any(stage != 0 for _mode, _object_id, stage, _path in stage_entries):
