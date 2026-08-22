@@ -2868,6 +2868,17 @@ def _is_development_source_checkout() -> bool:
     )
 
 
+def _allows_development_host_compatibility(reason: str) -> bool:
+    if not _is_development_source_checkout():
+        return False
+    if reason == "unsupported_controller_platform":
+        return True
+    return (
+        reason == "oci_acquisition_failed:verified cache entry is missing"
+        and os.environ.get("SPECFACT_CODE_REVIEW_DEV_HOST_COMPAT") == "1"
+    )
+
+
 def run_capsule_review(
     files: list[Path],
     options: ReviewOptions | None = None,
@@ -2882,7 +2893,7 @@ def run_capsule_review(
         "capsule_execution": "required",
     }
     if runtime is None:
-        if reason == "unsupported_controller_platform" and _is_development_source_checkout():
+        if _allows_development_host_compatibility(reason):
             return run_review(files, review_options)
         return _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence)
     snapshot = _run_capsule_snapshot(

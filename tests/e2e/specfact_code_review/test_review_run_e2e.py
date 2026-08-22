@@ -59,8 +59,9 @@ def _skip_if_tools_missing() -> None:
 
 
 @pytest.mark.e2e
-def test_review_run_clean_fixture_passes(tmp_path: Path) -> None:
+def test_review_run_clean_fixture_passes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _skip_if_tools_missing()
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_DEV_HOST_COMPAT", "1")
     out = tmp_path / "review-report.json"
 
     result = runner.invoke(
@@ -75,8 +76,9 @@ def test_review_run_clean_fixture_passes(tmp_path: Path) -> None:
 
 
 @pytest.mark.e2e
-def test_review_run_dirty_fixture_fails(tmp_path: Path) -> None:
+def test_review_run_dirty_fixture_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _skip_if_tools_missing()
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_DEV_HOST_COMPAT", "1")
     out = tmp_path / "review-report.json"
 
     result = runner.invoke(

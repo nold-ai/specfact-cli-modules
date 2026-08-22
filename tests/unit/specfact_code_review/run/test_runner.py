@@ -665,6 +665,43 @@ def test_source_checkout_legacy_scope_uses_bounded_host_compatibility(monkeypatc
     assert runner_api.run_capsule_review([Path("src/app.py")], no_tests=True) is expected
 
 
+def test_source_checkout_legacy_scope_explicitly_opts_into_linux_cache_miss_compatibility(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    runner_api = _c14_runner()
+    expected = ReviewReport(run_id="dev-host", score=100, findings=[], summary="complete")
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_DEV_HOST_COMPAT", "1")
+    monkeypatch.setattr(
+        runner_api,
+        "_prepare_capsule_runtime",
+        lambda: (None, "oci_acquisition_failed:verified cache entry is missing"),
+    )
+    monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
+    monkeypatch.setattr(runner_api, "run_review", lambda *_args, **_kwargs: expected)
+
+    assert runner_api.run_capsule_review([Path("src/app.py")], no_tests=True) is expected
+
+
+def test_source_checkout_linux_cache_miss_without_opt_in_fails_closed(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.delenv("SPECFACT_CODE_REVIEW_DEV_HOST_COMPAT", raising=False)
+    monkeypatch.setattr(
+        runner_api,
+        "_prepare_capsule_runtime",
+        lambda: (None, "oci_acquisition_failed:verified cache entry is missing"),
+    )
+    monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
+    monkeypatch.setattr(
+        runner_api,
+        "run_review",
+        lambda *_args, **_kwargs: pytest.fail("Linux cache miss must be explicit opt-in for legacy source scope"),
+    )
+
+    report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True)
+
+    assert report.assurance_status == "UNKNOWN"
+
+
 def test_immutable_scope_never_uses_source_checkout_host_compatibility(monkeypatch: MonkeyPatch) -> None:
     runner_api = _c14_runner()
     monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (None, "unsupported_controller_platform"))
