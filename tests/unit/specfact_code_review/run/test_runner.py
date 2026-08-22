@@ -325,6 +325,42 @@ def test_capsule_targeted_pytest_executes_supplied_complete_inventory(monkeypatc
     assert observed == [("--", *selectors)]
 
 
+def test_complete_tdd_gate_excludes_sealed_custom_test_root_from_coverage(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    pytest_config = tmp_path / "pytest.ini"
+    pytest_config.write_text(
+        "[pytest]\ntestpaths = /opt/specfact/snapshot/integration\n",
+        encoding="utf-8",
+    )
+    observed: list[Path] = []
+
+    def evaluate(source_files: list[Path], _execute: object) -> tuple[list[ReviewFinding], dict[str, float]]:
+        observed.extend(source_files)
+        return [], {}
+
+    monkeypatch.setattr(runner_api, "_evaluate_pytest_execution", evaluate)
+
+    findings, coverage = runner_api._evaluate_complete_tdd_gate(
+        [
+            Path("/opt/specfact/snapshot/src/app.py"),
+            Path("/opt/specfact/snapshot/integration/test_app.py"),
+            Path("/opt/specfact/snapshot/integration/helpers.py"),
+        ],
+        (
+            "-c",
+            str(pytest_config),
+            "--",
+            "integration/test_app.py::test_app",
+        ),
+    )
+
+    assert findings == []
+    assert coverage == {}
+    assert observed == [Path("/opt/specfact/snapshot/src/app.py")]
+
+
 def test_sealed_target_bugs_policy_activates_semgrep_bugs_without_bug_hunt(monkeypatch: MonkeyPatch) -> None:
     runner_api = _c14_runner()
     observed: list[str] = []

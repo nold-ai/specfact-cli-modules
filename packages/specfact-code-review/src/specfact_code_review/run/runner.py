@@ -751,6 +751,28 @@ def _split_pytest_adapter_argv(adapter_argv: tuple[str, ...]) -> tuple[tuple[str
     return adapter_argv[:separator], adapter_argv[separator + 1 :]
 
 
+def _projected_pytest_test_roots(policy_argv: tuple[str, ...]) -> tuple[Path, ...]:
+    try:
+        config_path = Path(policy_argv[policy_argv.index("-c") + 1])
+    except (ValueError, IndexError) as exc:
+        raise ValueError("sealed pytest configuration is missing") from exc
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        with config_path.open(encoding="utf-8") as handle:
+            parser.read_file(handle)
+        roots = tuple(Path(value) for value in parser.get("pytest", "testpaths").split())
+    except (OSError, configparser.Error, KeyError) as exc:
+        raise ValueError("sealed pytest test roots are invalid") from exc
+    snapshot_root = Path("/opt/specfact/snapshot")
+    if not roots or any(not root.is_absolute() or not root.is_relative_to(snapshot_root) for root in roots):
+        raise ValueError("sealed pytest test root escapes snapshot")
+    return roots
+
+
+def _is_below_any_root(path: Path, roots: tuple[Path, ...]) -> bool:
+    return any(path == root or path.is_relative_to(root) for root in roots)
+
+
 def _capsule_snapshot_files(request: dict[str, object]) -> list[Path]:
     raw_paths = request["paths"]
     if not isinstance(raw_paths, list) or not raw_paths or not all(isinstance(path, str) for path in raw_paths):
@@ -2748,7 +2770,10 @@ def _evaluate_complete_tdd_gate(
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     """Execute the controller-supplied complete immutable pytest inventory."""
     policy_argv, selectors = _split_pytest_adapter_argv(adapter_argv)
-    source_files = [file_path for file_path in files if file_path.suffix == ".py" and not _is_test_file(file_path)]
+    test_roots = _projected_pytest_test_roots(policy_argv)
+    source_files = [
+        file_path for file_path in files if file_path.suffix == ".py" and not _is_below_any_root(file_path, test_roots)
+    ]
     if not selectors:
         anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
         return [
