@@ -1918,15 +1918,23 @@ def _assignment_target_nodes(target: ast.expr) -> tuple[ast.Name | ast.Attribute
     return ()
 
 
+def _assignment_targets(node: ast.AST) -> tuple[ast.expr, ...]:
+    if isinstance(node, ast.Assign):
+        return tuple(node.targets)
+    if isinstance(node, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)):
+        return (node.target,)
+    return ()
+
+
 def _assignment_sets_dynamic_test_member(
     node: ast.AST,
     *,
     function_patterns: tuple[str, ...],
     class_patterns: tuple[str, ...],
 ) -> bool:
-    if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+    if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.NamedExpr)):
         return False
-    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+    targets = _assignment_targets(node)
     value = node.value
     destructured = any(isinstance(target, (ast.Tuple, ast.List, ast.Starred)) for target in targets)
     return any(
@@ -2113,9 +2121,8 @@ def _assigned_pytest_hook_names(tree: ast.Module) -> set[str]:
     return {
         target.id
         for node in _module_execution_nodes(tree)
-        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
-        for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
-        for target in _assignment_target_nodes(target)
+        for assignment_target in _assignment_targets(node)
+        for target in _assignment_target_nodes(assignment_target)
         if isinstance(target, ast.Name) and target.id.startswith("pytest_")
     }
 

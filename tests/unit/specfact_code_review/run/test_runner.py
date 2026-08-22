@@ -2838,6 +2838,22 @@ def test_complete_suite_rejects_destructured_pytest_hook_alias(tmp_path: Path) -
     assert plan.reason == "pytest_plugin_capability_unsupported"
 
 
+def test_complete_suite_rejects_named_expression_pytest_hook_alias(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tmp_path / "conftest.py").write_text(
+        "def bypass(pyfuncitem):\n    del pyfuncitem\n    return True\n\n(pytest_pyfunc_call := bypass)\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
 def test_complete_suite_rejects_subscript_assigned_pytest_hook_alias(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -2937,6 +2953,25 @@ def test_complete_suite_rejects_destructured_test_callable_alias(tmp_path: Path)
         "def failing_function():\n"
         "    assert False\n\n"
         "test_failure, = (failing_function,)\n\n"
+        "def test_smoke():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_test_assignment_unsupported"
+
+
+def test_complete_suite_rejects_named_expression_test_callable_alias(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_dynamic.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "def failing_function():\n"
+        "    assert False\n\n"
+        "(test_failure := failing_function)\n\n"
         "def test_smoke():\n"
         "    pass\n",
         encoding="utf-8",
