@@ -325,6 +325,52 @@ def test_capsule_targeted_pytest_executes_supplied_complete_inventory(monkeypatc
     assert observed == [("--", *selectors)]
 
 
+def test_sealed_target_bugs_policy_activates_semgrep_bugs_without_bug_hunt(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    observed: list[str] = []
+
+    def execute(request: object) -> dict[str, object]:
+        observed.append(cast(str, request.member))
+        return {
+            "execution_state": "ran",
+            "evidence_outcome": "PASS",
+            "findings": [],
+            "diagnostic": "",
+        }
+
+    monkeypatch.setattr(runner_api, "_execute_capsule_member", execute)
+
+    result = runner_api._run_capsule_snapshot(
+        SimpleNamespace(identity="sha256:" + "a" * 64),
+        snapshot_root=Path("/snapshot"),
+        files=[Path("/snapshot/src/app.py")],
+        options=runner_api.ReviewOptions(bug_hunt=False),
+        member_argv={"semgrep-bugs": ("/opt/specfact/config/0",)},
+    )
+
+    assert "semgrep-bugs" in observed
+    assert result.evidence["semgrep-bugs"]["evidence_outcome"] == "PASS"
+
+
+def test_empty_capsule_snapshot_marks_every_member_not_applicable(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setattr(
+        runner_api,
+        "_execute_capsule_member",
+        lambda *_args, **_kwargs: pytest.fail("empty snapshot must not launch an analyzer"),
+    )
+
+    result = runner_api._run_capsule_snapshot(
+        SimpleNamespace(identity="sha256:" + "a" * 64),
+        snapshot_root=Path("/snapshot"),
+        files=[],
+        options=runner_api.ReviewOptions(),
+    )
+
+    assert set(result.evidence) == set(runner_api.default_pr_range_profile().all_ids)
+    assert {item["evidence_outcome"] for item in result.evidence.values()} == {"NOT_APPLICABLE"}
+
+
 def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     policy_root = tmp_path / "policy"
@@ -2058,6 +2104,26 @@ def test_unchanged_test_candidate_without_selector_is_unknown(tmp_path: Path) ->
 
     assert plan.status == "UNKNOWN"
     assert plan.reason == "uncollected_test_candidate"
+
+
+def test_complete_suite_collects_inherited_unittest_selector(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_inherited.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "import unittest\n\n"
+        "class SharedCase(unittest.TestCase):\n"
+        "    def test_inherited(self):\n"
+        "        pass\n\n"
+        "class TestChild(SharedCase):\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "PASS"
+    assert plan.selectors == ("tests/test_inherited.py::TestChild::test_inherited",)
 
 
 def test_empty_merge_base_input_class_is_not_applicable_for_that_side() -> None:

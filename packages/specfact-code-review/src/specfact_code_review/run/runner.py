@@ -948,7 +948,10 @@ def _run_capsule_snapshot(
     evidence: dict[str, dict[str, object]] = {}
     findings_by_member: dict[str, list[ReviewFinding]] = {}
     for member in default_pr_range_profile().all_ids:
-        if member == "semgrep-bugs" and not options.bug_hunt:
+        sealed_bugs_policy = member_argv is not None and "semgrep-bugs" in member_argv
+        if not files:
+            raw = _not_applicable_member("empty_snapshot_input")
+        elif member == "semgrep-bugs" and not (options.bug_hunt or sealed_bugs_policy):
             raw = _not_applicable_member("conditional_member_not_activated")
         elif member == "targeted-pytest-coverage" and options.no_tests:
             raw = _not_applicable_member("tests_explicitly_disabled_for_legacy_scope")
@@ -1079,7 +1082,8 @@ def _bind_semgrep_policy(builder: _PolicyBindingBuilder, policy_root: Path) -> N
     builder.config_roots.append(policy_root)
     mounted = str(Path("/opt/specfact/config") / str(len(builder.config_roots)))
     builder.member_argv["semgrep-clean"] = (mounted,)
-    builder.member_argv["semgrep-bugs"] = (mounted,)
+    if (policy_root / ".semgrep/bugs.yaml").is_file():
+        builder.member_argv["semgrep-bugs"] = (mounted,)
 
 
 def _ini_projection_value(value: object) -> str:
@@ -1242,6 +1246,7 @@ def _test_selectors(
         return ()
     if _module_disables_pytest_collection(tree):
         return ()
+    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
     selectors: list[str] = []
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
@@ -1250,12 +1255,52 @@ def _test_selectors(
             selectors.append(f"{relative}::{node.name}")
         if isinstance(node, ast.ClassDef) and any(fnmatch.fnmatch(node.name, pattern) for pattern in class_patterns):
             selectors.extend(
-                f"{relative}::{node.name}::{child.name}"
-                for child in node.body
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
-                and any(fnmatch.fnmatch(child.name, pattern) for pattern in function_patterns)
+                f"{relative}::{node.name}::{method}"
+                for method in _class_test_methods(node, classes, function_patterns, visiting=frozenset())
             )
     return tuple(selectors)
+
+
+def _class_declared_names(node: ast.ClassDef) -> set[str]:
+    names = {
+        child.name for child in node.body if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    }
+    for child in node.body:
+        if isinstance(child, (ast.Assign, ast.AnnAssign)):
+            targets = child.targets if isinstance(child, ast.Assign) else [child.target]
+            names.update(target.id for target in targets if isinstance(target, ast.Name))
+    return names
+
+
+def _class_test_methods(
+    node: ast.ClassDef,
+    classes: dict[str, ast.ClassDef],
+    function_patterns: tuple[str, ...],
+    *,
+    visiting: frozenset[str],
+) -> tuple[str, ...]:
+    if node.name in visiting:
+        return ()
+    declared = _class_declared_names(node)
+    methods = [
+        child.name
+        for child in node.body
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(fnmatch.fnmatch(child.name, pattern) for pattern in function_patterns)
+    ]
+    inherited = (
+        method
+        for base in node.bases
+        if isinstance(base, ast.Name) and base.id in classes
+        for method in _class_test_methods(
+            classes[base.id],
+            classes,
+            function_patterns,
+            visiting=visiting | {node.name},
+        )
+        if method not in declared
+    )
+    return tuple(dict.fromkeys((*methods, *inherited)))
 
 
 def _module_disables_pytest_collection(tree: ast.Module) -> bool:
