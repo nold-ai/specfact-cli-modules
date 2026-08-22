@@ -1573,22 +1573,57 @@ def _imported_pytest_definitions(
         module_path = _imported_module_path(statement, path=path, snapshot_root=snapshot_root)
         if module_path is None:
             continue
-        try:
-            imported_tree = ast.parse(module_path.read_bytes())
-        except (OSError, SyntaxError):
-            continue
-        aliases = _unittest_aliases(imported_tree)
-        exported = {
-            node.name: node
-            for node in imported_tree.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-        }
-        definitions.extend(
-            (alias.asname or alias.name, exported[alias.name], aliases)
-            for alias in statement.names
-            if alias.name in exported
-        )
+        for alias in statement.names:
+            resolved = _resolve_imported_pytest_definition(
+                module_path,
+                alias.name,
+                snapshot_root=snapshot_root,
+                visiting=frozenset(),
+            )
+            if resolved is not None:
+                definitions.append((alias.asname or alias.name, *resolved))
     return tuple(definitions)
+
+
+def _resolve_imported_pytest_definition(
+    module_path: Path,
+    export_name: str,
+    *,
+    snapshot_root: Path,
+    visiting: frozenset[Path],
+) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef, tuple[set[str], set[str]]] | None:
+    resolved_path = module_path.resolve()
+    if resolved_path in visiting:
+        return None
+    try:
+        tree = ast.parse(module_path.read_bytes())
+    except (OSError, SyntaxError):
+        return None
+    direct = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == export_name
+        ),
+        None,
+    )
+    if direct is not None:
+        return direct, _unittest_aliases(tree)
+    for statement in tree.body:
+        if not isinstance(statement, ast.ImportFrom):
+            continue
+        alias = next((item for item in statement.names if (item.asname or item.name) == export_name), None)
+        if alias is None or alias.name == "*":
+            continue
+        nested_path = _imported_module_path(statement, path=module_path, snapshot_root=snapshot_root)
+        if nested_path is not None:
+            return _resolve_imported_pytest_definition(
+                nested_path,
+                alias.name,
+                snapshot_root=snapshot_root,
+                visiting=visiting | {resolved_path},
+            )
+    return None
 
 
 def _imported_test_selectors(
@@ -1760,6 +1795,103 @@ def _module_uses_wildcard_import(path: Path) -> bool:
     )
 
 
+def _module_has_unittest_execution_override(path: Path, *, snapshot_root: Path) -> bool:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+    imported = _imported_pytest_definitions(tree, path=path, snapshot_root=snapshot_root)
+    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+    classes.update({name: node for name, node, _aliases in imported if isinstance(node, ast.ClassDef)})
+    imported_cases = frozenset(
+        name
+        for name, node, aliases in imported
+        if isinstance(node, ast.ClassDef)
+        and _is_unittest_case(node, classes, *aliases, direct_unittest_classes=frozenset(), visiting=frozenset())
+    )
+    module_aliases, case_aliases = _unittest_aliases(tree)
+    return any(
+        {"run", "__call__"} & _class_declared_names(node)
+        and (
+            name in imported_cases
+            or _is_unittest_case(
+                node,
+                classes,
+                module_aliases,
+                case_aliases,
+                direct_unittest_classes=imported_cases,
+                visiting=frozenset(),
+            )
+        )
+        for name, node in classes.items()
+    )
+
+
+def _loaded_conftest_paths(snapshot_root: Path, roots: tuple[str, ...]) -> tuple[Path, ...]:
+    paths = {snapshot_root / "conftest.py"}
+    for root in roots:
+        root_path = snapshot_root / root
+        current = root_path
+        while current != snapshot_root:
+            paths.add(current / "conftest.py")
+            current = current.parent
+        if root_path.is_dir():
+            paths.update(root_path.rglob("conftest.py"))
+    return tuple(sorted(path for path in paths if path.is_file()))
+
+
+def _decorated_pytest_hook_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    return {
+        keyword.value.value
+        for decorator in node.decorator_list
+        if isinstance(decorator, ast.Call)
+        for keyword in decorator.keywords
+        if keyword.arg == "specname"
+        and isinstance(keyword.value, ast.Constant)
+        and isinstance(keyword.value.value, str)
+        and keyword.value.value.startswith("pytest_")
+    }
+
+
+def _conftest_hook_names(tree: ast.Module) -> set[str]:
+    functions = tuple(node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)))
+    hooks = {node.name for node in functions if node.name.startswith("pytest_")}
+    hooks.update(
+        alias.asname or alias.name
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+        if (alias.asname or alias.name).startswith("pytest_")
+    )
+    for function in functions:
+        hooks.update(_decorated_pytest_hook_names(function))
+    return hooks
+
+
+def _conftest_declares_plugins(tree: ast.Module) -> bool:
+    return any(
+        isinstance(node, (ast.Assign, ast.AnnAssign))
+        and any(
+            isinstance(target, ast.Name) and target.id == "pytest_plugins"
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+        )
+        for node in tree.body
+    )
+
+
+def _repository_pytest_hook_validation(snapshot_root: Path, roots: tuple[str, ...]) -> CandidateReconciliation:
+    plugins: list[dict[str, object]] = []
+    for path in _loaded_conftest_paths(snapshot_root, roots):
+        try:
+            tree = ast.parse(path.read_bytes())
+        except (OSError, SyntaxError):
+            return CandidateReconciliation("UNKNOWN", "pytest_plugin_inventory_ambiguous")
+        if _conftest_declares_plugins(tree):
+            return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
+        plugins.append({"origin": "repository", "hooks": sorted(_conftest_hook_names(tree)), "path": str(path)})
+    return validate_pytest_plugins(tuple(plugins))
+
+
 def _collect_pytest_selectors(
     snapshot_root: Path,
     roots: tuple[str, ...],
@@ -1820,6 +1952,9 @@ def plan_complete_pytest_suite(
     file_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_files", ["test_*.py"])))
     class_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_classes", ["Test*"])))
     function_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_functions", ["test_*"])))
+    plugin_validation = _repository_pytest_hook_validation(snapshot_root, roots)
+    if plugin_validation.status != "PASS":
+        return PytestSuitePlan((), False, "UNKNOWN", plugin_validation.reason)
     selectors = _collect_pytest_selectors(
         snapshot_root,
         roots,
@@ -1831,6 +1966,11 @@ def plan_complete_pytest_suite(
     candidates = _pytest_candidates(snapshot_root, roots, file_patterns)
     if any(_module_uses_wildcard_import(snapshot_root / candidate) for candidate in candidates):
         return PytestSuitePlan(selectors, False, "UNKNOWN", "wildcard_import_unsupported")
+    if any(
+        _module_has_unittest_execution_override(snapshot_root / candidate, snapshot_root=snapshot_root)
+        for candidate in candidates
+    ):
+        return PytestSuitePlan(selectors, False, "UNKNOWN", "unittest_execution_override")
     collected_paths = {selector.split("::", maxsplit=1)[0] for selector in selectors}
     uncollected = candidates - collected_paths
     if uncollected:

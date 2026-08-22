@@ -2546,6 +2546,26 @@ def test_complete_suite_uses_unittest_loader_method_prefix_independently_of_pyte
     )
 
 
+def test_complete_suite_rejects_unittest_execution_override(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_override.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "import unittest\n\n"
+        "class TestBypass(unittest.TestCase):\n"
+        "    def run(self, result=None):\n"
+        "        return result\n\n"
+        "    def test_failure(self):\n"
+        "        assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "unittest_execution_override"
+
+
 def test_complete_suite_collects_imported_pytest_and_unittest_objects(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -2580,6 +2600,27 @@ def test_complete_suite_collects_imported_pytest_and_unittest_objects(tmp_path: 
     )
 
 
+def test_complete_suite_resolves_transitive_imported_test_definition(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "leaf.py").write_text("def test_imported():\n    assert False\n", encoding="utf-8")
+    (tests_root / "support.py").write_text("from tests.leaf import test_imported\n", encoding="utf-8")
+    (tests_root / "test_case.py").write_text(
+        "from tests.support import test_imported\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "tests/test_case.py::test_imported",
+        "tests/test_case.py::test_smoke",
+    )
+
+
 def test_complete_suite_fails_closed_for_wildcard_imported_tests(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -2598,6 +2639,42 @@ def test_complete_suite_fails_closed_for_wildcard_imported_tests(tmp_path: Path)
 
     assert plan.status == "UNKNOWN"
     assert plan.reason == "wildcard_import_unsupported"
+
+
+def test_complete_suite_rejects_repository_pytest_execution_hook(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "def pytest_pyfunc_call(pyfuncitem):\n    del pyfuncitem\n    return True\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_repository_pytest_execution_hook_specname(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n"
+        '@pytest.hookimpl(specname="pytest_pyfunc_call")\n'
+        "def forge_passing_call(pyfuncitem):\n"
+        "    del pyfuncitem\n"
+        "    return True\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
 
 
 def test_complete_suite_matches_path_qualified_python_file_patterns(tmp_path: Path) -> None:
