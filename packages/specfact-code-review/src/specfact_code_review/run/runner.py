@@ -2021,6 +2021,20 @@ def _assigned_pytest_hook_names(tree: ast.Module) -> set[str]:
     }
 
 
+def _conftest_writes_module_namespace(tree: ast.Module) -> bool:
+    return any(
+        isinstance(target, ast.Subscript)
+        and isinstance(target.value, ast.Call)
+        and isinstance(target.value.func, ast.Name)
+        and target.value.func.id in {"globals", "locals", "vars"}
+        and not target.value.args
+        and not target.value.keywords
+        for node in tree.body
+        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
+        for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+    )
+
+
 def _conftest_hook_names(tree: ast.Module) -> set[str]:
     functions = tuple(node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)))
     hooks = {node.name for node in functions if node.name.startswith("pytest_")}
@@ -2049,7 +2063,7 @@ def _repository_pytest_hook_validation(snapshot_root: Path, roots: tuple[str, ..
             tree = ast.parse(path.read_bytes())
         except (OSError, SyntaxError):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_inventory_ambiguous")
-        if _conftest_declares_plugins(tree):
+        if _conftest_declares_plugins(tree) or _conftest_writes_module_namespace(tree):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
         plugins.append({"origin": "repository", "hooks": sorted(_conftest_hook_names(tree)), "path": str(path)})
     return validate_pytest_plugins(tuple(plugins))
