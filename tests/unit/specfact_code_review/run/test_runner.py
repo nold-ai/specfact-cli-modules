@@ -2580,6 +2580,26 @@ def test_complete_suite_collects_imported_pytest_and_unittest_objects(tmp_path: 
     )
 
 
+def test_complete_suite_fails_closed_for_wildcard_imported_tests(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "support.py").write_text(
+        '__all__ = ["test_imported"]\n\ndef test_imported():\n    assert False\n',
+        encoding="utf-8",
+    )
+    (tests_root / "test_imported.py").write_text(
+        "from tests.support import *\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "wildcard_import_unsupported"
+
+
 def test_complete_suite_matches_path_qualified_python_file_patterns(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     smoke = tmp_path / "tests/test_smoke.py"
@@ -2721,6 +2741,14 @@ def test_sealed_pytest_policy_rejects_selection_filters(option: str) -> None:
     assert result.status == "UNKNOWN"
 
 
+def test_sealed_pytest_policy_rejects_doctest_modules_collection() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_selection_controls(_suite_policy(addopts=["--doctest-modules"]))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "pytest_selection_policy_unsupported"
+
+
 def test_production_change_cannot_hide_failing_test_with_authorized_ignore() -> None:
     runner_api = _c14_runner()
     result = runner_api.validate_pytest_selection_controls(_suite_policy(addopts=["--ignore", "tests/test_fail.py"]))
@@ -2776,6 +2804,7 @@ def test_pytest_selection_option_catalog_covers_pinned_help() -> None:
         "--cov-fail-under",
         "--cov-report",
         "--deselect",
+        "--doctest-modules",
         "--exitfirst",
         "--ff",
         "--ignore",
@@ -2997,6 +3026,44 @@ def test_pytest_outcome_reconciliation_accepts_complete_parametrized_expansion()
     )
 
     assert result.status == "PASS"
+
+
+def test_partial_parametrized_deselection_is_unknown_from_real_pytest(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "def pytest_collection_modifyitems(config, items):\n"
+        "    del config\n"
+        "    items[:] = [item for item in items if item.callspec.params['value'] == 1]\n",
+        encoding="utf-8",
+    )
+    test_file = tests_root / "test_param.py"
+    test_file.write_text(
+        "import pytest\n\n@pytest.mark.parametrize('value', [1, 2])\ndef test_value(value):\n    assert value == 1\n",
+        encoding="utf-8",
+    )
+
+    process, coverage_path, observer_path, junit_path = runner_api._run_pytest_selection_with_coverage(
+        (f"{test_file}::test_value",),
+        coverage_source=tmp_path,
+        policy_argv=("--rootdir", str(tmp_path)),
+    )
+    try:
+        observer, junit = runner_api._load_pytest_outcome_evidence(observer_path, junit_path)
+        result = runner_api.reconcile_pytest_outcomes(
+            observer=observer,
+            junit=junit,
+            process_exit=process.returncode,
+            planned=("tests/test_param.py::test_value",),
+        )
+    finally:
+        coverage_path.unlink(missing_ok=True)
+        observer_path.unlink(missing_ok=True)
+        junit_path.unlink(missing_ok=True)
+
+    assert process.returncode == 0
+    assert result.status == "UNKNOWN"
 
 
 def test_pytest_outcome_reconciliation_rejects_unrelated_parameterized_prefix() -> None:

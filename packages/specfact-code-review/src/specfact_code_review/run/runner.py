@@ -1750,6 +1750,16 @@ def _module_disables_pytest_collection(tree: ast.Module) -> bool:
     return False
 
 
+def _module_uses_wildcard_import(path: Path) -> bool:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+    return any(
+        isinstance(node, ast.ImportFrom) and any(alias.name == "*" for alias in node.names) for node in tree.body
+    )
+
+
 def _collect_pytest_selectors(
     snapshot_root: Path,
     roots: tuple[str, ...],
@@ -1819,6 +1829,8 @@ def plan_complete_pytest_suite(
     )
     changed_candidates = _changed_pytest_candidates(changed_paths, roots, file_patterns)
     candidates = _pytest_candidates(snapshot_root, roots, file_patterns)
+    if any(_module_uses_wildcard_import(snapshot_root / candidate) for candidate in candidates):
+        return PytestSuitePlan(selectors, False, "UNKNOWN", "wildcard_import_unsupported")
     collected_paths = {selector.split("::", maxsplit=1)[0] for selector in selectors}
     uncollected = candidates - collected_paths
     if uncollected:
@@ -1896,6 +1908,7 @@ def validate_pytest_selection_controls(policy: dict[str, object]) -> CandidateRe
         "--cov-fail-under",
         "--cov-report",
         "--deselect",
+        "--doctest-modules",
         "--exitfirst",
         "--ff",
         "--ignore",
@@ -2055,6 +2068,7 @@ def pytest_selection_option_catalog(*, version: str, pytest_cov_version: str) ->
             "--cov-fail-under",
             "--cov-report",
             "--deselect",
+            "--doctest-modules",
             "--exitfirst",
             "--ff",
             "--ignore",
@@ -2458,6 +2472,14 @@ def _pytest_observer_script() -> str:
         "    def __init__(self, path):\n"
         "        self.path = pathlib.Path(path)\n"
         "        self.records = []\n"
+        "    def pytest_itemcollected(self, item):\n"
+        "        self.records.append({\n"
+        "            'nodeid': item.nodeid,\n"
+        "            'phase': 'collection',\n"
+        "            'passed': True,\n"
+        "            'skipped': False,\n"
+        "            'wasxfail': '',\n"
+        "        })\n"
         "    def pytest_runtest_logreport(self, report):\n"
         "        self.records.append({\n"
         "            'nodeid': report.nodeid,\n"
