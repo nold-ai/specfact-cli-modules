@@ -961,11 +961,27 @@ def _project_runtime_descriptor() -> dict[str, Any]:
 
 
 def test_project_runtime_layer_binds_target_tip_dependency_inputs(toolchain_api: Any) -> None:
-    result = toolchain_api.validate_project_runtime_layer(_project_runtime_descriptor(), expected_target="1" * 40)
+    result = toolchain_api.validate_project_runtime_layer(
+        _project_runtime_descriptor(), expected_target="1" * 40, expected_tree="2" * 40
+    )
 
     assert result.status == "PASS"
     assert result.source_lock_digest.startswith("sha256:")
     assert result.target_commit == "1" * 40
+
+
+def test_project_runtime_layer_rejects_target_tree_mismatch(toolchain_api: Any) -> None:
+    descriptor = _project_runtime_descriptor()
+    descriptor["target"]["tree_sha"] = "9" * 40
+
+    result = toolchain_api.validate_project_runtime_layer(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "project_runtime_identity_mismatch"
 
 
 def test_project_runtime_materialization_reuses_only_reverified_identity_cache(
@@ -978,7 +994,7 @@ def test_project_runtime_materialization_reuses_only_reverified_identity_cache(
     metadata.write_text("Name: consumer-dependency\nVersion: 1.0\n", encoding="utf-8")
     entries, _regular_bytes = toolchain_api._manifest_entries(seed, include_root=False)
     descriptor["root_manifest"]["digest"] = toolchain_api.canonical_json_digest(entries)
-    layer = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
+    layer = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
     storage = tmp_path / "storage"
     cached_root = storage / layer.identity.removeprefix("sha256:")
     shutil.copytree(seed, cached_root)
@@ -991,6 +1007,7 @@ def test_project_runtime_materialization_reuses_only_reverified_identity_cache(
     result = toolchain_api.materialize_project_runtime(
         descriptor,
         expected_target="1" * 40,
+        expected_tree="2" * 40,
         storage_root=storage,
     )
 
@@ -1012,14 +1029,16 @@ def test_project_runtime_layer_cannot_shadow_reserved_runner_components(toolchai
         }
     )
 
-    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
+    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
 
     assert result.status == "UNKNOWN"
     assert result.reason == "reserved_import_collision"
 
 
 def test_project_runtime_layer_is_identical_across_snapshots(toolchain_api: Any) -> None:
-    layer = toolchain_api.validate_project_runtime_layer(_project_runtime_descriptor(), expected_target="1" * 40)
+    layer = toolchain_api.validate_project_runtime_layer(
+        _project_runtime_descriptor(), expected_target="1" * 40, expected_tree="2" * 40
+    )
 
     result = toolchain_api.bind_project_runtime_to_snapshots(layer, snapshots=("merge_base", "head"))
 
@@ -1038,7 +1057,12 @@ def test_project_runtime_layer_rejects_untrusted_or_candidate_inputs(toolchain_a
     else:
         descriptor["oci"]["manifest_digest"] = "latest"
 
-    assert toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40).status == "UNKNOWN"
+    assert (
+        toolchain_api.validate_project_runtime_layer(
+            descriptor, expected_target="1" * 40, expected_tree="2" * 40
+        ).status
+        == "UNKNOWN"
+    )
 
 
 def test_candidate_project_dependency_input_change_is_governed_unknown(toolchain_api: Any) -> None:
@@ -1098,7 +1122,7 @@ def test_attested_pytest_plugin_identity_is_bound_by_project_runtime(toolchain_a
         }
     ]
 
-    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
+    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
 
     assert result.status == "PASS"
     assert result.pytest_plugins[0].distribution == "fixture-plugin"
@@ -1130,7 +1154,7 @@ def test_attested_pytest_plugin_manifest_digest_must_match_declared_hooks(toolch
         }
     ]
 
-    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
+    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
 
     assert result.status == "UNKNOWN"
 
@@ -1181,7 +1205,7 @@ def test_unattested_pytest_plugin_is_unknown(toolchain_api: Any) -> None:
         }
     ]
 
-    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
+    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
 
     assert result.status == "UNKNOWN"
 

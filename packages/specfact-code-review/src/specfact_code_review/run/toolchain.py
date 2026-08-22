@@ -208,6 +208,7 @@ class ProjectRuntimeLayer:
     status: Literal["PASS", "UNKNOWN"]
     reason: str = ""
     target_commit: str = ""
+    target_tree: str = ""
     source_lock_digest: str = ""
     identity: str = ""
     pytest_plugins: tuple[PytestPluginIdentity, ...] = ()
@@ -1767,11 +1768,12 @@ def _project_runtime_parts(descriptor: dict[str, object]) -> _ProjectRuntimePart
     )
 
 
-def _valid_runtime_target(target: dict[str, object], expected_target: str) -> bool:
+def _valid_runtime_target(target: dict[str, object], expected_target: str, expected_tree: str) -> bool:
     repository = target.get("repository")
     return (
         target.get("commit_sha") == expected_target
-        and _full_sha(target.get("tree_sha"))
+        and target.get("tree_sha") == expected_tree
+        and _full_sha(expected_tree)
         and isinstance(repository, str)
         and bool(repository)
     )
@@ -1822,11 +1824,16 @@ def _valid_runtime_provenance(build: dict[str, object], attestation: dict[str, o
     return all(isinstance(attestation.get(key), str) and bool(attestation[key]) for key in required_attestation)
 
 
-def _valid_project_runtime_parts(parts: _ProjectRuntimeParts, *, expected_target: str) -> bool:
+def _valid_project_runtime_parts(
+    parts: _ProjectRuntimeParts,
+    *,
+    expected_target: str,
+    expected_tree: str,
+) -> bool:
     plugin_names = [re.sub(r"[-_.]+", "-", str(plugin.get("distribution", ""))).lower() for plugin in parts.plugins]
     return all(
         (
-            _valid_runtime_target(parts.target, expected_target),
+            _valid_runtime_target(parts.target, expected_target, expected_tree),
             _valid_source_locks(parts.source_locks),
             _valid_runtime_distributions(parts.distributions),
             _valid_project_runtime_oci(parts.oci),
@@ -1838,12 +1845,21 @@ def _valid_project_runtime_parts(parts: _ProjectRuntimeParts, *, expected_target
     )
 
 
-def validate_project_runtime_layer(descriptor: dict[str, object], *, expected_target: str) -> ProjectRuntimeLayer:
+def validate_project_runtime_layer(
+    descriptor: dict[str, object],
+    *,
+    expected_target: str,
+    expected_tree: str,
+) -> ProjectRuntimeLayer:
     parts = _project_runtime_parts(descriptor)
     if (
         descriptor.get("schema") != "project-runtime-layer-v1"
         or parts is None
-        or not _valid_project_runtime_parts(parts, expected_target=expected_target)
+        or not _valid_project_runtime_parts(
+            parts,
+            expected_target=expected_target,
+            expected_tree=expected_tree,
+        )
     ):
         return ProjectRuntimeLayer("UNKNOWN", "project_runtime_identity_mismatch")
     reserved = {"specfact-code-review", "pytest", "sitecustomize"}
@@ -1867,6 +1883,7 @@ def validate_project_runtime_layer(descriptor: dict[str, object], *, expected_ta
     return ProjectRuntimeLayer(
         "PASS",
         target_commit=expected_target,
+        target_tree=expected_tree,
         source_lock_digest=source_lock_digest,
         identity=identity,
         pytest_plugins=plugin_models,
@@ -1944,12 +1961,17 @@ def materialize_project_runtime(
     descriptor: dict[str, object],
     *,
     expected_target: str,
+    expected_tree: str,
     storage_root: Path,
     credential: str | None = None,
 ) -> ProjectRuntimeMaterialization:
     """Validate, acquire, extract, and reverify one immutable dependency layer."""
 
-    layer = validate_project_runtime_layer(descriptor, expected_target=expected_target)
+    layer = validate_project_runtime_layer(
+        descriptor,
+        expected_target=expected_target,
+        expected_tree=expected_tree,
+    )
     destination = storage_root / layer.identity.removeprefix("sha256:")
     if layer.status != "PASS":
         return ProjectRuntimeMaterialization("UNKNOWN", destination, reason=layer.reason)

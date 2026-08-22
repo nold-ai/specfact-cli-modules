@@ -1467,6 +1467,7 @@ ImportedPytestDefinition = tuple[
     str,
     ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
     tuple[set[str], set[str]],
+    dict[str, ast.ClassDef],
 ]
 
 
@@ -1497,10 +1498,13 @@ def _test_selectors(
         return ()
     imported = _imported_pytest_definitions(tree, path=path, snapshot_root=snapshot_root)
     classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
-    classes.update({name: node for name, node, _aliases in imported if isinstance(node, ast.ClassDef)})
+    for name, node, _aliases, module_classes in imported:
+        classes.update(module_classes)
+        if isinstance(node, ast.ClassDef):
+            classes[name] = node
     imported_unittest_cases = {
         name
-        for name, node, aliases in imported
+        for name, node, aliases, _module_classes in imported
         if isinstance(node, ast.ClassDef)
         and _is_unittest_case(node, classes, *aliases, direct_unittest_classes=frozenset(), visiting=frozenset())
     }
@@ -1591,7 +1595,14 @@ def _resolve_imported_pytest_definition(
     *,
     snapshot_root: Path,
     visiting: frozenset[Path],
-) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef, tuple[set[str], set[str]]] | None:
+) -> (
+    tuple[
+        ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+        tuple[set[str], set[str]],
+        dict[str, ast.ClassDef],
+    ]
+    | None
+):
     resolved_path = module_path.resolve()
     if resolved_path in visiting:
         return None
@@ -1599,7 +1610,29 @@ def _resolve_imported_pytest_definition(
         tree = ast.parse(module_path.read_bytes())
     except (OSError, SyntaxError):
         return None
-    direct = next(
+    direct = _direct_pytest_definition(tree, export_name)
+    if direct is not None:
+        return direct, _unittest_aliases(tree), _module_class_definitions(tree)
+    reexport = _pytest_reexport(tree, export_name)
+    if reexport is None:
+        return None
+    statement, source_name = reexport
+    nested_path = _imported_module_path(statement, path=module_path, snapshot_root=snapshot_root)
+    if nested_path is None:
+        return None
+    return _resolve_imported_pytest_definition(
+        nested_path,
+        source_name,
+        snapshot_root=snapshot_root,
+        visiting=visiting | {resolved_path},
+    )
+
+
+def _direct_pytest_definition(
+    tree: ast.Module,
+    export_name: str,
+) -> ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | None:
+    return next(
         (
             node
             for node in tree.body
@@ -1607,22 +1640,19 @@ def _resolve_imported_pytest_definition(
         ),
         None,
     )
-    if direct is not None:
-        return direct, _unittest_aliases(tree)
+
+
+def _module_class_definitions(tree: ast.Module) -> dict[str, ast.ClassDef]:
+    return {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+
+
+def _pytest_reexport(tree: ast.Module, export_name: str) -> tuple[ast.ImportFrom, str] | None:
     for statement in tree.body:
         if not isinstance(statement, ast.ImportFrom):
             continue
         alias = next((item for item in statement.names if (item.asname or item.name) == export_name), None)
-        if alias is None or alias.name == "*":
-            continue
-        nested_path = _imported_module_path(statement, path=module_path, snapshot_root=snapshot_root)
-        if nested_path is not None:
-            return _resolve_imported_pytest_definition(
-                nested_path,
-                alias.name,
-                snapshot_root=snapshot_root,
-                visiting=visiting | {resolved_path},
-            )
+        if alias is not None and alias.name != "*":
+            return statement, alias.name
     return None
 
 
@@ -1636,7 +1666,7 @@ def _imported_test_selectors(
     selected_names: set[str],
 ) -> tuple[str, ...]:
     selectors: list[str] = []
-    for name, node, _aliases in imported:
+    for name, node, _aliases, module_classes in imported:
         if name not in selected_names:
             continue
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
@@ -1649,7 +1679,7 @@ def _imported_test_selectors(
                 continue
             methods = _class_test_methods(
                 node,
-                {child.name: child for child in ast.walk(node) if isinstance(child, ast.ClassDef)},
+                module_classes,
                 ("test*",) if is_unittest else function_patterns,
                 visiting=frozenset(),
             )
@@ -1795,6 +1825,54 @@ def _module_uses_wildcard_import(path: Path) -> bool:
     )
 
 
+def _module_has_dynamic_test_members(
+    path: Path,
+    *,
+    function_patterns: tuple[str, ...],
+) -> bool:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+
+    for node in ast.walk(tree):
+        if (
+            _class_uses_metaclass(node)
+            or _assignment_sets_dynamic_test_member(node, function_patterns=function_patterns)
+            or _call_sets_dynamic_test_member(node, function_patterns=function_patterns)
+        ):
+            return True
+    return False
+
+
+def _test_name_matches(value: object, patterns: tuple[str, ...]) -> bool:
+    return isinstance(value, str) and any(fnmatch.fnmatch(value, pattern) for pattern in patterns)
+
+
+def _class_uses_metaclass(node: ast.AST) -> bool:
+    return isinstance(node, ast.ClassDef) and any(keyword.arg == "metaclass" for keyword in node.keywords)
+
+
+def _assignment_sets_dynamic_test_member(node: ast.AST, *, function_patterns: tuple[str, ...]) -> bool:
+    if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+        return False
+    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+    return any(
+        isinstance(target, ast.Attribute) and _test_name_matches(target.attr, function_patterns) for target in targets
+    )
+
+
+def _call_sets_dynamic_test_member(node: ast.AST, *, function_patterns: tuple[str, ...]) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "setattr"
+        and len(node.args) >= 2
+        and isinstance(node.args[1], ast.Constant)
+        and _test_name_matches(node.args[1].value, function_patterns)
+    )
+
+
 def _module_has_unittest_execution_override(path: Path, *, snapshot_root: Path) -> bool:
     try:
         tree = ast.parse(path.read_bytes())
@@ -1802,16 +1880,19 @@ def _module_has_unittest_execution_override(path: Path, *, snapshot_root: Path) 
         return False
     imported = _imported_pytest_definitions(tree, path=path, snapshot_root=snapshot_root)
     classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
-    classes.update({name: node for name, node, _aliases in imported if isinstance(node, ast.ClassDef)})
+    for name, node, _aliases, module_classes in imported:
+        classes.update(module_classes)
+        if isinstance(node, ast.ClassDef):
+            classes[name] = node
     imported_cases = frozenset(
         name
-        for name, node, aliases in imported
+        for name, node, aliases, _module_classes in imported
         if isinstance(node, ast.ClassDef)
         and _is_unittest_case(node, classes, *aliases, direct_unittest_classes=frozenset(), visiting=frozenset())
     )
     module_aliases, case_aliases = _unittest_aliases(tree)
     return any(
-        {"run", "__call__"} & _class_declared_names(node)
+        {"run", "__call__", "_callTestMethod"} & _class_declared_names(node)
         and (
             name in imported_cases
             or _is_unittest_case(
@@ -1922,7 +2003,7 @@ def _changed_pytest_candidates(
     return {
         path
         for path in changed_paths
-        if any(path == root or path.startswith(f"{root}/") for root in roots)
+        if any(_logical_test_root_contains(path, root) for root in roots)
         and _matches_python_file(Path(path), file_patterns)
     }
 
@@ -1948,7 +2029,7 @@ def plan_complete_pytest_suite(
     deleted_paths: tuple[str, ...] = (),
 ) -> PytestSuitePlan:
     del deleted_paths
-    roots = tuple(str(value) for value in cast(list[object], policy.get("testpaths", ["tests"])))
+    roots = tuple(str(value) for value in cast(list[object], policy.get("testpaths", ["."])))
     file_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_files", ["test_*.py"])))
     class_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_classes", ["Test*"])))
     function_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_functions", ["test_*"])))
@@ -1966,6 +2047,14 @@ def plan_complete_pytest_suite(
     candidates = _pytest_candidates(snapshot_root, roots, file_patterns)
     if any(_module_uses_wildcard_import(snapshot_root / candidate) for candidate in candidates):
         return PytestSuitePlan(selectors, False, "UNKNOWN", "wildcard_import_unsupported")
+    if any(
+        _module_has_dynamic_test_members(
+            snapshot_root / candidate,
+            function_patterns=function_patterns,
+        )
+        for candidate in candidates
+    ):
+        return PytestSuitePlan(selectors, False, "UNKNOWN", "dynamic_test_assignment_unsupported")
     if any(
         _module_has_unittest_execution_override(snapshot_root / candidate, snapshot_root=snapshot_root)
         for candidate in candidates
@@ -1991,13 +2080,18 @@ def classify_snapshot_applicability(
 def classify_pytest_input_role(path: str, *, policy: dict[str, object]) -> PytestInputRole:
     roots = tuple(str(value).rstrip("/") for value in cast(list[object], policy["testpaths"]))
     patterns = tuple(str(value) for value in cast(list[object], policy["python_files"]))
-    below_root = any(path == root or path.startswith(f"{root}/") for root in roots)
+    below_root = any(_logical_test_root_contains(path, root) for root in roots)
     matches_test_pattern = _matches_python_file(Path(path), patterns)
     if below_root:
         kind = "test_candidate" if matches_test_pattern else "test_support"
     else:
         kind = "test_candidate_outside_root" if matches_test_pattern else "test_support"
     return PytestInputRole(kind, ("path", "testpaths", "python_files", "pytest_version"))
+
+
+def _logical_test_root_contains(path: str, root: str) -> bool:
+    normalized = root.rstrip("/")
+    return normalized in {"", "."} or path == normalized or path.startswith(f"{normalized}/")
 
 
 def pytest_path_matches_pattern(path: Path, pattern: str, *, platform: str) -> bool:
@@ -3333,6 +3427,8 @@ def _coverage_findings(
     coverage_payload: dict[str, object],
     *,
     allow_project_omitted_initializers: bool = True,
+    threshold: float = _COVERAGE_THRESHOLD,
+    blocking_low_coverage: bool = False,
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     findings: list[ReviewFinding] = []
     coverage_by_source: dict[str, float] = {}
@@ -3351,19 +3447,17 @@ def _coverage_findings(
                 )
             ], None
         coverage_by_source[str(source_file)] = percent_covered
-        if percent_covered >= _COVERAGE_THRESHOLD:
+        if percent_covered >= threshold:
             continue
         findings.append(
             ReviewFinding(
                 category="testing",
-                severity="warning",
+                severity="error" if blocking_low_coverage else "warning",
                 tool="pytest",
                 rule="TEST_COVERAGE_LOW",
                 file=str(source_file),
                 line=1,
-                message=(
-                    f"Coverage for {source_file} is {percent_covered:.1f}%, below required {_COVERAGE_THRESHOLD:.1f}%."
-                ),
+                message=(f"Coverage for {source_file} is {percent_covered:.1f}%, below required {threshold:.1f}%."),
                 fixable=False,
             )
         )
@@ -3440,6 +3534,8 @@ def _evaluate_pytest_execution(
     *,
     planned: tuple[str, ...] = (),
     allow_project_omitted_initializers: bool = True,
+    coverage_threshold: float = _COVERAGE_THRESHOLD,
+    blocking_low_coverage: bool = False,
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
     pytest_skip = skip_if_pytest_unavailable(anchor)
@@ -3485,7 +3581,26 @@ def _evaluate_pytest_execution(
         source_files,
         coverage_payload,
         allow_project_omitted_initializers=allow_project_omitted_initializers,
+        threshold=coverage_threshold,
+        blocking_low_coverage=blocking_low_coverage,
     )
+
+
+def _coverage_threshold_from_policy_argv(policy_argv: tuple[str, ...]) -> float:
+    try:
+        config_path = Path(policy_argv[policy_argv.index("--cov-config") + 1])
+    except (ValueError, IndexError) as exc:
+        raise ValueError("sealed coverage configuration is missing") from exc
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        with config_path.open(encoding="utf-8") as handle:
+            parser.read_file(handle)
+        configured = parser.getfloat("report", "fail_under", fallback=_COVERAGE_THRESHOLD)
+    except (OSError, configparser.Error, ValueError) as exc:
+        raise ValueError("sealed coverage threshold is invalid") from exc
+    if not 0.0 <= configured <= 100.0:
+        raise ValueError("sealed coverage threshold is invalid")
+    return max(_COVERAGE_THRESHOLD, configured)
 
 
 def _evaluate_complete_tdd_gate(
@@ -3511,6 +3626,8 @@ def _evaluate_complete_tdd_gate(
         lambda: _run_pytest_inventory_with_coverage(selectors, policy_argv=policy_argv),
         planned=selectors,
         allow_project_omitted_initializers=False,
+        coverage_threshold=_coverage_threshold_from_policy_argv(policy_argv),
+        blocking_low_coverage=True,
     )
 
 
@@ -4039,7 +4156,7 @@ def _pytest_string_list(value: object) -> list[str]:
 def _pytest_policy_values(policy_bundle: object | None) -> dict[str, object]:
     defaults: dict[str, object] = {
         "version": "9.0.3",
-        "testpaths": ["tests"],
+        "testpaths": ["."],
         "python_files": ["test_*.py"],
         "python_classes": ["Test*"],
         "python_functions": ["test_*"],
@@ -4169,6 +4286,7 @@ def _materialize_claimed_project_runtime(
     layer = toolchain.validate_project_runtime_layer(
         cast(dict[str, object], descriptor),
         expected_target=str(getattr(resolution, "resolved_target_commit", "")),
+        expected_tree=str(getattr(resolution, "resolved_target_tree", "")),
     )
     if layer.status != "PASS":
         return None, (), layer.reason
@@ -4181,6 +4299,7 @@ def _materialize_claimed_project_runtime(
     materialized = toolchain.materialize_project_runtime(
         cast(dict[str, object], descriptor),
         expected_target=str(getattr(resolution, "resolved_target_commit", "")),
+        expected_tree=str(getattr(resolution, "resolved_target_tree", "")),
         storage_root=storage_root,
         credential=_capsule_credential(),
     )

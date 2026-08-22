@@ -389,6 +389,8 @@ def test_complete_tdd_gate_excludes_sealed_custom_test_root_from_coverage(
         "[pytest]\ntestpaths = /opt/specfact/snapshot/integration\n",
         encoding="utf-8",
     )
+    coverage_config = tmp_path / "coveragerc"
+    coverage_config.write_text("[report]\nfail_under = 80\n", encoding="utf-8")
     observed: list[Path] = []
     observed_plans: list[tuple[str, ...]] = []
     observed_omission_policies: list[bool] = []
@@ -412,6 +414,8 @@ def test_complete_tdd_gate_excludes_sealed_custom_test_root_from_coverage(
         (
             "-c",
             str(pytest_config),
+            "--cov-config",
+            str(coverage_config),
             "--",
             "integration/test_app.py::test_app",
         ),
@@ -591,6 +595,29 @@ def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshot
     )
 
     assert observed_roots == [runtime_root, runtime_root]
+
+
+def test_project_runtime_validation_binds_resolved_target_tree(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    observed: list[dict[str, object]] = []
+
+    def validate(*_args: object, **kwargs: object) -> object:
+        observed.append(kwargs)
+        return SimpleNamespace(status="UNKNOWN", reason="stop", pytest_plugins=())
+
+    monkeypatch.setattr(runner_api.toolchain, "validate_project_runtime_layer", validate)
+    resolution = SimpleNamespace(
+        claimed_context={"project_runtime": {"schema": "project-runtime-layer-v1"}},
+        resolved_target_commit="1" * 40,
+        resolved_target_tree="2" * 40,
+    )
+
+    materialized, plugins, reason = runner_api._materialize_claimed_project_runtime(resolution)
+
+    assert materialized is None
+    assert plugins == ()
+    assert reason == "stop"
+    assert observed == [{"expected_target": "1" * 40, "expected_tree": "2" * 40}]
 
 
 def test_immutable_review_explicitly_loads_only_authenticated_project_pytest_plugins(
@@ -2600,6 +2627,29 @@ def test_complete_suite_collects_imported_pytest_and_unittest_objects(tmp_path: 
     )
 
 
+def test_complete_suite_resolves_imported_class_sibling_base(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "support.py").write_text(
+        "class Base:\n    def test_inherited(self):\n        assert False\n\nclass TestChild(Base):\n    pass\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_case.py").write_text(
+        "from tests.support import TestChild\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "tests/test_case.py::TestChild::test_inherited",
+        "tests/test_case.py::test_smoke",
+    )
+
+
 def test_complete_suite_resolves_transitive_imported_test_definition(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -2675,6 +2725,69 @@ def test_complete_suite_rejects_repository_pytest_execution_hook_specname(tmp_pa
 
     assert plan.status == "UNKNOWN"
     assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_unittest_method_dispatch_override(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_override.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "import unittest\n\n"
+        "class TestBypass(unittest.TestCase):\n"
+        "    def _callTestMethod(self, method):\n"
+        "        del method\n\n"
+        "    def test_failure(self):\n"
+        "        assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "unittest_execution_override"
+
+
+def test_complete_suite_rejects_dynamic_test_member_assignment(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_dynamic.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "def failing_function(self):\n"
+        "    assert False\n\n"
+        "class TestDynamic:\n"
+        "    pass\n\n"
+        "TestDynamic.test_failure = failing_function\n\n"
+        "def test_smoke():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_test_assignment_unsupported"
+
+
+def test_config_free_pytest_policy_discovers_from_repository_root(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    unit = tmp_path / "tests/test_smoke.py"
+    integration = tmp_path / "integration/test_outside.py"
+    unit.parent.mkdir()
+    integration.parent.mkdir()
+    unit.write_text("def test_smoke():\n    pass\n", encoding="utf-8")
+    integration.write_text("def test_outside():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(
+        tmp_path,
+        runner_api._pytest_policy_values(None),
+        changed_paths=("src/app.py",),
+    )
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "integration/test_outside.py::test_outside",
+        "tests/test_smoke.py::test_smoke",
+    )
 
 
 def test_complete_suite_matches_path_qualified_python_file_patterns(tmp_path: Path) -> None:
@@ -3230,6 +3343,57 @@ def test_complete_pytest_execution_observes_non_strict_xpass_from_real_pytest(tm
 
     assert coverage is None
     assert [finding.rule for finding in findings] == ["TEST_OUTCOME_NOT_PASS"]
+
+
+def test_complete_pytest_coverage_uses_sealed_fail_under_as_blocking_threshold(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    source_file = tmp_path / "src/app.py"
+    source_file.parent.mkdir()
+    source_file.write_text("VALUE = 1\n", encoding="utf-8")
+    pytest_config = tmp_path / "pytest.ini"
+    pytest_config.write_text("[pytest]\ntestpaths = /opt/specfact/snapshot/tests\n", encoding="utf-8")
+    coverage_config = tmp_path / "coveragerc"
+    coverage_config.write_text("[report]\nfail_under = 95\n", encoding="utf-8")
+    coverage_path, observer_path, junit_path = _write_complete_pytest_evidence(
+        tmp_path,
+        source_file,
+        [{"nodeid": "tests/test_app.py::test_app", "phase": "call", "passed": True}],
+        '<testsuites><testsuite><testcase classname="tests.test_app" name="test_app" /></testsuite></testsuites>',
+    )
+    coverage_path.write_text(
+        json.dumps({"files": {str(source_file): {"summary": {"percent_covered": 90.0}}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_run_pytest_inventory_with_coverage",
+        lambda *_args, **_kwargs: (
+            subprocess.CompletedProcess(["pytest"], 0, "", ""),
+            coverage_path,
+            observer_path,
+            junit_path,
+        ),
+    )
+
+    findings, coverage = runner_api._evaluate_complete_tdd_gate(
+        [source_file],
+        (
+            "-c",
+            str(pytest_config),
+            "--cov-config",
+            str(coverage_config),
+            "--",
+            "tests/test_app.py::test_app",
+        ),
+    )
+
+    response = runner_api._capsule_member_response("targeted-pytest-coverage", findings)
+    assert coverage == {str(source_file): 90.0}
+    assert [finding.rule for finding in findings] == ["TEST_COVERAGE_LOW"]
+    assert findings[0].severity == "error"
+    assert response["evidence_outcome"] == "FAIL"
 
 
 def test_complete_suite_discovers_async_and_class_test_selectors(tmp_path: Path) -> None:
