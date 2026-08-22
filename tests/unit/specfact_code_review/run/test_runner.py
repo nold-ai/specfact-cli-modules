@@ -2159,7 +2159,10 @@ def test_complete_suite_collects_inherited_unittest_selector(tmp_path: Path) -> 
     plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
 
     assert plan.status == "PASS"
-    assert plan.selectors == ("tests/test_inherited.py::TestChild::test_inherited",)
+    assert plan.selectors == (
+        "tests/test_inherited.py::SharedCase::test_inherited",
+        "tests/test_inherited.py::TestChild::test_inherited",
+    )
 
 
 def test_empty_merge_base_input_class_is_not_applicable_for_that_side() -> None:

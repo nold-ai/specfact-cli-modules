@@ -1269,18 +1269,75 @@ def _test_selectors(
     if _module_disables_pytest_collection(tree):
         return ()
     classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+    unittest_modules, unittest_cases = _unittest_aliases(tree)
     selectors: list[str] = []
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
             fnmatch.fnmatch(node.name, pattern) for pattern in function_patterns
         ):
             selectors.append(f"{relative}::{node.name}")
-        if isinstance(node, ast.ClassDef) and any(fnmatch.fnmatch(node.name, pattern) for pattern in class_patterns):
+        if isinstance(node, ast.ClassDef) and (
+            any(fnmatch.fnmatch(node.name, pattern) for pattern in class_patterns)
+            or _is_unittest_case(
+                node,
+                classes,
+                unittest_modules,
+                unittest_cases,
+                visiting=frozenset(),
+            )
+        ):
             selectors.extend(
                 f"{relative}::{node.name}::{method}"
                 for method in _class_test_methods(node, classes, function_patterns, visiting=frozenset())
             )
     return tuple(selectors)
+
+
+def _unittest_aliases(tree: ast.Module) -> tuple[set[str], set[str]]:
+    modules: set[str] = set()
+    cases: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            modules.update(alias.asname or alias.name for alias in node.names if alias.name == "unittest")
+        elif isinstance(node, ast.ImportFrom) and node.module == "unittest":
+            cases.update(alias.asname or alias.name for alias in node.names if alias.name == "TestCase")
+    return modules, cases
+
+
+def _is_unittest_case(
+    node: ast.ClassDef,
+    classes: dict[str, ast.ClassDef],
+    module_aliases: set[str],
+    case_aliases: set[str],
+    *,
+    visiting: frozenset[str],
+) -> bool:
+    if node.name in visiting:
+        return False
+    active = visiting | {node.name}
+    for base in node.bases:
+        if (
+            isinstance(base, ast.Attribute)
+            and base.attr == "TestCase"
+            and isinstance(base.value, ast.Name)
+            and base.value.id in module_aliases
+        ):
+            return True
+        if isinstance(base, ast.Name) and base.id in case_aliases:
+            return True
+        if (
+            isinstance(base, ast.Name)
+            and base.id in classes
+            and _is_unittest_case(
+                classes[base.id],
+                classes,
+                module_aliases,
+                case_aliases,
+                visiting=active,
+            )
+        ):
+            return True
+    return False
 
 
 def _class_declared_names(node: ast.ClassDef) -> set[str]:
