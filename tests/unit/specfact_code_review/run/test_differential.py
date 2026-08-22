@@ -371,6 +371,17 @@ def test_unchanged_baseline_inline_suppression_is_retained(differential_api: Any
     assert len(result.unchanged) == 1
 
 
+def test_unchanged_inline_suppression_survives_line_shift(differential_api: Any) -> None:
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"value = 1  # noqa: F401\n"},
+        head_sources={"src/app.py": b"header = 0\nvalue = 1  # noqa: F401\n"},
+    )
+
+    assert result.introduced == ()
+    assert [occurrence.line for occurrence in result.unchanged] == [2]
+    assert [finding.kind for finding in result.findings] == ["unchanged_suppression_on_changed_file"]
+
+
 def test_suppression_manifest_failure_is_unknown(differential_api: Any, monkeypatch: Any) -> None:
     monkeypatch.setattr(
         differential_api,

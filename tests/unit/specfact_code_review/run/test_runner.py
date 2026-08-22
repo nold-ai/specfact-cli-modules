@@ -438,6 +438,7 @@ def test_complete_tdd_gate_preserves_sources_when_discovering_from_snapshot_root
     coverage_config.write_text("[report]\nfail_under = 80\n", encoding="utf-8")
     source_file = Path("/opt/specfact/snapshot/src/app.py")
     test_file = Path("/opt/specfact/snapshot/tests/test_app.py")
+    support_file = Path("/opt/specfact/snapshot/tests/helpers.py")
     observed: list[Path] = []
 
     def evaluate(
@@ -449,7 +450,7 @@ def test_complete_tdd_gate_preserves_sources_when_discovering_from_snapshot_root
     monkeypatch.setattr(runner_api, "_evaluate_pytest_execution", evaluate)
 
     findings, coverage = runner_api._evaluate_complete_tdd_gate(
-        [source_file, test_file],
+        [source_file, test_file, support_file],
         (
             "-c",
             str(pytest_config),
@@ -2903,6 +2904,25 @@ def test_complete_suite_rejects_module_test_callable_alias(tmp_path: Path) -> No
     test_file.parent.mkdir()
     test_file.write_text(
         "def failing_function():\n    assert False\n\ntest_failure = failing_function\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_test_assignment_unsupported"
+
+
+def test_complete_suite_rejects_subscript_injected_test_callable(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_dynamic.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "def failing_function():\n"
+        "    assert False\n\n"
+        "globals()['test_failure'] = failing_function\n\n"
+        "def test_smoke():\n"
+        "    pass\n",
         encoding="utf-8",
     )
 

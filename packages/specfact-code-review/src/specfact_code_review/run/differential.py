@@ -111,8 +111,8 @@ class _ContinuityContext:
 
 @dataclass(frozen=True)
 class _SuppressionDeltaContext:
-    base_by_key: dict[tuple[str, int, str, str], SuppressionOccurrence]
-    head_by_key: dict[tuple[str, int, str, str], SuppressionOccurrence]
+    base_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence]
+    head_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence]
     base_sources: dict[str, bytes]
     head_sources: dict[str, bytes]
     renames: dict[str, str]
@@ -863,13 +863,13 @@ def _tokenize_comments(path: str, source: bytes) -> tuple[SuppressionOccurrence,
 
 
 def _suppression_key(
-    occurrence: SuppressionOccurrence, *, reverse_renames: dict[str, str]
-) -> tuple[str, int, str, str]:
+    occurrence: SuppressionOccurrence, *, reverse_renames: dict[str, str], ordinal: int
+) -> tuple[str, str, str, int]:
     return (
         reverse_renames.get(occurrence.path, occurrence.path),
-        occurrence.line,
         occurrence.family,
         occurrence.token,
+        ordinal,
     )
 
 
@@ -972,13 +972,30 @@ def _suppression_indexes(
     head_occurrences: tuple[SuppressionOccurrence, ...],
     renames: dict[str, str],
 ) -> tuple[
-    dict[tuple[str, int, str, str], SuppressionOccurrence],
-    dict[tuple[str, int, str, str], SuppressionOccurrence],
+    dict[tuple[str, str, str, int], SuppressionOccurrence],
+    dict[tuple[str, str, str, int], SuppressionOccurrence],
 ]:
     reverse_renames = {new: old for old, new in renames.items()}
-    base_by_key = {_suppression_key(item, reverse_renames={}): item for item in base_occurrences}
-    head_by_key = {_suppression_key(item, reverse_renames=reverse_renames): item for item in head_occurrences}
+    base_by_key = _suppression_occurrence_index(base_occurrences, reverse_renames={})
+    head_by_key = _suppression_occurrence_index(head_occurrences, reverse_renames=reverse_renames)
     return base_by_key, head_by_key
+
+
+def _suppression_occurrence_index(
+    occurrences: tuple[SuppressionOccurrence, ...], *, reverse_renames: dict[str, str]
+) -> dict[tuple[str, str, str, int], SuppressionOccurrence]:
+    counts: dict[tuple[str, str, str], int] = {}
+    indexed: dict[tuple[str, str, str, int], SuppressionOccurrence] = {}
+    for occurrence in occurrences:
+        identity = (
+            reverse_renames.get(occurrence.path, occurrence.path),
+            occurrence.family,
+            occurrence.token,
+        )
+        ordinal = counts.get(identity, 0)
+        counts[identity] = ordinal + 1
+        indexed[_suppression_key(occurrence, reverse_renames=reverse_renames, ordinal=ordinal)] = occurrence
+    return indexed
 
 
 def _introduced_suppression_findings(
@@ -1007,7 +1024,7 @@ def _introduced_suppression_findings(
 
 def _append_quarantined_suppressions(
     findings: list[SuppressionFinding],
-    unchanged_keys: list[tuple[str, int, str, str]],
+    unchanged_keys: list[tuple[str, str, str, int]],
     context: _SuppressionDeltaContext,
 ) -> bool:
     quarantined = False

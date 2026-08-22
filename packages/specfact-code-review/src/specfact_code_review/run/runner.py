@@ -1877,6 +1877,9 @@ def _module_has_dynamic_test_members(
     except (OSError, SyntaxError):
         return False
 
+    if _module_uses_dynamic_namespace(tree):
+        return True
+
     for node in ast.walk(tree):
         if (
             _class_uses_metaclass(node)
@@ -2042,7 +2045,7 @@ def _is_module_namespace_call(node: ast.AST) -> bool:
     )
 
 
-def _conftest_uses_dynamic_namespace(tree: ast.Module) -> bool:
+def _module_uses_dynamic_namespace(tree: ast.Module) -> bool:
     return any(_is_module_namespace_call(node) for node in _module_execution_nodes(tree)) or any(
         isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in {"__dir__", "__getattr__"}
         for node in tree.body
@@ -2077,7 +2080,7 @@ def _repository_pytest_hook_validation(snapshot_root: Path, roots: tuple[str, ..
             tree = ast.parse(path.read_bytes())
         except (OSError, SyntaxError):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_inventory_ambiguous")
-        if _conftest_declares_plugins(tree) or _conftest_uses_dynamic_namespace(tree):
+        if _conftest_declares_plugins(tree) or _module_uses_dynamic_namespace(tree):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
         plugins.append({"origin": "repository", "hooks": sorted(_conftest_hook_names(tree)), "path": str(path)})
     return validate_pytest_plugins(tuple(plugins))
@@ -3732,6 +3735,13 @@ def _coverage_threshold_from_policy_argv(policy_argv: tuple[str, ...]) -> float:
     return max(_COVERAGE_THRESHOLD, configured)
 
 
+def _complete_pytest_coverage_roots(
+    test_roots: tuple[Path, ...], selected_test_files: set[Path], *, snapshot_root: Path
+) -> tuple[Path, ...]:
+    selected_support_roots = {path.parent for path in selected_test_files if path.parent != snapshot_root}
+    return tuple(sorted({root for root in test_roots if root != snapshot_root} | selected_support_roots))
+
+
 def _evaluate_complete_tdd_gate(
     files: list[Path], adapter_argv: tuple[str, ...]
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
@@ -3739,8 +3749,8 @@ def _evaluate_complete_tdd_gate(
     policy_argv, selectors = _split_pytest_adapter_argv(adapter_argv)
     test_roots = _projected_pytest_test_roots(policy_argv)
     snapshot_root = Path("/opt/specfact/snapshot")
-    coverage_test_roots = tuple(root for root in test_roots if root != snapshot_root)
     selected_test_files = {snapshot_root / selector.split("::", maxsplit=1)[0] for selector in selectors}
+    coverage_test_roots = _complete_pytest_coverage_roots(test_roots, selected_test_files, snapshot_root=snapshot_root)
     source_files = [
         file_path
         for file_path in files
