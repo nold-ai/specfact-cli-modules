@@ -2011,6 +2011,18 @@ def test_changed_test_not_collected_by_sealed_policy_is_unknown(tmp_path: Path) 
     assert plan.reason == "uncollected_changed_test"
 
 
+def test_unchanged_test_candidate_without_selector_is_unknown(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests/test_active.py").write_text("def test_active(): pass\n", encoding="utf-8")
+    (tmp_path / "tests/test_placeholder.py").write_text("", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "uncollected_test_candidate"
+
+
 def test_empty_merge_base_input_class_is_not_applicable_for_that_side() -> None:
     runner_api = _c14_runner()
     result = runner_api.classify_snapshot_applicability(base_inputs=(), head_inputs=("src/new.py",))

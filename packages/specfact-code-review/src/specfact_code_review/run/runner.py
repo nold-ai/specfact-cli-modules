@@ -1303,6 +1303,19 @@ def _changed_pytest_candidates(
     }
 
 
+def _pytest_candidates(
+    snapshot_root: Path,
+    roots: tuple[str, ...],
+    file_patterns: tuple[str, ...],
+) -> set[str]:
+    return {
+        path.relative_to(snapshot_root).as_posix()
+        for root in roots
+        for path in (snapshot_root / root).rglob("*.py")
+        if _matches_python_file(path, file_patterns)
+    }
+
+
 def plan_complete_pytest_suite(
     snapshot_root: Path,
     policy: dict[str, object],
@@ -1323,9 +1336,12 @@ def plan_complete_pytest_suite(
         class_patterns,
     )
     changed_candidates = _changed_pytest_candidates(changed_paths, roots, file_patterns)
+    candidates = _pytest_candidates(snapshot_root, roots, file_patterns)
     collected_paths = {selector.split("::", maxsplit=1)[0] for selector in selectors}
-    if changed_candidates - collected_paths:
-        return PytestSuitePlan(selectors, False, "UNKNOWN", "uncollected_changed_test")
+    uncollected = candidates - collected_paths
+    if uncollected:
+        reason = "uncollected_changed_test" if uncollected & changed_candidates else "uncollected_test_candidate"
+        return PytestSuitePlan(selectors, False, "UNKNOWN", reason)
     return PytestSuitePlan(selectors, False)
 
 

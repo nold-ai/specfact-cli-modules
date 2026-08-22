@@ -1618,6 +1618,7 @@ import sys
 
 ANALYZER_ROOT = "/opt/specfact/analyzers"
 BUILTIN_ROOT = "/opt/specfact/builtin"
+PROJECT_RUNTIME_ROOT = "/opt/specfact/project-runtime/site-packages"
 MODULE_PAYLOAD_MANIFEST_DIGEST = "{module_payload_manifest_digest}"
 
 
@@ -1625,7 +1626,7 @@ def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit("missing sealed analyzer module")
     module = sys.argv.pop(1)
-    sys.path[:0] = [ANALYZER_ROOT, BUILTIN_ROOT]
+    sys.path[:0] = [ANALYZER_ROOT, BUILTIN_ROOT, PROJECT_RUNTIME_ROOT]
     runpy.run_module(module, run_name="__main__", alter_sys=True)
 
 

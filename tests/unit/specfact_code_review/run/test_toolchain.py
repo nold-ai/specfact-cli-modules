@@ -906,6 +906,8 @@ def test_post_base_bootstrap_and_composite_identity_bind_copied_payload(toolchai
     bootstrap_source = bootstrap.read_text(encoding="utf-8")
     assert 'ANALYZER_ROOT = "/opt/specfact/analyzers"' in bootstrap_source
     assert 'BUILTIN_ROOT = "/opt/specfact/builtin"' in bootstrap_source
+    assert 'PROJECT_RUNTIME_ROOT = "/opt/specfact/project-runtime/site-packages"' in bootstrap_source
+    assert "sys.path[:0] = [ANALYZER_ROOT, BUILTIN_ROOT, PROJECT_RUNTIME_ROOT]" in bootstrap_source
 
 
 def _project_runtime_descriptor() -> dict[str, Any]:
