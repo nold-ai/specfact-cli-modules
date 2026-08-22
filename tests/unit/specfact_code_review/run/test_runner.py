@@ -2709,6 +2709,31 @@ def test_complete_suite_resolves_transitive_imported_test_definition(tmp_path: P
     )
 
 
+def test_complete_suite_resolves_imported_test_through_project_pythonpath(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    support_root = tests_root / "support"
+    support_root.mkdir(parents=True)
+    (tmp_path / "shared.py").write_text("def helper():\n    pass\n", encoding="utf-8")
+    (support_root / "shared.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+    (tests_root / "test_case.py").write_text(
+        "from shared import test_failure\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(
+        tmp_path,
+        _suite_policy(config={"pythonpath": ["tests/support"]}),
+        changed_paths=("src/app.py",),
+    )
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "tests/test_case.py::test_failure",
+        "tests/test_case.py::test_smoke",
+    )
+
+
 def test_complete_suite_fails_closed_for_wildcard_imported_tests(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -2846,6 +2871,32 @@ def test_complete_suite_rejects_named_expression_pytest_hook_alias(tmp_path: Pat
         "def bypass(pyfuncitem):\n    del pyfuncitem\n    return True\n\n(pytest_pyfunc_call := bypass)\n",
         encoding="utf-8",
     )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [
+        "(pytest_plugins := ['tests.evil'])\n",
+        "if True:\n    pytest_plugins = ['tests.evil']\n",
+    ],
+    ids=["named-expression", "module-control-flow"],
+)
+def test_complete_suite_rejects_every_pytest_plugins_binding(tmp_path: Path, declaration: str) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "evil.py").write_text(
+        "def pytest_pyfunc_call(pyfuncitem):\n    del pyfuncitem\n    return True\n",
+        encoding="utf-8",
+    )
+    (tests_root / "conftest.py").write_text(declaration, encoding="utf-8")
     (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
 
     plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))

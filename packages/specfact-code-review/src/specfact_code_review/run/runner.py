@@ -1473,6 +1473,13 @@ ImportedPytestDefinition = tuple[
 
 
 @dataclass(frozen=True)
+class _PytestDiscoveryPolicy:
+    function_patterns: tuple[str, ...]
+    class_patterns: tuple[str, ...]
+    import_roots: tuple[Path, ...]
+
+
+@dataclass(frozen=True)
 class _PytestSelectorContext:
     relative: str
     imported: tuple[ImportedPytestDefinition, ...]
@@ -1486,8 +1493,7 @@ class _PytestSelectorContext:
 def _test_selectors(
     path: Path,
     relative: str,
-    function_patterns: tuple[str, ...],
-    class_patterns: tuple[str, ...],
+    policy: _PytestDiscoveryPolicy,
     *,
     snapshot_root: Path,
 ) -> tuple[str, ...]:
@@ -1497,7 +1503,12 @@ def _test_selectors(
         return ()
     if _module_disables_pytest_collection(tree):
         return ()
-    imported = _imported_pytest_definitions(tree, path=path, snapshot_root=snapshot_root)
+    imported = _imported_pytest_definitions(
+        tree,
+        path=path,
+        snapshot_root=snapshot_root,
+        import_roots=policy.import_roots,
+    )
     classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
     for name, node, _aliases, module_classes, _unsupported_bases in imported:
         for class_name, class_node in module_classes.items():
@@ -1522,8 +1533,8 @@ def _test_selectors(
         classes,
         _unittest_aliases(tree),
         frozenset(imported_unittest_cases),
-        function_patterns,
-        class_patterns,
+        policy.function_patterns,
+        policy.class_patterns,
     )
     return tuple(selector for node in tree.body for selector in _node_test_selectors(node, context))
 
@@ -1555,19 +1566,31 @@ def _node_test_selectors(node: ast.stmt, context: _PytestSelectorContext) -> tup
     return tuple(f"{context.relative}::{node.name}::{method}" for method in methods)
 
 
-def _imported_module_path(statement: ast.ImportFrom, *, path: Path, snapshot_root: Path) -> Path | None:
+def _imported_module_path(
+    statement: ast.ImportFrom,
+    *,
+    path: Path,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> Path | None:
     relative_parent = path.relative_to(snapshot_root).parent
     if statement.level:
         if statement.level > len(relative_parent.parts) + 1:
             return None
         prefix = relative_parent.parts[: len(relative_parent.parts) - statement.level + 1]
         module_parts = (*prefix, *(statement.module or "").split("."))
+        search_roots = (snapshot_root,)
     else:
         module_parts = tuple((statement.module or "").split("."))
+        search_roots = tuple(dict.fromkeys((*import_roots, snapshot_root)))
     module_parts = tuple(part for part in module_parts if part)
-    candidates = (
-        snapshot_root.joinpath(*module_parts).with_suffix(".py"),
-        snapshot_root.joinpath(*module_parts, "__init__.py"),
+    candidates = tuple(
+        candidate
+        for root in search_roots
+        for candidate in (
+            root.joinpath(*module_parts).with_suffix(".py"),
+            root.joinpath(*module_parts, "__init__.py"),
+        )
     )
     return next((candidate for candidate in candidates if candidate.is_file()), None)
 
@@ -1577,12 +1600,18 @@ def _imported_pytest_definitions(
     *,
     path: Path,
     snapshot_root: Path,
+    import_roots: tuple[Path, ...],
 ) -> tuple[ImportedPytestDefinition, ...]:
     definitions: list[ImportedPytestDefinition] = []
     for statement in tree.body:
         if not isinstance(statement, ast.ImportFrom) or any(alias.name == "*" for alias in statement.names):
             continue
-        module_path = _imported_module_path(statement, path=path, snapshot_root=snapshot_root)
+        module_path = _imported_module_path(
+            statement,
+            path=path,
+            snapshot_root=snapshot_root,
+            import_roots=import_roots,
+        )
         if module_path is None:
             continue
         for alias in statement.names:
@@ -1590,6 +1619,7 @@ def _imported_pytest_definitions(
                 module_path,
                 alias.name,
                 snapshot_root=snapshot_root,
+                import_roots=import_roots,
                 visiting=frozenset(),
             )
             if resolved is not None:
@@ -1602,6 +1632,7 @@ def _resolve_imported_pytest_definition(
     export_name: str,
     *,
     snapshot_root: Path,
+    import_roots: tuple[Path, ...],
     visiting: frozenset[Path],
 ) -> (
     tuple[
@@ -1627,13 +1658,19 @@ def _resolve_imported_pytest_definition(
     if reexport is None:
         return None
     statement, source_name = reexport
-    nested_path = _imported_module_path(statement, path=module_path, snapshot_root=snapshot_root)
+    nested_path = _imported_module_path(
+        statement,
+        path=module_path,
+        snapshot_root=snapshot_root,
+        import_roots=import_roots,
+    )
     if nested_path is None:
         return None
     return _resolve_imported_pytest_definition(
         nested_path,
         source_name,
         snapshot_root=snapshot_root,
+        import_roots=import_roots,
         visiting=visiting | {resolved_path},
     )
 
@@ -1851,7 +1888,12 @@ def _module_uses_wildcard_import(path: Path) -> bool:
     )
 
 
-def _module_has_unsupported_imported_test_base(path: Path, *, snapshot_root: Path) -> bool:
+def _module_has_unsupported_imported_test_base(
+    path: Path,
+    *,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> bool:
     try:
         tree = ast.parse(path.read_bytes())
     except (OSError, SyntaxError):
@@ -1862,6 +1904,7 @@ def _module_has_unsupported_imported_test_base(path: Path, *, snapshot_root: Pat
             tree,
             path=path,
             snapshot_root=snapshot_root,
+            import_roots=import_roots,
         )
     )
 
@@ -1969,6 +2012,7 @@ def _module_has_test_execution_override(
     path: Path,
     *,
     snapshot_root: Path,
+    import_roots: tuple[Path, ...],
     function_patterns: tuple[str, ...],
     class_patterns: tuple[str, ...],
 ) -> bool:
@@ -1976,7 +2020,12 @@ def _module_has_test_execution_override(
         tree = ast.parse(path.read_bytes())
     except (OSError, SyntaxError):
         return False
-    imported = _imported_pytest_definitions(tree, path=path, snapshot_root=snapshot_root)
+    imported = _imported_pytest_definitions(
+        tree,
+        path=path,
+        snapshot_root=snapshot_root,
+        import_roots=import_roots,
+    )
     classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
     for name, node, _aliases, module_classes, _unsupported_bases in imported:
         for class_name, class_node in module_classes.items():
@@ -2156,12 +2205,10 @@ def _conftest_hook_names(tree: ast.Module) -> set[str]:
 
 def _conftest_declares_plugins(tree: ast.Module) -> bool:
     return any(
-        isinstance(node, (ast.Assign, ast.AnnAssign))
-        and any(
-            isinstance(target, ast.Name) and target.id == "pytest_plugins"
-            for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
-        )
-        for node in tree.body
+        isinstance(target, ast.Name) and target.id == "pytest_plugins"
+        for node in _module_execution_nodes(tree)
+        for assignment_target in _assignment_targets(node)
+        for target in _assignment_target_nodes(assignment_target)
     )
 
 
@@ -2182,8 +2229,7 @@ def _collect_pytest_selectors(
     snapshot_root: Path,
     roots: tuple[str, ...],
     file_patterns: tuple[str, ...],
-    function_patterns: tuple[str, ...],
-    class_patterns: tuple[str, ...],
+    policy: _PytestDiscoveryPolicy,
 ) -> tuple[str, ...]:
     return tuple(
         selector
@@ -2193,8 +2239,7 @@ def _collect_pytest_selectors(
         for selector in _test_selectors(
             path,
             path.relative_to(snapshot_root).as_posix(),
-            function_patterns,
-            class_patterns,
+            policy,
             snapshot_root=snapshot_root,
         )
     )
@@ -2226,17 +2271,38 @@ def _pytest_candidates(
     }
 
 
+def _has_unsupported_imported_test_base(
+    paths: tuple[Path, ...],
+    *,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> bool:
+    return any(
+        _module_has_unsupported_imported_test_base(
+            path,
+            snapshot_root=snapshot_root,
+            import_roots=import_roots,
+        )
+        for path in paths
+    )
+
+
 def _pytest_candidate_rejection_reason(
     snapshot_root: Path,
     candidates: set[str],
     *,
     function_patterns: tuple[str, ...],
     class_patterns: tuple[str, ...],
+    import_roots: tuple[Path, ...],
 ) -> str:
     paths = tuple(snapshot_root / candidate for candidate in candidates)
     if any(_module_uses_wildcard_import(path) for path in paths):
         return "wildcard_import_unsupported"
-    if any(_module_has_unsupported_imported_test_base(path, snapshot_root=snapshot_root) for path in paths):
+    if _has_unsupported_imported_test_base(
+        paths,
+        snapshot_root=snapshot_root,
+        import_roots=import_roots,
+    ):
         return "imported_test_base_unsupported"
     if any(
         _module_has_dynamic_test_members(
@@ -2251,6 +2317,7 @@ def _pytest_candidate_rejection_reason(
         _module_has_test_execution_override(
             path,
             snapshot_root=snapshot_root,
+            import_roots=import_roots,
             function_patterns=function_patterns,
             class_patterns=class_patterns,
         )
@@ -2258,6 +2325,23 @@ def _pytest_candidate_rejection_reason(
     ):
         return "unittest_execution_override"
     return ""
+
+
+def _projected_pytest_import_roots(
+    policy: dict[str, object],
+    *,
+    snapshot_root: Path,
+) -> tuple[tuple[Path, ...], str]:
+    projection = project_pytest_policy(
+        policy,
+        snapshot_root=snapshot_root,
+        output_root=snapshot_root / ".specfact-pytest-output",
+    )
+    if projection.status != "PASS":
+        return (), projection.reason
+    raw = projection.values.get("pythonpath", [])
+    values = raw.split() if isinstance(raw, str) else cast(list[object], raw)
+    return tuple(Path(str(value)) for value in values), ""
 
 
 def plan_complete_pytest_suite(
@@ -2272,6 +2356,10 @@ def plan_complete_pytest_suite(
     file_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_files", ["test_*.py"])))
     class_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_classes", ["Test*"])))
     function_patterns = tuple(str(value) for value in cast(list[object], policy.get("python_functions", ["test_*"])))
+    import_roots, projection_reason = _projected_pytest_import_roots(policy, snapshot_root=snapshot_root)
+    if projection_reason:
+        return PytestSuitePlan((), False, "UNKNOWN", projection_reason)
+    discovery_policy = _PytestDiscoveryPolicy(function_patterns, class_patterns, import_roots)
     plugin_validation = _repository_pytest_hook_validation(snapshot_root, roots)
     if plugin_validation.status != "PASS":
         return PytestSuitePlan((), False, "UNKNOWN", plugin_validation.reason)
@@ -2279,8 +2367,7 @@ def plan_complete_pytest_suite(
         snapshot_root,
         roots,
         file_patterns,
-        function_patterns,
-        class_patterns,
+        discovery_policy,
     )
     changed_candidates = _changed_pytest_candidates(changed_paths, roots, file_patterns)
     candidates = _pytest_candidates(snapshot_root, roots, file_patterns)
@@ -2289,6 +2376,7 @@ def plan_complete_pytest_suite(
         candidates,
         function_patterns=function_patterns,
         class_patterns=class_patterns,
+        import_roots=import_roots,
     )
     if rejection_reason:
         return PytestSuitePlan(selectors, False, "UNKNOWN", rejection_reason)
