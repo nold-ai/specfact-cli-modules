@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import ast
+import configparser
 import fnmatch
 import hashlib
 import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from collections.abc import Callable, Iterable
-from contextlib import suppress
-from dataclasses import dataclass
+from contextlib import ExitStack, suppress
+from dataclasses import dataclass, field
 from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -24,7 +27,7 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
-from specfact_code_review.run import differential, toolchain
+from specfact_code_review.run import differential, scope, toolchain
 from specfact_code_review.run.findings import (
     PR_RANGE_CONDITIONAL_ANALYZERS,
     PR_RANGE_REQUIRED_ANALYZERS,
@@ -79,6 +82,7 @@ _PR_CONTEXT_ENVS = (
 )
 _CLEAN_CODE_CONTEXT_HINTS = ("clean code", "naming", "kiss", "yagni", "dry", "solid", "complexity")
 _TARGETED_TEST_TIMEOUT = int(os.environ.get("SPECFACT_CODE_REVIEW_TARGETED_TEST_TIMEOUT", "120"))
+_PROJECT_RUNTIME_MEMBERS = frozenset({"basedpyright", "contracts", "pylint", "targeted-pytest-coverage"})
 _GIT_LOCAL_ENV_VARS = frozenset(
     {
         "GIT_ALTERNATE_OBJECT_DIRECTORIES",
@@ -170,6 +174,30 @@ class CapsuleSnapshotResult:
 
     evidence: dict[str, dict[str, object]]
     findings_by_member: dict[str, list[ReviewFinding]]
+
+
+@dataclass(frozen=True)
+class SnapshotPolicyBindings:
+    """Explicit per-member policy argv and their read-only mount roots."""
+
+    config_roots: tuple[Path, ...]
+    member_argv: dict[str, tuple[str, ...]]
+    cleanup_roots: tuple[Path, ...]
+
+
+@dataclass(frozen=True)
+class CapsuleMemberExecutionRequest:
+    """Complete controller-owned input for one fresh member sandbox."""
+
+    runtime: CapsuleRuntime
+    member: str
+    invocation_id: str
+    snapshot_root: Path
+    files: list[Path]
+    options: ReviewOptions
+    config_roots: tuple[Path, ...] = ()
+    adapter_argv: tuple[str, ...] = ()
+    project_runtime_root: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -577,7 +605,7 @@ def _selected_module_payload() -> SelectedModulePayload:
     return SelectedModulePayload(payload, reason)
 
 
-def _prepare_capsule_runtime() -> tuple[CapsuleRuntime | None, str]:
+def _prepare_capsule_runtime(*, project_runtime_identity: str = "not-applicable") -> tuple[CapsuleRuntime | None, str]:
     """Materialize and compose the signed runtime without host analyzer fallback."""
 
     if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
@@ -621,7 +649,7 @@ def _prepare_capsule_runtime() -> tuple[CapsuleRuntime | None, str]:
                 immutable_base_root_digest=str(final_manifest["manifest_digest"]),
                 analyzer_installed_set_digest=toolchain.canonical_json_digest(materialized.installed_distributions),
                 native_launcher_digest=str(native["executable_sha256"]),
-                project_runtime_identity="not-applicable",
+                project_runtime_identity=project_runtime_identity,
             )
         finally:
             if selected_payload.staged_source is not None:
@@ -654,7 +682,13 @@ def _prepare_capsule_runtime() -> tuple[CapsuleRuntime | None, str]:
         return None, f"capsule_runtime_unavailable:{exc}"
 
 
-def _member_findings(member: str, files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
+def _member_findings(
+    member: str,
+    files: list[Path],
+    *,
+    bug_hunt: bool,
+    adapter_argv: tuple[str, ...] = (),
+) -> list[ReviewFinding]:
     runners: dict[str, Callable[[list[Path]], list[ReviewFinding]]] = {
         "ruff": run_ruff,
         "radon": run_radon,
@@ -669,6 +703,18 @@ def _member_findings(member: str, files: list[Path], *, bug_hunt: bool) -> list[
     if member == "targeted-pytest-coverage":
         findings, _coverage = _evaluate_tdd_gate(files)
         return findings
+    if member == "ruff":
+        return run_ruff(files, extra_args=adapter_argv) if adapter_argv else run_ruff(files)
+    if member == "basedpyright":
+        return run_basedpyright(files, extra_args=adapter_argv) if adapter_argv else run_basedpyright(files)
+    if member == "pylint":
+        return run_pylint(files, extra_args=adapter_argv) if adapter_argv else run_pylint(files)
+    if member == "semgrep-clean":
+        bundle_root = Path(adapter_argv[0]) if adapter_argv else None
+        return run_semgrep(files, bundle_root=bundle_root)
+    if member == "semgrep-bugs":
+        bundle_root = Path(adapter_argv[0]) if adapter_argv else None
+        return run_semgrep_bugs(files, bundle_root=bundle_root)
     try:
         runner = runners[member]
     except KeyError as exc:
@@ -676,7 +722,7 @@ def _member_findings(member: str, files: list[Path], *, bug_hunt: bool) -> list[
     return runner(files)
 
 
-def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool]:
+def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tuple[str, ...]]:
     request = json.loads(request_path.read_text(encoding="utf-8"))
     if not isinstance(request, dict):
         raise ValueError("capsule request must be an object")
@@ -687,10 +733,14 @@ def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool]:
     relative_paths = [Path(cast(str, path)) for path in raw_paths]
     if any(path.is_absolute() or ".." in path.parts for path in relative_paths):
         raise ValueError("capsule path escapes snapshot")
+    raw_adapter_argv = request.get("adapter_argv", [])
+    if not isinstance(raw_adapter_argv, list) or not all(isinstance(value, str) for value in raw_adapter_argv):
+        raise ValueError("capsule adapter argv is invalid")
     return (
         member,
         [Path("/opt/specfact/snapshot") / path for path in relative_paths],
         bool(request.get("bug_hunt", False)),
+        tuple(cast(list[str], raw_adapter_argv)),
     )
 
 
@@ -716,8 +766,11 @@ def _capsule_process_request(request_path: Path) -> None:
     """Run exactly one analyzer member inside the sealed capsule process."""
 
     try:
-        member, files, bug_hunt = _load_capsule_request(request_path)
-        response = _capsule_member_response(member, _member_findings(member, files, bug_hunt=bug_hunt))
+        member, files, bug_hunt, adapter_argv = _load_capsule_request(request_path)
+        response = _capsule_member_response(
+            member,
+            _member_findings(member, files, bug_hunt=bug_hunt, adapter_argv=adapter_argv),
+        )
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         response = {
             "member": "unknown",
@@ -734,18 +787,8 @@ def _capsule_process_request(request_path: Path) -> None:
     os.replace(temporary, destination)
 
 
-def _execute_capsule_member(
-    *,
-    runtime: CapsuleRuntime,
-    member: str,
-    invocation_id: str,
-    snapshot_root: Path,
-    files: list[Path],
-    options: ReviewOptions,
-    config_roots: tuple[Path, ...] = (),
-) -> dict[str, object]:
-    del invocation_id
-    with tempfile.TemporaryDirectory(prefix=f"specfact-{member}-") as temporary_directory:
+def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str, object]:
+    with tempfile.TemporaryDirectory(prefix=f"specfact-{request.member}-") as temporary_directory:
         process_root = Path(temporary_directory)
         request_root = process_root / "request"
         output_root = process_root / "output"
@@ -753,12 +796,17 @@ def _execute_capsule_member(
         control_root = process_root / "control"
         for root in (request_root, output_root, scratch_root, control_root):
             root.mkdir()
-        resolved_snapshot = snapshot_root.resolve()
-        relative_paths = tuple(path.resolve().relative_to(resolved_snapshot).as_posix() for path in files)
+        resolved_snapshot = request.snapshot_root.resolve()
+        relative_paths = tuple(path.resolve().relative_to(resolved_snapshot).as_posix() for path in request.files)
         request_path = request_root / "request.json"
         request_path.write_text(
             json.dumps(
-                {"bug_hunt": options.bug_hunt, "member": member, "paths": relative_paths},
+                {
+                    "adapter_argv": request.adapter_argv,
+                    "bug_hunt": request.options.bug_hunt,
+                    "member": request.member,
+                    "paths": relative_paths,
+                },
                 ensure_ascii=False,
                 separators=(",", ":"),
                 sort_keys=True,
@@ -767,15 +815,15 @@ def _execute_capsule_member(
             encoding="utf-8",
         )
         context = SnapshotInvocationContext(
-            member=member,
+            member=request.member,
             snapshot_root=resolved_snapshot,
-            config_roots=(request_root, *config_roots),
+            config_roots=(request_root, *request.config_roots),
             output_root=output_root,
             temporary_root=scratch_root,
-            capsule_root=runtime.root,
-            interpreter=runtime.interpreter,
-            bootstrap=runtime.bootstrap,
-            project_runtime_root=None,
+            capsule_root=request.runtime.root,
+            interpreter=request.runtime.interpreter,
+            bootstrap=request.runtime.bootstrap,
+            project_runtime_root=request.project_runtime_root,
             network="none",
             control_root=control_root,
         )
@@ -789,7 +837,7 @@ def _execute_capsule_member(
             }
         execution = execute_launch_plan(
             build_launch_plan(context),
-            runtime.bubblewrap,
+            request.runtime.bubblewrap,
             extra_argv=("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json"),
         )
         response_path = output_root / "result.json"
@@ -805,7 +853,7 @@ def _execute_capsule_member(
             if output_paths != ("result.json",):
                 raise ValueError("unexpected analyzer outputs")
             response = json.loads(response_path.read_text(encoding="utf-8"))
-            if not isinstance(response, dict) or response.get("member") != member:
+            if not isinstance(response, dict) or response.get("member") != request.member:
                 raise ValueError("analyzer response identity mismatch")
             findings = response.get("findings")
             if not isinstance(findings, list):
@@ -838,6 +886,8 @@ def _run_capsule_snapshot(
     files: list[Path],
     options: ReviewOptions,
     config_roots: tuple[Path, ...] = (),
+    member_argv: dict[str, tuple[str, ...]] | None = None,
+    project_runtime_root: Path | None = None,
 ) -> CapsuleSnapshotResult:
     evidence: dict[str, dict[str, object]] = {}
     findings_by_member: dict[str, list[ReviewFinding]] = {}
@@ -848,13 +898,17 @@ def _run_capsule_snapshot(
             raw = _not_applicable_member("tests_explicitly_disabled_for_legacy_scope")
         else:
             raw = _execute_capsule_member(
-                runtime=runtime,
-                member=member,
-                invocation_id=str(uuid4()),
-                snapshot_root=snapshot_root,
-                files=files,
-                options=options,
-                config_roots=config_roots,
+                CapsuleMemberExecutionRequest(
+                    runtime=runtime,
+                    member=member,
+                    invocation_id=str(uuid4()),
+                    snapshot_root=snapshot_root,
+                    files=files,
+                    options=options,
+                    config_roots=config_roots,
+                    adapter_argv=(member_argv or {}).get(member, ()),
+                    project_runtime_root=(project_runtime_root if member in _PROJECT_RUNTIME_MEMBERS else None),
+                )
             )
         raw_findings = raw.get("findings", [])
         findings = [ReviewFinding.model_validate(value) for value in cast(list[object], raw_findings)]
@@ -868,6 +922,129 @@ def _run_capsule_snapshot(
             "capsule_identity": runtime.identity,
         }
     return CapsuleSnapshotResult(evidence, findings_by_member)
+
+
+def _mounted_config_path(index: int, path: Path) -> str:
+    return str(Path("/opt/specfact/config") / str(index) / path.name)
+
+
+def _pylint_projection_argv(policy: scope.PylintPolicy, *, config_path: str) -> tuple[str, ...]:
+    if policy.status != "PASS":
+        raise ValueError(policy.reason)
+
+    def cli_value(value: object) -> str:
+        if isinstance(value, bool):
+            return "yes" if value else "no"
+        if isinstance(value, list | tuple):
+            return ",".join(str(item) for item in value)
+        return str(value)
+
+    return (
+        "--rcfile",
+        config_path,
+        *(f"--{key}={cli_value(value)}" for key, value in sorted(policy.projection.items())),
+    )
+
+
+@dataclass
+class _PolicyBindingBuilder:
+    config_roots: list[Path] = field(default_factory=list)
+    cleanup_roots: list[Path] = field(default_factory=list)
+    member_argv: dict[str, tuple[str, ...]] = field(default_factory=dict)
+
+    def register(self, path: Path) -> str:
+        root = path.parent
+        self.config_roots.append(root)
+        self.cleanup_roots.append(root)
+        return _mounted_config_path(len(self.config_roots), path)
+
+    def result(self) -> SnapshotPolicyBindings:
+        return SnapshotPolicyBindings(
+            tuple(self.config_roots),
+            self.member_argv,
+            tuple(dict.fromkeys(self.cleanup_roots)),
+        )
+
+
+def _bind_ruff_policy(builder: _PolicyBindingBuilder, policy_root: Path) -> None:
+    policy = scope.resolve_ruff_policy(policy_root, expected_version="0.15.12")
+    if policy.bundle_root is not None:
+        builder.cleanup_roots.append(policy.bundle_root)
+    projection = scope.project_ruff_policy(policy, snapshot_root=Path("/opt/specfact/snapshot"))
+    if projection.status != "PASS":
+        raise ValueError(projection.reason)
+    if projection.config_path is None:
+        builder.member_argv["ruff"] = projection.argv
+        return
+    mounted = builder.register(projection.config_path)
+    builder.member_argv["ruff"] = tuple(
+        mounted if value == str(projection.config_path) else value for value in projection.argv
+    )
+
+
+def _bind_basedpyright_policy(
+    builder: _PolicyBindingBuilder,
+    policy_root: Path,
+    *,
+    relative_inputs: tuple[str, ...],
+) -> None:
+    policy = scope.resolve_basedpyright_policy(policy_root, expected_version="1.39.10")
+    if policy.bundle_root is not None:
+        builder.cleanup_roots.append(policy.bundle_root)
+    projection = scope.project_basedpyright_policy(
+        policy,
+        snapshot_root=Path("/opt/specfact/snapshot"),
+        eligible_inputs=relative_inputs,
+    )
+    if projection.status != "PASS" or projection.config_path is None:
+        raise ValueError(projection.reason or "basedpyright_projection_missing")
+    mounted = builder.register(projection.config_path)
+    builder.member_argv["basedpyright"] = tuple(
+        mounted if value == str(projection.config_path) else value for value in projection.argv
+    )
+
+
+def _bind_pylint_policy(builder: _PolicyBindingBuilder, policy_root: Path) -> None:
+    policy = scope.resolve_pylint_policy(policy_root, expected_version="4.0.7")
+    pylint_root = Path(tempfile.mkdtemp(prefix="specfact-pylint-projection-"))
+    pylint_config = pylint_root / "pylintrc"
+    pylint_config.write_text("[MAIN]\n", encoding="utf-8")
+    pylint_config.chmod(0o444)
+    mounted = builder.register(pylint_config)
+    builder.member_argv["pylint"] = _pylint_projection_argv(policy, config_path=mounted)
+
+
+def _bind_semgrep_policy(builder: _PolicyBindingBuilder, policy_root: Path) -> None:
+    if not (policy_root / ".semgrep").is_dir():
+        return
+    builder.config_roots.append(policy_root)
+    mounted = str(Path("/opt/specfact/config") / str(len(builder.config_roots)))
+    builder.member_argv["semgrep-clean"] = (mounted,)
+    builder.member_argv["semgrep-bugs"] = (mounted,)
+
+
+def _snapshot_policy_bindings(
+    policy_bundle: object | None,
+    *,
+    snapshot_root: Path,
+    files: list[Path],
+) -> SnapshotPolicyBindings:
+    if policy_bundle is None:
+        return SnapshotPolicyBindings((), {}, ())
+    policy_root = cast(Path, cast(Any, policy_bundle).root)
+    builder = _PolicyBindingBuilder()
+    relative_inputs = tuple(
+        sorted(
+            path.resolve().relative_to(snapshot_root.resolve()).as_posix()
+            for path in files
+            if path.resolve().is_relative_to(snapshot_root.resolve())
+        )
+    )
+    _bind_ruff_policy(builder, policy_root)
+    _bind_basedpyright_policy(builder, policy_root, relative_inputs=relative_inputs)
+    _bind_pylint_policy(builder, policy_root)
+    _bind_semgrep_policy(builder, policy_root)
+    return builder.result()
 
 
 def validate_invocation_manifests(context: SyntheticSnapshotContext) -> InvocationManifestResult:
@@ -922,6 +1099,8 @@ def _test_selectors(
         tree = ast.parse(path.read_bytes())
     except (OSError, SyntaxError):
         return ()
+    if _module_disables_pytest_collection(tree):
+        return ()
     selectors: list[str] = []
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
@@ -936,6 +1115,17 @@ def _test_selectors(
                 and any(fnmatch.fnmatch(child.name, pattern) for pattern in function_patterns)
             )
     return tuple(selectors)
+
+
+def _module_disables_pytest_collection(tree: ast.Module) -> bool:
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
+            continue
+        if node.value.value is False and any(
+            isinstance(target, ast.Name) and target.id == "__test__" for target in node.targets
+        ):
+            return True
+    return False
 
 
 def _collect_pytest_selectors(
@@ -2704,6 +2894,112 @@ def _classify_range_findings(
     return combined, classified_by_member
 
 
+def _pytest_toml_values(path: Path, payload: bytes) -> dict[str, object]:
+    document = tomllib.loads(payload.decode("utf-8"))
+    if path.name != "pyproject.toml":
+        raw = document.get("pytest", {})
+        return cast(dict[str, object], raw if isinstance(raw, dict) else {})
+    tool = cast(dict[str, object], document.get("tool", {}))
+    raw = tool.get("pytest", {})
+    if isinstance(raw, dict) and isinstance(raw.get("ini_options"), dict):
+        raw = raw["ini_options"]
+    return cast(dict[str, object], raw if isinstance(raw, dict) else {})
+
+
+def _pytest_ini_values(path: Path, payload: bytes, *, section: str) -> dict[str, object]:
+    del path
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read_string(payload.decode("utf-8"))
+    return dict(parser[section]) if section else {}
+
+
+def _pytest_string_list(value: object) -> list[str]:
+    if isinstance(value, str):
+        return value.split()
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return cast(list[str], value)
+    raise ValueError("pytest_config_ambiguous")
+
+
+def _pytest_policy_values(policy_bundle: object | None) -> dict[str, object]:
+    defaults: dict[str, object] = {
+        "testpaths": ["tests"],
+        "python_files": ["test_*.py"],
+        "python_classes": ["Test*"],
+        "python_functions": ["test_*"],
+    }
+    if policy_bundle is None:
+        return defaults
+    root = cast(Path, cast(Any, policy_bundle).root)
+    located = scope.resolve_pytest_policy(root, expected_version="9.0.3")
+    if located.status != "PASS":
+        raise ValueError(located.reason)
+    if not located.selected_path:
+        return defaults
+    path = root / located.selected_path
+    payload = path.read_bytes()
+    values = (
+        _pytest_toml_values(path, payload)
+        if path.suffix == ".toml"
+        else _pytest_ini_values(path, payload, section=located.selected_section)
+    )
+    result = dict(defaults)
+    for key in defaults:
+        raw_value = values.get(key)
+        if raw_value is not None:
+            result[key] = _pytest_string_list(raw_value)
+    return result
+
+
+def _reconcile_immutable_pytest_inventory(resolution: object, *, options: ReviewOptions) -> CandidateReconciliation:
+    if options.no_tests:
+        return CandidateReconciliation("PASS")
+    base_snapshot = cast(Any, resolution).base_snapshot
+    head_snapshot = cast(Any, resolution).head_snapshot
+    policy = _pytest_policy_values(getattr(resolution, "policy_bundle", None))
+    changed_paths = tuple(sorted(cast(dict[str, str], getattr(resolution, "path_statuses", {}))))
+    base_plan = plan_complete_pytest_suite(base_snapshot.root, policy, changed_paths=changed_paths)
+    head_plan = plan_complete_pytest_suite(head_snapshot.root, policy, changed_paths=changed_paths)
+    if base_plan.status != "PASS":
+        return CandidateReconciliation("UNKNOWN", base_plan.reason)
+    if head_plan.status != "PASS":
+        return CandidateReconciliation("UNKNOWN", head_plan.reason)
+    rename_facts: dict[str, str] = {
+        item.old_path: item.new_path
+        for item in tuple(getattr(resolution, "exact_renames", ()))
+        if getattr(item, "disposition", "") == "exact_rename"
+    }
+    return reconcile_pytest_inventories(
+        base=base_plan.selectors,
+        head=head_plan.selectors,
+        rename_facts=rename_facts,
+    )
+
+
+def _materialize_claimed_project_runtime(
+    resolution: object,
+) -> tuple[toolchain.ProjectRuntimeMaterialization | None, str]:
+    context = getattr(resolution, "claimed_context", None)
+    if not isinstance(context, dict):
+        return None, ""
+    descriptor = context.get("project_runtime")
+    if not isinstance(descriptor, dict) or descriptor.get("schema") != "project-runtime-layer-v1":
+        return None, ""
+    storage_root = Path(
+        os.environ.get(
+            "SPECFACT_CODE_REVIEW_PROJECT_RUNTIME_CACHE",
+            str(Path.home() / ".cache/specfact/code-review/project-runtimes"),
+        )
+    ).expanduser()
+    materialized = toolchain.materialize_project_runtime(
+        cast(dict[str, object], descriptor),
+        expected_target=str(getattr(resolution, "resolved_target_commit", "")),
+        storage_root=storage_root,
+        credential=_capsule_credential(),
+    )
+    return (materialized, "") if materialized.status == "PASS" else (None, materialized.reason)
+
+
 def run_immutable_scope_review(
     resolution: object,
     *,
@@ -2712,7 +3008,11 @@ def run_immutable_scope_review(
 ) -> ReviewReport:
     """Execute both materialized sides through fresh member sandboxes."""
 
-    runtime, reason = _prepare_capsule_runtime()
+    project_runtime, reason = _materialize_claimed_project_runtime(resolution)
+    if reason:
+        return _unknown_capsule_report(reason, options=options, scope_evidence=scope_evidence)
+    runtime_kwargs = {} if project_runtime is None else {"project_runtime_identity": project_runtime.identity}
+    runtime, reason = _prepare_capsule_runtime(**runtime_kwargs)
     if runtime is None:
         return _unknown_capsule_report(reason, options=options, scope_evidence=scope_evidence)
     base_snapshot = getattr(resolution, "base_snapshot", None)
@@ -2723,22 +3023,62 @@ def run_immutable_scope_review(
             options=options,
             scope_evidence=scope_evidence,
         )
+    try:
+        pytest_reconciliation = _reconcile_immutable_pytest_inventory(resolution, options=options)
+    except (OSError, TypeError, ValueError, configparser.Error, tomllib.TOMLDecodeError) as exc:
+        return _unknown_capsule_report(
+            f"pytest_config_ambiguous:{exc}",
+            options=options,
+            scope_evidence=scope_evidence,
+        )
+    if pytest_reconciliation.status != "PASS":
+        return _unknown_capsule_report(
+            pytest_reconciliation.reason,
+            options=options,
+            scope_evidence=scope_evidence,
+        )
     policy_bundle = getattr(resolution, "policy_bundle", None)
-    config_roots = () if policy_bundle is None else (cast(Path, policy_bundle.root),)
-    base = _run_capsule_snapshot(
-        runtime,
-        snapshot_root=base_snapshot.root,
-        files=_snapshot_python_files(base_snapshot),
-        options=options,
-        config_roots=config_roots,
-    )
-    head = _run_capsule_snapshot(
-        runtime,
-        snapshot_root=head_snapshot.root,
-        files=_snapshot_python_files(head_snapshot),
-        options=options,
-        config_roots=config_roots,
-    )
+    base_files = _snapshot_python_files(base_snapshot)
+    head_files = _snapshot_python_files(head_snapshot)
+    try:
+        base_bindings = _snapshot_policy_bindings(
+            policy_bundle,
+            snapshot_root=base_snapshot.root,
+            files=base_files,
+        )
+        head_bindings = _snapshot_policy_bindings(
+            policy_bundle,
+            snapshot_root=head_snapshot.root,
+            files=head_files,
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        return _unknown_capsule_report(
+            f"target_policy_projection_failed:{exc}",
+            options=options,
+            scope_evidence=scope_evidence,
+        )
+    with ExitStack() as cleanup:
+        for root in (*base_bindings.cleanup_roots, *head_bindings.cleanup_roots):
+            cleanup.callback(shutil.rmtree, root, ignore_errors=True)
+        project_runtime_root = None if project_runtime is None else project_runtime.root
+        base = _run_capsule_snapshot(
+            runtime,
+            snapshot_root=base_snapshot.root,
+            files=base_files,
+            options=options,
+            config_roots=base_bindings.config_roots,
+            member_argv=base_bindings.member_argv,
+            project_runtime_root=project_runtime_root,
+        )
+        head = _run_capsule_snapshot(
+            runtime,
+            snapshot_root=head_snapshot.root,
+            files=head_files,
+            options=options,
+            config_roots=head_bindings.config_roots,
+            member_argv=head_bindings.member_argv,
+            project_runtime_root=project_runtime_root,
+        )
     combined, classified_findings = _classify_range_findings(resolution, base, head)
     return _capsule_report(
         combined,

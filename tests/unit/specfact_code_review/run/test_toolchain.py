@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import os
+import shutil
 import subprocess
 import tarfile
 from pathlib import Path
@@ -963,6 +964,37 @@ def test_project_runtime_layer_binds_target_tip_dependency_inputs(toolchain_api:
     assert result.status == "PASS"
     assert result.source_lock_digest.startswith("sha256:")
     assert result.target_commit == "1" * 40
+
+
+def test_project_runtime_materialization_reuses_only_reverified_identity_cache(
+    toolchain_api: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    descriptor = _project_runtime_descriptor()
+    seed = tmp_path / "seed"
+    metadata = seed / "site-packages/consumer_dependency-1.0.dist-info/METADATA"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text("Name: consumer-dependency\nVersion: 1.0\n", encoding="utf-8")
+    entries, _regular_bytes = toolchain_api._manifest_entries(seed, include_root=False)
+    descriptor["root_manifest"]["digest"] = toolchain_api.canonical_json_digest(entries)
+    layer = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40)
+    storage = tmp_path / "storage"
+    cached_root = storage / layer.identity.removeprefix("sha256:")
+    shutil.copytree(seed, cached_root)
+    monkeypatch.setattr(
+        toolchain_api,
+        "acquire_oci_distribution",
+        lambda *_args, **_kwargs: pytest.fail("a verified identity cache hit must not access the registry"),
+    )
+
+    result = toolchain_api.materialize_project_runtime(
+        descriptor,
+        expected_target="1" * 40,
+        storage_root=storage,
+    )
+
+    assert result.status == "PASS"
+    assert result.root == cached_root
+    assert result.identity == layer.identity
 
 
 @pytest.mark.parametrize("reserved", ["specfact_code_review", "pytest", "sitecustomize"])

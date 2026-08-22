@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import pytest
 from pytest import MonkeyPatch
@@ -252,8 +253,8 @@ def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
 
     monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
 
-    def execute_member(**kwargs: object) -> dict[str, object]:
-        launches.append((str(kwargs["member"]), str(kwargs["invocation_id"])))
+    def execute_member(request: Any) -> dict[str, object]:
+        launches.append((request.member, request.invocation_id))
         return {
             "execution_state": "ran",
             "evidence_outcome": "PASS",
@@ -269,6 +270,148 @@ def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
     assert len({invocation for _member, invocation in launches}) == len(launches)
     assert report.schema_version == "1.6"
     assert report.assurance_status == "PASS"
+
+
+def test_capsule_member_passes_explicit_target_policy_to_adapter(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    observed: dict[str, object] = {}
+
+    def run_ruff_with_policy(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> list[ReviewFinding]:
+        observed["files"] = files
+        observed["extra_args"] = extra_args
+        return []
+
+    monkeypatch.setattr(runner_api, "run_ruff", run_ruff_with_policy)
+
+    findings = runner_api._member_findings(
+        "ruff",
+        [Path("/opt/specfact/snapshot/src/app.py")],
+        bug_hunt=False,
+        adapter_argv=("--config", "/opt/specfact/config/1/ruff.toml", "--no-cache"),
+    )
+
+    assert findings == []
+    assert observed["extra_args"] == ("--config", "/opt/specfact/config/1/ruff.toml", "--no-cache")
+
+
+def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    policy_root = tmp_path / "policy"
+    snapshot_root = tmp_path / "snapshot"
+    policy_root.mkdir()
+    (snapshot_root / "src").mkdir(parents=True)
+    (policy_root / "ruff.toml").write_text("target-version = 'py311'\n", encoding="utf-8")
+    source = snapshot_root / "src/app.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+
+    bindings = runner_api._snapshot_policy_bindings(
+        SimpleNamespace(root=policy_root),
+        snapshot_root=snapshot_root,
+        files=[source],
+    )
+
+    try:
+        assert bindings.member_argv["ruff"][:2] == ("--config", "/opt/specfact/config/1/ruff.toml")
+        assert bindings.member_argv["basedpyright"][:2] == (
+            "--project",
+            "/opt/specfact/config/2/basedpyright.json",
+        )
+        assert bindings.member_argv["pylint"][:2] == ("--rcfile", "/opt/specfact/config/3/pylintrc")
+        assert all(
+            not argument.startswith(str(snapshot_root)) for argv in bindings.member_argv.values() for argument in argv
+        )
+    finally:
+        for root in bindings.cleanup_roots:
+            shutil.rmtree(root, ignore_errors=True)
+
+
+def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshots(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    runtime_root = tmp_path / "project-runtime"
+    runtime_root.mkdir()
+    capsule = SimpleNamespace(identity="sha256:" + "a" * 64)
+    descriptor = {"schema": "project-runtime-layer-v1"}
+    observed_roots: list[Path | None] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda **_kwargs: (capsule, ""))
+    monkeypatch.setattr(
+        runner_api.toolchain,
+        "materialize_project_runtime",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            status="PASS", root=runtime_root, identity="sha256:" + "b" * 64, reason=""
+        ),
+        raising=False,
+    )
+
+    def run_snapshot(*_args: object, **kwargs: object) -> Any:
+        observed_roots.append(cast(Path | None, kwargs.get("project_runtime_root")))
+        return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", run_snapshot)
+    monkeypatch.setattr(runner_api, "_classify_range_findings", lambda *_args: ({}, {}))
+    monkeypatch.setattr(
+        runner_api,
+        "_capsule_report",
+        lambda *_args, **_kwargs: ReviewReport(run_id="runtime", score=100, findings=[], summary="complete"),
+    )
+    snapshot = SimpleNamespace(root=tmp_path, contents={})
+    resolution = SimpleNamespace(
+        base_snapshot=snapshot,
+        head_snapshot=snapshot,
+        policy_bundle=None,
+        resolved_target_commit="1" * 40,
+        claimed_context={"project_runtime": descriptor},
+    )
+
+    runner_api.run_immutable_scope_review(
+        resolution,
+        options=runner_api.ReviewOptions(no_tests=False),
+        scope_evidence={"assurance_kind": "range_candidate"},
+    )
+
+    assert observed_roots == [runtime_root, runtime_root]
+
+
+def test_immutable_range_reconciles_removed_pytest_selector_before_execution(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    for root in (base_root, head_root):
+        (root / "tests").mkdir(parents=True)
+    (base_root / "tests/test_app.py").write_text("def test_visible():\n    assert True\n", encoding="utf-8")
+    (head_root / "tests/test_app.py").write_text(
+        "__test__ = False\n\ndef test_visible():\n    assert True\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_prepare_capsule_runtime",
+        lambda: (SimpleNamespace(identity="sha256:" + "a" * 64), ""),
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_run_capsule_snapshot",
+        lambda *_args, **_kwargs: pytest.fail("removed selector must fail closed before analyzer execution"),
+    )
+    resolution = SimpleNamespace(
+        base_snapshot=SimpleNamespace(root=base_root, contents={"tests/test_app.py": b""}),
+        head_snapshot=SimpleNamespace(root=head_root, contents={"tests/test_app.py": b""}),
+        policy_bundle=None,
+        path_statuses={"tests/test_app.py": "M"},
+        exact_renames=(),
+        claimed_context=None,
+    )
+
+    report = runner_api.run_immutable_scope_review(
+        resolution,
+        options=runner_api.ReviewOptions(no_tests=False),
+        scope_evidence={"assurance_kind": "range_preview"},
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert {item["diagnostic"] for item in report.analyzer_evidence} == {"uncollected_changed_test"}
 
 
 def test_marketplace_capsule_failure_never_falls_back_to_host_analyzers(monkeypatch: MonkeyPatch) -> None:

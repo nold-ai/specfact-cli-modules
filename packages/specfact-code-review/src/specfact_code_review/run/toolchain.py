@@ -209,6 +209,16 @@ class ProjectRuntimeLayer:
 
 
 @dataclass(frozen=True)
+class ProjectRuntimeMaterialization:
+    """Verified dependency-layer root admitted to the analyzer sandbox."""
+
+    status: Literal["PASS", "UNKNOWN"]
+    root: Path
+    identity: str = ""
+    reason: str = ""
+
+
+@dataclass(frozen=True)
 class PytestCatalog:
     options: tuple[str, ...]
     ini_fields: tuple[str, ...]
@@ -1840,6 +1850,134 @@ def validate_project_runtime_layer(descriptor: dict[str, object], *, expected_ta
         identity=identity,
         pytest_plugins=plugin_models,
     )
+
+
+def _project_runtime_oci_descriptor(oci: dict[str, object]) -> dict[str, object]:
+    registry = str(oci["registry"]).rstrip("/")
+    repository = str(oci["repository"])
+    manifest_digest = str(oci["manifest_digest"])
+    registry_host = urlparse(registry).hostname or ""
+    redirect_allowlist: list[object] = [{"host": registry_host, "path_prefix": "/"}]
+    if registry_host == "ghcr.io":
+        redirect_allowlist.append({"host": "pkg-containers.githubusercontent.com", "path_prefix": "/"})
+    return {
+        "registry": registry,
+        "repository": repository,
+        "locator": f"{registry}/v2/{repository}/manifests/{manifest_digest}",
+        "manifest": {"digest": manifest_digest},
+        "config": {"digest": str(oci["config_digest"])},
+        "layers": oci["layers"],
+        "redirect_allowlist": redirect_allowlist,
+        "bounds": {
+            "max_redirects": 4,
+            "max_layer_bytes": 1_073_741_824,
+            "max_files": 200_000,
+            "max_unpacked_bytes": 4_294_967_296,
+        },
+    }
+
+
+def _project_runtime_root_matches(root: Path, descriptor: dict[str, object]) -> bool:
+    try:
+        expected = cast(dict[str, object], descriptor["root_manifest"])
+        entries, _regular_bytes = _manifest_entries(root, include_root=False)
+        site_packages = root / str(expected["site_packages"]).removeprefix("/opt/specfact/project-runtime/")
+        if not site_packages.is_dir() or canonical_json_digest(entries) != expected["digest"]:
+            return False
+        expected_distributions = {
+            (re.sub(r"[-_.]+", "-", str(item["name"])).lower(), str(item["version"]))
+            for item in cast(list[dict[str, object]], descriptor["distributions"])
+        }
+        observed_distributions: set[tuple[str, str]] = set()
+        for metadata in site_packages.glob("*.dist-info/METADATA"):
+            fields: dict[str, str] = {}
+            for line in metadata.read_text(encoding="utf-8").splitlines():
+                key, separator, value = line.partition(":")
+                if separator and key in {"Name", "Version"} and key not in fields:
+                    fields[key] = value.strip()
+            if set(fields) != {"Name", "Version"}:
+                return False
+            observed_distributions.add((re.sub(r"[-_.]+", "-", fields["Name"]).lower(), fields["Version"]))
+        return observed_distributions == expected_distributions
+    except (KeyError, OSError, TypeError, ValueError):
+        return False
+
+
+def _project_runtime_manifest_matches(cache_root: Path, oci: dict[str, object]) -> bool:
+    payload = _verified_cached_blob(cache_root, str(oci["manifest_digest"]))
+    if payload is None:
+        return False
+    try:
+        manifest = json.loads(payload)
+        config = cast(dict[str, object], manifest["config"])
+        layers = cast(list[dict[str, object]], manifest["layers"])
+    except (KeyError, TypeError, json.JSONDecodeError):
+        return False
+    expected_layers = cast(list[dict[str, object]], oci["layers"])
+    return config.get("digest") == oci["config_digest"] and [
+        (item.get("digest"), item.get("size")) for item in layers
+    ] == [(item.get("digest"), item.get("size")) for item in expected_layers]
+
+
+def materialize_project_runtime(
+    descriptor: dict[str, object],
+    *,
+    expected_target: str,
+    storage_root: Path,
+    credential: str | None = None,
+) -> ProjectRuntimeMaterialization:
+    """Validate, acquire, extract, and reverify one immutable dependency layer."""
+
+    layer = validate_project_runtime_layer(descriptor, expected_target=expected_target)
+    destination = storage_root / layer.identity.removeprefix("sha256:")
+    if layer.status != "PASS":
+        return ProjectRuntimeMaterialization("UNKNOWN", destination, reason=layer.reason)
+    if _project_runtime_root_matches(destination, descriptor):
+        return ProjectRuntimeMaterialization("PASS", destination, layer.identity)
+    if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
+        return ProjectRuntimeMaterialization("UNKNOWN", destination, layer.identity, "unsupported_controller_platform")
+    storage_root.mkdir(parents=True, exist_ok=True)
+    cache_root = storage_root / "oci-cache"
+    oci = cast(dict[str, object], descriptor["oci"])
+    acquisition_oci = _project_runtime_oci_descriptor(oci)
+    acquisition = acquire_oci_distribution(
+        acquisition_oci,
+        cache_root=cache_root,
+        credential=credential,
+    )
+    if acquisition.status != "PASS" or not _project_runtime_manifest_matches(cache_root, oci):
+        return ProjectRuntimeMaterialization(
+            "UNKNOWN",
+            destination,
+            layer.identity,
+            acquisition.reason or "project_runtime_manifest_mismatch",
+        )
+    temporary = Path(tempfile.mkdtemp(prefix=".project-runtime-", dir=storage_root))
+    try:
+        rootfs = temporary / "rootfs"
+        rootfs.mkdir()
+        for layer_descriptor in cast(list[dict[str, object]], oci["layers"]):
+            payload = _verified_cached_blob(
+                cache_root,
+                str(layer_descriptor["digest"]),
+                size=cast(int, layer_descriptor["size"]),
+            )
+            if payload is None:
+                raise ValueError("verified project-runtime layer disappeared from cache")
+            _apply_oci_layer(rootfs, payload, layer_descriptor)
+        extracted = rootfs / "opt/specfact/project-runtime"
+        if not _project_runtime_root_matches(extracted, descriptor):
+            raise ValueError("project runtime root manifest or distribution set mismatch")
+        if destination.exists():
+            shutil.rmtree(destination)
+        os.replace(extracted, destination)
+    except (OSError, tarfile.TarError, TypeError, ValueError) as exc:
+        return ProjectRuntimeMaterialization(
+            "UNKNOWN", destination, layer.identity, f"project_runtime_materialization_failed:{exc}"
+        )
+    finally:
+        shutil.rmtree(temporary, ignore_errors=True)
+    return ProjectRuntimeMaterialization("PASS", destination, layer.identity)
 
 
 def _full_sha(value: object) -> bool:
