@@ -518,6 +518,22 @@ def test_oci_absolute_symlink_is_rewritten_inside_capsule_root(toolchain_api: An
     assert link.resolve(strict=False).is_relative_to(root)
 
 
+def test_oci_whiteout_rejects_symlinked_parent(toolchain_api: Any, tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    victim_file = victim / "file"
+    victim_file.write_text("keep", encoding="utf-8")
+    (root / "host").symlink_to(victim, target_is_directory=True)
+    whiteout = tarfile.TarInfo("host/.wh.file")
+
+    with pytest.raises(ValueError, match="parent is a symlink"):
+        toolchain_api._apply_whiteouts(root, [whiteout])
+
+    assert victim_file.read_text(encoding="utf-8") == "keep"
+
+
 def test_checkpoint_binds_canonical_toolchain_lock_projection(toolchain_api: Any) -> None:
     lock = _valid_lock()
 
@@ -719,7 +735,34 @@ def test_core_handoff_requires_explicit_approved_public_key(
     assert result.status == "UNKNOWN"
 
 
-@pytest.mark.parametrize("mutation", ["added", "removed", "changed"])
+def test_core_handoff_distinguishes_core_api_incompatibility(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from specfact_cli.registry import module_installer
+
+    user_root = tmp_path / "user-modules"
+    discovered, registry_id, public_key = _core_0_55_1_discovered_install(
+        user_root / "nold-ai" / "specfact-code-review"
+    )
+
+    def incompatible(*_args: Any, **_kwargs: Any) -> bool:
+        raise AttributeError("simulated core API drift")
+
+    monkeypatch.setattr(module_installer, "verify_module_artifact", incompatible)
+
+    result = toolchain_api.derive_core_0_55_1_install_handoff(
+        discovered,
+        expected_registry_id=registry_id,
+        user_modules_root=user_root,
+        marketplace_modules_root=tmp_path / "marketplace-modules",
+        public_key_path=public_key,
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "core_api_incompatible"
+
+
+@pytest.mark.parametrize("mutation", ["added", "removed", "changed", "mode"])
 def test_core_handoff_payload_mutation_is_unknown(
     toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
 ) -> None:
@@ -742,6 +785,8 @@ def test_core_handoff_payload_mutation_is_unknown(
         (install_root / "specfact_code_review/added.py").write_text("ADDED = True\n", encoding="utf-8")
     elif mutation == "removed":
         target.unlink()
+    elif mutation == "mode":
+        target.chmod(0o755)
     else:
         target.write_text("CHANGED = True\n", encoding="utf-8")
 
@@ -788,7 +833,7 @@ def test_post_base_bootstrap_and_composite_identity_bind_copied_payload(toolchai
     assert result.composite_schema == "capsule-composite-identity-v1"
     assert result.immutable_base_root_digest == _digest("5")
     assert result.module_payload_manifest_digest == toolchain_api.canonical_json_digest(
-        [{"digest": entry.digest, "path": entry.path} for entry in payload.manifest]
+        [{"digest": entry.digest, "mode": entry.mode, "path": entry.path} for entry in payload.manifest]
     )
     assert result.bootstrap_digest.startswith("sha256:")
     assert result.final_composite_root_manifest_digest.startswith("sha256:")

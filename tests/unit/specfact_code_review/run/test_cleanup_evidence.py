@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -54,8 +53,7 @@ def test_with_previewed_simplification_findings_refreshes_forecast_without_fixab
 def test_cleanup_enrichment_preserves_schema_1_6_assurance_status(tmp_path: Path) -> None:
     source = tmp_path / "sample.py"
     source.write_text("def total(values: list[int]) -> int:\n    return sum(values)\n", encoding="utf-8")
-    report_type: Any = ReviewReport
-    report = report_type(
+    report = ReviewReport(
         schema_version="1.6",
         assurance_status="UNKNOWN",
         run_id="review",

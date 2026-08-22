@@ -10,11 +10,13 @@ import configparser
 import hashlib
 import json
 import os
+import shutil
 import stat
 import subprocess
 import tempfile
 import tomllib
 from collections.abc import Callable, Iterable, Sequence
+from contextlib import ExitStack
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import Literal, cast
@@ -29,6 +31,17 @@ EnforcementKind = Literal["full", "changed", "shadow"]
 
 _REGULAR_GIT_MODES = frozenset({"100644", "100755"})
 _PYTHON_SUFFIXES = frozenset({".py", ".pyi"})
+_GIT_LOCAL_ENV_VARS = frozenset(
+    {
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_DIR",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_PREFIX",
+        "GIT_WORK_TREE",
+    }
+)
 GOVERNED_POLICY_PATHS_V1 = frozenset(
     {
         ".coveragerc",
@@ -69,10 +82,16 @@ _INI_POLICY_SECTIONS = frozenset(
         "coverage:run",
         "mypy",
         "pylint",
+        "pytest",
         "radon",
         "tool:pytest",
     }
 )
+
+
+def _recognized_ini_policy_section(section: str) -> bool:
+    normalized = section.lower()
+    return normalized in _INI_POLICY_SECTIONS or normalized.startswith("pylint.")
 
 
 class GitResolutionError(RuntimeError):
@@ -444,6 +463,7 @@ class _ResolvedRange:
     candidate_policy_paths: tuple[str, ...]
     policy_manifest_digest: str
     candidate_policy_change_digest: str
+    claimed_context: _ClaimedContext | None
 
 
 @dataclass(frozen=True)
@@ -508,6 +528,11 @@ def _canonical_json_digest(value: object) -> str:
     return sha256_bytes(payload)
 
 
+def _git_environment(env_overrides: dict[str, str] | None = None) -> dict[str, str]:
+    environment = {key: value for key, value in os.environ.items() if key not in _GIT_LOCAL_ENV_VARS}
+    return {**environment, "GIT_CONFIG_NOSYSTEM": "1", **(env_overrides or {})}
+
+
 def _git(
     repository: Path,
     args: Sequence[str],
@@ -519,9 +544,11 @@ def _git(
         cwd=repository,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="surrogateescape",
         check=False,
         timeout=30,
-        env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1", **(env_overrides or {})},
+        env=_git_environment(env_overrides),
     )
     if result.returncode != 0:
         stderr = str(result.stderr).strip()
@@ -541,7 +568,7 @@ def _git_bytes(repository: Path, args: Sequence[str], *, env_overrides: dict[str
         text=False,
         check=False,
         timeout=30,
-        env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1", **(env_overrides or {})},
+        env=_git_environment(env_overrides),
     )
     if result.returncode != 0:
         diagnostics = result.stderr.decode("utf-8", errors="replace").strip()
@@ -653,7 +680,7 @@ def _ini_policy_projection(payload: bytes | None) -> object:
     return {
         section.lower(): dict(parser.items(section))
         for section in parser.sections()
-        if section.lower() in _INI_POLICY_SECTIONS
+        if _recognized_ini_policy_section(section)
     }
 
 
@@ -681,9 +708,11 @@ def _is_policy_path(
     *,
     base: Snapshot,
     head: Snapshot,
+    additional_policy_paths: frozenset[str] = frozenset(),
 ) -> bool:
     return (
         relative in GOVERNED_POLICY_PATHS_V1
+        or relative in additional_policy_paths
         or relative in source_lock_paths
         or _section_policy_changed(relative, base, head)
     )
@@ -695,9 +724,16 @@ def _governed_path(
     *,
     base: Snapshot,
     head: Snapshot,
+    additional_policy_paths: frozenset[str] = frozenset(),
 ) -> bool:
     path = PurePosixPath(relative)
-    return path.suffix in _PYTHON_SUFFIXES or _is_policy_path(relative, source_lock_paths, base=base, head=head)
+    return path.suffix in _PYTHON_SUFFIXES or _is_policy_path(
+        relative,
+        source_lock_paths,
+        base=base,
+        head=head,
+        additional_policy_paths=additional_policy_paths,
+    )
 
 
 def _range_paths(repository: Path, merge_base: str, head: str) -> tuple[str, ...]:
@@ -826,48 +862,64 @@ def _build_policy_bundle(
     repository: Path,
     target_commit: str,
     source_lock_paths: frozenset[str],
+    additional_policy_paths: frozenset[str] = frozenset(),
 ) -> PolicyBundle:
     target_tree = _resolve_tree(repository, target_commit)
     entries = {entry.path: entry for entry in _tree_entries(repository, target_commit)}
-    policy_root = Path(tempfile.mkdtemp(prefix=f"specfact-policy-{target_commit[:12]}-"))
-    manifest: list[dict[str, object]] = []
-    candidate_paths = sorted({*GOVERNED_POLICY_PATHS_V1, *source_lock_paths, "pyproject.toml", "setup.cfg", "tox.ini"})
-    selected_paths: list[str] = []
-    for relative in candidate_paths:
-        entry = entries.get(relative)
-        if entry is None:
-            continue
-        payload = _git_bytes(repository, ["cat-file", "blob", entry.object_id]) if entry.object_type == "blob" else b""
-        projection = _policy_projection(relative, payload)
-        if projection == "invalid-policy-document":
-            raise PolicyResolutionError(f"Unable to parse target-tip policy input: {relative}")
-        is_section_policy = relative in {"pyproject.toml", "setup.cfg", "tox.ini"}
-        if is_section_policy and not projection:
-            continue
-        if entry.object_type != "blob" or entry.git_mode not in _REGULAR_GIT_MODES:
-            raise PolicyResolutionError(f"Target-tip policy input is not a regular Git blob: {relative}")
-        destination = _safe_snapshot_path(policy_root, relative)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(payload)
-        destination.chmod(0o444)
-        selected_paths.append(relative)
-        manifest.append(
+    with ExitStack() as cleanup:
+        policy_root = Path(tempfile.mkdtemp(prefix=f"specfact-policy-{target_commit[:12]}-"))
+        cleanup.callback(shutil.rmtree, policy_root, ignore_errors=True)
+        manifest: list[dict[str, object]] = []
+        candidate_paths = sorted(
             {
-                "blob_sha": entry.object_id,
-                "content_digest": sha256_bytes(payload),
-                "git_mode": entry.git_mode,
-                "object_type": entry.object_type,
-                "path": relative,
-                "sections": projection,
+                *GOVERNED_POLICY_PATHS_V1,
+                *source_lock_paths,
+                *additional_policy_paths,
+                "pyproject.toml",
+                "setup.cfg",
+                "tox.ini",
             }
         )
-    return PolicyBundle(
-        root=policy_root,
-        source_commit=target_commit,
-        source_tree=target_tree,
-        paths=tuple(selected_paths),
-        digest=_canonical_json_digest(manifest),
-    )
+        selected_paths: list[str] = []
+        for relative in candidate_paths:
+            entry = entries.get(relative)
+            if entry is None:
+                continue
+            payload = (
+                _git_bytes(repository, ["cat-file", "blob", entry.object_id]) if entry.object_type == "blob" else b""
+            )
+            projection = _policy_projection(relative, payload)
+            if projection == "invalid-policy-document":
+                raise PolicyResolutionError(f"Unable to parse target-tip policy input: {relative}")
+            is_section_policy = relative in {"pyproject.toml", "setup.cfg", "tox.ini"}
+            if is_section_policy and not projection:
+                continue
+            if entry.object_type != "blob" or entry.git_mode not in _REGULAR_GIT_MODES:
+                raise PolicyResolutionError(f"Target-tip policy input is not a regular Git blob: {relative}")
+            destination = _safe_snapshot_path(policy_root, relative)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(payload)
+            destination.chmod(0o444)
+            selected_paths.append(relative)
+            manifest.append(
+                {
+                    "blob_sha": entry.object_id,
+                    "content_digest": sha256_bytes(payload),
+                    "git_mode": entry.git_mode,
+                    "object_type": entry.object_type,
+                    "path": relative,
+                    "sections": projection,
+                }
+            )
+        result = PolicyBundle(
+            root=policy_root,
+            source_commit=target_commit,
+            source_tree=target_tree,
+            paths=tuple(selected_paths),
+            digest=_canonical_json_digest(manifest),
+        )
+        cleanup.pop_all()
+        return result
 
 
 def _candidate_policy_evidence(
@@ -876,9 +928,18 @@ def _candidate_policy_evidence(
     base: Snapshot,
     head: Snapshot,
     statuses: dict[str, str],
+    additional_policy_paths: frozenset[str] = frozenset(),
 ) -> tuple[tuple[str, ...], str, str]:
     policy_paths = tuple(
-        path for path in selected_paths if _is_policy_path(path, source_lock_paths, base=base, head=head)
+        path
+        for path in selected_paths
+        if _is_policy_path(
+            path,
+            source_lock_paths,
+            base=base,
+            head=head,
+            additional_policy_paths=additional_policy_paths,
+        )
     )
     manifest = [
         {
@@ -1519,6 +1580,27 @@ def _pylint_values(payload: bytes, relative: str) -> dict[str, object]:
     return _pylint_ini_values(payload, relative)
 
 
+def _pylint_source_is_applicable(root: Path, relative: str) -> bool:
+    if relative not in {"pyproject.toml", "setup.cfg", "tox.ini"}:
+        return True
+    payload = _stable_regular_bytes(root / relative, max_size=16 * 1024 * 1024)
+    if relative == "pyproject.toml":
+        try:
+            document = tomllib.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
+            raise PolicyResolutionError(f"Unable to parse Pylint source {relative}: {exc}") from exc
+        tool = document.get("tool", {})
+        return (isinstance(tool, dict) and isinstance(tool.get("pylint"), dict)) or isinstance(
+            document.get("MAIN"), dict
+        )
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        parser.read_string(payload.decode("utf-8"))
+    except (UnicodeDecodeError, configparser.Error) as exc:
+        raise PolicyResolutionError(f"Unable to parse Pylint source {relative}: {exc}") from exc
+    return any(section.lower() == "pylint" or section.lower().startswith("pylint.") for section in parser.sections())
+
+
 def _pylint_projection(values: dict[str, object]) -> dict[str, object]:
     projection = dict(values)
     for option in _PYLINT_CLEARED_OPTIONS:
@@ -1556,7 +1638,11 @@ def resolve_pylint_policy(root: Path, *, expected_version: str) -> PylintPolicy:
     )
     if expected_version != "4.0.7":
         return _unknown_pylint("pylint_loader_profile_drift")
-    present = [relative for relative in source_order if os.path.lexists(root / relative)]
+    present = [
+        relative
+        for relative in source_order
+        if os.path.lexists(root / relative) and _pylint_source_is_applicable(root, relative)
+    ]
     if len(present) > 1:
         return _unknown_pylint("pylint_config_ambiguous")
     if not present:
@@ -1677,7 +1763,6 @@ def project_ruff_policy(policy: RuffPolicy, *, snapshot_root: Path) -> PolicyPro
     values.update(
         {
             "lint": lint,
-            "lint.pycodestyle.ignore-overlong-task-comments": False,
             "per-file-target-version": {},
             "namespace-packages": [],
             "src": [str(snapshot_root)],
@@ -1747,13 +1832,7 @@ def project_basedpyright_policy(
     values = dict(policy.values)
     for key in ("extends", "baselineFile", "executionEnvironments"):
         values.pop(key, None)
-    include_values = list(eligible)
-    if any(
-        candidate != eligible_path and PurePosixPath(candidate) in PurePosixPath(eligible_path).parents
-        for candidate in policy.include
-        for eligible_path in eligible
-    ):
-        include_values = [str(snapshot_root / PurePosixPath(path)) for path in eligible]
+    include_values = [str(snapshot_root / PurePosixPath(path)) for path in eligible]
     values.update(
         {
             "include": include_values,
@@ -1874,8 +1953,8 @@ def _validate_context_git_identities(document: dict[str, object]) -> None:
         if not _is_full_sha(document.get(context_field)):
             raise ContextResolutionError(f"PR context {context_field} must be a full lowercase commit SHA.")
     for context_field in ("target_tree", "head_tree"):
-        if context_field in document and not _is_full_sha(document[context_field]):
-            raise ContextResolutionError(f"PR context {context_field} must be a full lowercase tree SHA when present.")
+        if not _is_full_sha(document.get(context_field)):
+            raise ContextResolutionError(f"PR context {context_field} must be a full lowercase tree SHA.")
 
 
 def _validate_optional_digest(document: dict[str, object], field: str, *, prefix: str = "") -> None:
@@ -1895,6 +1974,17 @@ def _validate_context_runtime(document: dict[str, object]) -> None:
     runtime_document = cast(dict[str, object], project_runtime)
     for context_field in ("descriptor_digest", "build_attestation_digest"):
         _validate_optional_digest(runtime_document, context_field, prefix="project_runtime.")
+    source_lock_paths = runtime_document.get("source_lock_paths", [])
+    if not isinstance(source_lock_paths, list) or not all(
+        isinstance(path, str)
+        and path
+        and not PurePosixPath(path).is_absolute()
+        and ".." not in PurePosixPath(path).parts
+        for path in source_lock_paths
+    ):
+        raise ContextResolutionError("PR context project_runtime.source_lock_paths must be safe relative paths.")
+    if len(source_lock_paths) != len(set(cast(list[str], source_lock_paths))):
+        raise ContextResolutionError("PR context project_runtime.source_lock_paths must not contain duplicates.")
 
 
 def _load_claimed_context(request: ScopeRequest) -> _ClaimedContext | None:
@@ -1909,13 +1999,22 @@ def _load_claimed_context(request: ScopeRequest) -> _ClaimedContext | None:
     return _ClaimedContext(document=document, digest=sha256_bytes(payload))
 
 
+def _context_source_lock_paths(context: _ClaimedContext | None) -> frozenset[str]:
+    if context is None:
+        return frozenset()
+    project_runtime = context.document.get("project_runtime")
+    if not isinstance(project_runtime, dict):
+        return frozenset()
+    return frozenset(cast(list[str], project_runtime.get("source_lock_paths", [])))
+
+
 def _context_matches_range(context: _ClaimedContext, resolved: _ResolvedRange) -> bool:
     document = context.document
     return (
         document["target_commit"] == resolved.target_commit
         and document["head_commit"] == resolved.head_snapshot.commit
-        and document.get("target_tree", resolved.target_tree) == resolved.target_tree
-        and document.get("head_tree", resolved.head_snapshot.tree) == resolved.head_snapshot.tree
+        and document["target_tree"] == resolved.target_tree
+        and document["head_tree"] == resolved.head_snapshot.tree
     )
 
 
@@ -1943,6 +2042,7 @@ def _context_failure(reason: str, diagnostics: str, resolved: _ResolvedRange) ->
 
 
 def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResolution:
+    claimed_context = _load_claimed_context(request)
     base = _resolve_commit(request.repository, cast(str, request.base_ref))
     head = _resolve_commit(request.repository, cast(str, request.head_ref))
     candidates = _best_merge_bases(request.repository, base, head)
@@ -1955,48 +2055,80 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             candidate_identities=identities,
         )
     merge_base = candidates[0]
-    base_snapshot = _materialize_commit(request.repository, merge_base)
-    head_snapshot = _materialize_commit(request.repository, head)
-    source_locks = frozenset(PurePosixPath(path).as_posix() for path in request.project_runtime_source_lock_paths)
-    selected = tuple(
-        path
-        for path in _range_paths(request.repository, merge_base, head)
-        if _governed_path(path, source_locks, base=base_snapshot, head=head_snapshot)
-    )
-    statuses = _range_statuses(request.repository, merge_base, head)
-    renames = _canonical_exact_renames(base_snapshot, head_snapshot, statuses)
-    policy_bundle = _build_policy_bundle(request.repository, base, source_locks)
-    policy_paths, policy_manifest_digest, candidate_policy_change_digest = _candidate_policy_evidence(
-        selected, source_locks, base_snapshot, head_snapshot, statuses
-    )
-    rename_projection = [
-        {
-            "blob_sha": item.blob_sha,
-            "disposition": item.disposition,
-            "git_mode": item.git_mode,
-            "new_path": item.new_path,
-            "old_path": item.old_path,
-        }
-        for item in renames
-    ]
-    return _ResolvedRange(
-        candidates,
-        base,
-        _resolve_tree(request.repository, base),
-        base_snapshot,
-        head_snapshot,
-        selected,
-        source_locks,
-        statuses,
-        renames,
-        _canonical_json_digest(rename_projection),
-        _source_manifest_digest(base_snapshot),
-        _source_manifest_digest(head_snapshot),
-        policy_bundle,
-        policy_paths,
-        policy_manifest_digest,
-        candidate_policy_change_digest,
-    )
+    with ExitStack() as cleanup:
+        base_snapshot = _materialize_commit(request.repository, merge_base)
+        cleanup.callback(shutil.rmtree, base_snapshot.root, ignore_errors=True)
+        head_snapshot = _materialize_commit(request.repository, head)
+        cleanup.callback(shutil.rmtree, head_snapshot.root, ignore_errors=True)
+        source_locks = frozenset(PurePosixPath(path).as_posix() for path in request.project_runtime_source_lock_paths)
+        source_locks |= _context_source_lock_paths(claimed_context)
+        target_snapshot = base_snapshot if base == merge_base else _materialize_commit(request.repository, base)
+        if target_snapshot is not base_snapshot:
+            cleanup.callback(shutil.rmtree, target_snapshot.root, ignore_errors=True)
+        ruff_policy = resolve_ruff_policy(target_snapshot.root, expected_version="0.15.12")
+        if ruff_policy.bundle_root is not None:
+            cleanup.callback(shutil.rmtree, ruff_policy.bundle_root, ignore_errors=True)
+        if ruff_policy.status != "PASS":
+            raise PolicyResolutionError(ruff_policy.reason)
+        additional_policy_paths = frozenset(ruff_policy.closure_paths)
+        selected = tuple(
+            path
+            for path in _range_paths(request.repository, merge_base, head)
+            if _governed_path(
+                path,
+                source_locks,
+                base=base_snapshot,
+                head=head_snapshot,
+                additional_policy_paths=additional_policy_paths,
+            )
+        )
+        statuses = _range_statuses(request.repository, merge_base, head)
+        renames = _canonical_exact_renames(base_snapshot, head_snapshot, statuses)
+        policy_bundle = _build_policy_bundle(request.repository, base, source_locks, additional_policy_paths)
+        cleanup.callback(shutil.rmtree, policy_bundle.root, ignore_errors=True)
+        policy_paths, policy_manifest_digest, candidate_policy_change_digest = _candidate_policy_evidence(
+            selected,
+            source_locks,
+            base_snapshot,
+            head_snapshot,
+            statuses,
+            additional_policy_paths,
+        )
+        rename_projection = [
+            {
+                "blob_sha": item.blob_sha,
+                "disposition": item.disposition,
+                "git_mode": item.git_mode,
+                "new_path": item.new_path,
+                "old_path": item.old_path,
+            }
+            for item in renames
+        ]
+        result = _ResolvedRange(
+            candidates,
+            base,
+            _resolve_tree(request.repository, base),
+            base_snapshot,
+            head_snapshot,
+            selected,
+            source_locks,
+            statuses,
+            renames,
+            _canonical_json_digest(rename_projection),
+            _source_manifest_digest(base_snapshot),
+            _source_manifest_digest(head_snapshot),
+            policy_bundle,
+            policy_paths,
+            policy_manifest_digest,
+            candidate_policy_change_digest,
+            claimed_context,
+        )
+        if target_snapshot is not base_snapshot:
+            shutil.rmtree(target_snapshot.root, ignore_errors=True)
+        if ruff_policy.bundle_root is not None:
+            shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
+        cleanup.pop_all()
+        return result
 
 
 def _governed_range_manifests(
@@ -2045,10 +2177,7 @@ def _range_result(request: ScopeRequest, resolved: _ResolvedRange) -> ScopeResol
             ci_exit_code=1,
             diagnostics=f"Governed input is not a regular blob with an allowed Git mode: {unsafe_path}",
         )
-    try:
-        claimed_context = _load_claimed_context(request)
-    except ContextResolutionError as exc:
-        return _context_failure("unsafe_pr_context", str(exc), resolved)
+    claimed_context = resolved.claimed_context
     if claimed_context is not None and not _context_matches_range(claimed_context, resolved):
         return _context_failure("pr_context_identity_mismatch", "Claimed target/head identity mismatch.", resolved)
     context = _range_result_context(
@@ -2160,6 +2289,8 @@ def _resolve_range(request: ScopeRequest) -> ScopeResolution:
         return _unknown_range("missing_range_ref", "Range scope requires full base and head refs.")
     try:
         resolved = _materialized_range(request)
+    except ContextResolutionError as exc:
+        return _unknown_range("unsafe_pr_context", str(exc))
     except PolicyResolutionError as exc:
         return _unknown_range("policy_parse_failure", str(exc))
     except GitResolutionError as exc:
@@ -2435,7 +2566,7 @@ def _validate_immutable_scope_options(request: ScopeRequest) -> None:
         "path_filters": bool(request.path_filters),
         "no_tests": request.no_tests,
         "level": request.level is not None,
-        "enforcement": request.enforcement != "full",
+        "enforcement": request.enforcement not in {"full", "shadow"},
     }
     if rejected := next((name for name, enabled in narrowing.items() if enabled), None):
         raise InvalidScopeOption(f"{rejected} would narrow immutable range evidence")
@@ -2472,6 +2603,16 @@ def resolve_scope(request: ScopeRequest) -> ScopeResolution:
         ci_exit_code=1,
         diagnostics=f"{normalized.scope} scope materialization is not available yet.",
     )
+
+
+def cleanup_scope_resolution(resolution: ScopeResolution) -> None:
+    """Remove every temporary root owned by a completed scope resolution."""
+
+    roots = {snapshot.root for snapshot in (resolution.base_snapshot, resolution.head_snapshot) if snapshot is not None}
+    if resolution.policy_bundle is not None:
+        roots.add(resolution.policy_bundle.root)
+    for root in sorted(roots, key=lambda path: len(path.parts), reverse=True):
+        shutil.rmtree(root, ignore_errors=True)
 
 
 @ensure(lambda result: result.status in {"PASS", "UNKNOWN"})

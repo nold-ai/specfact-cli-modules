@@ -7,7 +7,7 @@ import io
 import json
 import re
 import tokenize
-from collections import Counter, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass, field
 from importlib.resources import files
 from typing import Any, Literal
@@ -627,24 +627,25 @@ def _classify_identity(
 ) -> None:
     base_bucket = list(base_buckets.get(identity, ()))
     head_bucket = list(head_buckets.get(identity, ()))
-    severities = {finding.severity for finding in (*base_bucket, *head_bucket)}
-    if _severity_multiset_changed(severities, base_bucket, head_bucket):
+    partitions = {(finding.severity, finding.blocking) for finding in (*base_bucket, *head_bucket)}
+    if _severity_multiset_changed(base_bucket, head_bucket):
         state.unknown.extend(head_bucket or base_bucket)
         return
-    for severity in sorted(severities):
-        base_partition = [item for item in base_bucket if item.severity == severity]
-        head_partition = [item for item in head_bucket if item.severity == severity]
+    for severity, blocking in sorted(partitions):
+        base_partition = [item for item in base_bucket if (item.severity, item.blocking) == (severity, blocking)]
+        head_partition = [item for item in head_bucket if (item.severity, item.blocking) == (severity, blocking)]
         _classify_partition(identity, base_partition, head_partition, request, state)
 
 
 def _severity_multiset_changed(
-    severities: set[str],
     base_bucket: list[DifferentialFinding],
     head_bucket: list[DifferentialFinding],
 ) -> bool:
-    return len(severities) > 1 and Counter(item.severity for item in base_bucket) != Counter(
-        item.severity for item in head_bucket
-    )
+    if not base_bucket or not head_bucket:
+        return False
+    return {(item.severity, item.blocking) for item in base_bucket} != {
+        (item.severity, item.blocking) for item in head_bucket
+    }
 
 
 def _classify_partition(
@@ -654,12 +655,61 @@ def _classify_partition(
     request: FindingClassificationRequest,
     state: _ClassificationState,
 ) -> None:
-    pair_count = min(len(base_partition), len(head_partition))
-    for base_item, head_item in zip(base_partition[:pair_count], head_partition[:pair_count], strict=True):
+    pairs, remaining_base, remaining_head = _continuity_compatible_pairs(base_partition, head_partition, request, state)
+    for base_item, head_item in pairs:
         _classify_pair(identity, base_item, head_item, request, state)
-    for base_item in base_partition[pair_count:]:
+    for base_item in remaining_base:
         _classify_removed_base(base_item, request, state)
-    state.introduced.extend(head_partition[pair_count:])
+    state.introduced.extend(remaining_head)
+
+
+def _continuity_compatible_pairs(
+    base_partition: list[DifferentialFinding],
+    head_partition: list[DifferentialFinding],
+    request: FindingClassificationRequest,
+    state: _ClassificationState,
+) -> tuple[
+    list[tuple[DifferentialFinding, DifferentialFinding]],
+    list[DifferentialFinding],
+    list[DifferentialFinding],
+]:
+    remaining_base = sorted(base_partition, key=_pairing_sort_key)
+    remaining_head = sorted(head_partition, key=_pairing_sort_key)
+    pairs: list[tuple[DifferentialFinding, DifferentialFinding]] = []
+    for head_item in list(remaining_head):
+        candidates = [
+            base_item
+            for base_item in remaining_base
+            if _continuity(
+                base_item,
+                head_item,
+                base_source=_source_for(base_item.path, request.base_sources),
+                head_source=_source_for(head_item.path, request.head_sources),
+                matrix_cache=state.correspondence_matrices,
+                forbidden_cache=state.forbidden_costs,
+            )[0]
+            == "unchanged"
+        ]
+        if len(candidates) == 1:
+            base_item = candidates[0]
+            pairs.append((base_item, head_item))
+            remaining_base.remove(base_item)
+            remaining_head.remove(head_item)
+    pair_count = min(len(remaining_base), len(remaining_head))
+    pairs.extend(zip(remaining_base[:pair_count], remaining_head[:pair_count], strict=True))
+    return pairs, remaining_base[pair_count:], remaining_head[pair_count:]
+
+
+def _pairing_sort_key(finding: DifferentialFinding) -> tuple[str, str, str, int, str, str, bool]:
+    return (
+        finding.analyzer,
+        finding.rule,
+        finding.path,
+        finding.line,
+        finding.message,
+        finding.severity,
+        finding.blocking,
+    )
 
 
 def _classify_pair(
@@ -756,7 +806,7 @@ _DIRECTIVE_PATTERNS: tuple[tuple[str, str, re.Pattern[str]], ...] = (
     (
         "ruff-control",
         "introduced_inline_suppression",
-        re.compile(r"\bruff:\s*(?:ignore|file-ignore|disable|enable)\s*\[", re.I),
+        re.compile(r"\bruff:\s*(?:ignore|file-ignore|disable|enable)\s*\["),
     ),
     (
         "ruff-isort",

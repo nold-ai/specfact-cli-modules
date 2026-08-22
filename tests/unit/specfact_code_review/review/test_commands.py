@@ -143,6 +143,21 @@ def test_review_run_range_defaults_to_full_enforcement(monkeypatch: Any) -> None
     assert recorded["review_mode"] == "full"
 
 
+def test_review_run_accepts_canonical_worktree_scope(monkeypatch: Any) -> None:
+    recorded: dict[str, object] = {}
+
+    def _fake_run_command(_files: list[Path], **kwargs: object) -> tuple[int, str | None]:
+        recorded.update(kwargs)
+        return 0, None
+
+    monkeypatch.setattr("specfact_code_review.review.commands.run_command", _fake_run_command)
+
+    result = runner.invoke(app, ["review", "run", "--scope", "worktree"])
+
+    assert result.exit_code == 0
+    assert recorded["scope"] == "worktree"
+
+
 def test_review_run_rejects_legacy_mode_with_explicit_enforcement(monkeypatch: Any) -> None:
     def _fail_run_command(_files: list[Path], **_kwargs: object) -> tuple[int, str | None]:
         raise AssertionError("run_command should not be called with ambiguous enforcement flags")

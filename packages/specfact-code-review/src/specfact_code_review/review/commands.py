@@ -84,7 +84,7 @@ class _ReviewRunCliInputs:
 class _ReviewRunCommandInputs:
     ctx: typer.Context
     files: list[Path] | None
-    scope: Literal["changed", "index", "range", "full"] | None
+    scope: Literal["changed", "worktree", "index", "range", "full"] | None
     path: list[Path] | None
     base_ref: str | None
     head_ref: str | None
@@ -270,7 +270,7 @@ def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
 def run(
     ctx: typer.Context,
     files: list[Path] = typer.Argument(None),
-    scope: Literal["changed", "index", "range", "full"] = typer.Option(None),
+    scope: Literal["changed", "worktree", "index", "range", "full"] = typer.Option(None),
     path: list[Path] = typer.Option(None, "--path"),
     base_ref: str | None = typer.Option(
         None,

@@ -120,7 +120,7 @@ def test_ledger_authoritative_assurance_controls_rewards_and_streaks(
         assurance_status=assurance_status,
         run_id=f"run-{assurance_status.lower()}",
         timestamp=datetime(2026, 8, 19, tzinfo=UTC),
-        score=85,
+        score=85 if assurance_status == "PASS" else 75 if assurance_status == "FAIL" else 80,
         findings=[] if assurance_status != "FAIL" else [_blocking_finding()],
         summary=f"{assurance_status} evidence",
         overall_verdict="FAIL" if assurance_status in {"FAIL", "UNKNOWN"} else "PASS",
@@ -153,6 +153,25 @@ def test_schema_1_6_missing_assurance_status_defaults_to_unknown(tmp_path: Path)
 
     assert client._verdict_for(report) == "UNKNOWN"
     assert client._reward_delta_for(report) == 0
+
+
+def test_schema_1_6_known_outcome_preserves_report_reward_delta(tmp_path: Path) -> None:
+    report = ReviewReport(
+        schema_version="1.6",
+        assurance_status="PASS",
+        run_id="run-score-derived-reward",
+        timestamp=datetime(2026, 8, 19, tzinfo=UTC),
+        score=120,
+        reward_delta=40,
+        findings=[],
+        summary="authoritative pass",
+        overall_verdict="PASS",
+        ci_exit_code=0,
+        scope_evidence={"assurance_kind": "range_candidate"},
+        analyzer_evidence=[{"id": "contracts", "evidence_outcome": "PASS"}],
+    )
+
+    assert LedgerClient(local_path=tmp_path / "ledger.json")._reward_delta_for(report) == 40
 
 
 def test_record_run_applies_pass_streak_bonus_at_five(tmp_path: Path) -> None:

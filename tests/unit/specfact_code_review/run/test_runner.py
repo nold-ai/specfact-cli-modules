@@ -74,7 +74,7 @@ def _synthetic_snapshot_context(runner_api: Any) -> Any:
         runner_api.GeneratedInputIdentity(kinds[index % len(kinds)], f"sha256:{index + 1:064x}")
         for index, _member_id in enumerate(runner_api.default_pr_range_profile().all_ids)
     )
-    return runner_api.SyntheticSnapshotContext(identities)
+    return runner_api.SyntheticSnapshotContext(identities, identities)
 
 
 def _simplification_finding(
@@ -1252,6 +1252,22 @@ def test_required_analyzer_infrastructure_error_is_unknown_not_fail() -> None:
     assert report.has_unknown_required_evidence is True
 
 
+def test_active_conditional_analyzer_infrastructure_error_is_unknown() -> None:
+    runner_api = _c14_runner()
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["semgrep-bugs"] = {
+        "execution_state": "error",
+        "evidence_outcome": "UNKNOWN",
+        "version": runner_api._C14_ANALYZER_VERSIONS["semgrep-bugs"],
+        "diagnostic": "launch failed",
+    }
+
+    report = runner_api.aggregate_profile_evidence(evidence)
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+
+
 def test_generated_analyzer_inputs_use_typed_provenance(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     context = _synthetic_snapshot_context(runner_api)
@@ -1287,11 +1303,23 @@ def test_mandatory_analyzer_eligible_and_invoked_input_manifests_match(tmp_path:
     assert all(member.eligible_digest == member.invoked_digest for member in result.members)
 
 
+def test_invocation_manifest_digest_mismatch_is_unknown() -> None:
+    runner_api = _c14_runner()
+    eligible = _synthetic_snapshot_context(runner_api).inputs
+    invoked = list(eligible)
+    invoked[0] = runner_api.GeneratedInputIdentity(invoked[0].kind, "sha256:" + "f" * 64)
+    context = runner_api.SyntheticSnapshotContext(eligible, invoked_inputs=tuple(invoked))
+
+    result = runner_api.validate_invocation_manifests(context)
+
+    assert result.status == "UNKNOWN"
+    assert result.members[0].eligible_digest != result.members[0].invoked_digest
+
+
 def test_incomplete_invocation_manifest_is_unknown() -> None:
     runner_api = _c14_runner()
-    context = runner_api.SyntheticSnapshotContext(
-        (runner_api.GeneratedInputIdentity("git_blob", "sha256:" + "a" * 64),)
-    )
+    incomplete = (runner_api.GeneratedInputIdentity("git_blob", "sha256:" + "a" * 64),)
+    context = runner_api.SyntheticSnapshotContext(incomplete, incomplete)
 
     result = runner_api.validate_invocation_manifests(context)
 
@@ -1518,12 +1546,65 @@ def test_pytest_cache_and_short_circuit_controls_are_unknown(option: str) -> Non
     assert runner_api.validate_pytest_selection_controls(_suite_policy(addopts=[option])).status == "UNKNOWN"
 
 
+@pytest.mark.parametrize(
+    "option",
+    [
+        "--cache-clear",
+        "--collect-only",
+        "--cov=src",
+        "--cov-fail-under=0",
+        "--cov-report=term",
+        "--exitfirst",
+        "--ff",
+        "--ignore-glob=tests/*",
+        "--new-first",
+        "--no-cov",
+        "--noconftest",
+        "--stepwise-skip",
+        "-qx",
+    ],
+)
+def test_pytest_all_collection_and_execution_overrides_are_unknown(option: str) -> None:
+    runner_api = _c14_runner()
+
+    assert runner_api.validate_pytest_selection_controls(_suite_policy(addopts=[option])).status == "UNKNOWN"
+
+
 def test_pytest_selection_option_catalog_covers_pinned_help() -> None:
     runner_api = _c14_runner()
     catalog = runner_api.pytest_selection_option_catalog(version="9.0.3", pytest_cov_version="7.1.0")
 
     assert catalog.unclassified_help_options == ()
-    assert {"-k", "-m", "--ignore", "--deselect", "--cov", "--cov-config"} <= set(catalog.options)
+    assert set(catalog.options) == {
+        "--cache-clear",
+        "--collect-only",
+        "--confcutdir",
+        "--cov",
+        "--cov-config",
+        "--cov-fail-under",
+        "--cov-report",
+        "--deselect",
+        "--exitfirst",
+        "--ff",
+        "--ignore",
+        "--ignore-glob",
+        "--lf",
+        "--last-failed",
+        "--maxfail",
+        "--new-first",
+        "--no-cov",
+        "--noconftest",
+        "--override-ini",
+        "--pyargs",
+        "--rootdir",
+        "--stepwise",
+        "--stepwise-skip",
+        "-c",
+        "-k",
+        "-m",
+        "-p",
+        "-x",
+    }
 
 
 def test_sealed_pytest_policy_rejects_norecursedirs() -> None:
@@ -1546,12 +1627,10 @@ def test_pytest_hook_disposition_catalog_covers_execution_and_report_hooks() -> 
     catalog = runner_api.pytest_hook_disposition_catalog(version="9.0.3")
 
     assert catalog.unclassified_hooks == ()
-    assert {
-        "pytest_runtest_protocol",
-        "pytest_runtest_makereport",
-        "pytest_runtest_logreport",
-        "pytest_report_teststatus",
-    } <= set(catalog.hooks)
+    assert len(catalog.hooks) == 52
+    assert {"pytest_addhooks", "pytest_collectstart", "pytest_runtest_protocol", "pytest_warning_recorded"} <= set(
+        catalog.hooks
+    )
 
 
 def test_pytest_builtin_collector_decision_catalog_covers_pinned_branches() -> None:
@@ -1620,6 +1699,17 @@ def test_plugin_collection_shaping_hook_is_unknown() -> None:
     result = runner_api.validate_pytest_plugins(
         ({"origin": "attested-project", "hooks": ["pytest_collection_modifyitems"]},)
     )
+    assert result.status == "UNKNOWN"
+
+
+@pytest.mark.parametrize(
+    "hook",
+    ["pytest_ignore_collect", "pytest_pycollect_makeitem", "pytest_runtest_call"],
+)
+def test_every_collection_or_execution_shaping_plugin_hook_is_unknown(hook: str) -> None:
+    runner_api = _c14_runner()
+    result = runner_api.validate_pytest_plugins(({"origin": "attested-project", "hooks": [hook]},))
+
     assert result.status == "UNKNOWN"
 
 

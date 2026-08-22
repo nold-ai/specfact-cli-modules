@@ -97,6 +97,7 @@ class AcquisitionResult:
 class PayloadEntry:
     path: str
     digest: str
+    mode: int
 
 
 @dataclass(frozen=True)
@@ -446,14 +447,19 @@ def _remove_archive_target(path: Path) -> None:
         shutil.rmtree(path)
 
 
-def _safe_archive_parent(root: Path, path: Path) -> None:
+def _safe_archive_parent(root: Path, path: Path, *, create_missing: bool = True) -> bool:
     relative = path.relative_to(root)
     current = root
     for part in relative.parts[:-1]:
         current /= part
         if current.is_symlink():
             raise ValueError(f"OCI archive parent is a symlink: {current}")
+        if not current.exists() and not create_missing:
+            return False
         current.mkdir(exist_ok=True)
+        if not current.is_dir():
+            raise ValueError(f"OCI archive parent is not a directory: {current}")
+    return True
 
 
 def _apply_whiteouts(root: Path, members: list[tarfile.TarInfo]) -> set[str]:
@@ -465,12 +471,15 @@ def _apply_whiteouts(root: Path, members: list[tarfile.TarInfo]) -> set[str]:
         _safe_archive_path(root, member.name)
         whiteouts.add(member.name)
         parent = root.joinpath(*path.parent.parts)
+        target = parent / (".opaque" if path.name == ".wh..wh..opq" else path.name.removeprefix(".wh."))
+        if not _safe_archive_parent(root, target, create_missing=False):
+            continue
         if path.name == ".wh..wh..opq":
             if parent.is_dir() and not parent.is_symlink():
                 for child in parent.iterdir():
                     _remove_archive_target(child)
         else:
-            _remove_archive_target(parent / path.name.removeprefix(".wh."))
+            _remove_archive_target(target)
     return whiteouts
 
 
@@ -1343,9 +1352,7 @@ def derive_core_0_55_1_install_handoff(
             verified,
         )
         payload_manifest = _installed_payload_manifest(provisional)
-        payload_manifest_digest = canonical_json_digest(
-            [{"digest": entry.digest, "path": entry.path} for entry in payload_manifest]
-        )
+        payload_manifest_digest = canonical_json_digest(_payload_manifest_projection(payload_manifest))
         identity = CoreInstalledModuleIdentity(
             "core-v0.55.1-installed-module-handoff-v1",
             source,
@@ -1364,7 +1371,9 @@ def derive_core_0_55_1_install_handoff(
             root_descriptor,
             payload_manifest_digest,
         )
-    except (AttributeError, ImportError, OSError, TypeError, UnicodeDecodeError, ValueError):
+    except (AttributeError, ImportError):
+        return CoreInstalledModuleHandoff("UNKNOWN", "core_api_incompatible")
+    except (OSError, TypeError, UnicodeDecodeError, ValueError):
         return CoreInstalledModuleHandoff("UNKNOWN", "invalid_core_0_55_1_install_handoff")
     return CoreInstalledModuleHandoff("PASS", identity=identity)
 
@@ -1447,11 +1456,12 @@ def _stable_payload_bytes(path: Path) -> tuple[bytes, int]:
         after = os.fstat(descriptor)
     finally:
         os.close(descriptor)
-    stable = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) == (
+    stable = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_mode) == (
         after.st_dev,
         after.st_ino,
         after.st_size,
         after.st_mtime_ns,
+        after.st_mode,
     )
     if not stat.S_ISREG(before.st_mode) or not stable:
         raise ValueError("payload changed during verification")
@@ -1473,11 +1483,15 @@ def _installed_payload_manifest(identity: InstalledModuleIdentity) -> tuple[Payl
             continue
         if not stat.S_ISREG(mode) or path.is_symlink():
             raise ValueError("payload contains a non-regular entry")
-        file_bytes, _mode = _stable_payload_bytes(path)
+        file_bytes, stable_mode = _stable_payload_bytes(path)
         relative = path.relative_to(installed_root).as_posix()
         digest = "sha256:" + hashlib.sha256(file_bytes).hexdigest()
-        manifest.append(PayloadEntry(relative, digest))
+        manifest.append(PayloadEntry(relative, digest, stat.S_IMODE(stable_mode)))
     return tuple(manifest)
+
+
+def _payload_manifest_projection(manifest: tuple[PayloadEntry, ...]) -> list[dict[str, object]]:
+    return [{"digest": entry.digest, "mode": entry.mode, "path": entry.path} for entry in manifest]
 
 
 def _legacy_payload_checksum(manifest: tuple[PayloadEntry, ...]) -> str:
@@ -1491,7 +1505,7 @@ def verify_installed_module_payload(metadata: dict[str, object] | CoreInstalledM
         return InstalledPayload("UNKNOWN", "untrusted_installed_module", identity)
     try:
         manifest = _installed_payload_manifest(identity)
-        manifest_digest = canonical_json_digest([{"digest": entry.digest, "path": entry.path} for entry in manifest])
+        manifest_digest = canonical_json_digest(_payload_manifest_projection(manifest))
         if identity.derivation_schema and manifest_digest != identity.payload_manifest_digest:
             raise ValueError("installed payload manifest differs from the verified handoff")
         if not identity.derivation_schema and _legacy_payload_checksum(manifest) != identity.checksum:
@@ -1510,13 +1524,16 @@ def _copy_builtin_entry(
     if relative.parts[:1] != ("specfact_code_review",) or ".." in relative.parts:
         raise ValueError("built-in payload manifest path is unsafe")
     file_bytes, source_mode = _stable_payload_bytes(Path(identity.installed_root) / relative)
-    if "sha256:" + hashlib.sha256(file_bytes).hexdigest() != entry.digest:
+    if "sha256:" + hashlib.sha256(file_bytes).hexdigest() != entry.digest or stat.S_IMODE(source_mode) != entry.mode:
         raise ValueError("built-in payload changed before copy")
     copied = temporary.joinpath(*relative.parts[1:])
     copied.parent.mkdir(parents=True, exist_ok=True)
     copied.write_bytes(file_bytes)
-    copied.chmod(stat.S_IMODE(source_mode))
-    if "sha256:" + hashlib.sha256(copied.read_bytes()).hexdigest() != entry.digest:
+    copied.chmod(entry.mode)
+    if (
+        "sha256:" + hashlib.sha256(copied.read_bytes()).hexdigest() != entry.digest
+        or stat.S_IMODE(copied.stat().st_mode) != entry.mode
+    ):
         raise ValueError("built-in payload changed during copy")
 
 
@@ -1588,7 +1605,7 @@ def compose_post_base_capsule(
     installed = install_builtin_payload(payload, capsule_root=capsule_root)
     if installed.status != "PASS":
         return CapsuleComposition("UNKNOWN", installed.reason)
-    payload_projection = [{"digest": entry.digest, "path": entry.path} for entry in payload.manifest]
+    payload_projection = _payload_manifest_projection(payload.manifest)
     module_payload_manifest_digest = canonical_json_digest(payload_projection)
     bootstrap_bytes = _sealed_bootstrap_source(module_payload_manifest_digest)
     bootstrap = capsule_root / "opt/specfact/bootstrap/sealed_bootstrap.py"

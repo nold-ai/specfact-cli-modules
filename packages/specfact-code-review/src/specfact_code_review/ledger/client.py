@@ -180,7 +180,9 @@ class LedgerClient:
 
     def _reward_delta_for(self, report: ReviewReport) -> int:
         if schema_version_at_least(report.schema_version, 6):
-            return {"PASS": 5, "FAIL": -5}.get(report.assurance_status or "UNKNOWN", 0)
+            if report.assurance_status in {"PASS", "FAIL"}:
+                return report.reward_delta or 0
+            return 0
         return report.reward_delta or 0
 
     def _rule_counts(self, findings: list[ReviewFinding]) -> Counter[str]:

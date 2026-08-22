@@ -43,6 +43,7 @@ class SnapshotInvocationContext:
     bootstrap: str
     project_runtime_root: Path | None
     network: Literal["none"]
+    control_root: Path | None
     reserved_import_prefixes: tuple[str, ...] = _DEFAULT_RESERVED_IMPORT_PREFIXES
 
     @property
@@ -52,6 +53,7 @@ class SnapshotInvocationContext:
                 "bootstrap": self.bootstrap,
                 "capsule_root": str(self.capsule_root),
                 "config_roots": [str(path) for path in self.config_roots],
+                "control_root": None if self.control_root is None else str(self.control_root),
                 "interpreter": self.interpreter,
                 "member": self.member,
                 "network": self.network,
@@ -209,12 +211,15 @@ def _mounts(context: SnapshotInvocationContext) -> tuple[SandboxMount, ...]:
         SandboxMount("temporary", "temporary", context.temporary_root, "/opt/specfact/tmp", False),
     ]
     if context.member == "radon":
-        control_root = context.temporary_root.parent / "radon-control"
-        if control_root.is_symlink() or (
-            control_root.exists() and (not control_root.is_dir() or any(control_root.iterdir()))
+        control_root = context.control_root
+        if (
+            control_root is None
+            or control_root.is_symlink()
+            or not control_root.exists()
+            or not control_root.is_dir()
+            or any(control_root.iterdir())
         ):
             raise ValueError("Radon control root must be an empty real directory")
-        control_root.mkdir(exist_ok=True)
         mounts.append(SandboxMount("control", "control", control_root, "/opt/specfact/control", True))
     if context.project_runtime_root is not None and context.member in _PROJECT_RUNTIME_MEMBERS:
         mounts.append(

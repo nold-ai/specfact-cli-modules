@@ -212,6 +212,8 @@ def test_run_contract_check_reports_unavailable_crosshair_but_keeps_ast_findings
     assert {finding.tool for finding in findings} == {"contract_runner", "crosshair"}
     crosshair_finding = next(finding for finding in findings if finding.tool == "crosshair")
     assert crosshair_finding.severity == "warning"
+    assert crosshair_finding.execution_state == "error"
+    assert crosshair_finding.evidence_outcome == "UNKNOWN"
 
 
 def test_run_contract_check_ignores_crosshair_findings_for_other_files(monkeypatch: MonkeyPatch) -> None:

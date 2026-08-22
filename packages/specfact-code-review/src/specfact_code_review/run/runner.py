@@ -139,6 +139,7 @@ class GeneratedInputIdentity:
 @dataclass(frozen=True)
 class SyntheticSnapshotContext:
     inputs: tuple[GeneratedInputIdentity, ...]
+    invoked_inputs: tuple[GeneratedInputIdentity, ...]
 
 
 @dataclass(frozen=True)
@@ -333,7 +334,7 @@ def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> Profil
         version = str(raw.get("version", ""))
         if execution == "error" or version != _C14_ANALYZER_VERSIONS[member_id]:
             outcome = "UNKNOWN"
-        required_unknown |= member_id in profile.required_ids and outcome == "UNKNOWN"
+        required_unknown |= outcome == "UNKNOWN"
         known_fail |= outcome == "FAIL"
         members.append(AnalyzerEvidence(member_id, execution, outcome, version, str(raw.get("diagnostic", ""))))
     assurance = "FAIL" if known_fail else "UNKNOWN" if required_unknown else "PASS"
@@ -342,20 +343,19 @@ def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> Profil
 
 def validate_invocation_manifests(context: SyntheticSnapshotContext) -> InvocationManifestResult:
     member_ids = default_pr_range_profile().all_ids
-    if len(context.inputs) != len(member_ids):
-        missing = tuple(
-            InvocationManifestEvidence(member_id, "", "") for member_id in member_ids[len(context.inputs) :]
-        )
-        present = tuple(
-            InvocationManifestEvidence(member_id, item.digest, item.digest)
-            for member_id, item in zip(member_ids, context.inputs, strict=False)
-        )
-        return InvocationManifestResult("UNKNOWN", present + missing)
     members = tuple(
-        InvocationManifestEvidence(member_id, item.digest, item.digest)
-        for member_id, item in zip(member_ids, context.inputs, strict=True)
+        InvocationManifestEvidence(
+            member_id,
+            context.inputs[index].digest if index < len(context.inputs) else "",
+            context.invoked_inputs[index].digest if index < len(context.invoked_inputs) else "",
+        )
+        for index, member_id in enumerate(member_ids)
     )
-    return InvocationManifestResult("PASS", members)
+    complete = len(context.inputs) == len(member_ids) == len(context.invoked_inputs)
+    matching = complete and all(
+        eligible == invoked for eligible, invoked in zip(context.inputs, context.invoked_inputs, strict=True)
+    )
+    return InvocationManifestResult("PASS" if matching else "UNKNOWN", members)
 
 
 def apply_target_policy(
@@ -523,10 +523,48 @@ def reconcile_test_roles(
 
 
 def validate_pytest_selection_controls(policy: dict[str, object]) -> CandidateReconciliation:
-    rejected = {"-k", "-m", "--ignore", "--deselect", "--lf", "--last-failed", "-x", "--stepwise"}
-    addopts = {str(value).split("=", maxsplit=1)[0] for value in cast(list[object], policy.get("addopts", []))}
+    rejected = {
+        "--cache-clear",
+        "--co",
+        "--collect-only",
+        "--confcutdir",
+        "--cov",
+        "--cov-config",
+        "--cov-fail-under",
+        "--cov-report",
+        "--deselect",
+        "--exitfirst",
+        "--ff",
+        "--ignore",
+        "--ignore-glob",
+        "--lf",
+        "--last-failed",
+        "--maxfail",
+        "--new-first",
+        "--no-cov",
+        "--noconftest",
+        "--override-ini",
+        "--pyargs",
+        "--rootdir",
+        "--stepwise",
+        "--stepwise-skip",
+        "-c",
+        "-k",
+        "-m",
+        "-p",
+        "-x",
+    }
+    raw_addopts = [str(value) for value in cast(list[object], policy.get("addopts", []))]
+    addopts = {value.split("=", maxsplit=1)[0] for value in raw_addopts}
+    short_cluster_rejected = any(
+        value.startswith("-")
+        and not value.startswith("--")
+        and len(value) > 2
+        and any(flag in value[1:] for flag in ("k", "m", "x", "c", "p"))
+        for value in raw_addopts
+    )
     config = cast(dict[str, object], policy.get("config", {}))
-    if rejected & addopts or "--maxfail" in addopts or config.get("norecursedirs"):
+    if rejected & addopts or short_cluster_rejected or config.get("norecursedirs"):
         return CandidateReconciliation("UNKNOWN", "pytest_selection_policy_unsupported")
     return CandidateReconciliation("PASS")
 
@@ -540,7 +578,41 @@ def validate_unittest_controls(controls: dict[str, dict[str, object]]) -> Candid
 
 
 def validate_pytest_plugins(plugins: tuple[dict[str, object], ...]) -> CandidateReconciliation:
-    forbidden = {"pytest_collection_modifyitems", "pytest_runtest_makereport"}
+    forbidden = {
+        "pytest_addhooks",
+        "pytest_addoption",
+        "pytest_cmdline_main",
+        "pytest_cmdline_parse",
+        "pytest_collect_directory",
+        "pytest_collect_file",
+        "pytest_collection",
+        "pytest_collection_finish",
+        "pytest_collection_modifyitems",
+        "pytest_collectreport",
+        "pytest_collectstart",
+        "pytest_configure",
+        "pytest_deselected",
+        "pytest_generate_tests",
+        "pytest_ignore_collect",
+        "pytest_itemcollected",
+        "pytest_load_initial_conftests",
+        "pytest_make_collect_report",
+        "pytest_make_parametrize_id",
+        "pytest_markeval_namespace",
+        "pytest_plugin_registered",
+        "pytest_pycollect_makeitem",
+        "pytest_pycollect_makemodule",
+        "pytest_pyfunc_call",
+        "pytest_runtest_call",
+        "pytest_runtest_makereport",
+        "pytest_runtest_protocol",
+        "pytest_runtest_setup",
+        "pytest_runtest_teardown",
+        "pytest_runtestloop",
+        "pytest_sessionfinish",
+        "pytest_sessionstart",
+        "pytest_unconfigure",
+    }
     if any(forbidden & set(cast(list[str], plugin.get("hooks", []))) for plugin in plugins):
         return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
     return CandidateReconciliation("PASS")
@@ -551,14 +623,58 @@ def pytest_hook_disposition_catalog(*, version: str) -> PytestHookCatalog:
         return PytestHookCatalog((), ("version_drift",))
     return PytestHookCatalog(
         (
+            "pytest_addhooks",
+            "pytest_addoption",
+            "pytest_assertion_pass",
+            "pytest_assertrepr_compare",
+            "pytest_cmdline_main",
+            "pytest_cmdline_parse",
+            "pytest_collect_directory",
+            "pytest_collect_file",
+            "pytest_collection",
+            "pytest_collection_finish",
             "pytest_collection_modifyitems",
+            "pytest_collectreport",
+            "pytest_collectstart",
+            "pytest_configure",
+            "pytest_deselected",
+            "pytest_enter_pdb",
+            "pytest_exception_interact",
+            "pytest_fixture_post_finalizer",
+            "pytest_fixture_setup",
+            "pytest_generate_tests",
+            "pytest_ignore_collect",
+            "pytest_internalerror",
+            "pytest_itemcollected",
+            "pytest_keyboard_interrupt",
+            "pytest_leave_pdb",
+            "pytest_load_initial_conftests",
+            "pytest_make_collect_report",
+            "pytest_make_parametrize_id",
+            "pytest_markeval_namespace",
+            "pytest_plugin_registered",
+            "pytest_pycollect_makeitem",
+            "pytest_pycollect_makemodule",
+            "pytest_pyfunc_call",
+            "pytest_report_collectionfinish",
+            "pytest_report_from_serializable",
+            "pytest_report_header",
+            "pytest_report_teststatus",
+            "pytest_report_to_serializable",
+            "pytest_runtest_call",
+            "pytest_runtest_logfinish",
+            "pytest_runtest_logreport",
+            "pytest_runtest_logstart",
+            "pytest_runtest_makereport",
             "pytest_runtest_protocol",
             "pytest_runtest_setup",
-            "pytest_runtest_call",
             "pytest_runtest_teardown",
-            "pytest_runtest_makereport",
-            "pytest_runtest_logreport",
-            "pytest_report_teststatus",
+            "pytest_runtestloop",
+            "pytest_sessionfinish",
+            "pytest_sessionstart",
+            "pytest_terminal_summary",
+            "pytest_unconfigure",
+            "pytest_warning_recorded",
         )
     )
 
@@ -568,17 +684,34 @@ def pytest_selection_option_catalog(*, version: str, pytest_cov_version: str) ->
         return PytestOptionCatalog((), ("version_drift",))
     return PytestOptionCatalog(
         (
-            "-k",
-            "-m",
-            "--ignore",
-            "--deselect",
-            "--lf",
-            "--last-failed",
-            "-x",
-            "--maxfail",
-            "--stepwise",
+            "--cache-clear",
+            "--collect-only",
+            "--confcutdir",
             "--cov",
             "--cov-config",
+            "--cov-fail-under",
+            "--cov-report",
+            "--deselect",
+            "--exitfirst",
+            "--ff",
+            "--ignore",
+            "--ignore-glob",
+            "--lf",
+            "--last-failed",
+            "--maxfail",
+            "--new-first",
+            "--no-cov",
+            "--noconftest",
+            "--override-ini",
+            "--pyargs",
+            "--rootdir",
+            "--stepwise",
+            "--stepwise-skip",
+            "-c",
+            "-k",
+            "-m",
+            "-p",
+            "-x",
         )
     )
 

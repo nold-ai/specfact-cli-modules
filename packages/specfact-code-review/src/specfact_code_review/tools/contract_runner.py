@@ -281,13 +281,8 @@ def _execute_crosshair(files: list[Path], *, bug_hunt: bool) -> subprocess.Compl
         )
     except subprocess.TimeoutExpired:
         return _crosshair_unknown(files[0], "CrossHair timed out before mandatory evidence completed.")
-    except (FileNotFoundError, OSError) as exc:
-        return tool_error(
-            tool="crosshair",
-            file_path=files[0],
-            message=f"Unable to execute CrossHair: {exc}",
-            severity="warning",
-        )
+    except OSError as exc:
+        return _crosshair_unknown(files[0], f"Unable to execute CrossHair: {exc}")
 
 
 def _parse_crosshair_findings(output: str, files: list[Path]) -> list[ReviewFinding]:

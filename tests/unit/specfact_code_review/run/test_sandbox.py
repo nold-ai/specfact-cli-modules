@@ -36,6 +36,7 @@ def _context(tmp_path: Path, sandbox_api: Any, *, member: str = "ruff") -> Any:
         bootstrap="/opt/specfact/bootstrap/runner.py",
         project_runtime_root=None,
         network="none",
+        control_root=tmp_path / "control",
     )
 
 
@@ -68,12 +69,32 @@ def test_analyzer_subprocesses_use_snapshot_invocation_context(sandbox_api: Any,
 
 
 def test_radon_uses_a_mounted_empty_control_working_directory(sandbox_api: Any, tmp_path: Path) -> None:
-    plan = sandbox_api.build_launch_plan(_context(tmp_path, sandbox_api, member="radon"))
+    context = _context(tmp_path, sandbox_api, member="radon")
+    context.control_root.mkdir()
+    plan = sandbox_api.build_launch_plan(context)
 
     assert plan.cwd == "/opt/specfact/control"
     control = next(mount for mount in plan.mounts if mount.destination == plan.cwd)
     assert control.role == "control"
     assert control.read_only is True
+    assert control.source.is_dir()
+    assert not control.source.is_symlink()
+    assert not tuple(control.source.iterdir())
+
+
+@pytest.mark.parametrize("kind", ["non-empty", "symlink"])
+def test_radon_rejects_untrusted_control_root(sandbox_api: Any, tmp_path: Path, kind: str) -> None:
+    context = _context(tmp_path, sandbox_api, member="radon")
+    if kind == "non-empty":
+        context.control_root.mkdir()
+        (context.control_root / "candidate.txt").write_text("untrusted", encoding="utf-8")
+    else:
+        target = tmp_path / "control-target"
+        target.mkdir()
+        context.control_root.symlink_to(target, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="empty real directory"):
+        sandbox_api.build_launch_plan(context)
 
 
 def test_snapshot_context_mounts_every_sealed_analyzer_config_root(sandbox_api: Any, tmp_path: Path) -> None:

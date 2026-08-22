@@ -32,14 +32,15 @@ def test_review_tool_pip_packages_are_locked_not_host_dependencies() -> None:
         / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json"
     )
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
-    locked = {
-        _normalized_distribution(str(component["id"]))
-        for environment in lock["environments"]
-        for component in environment["components"]
-        if component.get("kind") == "python_distribution"
-    }
-    for pip_name in REVIEW_TOOL_PIP_PACKAGES.values():
-        assert _normalized_distribution(pip_name) in locked
+    expected = {_normalized_distribution(pip_name) for pip_name in REVIEW_TOOL_PIP_PACKAGES.values()}
+    for environment in lock["environments"]:
+        locked = {
+            _normalized_distribution(str(component["id"]))
+            for component in environment["components"]
+            if component.get("kind") == "python_distribution"
+        }
+        missing = expected - locked
+        assert not missing, f"{environment.get('python_abi')} is missing locked analyzers: {sorted(missing)}"
 
 
 def test_module_package_authenticates_suppression_catalog_resource() -> None:

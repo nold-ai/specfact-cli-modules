@@ -71,11 +71,11 @@ def test_pr_orchestrator_pins_exact_core_schema_smoke() -> None:
 
 def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
     workflow = _workflow_text()
-
-    assert "0.55.1+vendor" in workflow
-    assert "==0.55.1" in workflow
-    assert "reject-core-version-alias" in workflow
     exact_job = _job_text(workflow, "exact-core-schema-compatibility")
+
+    assert "0.55.1+vendor" in exact_job
+    assert re.search(r"(?<!=)==0\.55\.1", exact_job)
+    assert "reject-core-version-alias" in exact_job
     assert "ref: dev" not in exact_job
     assert "ref: main" not in exact_job
     assert "FALLBACK_REF" not in exact_job
@@ -104,7 +104,7 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         "permutations",
         "gzip",
         "c14-manifest-{abi}.json.gz",
-        "actions/upload-artifact@v4",
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
         "c14-manifest-${{ matrix.python }}.json.gz",
         "pr-range-v1-toolchain-lock.json",
         'credential=f"{registry_actor}:{registry_token}"',
@@ -141,6 +141,8 @@ def test_exact_core_smoke_quotes_tree_revision_and_redacts_acquisition_urls() ->
     assert "rev-parse 'HEAD^{tree}'" in exact_job
     assert "urlsplit" in exact_job
     assert "urlunsplit" in exact_job
+    assert "parsed.hostname" in exact_job
+    assert "parsed.netloc" not in exact_job
     assert '"acquisition_final_url": acquisition.final_url' not in exact_job
     assert '"redirects": [hop.url' not in exact_job
 

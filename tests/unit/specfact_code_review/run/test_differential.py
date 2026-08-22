@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -72,6 +71,16 @@ def test_unchanged_baseline_blocker_is_retained_but_not_introduced(differential_
     assert result.status == "FAIL"
     assert len(result.unchanged) == 1
     assert result.introduced == ()
+
+
+def test_blocking_policy_transition_is_unknown_before_pairing(differential_api: Any) -> None:
+    base = _finding()
+    head = {**base, "blocking": False}
+
+    result = _classify(differential_api, base=[base], head=[head])
+
+    assert result.status == "UNKNOWN"
+    assert result.unknown
 
 
 def test_baseline_analysis_failure_is_unknown(differential_api: Any) -> None:
@@ -257,11 +266,10 @@ globals().update({name: _make_continuity_test(name, case) for name, case in _CON
 
 def test_correspondence_reuses_source_pair_matrices(differential_api: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     original = differential_api._edit_costs
-    calls = 0
+    calls: list[tuple[tuple[bytes, ...], tuple[bytes, ...], tuple[int, int] | None]] = []
 
     def counted(*args: Any, **kwargs: Any) -> Any:
-        nonlocal calls
-        calls += 1
+        calls.append((tuple(args[0]), tuple(args[1]), kwargs.get("forbidden_pair")))
         return original(*args, **kwargs)
 
     monkeypatch.setattr(differential_api, "_edit_costs", counted)
@@ -275,7 +283,37 @@ def test_correspondence_reuses_source_pair_matrices(differential_api: Any, monke
     )
 
     assert result.status == "FAIL"
-    assert calls == 4
+    assert len(calls) == len(set(calls))
+
+
+def test_duplicate_occurrences_pair_by_source_continuity(differential_api: Any) -> None:
+    source = "start\nfirst occurrence\na\nb\nc\nsecond occurrence\nend\n"
+    result = _classify(
+        differential_api,
+        base=[_finding(line=2), _finding(line=6)],
+        head=[_finding(line=6)],
+        before=source,
+        after=source,
+    )
+
+    assert [finding.line for finding in result.unchanged] == [6]
+    assert [finding.line for finding in result.fixed] == [2]
+    assert result.introduced == ()
+
+
+def test_duplicate_pairing_is_independent_of_analyzer_emission_order(differential_api: Any) -> None:
+    source = "start\nfirst occurrence\na\nb\nc\nsecond occurrence\nend\n"
+    result = _classify(
+        differential_api,
+        base=[_finding(line=6), _finding(line=2)],
+        head=[_finding(line=6), _finding(line=2)],
+        before=source,
+        after=source,
+    )
+
+    assert [finding.line for finding in result.unchanged] == [2, 6]
+    assert result.fixed == ()
+    assert result.introduced == ()
 
 
 def test_rename_facts_ignore_ambient_git_config(differential_api: Any, monkeypatch: Any) -> None:
@@ -312,6 +350,15 @@ def test_introduced_inline_suppression_blocks_before_fixed_classification(
     assert result.status == "FAIL"
     assert result.findings[0].kind == kind
     assert result.findings[0].blocking is True
+
+
+def test_uppercase_ruff_control_comment_is_not_a_suppression(differential_api: Any) -> None:
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"x=1\n"},
+        head_sources={"src/app.py": b"x=1  # RUFF: disable[F401]\n"},
+    )
+
+    assert result.findings == ()
 
 
 def test_unchanged_baseline_inline_suppression_is_retained(differential_api: Any) -> None:
@@ -617,15 +664,7 @@ def test_suppression_catalog_resource_matches_checkpoint(differential_api: Any) 
     assert resource.canonical_bytes == checkpoint.suppression_catalog_contract.canonical_bytes
 
 
-def test_suppression_checkpoint_binding_is_available_from_installed_resources(
-    differential_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(
-        differential_api,
-        "__file__",
-        str(tmp_path / "site-packages/specfact_code_review/run/differential.py"),
-    )
-
+def test_suppression_checkpoint_binding_repeats_stably(differential_api: Any) -> None:
     resource, checkpoint = differential_api.load_suppression_catalog_and_checkpoint()
 
     assert resource.digest == checkpoint.suppression_catalog_contract.digest

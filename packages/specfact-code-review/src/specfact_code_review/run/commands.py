@@ -11,6 +11,7 @@ import ast
 import hashlib
 import importlib
 import json
+import re
 import subprocess
 import sys
 from collections import defaultdict
@@ -38,6 +39,7 @@ from specfact_code_review.run.scope import (
     RunCommandError,
     ScopeRequest,
     ScopeResolution,
+    cleanup_scope_resolution,
     discover_full_python_files,
     discover_worktree_python_files,
     filter_files_by_focus as _filter_files_by_focus,
@@ -48,7 +50,7 @@ from specfact_code_review.run.scope import (
 
 console = Console()
 progress_console = Console(stderr=True)
-AutoScope = Literal["changed", "index", "range", "full"]
+AutoScope = Literal["changed", "worktree", "index", "range", "full"]
 ReviewRunMode = Literal["full", "changed", "shadow"]
 ReviewLevelFilter = Literal["error", "warning"]
 
@@ -597,7 +599,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
 def _as_auto_scope(value: object) -> AutoScope | None:
     if value is None:
         return None
-    if isinstance(value, str) and value in {"changed", "index", "range", "full"}:
+    if isinstance(value, str) and value in {"changed", "worktree", "index", "range", "full"}:
         return cast(AutoScope, value)
     raise RunCommandError(f"Invalid scope value: {value!r}")
 
@@ -774,7 +776,44 @@ def _scope_evidence(resolution: ScopeResolution) -> dict[str, object]:
         "head_source_manifest_digest": resolution.head_source_manifest_digest,
         "policy_manifest_digest": resolution.policy_manifest_digest,
         "candidate_policy_change_digest": resolution.candidate_policy_change_digest,
+        "index_tree": resolution.index_tree,
+        "selection_tree": resolution.selection_tree,
+        "input_manifest": {
+            path: {
+                "object_type": identity.object_type,
+                "git_mode": identity.git_mode,
+                "blob_sha": identity.blob_sha,
+                "content_digest": identity.content_digest,
+                "open_policy": identity.open_policy,
+            }
+            for path, identity in sorted(resolution.input_manifest.items())
+        },
+        "index_metadata": {
+            path: {
+                "git_mode": metadata.git_mode,
+                "blob_sha": metadata.blob_sha,
+                "stage": metadata.stage,
+                "intent_to_add": metadata.intent_to_add,
+                "flag_tag": metadata.flag_tag,
+            }
+            for path, metadata in sorted(resolution.index_metadata.items())
+        },
     }
+
+
+def _repository_slug(repository: Path) -> str | None:
+    result = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"],
+        cwd=repository,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        return None
+    match = re.search(r"github\.com(?::|/)([^/]+)/([^/]+?)(?:\.git)?$", result.stdout.strip())
+    return f"{match.group(1)}/{match.group(2)}" if match is not None else None
 
 
 def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
@@ -797,25 +836,30 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
             preview_fixes=request.preview_fixes,
             with_mutation=request.with_mutation,
             pr_context_file=request.pr_context_file,
+            repository_slug=_repository_slug(Path.cwd()),
         )
     )
-    status = resolution.status
-    reason = resolution.reason
-    if status == "PASS":
-        status = "UNKNOWN"
-        reason = "snapshot_differential_execution_unavailable"
-    return ReviewReport(
-        schema_version="1.6",
-        run_id=f"review-scope-{resolution.resolved_head_commit or 'unresolved'}",
-        score=0,
-        findings=[],
-        summary=resolution.diagnostics or reason.replace("_", " "),
-        assurance_status=cast(Any, status),
-        has_unknown_required_evidence=status == "UNKNOWN",
-        scope_evidence={**_scope_evidence(resolution), "reason": reason},
-        analyzer_evidence=[],
-        enforcement_mode="shadow" if request.review_mode == "shadow" else "full",
-    )
+    try:
+        status = resolution.status
+        reason = resolution.reason
+        if status == "PASS":
+            status = "UNKNOWN"
+            reason = "snapshot_differential_execution_unavailable"
+        run_identity = resolution.resolved_head_commit or resolution.index_tree or "unresolved"
+        return ReviewReport(
+            schema_version="1.6",
+            run_id=f"review-scope-{run_identity}",
+            score=0,
+            findings=[],
+            summary=resolution.diagnostics or reason.replace("_", " "),
+            assurance_status=cast(Any, status),
+            has_unknown_required_evidence=status == "UNKNOWN",
+            scope_evidence={**_scope_evidence(resolution), "reason": reason},
+            analyzer_evidence=[],
+            enforcement_mode="shadow" if request.review_mode == "shadow" else "full",
+        )
+    finally:
+        cleanup_scope_resolution(resolution)
 
 
 def _validate_review_request(request: ReviewRunRequest) -> None:
@@ -1097,7 +1141,7 @@ def run_command(
     file_focus_facets = tuple(facet for facet in request.focus_facets if facet in {"source", "tests", "docs"})
     include_for_resolve = request.include_tests or bool(file_focus_facets)
     legacy_scope: Literal["changed", "full"] | None = None
-    if request.scope == "changed":
+    if request.scope in {"changed", "worktree"}:
         legacy_scope = "changed"
     elif request.scope == "full":
         legacy_scope = "full"

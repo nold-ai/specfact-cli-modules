@@ -13,7 +13,7 @@ import yaml
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
-from specfact_code_review.run import commands as run_commands
+from specfact_code_review.run import commands as run_commands, scope as review_scope
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 from specfact_requirements.requirements.lifecycle import build_plan
 
@@ -253,8 +253,7 @@ def test_requirements_evidence_context_canonicalizes_equivalent_json(tmp_path: P
 def test_requirements_evidence_attachment_preserves_schema_1_6_assurance_status(tmp_path: Path) -> None:
     proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
     context = run_commands._requirements_evidence_context(proof_path)
-    report_type: Any = ReviewReport
-    report = report_type(
+    report = ReviewReport(
         schema_version="1.6",
         assurance_status="UNKNOWN",
         run_id="unknown-review",
@@ -276,6 +275,108 @@ def test_requirements_evidence_attachment_preserves_schema_1_6_assurance_status(
     assert attached.ci_exit_code == 1
     assert attached.scope_evidence == report.scope_evidence
     assert attached.analyzer_evidence == report.analyzer_evidence
+
+
+def test_index_scope_evidence_serializes_captured_identity() -> None:
+    identity = review_scope.InputIdentity("blob", "100644", "a" * 40, "sha256:" + "b" * 64)
+    metadata = review_scope.IndexMetadata("100644", "a" * 40, 0, False, "H")
+    resolution = review_scope.ScopeResolution(
+        status="PASS",
+        reason="resolved",
+        selected_paths=("src/app.py",),
+        assurance_kind="index",
+        effective_assurance_kind="index",
+        ci_exit_code=0,
+        input_manifest={"src/app.py": identity},
+        index_metadata={"src/app.py": metadata},
+        index_tree="c" * 40,
+        selection_tree="c" * 40,
+    )
+
+    evidence = run_commands._scope_evidence(resolution)
+
+    assert evidence["index_tree"] == "c" * 40
+    assert evidence["selection_tree"] == "c" * 40
+    input_manifest = evidence["input_manifest"]
+    index_metadata = evidence["index_metadata"]
+    assert isinstance(input_manifest, dict)
+    assert isinstance(index_metadata, dict)
+    assert input_manifest["src/app.py"]["blob_sha"] == "a" * 40
+    assert index_metadata["src/app.py"]["flag_tag"] == "H"
+
+
+def test_immutable_scope_report_cleans_materialized_roots(monkeypatch: Any, tmp_path: Path) -> None:
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    policy_root = tmp_path / "policy"
+    for root in (base_root, head_root, policy_root):
+        root.mkdir()
+
+    def snapshot(root: Path, commit: str) -> review_scope.Snapshot:
+        return review_scope.Snapshot(root, commit, "b" * 40, {}, {})
+
+    resolution = review_scope.ScopeResolution(
+        status="PASS",
+        reason="resolved",
+        selected_paths=("src/app.py",),
+        assurance_kind="range_preview",
+        effective_assurance_kind="range_preview",
+        ci_exit_code=0,
+        base_snapshot=snapshot(base_root, "a" * 40),
+        head_snapshot=snapshot(head_root, "c" * 40),
+        materialized=True,
+        policy_bundle=review_scope.PolicyBundle(policy_root, "a" * 40, "b" * 40, (), "sha256:" + "d" * 64),
+    )
+    monkeypatch.setattr(run_commands, "resolve_scope", lambda _request: resolution)
+
+    run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="c" * 40)
+    )
+
+    assert not base_root.exists()
+    assert not head_root.exists()
+    assert not policy_root.exists()
+
+
+def test_immutable_scope_request_propagates_repository_identity(monkeypatch: Any) -> None:
+    captured: dict[str, object] = {}
+
+    def resolve(request: object) -> review_scope.ScopeResolution:
+        captured["request"] = request
+        return review_scope.ScopeResolution(
+            status="UNKNOWN",
+            reason="test",
+            selected_paths=(),
+            assurance_kind="range_preview",
+            effective_assurance_kind="range_preview",
+            ci_exit_code=1,
+        )
+
+    monkeypatch.setattr(run_commands, "resolve_scope", resolve)
+    monkeypatch.setattr(run_commands, "_repository_slug", lambda _root: "nold-ai/specfact-cli-modules")
+
+    run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="b" * 40)
+    )
+
+    request = captured["request"]
+    assert isinstance(request, review_scope.ScopeRequest)
+    assert request.repository_slug == "nold-ai/specfact-cli-modules"
+
+
+def test_repository_slug_accepts_authenticated_github_origin(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        run_commands.subprocess,
+        "run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(
+            command,
+            0,
+            "git@github.com:nold-ai/specfact-cli-modules.git\n",
+            "",
+        ),
+    )
+
+    assert run_commands._repository_slug(Path.cwd()) == "nold-ai/specfact-cli-modules"
 
 
 def test_run_command_rejects_incomplete_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:

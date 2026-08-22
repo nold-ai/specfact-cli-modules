@@ -11,6 +11,19 @@ from typing import Any
 import pytest
 
 
+_GIT_LOCAL_ENV_VARS = frozenset(
+    {
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_DIR",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_PREFIX",
+        "GIT_WORK_TREE",
+    }
+)
+
+
 def _git(repo: Path, *args: str) -> str:
     result = subprocess.run(
         ["git", *args],
@@ -19,7 +32,7 @@ def _git(repo: Path, *args: str) -> str:
         capture_output=True,
         text=True,
         env={
-            **os.environ,
+            **{key: value for key, value in os.environ.items() if key not in _GIT_LOCAL_ENV_VARS},
             "GIT_CONFIG_NOSYSTEM": "1",
             "GIT_CONFIG_GLOBAL": os.devnull,
             "GIT_CONFIG_SYSTEM": os.devnull,
@@ -126,6 +139,61 @@ def test_scope_git_failure_is_unknown_and_blocks_enforcement(scope_api: Any, git
     assert result.status == "UNKNOWN"
     assert result.ci_exit_code == 1
     assert "simulated failure" in result.diagnostics
+
+
+def test_scope_git_subprocesses_ignore_inherited_repository_local_environment(
+    scope_api: Any, git_repo: Path, tmp_path: Path, monkeypatch: Any
+) -> None:
+    base, head = _make_range(git_repo)
+    monkeypatch.setenv("GIT_DIR", str(tmp_path / "poison.git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(tmp_path / "poison-worktree"))
+
+    result = scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head))
+
+    assert result.status == "PASS"
+    assert result.selected_paths == ("src/app.py",)
+
+
+def test_range_policy_failure_removes_materialized_temporary_roots(
+    scope_api: Any, git_repo: Path, tmp_path: Path, monkeypatch: Any
+) -> None:
+    base, head = _make_range(git_repo)
+    created: list[Path] = []
+
+    def tracked_mkdtemp(*, prefix: str) -> str:
+        root = tmp_path / f"{prefix}{len(created)}"
+        root.mkdir()
+        created.append(root)
+        return str(root)
+
+    def fail_policy(*_args: Any, **_kwargs: Any) -> Any:
+        raise scope_api.PolicyResolutionError("simulated policy failure")
+
+    monkeypatch.setattr(scope_api.tempfile, "mkdtemp", tracked_mkdtemp)
+    monkeypatch.setattr(scope_api, "_build_policy_bundle", fail_policy)
+
+    result = scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "policy_parse_failure"
+    assert created
+    assert all(not root.exists() for root in created)
+
+
+def test_git_text_output_uses_reversible_surrogateescape(scope_api: Any, git_repo: Path, monkeypatch: Any) -> None:
+    observed: dict[str, object] = {}
+
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        observed.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, "src/\udcff.py\0", "")
+
+    monkeypatch.setattr(scope_api.subprocess, "run", run)
+
+    result = scope_api._git(git_repo, ["ls-tree", "-z", "HEAD"])
+
+    assert result.stdout == "src/\udcff.py\0"
+    assert observed["encoding"] == "utf-8"
+    assert observed["errors"] == "surrogateescape"
 
 
 def test_empty_resolved_range_is_not_applicable(scope_api: Any, git_repo: Path) -> None:
@@ -292,6 +360,14 @@ def test_range_scope_omitted_enforcement_defaults_to_full(scope_api: Any, git_re
     assert normalized.enforcement == "full"
 
 
+def test_range_scope_allows_shadow_enforcement(scope_api: Any, git_repo: Path) -> None:
+    base, head = _make_range(git_repo)
+
+    result = scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head, enforcement="shadow"))
+
+    assert result.status == "PASS"
+
+
 @pytest.mark.parametrize(
     "narrowing",
     [
@@ -314,7 +390,15 @@ def test_range_scope_rejects_narrowing_filters_before_analysis(
         scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head, **narrowing))
 
 
-def _write_context(path: Path, *, repository: str, base: str, head: str) -> None:
+def _write_context(
+    path: Path,
+    *,
+    repository: str,
+    base: str,
+    head: str,
+    target_tree: str,
+    head_tree: str,
+) -> None:
     path.write_text(
         json.dumps(
             {
@@ -325,8 +409,10 @@ def _write_context(path: Path, *, repository: str, base: str, head: str) -> None
                 "pull_request": 416,
                 "target_ref": "refs/heads/dev",
                 "target_commit": base,
+                "target_tree": target_tree,
                 "head_ref": "refs/heads/feature/code-review-14-delivery",
                 "head_commit": head,
+                "head_tree": head_tree,
             }
         ),
         encoding="utf-8",
@@ -338,7 +424,14 @@ def test_range_candidate_rejects_base_ref_mismatching_claimed_target_tip(
 ) -> None:
     base, head = _make_range(git_repo)
     context = tmp_path / "context.json"
-    _write_context(context, repository="example/repo", base="f" * 40, head=head)
+    _write_context(
+        context,
+        repository="example/repo",
+        base="f" * 40,
+        head=head,
+        target_tree="f" * 40,
+        head_tree=_git(git_repo, "rev-parse", f"{head}^{{tree}}"),
+    )
 
     result = scope_api.resolve_scope(
         _range_request(scope_api, git_repo, base, head, pr_context_file=context, repository_slug="example/repo")
@@ -351,7 +444,14 @@ def test_range_candidate_rejects_base_ref_mismatching_claimed_target_tip(
 def test_producer_never_self_asserts_pr_range_from_context_file(scope_api: Any, git_repo: Path, tmp_path: Path) -> None:
     base, head = _make_range(git_repo)
     context = tmp_path / "context.json"
-    _write_context(context, repository="example/repo", base=base, head=head)
+    _write_context(
+        context,
+        repository="example/repo",
+        base=base,
+        head=head,
+        target_tree=_git(git_repo, "rev-parse", f"{base}^{{tree}}"),
+        head_tree=_git(git_repo, "rev-parse", f"{head}^{{tree}}"),
+    )
 
     result = scope_api.resolve_scope(
         _range_request(scope_api, git_repo, base, head, pr_context_file=context, repository_slug="example/repo")
@@ -480,7 +580,8 @@ def test_coverage_supported_config_sources_follow_pinned_precedence(
 def test_pylint_supported_config_sources_are_governed_and_explicit(
     scope_api: Any, tmp_path: Path, source_name: str
 ) -> None:
-    (tmp_path / source_name).write_text("[MAIN]\n", encoding="utf-8")
+    content = "[pylint.main]\n" if source_name in {"setup.cfg", "tox.ini"} else "[MAIN]\n"
+    (tmp_path / source_name).write_text(content, encoding="utf-8")
 
     policy = scope_api.resolve_pylint_policy(tmp_path, expected_version="4.0.7")
 
@@ -596,6 +697,21 @@ def test_ruff_transitive_extend_policy_is_governed_and_sealed(scope_api: Any, tm
     assert policy.closure_digest.startswith("sha256:")
 
 
+def test_range_change_to_transitive_ruff_config_is_governed(scope_api: Any, git_repo: Path) -> None:
+    (git_repo / "ruff.toml").write_text("extend='config/base.toml'\n", encoding="utf-8")
+    (git_repo / "config").mkdir()
+    (git_repo / "config/base.toml").write_text("line-length=80\n", encoding="utf-8")
+    base = _commit(git_repo, "add ruff policy graph")
+    (git_repo / "config/base.toml").write_text("line-length=88\n", encoding="utf-8")
+    head = _commit(git_repo, "change transitive ruff policy")
+
+    result = scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "candidate_policy_change"
+    assert result.selected_paths == ("config/base.toml",)
+
+
 @pytest.mark.parametrize("extend", ["../escape.toml", "missing.toml", "ruff.toml"], ids=["escape", "missing", "cycle"])
 def test_ruff_extend_rejects_escape_cycle_or_missing_input(scope_api: Any, tmp_path: Path, extend: str) -> None:
     (tmp_path / "ruff.toml").write_text(f"extend='{extend}'\n", encoding="utf-8")
@@ -652,6 +768,15 @@ def test_ruff_namespace_packages_cannot_change_rules_across_rename(scope_api: An
     assert projection.values["namespace-packages"] == []
 
 
+def test_ruff_projection_does_not_emit_invalid_flattened_pycodestyle_key(scope_api: Any, tmp_path: Path) -> None:
+    policy = scope_api.RuffPolicy.default(version="0.15.12")
+
+    projection = scope_api.project_ruff_policy(policy, snapshot_root=tmp_path / "snapshot")
+
+    assert "lint.pycodestyle.ignore-overlong-task-comments" not in projection.values
+    assert projection.values["lint"]["pycodestyle"]["ignore-overlong-task-comments"] is False
+
+
 def test_basedpyright_referenced_policy_files_are_governed(scope_api: Any, tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text("[tool.basedpyright]\nextends='base.json'\n", encoding="utf-8")
     (tmp_path / "base.json").write_text('{"baselineFile":"baseline.json"}', encoding="utf-8")
@@ -671,8 +796,90 @@ def test_basedpyright_include_exclude_cannot_drop_governed_input(scope_api: Any,
         eligible_inputs=("one.py", "two.py"),
     )
 
-    assert projection.values["include"] == ["one.py", "two.py"]
+    assert projection.values["include"] == [str(tmp_path / "one.py"), str(tmp_path / "two.py")]
     assert projection.values["exclude"] == []
+
+
+def test_context_requires_target_and_head_tree_identities(scope_api: Any, git_repo: Path, tmp_path: Path) -> None:
+    base, head = _make_range(git_repo)
+    context = tmp_path / "context.json"
+    context.write_text(
+        json.dumps(
+            {
+                "schema": "github-actions-pr-v1",
+                "provider": "github-actions",
+                "repository": "example/repo",
+                "event": "pull_request",
+                "pull_request": 1,
+                "target_ref": "refs/heads/main",
+                "head_ref": "refs/heads/feature",
+                "target_commit": base,
+                "head_commit": head,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = scope_api.resolve_scope(
+        _range_request(scope_api, git_repo, base, head, pr_context_file=context, repository_slug="example/repo")
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "unsafe_pr_context"
+
+
+def test_context_declared_source_lock_change_is_governed(scope_api: Any, git_repo: Path, tmp_path: Path) -> None:
+    lock = git_repo / "requirements.lock"
+    lock.write_text("demo==1\n", encoding="utf-8")
+    base = _commit(git_repo, "add runtime source lock")
+    lock.write_text("demo==2\n", encoding="utf-8")
+    head = _commit(git_repo, "change runtime source lock")
+    context = tmp_path / "context.json"
+    document = {
+        "schema": "github-actions-pr-v1",
+        "provider": "github-actions",
+        "repository": "example/repo",
+        "event": "pull_request",
+        "pull_request": 1,
+        "target_ref": "refs/heads/main",
+        "head_ref": "refs/heads/feature",
+        "target_commit": base,
+        "target_tree": _git(git_repo, "rev-parse", f"{base}^{{tree}}"),
+        "head_commit": head,
+        "head_tree": _git(git_repo, "rev-parse", f"{head}^{{tree}}"),
+        "project_runtime": {
+            "descriptor_digest": "sha256:" + "a" * 64,
+            "build_attestation_digest": "sha256:" + "b" * 64,
+            "source_lock_paths": ["requirements.lock"],
+        },
+    }
+    context.write_text(json.dumps(document), encoding="utf-8")
+
+    result = scope_api.resolve_scope(
+        _range_request(scope_api, git_repo, base, head, pr_context_file=context, repository_slug="example/repo")
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "candidate_project_runtime_source_lock_change"
+    assert result.selected_paths == ("requirements.lock",)
+
+
+def test_ini_policy_projection_preserves_pytest_and_pylint_families(scope_api: Any) -> None:
+    projection = scope_api._ini_policy_projection(
+        b"[pytest]\naddopts=-q\n[pylint.main]\nignore=build\n[pylint.messages control]\ndisable=C0103\n"
+    )
+
+    assert set(projection) == {"pytest", "pylint.main", "pylint.messages control"}
+
+
+def test_pylint_locator_ignores_unrelated_shared_config(scope_api: Any, tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='demo'\n", encoding="utf-8")
+    (tmp_path / "pylintrc").write_text("[MAIN]\nignore=build\n", encoding="utf-8")
+
+    policy = scope_api.resolve_pylint_policy(tmp_path, expected_version="4.0.7")
+
+    assert policy.status == "PASS"
+    assert policy.selected_path == "pylintrc"
 
 
 def test_basedpyright_ignore_cannot_suppress_governed_input(scope_api: Any, tmp_path: Path) -> None:

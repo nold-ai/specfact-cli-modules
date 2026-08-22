@@ -223,7 +223,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - name: Checkout candidate modules
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
       - name: Checkout immutable core v0.55.1
@@ -241,7 +241,7 @@ jobs:
           test "$(git -C exact-core rev-parse 'HEAD^{tree}')" = "47984be5434d7ae65ed6908bf525a32053290337"
           test "$(git ls-remote --tags https://github.com/nold-ai/specfact-cli.git refs/tags/v0.55.1 | cut -f1)" = "b1e517e60e669eaba15a18ecfa83ef5a9df65276"
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install exact core and candidate module package
@@ -489,7 +489,11 @@ jobs:
 
           def redact_url(url: str) -> str:
               parsed = urlsplit(url)
-              return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+              host = parsed.hostname or ""
+              if ":" in host and not host.startswith("["):
+                  host = f"[{host}]"
+              authority = f"{host}:{parsed.port}" if parsed.port is not None else host
+              return urlunsplit((parsed.scheme, authority, parsed.path, "", ""))
 
           print(json.dumps({
               "abi": abi,
@@ -505,7 +509,7 @@ jobs:
 
       - name: Upload failed C14 capsule manifest diagnostic
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: c14-manifest-${{ matrix.python }}.json.gz
           path: /tmp/c14-manifest-*.json.gz
