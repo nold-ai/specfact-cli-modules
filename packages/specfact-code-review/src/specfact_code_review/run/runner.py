@@ -2011,28 +2011,39 @@ def _imported_pytest_hook_names(tree: ast.Module) -> set[str]:
     }
 
 
+def _module_execution_nodes(tree: ast.Module) -> tuple[ast.AST, ...]:
+    pending: list[ast.AST] = list(reversed(tree.body))
+    nodes: list[ast.AST] = []
+    while pending:
+        node = pending.pop()
+        nodes.append(node)
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            pending.extend(reversed(tuple(ast.iter_child_nodes(node))))
+    return tuple(nodes)
+
+
 def _assigned_pytest_hook_names(tree: ast.Module) -> set[str]:
     return {
         target.id
-        for node in tree.body
+        for node in _module_execution_nodes(tree)
         if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
         for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
         if isinstance(target, ast.Name) and target.id.startswith("pytest_")
     }
 
 
-def _conftest_writes_module_namespace(tree: ast.Module) -> bool:
-    return any(
-        isinstance(target, ast.Subscript)
-        and isinstance(target.value, ast.Call)
-        and isinstance(target.value.func, ast.Name)
-        and target.value.func.id in {"globals", "locals", "vars"}
-        and not target.value.args
-        and not target.value.keywords
-        for node in tree.body
-        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
-        for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+def _is_module_namespace_call(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id in {"globals", "locals", "vars"}
+        and not node.args
+        and not node.keywords
     )
+
+
+def _conftest_uses_dynamic_namespace(tree: ast.Module) -> bool:
+    return any(_is_module_namespace_call(node) for node in _module_execution_nodes(tree))
 
 
 def _conftest_hook_names(tree: ast.Module) -> set[str]:
@@ -2063,7 +2074,7 @@ def _repository_pytest_hook_validation(snapshot_root: Path, roots: tuple[str, ..
             tree = ast.parse(path.read_bytes())
         except (OSError, SyntaxError):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_inventory_ambiguous")
-        if _conftest_declares_plugins(tree) or _conftest_writes_module_namespace(tree):
+        if _conftest_declares_plugins(tree) or _conftest_uses_dynamic_namespace(tree):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
         plugins.append({"origin": "repository", "hooks": sorted(_conftest_hook_names(tree)), "path": str(path)})
     return validate_pytest_plugins(tuple(plugins))
@@ -3724,8 +3735,16 @@ def _evaluate_complete_tdd_gate(
     """Execute the controller-supplied complete immutable pytest inventory."""
     policy_argv, selectors = _split_pytest_adapter_argv(adapter_argv)
     test_roots = _projected_pytest_test_roots(policy_argv)
+    snapshot_root = Path("/opt/specfact/snapshot")
+    coverage_test_roots = tuple(root for root in test_roots if root != snapshot_root)
+    selected_test_files = {snapshot_root / selector.split("::", maxsplit=1)[0] for selector in selectors}
     source_files = [
-        file_path for file_path in files if file_path.suffix == ".py" and not _is_below_any_root(file_path, test_roots)
+        file_path
+        for file_path in files
+        if file_path.suffix == ".py"
+        and file_path not in selected_test_files
+        and file_path.name != "conftest.py"
+        and not _is_below_any_root(file_path, coverage_test_roots)
     ]
     if not selectors:
         anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")

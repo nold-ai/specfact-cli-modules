@@ -428,6 +428,43 @@ def test_complete_tdd_gate_excludes_sealed_custom_test_root_from_coverage(
     assert observed_omission_policies == [False]
 
 
+def test_complete_tdd_gate_preserves_sources_when_discovering_from_snapshot_root(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    pytest_config = tmp_path / "pytest.ini"
+    pytest_config.write_text("[pytest]\ntestpaths = /opt/specfact/snapshot\n", encoding="utf-8")
+    coverage_config = tmp_path / "coveragerc"
+    coverage_config.write_text("[report]\nfail_under = 80\n", encoding="utf-8")
+    source_file = Path("/opt/specfact/snapshot/src/app.py")
+    test_file = Path("/opt/specfact/snapshot/tests/test_app.py")
+    observed: list[Path] = []
+
+    def evaluate(
+        source_files: list[Path], _execute: object, **_kwargs: object
+    ) -> tuple[list[ReviewFinding], dict[str, float]]:
+        observed.extend(source_files)
+        return [], {}
+
+    monkeypatch.setattr(runner_api, "_evaluate_pytest_execution", evaluate)
+
+    findings, coverage = runner_api._evaluate_complete_tdd_gate(
+        [source_file, test_file],
+        (
+            "-c",
+            str(pytest_config),
+            "--cov-config",
+            str(coverage_config),
+            "--",
+            "tests/test_app.py::test_app",
+        ),
+    )
+
+    assert findings == []
+    assert coverage == {}
+    assert observed == [source_file]
+
+
 def test_sealed_target_bugs_policy_activates_semgrep_bugs_without_bug_hunt(monkeypatch: MonkeyPatch) -> None:
     runner_api = _c14_runner()
     observed: list[str] = []
@@ -2790,6 +2827,42 @@ def test_complete_suite_rejects_subscript_assigned_pytest_hook_alias(tmp_path: P
     tests_root.mkdir()
     (tmp_path / "conftest.py").write_text(
         'def bypass(pyfuncitem):\n    del pyfuncitem\n    return True\n\nglobals()["pytest_pyfunc_call"] = bypass\n',
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_namespace_update_pytest_hook_alias(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tmp_path / "conftest.py").write_text(
+        "def bypass(pyfuncitem):\n    del pyfuncitem\n    return True\n\nglobals().update(pytest_pyfunc_call=bypass)\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_aliased_namespace_update_pytest_hook(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tmp_path / "conftest.py").write_text(
+        "def bypass(pyfuncitem):\n"
+        "    del pyfuncitem\n"
+        "    return True\n\n"
+        "namespace = globals()\n"
+        "namespace.update(pytest_pyfunc_call=bypass)\n",
         encoding="utf-8",
     )
     (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
