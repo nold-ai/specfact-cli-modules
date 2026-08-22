@@ -12,6 +12,25 @@ from icontract import ensure
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
+PR_RANGE_REQUIRED_ANALYZERS = (
+    "ruff",
+    "radon",
+    "semgrep-clean",
+    "ai-bloat-ast",
+    "ast-clean-code",
+    "basedpyright",
+    "pylint",
+    "contracts",
+)
+PR_RANGE_CONDITIONAL_ANALYZERS = ("semgrep-bugs", "targeted-pytest-coverage")
+PR_RANGE_ANALYZERS = PR_RANGE_REQUIRED_ANALYZERS + PR_RANGE_CONDITIONAL_ANALYZERS
+
+
+def _complete_pr_range_analyzer_profile(evidence: list[dict[str, object]] | None) -> bool:
+    evidence_ids = [str(item.get("id", "")) for item in evidence or []]
+    return len(evidence_ids) == len(PR_RANGE_ANALYZERS) and set(evidence_ids) == set(PR_RANGE_ANALYZERS)
+
+
 VALID_CATEGORIES = (
     "clean_code",
     "security",
@@ -605,9 +624,13 @@ class ReviewReport(BaseModel):
     def _derive_authoritative_governance(self) -> bool:
         if not schema_version_at_least(self.schema_version, 6) or self.assurance_status is None:
             return False
+        profile_incomplete = self.assurance_status == "PASS" and not _complete_pr_range_analyzer_profile(
+            self.analyzer_evidence
+        )
         self.has_unknown_required_evidence = bool(
             self.has_unknown_required_evidence
             or self.assurance_status == "UNKNOWN"
+            or profile_incomplete
             or any(item.get("evidence_outcome") == "UNKNOWN" for item in self.analyzer_evidence or [])
         )
         if self.has_unknown_required_evidence and self.assurance_status in {"PASS", "NOT_APPLICABLE"}:

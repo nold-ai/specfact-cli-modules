@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from specfact_code_review.ledger.client import LedgerClient, _default_local_path
-from specfact_code_review.run.findings import AssuranceStatus, ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import PR_RANGE_ANALYZERS, AssuranceStatus, ReviewFinding, ReviewReport
 
 
 class _Response:
@@ -20,6 +20,12 @@ class _Response:
 
     def json(self) -> Any:
         return self._payload
+
+
+def _complete_analyzer_evidence(outcome: AssuranceStatus) -> list[dict[str, object]]:
+    return [
+        {"id": member_id, "execution_state": "ran", "evidence_outcome": outcome} for member_id in PR_RANGE_ANALYZERS
+    ]
 
 
 def _report(
@@ -126,7 +132,7 @@ def test_ledger_authoritative_assurance_controls_rewards_and_streaks(
         overall_verdict="FAIL" if assurance_status in {"FAIL", "UNKNOWN"} else "PASS",
         ci_exit_code=1 if assurance_status in {"FAIL", "UNKNOWN"} else 0,
         scope_evidence={"assurance_kind": "range_candidate"},
-        analyzer_evidence=[{"id": "contracts", "evidence_outcome": assurance_status}],
+        analyzer_evidence=_complete_analyzer_evidence(assurance_status),
     )
 
     LedgerClient(local_path=ledger_path).record_run(report)
@@ -168,7 +174,7 @@ def test_schema_1_6_known_outcome_preserves_report_reward_delta(tmp_path: Path) 
         overall_verdict="PASS",
         ci_exit_code=0,
         scope_evidence={"assurance_kind": "range_candidate"},
-        analyzer_evidence=[{"id": "contracts", "evidence_outcome": "PASS"}],
+        analyzer_evidence=_complete_analyzer_evidence("PASS"),
     )
 
     assert LedgerClient(local_path=tmp_path / "ledger.json")._reward_delta_for(report) == 40

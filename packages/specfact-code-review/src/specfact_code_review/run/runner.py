@@ -24,6 +24,8 @@ from icontract import ensure, require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
 from specfact_code_review.run.findings import (
+    PR_RANGE_CONDITIONAL_ANALYZERS,
+    PR_RANGE_REQUIRED_ANALYZERS,
     CleanupForecast,
     EvidenceRef,
     PreserveReasonEvidence,
@@ -308,17 +310,8 @@ def _canonical_json_digest(value: object) -> str:
 def default_pr_range_profile() -> AnalyzerProfile:
     return AnalyzerProfile(
         "pr-range-v1",
-        (
-            "ruff",
-            "radon",
-            "semgrep-clean",
-            "ai-bloat-ast",
-            "ast-clean-code",
-            "basedpyright",
-            "pylint",
-            "contracts",
-        ),
-        ("semgrep-bugs", "targeted-pytest-coverage"),
+        PR_RANGE_REQUIRED_ANALYZERS,
+        PR_RANGE_CONDITIONAL_ANALYZERS,
     )
 
 

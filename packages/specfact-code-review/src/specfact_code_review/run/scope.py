@@ -2070,7 +2070,12 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             cleanup.callback(shutil.rmtree, ruff_policy.bundle_root, ignore_errors=True)
         if ruff_policy.status != "PASS":
             raise PolicyResolutionError(ruff_policy.reason)
-        additional_policy_paths = frozenset(ruff_policy.closure_paths)
+        basedpyright_policy = resolve_basedpyright_policy(target_snapshot.root, expected_version="1.39.10")
+        if basedpyright_policy.bundle_root is not None:
+            cleanup.callback(shutil.rmtree, basedpyright_policy.bundle_root, ignore_errors=True)
+        if basedpyright_policy.status != "PASS":
+            raise PolicyResolutionError(basedpyright_policy.reason)
+        additional_policy_paths = frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths))
         selected = tuple(
             path
             for path in _range_paths(request.repository, merge_base, head)
@@ -2127,6 +2132,8 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             shutil.rmtree(target_snapshot.root, ignore_errors=True)
         if ruff_policy.bundle_root is not None:
             shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
+        if basedpyright_policy.bundle_root is not None:
+            shutil.rmtree(basedpyright_policy.bundle_root, ignore_errors=True)
         cleanup.pop_all()
         return result
 

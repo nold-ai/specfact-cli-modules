@@ -757,6 +757,40 @@ def test_schema_1_6_json_pass_with_unknown_analyzer_is_demoted() -> None:
 
 
 @pytest.mark.parametrize(
+    "analyzer_evidence",
+    [
+        [],
+        [{"id": "contracts", "execution_state": "ran", "evidence_outcome": "PASS"}],
+    ],
+)
+def test_schema_1_6_json_pass_with_missing_profile_members_is_demoted(
+    analyzer_evidence: list[dict[str, object]],
+) -> None:
+    report = ReviewReport.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": "1.6",
+                "assurance_status": "PASS",
+                "run_id": "incomplete-profile-pass",
+                "timestamp": "2026-08-22T00:00:00Z",
+                "score": 120,
+                "findings": [],
+                "summary": "Untrusted producer omitted required analyzers.",
+                "overall_verdict": "PASS",
+                "ci_exit_code": 0,
+                "enforcement_mode": "full",
+                "analyzer_evidence": analyzer_evidence,
+            }
+        )
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+    assert report.overall_verdict == "FAIL"
+    assert report.ci_exit_code == 1
+
+
+@pytest.mark.parametrize(
     ("status", "enforcement", "legacy_verdict", "exit_code"),
     [
         ("PASS", "full", "PASS", 0),

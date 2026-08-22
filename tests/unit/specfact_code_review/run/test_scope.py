@@ -787,6 +787,22 @@ def test_basedpyright_referenced_policy_files_are_governed(scope_api: Any, tmp_p
     assert policy.reference_paths == ("base.json", "baseline.json", "pyproject.toml")
 
 
+def test_range_change_to_basedpyright_reference_is_governed(scope_api: Any, git_repo: Path) -> None:
+    (git_repo / "pyrightconfig.json").write_text('{"extends":"config/base.json"}', encoding="utf-8")
+    (git_repo / "config").mkdir()
+    (git_repo / "config/base.json").write_text('{"baselineFile":"baseline.json"}', encoding="utf-8")
+    (git_repo / "config/baseline.json").write_text("{}", encoding="utf-8")
+    base = _commit(git_repo, "add basedpyright policy graph")
+    (git_repo / "config/base.json").write_text('{"typeCheckingMode":"strict"}', encoding="utf-8")
+    head = _commit(git_repo, "change basedpyright policy reference")
+
+    result = scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "candidate_policy_change"
+    assert "config/base.json" in result.policy_paths
+
+
 def test_basedpyright_include_exclude_cannot_drop_governed_input(scope_api: Any, tmp_path: Path) -> None:
     policy = scope_api.BasedPyrightPolicy(include=("one.py",), exclude=("two.py",), ignore=())
 
