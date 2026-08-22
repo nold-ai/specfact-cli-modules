@@ -560,6 +560,11 @@ def _git_lines(repository: Path, args: Sequence[str]) -> list[str]:
     return [line.strip() for line in _git(repository, args).stdout.splitlines() if line.strip()]
 
 
+def _git_paths(repository: Path, args: Sequence[str]) -> list[str]:
+    """Decode repository-relative paths from a NUL-delimited Git command."""
+    return [path for path in _git(repository, [*args, "-z"]).stdout.split("\0") if path]
+
+
 def _git_bytes(repository: Path, args: Sequence[str], *, env_overrides: dict[str, str] | None = None) -> bytes:
     result = subprocess.run(
         ["git", *args],
@@ -1963,6 +1968,29 @@ def _validate_optional_digest(document: dict[str, object], field: str, *, prefix
         raise ContextResolutionError(f"PR context {prefix}{field} is not a canonical SHA-256 digest.")
 
 
+def _validated_source_lock_records(runtime_document: dict[str, object]) -> list[dict[str, object]]:
+    source_lock_paths = runtime_document.get("source_lock_paths", [])
+    if not isinstance(source_lock_paths, list) or not all(isinstance(item, dict) for item in source_lock_paths):
+        raise ContextResolutionError("PR context project_runtime.source_lock_paths must be lock records.")
+    records = cast(list[dict[str, object]], source_lock_paths)
+    paths = [item.get("path") for item in records]
+    if not all(
+        isinstance(path, str)
+        and path
+        and not PurePosixPath(path).is_absolute()
+        and ".." not in PurePosixPath(path).parts
+        for path in paths
+    ):
+        raise ContextResolutionError("PR context project_runtime.source_lock_paths must use safe relative paths.")
+    if not all(
+        _is_full_sha(item.get("blob_sha")) and _is_sha256_digest(item.get("content_sha256")) for item in records
+    ):
+        raise ContextResolutionError("PR context project_runtime.source_lock_paths identities are invalid.")
+    if len(paths) != len(set(cast(list[str], paths))):
+        raise ContextResolutionError("PR context project_runtime.source_lock_paths must not contain duplicates.")
+    return records
+
+
 def _validate_context_runtime(document: dict[str, object]) -> None:
     for context_field in ("project_runtime_descriptor_digest", "project_runtime_build_attestation_digest"):
         _validate_optional_digest(document, context_field)
@@ -1974,17 +2002,7 @@ def _validate_context_runtime(document: dict[str, object]) -> None:
     runtime_document = cast(dict[str, object], project_runtime)
     for context_field in ("descriptor_digest", "build_attestation_digest"):
         _validate_optional_digest(runtime_document, context_field, prefix="project_runtime.")
-    source_lock_paths = runtime_document.get("source_lock_paths", [])
-    if not isinstance(source_lock_paths, list) or not all(
-        isinstance(path, str)
-        and path
-        and not PurePosixPath(path).is_absolute()
-        and ".." not in PurePosixPath(path).parts
-        for path in source_lock_paths
-    ):
-        raise ContextResolutionError("PR context project_runtime.source_lock_paths must be safe relative paths.")
-    if len(source_lock_paths) != len(set(cast(list[str], source_lock_paths))):
-        raise ContextResolutionError("PR context project_runtime.source_lock_paths must not contain duplicates.")
+    _validated_source_lock_records(runtime_document)
 
 
 def _load_claimed_context(request: ScopeRequest) -> _ClaimedContext | None:
@@ -2005,7 +2023,8 @@ def _context_source_lock_paths(context: _ClaimedContext | None) -> frozenset[str
     project_runtime = context.document.get("project_runtime")
     if not isinstance(project_runtime, dict):
         return frozenset()
-    return frozenset(cast(list[str], project_runtime.get("source_lock_paths", [])))
+    records = cast(list[dict[str, object]], project_runtime.get("source_lock_paths", []))
+    return frozenset(str(record["path"]) for record in records)
 
 
 def _context_matches_range(context: _ClaimedContext, resolved: _ResolvedRange) -> bool:
@@ -2772,8 +2791,8 @@ def discover_worktree_python_files(
 ) -> list[Path]:
     """Discover tracked modifications and untracked Python files for local review."""
 
-    tracked = [Path(path) for path in _git_lines(repository, ["diff", "HEAD", "--name-only"])]
-    untracked = [Path(path) for path in _git_lines(repository, ["ls-files", "--others", "--exclude-standard"])]
+    tracked = [Path(path) for path in _git_paths(repository, ["diff", "HEAD", "--name-only"])]
+    untracked = [Path(path) for path in _git_paths(repository, ["ls-files", "--others", "--exclude-standard"])]
     return _discovered_python_files([*tracked, *untracked], include_tests=include_tests)
 
 
@@ -2786,6 +2805,6 @@ def discover_full_python_files(
 ) -> list[Path]:
     """Discover tracked and untracked Python files for a local full review."""
 
-    tracked = [Path(path) for path in _git_lines(repository, ["ls-files", "--cached"])]
-    untracked = [Path(path) for path in _git_lines(repository, ["ls-files", "--others", "--exclude-standard"])]
+    tracked = [Path(path) for path in _git_paths(repository, ["ls-files", "--cached"])]
+    untracked = [Path(path) for path in _git_paths(repository, ["ls-files", "--others", "--exclude-standard"])]
     return _discovered_python_files([*tracked, *untracked], include_tests=include_tests)

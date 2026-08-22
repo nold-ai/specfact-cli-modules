@@ -294,6 +294,37 @@ def test_capsule_member_passes_explicit_target_policy_to_adapter(monkeypatch: Mo
     assert observed["extra_args"] == ("--config", "/opt/specfact/config/1/ruff.toml", "--no-cache")
 
 
+def test_capsule_targeted_pytest_executes_supplied_complete_inventory(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    observed: list[tuple[str, ...]] = []
+    selectors = (
+        "tests/test_a.py::test_a",
+        "tests/nonconventional/test_b.py::TestB::test_b",
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_evaluate_tdd_gate",
+        lambda *_args: pytest.fail("immutable capsule execution must not use source-to-test mapping"),
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_evaluate_complete_tdd_gate",
+        lambda _files, supplied: (observed.append(supplied) or [], None),
+        raising=False,
+    )
+
+    findings = runner_api._member_findings(
+        "targeted-pytest-coverage",
+        [Path("/opt/specfact/snapshot/src/app.py")],
+        bug_hunt=False,
+        adapter_argv=("--", *selectors),
+        complete_pytest_inventory=True,
+    )
+
+    assert findings == []
+    assert observed == [("--", *selectors)]
+
+
 def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     policy_root = tmp_path / "policy"
@@ -311,15 +342,52 @@ def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path:
     )
 
     try:
-        assert bindings.member_argv["ruff"][:2] == ("--config", "/opt/specfact/config/1/ruff.toml")
-        assert bindings.member_argv["basedpyright"][:2] == (
-            "--project",
-            "/opt/specfact/config/2/basedpyright.json",
-        )
-        assert bindings.member_argv["pylint"][:2] == ("--rcfile", "/opt/specfact/config/3/pylintrc")
+        assert bindings.member_argv["ruff"][0] == "--config"
+        assert bindings.member_argv["ruff"][1].endswith("/ruff.toml")
+        assert bindings.member_argv["basedpyright"][0] == "--project"
+        assert bindings.member_argv["basedpyright"][1].endswith("/basedpyright.json")
+        assert bindings.member_argv["pylint"][0] == "--rcfile"
+        assert bindings.member_argv["pylint"][1].endswith("/pylintrc")
         assert all(
             not argument.startswith(str(snapshot_root)) for argv in bindings.member_argv.values() for argument in argv
         )
+    finally:
+        for root in bindings.cleanup_roots:
+            shutil.rmtree(root, ignore_errors=True)
+
+
+def test_snapshot_policy_bindings_apply_sealed_pytest_and_coverage_projections(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    policy_root = tmp_path / "policy"
+    snapshot_root = tmp_path / "snapshot"
+    policy_root.mkdir()
+    snapshot_root.mkdir()
+    (policy_root / "pytest.ini").write_text(
+        "[pytest]\ntestpaths = target_tests\npython_files = check_*.py\n",
+        encoding="utf-8",
+    )
+    (policy_root / ".coveragerc").write_text("[run]\nbranch = true\n", encoding="utf-8")
+
+    bindings = runner_api._with_pytest_inventory(
+        runner_api._snapshot_policy_bindings(
+            SimpleNamespace(root=policy_root),
+            snapshot_root=snapshot_root,
+            files=[],
+        ),
+        ("target_tests/check_app.py::test_app",),
+    )
+
+    try:
+        argv = bindings.member_argv["targeted-pytest-coverage"]
+        assert argv[argv.index("-c") + 1].startswith("/opt/specfact/config/")
+        assert argv[argv.index("--cov-config") + 1].startswith("/opt/specfact/config/")
+        assert argv[argv.index("--rootdir") + 1] == "/opt/specfact/snapshot"
+        assert argv[-2:] == ("--", "target_tests/check_app.py::test_app")
+        projected_payloads = [
+            path.read_text(encoding="utf-8") for root in bindings.config_roots for path in root.iterdir()
+        ]
+        assert any("/opt/specfact/snapshot/target_tests" in payload for payload in projected_payloads)
+        assert any("exclude_lines" in payload for payload in projected_payloads)
     finally:
         for root in bindings.cleanup_roots:
             shutil.rmtree(root, ignore_errors=True)
@@ -371,6 +439,55 @@ def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshot
     )
 
     assert observed_roots == [runtime_root, runtime_root]
+
+
+def test_immutable_review_binds_each_complete_pytest_inventory_to_its_snapshot(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    for root in (base_root, head_root):
+        (root / "tests").mkdir(parents=True)
+        (root / "tests/test_a.py").write_text("def test_a():\n    assert True\n", encoding="utf-8")
+    (head_root / "tests/test_b.py").write_text("def test_b():\n    assert True\n", encoding="utf-8")
+    capsule = SimpleNamespace(identity="sha256:" + "a" * 64)
+    observed_argv: list[dict[str, tuple[str, ...]]] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda **_kwargs: (capsule, ""))
+
+    def run_snapshot(*_args: object, **kwargs: object) -> Any:
+        observed_argv.append(cast(dict[str, tuple[str, ...]], kwargs["member_argv"]))
+        return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", run_snapshot)
+    monkeypatch.setattr(runner_api, "_classify_range_findings", lambda *_args: ({}, {}))
+    monkeypatch.setattr(
+        runner_api,
+        "_capsule_report",
+        lambda *_args, **_kwargs: ReviewReport(run_id="inventory", score=100, findings=[], summary="complete"),
+    )
+    resolution = SimpleNamespace(
+        base_snapshot=SimpleNamespace(root=base_root, contents={"tests/test_a.py": b""}),
+        head_snapshot=SimpleNamespace(
+            root=head_root,
+            contents={"tests/test_a.py": b"", "tests/test_b.py": b""},
+        ),
+        policy_bundle=None,
+        path_statuses={"src/app.py": "M"},
+        exact_renames=(),
+        claimed_context=None,
+    )
+
+    runner_api.run_immutable_scope_review(
+        resolution,
+        options=runner_api.ReviewOptions(no_tests=False),
+        scope_evidence={"assurance_kind": "range_candidate"},
+    )
+
+    assert [runner_api._split_pytest_adapter_argv(argv["targeted-pytest-coverage"])[1] for argv in observed_argv] == [
+        ("tests/test_a.py::test_a",),
+        ("tests/test_a.py::test_a", "tests/test_b.py::test_b"),
+    ]
 
 
 def test_immutable_range_reconciles_removed_pytest_selector_before_execution(
@@ -1565,6 +1682,62 @@ def test_run_pytest_with_coverage_disables_global_fail_under(monkeypatch: Monkey
     assert "import specfact_code_review" in command[2]
     assert "--import-mode=importlib" in command
     assert "--cov-fail-under=0" in command
+
+
+def test_run_complete_pytest_inventory_preserves_exact_node_ids(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    recorded: dict[str, object] = {}
+    selectors = (
+        "tests/test_a.py::test_a",
+        "tests/nonconventional/test_b.py::TestB::test_b",
+    )
+
+    def _fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        recorded["command"] = command
+        recorded["kwargs"] = kwargs
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    _result, coverage_path = runner_api._run_pytest_inventory_with_coverage(selectors)
+
+    try:
+        command = cast(list[str], recorded["command"])
+        assert command[-2:] == list(selectors)
+        assert command[command.index("--cov") + 1] == "/opt/specfact/snapshot"
+    finally:
+        coverage_path.unlink(missing_ok=True)
+
+
+def test_run_complete_pytest_inventory_applies_sealed_policy_argv(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    recorded: dict[str, object] = {}
+    policy_argv = (
+        "-c",
+        "/opt/specfact/config/1/pytest.ini",
+        "--rootdir",
+        "/opt/specfact/snapshot",
+        "--cov-config",
+        "/opt/specfact/config/2/coveragerc",
+    )
+
+    def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        recorded["command"] = command
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    _result, coverage_path = runner_api._run_pytest_inventory_with_coverage(
+        ("tests/test_a.py::test_a",),
+        policy_argv=policy_argv,
+    )
+
+    try:
+        command = cast(list[str], recorded["command"])
+        assert command[3 : 3 + len(policy_argv)] == list(policy_argv)
+        assert command[-1] == "tests/test_a.py::test_a"
+    finally:
+        coverage_path.unlink(missing_ok=True)
 
 
 def test_pytest_python_executable_uses_current_interpreter() -> None:

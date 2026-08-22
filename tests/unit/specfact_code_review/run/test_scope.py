@@ -890,7 +890,13 @@ def test_context_declared_source_lock_change_is_governed(scope_api: Any, git_rep
         "project_runtime": {
             "descriptor_digest": "sha256:" + "a" * 64,
             "build_attestation_digest": "sha256:" + "b" * 64,
-            "source_lock_paths": ["requirements.lock"],
+            "source_lock_paths": [
+                {
+                    "path": "requirements.lock",
+                    "blob_sha": "c" * 40,
+                    "content_sha256": "sha256:" + "d" * 64,
+                }
+            ],
         },
     }
     context.write_text(json.dumps(document), encoding="utf-8")
@@ -902,6 +908,26 @@ def test_context_declared_source_lock_change_is_governed(scope_api: Any, git_rep
     assert result.status == "UNKNOWN"
     assert result.reason == "candidate_project_runtime_source_lock_change"
     assert result.selected_paths == ("requirements.lock",)
+
+
+def test_local_discovery_preserves_nul_delimited_python_paths(
+    scope_api: Any, git_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tracked = git_repo / "src/café.py"
+    tracked.write_text("VALUE = 1\n", encoding="utf-8")
+    _commit(git_repo, "add non-ascii path")
+    tracked.write_text("VALUE = 2\n", encoding="utf-8")
+    untracked = git_repo / "src/line\nbreak.py"
+    untracked.write_text("VALUE = 3\n", encoding="utf-8")
+    monkeypatch.chdir(git_repo)
+
+    worktree = scope_api.discover_worktree_python_files(git_repo, include_tests=True)
+    complete = scope_api.discover_full_python_files(git_repo, include_tests=True)
+
+    assert Path("src/café.py") in worktree
+    assert Path("src/line\nbreak.py") in worktree
+    assert Path("src/café.py") in complete
+    assert Path("src/line\nbreak.py") in complete
 
 
 def test_ini_policy_projection_preserves_pytest_and_pylint_families(scope_api: Any) -> None:

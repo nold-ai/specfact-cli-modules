@@ -197,7 +197,17 @@ class CapsuleMemberExecutionRequest:
     options: ReviewOptions
     config_roots: tuple[Path, ...] = ()
     adapter_argv: tuple[str, ...] = ()
+    complete_pytest_inventory: bool = False
     project_runtime_root: Path | None = None
+
+
+@dataclass(frozen=True)
+class ImmutablePytestInventory:
+    """Reconciled complete selector inventory for both immutable sides."""
+
+    reconciliation: CandidateReconciliation
+    base: tuple[str, ...] = ()
+    head: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -688,6 +698,7 @@ def _member_findings(
     *,
     bug_hunt: bool,
     adapter_argv: tuple[str, ...] = (),
+    complete_pytest_inventory: bool = False,
 ) -> list[ReviewFinding]:
     runners: dict[str, Callable[[list[Path]], list[ReviewFinding]]] = {
         "ruff": run_ruff,
@@ -701,7 +712,9 @@ def _member_findings(
         "contracts": partial(run_contract_check, bug_hunt=bug_hunt),
     }
     if member == "targeted-pytest-coverage":
-        findings, _coverage = _evaluate_tdd_gate(files)
+        findings, _coverage = (
+            _evaluate_complete_tdd_gate(files, adapter_argv) if complete_pytest_inventory else _evaluate_tdd_gate(files)
+        )
         return findings
     if member == "ruff":
         return run_ruff(files, extra_args=adapter_argv) if adapter_argv else run_ruff(files)
@@ -722,25 +735,61 @@ def _member_findings(
     return runner(files)
 
 
-def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tuple[str, ...]]:
-    request = json.loads(request_path.read_text(encoding="utf-8"))
-    if not isinstance(request, dict):
-        raise ValueError("capsule request must be an object")
-    member = str(request["member"])
+def _validate_pytest_inventory(selectors: tuple[str, ...]) -> None:
+    for selector in selectors:
+        raw_path = selector.split("::", maxsplit=1)[0]
+        path = Path(raw_path)
+        if not raw_path or path.is_absolute() or ".." in path.parts:
+            raise ValueError("pytest selector escapes snapshot")
+
+
+def _split_pytest_adapter_argv(adapter_argv: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    try:
+        separator = adapter_argv.index("--")
+    except ValueError as exc:
+        raise ValueError("complete pytest inventory separator is missing") from exc
+    return adapter_argv[:separator], adapter_argv[separator + 1 :]
+
+
+def _capsule_snapshot_files(request: dict[str, object]) -> list[Path]:
     raw_paths = request["paths"]
     if not isinstance(raw_paths, list) or not raw_paths or not all(isinstance(path, str) for path in raw_paths):
         raise ValueError("capsule paths are invalid")
     relative_paths = [Path(cast(str, path)) for path in raw_paths]
     if any(path.is_absolute() or ".." in path.parts for path in relative_paths):
         raise ValueError("capsule path escapes snapshot")
+    return [Path("/opt/specfact/snapshot") / path for path in relative_paths]
+
+
+def _capsule_adapter_request(request: dict[str, object], *, member: str) -> tuple[tuple[str, ...], bool]:
     raw_adapter_argv = request.get("adapter_argv", [])
     if not isinstance(raw_adapter_argv, list) or not all(isinstance(value, str) for value in raw_adapter_argv):
         raise ValueError("capsule adapter argv is invalid")
+    adapter_argv = tuple(cast(list[str], raw_adapter_argv))
+    complete_pytest_inventory = request.get("complete_pytest_inventory", False)
+    if not isinstance(complete_pytest_inventory, bool):
+        raise ValueError("complete pytest inventory flag is invalid")
+    if not complete_pytest_inventory:
+        return adapter_argv, False
+    if member != "targeted-pytest-coverage":
+        raise ValueError("complete pytest inventory is invalid for this member")
+    _policy_argv, selectors = _split_pytest_adapter_argv(adapter_argv)
+    _validate_pytest_inventory(selectors)
+    return adapter_argv, True
+
+
+def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tuple[str, ...], bool]:
+    request = json.loads(request_path.read_text(encoding="utf-8"))
+    if not isinstance(request, dict):
+        raise ValueError("capsule request must be an object")
+    member = str(request["member"])
+    adapter_argv, complete_pytest_inventory = _capsule_adapter_request(request, member=member)
     return (
         member,
-        [Path("/opt/specfact/snapshot") / path for path in relative_paths],
+        _capsule_snapshot_files(request),
         bool(request.get("bug_hunt", False)),
-        tuple(cast(list[str], raw_adapter_argv)),
+        adapter_argv,
+        complete_pytest_inventory,
     )
 
 
@@ -766,10 +815,16 @@ def _capsule_process_request(request_path: Path) -> None:
     """Run exactly one analyzer member inside the sealed capsule process."""
 
     try:
-        member, files, bug_hunt, adapter_argv = _load_capsule_request(request_path)
+        member, files, bug_hunt, adapter_argv, complete_pytest_inventory = _load_capsule_request(request_path)
         response = _capsule_member_response(
             member,
-            _member_findings(member, files, bug_hunt=bug_hunt, adapter_argv=adapter_argv),
+            _member_findings(
+                member,
+                files,
+                bug_hunt=bug_hunt,
+                adapter_argv=adapter_argv,
+                complete_pytest_inventory=complete_pytest_inventory,
+            ),
         )
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         response = {
@@ -804,6 +859,7 @@ def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str,
                 {
                     "adapter_argv": request.adapter_argv,
                     "bug_hunt": request.options.bug_hunt,
+                    "complete_pytest_inventory": request.complete_pytest_inventory,
                     "member": request.member,
                     "paths": relative_paths,
                 },
@@ -907,6 +963,9 @@ def _run_capsule_snapshot(
                     options=options,
                     config_roots=config_roots,
                     adapter_argv=(member_argv or {}).get(member, ()),
+                    complete_pytest_inventory=(
+                        member == "targeted-pytest-coverage" and member_argv is not None and member in member_argv
+                    ),
                     project_runtime_root=(project_runtime_root if member in _PROJECT_RUNTIME_MEMBERS else None),
                 )
             )
@@ -1023,16 +1082,98 @@ def _bind_semgrep_policy(builder: _PolicyBindingBuilder, policy_root: Path) -> N
     builder.member_argv["semgrep-bugs"] = (mounted,)
 
 
+def _ini_projection_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list | tuple):
+        return "\n    ".join(str(item) for item in value)
+    if isinstance(value, str | int | float):
+        return str(value)
+    raise ValueError("policy_projection_value_unsupported")
+
+
+def _serialize_pytest_projection(values: dict[str, object]) -> str:
+    lines = ["[pytest]"]
+    lines.extend(f"{key} = {_ini_projection_value(value)}" for key, value in sorted(values.items()))
+    return "\n".join(lines) + "\n"
+
+
+def _serialize_coverage_projection(values: dict[str, object]) -> str:
+    sections: dict[str, dict[str, object]] = {}
+    for qualified, value in values.items():
+        if ":" not in qualified:
+            raise ValueError("coverage_policy_projection_field_unsupported")
+        section, key = qualified.split(":", maxsplit=1)
+        sections.setdefault(section, {})[key] = value
+    lines: list[str] = []
+    for section, fields in sorted(sections.items()):
+        lines.append(f"[{section}]")
+        lines.extend(f"{key} = {_ini_projection_value(value)}" for key, value in sorted(fields.items()))
+    return "\n".join(lines) + "\n"
+
+
+def _write_policy_projection(builder: _PolicyBindingBuilder, *, name: str, payload: str) -> str:
+    root = Path(tempfile.mkdtemp(prefix=f"specfact-{name}-projection-"))
+    path = root / name
+    path.write_text(payload, encoding="utf-8")
+    path.chmod(0o444)
+    return builder.register(path)
+
+
+def _bind_pytest_coverage_policy(
+    builder: _PolicyBindingBuilder,
+    policy_bundle: object | None,
+) -> None:
+    pytest_policy = _pytest_policy_values(policy_bundle)
+    selection = validate_pytest_selection_controls(pytest_policy)
+    if selection.status != "PASS":
+        raise ValueError(selection.reason)
+    private_root = Path("/opt/specfact/temporary")
+    pytest_projection = project_pytest_policy(
+        pytest_policy,
+        snapshot_root=Path("/opt/specfact/snapshot"),
+        output_root=private_root / "pytest",
+    )
+    if pytest_projection.status != "PASS":
+        raise ValueError(pytest_projection.reason)
+    coverage_projection = project_coverage_policy(
+        _coverage_policy_values(policy_bundle),
+        snapshot_root=Path("/opt/specfact/snapshot"),
+        output_root=private_root / "coverage",
+    )
+    if coverage_projection.status != "PASS":
+        raise ValueError(coverage_projection.reason)
+    pytest_config = _write_policy_projection(
+        builder,
+        name="pytest.ini",
+        payload=_serialize_pytest_projection(pytest_projection.values),
+    )
+    coverage_config = _write_policy_projection(
+        builder,
+        name="coveragerc",
+        payload=_serialize_coverage_projection(coverage_projection.values),
+    )
+    builder.member_argv["targeted-pytest-coverage"] = (
+        "-c",
+        pytest_config,
+        "--rootdir",
+        "/opt/specfact/snapshot",
+        "--cov-config",
+        coverage_config,
+    )
+
+
 def _snapshot_policy_bindings(
     policy_bundle: object | None,
     *,
     snapshot_root: Path,
     files: list[Path],
 ) -> SnapshotPolicyBindings:
-    if policy_bundle is None:
-        return SnapshotPolicyBindings((), {}, ())
-    policy_root = cast(Path, cast(Any, policy_bundle).root)
     builder = _PolicyBindingBuilder()
+    _bind_pytest_coverage_policy(builder, policy_bundle)
+    if policy_bundle is None:
+        return builder.result()
+    policy_root = cast(Path, cast(Any, policy_bundle).root)
     relative_inputs = tuple(
         sorted(
             path.resolve().relative_to(snapshot_root.resolve()).as_posix()
@@ -1480,7 +1621,8 @@ def project_pytest_policy(policy: dict[str, object], *, snapshot_root: Path, out
     values = dict(config)
     writable: list[Path] = []
     for key in ("pythonpath", "testpaths"):
-        raw = cast(list[object], config.get(key, policy.get(key, [])))
+        raw_value = policy.get(key, config.get(key, []))
+        raw = raw_value.split() if isinstance(raw_value, str) else cast(list[object], raw_value)
         projected: list[str] = []
         for value in raw:
             relative = Path(str(value))
@@ -1489,6 +1631,12 @@ def project_pytest_policy(policy: dict[str, object], *, snapshot_root: Path, out
             projected.append(str(snapshot_root / relative))
         if projected:
             values[key] = projected
+    for key in ("python_files", "python_classes", "python_functions"):
+        raw = policy.get(key)
+        if raw is not None:
+            values[key] = raw
+    if policy.get("addopts"):
+        values["addopts"] = policy["addopts"]
     for key in ("cache_dir", "log_file"):
         if key not in config:
             continue
@@ -1760,11 +1908,15 @@ def _pytest_python_executable() -> str:
     return sys.executable
 
 
-def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.CompletedProcess[str], Path]:
+def _run_pytest_selection_with_coverage(
+    selectors: tuple[str, ...],
+    *,
+    coverage_source: Path,
+    policy_argv: tuple[str, ...] = (),
+) -> tuple[subprocess.CompletedProcess[str], Path]:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as coverage_file:
         coverage_path = Path(coverage_file.name)
 
-    test_targets = _pytest_targets(test_files)
     source_root = str(_SOURCE_ROOT.resolve())
     repo_root = str(Path.cwd().resolve())
     command = [
@@ -1776,12 +1928,13 @@ def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.Comple
             "import specfact_code_review; "
             "raise SystemExit(pytest.main(sys.argv[1:]))"
         ),
+        *policy_argv,
         "--import-mode=importlib",
         "--cov",
-        str(_PACKAGE_ROOT),
+        str(coverage_source),
         "--cov-fail-under=0",
         f"--cov-report=json:{coverage_path}",
-        *(str(test_target) for test_target in test_targets),
+        *selectors,
     ]
     result = subprocess.run(
         command,
@@ -1792,6 +1945,23 @@ def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.Comple
         env=_pytest_env(),
     )
     return result, coverage_path
+
+
+def _run_pytest_with_coverage(test_files: list[Path]) -> tuple[subprocess.CompletedProcess[str], Path]:
+    test_targets = tuple(str(test_target) for test_target in _pytest_targets(test_files))
+    return _run_pytest_selection_with_coverage(test_targets, coverage_source=_PACKAGE_ROOT)
+
+
+def _run_pytest_inventory_with_coverage(
+    selectors: tuple[str, ...],
+    *,
+    policy_argv: tuple[str, ...] = (),
+) -> tuple[subprocess.CompletedProcess[str], Path]:
+    return _run_pytest_selection_with_coverage(
+        selectors,
+        coverage_source=Path("/opt/specfact/snapshot"),
+        policy_argv=policy_argv,
+    )
 
 
 def _summary_for_findings(findings: list[ReviewFinding]) -> str:
@@ -2462,25 +2632,22 @@ def _coverage_findings(
     return findings, coverage_by_source
 
 
-def _evaluate_tdd_gate(files: list[Path]) -> tuple[list[ReviewFinding], dict[str, float] | None]:
-    """Validate tests and return findings plus per-source coverage when available."""
-    source_files, test_files, findings = _collect_tdd_inputs(files)
-    if not source_files:
-        return [], None
-    if findings:
-        return findings, None
-
-    pytest_skip = skip_if_pytest_unavailable(source_files[0])
+def _evaluate_pytest_execution(
+    source_files: list[Path],
+    execute: Callable[[], tuple[subprocess.CompletedProcess[str], Path]],
+) -> tuple[list[ReviewFinding], dict[str, float] | None]:
+    anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
+    pytest_skip = skip_if_pytest_unavailable(anchor)
     if pytest_skip:
         return pytest_skip, None
 
     try:
-        test_result, coverage_path = _run_pytest_with_coverage(test_files)
+        test_result, coverage_path = execute()
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
         return [
             tool_error(
                 tool="pytest",
-                file_path=source_files[0],
+                file_path=anchor,
                 message=f"Unable to execute targeted tests: {exc}",
             )
         ], None
@@ -2492,7 +2659,7 @@ def _evaluate_tdd_gate(files: list[Path]) -> tuple[list[ReviewFinding], dict[str
                 severity="error",
                 tool="pytest",
                 rule="TEST_FAILURE",
-                file=str(source_files[0]),
+                file=str(anchor),
                 line=1,
                 message="Targeted tests failed for the reviewed source files.",
                 fixable=False,
@@ -2505,7 +2672,7 @@ def _evaluate_tdd_gate(files: list[Path]) -> tuple[list[ReviewFinding], dict[str
         return [
             tool_error(
                 tool="pytest",
-                file_path=source_files[0],
+                file_path=anchor,
                 message=f"Unable to read coverage report: {exc}",
             )
         ], None
@@ -2513,6 +2680,40 @@ def _evaluate_tdd_gate(files: list[Path]) -> tuple[list[ReviewFinding], dict[str
         coverage_path.unlink(missing_ok=True)
 
     return _coverage_findings(source_files, coverage_payload)
+
+
+def _evaluate_complete_tdd_gate(
+    files: list[Path], adapter_argv: tuple[str, ...]
+) -> tuple[list[ReviewFinding], dict[str, float] | None]:
+    """Execute the controller-supplied complete immutable pytest inventory."""
+    policy_argv, selectors = _split_pytest_adapter_argv(adapter_argv)
+    source_files = [file_path for file_path in files if file_path.suffix == ".py" and not _is_test_file(file_path)]
+    if not selectors:
+        anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
+        return [
+            tool_error(
+                tool="pytest",
+                file_path=anchor,
+                message="Complete pytest inventory contains no collected selectors.",
+            )
+        ], None
+    return _evaluate_pytest_execution(
+        source_files,
+        lambda: _run_pytest_inventory_with_coverage(selectors, policy_argv=policy_argv),
+    )
+
+
+def _evaluate_tdd_gate(files: list[Path]) -> tuple[list[ReviewFinding], dict[str, float] | None]:
+    """Validate tests and return findings plus per-source coverage when available."""
+    source_files, test_files, findings = _collect_tdd_inputs(files)
+    if not source_files:
+        return [], None
+    if findings:
+        return findings, None
+    return _evaluate_pytest_execution(
+        source_files,
+        lambda: _run_pytest_with_coverage(test_files),
+    )
 
 
 @beartype
@@ -2907,10 +3108,10 @@ def _pytest_toml_values(path: Path, payload: bytes) -> dict[str, object]:
 
 
 def _pytest_ini_values(path: Path, payload: bytes, *, section: str) -> dict[str, object]:
-    del path
     parser = configparser.ConfigParser(interpolation=None)
     parser.read_string(payload.decode("utf-8"))
-    return dict(parser[section]) if section else {}
+    selected_section = "pytest" if path.name in {"pytest.ini", ".pytest.ini"} else section
+    return dict(parser[selected_section]) if selected_section and parser.has_section(selected_section) else {}
 
 
 def _pytest_string_list(value: object) -> list[str]:
@@ -2923,10 +3124,13 @@ def _pytest_string_list(value: object) -> list[str]:
 
 def _pytest_policy_values(policy_bundle: object | None) -> dict[str, object]:
     defaults: dict[str, object] = {
+        "version": "9.0.3",
         "testpaths": ["tests"],
         "python_files": ["test_*.py"],
         "python_classes": ["Test*"],
         "python_functions": ["test_*"],
+        "addopts": [],
+        "config": {},
     }
     if policy_bundle is None:
         return defaults
@@ -2944,16 +3148,55 @@ def _pytest_policy_values(policy_bundle: object | None) -> dict[str, object]:
         else _pytest_ini_values(path, payload, section=located.selected_section)
     )
     result = dict(defaults)
-    for key in defaults:
+    for key in ("testpaths", "python_files", "python_classes", "python_functions"):
         raw_value = values.get(key)
         if raw_value is not None:
             result[key] = _pytest_string_list(raw_value)
+    addopts = values.get("addopts")
+    if addopts is not None:
+        result["addopts"] = _pytest_string_list(addopts)
+    result["config"] = values
     return result
 
 
-def _reconcile_immutable_pytest_inventory(resolution: object, *, options: ReviewOptions) -> CandidateReconciliation:
+def _flatten_coverage_sections(document: dict[str, object]) -> dict[str, object]:
+    return {
+        f"{section}:{key}": value
+        for section, raw_fields in document.items()
+        if isinstance(section, str) and isinstance(raw_fields, dict)
+        for key, value in cast(dict[str, object], raw_fields).items()
+    }
+
+
+def _coverage_policy_values(policy_bundle: object | None) -> dict[str, object]:
+    if policy_bundle is None:
+        return {}
+    root = cast(Path, cast(Any, policy_bundle).root)
+    located = scope.resolve_coverage_policy(root, expected_version="7.15.4")
+    if located.status != "PASS":
+        raise ValueError(located.reason)
+    if not located.selected_path:
+        return {}
+    path = root / located.selected_path
+    payload = path.read_bytes()
+    if path.suffix == ".toml" or path.name == "pyproject.toml":
+        document = tomllib.loads(payload.decode("utf-8"))
+        if path.name == "pyproject.toml":
+            tool = cast(dict[str, object], document.get("tool", {}))
+            document = cast(dict[str, object], tool.get("coverage", {}))
+        return _flatten_coverage_sections(document)
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read_string(payload.decode("utf-8"))
+    values: dict[str, object] = {}
+    for raw_section in parser.sections():
+        section = raw_section.removeprefix("coverage:")
+        values.update({f"{section}:{key}": value for key, value in parser[raw_section].items()})
+    return values
+
+
+def _reconcile_immutable_pytest_inventory(resolution: object, *, options: ReviewOptions) -> ImmutablePytestInventory:
     if options.no_tests:
-        return CandidateReconciliation("PASS")
+        return ImmutablePytestInventory(CandidateReconciliation("PASS"))
     base_snapshot = cast(Any, resolution).base_snapshot
     head_snapshot = cast(Any, resolution).head_snapshot
     policy = _pytest_policy_values(getattr(resolution, "policy_bundle", None))
@@ -2961,19 +3204,36 @@ def _reconcile_immutable_pytest_inventory(resolution: object, *, options: Review
     base_plan = plan_complete_pytest_suite(base_snapshot.root, policy, changed_paths=changed_paths)
     head_plan = plan_complete_pytest_suite(head_snapshot.root, policy, changed_paths=changed_paths)
     if base_plan.status != "PASS":
-        return CandidateReconciliation("UNKNOWN", base_plan.reason)
+        return ImmutablePytestInventory(CandidateReconciliation("UNKNOWN", base_plan.reason))
     if head_plan.status != "PASS":
-        return CandidateReconciliation("UNKNOWN", head_plan.reason)
+        return ImmutablePytestInventory(CandidateReconciliation("UNKNOWN", head_plan.reason))
     rename_facts: dict[str, str] = {
         item.old_path: item.new_path
         for item in tuple(getattr(resolution, "exact_renames", ()))
         if getattr(item, "disposition", "") == "exact_rename"
     }
-    return reconcile_pytest_inventories(
-        base=base_plan.selectors,
-        head=head_plan.selectors,
-        rename_facts=rename_facts,
+    return ImmutablePytestInventory(
+        reconcile_pytest_inventories(
+            base=base_plan.selectors,
+            head=head_plan.selectors,
+            rename_facts=rename_facts,
+        ),
+        base_plan.selectors,
+        head_plan.selectors,
     )
+
+
+def _with_pytest_inventory(
+    bindings: SnapshotPolicyBindings,
+    selectors: tuple[str, ...],
+) -> SnapshotPolicyBindings:
+    member_argv = dict(bindings.member_argv)
+    member_argv["targeted-pytest-coverage"] = (
+        *member_argv.get("targeted-pytest-coverage", ()),
+        "--",
+        *selectors,
+    )
+    return SnapshotPolicyBindings(bindings.config_roots, member_argv, bindings.cleanup_roots)
 
 
 def _materialize_claimed_project_runtime(
@@ -3024,16 +3284,16 @@ def run_immutable_scope_review(
             scope_evidence=scope_evidence,
         )
     try:
-        pytest_reconciliation = _reconcile_immutable_pytest_inventory(resolution, options=options)
+        pytest_inventory = _reconcile_immutable_pytest_inventory(resolution, options=options)
     except (OSError, TypeError, ValueError, configparser.Error, tomllib.TOMLDecodeError) as exc:
         return _unknown_capsule_report(
             f"pytest_config_ambiguous:{exc}",
             options=options,
             scope_evidence=scope_evidence,
         )
-    if pytest_reconciliation.status != "PASS":
+    if pytest_inventory.reconciliation.status != "PASS":
         return _unknown_capsule_report(
-            pytest_reconciliation.reason,
+            pytest_inventory.reconciliation.reason,
             options=options,
             scope_evidence=scope_evidence,
         )
@@ -3041,15 +3301,21 @@ def run_immutable_scope_review(
     base_files = _snapshot_python_files(base_snapshot)
     head_files = _snapshot_python_files(head_snapshot)
     try:
-        base_bindings = _snapshot_policy_bindings(
-            policy_bundle,
-            snapshot_root=base_snapshot.root,
-            files=base_files,
+        base_bindings = _with_pytest_inventory(
+            _snapshot_policy_bindings(
+                policy_bundle,
+                snapshot_root=base_snapshot.root,
+                files=base_files,
+            ),
+            pytest_inventory.base,
         )
-        head_bindings = _snapshot_policy_bindings(
-            policy_bundle,
-            snapshot_root=head_snapshot.root,
-            files=head_files,
+        head_bindings = _with_pytest_inventory(
+            _snapshot_policy_bindings(
+                policy_bundle,
+                snapshot_root=head_snapshot.root,
+                files=head_files,
+            ),
+            pytest_inventory.head,
         )
     except (OSError, TypeError, ValueError) as exc:
         return _unknown_capsule_report(

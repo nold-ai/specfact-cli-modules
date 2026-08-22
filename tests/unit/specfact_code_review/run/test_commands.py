@@ -1544,7 +1544,7 @@ def test_changed_files_from_git_diff_filters_python_files(monkeypatch: Any, tmp_
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=0,
-                stdout=f"{python_file}\n{text_file}\nmissing.py\n",
+                stdout=f"{python_file}\0{text_file}\0missing.py\0",
                 stderr="",
             )
         return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
@@ -1569,7 +1569,7 @@ def test_changed_files_from_git_diff_excludes_test_files_by_default(monkeypatch:
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=0,
-                stdout=f"{source_file}\n{test_file}\n",
+                stdout=f"{source_file}\0{test_file}\0",
                 stderr="",
             )
         return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
@@ -1594,14 +1594,14 @@ def test_changed_files_from_git_diff_includes_untracked_python_files(monkeypatch
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=0,
-                stdout=f"{tracked_file}\n",
+                stdout=f"{tracked_file}\0",
                 stderr="",
             )
         if command[:4] == ["git", "ls-files", "--others", "--exclude-standard"]:
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=0,
-                stdout=f"{untracked_file}\n",
+                stdout=f"{untracked_file}\0",
                 stderr="",
             )
         raise AssertionError(f"Unexpected command: {command}")
