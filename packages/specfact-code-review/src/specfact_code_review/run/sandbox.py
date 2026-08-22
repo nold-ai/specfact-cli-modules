@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
+import subprocess
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
@@ -146,26 +149,42 @@ class RuntimeObservationScope:
     status_on_policy_uncertainty: Literal["UNKNOWN"]
 
 
+@dataclass(frozen=True)
+class SandboxExecution:
+    """OS-observed result from one fresh isolated analyzer process."""
+
+    status: ScopeStatus
+    returncode: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    reason: str = ""
+
+
 @ensure(lambda result: result.status in {"PASS", "UNKNOWN"})
 def validate_bubblewrap(identity: BubblewrapIdentity) -> IsolationValidation:
     """Require the canonical static Linux x86_64 Bubblewrap descriptor."""
 
     expected = {
         "path": "/opt/specfact/bin/bwrap-static",
-        "format": "ELF",
         "architecture": "x86_64",
-        "linkage": "static",
     }
     actual = {
         "path": identity.path,
-        "format": identity.format,
         "architecture": identity.architecture,
-        "linkage": identity.linkage,
     }
     digest_fields_valid = all(
         value.startswith("sha256:") and len(value) == 71 for value in (identity.sha256, identity.descriptor_digest)
     )
-    if actual != expected or identity.interpreter or identity.needed or not digest_fields_valid:
+    admitted_format = identity.format in {"ELF", "ELF64"}
+    admitted_linkage = identity.linkage in {"static", "static-pie"}
+    if (
+        actual != expected
+        or not admitted_format
+        or not admitted_linkage
+        or identity.interpreter
+        or identity.needed
+        or not digest_fields_valid
+    ):
         return IsolationValidation("UNKNOWN", "bubblewrap_identity_mismatch")
     return IsolationValidation("PASS")
 
@@ -252,6 +271,126 @@ def build_launch_plan(context: SnapshotInvocationContext) -> SandboxLaunchPlan:
         writable_roots=("/opt/specfact/output", "/opt/specfact/tmp"),
         mounts=_mounts(context),
     )
+
+
+def _verified_bubblewrap_descriptor(capsule_root: Path, identity: BubblewrapIdentity) -> int:
+    executable = capsule_root / identity.path.lstrip("/")
+    descriptor = os.open(
+        executable,
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+    )
+    try:
+        before = os.fstat(descriptor)
+        chunks: list[bytes] = []
+        while chunk := os.read(descriptor, 1_048_576):
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+        stable = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_mode) == (
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
+            after.st_mode,
+        )
+        digest = "sha256:" + hashlib.sha256(b"".join(chunks)).hexdigest()
+        if not stat.S_ISREG(before.st_mode) or not before.st_mode & 0o111 or not stable or digest != identity.sha256:
+            raise ValueError("bubblewrap descriptor identity mismatch")
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        return descriptor
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def _bubblewrap_command(
+    descriptor: int,
+    plan: SandboxLaunchPlan,
+    *,
+    extra_argv: tuple[str, ...],
+) -> list[str]:
+    command = [
+        f"/proc/self/fd/{descriptor}",
+        "--unshare-all",
+        "--cap-drop",
+        "ALL",
+        "--die-with-parent",
+        "--new-session",
+        "--ro-bind",
+        str(plan.startup_sys_path[0]),
+        "/",
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+        "--tmpfs",
+        "/tmp",
+    ]
+    for mount in plan.mounts:
+        command.extend(("--dir", mount.destination))
+        command.extend(("--ro-bind" if mount.read_only else "--bind", str(mount.source), mount.destination))
+    command.extend(
+        (
+            "--clearenv",
+            "--setenv",
+            "PATH",
+            "/opt/specfact/analyzers/bin:/opt/specfact/python/bin",
+            "--setenv",
+            "PYTHONHOME",
+            "/opt/specfact/python",
+            "--setenv",
+            "PYTHONNOUSERSITE",
+            "1",
+            "--setenv",
+            "HOME",
+            "/opt/specfact/tmp",
+            "--chdir",
+            plan.cwd,
+            *plan.argv,
+            *extra_argv,
+        )
+    )
+    return command
+
+
+@ensure(lambda result: result.status in {"PASS", "UNKNOWN"})
+def execute_launch_plan(
+    plan: SandboxLaunchPlan,
+    identity: BubblewrapIdentity,
+    *,
+    extra_argv: tuple[str, ...],
+    timeout: int = 300,
+) -> SandboxExecution:
+    """Execute one analyzer with the verified static launcher and no host fallback."""
+
+    if validate_bubblewrap(identity).status != "PASS" or not plan.startup_sys_path:
+        return SandboxExecution("UNKNOWN", reason="bubblewrap_identity_mismatch")
+    descriptor: int | None = None
+    try:
+        descriptor = _verified_bubblewrap_descriptor(plan.startup_sys_path[0], identity)
+        command = _bubblewrap_command(descriptor, plan, extra_argv=extra_argv)
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+            env={},
+            pass_fds=(descriptor,),
+        )
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        return SandboxExecution("UNKNOWN", reason=f"sandbox_launch_failed:{exc}")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+    if completed.returncode != 0:
+        return SandboxExecution(
+            "UNKNOWN",
+            completed.returncode,
+            completed.stdout,
+            completed.stderr,
+            "analyzer_process_error",
+        )
+    return SandboxExecution("PASS", completed.returncode, completed.stdout, completed.stderr)
 
 
 def _reserved_collision_paths(root: Path, prefixes: frozenset[str]) -> tuple[str, ...]:

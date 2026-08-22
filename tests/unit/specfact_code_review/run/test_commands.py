@@ -338,6 +338,49 @@ def test_immutable_scope_report_cleans_materialized_roots(monkeypatch: Any, tmp_
     assert not policy_root.exists()
 
 
+def test_resolved_immutable_scope_executes_capsule_review_before_cleanup(monkeypatch: Any, tmp_path: Path) -> None:
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    for root in (base_root, head_root):
+        root.mkdir()
+    resolution = review_scope.ScopeResolution(
+        status="PASS",
+        reason="resolved",
+        selected_paths=("src/app.py",),
+        assurance_kind="range_preview",
+        effective_assurance_kind="range_preview",
+        ci_exit_code=0,
+        base_snapshot=review_scope.Snapshot(base_root, "a" * 40, "b" * 40, {}, {}),
+        head_snapshot=review_scope.Snapshot(head_root, "c" * 40, "d" * 40, {}, {}),
+        materialized=True,
+    )
+    expected = _report()
+    observed: dict[str, object] = {}
+
+    def execute(resolved: review_scope.ScopeResolution, **_kwargs: object) -> ReviewReport:
+        observed["resolution"] = resolved
+        observed["roots_existed"] = base_root.exists() and head_root.exists()
+        return expected
+
+    monkeypatch.setattr(run_commands, "resolve_scope", lambda _request: resolution)
+    monkeypatch.setattr(run_commands, "run_immutable_scope_review", execute)
+
+    actual = run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="c" * 40)
+    )
+
+    assert actual is expected
+    assert observed == {"resolution": resolution, "roots_existed": True}
+    assert not base_root.exists()
+    assert not head_root.exists()
+
+
+def test_command_layer_uses_capsule_gateway_for_legacy_scopes() -> None:
+    from specfact_code_review.run import runner as runner_api
+
+    assert run_commands.run_review is runner_api.run_capsule_review
+
+
 def test_immutable_scope_request_propagates_repository_identity(monkeypatch: Any) -> None:
     captured: dict[str, object] = {}
 

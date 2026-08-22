@@ -7,6 +7,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -16,13 +17,14 @@ from contextlib import suppress
 from dataclasses import dataclass
 from functools import lru_cache, partial
 from pathlib import Path
-from typing import Literal, cast
+from typing import Any, Literal, cast
 from uuid import uuid4
 
 from beartype import beartype
 from icontract import ensure, require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
+from specfact_code_review.run import differential, toolchain
 from specfact_code_review.run.findings import (
     PR_RANGE_CONDITIONAL_ANALYZERS,
     PR_RANGE_REQUIRED_ANALYZERS,
@@ -35,6 +37,13 @@ from specfact_code_review.run.findings import (
     SignalTraceEntry,
 )
 from specfact_code_review.run.forecast import build_cleanup_forecast
+from specfact_code_review.run.sandbox import (
+    BubblewrapIdentity,
+    SnapshotInvocationContext,
+    build_launch_plan,
+    execute_launch_plan,
+    preflight_reserved_imports,
+)
 from specfact_code_review.run.scorer import score_review
 from specfact_code_review.tools.ai_bloat_runner import run_ai_bloat
 from specfact_code_review.tools.ast_clean_code_runner import run_ast_clean_code
@@ -70,6 +79,17 @@ _PR_CONTEXT_ENVS = (
 )
 _CLEAN_CODE_CONTEXT_HINTS = ("clean code", "naming", "kiss", "yagni", "dry", "solid", "complexity")
 _TARGETED_TEST_TIMEOUT = int(os.environ.get("SPECFACT_CODE_REVIEW_TARGETED_TEST_TIMEOUT", "120"))
+_GIT_LOCAL_ENV_VARS = frozenset(
+    {
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_DIR",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_PREFIX",
+        "GIT_WORK_TREE",
+    }
+)
 ReviewFocus = Literal["simplify"]
 ReviewEnforcementMode = Literal["full", "changed", "shadow"]
 
@@ -130,6 +150,47 @@ class ProfileEvidenceReport:
     assurance_status: str
     overall_verdict: str
     has_unknown_required_evidence: bool
+
+
+@dataclass(frozen=True)
+class CapsuleRuntime:
+    """Verified analyzer capsule identities reused across fresh sandboxes."""
+
+    root: Path
+    identity: str
+    environment_id: str
+    interpreter: str
+    bootstrap: str
+    bubblewrap: BubblewrapIdentity
+
+
+@dataclass(frozen=True)
+class CapsuleSnapshotResult:
+    """Per-member evidence produced from one immutable snapshot."""
+
+    evidence: dict[str, dict[str, object]]
+    findings_by_member: dict[str, list[ReviewFinding]]
+
+
+@dataclass(frozen=True)
+class RangeDifferentialContext:
+    """Immutable sources and rename/add/delete facts shared by all members."""
+
+    base_sources: dict[str, bytes]
+    head_sources: dict[str, bytes]
+    rename_facts: dict[str, str]
+    rename_ambiguities: dict[str, list[str]] | None
+    added_paths: tuple[str, ...]
+    deleted_paths: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SelectedModulePayload:
+    """Verified module bytes plus optional ownership of a staged source tree."""
+
+    payload: object | None
+    reason: str = ""
+    staged_source: tempfile.TemporaryDirectory[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -332,6 +393,481 @@ def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> Profil
         members.append(AnalyzerEvidence(member_id, execution, outcome, version, str(raw.get("diagnostic", ""))))
     assurance = "FAIL" if known_fail else "UNKNOWN" if required_unknown else "PASS"
     return ProfileEvidenceReport(tuple(members), assurance, "PASS" if assurance == "PASS" else "FAIL", required_unknown)
+
+
+def _capsule_environment_id() -> str:
+    return f"linux-x86_64-cp{sys.version_info.major}{sys.version_info.minor}"
+
+
+def _capsule_credential() -> str | None:
+    actor = os.environ.get("GITHUB_ACTOR", "").strip()
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    return f"{actor}:{token}" if actor and token else None
+
+
+def _official_installed_payload() -> tuple[object | None, str]:
+    try:
+        from specfact_cli.registry import module_discovery, module_installer
+
+        discovered = next(
+            (
+                item
+                for item in module_discovery.discover_all_modules_for_project_with_shadowed(Path.cwd())
+                if item.metadata.name == "nold-ai/specfact-code-review" and item.source in {"user", "marketplace"}
+            ),
+            None,
+        )
+        if discovered is None:
+            return None, "official_installed_module_missing"
+        handoff = toolchain.derive_core_0_55_1_install_handoff(
+            discovered,
+            expected_registry_id="nold-ai/specfact-code-review",
+            user_modules_root=module_discovery.USER_MODULES_ROOT,
+            marketplace_modules_root=module_discovery.MARKETPLACE_MODULES_ROOT,
+            public_key_path=module_installer._bundled_public_key_path(),  # pylint: disable=protected-access
+        )
+        payload = toolchain.verify_installed_module_payload(handoff)
+    except (AttributeError, ImportError, OSError):
+        return None, "core_installed_module_handoff_unavailable"
+    if payload.status != "PASS":
+        return None, payload.reason
+    return payload, ""
+
+
+def _candidate_git_environment() -> dict[str, str]:
+    return {
+        **{key: value for key, value in os.environ.items() if key not in _GIT_LOCAL_ENV_VARS},
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+    }
+
+
+def _git_bytes(repo_root: Path, *args: str) -> bytes:
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        check=True,
+        capture_output=True,
+        env=_candidate_git_environment(),
+    )
+    return completed.stdout
+
+
+def _stage_candidate_payload(repo_root: Path, commit_sha: str) -> tempfile.TemporaryDirectory[str]:
+    package_prefix = "packages/specfact-code-review/src/"
+    tree = _git_bytes(
+        repo_root,
+        "ls-tree",
+        "-rz",
+        "--full-tree",
+        commit_sha,
+        package_prefix + "specfact_code_review",
+    )
+    # Ownership is transferred to SelectedModulePayload and released after capsule composition.
+    staged = tempfile.TemporaryDirectory(prefix="specfact-candidate-")  # pylint: disable=consider-using-with
+    installed_root = Path(staged.name)
+    try:
+        entries = [entry for entry in tree.split(b"\0") if entry]
+        if not entries:
+            raise ValueError("candidate payload tree is empty")
+        for entry in entries:
+            descriptor, encoded_path = entry.split(b"\t", 1)
+            mode, object_type, object_sha = descriptor.decode("ascii").split()
+            path = encoded_path.decode("utf-8")
+            if object_type != "blob" or mode not in {"100644", "100755"} or not path.startswith(package_prefix):
+                raise ValueError("candidate payload contains an unsupported entry")
+            relative = Path(path.removeprefix(package_prefix))
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ValueError("candidate payload path escapes its staging root")
+            target = installed_root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(_git_bytes(repo_root, "cat-file", "blob", object_sha))
+            target.chmod(0o755 if mode == "100755" else 0o644)
+    except Exception:
+        staged.cleanup()
+        raise
+    return staged
+
+
+def _candidate_module_version(module_package: bytes) -> str:
+    match = re.search(rb"(?m)^version:\s*([^\s#]+)\s*$", module_package)
+    if match is None:
+        raise ValueError("candidate module version is missing")
+    return match.group(1).decode("utf-8")
+
+
+def _protected_candidate_payload() -> SelectedModulePayload:
+    required = {
+        "GITHUB_REPOSITORY": "repository",
+        "GITHUB_WORKFLOW": "workflow",
+        "GITHUB_WORKFLOW_REF": "workflow_ref",
+        "GITHUB_RUN_ID": "run_id",
+        "GITHUB_RUN_ATTEMPT": "run_attempt",
+        "GITHUB_JOB": "job",
+    }
+    if (
+        os.environ.get("GITHUB_ACTIONS") != "true"
+        or os.environ.get("GITHUB_REPOSITORY") != "nold-ai/specfact-cli-modules"
+        or os.environ.get("GITHUB_EVENT_NAME") not in {"pull_request", "merge_group"}
+    ):
+        return SelectedModulePayload(None, "untrusted_candidate_workflow_context")
+    try:
+        repo_root = Path(__file__).parents[5]
+        if (
+            Path(_git_bytes(repo_root, "rev-parse", "--show-toplevel").decode().strip()).resolve()
+            != repo_root.resolve()
+        ):
+            raise ValueError("candidate repository root mismatch")
+        commit_sha = os.environ.get("GITHUB_SHA", "")
+        if re.fullmatch(r"[0-9a-f]{40}", commit_sha) is None:
+            raise ValueError("candidate commit is invalid")
+        if _git_bytes(repo_root, "rev-parse", "HEAD").decode().strip() != commit_sha:
+            raise ValueError("candidate checkout does not match GITHUB_SHA")
+        tree_sha = _git_bytes(repo_root, "rev-parse", f"{commit_sha}^{{tree}}").decode().strip()
+        if re.fullmatch(r"[0-9a-f]{40}", tree_sha) is None:
+            raise ValueError("candidate tree is invalid")
+        dirty = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_root),
+                "diff",
+                "--quiet",
+                commit_sha,
+                "--",
+                "packages/specfact-code-review/src/specfact_code_review",
+                "packages/specfact-code-review/module-package.yaml",
+            ],
+            check=False,
+            env=_candidate_git_environment(),
+        )
+        if dirty.returncode != 0:
+            raise ValueError("candidate tracked payload differs from GITHUB_SHA")
+        module_package = _git_bytes(
+            repo_root,
+            "show",
+            f"{commit_sha}:packages/specfact-code-review/module-package.yaml",
+        )
+        staged = _stage_candidate_payload(repo_root, commit_sha)
+        installed_root = Path(staged.name)
+        metadata: dict[str, object] = {
+            output_name: os.environ[input_name] for input_name, output_name in required.items()
+        }
+        metadata.update(
+            {
+                "commit_sha": commit_sha,
+                "tree_sha": tree_sha,
+                "module_package_digest": "sha256:" + hashlib.sha256(module_package).hexdigest(),
+                "payload_manifest_digest": toolchain.candidate_source_manifest_digest(installed_root),
+                "version": _candidate_module_version(module_package),
+            }
+        )
+        payload = toolchain.verify_candidate_module_source(metadata, installed_root=installed_root)
+        if payload.status != "PASS":
+            staged.cleanup()
+            return SelectedModulePayload(None, payload.reason)
+        return SelectedModulePayload(payload, staged_source=staged)
+    except (OSError, subprocess.SubprocessError, TypeError, UnicodeDecodeError, ValueError) as exc:
+        return SelectedModulePayload(None, f"candidate_payload_unavailable:{exc}")
+
+
+def _selected_module_payload() -> SelectedModulePayload:
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        return _protected_candidate_payload()
+    payload, reason = _official_installed_payload()
+    return SelectedModulePayload(payload, reason)
+
+
+def _prepare_capsule_runtime() -> tuple[CapsuleRuntime | None, str]:
+    """Materialize and compose the signed runtime without host analyzer fallback."""
+
+    if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
+        return None, "unsupported_controller_platform"
+    try:
+        lock_path = Path(__file__).parents[1] / "resources/contracts/pr-range-v1-toolchain-lock.json"
+        lock = cast(dict[str, object], json.loads(lock_path.read_text(encoding="utf-8")))
+        environment_id = _capsule_environment_id()
+        environments = cast(list[dict[str, object]], lock["environments"])
+        environment = next(
+            item for item in environments if str(item.get("environment_id") or item.get("id")) == environment_id
+        )
+        storage_root = Path(
+            os.environ.get(
+                "SPECFACT_CODE_REVIEW_CAPSULE_CACHE",
+                str(Path.home() / ".cache/specfact/code-review/capsules"),
+            )
+        ).expanduser()
+        storage_root.mkdir(parents=True, exist_ok=True)
+        materialized = toolchain.materialize_capsule(
+            lock,
+            environment_id=environment_id,
+            storage_root=storage_root,
+            credential=_capsule_credential(),
+        )
+        if materialized.status != "PASS":
+            return None, materialized.reason
+        selected_payload = _selected_module_payload()
+        if selected_payload.payload is None:
+            return None, selected_payload.reason
+        try:
+            native = next(
+                item
+                for item in cast(list[dict[str, object]], environment["native_tools"])
+                if item.get("id") == "bubblewrap-static"
+            )
+            final_manifest = cast(dict[str, object], environment["final_root_manifest"])
+            composition = toolchain.compose_post_base_capsule(
+                cast(Any, selected_payload.payload),
+                capsule_root=materialized.root,
+                immutable_base_root_digest=str(final_manifest["manifest_digest"]),
+                analyzer_installed_set_digest=toolchain.canonical_json_digest(materialized.installed_distributions),
+                native_launcher_digest=str(native["executable_sha256"]),
+                project_runtime_identity="not-applicable",
+            )
+        finally:
+            if selected_payload.staged_source is not None:
+                selected_payload.staged_source.cleanup()
+        if composition.status != "PASS":
+            return None, composition.reason
+        paths = cast(dict[str, object], environment["paths"])
+        bubblewrap = BubblewrapIdentity(
+            path=str(native["path"]),
+            format=str(native["format"]),
+            architecture=str(native["architecture"]),
+            linkage=str(native["linkage_kind"]),
+            interpreter=tuple(str(value) for value in cast(list[object], native["interpreter_set"])),
+            needed=tuple(str(value) for value in cast(list[object], native["needed_library_set"])),
+            sha256=str(native["executable_sha256"]),
+            descriptor_digest=str(native["verified_descriptor_digest"]),
+        )
+        return (
+            CapsuleRuntime(
+                materialized.root,
+                composition.composite_identity_digest,
+                environment_id,
+                str(paths["interpreter"]),
+                "/opt/specfact/bootstrap/sealed_bootstrap.py",
+                bubblewrap,
+            ),
+            "",
+        )
+    except (KeyError, OSError, StopIteration, TypeError, ValueError, json.JSONDecodeError) as exc:
+        return None, f"capsule_runtime_unavailable:{exc}"
+
+
+def _member_findings(member: str, files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
+    runners: dict[str, Callable[[list[Path]], list[ReviewFinding]]] = {
+        "ruff": run_ruff,
+        "radon": run_radon,
+        "semgrep-clean": run_semgrep,
+        "semgrep-bugs": run_semgrep_bugs,
+        "ai-bloat-ast": run_ai_bloat,
+        "ast-clean-code": run_ast_clean_code,
+        "basedpyright": run_basedpyright,
+        "pylint": run_pylint,
+        "contracts": partial(run_contract_check, bug_hunt=bug_hunt),
+    }
+    if member == "targeted-pytest-coverage":
+        findings, _coverage = _evaluate_tdd_gate(files)
+        return findings
+    try:
+        runner = runners[member]
+    except KeyError as exc:
+        raise ValueError(f"unsupported capsule member: {member}") from exc
+    return runner(files)
+
+
+def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool]:
+    request = json.loads(request_path.read_text(encoding="utf-8"))
+    if not isinstance(request, dict):
+        raise ValueError("capsule request must be an object")
+    member = str(request["member"])
+    raw_paths = request["paths"]
+    if not isinstance(raw_paths, list) or not raw_paths or not all(isinstance(path, str) for path in raw_paths):
+        raise ValueError("capsule paths are invalid")
+    relative_paths = [Path(cast(str, path)) for path in raw_paths]
+    if any(path.is_absolute() or ".." in path.parts for path in relative_paths):
+        raise ValueError("capsule path escapes snapshot")
+    return (
+        member,
+        [Path("/opt/specfact/snapshot") / path for path in relative_paths],
+        bool(request.get("bug_hunt", False)),
+    )
+
+
+def _capsule_member_response(member: str, findings: list[ReviewFinding]) -> dict[str, object]:
+    unknown = any(finding.category == "tool_error" for finding in findings)
+    blocking = any(finding.is_blocking() for finding in findings)
+    normalized = [
+        finding.model_copy(
+            update={"file": Path(finding.file).as_posix().removeprefix("/opt/specfact/snapshot/")}
+        ).model_dump(mode="json")
+        for finding in findings
+    ]
+    return {
+        "member": member,
+        "execution_state": "error" if unknown else "ran",
+        "evidence_outcome": "UNKNOWN" if unknown else "FAIL" if blocking else "PASS",
+        "findings": normalized,
+        "diagnostic": "analyzer_reported_incomplete_execution" if unknown else "",
+    }
+
+
+def _capsule_process_request(request_path: Path) -> None:
+    """Run exactly one analyzer member inside the sealed capsule process."""
+
+    try:
+        member, files, bug_hunt = _load_capsule_request(request_path)
+        response = _capsule_member_response(member, _member_findings(member, files, bug_hunt=bug_hunt))
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        response = {
+            "member": "unknown",
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "findings": [],
+            "diagnostic": f"capsule_request_failed:{exc}",
+        }
+    destination = Path("/opt/specfact/output/result.json")
+    temporary = destination.with_name(".result.json.tmp")
+    temporary.write_text(
+        json.dumps(response, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n", encoding="utf-8"
+    )
+    os.replace(temporary, destination)
+
+
+def _execute_capsule_member(
+    *,
+    runtime: CapsuleRuntime,
+    member: str,
+    invocation_id: str,
+    snapshot_root: Path,
+    files: list[Path],
+    options: ReviewOptions,
+    config_roots: tuple[Path, ...] = (),
+) -> dict[str, object]:
+    del invocation_id
+    with tempfile.TemporaryDirectory(prefix=f"specfact-{member}-") as temporary_directory:
+        process_root = Path(temporary_directory)
+        request_root = process_root / "request"
+        output_root = process_root / "output"
+        scratch_root = process_root / "temporary"
+        control_root = process_root / "control"
+        for root in (request_root, output_root, scratch_root, control_root):
+            root.mkdir()
+        resolved_snapshot = snapshot_root.resolve()
+        relative_paths = tuple(path.resolve().relative_to(resolved_snapshot).as_posix() for path in files)
+        request_path = request_root / "request.json"
+        request_path.write_text(
+            json.dumps(
+                {"bug_hunt": options.bug_hunt, "member": member, "paths": relative_paths},
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        context = SnapshotInvocationContext(
+            member=member,
+            snapshot_root=resolved_snapshot,
+            config_roots=(request_root, *config_roots),
+            output_root=output_root,
+            temporary_root=scratch_root,
+            capsule_root=runtime.root,
+            interpreter=runtime.interpreter,
+            bootstrap=runtime.bootstrap,
+            project_runtime_root=None,
+            network="none",
+            control_root=control_root,
+        )
+        preflight = preflight_reserved_imports(context)
+        if preflight.status != "PASS":
+            return {
+                "execution_state": "error",
+                "evidence_outcome": "UNKNOWN",
+                "findings": [],
+                "diagnostic": preflight.reason,
+            }
+        execution = execute_launch_plan(
+            build_launch_plan(context),
+            runtime.bubblewrap,
+            extra_argv=("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json"),
+        )
+        response_path = output_root / "result.json"
+        if execution.status != "PASS":
+            return {
+                "execution_state": "error",
+                "evidence_outcome": "UNKNOWN",
+                "findings": [],
+                "diagnostic": execution.reason,
+            }
+        try:
+            output_paths = tuple(sorted(path.relative_to(output_root).as_posix() for path in output_root.rglob("*")))
+            if output_paths != ("result.json",):
+                raise ValueError("unexpected analyzer outputs")
+            response = json.loads(response_path.read_text(encoding="utf-8"))
+            if not isinstance(response, dict) or response.get("member") != member:
+                raise ValueError("analyzer response identity mismatch")
+            findings = response.get("findings")
+            if not isinstance(findings, list):
+                raise ValueError("analyzer findings are invalid")
+            for finding in findings:
+                ReviewFinding.model_validate(finding)
+            return cast(dict[str, object], response)
+        except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            return {
+                "execution_state": "error",
+                "evidence_outcome": "UNKNOWN",
+                "findings": [],
+                "diagnostic": "analyzer_output_invalid",
+            }
+
+
+def _not_applicable_member(reason: str) -> dict[str, object]:
+    return {
+        "execution_state": "not_applicable",
+        "evidence_outcome": "NOT_APPLICABLE",
+        "findings": [],
+        "diagnostic": reason,
+    }
+
+
+def _run_capsule_snapshot(
+    runtime: CapsuleRuntime,
+    *,
+    snapshot_root: Path,
+    files: list[Path],
+    options: ReviewOptions,
+    config_roots: tuple[Path, ...] = (),
+) -> CapsuleSnapshotResult:
+    evidence: dict[str, dict[str, object]] = {}
+    findings_by_member: dict[str, list[ReviewFinding]] = {}
+    for member in default_pr_range_profile().all_ids:
+        if member == "semgrep-bugs" and not options.bug_hunt:
+            raw = _not_applicable_member("conditional_member_not_activated")
+        elif member == "targeted-pytest-coverage" and options.no_tests:
+            raw = _not_applicable_member("tests_explicitly_disabled_for_legacy_scope")
+        else:
+            raw = _execute_capsule_member(
+                runtime=runtime,
+                member=member,
+                invocation_id=str(uuid4()),
+                snapshot_root=snapshot_root,
+                files=files,
+                options=options,
+                config_roots=config_roots,
+            )
+        raw_findings = raw.get("findings", [])
+        findings = [ReviewFinding.model_validate(value) for value in cast(list[object], raw_findings)]
+        findings_by_member[member] = findings
+        evidence[member] = {
+            "execution_state": str(raw.get("execution_state", "error")),
+            "evidence_outcome": str(raw.get("evidence_outcome", "UNKNOWN")),
+            "version": _C14_ANALYZER_VERSIONS[member],
+            "diagnostic": str(raw.get("diagnostic", "")),
+            "sandbox_invocation": "fresh",
+            "capsule_identity": runtime.identity,
+        }
+    return CapsuleSnapshotResult(evidence, findings_by_member)
 
 
 def validate_invocation_manifests(context: SyntheticSnapshotContext) -> InvocationManifestResult:
@@ -1191,7 +1727,10 @@ def _with_enforcement(report: ReviewReport, *, mode: ReviewEnforcementMode, file
     summary = (
         "Changed enforcement found no blocking findings on changed lines."
         if legacy_blocking == 0
-        else f"Changed enforcement found no blocking findings on changed lines; {legacy_blocking} legacy blocking finding(s) remain as evidence."
+        else (
+            "Changed enforcement found no blocking findings on changed lines; "
+            f"{legacy_blocking} legacy blocking finding(s) remain as evidence."
+        )
     )
     verdict = "PASS" if not report.findings else "PASS_WITH_ADVISORY"
     return report.model_copy(
@@ -1861,6 +2400,354 @@ def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[s
     )
 
 
+def _capsule_evidence_list(evidence: dict[str, dict[str, object]]) -> list[dict[str, object]]:
+    return [{"id": member, **evidence[member]} for member in default_pr_range_profile().all_ids]
+
+
+def _capsule_report(
+    evidence: dict[str, dict[str, object]],
+    findings_by_member: dict[str, list[ReviewFinding]],
+    *,
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+) -> ReviewReport:
+    profile = aggregate_profile_evidence(evidence)
+    findings = [
+        finding for member in default_pr_range_profile().all_ids for finding in findings_by_member.get(member, [])
+    ]
+    if not options.include_noise:
+        findings = _suppress_known_noise(findings)
+    findings = _filter_findings_by_review_level(findings, options.review_level)
+    findings = _filter_findings_by_focus(findings, options.focus)
+    score = 100 if profile.assurance_status == "PASS" and not any(finding.is_blocking() for finding in findings) else 0
+    return ReviewReport(
+        schema_version="1.6",
+        run_id=f"review-capsule-{uuid4()}",
+        score=score,
+        findings=findings,
+        summary=(
+            _summary_for_findings(findings)
+            if profile.assurance_status != "UNKNOWN"
+            else "Analyzer capsule execution is incomplete; assurance is UNKNOWN."
+        ),
+        assurance_status=cast(Any, profile.assurance_status),
+        has_unknown_required_evidence=profile.has_unknown_required_evidence,
+        scope_evidence=scope_evidence,
+        analyzer_evidence=_capsule_evidence_list(evidence),
+        enforcement_mode=options.review_mode,
+    )
+
+
+def _unknown_capsule_report(reason: str, *, options: ReviewOptions, scope_evidence: dict[str, object]) -> ReviewReport:
+    evidence: dict[str, dict[str, object]] = {
+        member: {
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "version": _C14_ANALYZER_VERSIONS[member],
+            "diagnostic": reason,
+        }
+        for member in default_pr_range_profile().all_ids
+    }
+    return _capsule_report(evidence, {}, options=options, scope_evidence=scope_evidence)
+
+
+def _is_development_source_checkout() -> bool:
+    repository = Path.cwd().resolve()
+    source = Path(__file__).resolve()
+    return (
+        (repository / ".git").exists()
+        and (repository / "openspec/changes/code-review-14-scope-truth-and-differential-enforcement").is_dir()
+        and source.is_relative_to(repository)
+    )
+
+
+def run_capsule_review(
+    files: list[Path],
+    options: ReviewOptions | None = None,
+    **overrides: object,
+) -> ReviewReport:
+    """Run legacy/local review scopes only through the signed analyzer capsule."""
+
+    review_options = _review_options_from_kwargs(options, overrides)
+    runtime, reason = _prepare_capsule_runtime()
+    scope_evidence: dict[str, object] = {
+        "assurance_kind": "explicit_files",
+        "capsule_execution": "required",
+    }
+    if runtime is None:
+        if reason == "unsupported_controller_platform" and _is_development_source_checkout():
+            return run_review(files, review_options)
+        return _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence)
+    snapshot = _run_capsule_snapshot(
+        runtime,
+        snapshot_root=Path.cwd(),
+        files=files,
+        options=review_options,
+    )
+    return _capsule_report(
+        snapshot.evidence,
+        snapshot.findings_by_member,
+        options=review_options,
+        scope_evidence=scope_evidence,
+    )
+
+
+def _snapshot_python_files(snapshot: object) -> list[Path]:
+    root = cast(Path, snapshot.root)
+    contents = cast(dict[str, bytes], snapshot.contents)
+    return [root / path for path in sorted(contents) if Path(path).suffix in {".py", ".pyi"}]
+
+
+def _differential_finding_projection(finding: ReviewFinding) -> dict[str, object]:
+    return {
+        "analyzer": finding.tool,
+        "blocking": finding.is_blocking(),
+        "line": finding.line,
+        "message": finding.message,
+        "path": finding.file,
+        "rule": finding.rule,
+        "severity": finding.severity,
+    }
+
+
+def _differential_finding_key(finding: object) -> tuple[str, str, str, int, str, str, bool]:
+    return (
+        str(getattr(finding, "analyzer", getattr(finding, "tool", ""))),
+        str(getattr(finding, "rule", "")),
+        str(getattr(finding, "path", getattr(finding, "file", ""))),
+        int(getattr(finding, "line", 1)),
+        " ".join(str(getattr(finding, "message", "")).split()),
+        str(getattr(finding, "severity", "")),
+        bool(getattr(finding, "blocking", False)),
+    )
+
+
+def _classified_findings(
+    classification: differential.DifferentialClassification,
+    *,
+    base: list[ReviewFinding],
+    head: list[ReviewFinding],
+) -> list[ReviewFinding]:
+    base_by_key: dict[tuple[str, str, str, int, str, str, bool], list[ReviewFinding]] = {}
+    head_by_key: dict[tuple[str, str, str, int, str, str, bool], list[ReviewFinding]] = {}
+    for source, destination in ((base, base_by_key), (head, head_by_key)):
+        for finding in source:
+            destination.setdefault(_differential_finding_key(finding), []).append(finding)
+    result: list[ReviewFinding] = []
+    for state in ("introduced", "unchanged", "fixed", "unknown"):
+        for finding in cast(tuple[object, ...], getattr(classification, state)):
+            key = _differential_finding_key(finding)
+            preferred = base_by_key if state == "fixed" else head_by_key
+            fallback = head_by_key if state == "fixed" else base_by_key
+            candidates = preferred.get(key) or fallback.get(key)
+            if not candidates:
+                raise ValueError("differential finding cannot be mapped to analyzer evidence")
+            original = candidates.pop(0)
+            updates: dict[str, object] = {"differential_state": state}
+            if state == "fixed":
+                updates.update({"blocking": False, "status": "fixed"})
+            result.append(ReviewFinding.model_validate({**original.model_dump(), **updates}))
+    return result
+
+
+def _member_snapshot_is_consistent(evidence: dict[str, object], findings: list[ReviewFinding]) -> bool:
+    outcome = str(evidence.get("evidence_outcome", "UNKNOWN"))
+    if outcome == "UNKNOWN":
+        return False
+    if outcome == "NOT_APPLICABLE":
+        return not findings
+    expected = "FAIL" if any(finding.is_blocking() for finding in findings) else "PASS"
+    return outcome == expected
+
+
+def _unknown_range_member(
+    member: str,
+    *,
+    reason: str,
+    base: dict[str, object],
+    head: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "execution_state": "error",
+        "evidence_outcome": "UNKNOWN",
+        "version": _C14_ANALYZER_VERSIONS[member],
+        "diagnostic": reason,
+        "disposition": "unknown",
+        "base": base,
+        "head": head,
+    }
+
+
+def _range_differential_context(resolution: object) -> RangeDifferentialContext:
+    exact_renames = tuple(getattr(resolution, "exact_renames", ()))
+    rename_ambiguities: dict[str, list[str]] = {
+        item.old_path: [item.new_path] for item in exact_renames if item.disposition == "ambiguous"
+    }
+    path_statuses = cast(dict[str, str], getattr(resolution, "path_statuses", {}))
+    return RangeDifferentialContext(
+        cast(dict[str, bytes], resolution.base_snapshot.contents),
+        cast(dict[str, bytes], resolution.head_snapshot.contents),
+        {item.old_path: item.new_path for item in exact_renames if item.disposition == "exact_rename"},
+        rename_ambiguities or None,
+        tuple(sorted(path for path, status in path_statuses.items() if status == "A")),
+        tuple(sorted(path for path, status in path_statuses.items() if status == "D")),
+    )
+
+
+def _not_applicable_range_member(
+    member: str,
+    *,
+    base: dict[str, object],
+    head: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "execution_state": "not_applicable",
+        "evidence_outcome": "NOT_APPLICABLE",
+        "version": _C14_ANALYZER_VERSIONS[member],
+        "diagnostic": "",
+        "disposition": "not_applicable",
+        "base": base,
+        "head": head,
+    }
+
+
+def _classify_range_member(
+    member: str,
+    context: RangeDifferentialContext,
+    *,
+    base_evidence: dict[str, object],
+    head_evidence: dict[str, object],
+    base_findings: list[ReviewFinding],
+    head_findings: list[ReviewFinding],
+) -> tuple[dict[str, object], list[ReviewFinding]]:
+    outcomes = {
+        str(base_evidence.get("evidence_outcome", "UNKNOWN")),
+        str(head_evidence.get("evidence_outcome", "UNKNOWN")),
+    }
+    if outcomes == {"NOT_APPLICABLE"}:
+        return _not_applicable_range_member(member, base=base_evidence, head=head_evidence), []
+    if not _member_snapshot_is_consistent(base_evidence, base_findings) or not _member_snapshot_is_consistent(
+        head_evidence, head_findings
+    ):
+        unknown_findings = [
+            finding.model_copy(update={"differential_state": "unknown"}) for finding in (head_findings or base_findings)
+        ]
+        return (
+            _unknown_range_member(
+                member,
+                reason="snapshot_member_incomplete",
+                base=base_evidence,
+                head=head_evidence,
+            ),
+            unknown_findings,
+        )
+    classification = differential.classify_findings(
+        differential.FindingClassificationRequest(
+            base_findings=[_differential_finding_projection(finding) for finding in base_findings],
+            head_findings=[_differential_finding_projection(finding) for finding in head_findings],
+            base_sources=context.base_sources,
+            head_sources=context.head_sources,
+            rename_facts=context.rename_facts,
+            rename_ambiguities=context.rename_ambiguities,
+            deleted_paths=context.deleted_paths,
+            added_paths=context.added_paths,
+        )
+    )
+    try:
+        classified = _classified_findings(classification, base=base_findings, head=head_findings)
+    except ValueError:
+        return (
+            _unknown_range_member(
+                member,
+                reason="differential_finding_mapping_failed",
+                base=base_evidence,
+                head=head_evidence,
+            ),
+            [],
+        )
+    counts = {state: len(getattr(classification, state)) for state in ("fixed", "introduced", "unchanged", "unknown")}
+    return (
+        {
+            "execution_state": "ran",
+            "evidence_outcome": classification.status,
+            "version": _C14_ANALYZER_VERSIONS[member],
+            "diagnostic": classification.reason,
+            "disposition": "differential_complete" if classification.status != "UNKNOWN" else "unknown",
+            "differential_counts": counts,
+            "differential_evidence_digest": classification.evidence_digest,
+            "base": base_evidence,
+            "head": head_evidence,
+        },
+        classified,
+    )
+
+
+def _classify_range_findings(
+    resolution: object,
+    base: CapsuleSnapshotResult,
+    head: CapsuleSnapshotResult,
+) -> tuple[dict[str, dict[str, object]], dict[str, list[ReviewFinding]]]:
+    """Classify each member's base/head findings with the canonical C14 differential."""
+
+    context = _range_differential_context(resolution)
+    combined: dict[str, dict[str, object]] = {}
+    classified_by_member: dict[str, list[ReviewFinding]] = {}
+    for member in default_pr_range_profile().all_ids:
+        combined[member], classified_by_member[member] = _classify_range_member(
+            member,
+            context,
+            base_evidence=base.evidence[member],
+            head_evidence=head.evidence[member],
+            base_findings=base.findings_by_member.get(member, []),
+            head_findings=head.findings_by_member.get(member, []),
+        )
+    return combined, classified_by_member
+
+
+def run_immutable_scope_review(
+    resolution: object,
+    *,
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+) -> ReviewReport:
+    """Execute both materialized sides through fresh member sandboxes."""
+
+    runtime, reason = _prepare_capsule_runtime()
+    if runtime is None:
+        return _unknown_capsule_report(reason, options=options, scope_evidence=scope_evidence)
+    base_snapshot = getattr(resolution, "base_snapshot", None)
+    head_snapshot = getattr(resolution, "head_snapshot", None)
+    if base_snapshot is None or head_snapshot is None:
+        return _unknown_capsule_report(
+            "immutable_snapshot_missing",
+            options=options,
+            scope_evidence=scope_evidence,
+        )
+    policy_bundle = getattr(resolution, "policy_bundle", None)
+    config_roots = () if policy_bundle is None else (cast(Path, policy_bundle.root),)
+    base = _run_capsule_snapshot(
+        runtime,
+        snapshot_root=base_snapshot.root,
+        files=_snapshot_python_files(base_snapshot),
+        options=options,
+        config_roots=config_roots,
+    )
+    head = _run_capsule_snapshot(
+        runtime,
+        snapshot_root=head_snapshot.root,
+        files=_snapshot_python_files(head_snapshot),
+        options=options,
+        config_roots=config_roots,
+    )
+    combined, classified_findings = _classify_range_findings(resolution, base, head)
+    return _capsule_report(
+        combined,
+        classified_findings,
+        options=options,
+        scope_evidence=scope_evidence,
+    )
+
+
 def _collect_tool_findings(
     files: list[Path],
     *,
@@ -1950,3 +2837,9 @@ def run_review(
     ):
         return report.model_copy(update={"overall_verdict": "FAIL", "ci_exit_code": 1})
     return report
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        raise SystemExit("capsule runner requires one sealed request path")
+    _capsule_process_request(Path(sys.argv[1]))

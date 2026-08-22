@@ -511,7 +511,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: c14-manifest-${{ matrix.python }}.json.gz
+          name: c14-manifest-${{ matrix.python-version }}.json.gz
           path: /tmp/c14-manifest-*.json.gz
           if-no-files-found: error
           retention-days: 1

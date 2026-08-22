@@ -105,7 +105,7 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         "gzip",
         "c14-manifest-{abi}.json.gz",
         "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
-        "c14-manifest-${{ matrix.python }}.json.gz",
+        "c14-manifest-${{ matrix.python-version }}.json.gz",
         "pr-range-v1-toolchain-lock.json",
         'credential=f"{registry_actor}:{registry_token}"',
         "empty_cache=True",

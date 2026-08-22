@@ -1403,6 +1403,39 @@ def verify_candidate_module_payload(metadata: dict[str, object]) -> CandidateMod
     return CandidateModulePayload("PASS", identity=identity)
 
 
+def verify_candidate_module_source(metadata: dict[str, object], *, installed_root: Path) -> InstalledPayload:
+    """Verify protected pre-release source bytes without granting install provenance."""
+
+    candidate = verify_candidate_module_payload(metadata)
+    if candidate.status != "PASS" or candidate.identity is None:
+        return InstalledPayload("UNKNOWN", candidate.reason or "invalid_candidate_module_identity")
+    expected_manifest_digest = str(metadata.get("payload_manifest_digest", ""))
+    identity = InstalledModuleIdentity(
+        "nold-ai/specfact-code-review",
+        str(metadata.get("version", "candidate")),
+        expected_manifest_digest,
+        "candidate-attested",
+        candidate.identity.digest,
+        "verified-candidate",
+        str(installed_root),
+        candidate.identity.schema,
+        "protected-workflow",
+        "candidate",
+        "nold-ai/specfact-code-review",
+        expected_manifest_digest,
+        False,
+        expected_manifest_digest,
+    )
+    try:
+        manifest = _installed_payload_manifest(identity)
+        actual_manifest_digest = candidate_source_manifest_digest(installed_root)
+        if actual_manifest_digest != expected_manifest_digest:
+            raise ValueError("candidate payload manifest mismatch")
+    except (OSError, ValueError):
+        return InstalledPayload("UNKNOWN", "candidate_payload_drift", identity)
+    return InstalledPayload("PASS", identity=identity, manifest=manifest)
+
+
 def _payload_identity(metadata: dict[str, object] | CoreInstalledModuleHandoff) -> InstalledModuleIdentity:
     if isinstance(metadata, CoreInstalledModuleHandoff):
         if metadata.status != "PASS" or metadata.identity is None:
@@ -1492,6 +1525,13 @@ def _installed_payload_manifest(identity: InstalledModuleIdentity) -> tuple[Payl
 
 def _payload_manifest_projection(manifest: tuple[PayloadEntry, ...]) -> list[dict[str, object]]:
     return [{"digest": entry.digest, "mode": entry.mode, "path": entry.path} for entry in manifest]
+
+
+def candidate_source_manifest_digest(installed_root: Path) -> str:
+    """Digest a staged candidate payload using the installed-payload contract."""
+
+    identity = InstalledModuleIdentity("", "", "", "", "", "", str(installed_root))
+    return canonical_json_digest(_payload_manifest_projection(_installed_payload_manifest(identity)))
 
 
 def _legacy_payload_checksum(manifest: tuple[PayloadEntry, ...]) -> str:

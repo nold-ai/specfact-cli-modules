@@ -816,6 +816,69 @@ def test_candidate_payload_identity_is_not_official_install(toolchain_api: Any) 
     assert result.identity.pr_range_authority is False
 
 
+def test_candidate_source_payload_can_compose_only_as_protected_pre_release(toolchain_api: Any, tmp_path: Path) -> None:
+    installed_root = tmp_path / "candidate-src"
+    official_shape = toolchain_api.verify_installed_module_payload(_installed_payload(installed_root))
+    payload_digest = toolchain_api.canonical_json_digest(
+        [{"digest": entry.digest, "mode": entry.mode, "path": entry.path} for entry in official_shape.manifest]
+    )
+    metadata = {
+        "repository": "nold-ai/specfact-cli-modules",
+        "commit_sha": "1" * 40,
+        "tree_sha": "2" * 40,
+        "module_package_digest": _digest("3"),
+        "payload_manifest_digest": payload_digest,
+        "workflow": "pr-orchestrator.yml",
+        "workflow_ref": "refs/heads/dev",
+        "run_id": "1234",
+        "run_attempt": "1",
+        "job": "exact-core-compatibility",
+    }
+
+    payload = toolchain_api.verify_candidate_module_source(metadata, installed_root=installed_root)
+    composition = toolchain_api.compose_post_base_capsule(
+        payload,
+        capsule_root=tmp_path / "capsule",
+        immutable_base_root_digest=_digest("5"),
+        analyzer_installed_set_digest=_digest("6"),
+        native_launcher_digest=_digest("7"),
+        project_runtime_identity="not-applicable",
+    )
+
+    assert payload.status == "PASS"
+    assert payload.identity.loader_origin == "verified-candidate"
+    assert payload.identity.artifact_verification_result is False
+    assert composition.status == "PASS"
+
+
+def test_candidate_source_payload_drift_after_attestation_is_unknown(toolchain_api: Any, tmp_path: Path) -> None:
+    installed_root = tmp_path / "candidate-src"
+    official_shape = toolchain_api.verify_installed_module_payload(_installed_payload(installed_root))
+    payload_digest = toolchain_api.canonical_json_digest(
+        [{"digest": entry.digest, "mode": entry.mode, "path": entry.path} for entry in official_shape.manifest]
+    )
+    (installed_root / "specfact_code_review/builtin.py").write_text("CHANGED = True\n", encoding="utf-8")
+
+    payload = toolchain_api.verify_candidate_module_source(
+        {
+            "repository": "nold-ai/specfact-cli-modules",
+            "commit_sha": "1" * 40,
+            "tree_sha": "2" * 40,
+            "module_package_digest": _digest("3"),
+            "payload_manifest_digest": payload_digest,
+            "workflow": "pr-orchestrator.yml",
+            "workflow_ref": "refs/heads/dev",
+            "run_id": "1234",
+            "run_attempt": "1",
+            "job": "exact-core-compatibility",
+        },
+        installed_root=installed_root,
+    )
+
+    assert payload.status == "UNKNOWN"
+    assert payload.reason == "candidate_payload_drift"
+
+
 def test_post_base_bootstrap_and_composite_identity_bind_copied_payload(toolchain_api: Any, tmp_path: Path) -> None:
     payload = toolchain_api.verify_installed_module_payload(_installed_payload(tmp_path / "installed"))
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -138,6 +140,49 @@ def test_runtime_capsule_boots_in_empty_bwrap_root_without_host_mounts(sandbox_a
     assert plan.root_source == "verified-capsule-root"
     assert not any(str(mount.source).startswith(("/usr", "/lib", "/System")) for mount in plan.mounts)
     assert not plan.host_runtime_mounts
+
+
+def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor(
+    sandbox_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context = _context(tmp_path, sandbox_api)
+    bubblewrap = context.capsule_root / "opt/specfact/bin/bwrap-static"
+    bubblewrap.parent.mkdir(parents=True)
+    payload = b"signed static bubblewrap"
+    bubblewrap.write_bytes(payload)
+    bubblewrap.chmod(0o755)
+    calls: list[tuple[list[str], dict[str, object]]] = []
+
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append((command, kwargs))
+        return subprocess.CompletedProcess(command, 0, "{}", "")
+
+    monkeypatch.setattr(sandbox_api.subprocess, "run", run)
+    identity = sandbox_api.BubblewrapIdentity(
+        path="/opt/specfact/bin/bwrap-static",
+        format="ELF",
+        architecture="x86_64",
+        linkage="static",
+        interpreter=(),
+        needed=(),
+        sha256="sha256:" + hashlib.sha256(payload).hexdigest(),
+        descriptor_digest="sha256:" + "b" * 64,
+    )
+
+    result = sandbox_api.execute_launch_plan(
+        sandbox_api.build_launch_plan(context),
+        identity,
+        extra_argv=("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json"),
+    )
+
+    command, kwargs = calls[0]
+    assert result.status == "PASS"
+    assert command[0].startswith("/proc/self/fd/")
+    assert kwargs["pass_fds"]
+    assert kwargs["env"] == {}
+    assert "--unshare-all" in command
+    assert "--unshare-net" not in command
+    assert "--cap-drop" in command
 
 
 def test_bwrap_launcher_is_static_elf_without_interp_or_needed(sandbox_api: Any) -> None:

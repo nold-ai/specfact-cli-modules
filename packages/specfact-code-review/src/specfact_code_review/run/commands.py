@@ -30,7 +30,12 @@ from specfact_code_review.run.cleanup_evidence import (
     with_previewed_simplification_findings,
 )
 from specfact_code_review.run.findings import EvidenceRef, RequirementsEvidenceContext, ReviewFinding, ReviewReport
-from specfact_code_review.run.runner import ReviewFocus, run_review
+from specfact_code_review.run.runner import (
+    ReviewFocus,
+    ReviewOptions,
+    run_capsule_review as run_review,
+    run_immutable_scope_review,
+)
 from specfact_code_review.run.scope import (
     ConflictingScopeError,
     GitResolutionError,
@@ -817,7 +822,7 @@ def _repository_slug(repository: Path) -> str | None:
 
 
 def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
-    """Resolve immutable scope and fail closed until differential execution is available."""
+    """Resolve immutable scope and execute every active analyzer in its capsule."""
 
     resolution = resolve_scope(
         ScopeRequest(
@@ -843,8 +848,18 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
         status = resolution.status
         reason = resolution.reason
         if status == "PASS":
-            status = "UNKNOWN"
-            reason = "snapshot_differential_execution_unavailable"
+            return run_immutable_scope_review(
+                resolution,
+                options=ReviewOptions(
+                    no_tests=request.no_tests,
+                    include_noise=request.include_noise,
+                    bug_hunt=request.bug_hunt,
+                    review_level=request.review_level,
+                    review_mode=request.review_mode,
+                    focus=request.review_focus,
+                ),
+                scope_evidence={**_scope_evidence(resolution), "reason": reason},
+            )
         run_identity = resolution.resolved_head_commit or resolution.index_tree or "unresolved"
         return ReviewReport(
             schema_version="1.6",

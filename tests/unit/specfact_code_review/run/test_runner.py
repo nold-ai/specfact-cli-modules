@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal
 
 import pytest
@@ -237,6 +238,276 @@ def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
         "contracts",
         "testing",
     ]
+
+
+def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    source = tmp_path / "src/app.py"
+    source.parent.mkdir()
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    launches: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+
+    def execute_member(**kwargs: object) -> dict[str, object]:
+        launches.append((str(kwargs["member"]), str(kwargs["invocation_id"])))
+        return {
+            "execution_state": "ran",
+            "evidence_outcome": "PASS",
+            "findings": [],
+            "diagnostic": "",
+        }
+
+    monkeypatch.setattr(runner_api, "_execute_capsule_member", execute_member)
+
+    report = runner_api.run_capsule_review([source], no_tests=False, bug_hunt=True)
+
+    assert [member for member, _invocation in launches] == list(runner_api.default_pr_range_profile().all_ids)
+    assert len({invocation for _member, invocation in launches}) == len(launches)
+    assert report.schema_version == "1.6"
+    assert report.assurance_status == "PASS"
+
+
+def test_marketplace_capsule_failure_never_falls_back_to_host_analyzers(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (None, "unsupported_controller_platform"))
+    monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: False, raising=False)
+    monkeypatch.setattr(
+        runner_api,
+        "run_review",
+        lambda *_args, **_kwargs: pytest.fail("marketplace review must not use host analyzers"),
+    )
+
+    report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True)
+
+    assert report.schema_version == "1.6"
+    assert report.assurance_status == "UNKNOWN"
+    assert report.ci_exit_code == 1
+
+
+def test_capsule_runtime_loads_the_packaged_signed_lock_before_materialization(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    from specfact_code_review.run import toolchain
+
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(runner_api.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(runner_api.platform, "machine", lambda: "x86_64")
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CAPSULE_CACHE", str(tmp_path / "cache"))
+
+    def materialize(lock: dict[str, object], **kwargs: object) -> SimpleNamespace:
+        captured["lock"] = lock
+        captured["environment_id"] = kwargs["environment_id"]
+        return SimpleNamespace(status="UNKNOWN", reason="stop_after_lock")
+
+    monkeypatch.setattr(toolchain, "materialize_capsule", materialize)
+
+    runtime, reason = runner_api._prepare_capsule_runtime()
+
+    assert runtime is None
+    assert reason == "stop_after_lock"
+    assert isinstance(captured["lock"], dict)
+    assert captured["lock"]["schema"] == "toolchain-lock-schema-1"
+    assert captured["environment_id"] == runner_api._capsule_environment_id()
+
+
+def test_protected_pr_candidate_payload_is_reconstructed_from_verified_git_bytes(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    repo_root = tmp_path / "repo"
+    package_root = repo_root / "packages/specfact-code-review"
+    runner_file = package_root / "src/specfact_code_review/run/runner.py"
+    runner_file.parent.mkdir(parents=True)
+    runner_file.write_text("VALUE = 'committed'\n", encoding="utf-8")
+    (runner_file.parents[1] / "__init__.py").write_text("", encoding="utf-8")
+    (package_root / "module-package.yaml").write_text(
+        "name: nold-ai/specfact-code-review\nversion: 0.49.4\n",
+        encoding="utf-8",
+    )
+    git_env = runner_api._candidate_git_environment()
+    subprocess.run(["git", "init", "-q", str(repo_root)], check=True, env=git_env)
+    subprocess.run(["git", "-C", str(repo_root), "config", "user.name", "C14 Test"], check=True, env=git_env)
+    subprocess.run(
+        ["git", "-C", str(repo_root), "config", "user.email", "c14@example.invalid"],
+        check=True,
+        env=git_env,
+    )
+    subprocess.run(["git", "-C", str(repo_root), "add", "."], check=True, env=git_env)
+    subprocess.run(["git", "-C", str(repo_root), "commit", "-qm", "candidate"], check=True, env=git_env)
+    commit_sha = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=git_env,
+    ).stdout.strip()
+    monkeypatch.setattr(runner_api, "__file__", str(runner_file))
+    candidate_env = {
+        "GITHUB_ACTIONS": "true",
+        "GITHUB_REPOSITORY": "nold-ai/specfact-cli-modules",
+        "GITHUB_EVENT_NAME": "pull_request",
+        "GITHUB_SHA": commit_sha,
+        "GITHUB_WORKFLOW": "PR Orchestrator",
+        "GITHUB_WORKFLOW_REF": "nold-ai/specfact-cli-modules/.github/workflows/pr-orchestrator.yml@refs/pull/418/merge",
+        "GITHUB_RUN_ID": "1234",
+        "GITHUB_RUN_ATTEMPT": "1",
+        "GITHUB_JOB": "exact-core-compatibility",
+    }
+    for name, value in candidate_env.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setenv("GIT_DIR", str(tmp_path / "poison.git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(tmp_path / "poison-worktree"))
+
+    selected = runner_api._protected_candidate_payload()
+
+    try:
+        assert selected.reason == ""
+        assert selected.payload.status == "PASS"
+        assert selected.payload.identity.loader_origin == "verified-candidate"
+        assert selected.payload.identity.artifact_verification_result is False
+        assert selected.staged_source is not None
+        staged_runner = Path(selected.staged_source.name) / "specfact_code_review/run/runner.py"
+        assert staged_runner.read_text(encoding="utf-8") == "VALUE = 'committed'\n"
+    finally:
+        if selected.staged_source is not None:
+            selected.staged_source.cleanup()
+
+
+def test_github_candidate_context_failure_never_uses_stale_official_payload(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "nold-ai/specfact-cli-modules")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
+    monkeypatch.setattr(
+        runner_api,
+        "_official_installed_payload",
+        lambda: pytest.fail("protected workflow must not fall back to an installed release"),
+    )
+
+    selected = runner_api._selected_module_payload()
+
+    assert selected.payload is None
+    assert selected.reason == "untrusted_candidate_workflow_context"
+
+
+def test_source_checkout_legacy_scope_uses_bounded_host_compatibility(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    expected = ReviewReport(run_id="dev-host", score=100, findings=[], summary="complete")
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (None, "unsupported_controller_platform"))
+    monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
+    monkeypatch.setattr(runner_api, "run_review", lambda *_args, **_kwargs: expected)
+
+    assert runner_api.run_capsule_review([Path("src/app.py")], no_tests=True) is expected
+
+
+def test_immutable_scope_never_uses_source_checkout_host_compatibility(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (None, "unsupported_controller_platform"))
+    monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
+    monkeypatch.setattr(
+        runner_api,
+        "run_review",
+        lambda *_args, **_kwargs: pytest.fail("immutable scope must never use host analyzers"),
+    )
+
+    report = runner_api.run_immutable_scope_review(
+        SimpleNamespace(base_snapshot=object(), head_snapshot=object()),
+        options=runner_api.ReviewOptions(no_tests=True),
+        scope_evidence={"assurance_kind": "pr_range"},
+    )
+
+    assert report.schema_version == "1.6"
+    assert report.assurance_status == "UNKNOWN"
+    assert report.ci_exit_code == 1
+
+
+def test_immutable_range_classifies_introduced_findings_with_existing_differential_contract(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    (base_root / "src").mkdir(parents=True)
+    (head_root / "src").mkdir(parents=True)
+    (base_root / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (head_root / "src/app.py").write_text("VALUE = eval('1')\n", encoding="utf-8")
+    base_evidence = _synthetic_complete_profile_evidence(runner_api)
+    head_evidence = _synthetic_complete_profile_evidence(runner_api)
+    head_evidence["ruff"]["evidence_outcome"] = "FAIL"
+    introduced = ReviewFinding(
+        category="security",
+        severity="error",
+        tool="ruff",
+        rule="S307",
+        file="src/app.py",
+        line=1,
+        message="Use of eval detected",
+        fixable=False,
+    )
+    resolution = SimpleNamespace(
+        base_snapshot=SimpleNamespace(root=base_root, contents={"src/app.py": b"VALUE = 1\n"}),
+        head_snapshot=SimpleNamespace(root=head_root, contents={"src/app.py": b"VALUE = eval('1')\n"}),
+        exact_renames=(),
+        path_statuses={"src/app.py": "M"},
+    )
+
+    evidence, findings = runner_api._classify_range_findings(
+        resolution,
+        runner_api.CapsuleSnapshotResult(base_evidence, {}),
+        runner_api.CapsuleSnapshotResult(head_evidence, {"ruff": [introduced]}),
+    )
+
+    assert evidence["ruff"]["evidence_outcome"] == "FAIL"
+    assert evidence["ruff"]["differential_counts"] == {
+        "fixed": 0,
+        "introduced": 1,
+        "unchanged": 0,
+        "unknown": 0,
+    }
+    assert findings["ruff"][0].differential_state == "introduced"
+
+
+def test_immutable_range_preserves_fixed_findings_without_blocking(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    (base_root / "src").mkdir(parents=True)
+    (head_root / "src").mkdir(parents=True)
+    (base_root / "src/app.py").write_text("VALUE = eval('1')\n", encoding="utf-8")
+    (head_root / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
+    base_evidence = _synthetic_complete_profile_evidence(runner_api)
+    head_evidence = _synthetic_complete_profile_evidence(runner_api)
+    base_evidence["ruff"]["evidence_outcome"] = "FAIL"
+    fixed = ReviewFinding(
+        category="security",
+        severity="error",
+        tool="ruff",
+        rule="S307",
+        file="src/app.py",
+        line=1,
+        message="Use of eval detected",
+        fixable=False,
+    )
+    resolution = SimpleNamespace(
+        base_snapshot=SimpleNamespace(root=base_root, contents={"src/app.py": b"VALUE = eval('1')\n"}),
+        head_snapshot=SimpleNamespace(root=head_root, contents={"src/app.py": b"VALUE = 1\n"}),
+        exact_renames=(),
+        path_statuses={"src/app.py": "M"},
+    )
+
+    evidence, findings = runner_api._classify_range_findings(
+        resolution,
+        runner_api.CapsuleSnapshotResult(base_evidence, {"ruff": [fixed]}),
+        runner_api.CapsuleSnapshotResult(head_evidence, {}),
+    )
+
+    assert evidence["ruff"]["evidence_outcome"] == "PASS"
+    assert findings["ruff"][0].differential_state == "fixed"
+    assert findings["ruff"][0].status == "fixed"
+    assert findings["ruff"][0].is_blocking() is False
 
 
 def test_run_review_merges_findings_from_all_runners(monkeypatch: MonkeyPatch) -> None:
