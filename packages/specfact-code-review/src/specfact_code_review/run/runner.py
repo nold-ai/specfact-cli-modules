@@ -1253,7 +1253,8 @@ def select_range_policy(
 
 
 def _matches_python_file(path: Path, patterns: tuple[str, ...]) -> bool:
-    return any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
+    match_path = path if path.is_absolute() else Path("/opt/specfact/snapshot") / path
+    return any(pytest_path_matches_pattern(match_path, pattern, platform="linux") for pattern in patterns)
 
 
 def _test_selectors(

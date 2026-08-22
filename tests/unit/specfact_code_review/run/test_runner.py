@@ -2165,6 +2165,24 @@ def test_complete_suite_collects_inherited_unittest_selector(tmp_path: Path) -> 
     )
 
 
+def test_complete_suite_matches_path_qualified_python_file_patterns(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    smoke = tmp_path / "tests/test_smoke.py"
+    nested = tmp_path / "tests/unit/check_case.py"
+    nested.parent.mkdir(parents=True)
+    smoke.write_text("def test_smoke():\n    pass\n", encoding="utf-8")
+    nested.write_text("def test_nested():\n    pass\n", encoding="utf-8")
+    policy = _suite_policy(python_files=["test_*.py", "tests/**/check_*.py"])
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, policy, changed_paths=("src/app.py",))
+
+    assert plan.status == "PASS"
+    assert plan.selectors == (
+        "tests/test_smoke.py::test_smoke",
+        "tests/unit/check_case.py::test_nested",
+    )
+
+
 def test_empty_merge_base_input_class_is_not_applicable_for_that_side() -> None:
     runner_api = _c14_runner()
     result = runner_api.classify_snapshot_applicability(base_inputs=(), head_inputs=("src/new.py",))

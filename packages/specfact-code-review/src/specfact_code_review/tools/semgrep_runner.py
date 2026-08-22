@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
+import yaml
 from beartype import beartype
 from icontract import ensure, require
 
@@ -381,9 +382,9 @@ def _snip_stderr_tail(stderr: str) -> str:
     return "…" + err_raw[-_SEMGREP_STDERR_SNIP_MAX:]
 
 
-def _load_semgrep_results(
+def _load_semgrep_payload(
     files: list[Path], *, bundle_root: Path | None, config_file: Path | list[Path]
-) -> list[object]:
+) -> dict[str, object]:
     last_error: Exception | None = None
     for _attempt in range(SEMGREP_RETRY_ATTEMPTS):
         try:
@@ -392,7 +393,9 @@ def _load_semgrep_results(
             if not raw_out:
                 err_tail = _snip_stderr_tail(result.stderr or "")
                 raise ValueError(f"semgrep returned empty stdout (returncode={result.returncode}); stderr={err_tail!r}")
-            return _parse_semgrep_results(json.loads(raw_out))
+            payload = json.loads(raw_out)
+            _parse_semgrep_results(payload)
+            return payload
         except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
             last_error = exc
     if last_error is None:
@@ -409,6 +412,63 @@ def _parse_semgrep_results(payload: dict[str, object]) -> list[object]:
     if not isinstance(raw_results, list):
         raise ValueError("semgrep results must be a list")
     return raw_results
+
+
+def _validate_rule_packs(config_files: list[Path]) -> None:
+    for config_file in config_files:
+        try:
+            payload = yaml.safe_load(config_file.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError) as exc:
+            raise ValueError("semgrep_rule_pack_invalid") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("semgrep_rule_pack_invalid")
+        result = validate_rule_pack(cast(dict[str, object], payload))
+        if result.status != "PASS":
+            raise ValueError(result.reason)
+
+
+def _semgrep_output_paths(payload: dict[str, object]) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    paths = payload.get("paths")
+    if not isinstance(paths, dict):
+        raise ValueError("semgrep_path_evidence_missing")
+    scanned = paths.get("scanned")
+    skipped = paths.get("skipped")
+    if not isinstance(scanned, list) or not all(isinstance(path, str) for path in scanned):
+        raise ValueError("semgrep_path_evidence_invalid")
+    if not isinstance(skipped, list):
+        raise ValueError("semgrep_path_evidence_invalid")
+    skipped_paths: list[str] = []
+    for item in skipped:
+        if isinstance(item, str):
+            skipped_paths.append(item)
+        elif isinstance(item, dict) and isinstance(item.get("path"), str):
+            skipped_paths.append(cast(str, item["path"]))
+        else:
+            raise ValueError("semgrep_path_evidence_invalid")
+    return tuple(cast(list[str], scanned)), tuple(skipped_paths)
+
+
+def _canonical_semgrep_paths(raw_paths: tuple[str, ...], files: list[Path]) -> tuple[str, ...]:
+    eligible = {str(file_path): _normalize_path_variants(file_path) for file_path in files}
+    canonical: list[str] = []
+    for raw_path in raw_paths:
+        matches = [
+            path for path, variants in eligible.items() if not _normalize_path_variants(raw_path).isdisjoint(variants)
+        ]
+        canonical.append(matches[0] if len(matches) == 1 else raw_path)
+    return tuple(canonical)
+
+
+def _validate_semgrep_output_paths(files: list[Path], payload: dict[str, object]) -> None:
+    scanned, skipped = _semgrep_output_paths(payload)
+    eligible = tuple(str(file_path) for file_path in files)
+    result = reconcile_scanned_paths(
+        eligible=eligible,
+        scanned=_canonical_semgrep_paths(scanned, files),
+        skipped=_canonical_semgrep_paths(skipped, files),
+    )
+    if result.status != "PASS":
+        raise ValueError(result.reason)
 
 
 def _category_for_rule(rule: str) -> SemgrepCategory | None:
@@ -526,7 +586,12 @@ def run_semgrep(files: list[Path], *, bundle_root: Path | None = None) -> list[R
         ai_bloat_config = find_semgrep_ai_bloat_config(bundle_root=bundle_root)
         if ai_bloat_config is not None:
             config_paths.append(ai_bloat_config)
-        raw_results = _load_semgrep_results(files, bundle_root=bundle_root, config_file=config_paths)
+        if bundle_root is not None:
+            _validate_rule_packs(config_paths)
+        payload = _load_semgrep_payload(files, bundle_root=bundle_root, config_file=config_paths)
+        if bundle_root is not None:
+            _validate_semgrep_output_paths(files, payload)
+        raw_results = _parse_semgrep_results(payload)
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep output: {exc}")
 
@@ -619,7 +684,12 @@ def run_semgrep_bugs(files: list[Path], *, bundle_root: Path | None = None) -> l
         return []
 
     try:
-        raw_results = _load_semgrep_results(files, bundle_root=bundle_root, config_file=config_path)
+        if bundle_root is not None:
+            _validate_rule_packs([config_path])
+        payload = _load_semgrep_payload(files, bundle_root=bundle_root, config_file=config_path)
+        if bundle_root is not None:
+            _validate_semgrep_output_paths(files, payload)
+        raw_results = _parse_semgrep_results(payload)
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return _tool_error(files[0], f"Unable to parse Semgrep bugs pass output: {exc}")
 

@@ -91,6 +91,58 @@ def test_semgrep_rule_target_narrowing_is_unknown() -> None:
     assert result.reason == "semgrep_rule_target_narrowing"
 
 
+@pytest.mark.parametrize(
+    ("config_name", "runner"),
+    [("clean_code.yaml", run_semgrep), ("bugs.yaml", run_semgrep_bugs)],
+    ids=["clean", "bugs"],
+)
+def test_sealed_semgrep_pass_rejects_rule_target_narrowing_before_launch(
+    tmp_path: Path, monkeypatch: MonkeyPatch, config_name: str, runner: object
+) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep" / config_name).write_text(
+        "rules:\n  - id: narrowed\n    paths:\n      exclude: [src/ignored.py]\n",
+        encoding="utf-8",
+    )
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    run_mock = Mock(return_value=completed_process("semgrep", stdout='{"results": []}'))
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    findings = runner([target], bundle_root=bundle)  # type: ignore[operator]
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    run_mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("config_name", "runner"),
+    [("clean_code.yaml", run_semgrep), ("bugs.yaml", run_semgrep_bugs)],
+    ids=["clean", "bugs"],
+)
+def test_sealed_semgrep_pass_rejects_skipped_eligible_input(
+    tmp_path: Path, monkeypatch: MonkeyPatch, config_name: str, runner: object
+) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep" / config_name).write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {"results": [], "paths": {"scanned": [], "skipped": [str(target)]}}
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload))),
+    )
+
+    findings = runner([target], bundle_root=bundle)  # type: ignore[operator]
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+
+
 def test_semgrep_pass_union_cannot_hide_rule_exclusion() -> None:
     from specfact_code_review.tools import semgrep_runner
 
@@ -169,7 +221,8 @@ def test_run_semgrep_maps_findings_to_review_finding(tmp_path: Path, monkeypatch
                 "start": {"line": 4},
                 "extra": {"message": "Method mixes read and write responsibilities."},
             }
-        ]
+        ],
+        "paths": {"scanned": [str(file_path)], "skipped": []},
     }
     run_mock = Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=1))
     monkeypatch.setattr(subprocess, "run", run_mock)
@@ -258,7 +311,8 @@ def test_run_semgrep_filters_findings_to_requested_files(tmp_path: Path, monkeyp
                 "start": {"line": 9},
                 "extra": {"message": "Avoid print in source files."},
             },
-        ]
+        ],
+        "paths": {"scanned": [str(file_path)], "skipped": []},
     }
     monkeypatch.setattr(
         subprocess,
@@ -436,7 +490,8 @@ def test_run_semgrep_bugs_maps_security_and_clean_code_findings(tmp_path: Path, 
                 "start": {"line": 3},
                 "extra": {"message": "Comparison is always true."},
             },
-        ]
+        ],
+        "paths": {"scanned": [str(file_path)], "skipped": []},
     }
     monkeypatch.setattr(
         subprocess,
