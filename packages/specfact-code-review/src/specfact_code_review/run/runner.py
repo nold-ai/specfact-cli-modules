@@ -1879,6 +1879,12 @@ def _module_has_dynamic_test_members(
 
     if _module_uses_dynamic_namespace(tree):
         return True
+    if _module_has_control_flow_test_bindings(
+        tree,
+        function_patterns=function_patterns,
+        class_patterns=class_patterns,
+    ):
+        return True
 
     for node in ast.walk(tree):
         if (
@@ -1902,6 +1908,16 @@ def _class_uses_metaclass(node: ast.AST) -> bool:
     return isinstance(node, ast.ClassDef) and any(keyword.arg == "metaclass" for keyword in node.keywords)
 
 
+def _assignment_target_nodes(target: ast.expr) -> tuple[ast.Name | ast.Attribute, ...]:
+    if isinstance(target, (ast.Name, ast.Attribute)):
+        return (target,)
+    if isinstance(target, (ast.Tuple, ast.List)):
+        return tuple(item for element in target.elts for item in _assignment_target_nodes(element))
+    if isinstance(target, ast.Starred):
+        return _assignment_target_nodes(target.value)
+    return ()
+
+
 def _assignment_sets_dynamic_test_member(
     node: ast.AST,
     *,
@@ -1912,14 +1928,19 @@ def _assignment_sets_dynamic_test_member(
         return False
     targets = node.targets if isinstance(node, ast.Assign) else [node.target]
     value = node.value
+    destructured = any(isinstance(target, (ast.Tuple, ast.List, ast.Starred)) for target in targets)
     return any(
         (isinstance(target, ast.Attribute) and _test_name_matches(target.attr, function_patterns))
         or (
             isinstance(target, ast.Name)
             and (_test_name_matches(target.id, function_patterns) or _test_name_matches(target.id, class_patterns))
-            and isinstance(value, (ast.Name, ast.Attribute, ast.Lambda, ast.Call, ast.Subscript, ast.IfExp))
+            and (
+                destructured
+                or isinstance(value, (ast.Name, ast.Attribute, ast.Lambda, ast.Call, ast.Subscript, ast.IfExp))
+            )
         )
         for target in targets
+        for target in _assignment_target_nodes(target)
     )
 
 
@@ -1936,7 +1957,13 @@ def _call_sets_dynamic_test_member(node: ast.AST, *, function_patterns: tuple[st
     )
 
 
-def _module_has_unittest_execution_override(path: Path, *, snapshot_root: Path) -> bool:
+def _module_has_test_execution_override(
+    path: Path,
+    *,
+    snapshot_root: Path,
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> bool:
     try:
         tree = ast.parse(path.read_bytes())
     except (OSError, SyntaxError):
@@ -1961,20 +1988,53 @@ def _module_has_unittest_execution_override(path: Path, *, snapshot_root: Path) 
         )
     )
     module_aliases, case_aliases = _unittest_aliases(tree)
+    context = _PytestSelectorContext(
+        path.relative_to(snapshot_root).as_posix(),
+        imported,
+        classes,
+        (module_aliases, case_aliases),
+        imported_cases,
+        function_patterns,
+        class_patterns,
+    )
     return any(
-        {"run", "__call__", "_callTestMethod", "__getattribute__", "__getattr__"} & _class_declared_names(node)
-        and (
-            name in imported_cases
-            or _is_unittest_case(
-                node,
-                classes,
-                module_aliases,
-                case_aliases,
-                direct_unittest_classes=imported_cases,
-                visiting=frozenset(),
-            )
+        _class_has_test_execution_override(
+            name,
+            node,
+            context,
         )
         for name, node in classes.items()
+    )
+
+
+def _class_has_test_execution_override(
+    name: str,
+    node: ast.ClassDef,
+    context: _PytestSelectorContext,
+) -> bool:
+    declared = _class_declared_names(node)
+    module_aliases, case_aliases = context.unittest_aliases
+    is_unittest = name in context.imported_unittest_cases or _is_unittest_case(
+        node,
+        context.classes,
+        module_aliases,
+        case_aliases,
+        direct_unittest_classes=context.imported_unittest_cases,
+        visiting=frozenset(),
+    )
+    if is_unittest:
+        return bool({"run", "__call__", "_callTestMethod", "__getattribute__", "__getattr__"} & declared)
+    if not {"__getattribute__", "__getattr__"} & declared:
+        return False
+    return bool(
+        _pytest_class_test_methods(
+            node,
+            context.classes,
+            context.unittest_aliases,
+            context.function_patterns,
+            context.class_patterns,
+            direct_unittest_classes=context.imported_unittest_cases,
+        )
     )
 
 
@@ -2025,12 +2085,37 @@ def _module_execution_nodes(tree: ast.Module) -> tuple[ast.AST, ...]:
     return tuple(nodes)
 
 
+def _module_has_control_flow_test_bindings(
+    tree: ast.Module,
+    *,
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> bool:
+    direct_statements = {id(node) for node in tree.body}
+    for node in _module_execution_nodes(tree):
+        if id(node) in direct_statements:
+            continue
+        if isinstance(node, ast.ImportFrom) and any(
+            _test_name_matches(alias.asname or alias.name, (*function_patterns, *class_patterns))
+            for alias in node.names
+        ):
+            return True
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _test_name_matches(
+            node.name, function_patterns
+        ):
+            return True
+        if isinstance(node, ast.ClassDef) and _test_name_matches(node.name, class_patterns):
+            return True
+    return False
+
+
 def _assigned_pytest_hook_names(tree: ast.Module) -> set[str]:
     return {
         target.id
         for node in _module_execution_nodes(tree)
         if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign))
         for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+        for target in _assignment_target_nodes(target)
         if isinstance(target, ast.Name) and target.id.startswith("pytest_")
     }
 
@@ -2155,7 +2240,15 @@ def _pytest_candidate_rejection_reason(
         for path in paths
     ):
         return "dynamic_test_assignment_unsupported"
-    if any(_module_has_unittest_execution_override(path, snapshot_root=snapshot_root) for path in paths):
+    if any(
+        _module_has_test_execution_override(
+            path,
+            snapshot_root=snapshot_root,
+            function_patterns=function_patterns,
+            class_patterns=class_patterns,
+        )
+        for path in paths
+    ):
         return "unittest_execution_override"
     return ""
 
