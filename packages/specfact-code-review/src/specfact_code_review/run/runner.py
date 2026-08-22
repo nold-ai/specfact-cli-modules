@@ -2043,8 +2043,16 @@ def _pytest_observed_outcome(records: list[dict[str, object]]) -> str:
     return _pytest_call_outcome(call_record, records) if call_record is not None else _pytest_no_call_outcome(records)
 
 
+def _pytest_planned_nodes_match(*, planned: tuple[str, ...], observed: tuple[str, ...]) -> bool:
+    return not planned or (len(observed) == len(planned) and set(observed) == set(planned))
+
+
 def reconcile_pytest_outcomes(
-    *, observer: tuple[dict[str, object], ...], junit: tuple[dict[str, object], ...], process_exit: int
+    *,
+    observer: tuple[dict[str, object], ...],
+    junit: tuple[dict[str, object], ...],
+    process_exit: int,
+    planned: tuple[str, ...] = (),
 ) -> PytestOutcomeResult:
     records_by_node: dict[str, list[dict[str, object]]] = {}
     for record in observer:
@@ -2061,7 +2069,11 @@ def reconcile_pytest_outcomes(
         for nodeid, outcome in zip(observed_nodes, outcomes, strict=True)
     )
     process_matches = (process_exit != 0) == any(outcome.kind == "FAILED" for outcome in outcomes)
-    if not signals_match or not process_matches:
+    if (
+        not signals_match
+        or not process_matches
+        or not _pytest_planned_nodes_match(planned=planned, observed=observed_nodes)
+    ):
         return PytestOutcomeResult("UNKNOWN", outcomes)
     return PytestOutcomeResult(
         "FAIL" if any(outcome.kind != "PASS" for outcome in outcomes) else "PASS",
@@ -3128,6 +3140,8 @@ def _pytest_outcome_finding(anchor: Path, *, status: str) -> ReviewFinding:
 def _evaluate_pytest_execution(
     source_files: list[Path],
     execute: Callable[[], tuple[subprocess.CompletedProcess[str], Path, Path, Path]],
+    *,
+    planned: tuple[str, ...] = (),
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
     pytest_skip = skip_if_pytest_unavailable(anchor)
@@ -3147,7 +3161,12 @@ def _evaluate_pytest_execution(
 
     try:
         observer, junit = _load_pytest_outcome_evidence(observer_path, junit_path)
-        outcome = reconcile_pytest_outcomes(observer=observer, junit=junit, process_exit=test_result.returncode)
+        outcome = reconcile_pytest_outcomes(
+            observer=observer,
+            junit=junit,
+            process_exit=test_result.returncode,
+            planned=planned,
+        )
         if outcome.status != "PASS":
             return [_pytest_outcome_finding(anchor, status=outcome.status)], None
         coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
@@ -3188,6 +3207,7 @@ def _evaluate_complete_tdd_gate(
     return _evaluate_pytest_execution(
         source_files,
         lambda: _run_pytest_inventory_with_coverage(selectors, policy_argv=policy_argv),
+        planned=selectors,
     )
 
 
@@ -3790,7 +3810,7 @@ def _reconcile_immutable_pytest_inventory(resolution: object, *, options: Review
         return ImmutablePytestInventory(CandidateReconciliation("PASS"))
     base_snapshot = cast(Any, resolution).base_snapshot
     head_snapshot = cast(Any, resolution).head_snapshot
-    policy = _pytest_policy_values(getattr(resolution, "policy_bundle", None))
+    policy = _pytest_policy_values(_trusted_policy_bundle(resolution))
     changed_paths = tuple(sorted(cast(dict[str, str], getattr(resolution, "path_statuses", {}))))
     base_plan = plan_complete_pytest_suite(base_snapshot.root, policy, changed_paths=changed_paths)
     head_plan = plan_complete_pytest_suite(head_snapshot.root, policy, changed_paths=changed_paths)
@@ -3817,10 +3837,13 @@ def _reconcile_immutable_pytest_inventory(resolution: object, *, options: Review
 def _with_pytest_inventory(
     bindings: SnapshotPolicyBindings,
     selectors: tuple[str, ...],
+    *,
+    pytest_plugins: tuple[str, ...] = (),
 ) -> SnapshotPolicyBindings:
     member_argv = dict(bindings.member_argv)
     member_argv["targeted-pytest-coverage"] = (
         *member_argv.get("targeted-pytest-coverage", ()),
+        *(value for plugin in pytest_plugins for value in ("-p", plugin)),
         "--",
         *selectors,
     )
@@ -3829,13 +3852,19 @@ def _with_pytest_inventory(
 
 def _materialize_claimed_project_runtime(
     resolution: object,
-) -> tuple[toolchain.ProjectRuntimeMaterialization | None, str]:
+) -> tuple[toolchain.ProjectRuntimeMaterialization | None, tuple[str, ...], str]:
     context = getattr(resolution, "claimed_context", None)
     if not isinstance(context, dict):
-        return None, ""
+        return None, (), ""
     descriptor = context.get("project_runtime")
     if not isinstance(descriptor, dict) or descriptor.get("schema") != "project-runtime-layer-v1":
-        return None, ""
+        return None, (), ""
+    layer = toolchain.validate_project_runtime_layer(
+        cast(dict[str, object], descriptor),
+        expected_target=str(getattr(resolution, "resolved_target_commit", "")),
+    )
+    if layer.status != "PASS":
+        return None, (), layer.reason
     storage_root = Path(
         os.environ.get(
             "SPECFACT_CODE_REVIEW_PROJECT_RUNTIME_CACHE",
@@ -3848,7 +3877,16 @@ def _materialize_claimed_project_runtime(
         storage_root=storage_root,
         credential=_capsule_credential(),
     )
-    return (materialized, "") if materialized.status == "PASS" else (None, materialized.reason)
+    plugins = tuple(plugin.entry_point for plugin in layer.pytest_plugins)
+    return (materialized, plugins, "") if materialized.status == "PASS" else (None, (), materialized.reason)
+
+
+def _trusted_policy_bundle(resolution: object) -> object | None:
+    policy_bundle = getattr(resolution, "policy_bundle", None)
+    if policy_bundle is not None or getattr(resolution, "assurance_kind", "") != "index":
+        return policy_bundle
+    base_snapshot = getattr(resolution, "base_snapshot", None)
+    return None if base_snapshot is None else base_snapshot
 
 
 def run_immutable_scope_review(
@@ -3859,7 +3897,7 @@ def run_immutable_scope_review(
 ) -> ReviewReport:
     """Execute both materialized sides through fresh member sandboxes."""
 
-    project_runtime, reason = _materialize_claimed_project_runtime(resolution)
+    project_runtime, pytest_plugins, reason = _materialize_claimed_project_runtime(resolution)
     if reason:
         return _unknown_capsule_report(reason, options=options, scope_evidence=scope_evidence)
     runtime_kwargs = {} if project_runtime is None else {"project_runtime_identity": project_runtime.identity}
@@ -3888,7 +3926,7 @@ def run_immutable_scope_review(
             options=options,
             scope_evidence=scope_evidence,
         )
-    policy_bundle = getattr(resolution, "policy_bundle", None)
+    policy_bundle = _trusted_policy_bundle(resolution)
     base_files = _snapshot_python_files(base_snapshot)
     head_files = _snapshot_python_files(head_snapshot)
     try:
@@ -3899,6 +3937,7 @@ def run_immutable_scope_review(
                 files=base_files,
             ),
             pytest_inventory.base,
+            pytest_plugins=pytest_plugins,
         )
         head_bindings = _with_pytest_inventory(
             _snapshot_policy_bindings(
@@ -3907,6 +3946,7 @@ def run_immutable_scope_review(
                 files=head_files,
             ),
             pytest_inventory.head,
+            pytest_plugins=pytest_plugins,
         )
     except (OSError, TypeError, ValueError) as exc:
         return _unknown_capsule_report(

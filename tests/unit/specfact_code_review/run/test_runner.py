@@ -390,9 +390,13 @@ def test_complete_tdd_gate_excludes_sealed_custom_test_root_from_coverage(
         encoding="utf-8",
     )
     observed: list[Path] = []
+    observed_plans: list[tuple[str, ...]] = []
 
-    def evaluate(source_files: list[Path], _execute: object) -> tuple[list[ReviewFinding], dict[str, float]]:
+    def evaluate(
+        source_files: list[Path], _execute: object, **kwargs: object
+    ) -> tuple[list[ReviewFinding], dict[str, float]]:
         observed.extend(source_files)
+        observed_plans.append(cast(tuple[str, ...], kwargs["planned"]))
         return [], {}
 
     monkeypatch.setattr(runner_api, "_evaluate_pytest_execution", evaluate)
@@ -414,6 +418,7 @@ def test_complete_tdd_gate_excludes_sealed_custom_test_root_from_coverage(
     assert findings == []
     assert coverage == {}
     assert observed == [Path("/opt/specfact/snapshot/src/app.py")]
+    assert observed_plans == [("integration/test_app.py::test_app",)]
 
 
 def test_sealed_target_bugs_policy_activates_semgrep_bugs_without_bug_hunt(monkeypatch: MonkeyPatch) -> None:
@@ -543,6 +548,12 @@ def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshot
     monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda **_kwargs: (capsule, ""))
     monkeypatch.setattr(
         runner_api.toolchain,
+        "validate_project_runtime_layer",
+        lambda *_args, **_kwargs: SimpleNamespace(status="PASS", reason="", pytest_plugins=()),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        runner_api.toolchain,
         "materialize_project_runtime",
         lambda *_args, **_kwargs: SimpleNamespace(
             status="PASS", root=runtime_root, identity="sha256:" + "b" * 64, reason=""
@@ -577,6 +588,131 @@ def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshot
     )
 
     assert observed_roots == [runtime_root, runtime_root]
+
+
+def test_immutable_review_explicitly_loads_only_authenticated_project_pytest_plugins(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    runtime_root = tmp_path / "project-runtime"
+    runtime_root.mkdir()
+    capsule = SimpleNamespace(identity="sha256:" + "a" * 64)
+    descriptor = {"schema": "project-runtime-layer-v1"}
+    observed_argv: list[tuple[str, ...]] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda **_kwargs: (capsule, ""))
+    monkeypatch.setattr(
+        runner_api.toolchain,
+        "validate_project_runtime_layer",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            status="PASS",
+            reason="",
+            pytest_plugins=(SimpleNamespace(entry_point="fixture_plugin"),),
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        runner_api.toolchain,
+        "materialize_project_runtime",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            status="PASS", root=runtime_root, identity="sha256:" + "b" * 64, reason=""
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_reconcile_immutable_pytest_inventory",
+        lambda *_args, **_kwargs: runner_api.ImmutablePytestInventory(
+            runner_api.CandidateReconciliation("PASS"),
+            ("tests/test_app.py::test_app",),
+            ("tests/test_app.py::test_app",),
+        ),
+    )
+
+    def run_snapshot(*_args: object, **kwargs: object) -> Any:
+        observed_argv.append(cast(dict[str, tuple[str, ...]], kwargs["member_argv"])["targeted-pytest-coverage"])
+        return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", run_snapshot)
+    monkeypatch.setattr(runner_api, "_classify_range_findings", lambda *_args: ({}, {}))
+    monkeypatch.setattr(
+        runner_api,
+        "_capsule_report",
+        lambda *_args, **_kwargs: ReviewReport(run_id="plugins", score=100, findings=[], summary="complete"),
+    )
+    snapshot = SimpleNamespace(root=tmp_path, contents={})
+    resolution = SimpleNamespace(
+        base_snapshot=snapshot,
+        head_snapshot=snapshot,
+        policy_bundle=None,
+        resolved_target_commit="1" * 40,
+        claimed_context={"project_runtime": descriptor},
+    )
+
+    runner_api.run_immutable_scope_review(
+        resolution,
+        options=runner_api.ReviewOptions(no_tests=False),
+        scope_evidence={"assurance_kind": "range_candidate"},
+    )
+
+    assert len(observed_argv) == 2
+    assert all(argv.count("-p") == 1 for argv in observed_argv)
+    assert all(argv[argv.index("-p") + 1] == "fixture_plugin" for argv in observed_argv)
+
+
+def test_index_review_uses_head_policy_for_both_immutable_snapshots(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "index"
+    base_root.mkdir()
+    head_root.mkdir()
+    (base_root / "pytest.ini").write_text("[pytest]\ntestpaths = trusted_tests\n", encoding="utf-8")
+    (head_root / "pytest.ini").write_text("[pytest]\ntestpaths = staged_tests\n", encoding="utf-8")
+    observed_configs: list[str] = []
+    monkeypatch.setattr(
+        runner_api,
+        "_prepare_capsule_runtime",
+        lambda **_kwargs: (SimpleNamespace(identity="sha256:" + "a" * 64), ""),
+    )
+    monkeypatch.setattr(
+        runner_api,
+        "_reconcile_immutable_pytest_inventory",
+        lambda *_args, **_kwargs: runner_api.ImmutablePytestInventory(
+            runner_api.CandidateReconciliation("PASS"),
+            ("trusted_tests/test_app.py::test_app",),
+            ("trusted_tests/test_app.py::test_app",),
+        ),
+    )
+
+    def run_snapshot(*_args: object, **kwargs: object) -> Any:
+        config_roots = cast(tuple[Path, ...], kwargs["config_roots"])
+        pytest_config = next(path for root in config_roots for path in root.iterdir() if path.name == "pytest.ini")
+        observed_configs.append(pytest_config.read_text(encoding="utf-8"))
+        return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", run_snapshot)
+    monkeypatch.setattr(runner_api, "_classify_range_findings", lambda *_args: ({}, {}))
+    monkeypatch.setattr(
+        runner_api,
+        "_capsule_report",
+        lambda *_args, **_kwargs: ReviewReport(run_id="index-policy", score=100, findings=[], summary="complete"),
+    )
+    resolution = SimpleNamespace(
+        assurance_kind="index",
+        base_snapshot=SimpleNamespace(root=base_root, contents={}),
+        head_snapshot=SimpleNamespace(root=head_root, contents={}),
+        policy_bundle=None,
+        claimed_context=None,
+    )
+
+    runner_api.run_immutable_scope_review(
+        resolution,
+        options=runner_api.ReviewOptions(no_tests=False),
+        scope_evidence={"assurance_kind": "index"},
+    )
+
+    assert len(observed_configs) == 2
+    assert all("/opt/specfact/snapshot/trusted_tests" in payload for payload in observed_configs)
+    assert all("staged_tests" not in payload for payload in observed_configs)
 
 
 def test_immutable_review_binds_each_complete_pytest_inventory_to_its_snapshot(
@@ -2722,6 +2858,18 @@ def test_pytest_outcome_signal_disagreement_is_unknown() -> None:
         observer=({"nodeid": "tests/test_a.py::test_a", "phase": "call", "passed": True},),
         junit=({"nodeid": "tests/test_a.py::test_a", "outcome": "failed"},),
         process_exit=0,
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+def test_pytest_outcome_reconciliation_rejects_missing_planned_selector() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_outcomes(
+        observer=({"nodeid": "tests/test_app.py::test_visible", "phase": "call", "passed": True},),
+        junit=({"nodeid": "tests/test_app.py::test_visible", "outcome": "passed"},),
+        process_exit=0,
+        planned=("tests/test_app.py::test_visible", "tests/test_app.py::test_hidden_by_conftest"),
     )
 
     assert result.status == "UNKNOWN"
