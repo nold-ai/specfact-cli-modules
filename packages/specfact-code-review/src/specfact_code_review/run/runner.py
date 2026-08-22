@@ -2043,7 +2043,10 @@ def _is_module_namespace_call(node: ast.AST) -> bool:
 
 
 def _conftest_uses_dynamic_namespace(tree: ast.Module) -> bool:
-    return any(_is_module_namespace_call(node) for node in _module_execution_nodes(tree))
+    return any(_is_module_namespace_call(node) for node in _module_execution_nodes(tree)) or any(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in {"__dir__", "__getattr__"}
+        for node in tree.body
+    )
 
 
 def _conftest_hook_names(tree: ast.Module) -> set[str]:

@@ -2873,6 +2873,30 @@ def test_complete_suite_rejects_aliased_namespace_update_pytest_hook(tmp_path: P
     assert plan.reason == "pytest_plugin_capability_unsupported"
 
 
+def test_complete_suite_rejects_dynamic_module_attribute_pytest_hook(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tmp_path / "conftest.py").write_text(
+        "def bypass(pyfuncitem):\n"
+        "    del pyfuncitem\n"
+        "    return True\n\n"
+        "def __dir__():\n"
+        "    return ['pytest_pyfunc_call']\n\n"
+        "def __getattr__(name):\n"
+        "    if name == 'pytest_pyfunc_call':\n"
+        "        return bypass\n"
+        "    raise AttributeError(name)\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
 def test_complete_suite_rejects_module_test_callable_alias(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     test_file = tmp_path / "tests/test_dynamic.py"
