@@ -215,6 +215,7 @@ jobs:
     if: needs.changes.outputs.code_changed == 'true' && needs.changes.outputs.skip_tests_dev_to_main != 'true'
     permissions:
       contents: read
+      packages: read
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -243,6 +244,44 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Set up immutable ORAS client
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6
+        with:
+          url: https://github.com/oras-project/oras/releases/download/v1.3.3/oras_1.3.3_linux_amd64.tar.gz
+          checksum: 9ce999f8d2de03fc03968b29d743077a58783e545e5eaa53917ca177352d0e59
+      - name: Prefetch signed analyzer capsule into credential-free cache
+        shell: bash
+        env:
+          MATRIX_PYTHON: ${{ matrix.python-version }}
+          REGISTRY_ACTOR: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          abi="cp${MATRIX_PYTHON//./}"
+          case "$abi" in
+            cp311) manifest="sha256:4f9e424f3720ea0807cc0f9f22c0ba28e3c604632ddd719f605c22e878437a72" ;;
+            cp312) manifest="sha256:f00ac813f428b7c2ef3d1ce3400496f67ca2d508064e6efc55af1ba6c4697461" ;;
+            cp313) manifest="sha256:1516be5a113d9176c70fcc4cfac3fe46eaf32d5b66c381b17fbb26a5bcc9fb27" ;;
+            *) echo "unsupported C14 ABI: $abi" >&2; exit 1 ;;
+          esac
+          layout="${RUNNER_TEMP}/c14-oci-layout-${abi}"
+          cache="${RUNNER_TEMP}/c14-prefetched-${abi}/oci-cache"
+          registry_config="${RUNNER_TEMP}/c14-oras-auth-${abi}.json"
+          trap 'rm -f "$registry_config"' EXIT
+          rm -rf "$layout" "$cache"
+          mkdir -p "$cache"
+          printf '%s' "$REGISTRY_TOKEN" | oras login ghcr.io \
+            --username "$REGISTRY_ACTOR" \
+            --password-stdin \
+            --registry-config "$registry_config"
+          oras cp --to-oci-layout \
+            --from-registry-config "$registry_config" \
+            "ghcr.io/nold-ai/specfact-code-review-analyzer-runtime@${manifest}" \
+            "${layout}:${abi}"
+          cp -R "${layout}/blobs" "$cache/"
+          test "$(sha256sum "${cache}/blobs/sha256/${manifest#sha256:}" | cut -d ' ' -f1)" = "${manifest#sha256:}"
+          rm -f "$registry_config"
+          echo "PREFETCHED_OCI_CACHE=$cache" >> "$GITHUB_ENV"
       - name: Install exact core and candidate module package
         shell: bash
         run: |
@@ -276,15 +315,16 @@ jobs:
           set -euo pipefail
           . .exact-core-venv/bin/activate
           python -m pytest -q --import-mode=importlib tests/e2e/specfact_code_review/test_review_run_e2e.py::test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix
-      - name: Run signed analyzer capsule cache-miss, cache-hit, and empty Bubblewrap smoke
+      - name: Run signed analyzer capsule from prefetched cache and empty Bubblewrap smoke
         shell: bash
         env:
           MATRIX_PYTHON: ${{ matrix.python-version }}
+          PREFETCHED_OCI_CACHE: ${{ env.PREFETCHED_OCI_CACHE }}
           PYTHONPATH: ${{ github.workspace }}/packages/specfact-code-review/src
         run: |
           set -euo pipefail
           . .exact-core-venv/bin/activate
-          sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH "$PWD/.exact-core-venv/bin/python" - <<'PY'
+          sudo --preserve-env=MATRIX_PYTHON,PREFETCHED_OCI_CACHE,PYTHONPATH "$PWD/.exact-core-venv/bin/python" - <<'PY'
           import gzip
           import hashlib
           import json
@@ -316,6 +356,7 @@ jobs:
           storage_a = runtime_root / "storage-a"
           storage_b = runtime_root / "storage-b"
           cache_a = storage_a / "oci-cache"
+          shutil.copytree(Path(os.environ["PREFETCHED_OCI_CACHE"]), cache_a)
 
           strict_manifest_verifier = toolchain._verify_final_root_manifest
 
@@ -401,12 +442,12 @@ jobs:
           acquisition = toolchain.acquire_oci_distribution(
               environment["oci"],
               cache_root=cache_a,
-              simulate_cache_hit=False,
+              simulate_cache_hit=True,
           )
           assert acquisition.status == "PASS", acquisition.reason
-          assert acquisition.source == "signed_registry"
-          assert acquisition.final_url.startswith("https://")
-          assert all(not hop.credential_sent for hop in acquisition.redirect_chain)
+          assert acquisition.source == "verified_cache"
+          assert acquisition.final_url == ""
+          assert acquisition.redirect_chain == ()
           assert len(acquisition.records) == 2 + len(environment["oci"]["layers"])
 
           first = toolchain.materialize_capsule(

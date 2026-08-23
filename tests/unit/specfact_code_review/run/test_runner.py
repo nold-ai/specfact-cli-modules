@@ -2785,6 +2785,31 @@ def test_complete_suite_rejects_test_body_replacing_decorator(tmp_path: Path) ->
     assert plan.reason == "test_execution_decorator_unsupported"
 
 
+def test_complete_suite_rejects_imported_test_body_replacing_decorator(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "support.py").write_text(
+        "def replace(function):\n"
+        "    del function\n"
+        "    return lambda: None\n\n"
+        "@replace\n"
+        "def test_failure():\n"
+        "    assert False\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_case.py").write_text(
+        "from tests.support import test_failure\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "test_execution_decorator_unsupported"
+
+
 def test_complete_suite_fails_closed_for_wildcard_imported_tests(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -2850,6 +2875,45 @@ def test_complete_suite_rejects_execution_shaping_autouse_fixture(tmp_path: Path
         encoding="utf-8",
     )
     (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_test_module_autouse_fixture(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_failure.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "import pytest\n\n"
+        "@pytest.fixture(autouse=True)\n"
+        "def bypass(request):\n"
+        "    request.node.obj = lambda: None\n\n"
+        "def test_failure():\n"
+        "    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_requested_execution_shaping_fixture(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n@pytest.fixture\ndef bypass(request):\n    request.node.obj = lambda **kwargs: None\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
 
     plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
 
@@ -3144,6 +3208,21 @@ def test_complete_suite_rejects_module_level_exec_test_generation(tmp_path: Path
     test_file.parent.mkdir()
     test_file.write_text(
         'exec("def test_failure():\\n    assert False")\n\ndef test_smoke():\n    pass\n',
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_test_assignment_unsupported"
+
+
+def test_complete_suite_rejects_module_level_eval_compile_test_generation(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_dynamic.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        'eval(compile("def test_failure():\\n    assert False", "<dynamic>", "exec"))\n\ndef test_smoke():\n    pass\n',
         encoding="utf-8",
     )
 

@@ -2087,11 +2087,66 @@ def _module_has_test_execution_override(
     )
 
 
-def _module_has_unsupported_test_decorator(tree: ast.Module, *, function_patterns: tuple[str, ...]) -> bool:
-    modeled = _modeled_test_decorators(tree)
+def _definition_has_unsupported_decorator(
+    definition: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+    modeled: _ModeledTestDecorators,
+) -> bool:
+    return any(not _is_modeled_test_decorator(decorator, modeled) for decorator in definition.decorator_list)
+
+
+def _class_has_unsupported_test_decorator(
+    node: ast.ClassDef,
+    classes: dict[str, ast.ClassDef],
+    modeled: _ModeledTestDecorators,
+    function_patterns: tuple[str, ...],
+    *,
+    visiting: frozenset[str],
+) -> bool:
+    if node.name in visiting:
+        return False
+    if _definition_has_unsupported_decorator(node, modeled):
+        return True
+    if any(
+        _definition_has_unsupported_decorator(child, modeled)
+        for child in node.body
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and _test_name_matches(child.name, function_patterns)
+    ):
+        return True
     return any(
-        any(not _is_modeled_test_decorator(decorator, modeled) for decorator in definition.decorator_list)
+        _class_has_unsupported_test_decorator(
+            classes[base.id],
+            classes,
+            modeled,
+            function_patterns,
+            visiting=visiting | {node.name},
+        )
+        for base in node.bases
+        if isinstance(base, ast.Name) and base.id in classes
+    )
+
+
+def _module_has_unsupported_test_decorator(
+    tree: ast.Module,
+    *,
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> bool:
+    modeled = _modeled_test_decorators(tree)
+    classes = _module_class_definitions(tree)
+    return any(
+        _definition_has_unsupported_decorator(definition, modeled)
         for definition in _test_definitions(tree, function_patterns)
+    ) or any(
+        _class_has_unsupported_test_decorator(
+            node,
+            classes,
+            modeled,
+            function_patterns,
+            visiting=frozenset(),
+        )
+        for node in classes.values()
+        if _test_name_matches(node.name, class_patterns)
     )
 
 
@@ -2142,12 +2197,131 @@ def _test_definitions(
     )
 
 
-def _path_has_unsupported_test_decorator(path: Path, *, function_patterns: tuple[str, ...]) -> bool:
+def _path_has_unsupported_test_decorator(
+    path: Path,
+    *,
+    function_patterns: tuple[str, ...],
+    class_patterns: tuple[str, ...],
+) -> bool:
     try:
         tree = ast.parse(path.read_bytes())
     except (OSError, SyntaxError):
         return False
-    return _module_has_unsupported_test_decorator(tree, function_patterns=function_patterns)
+    return _module_has_unsupported_test_decorator(
+        tree,
+        function_patterns=function_patterns,
+        class_patterns=class_patterns,
+    )
+
+
+def _resolved_import_has_unsupported_test_decorator(
+    module_path: Path,
+    export_name: str,
+    *,
+    snapshot_root: Path,
+    policy: _PytestDiscoveryPolicy,
+    visiting: frozenset[Path],
+) -> bool:
+    resolved_path = module_path.resolve()
+    if resolved_path in visiting:
+        return False
+    try:
+        tree = ast.parse(module_path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+    direct = _direct_pytest_definition(tree, export_name)
+    if isinstance(direct, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return _definition_has_unsupported_decorator(direct, _modeled_test_decorators(tree))
+    if isinstance(direct, ast.ClassDef):
+        return _class_has_unsupported_test_decorator(
+            direct,
+            _module_class_definitions(tree),
+            _modeled_test_decorators(tree),
+            policy.function_patterns,
+            visiting=frozenset(),
+        )
+    reexport = _pytest_reexport(tree, export_name)
+    if reexport is None:
+        return False
+    statement, source_name = reexport
+    nested_path = _imported_module_path(
+        statement,
+        path=module_path,
+        snapshot_root=snapshot_root,
+        import_roots=policy.import_roots,
+    )
+    return nested_path is not None and _resolved_import_has_unsupported_test_decorator(
+        nested_path,
+        source_name,
+        snapshot_root=snapshot_root,
+        policy=policy,
+        visiting=visiting | {resolved_path},
+    )
+
+
+def _path_has_unsupported_imported_test_decorator(
+    path: Path,
+    *,
+    snapshot_root: Path,
+    policy: _PytestDiscoveryPolicy,
+) -> bool:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+    for statement in tree.body:
+        if not isinstance(statement, ast.ImportFrom) or any(alias.name == "*" for alias in statement.names):
+            continue
+        module_path = _imported_module_path(
+            statement,
+            path=path,
+            snapshot_root=snapshot_root,
+            import_roots=policy.import_roots,
+        )
+        if module_path is None:
+            continue
+        for alias in statement.names:
+            bound_name = alias.asname or alias.name
+            if not _test_name_matches(bound_name, (*policy.function_patterns, *policy.class_patterns)):
+                continue
+            if _resolved_import_has_unsupported_test_decorator(
+                module_path,
+                alias.name,
+                snapshot_root=snapshot_root,
+                policy=policy,
+                visiting=frozenset(),
+            ):
+                return True
+    return False
+
+
+def _path_declares_unsupported_pytest_fixture(path: Path) -> bool:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+    return _module_declares_autouse_fixture(tree) or _module_declares_execution_shaping_fixture(tree)
+
+
+def _has_unsupported_test_decorator(
+    paths: tuple[Path, ...],
+    *,
+    snapshot_root: Path,
+    policy: _PytestDiscoveryPolicy,
+) -> bool:
+    return any(
+        _path_has_unsupported_test_decorator(
+            path,
+            function_patterns=policy.function_patterns,
+            class_patterns=policy.class_patterns,
+        )
+        or _path_has_unsupported_imported_test_decorator(
+            path,
+            snapshot_root=snapshot_root,
+            policy=policy,
+        )
+        for path in paths
+    )
 
 
 def _is_modeled_test_decorator(
@@ -2301,7 +2475,7 @@ def _module_uses_dynamic_namespace(tree: ast.Module) -> bool:
     return (
         any(_is_module_namespace_call(node) for node in execution_nodes)
         or any(
-            isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "exec"
+            isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in {"eval", "exec"}
             for node in execution_nodes
         )
         or any(
@@ -2311,7 +2485,29 @@ def _module_uses_dynamic_namespace(tree: ast.Module) -> bool:
     )
 
 
-def _conftest_declares_autouse_fixture(tree: ast.Module) -> bool:
+def _pytest_fixture_names(tree: ast.Module) -> set[str]:
+    return {
+        *(f"{module}.fixture" for module in _imported_module_aliases(tree, "pytest")),
+        *_imported_member_aliases(tree, "pytest", frozenset({"fixture"})),
+    }
+
+
+def _pytest_fixture_definitions(
+    tree: ast.Module,
+) -> tuple[ast.FunctionDef | ast.AsyncFunctionDef, ...]:
+    fixture_names = _pytest_fixture_names(tree)
+    return tuple(
+        node
+        for node in _module_execution_nodes(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(
+            _decorator_full_name(decorator.func if isinstance(decorator, ast.Call) else decorator) in fixture_names
+            for decorator in node.decorator_list
+        )
+    )
+
+
+def _module_declares_autouse_fixture(tree: ast.Module) -> bool:
     fixture_names = {
         *(f"{module}.fixture" for module in _imported_module_aliases(tree, "pytest")),
         *_imported_member_aliases(tree, "pytest", frozenset({"fixture"})),
@@ -2329,6 +2525,34 @@ def _conftest_declares_autouse_fixture(tree: ast.Module) -> bool:
         )
         for node in _module_execution_nodes(tree)
     )
+
+
+def _is_pytest_node(node: ast.AST) -> bool:
+    return isinstance(node, ast.Attribute) and node.attr == "node"
+
+
+def _is_collected_callable_target(node: ast.AST) -> bool:
+    return isinstance(node, ast.Attribute) and node.attr == "obj" and _is_pytest_node(node.value)
+
+
+def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    return any(
+        any(_is_collected_callable_target(target) for target in _assignment_targets(child))
+        or (
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Name)
+            and child.func.id == "setattr"
+            and len(child.args) >= 2
+            and isinstance(child.args[1], ast.Constant)
+            and child.args[1].value == "obj"
+            and _is_pytest_node(child.args[0])
+        )
+        for child in ast.walk(node)
+    )
+
+
+def _module_declares_execution_shaping_fixture(tree: ast.Module) -> bool:
+    return any(_fixture_shapes_test_execution(node) for node in _pytest_fixture_definitions(tree))
 
 
 def _conftest_hook_names(tree: ast.Module) -> set[str]:
@@ -2360,7 +2584,8 @@ def _repository_pytest_hook_validation(snapshot_root: Path, roots: tuple[str, ..
         if (
             _conftest_declares_plugins(tree)
             or _module_uses_dynamic_namespace(tree)
-            or _conftest_declares_autouse_fixture(tree)
+            or _module_declares_autouse_fixture(tree)
+            or _module_declares_execution_shaping_fixture(tree)
         ):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
         plugins.append({"origin": "repository", "hooks": sorted(_conftest_hook_names(tree)), "path": str(path)})
@@ -2433,9 +2658,7 @@ def _pytest_candidate_rejection_reason(
     snapshot_root: Path,
     candidates: set[str],
     *,
-    function_patterns: tuple[str, ...],
-    class_patterns: tuple[str, ...],
-    import_roots: tuple[Path, ...],
+    policy: _PytestDiscoveryPolicy,
 ) -> str:
     paths = tuple(snapshot_root / candidate for candidate in candidates)
     if any(_module_uses_wildcard_import(path) for path in paths):
@@ -2443,27 +2666,29 @@ def _pytest_candidate_rejection_reason(
     if _has_unsupported_imported_test_base(
         paths,
         snapshot_root=snapshot_root,
-        import_roots=import_roots,
+        import_roots=policy.import_roots,
     ):
         return "imported_test_base_unsupported"
     if any(
         _module_has_dynamic_test_members(
             path,
-            function_patterns=function_patterns,
-            class_patterns=class_patterns,
+            function_patterns=policy.function_patterns,
+            class_patterns=policy.class_patterns,
         )
         for path in paths
     ):
         return "dynamic_test_assignment_unsupported"
-    if any(_path_has_unsupported_test_decorator(path, function_patterns=function_patterns) for path in paths):
+    if _has_unsupported_test_decorator(paths, snapshot_root=snapshot_root, policy=policy):
         return "test_execution_decorator_unsupported"
+    if any(_path_declares_unsupported_pytest_fixture(path) for path in paths):
+        return "pytest_plugin_capability_unsupported"
     if any(
         _module_has_test_execution_override(
             path,
             snapshot_root=snapshot_root,
-            import_roots=import_roots,
-            function_patterns=function_patterns,
-            class_patterns=class_patterns,
+            import_roots=policy.import_roots,
+            function_patterns=policy.function_patterns,
+            class_patterns=policy.class_patterns,
         )
         for path in paths
     ):
@@ -2521,9 +2746,7 @@ def plan_complete_pytest_suite(
     rejection_reason = _pytest_candidate_rejection_reason(
         snapshot_root,
         candidates,
-        function_patterns=function_patterns,
-        class_patterns=class_patterns,
-        import_roots=import_roots,
+        policy=discovery_policy,
     )
     if rejection_reason:
         return PytestSuitePlan(selectors, False, "UNKNOWN", rejection_reason)

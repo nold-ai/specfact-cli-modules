@@ -81,25 +81,53 @@ def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
     assert "FALLBACK_REF" not in exact_job
 
 
-def test_exact_core_smoke_does_not_expose_registry_token_to_candidate_python() -> None:
-    exact_job = _job_text(_workflow_text(), "exact-core-schema-compatibility")
-    capsule_step = exact_job[exact_job.index("Run signed analyzer capsule") :]
+def _assert_pinned_credentialed_prefetch(exact_job: str, prefetch_step: str) -> None:
+    assert "packages: read" in exact_job
+    assert "oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6" in exact_job
+    assert "oras_1.3.3_linux_amd64.tar.gz" in exact_job
+    assert "9ce999f8d2de03fc03968b29d743077a58783e545e5eaa53917ca177352d0e59" in exact_job
+    assert "REGISTRY_TOKEN: ${{ github.token }}" in prefetch_step
+    assert "REGISTRY_ACTOR: ${{ github.actor }}" in prefetch_step
+    assert "oras cp --to-oci-layout" in prefetch_step
+    assert 'rm -f "$registry_config"' in prefetch_step
 
-    assert "packages: read" not in exact_job
+
+def _assert_candidate_python_is_credential_free(capsule_step: str) -> None:
     assert "REGISTRY_TOKEN" not in capsule_step
     assert "REGISTRY_ACTOR" not in capsule_step
     assert "github.token" not in capsule_step
     assert "credential=" not in capsule_step
-    assert "sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH" in capsule_step
+    assert "simulate_cache_hit=True" in capsule_step
+    assert "PREFETCHED_OCI_CACHE" in capsule_step
+    assert "sudo --preserve-env=MATRIX_PYTHON,PREFETCHED_OCI_CACHE,PYTHONPATH" in capsule_step
+
+
+def test_exact_core_smoke_does_not_expose_registry_token_to_candidate_python() -> None:
+    exact_job = _job_text(_workflow_text(), "exact-core-schema-compatibility")
+    prefetch_name = "Prefetch signed analyzer capsule into credential-free cache"
+    capsule_name = "Run signed analyzer capsule from prefetched cache and empty Bubblewrap smoke"
+    prefetch_offset = exact_job.index(prefetch_name)
+    capsule_offset = exact_job.index(capsule_name)
+    candidate_execution_offset = exact_job.index("Install exact core and candidate module package")
+    prefetch_step = exact_job[prefetch_offset:candidate_execution_offset]
+    capsule_step = exact_job[capsule_offset:]
+
+    assert prefetch_offset < candidate_execution_offset < capsule_offset
+    assert "github.workspace" not in prefetch_step
+    assert "PYTHONPATH" not in prefetch_step
+    _assert_pinned_credentialed_prefetch(exact_job, prefetch_step)
+    _assert_candidate_python_is_credential_free(capsule_step)
 
 
 def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     workflow = _workflow_text()
     exact_job = _job_text(workflow, "exact-core-schema-compatibility")
-    capsule_step_name = "Run signed analyzer capsule cache-miss, cache-hit, and empty Bubblewrap smoke"
+    capsule_step_name = "Run signed analyzer capsule from prefetched cache and empty Bubblewrap smoke"
     capsule_step_offset = exact_job.index(capsule_step_name)
     capsule_step = exact_job[capsule_step_offset:]
-    elevated_python = 'sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH "$PWD/.exact-core-venv/bin/python" -'
+    elevated_python = (
+        'sudo --preserve-env=MATRIX_PYTHON,PREFETCHED_OCI_CACHE,PYTHONPATH "$PWD/.exact-core-venv/bin/python" -'
+    )
     required_fragments = (
         capsule_step_name,
         "import tempfile",
@@ -113,6 +141,9 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
         "c14-manifest-${{ matrix.python-version }}.json.gz",
         "pr-range-v1-toolchain-lock.json",
+        "Prefetch signed analyzer capsule into credential-free cache",
+        "oras cp --to-oci-layout",
+        "PREFETCHED_OCI_CACHE",
         "empty_cache=True",
         "empty_cache=False",
         'storage_root=runtime_root / "storage-a"',
