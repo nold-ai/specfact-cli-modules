@@ -18,7 +18,7 @@ Operating guidance: command examples in this skill are not the source of truth; 
 - Log each simplification action as recommended, applied, kept, skipped, failed, with evidence of improvement or preserved contract
 - In headless mode, process one file at a time and emit an action table: file, line, rule, guidance_kind, recommended_action, action_status, evidence
 - Run targeted tests or rerun simplify review after each accepted file or very small batch; if validation cannot prove safety, downgrade to `needs_tests` or `skipped`
-- For merge-quality review, run `specfact code review run --scope changed --enforcement changed --bug-hunt --json --out .specfact/code-review.json`; use `--enforcement full` only when the user wants legacy blockers in reviewed files to fail
+- For merge-quality review, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`; output is `range_preview` without matching claimed context and `range_candidate` with it; neither is `pr_range` until a protected consumer verifies and promotes it
 - Use intention-revealing names; avoid placeholder public names like data/process/handle
 - Keep functions under 120 LOC, shallow nesting, and <= 5 parameters (KISS)
 - Delete unused private helpers and speculative abstractions quickly (YAGNI)

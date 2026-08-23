@@ -35,6 +35,28 @@ SAMPLE_FAIL_REVIEW_REPORT: dict[str, object] = {
 }
 
 
+def test_pre_commit_consumer_preserves_schema_1_6_unknown_exit() -> None:
+    module = _load_script_module()
+    report = {
+        "schema_version": "1.6",
+        "assurance_status": "UNKNOWN",
+        "overall_verdict": "FAIL",
+        "ci_exit_code": 1,
+        "findings": [],
+        "scope_evidence": {"assurance_kind": "explicit_files"},
+        "analyzer_evidence": [{"id": "contracts", "evidence_outcome": "UNKNOWN"}],
+    }
+
+    assert module._authoritative_report_exit_code(report, enforcement="changed") == 1
+    assert module._authoritative_report_exit_code({**report, "ci_exit_code": 0}, enforcement="changed") == 1
+    assert (
+        module._authoritative_report_exit_code(
+            {**report, "assurance_status": "NOT_APPLICABLE", "ci_exit_code": 0}, enforcement="changed"
+        )
+        == 0
+    )
+
+
 def test_specfact_review_paths_keeps_only_python_sources() -> None:
     module = _load_script_module()
     assert module._specfact_review_paths(
@@ -325,6 +347,27 @@ def test_shadow_enforcement_reports_without_blocking(tmp_path: Path, capsys: pyt
 
     assert module._print_review_findings_summary(tmp_path, enforcement="shadow") == (True, 1, 0)
     assert "shadow gate" in capsys.readouterr().err
+
+
+def test_schema_1_6_authoritative_failure_prints_decision_reason(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _load_script_module()
+    _write_sample_review_report(
+        tmp_path,
+        {
+            "schema_version": "1.6",
+            "assurance_status": "UNKNOWN",
+            "overall_verdict": "FAIL",
+            "ci_exit_code": 1,
+            "findings": [],
+        },
+    )
+
+    assert module._print_review_findings_summary(tmp_path, enforcement="changed") == (True, 0, 1)
+    diagnostic = capsys.readouterr().err
+    assert "schema 1.6 authoritative decision" in diagnostic
+    assert "assurance_status='UNKNOWN'" in diagnostic
 
 
 def _write_sample_review_report(repo_root: Path, payload: dict[str, object]) -> None:

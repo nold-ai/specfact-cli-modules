@@ -15,6 +15,53 @@ def test_run_basedpyright_returns_empty_for_no_files() -> None:
     assert run_basedpyright([]) == []
 
 
+def test_basedpyright_extends_and_baseline_files_are_governed_but_disabled(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    (tmp_path / "pyproject.toml").write_text("[tool.basedpyright]\nextends='base.json'\n", encoding="utf-8")
+    (tmp_path / "base.json").write_text('{"baselineFile":"baseline.json"}', encoding="utf-8")
+    (tmp_path / "baseline.json").write_text("{}", encoding="utf-8")
+
+    policy = scope.resolve_basedpyright_policy(tmp_path, expected_version="1.39.10")
+    projection = scope.project_basedpyright_policy(policy, snapshot_root=tmp_path, eligible_inputs=("src/app.py",))
+
+    assert set(policy.reference_paths) == {"pyproject.toml", "base.json", "baseline.json"}
+    assert projection.status == "PASS"
+    assert "baselineFile" not in projection.values
+    assert "--baselinefile" not in projection.argv
+
+
+def test_basedpyright_no_config_uses_generated_default(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    policy = scope.resolve_basedpyright_policy(tmp_path, expected_version="1.39.10")
+
+    assert policy.identity == "basedpyright-default-v1"
+    assert policy.identity_kind == "builtin_mode"
+
+
+def test_basedpyright_project_rebases_relative_paths_per_snapshot(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    policy = scope.BasedPyrightPolicy(include=("src",), exclude=(), ignore=())
+    left = scope.project_basedpyright_policy(policy, snapshot_root=tmp_path / "base", eligible_inputs=("src/app.py",))
+    right = scope.project_basedpyright_policy(policy, snapshot_root=tmp_path / "head", eligible_inputs=("src/app.py",))
+
+    assert left.values["include"] == [str(tmp_path / "base/src/app.py")]
+    assert right.values["include"] == [str(tmp_path / "head/src/app.py")]
+    assert left.logical_policy_digest == right.logical_policy_digest
+
+
+def test_basedpyright_project_rejects_unbound_paths(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    policy = scope.BasedPyrightPolicy(include=("../escape",), exclude=(), ignore=())
+
+    result = scope.project_basedpyright_policy(policy, snapshot_root=tmp_path, eligible_inputs=("src/app.py",))
+
+    assert result.status == "UNKNOWN"
+
+
 def test_run_basedpyright_skips_yaml_manifests(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     manifest = tmp_path / "module-package.yaml"
     manifest.write_text("name: example\nversion: 1\n", encoding="utf-8")

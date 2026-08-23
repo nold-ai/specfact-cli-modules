@@ -3,12 +3,44 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import cast
 from unittest.mock import Mock
 
 from pytest import MonkeyPatch
 
 from specfact_code_review.tools.ruff_runner import run_ruff
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process
+
+
+def test_ruff_snapshot_mode_disables_cache(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    projection = scope.project_ruff_policy(scope.RuffPolicy.default(version="0.15.12"), snapshot_root=tmp_path)
+
+    assert "--no-cache" in projection.argv
+    assert projection.cache_writes == ()
+
+
+def test_ruff_task_tag_cannot_hide_e501(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    policy = scope.RuffPolicy.default(version="0.15.12", task_tags=("TODO",))
+    projection = scope.project_ruff_policy(policy, snapshot_root=tmp_path)
+    lint = cast(dict[str, object], projection.values["lint"])
+    pycodestyle = cast(dict[str, object], lint["pycodestyle"])
+
+    assert pycodestyle["ignore-overlong-task-comments"] is False
+    assert projection.evidence["original_task_tags"] == ["TODO"]
+
+
+def test_ruff_fix_only_cannot_hide_unfixable_finding(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    policy = scope.RuffPolicy.default(version="0.15.12", fix=True, fix_only=True)
+    projection = scope.project_ruff_policy(policy, snapshot_root=tmp_path)
+
+    assert projection.values["fix"] is False
+    assert projection.values["fix-only"] is False
 
 
 def test_run_ruff_maps_categories_and_fixable_flag(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:

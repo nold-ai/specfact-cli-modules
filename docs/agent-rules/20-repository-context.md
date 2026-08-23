@@ -32,6 +32,8 @@ depends_on:
 
 # Agent repository context
 
+For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local range run without matching claimed context is `range_preview`; matching claimed context produces `range_candidate`. Neither is `pr_range` until a protected consumer independently verifies and promotes the evidence.
+
 ## Project overview
 
 `specfact-cli-modules` hosts official nold-ai bundle packages and the module registry consumed by SpecFact CLI. The core CLI lives in the sibling `specfact-cli` repository and is installed locally through `hatch run dev-deps`.

@@ -1,8 +1,8 @@
-"""Command implementation for `specfact code review run`.
+"""Implement ``specfact code review run``; its CLI help is the command contract.
 
-Operating guidance: command examples in this source are not the source of
-truth; CLI help is authoritative. Check `specfact code review run --help`,
-and ask the user before guessing when help output disagrees.
+Operating guidance in this source is not the source of truth; CLI help is
+authoritative. Check the nearest command-specific ``--help`` and ask the user
+before guessing when the available command or option differs.
 """
 
 from __future__ import annotations
@@ -11,10 +11,11 @@ import ast
 import hashlib
 import importlib
 import json
+import re
 import subprocess
 import sys
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -29,20 +30,34 @@ from specfact_code_review.run.cleanup_evidence import (
     with_previewed_simplification_findings,
 )
 from specfact_code_review.run.findings import EvidenceRef, RequirementsEvidenceContext, ReviewFinding, ReviewReport
-from specfact_code_review.run.runner import ReviewFocus, run_review
+from specfact_code_review.run.runner import (
+    ReviewFocus,
+    ReviewOptions,
+    run_capsule_review as run_review,
+    run_immutable_scope_review,
+)
+from specfact_code_review.run.scope import (
+    ConflictingScopeError,
+    GitResolutionError,
+    LegacyFileSelectionRequest,
+    NoReviewableFilesError,
+    RunCommandError,
+    ScopeRequest,
+    ScopeResolution,
+    cleanup_scope_resolution,
+    discover_full_python_files,
+    discover_worktree_python_files,
+    filter_files_by_focus as _filter_files_by_focus,
+    resolve_legacy_files,
+    resolve_scope,
+)
 
 
 console = Console()
 progress_console = Console(stderr=True)
-AutoScope = Literal["changed", "full"]
+AutoScope = Literal["changed", "worktree", "index", "range", "full"]
 ReviewRunMode = Literal["full", "changed", "shadow"]
 ReviewLevelFilter = Literal["error", "warning"]
-
-
-class RunCommandError(ValueError):
-    """Structured validation error for review run command options."""
-
-    error_code = "run_command_error"
 
 
 class InvalidOptionCombinationError(RunCommandError):
@@ -53,14 +68,6 @@ class MissingOutForJsonError(RunCommandError):
     error_code = "missing_out_for_json"
 
 
-class ConflictingScopeError(RunCommandError):
-    error_code = "conflicting_scope"
-
-
-class NoReviewableFilesError(RunCommandError):
-    error_code = "no_reviewable_files"
-
-
 @dataclass(frozen=True)
 class ReviewRunRequest:
     """Inputs needed to execute a governed review run."""
@@ -69,6 +76,9 @@ class ReviewRunRequest:
     include_tests: bool = False
     scope: AutoScope | None = None
     path_filters: list[Path] | None = None
+    base_ref: str | None = None
+    head_ref: str | None = None
+    pr_context_file: Path | None = None
     include_noise: bool = False
     json_output: bool = False
     out: Path | None = None
@@ -99,187 +109,20 @@ class _ReviewLoopFlags:
     review_focus: ReviewFocus | None
 
 
-def _is_test_file(file_path: Path) -> bool:
-    return "tests" in file_path.parts
-
-
-def _filter_files_by_focus(files: list[Path], facets: tuple[str, ...]) -> list[Path]:
-    """Restrict files to the union of facet selections (Python files only)."""
-    file_facets = tuple(facet for facet in facets if facet in {"source", "tests", "docs"})
-    if not file_facets:
-        return files
-
-    def _matches_focus(file_path: Path, facet: str) -> bool:
-        if file_path.suffix not in (".py", ".pyi"):
-            return False
-        if facet == "tests":
-            return _is_test_file(file_path)
-        if facet == "docs":
-            return "docs" in file_path.parts
-        if facet == "source":
-            return not _is_test_file(file_path) and "docs" not in file_path.parts
-        return False
-
-    return [file_path for file_path in files if any(_matches_focus(file_path, f) for f in file_facets)]
-
-
-def _is_ignored_review_path(file_path: Path) -> bool:
-    parent_parts = file_path.parts[:-1]
-    return any(part.startswith(".") and len(part) > 1 for part in parent_parts)
-
-
-def _git_file_list(command: list[str], *, error_message: str) -> list[Path]:
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
-    if result.returncode != 0:
-        raise RunCommandError(error_message)
-    return [Path(line.strip()) for line in result.stdout.splitlines() if line.strip()]
-
-
 def _changed_files_from_git_diff(*, include_tests: bool) -> list[Path]:
-    tracked_files = _git_file_list(
-        ["git", "diff", "HEAD", "--name-only"],
-        error_message="Unable to determine changed tracked files from `git diff HEAD --name-only`.",
-    )
-    untracked_files = _git_file_list(
-        ["git", "ls-files", "--others", "--exclude-standard"],
-        error_message="Unable to determine untracked files from `git ls-files --others --exclude-standard`.",
-    )
-
-    python_files = [
-        file_path
-        for file_path in [*tracked_files, *untracked_files]
-        if file_path.suffix in (".py", ".pyi") and file_path.is_file() and not _is_ignored_review_path(file_path)
-    ]
-    deduped_python_files = list(dict.fromkeys(python_files))
-    if include_tests:
-        return deduped_python_files
-    return [file_path for file_path in deduped_python_files if not _is_test_file(file_path)]
+    try:
+        return discover_worktree_python_files(Path.cwd(), include_tests=include_tests)
+    except GitResolutionError as exc:
+        raise RunCommandError(
+            "Unable to determine changed tracked and untracked files from the worktree scope."
+        ) from exc
 
 
 def _all_python_files_from_git() -> list[Path]:
-    tracked_files = _git_file_list(
-        ["git", "ls-files", "--cached"],
-        error_message="Unable to determine tracked repository files from `git ls-files --cached`.",
-    )
-    untracked_files = _git_file_list(
-        ["git", "ls-files", "--others", "--exclude-standard"],
-        error_message="Unable to determine untracked files from `git ls-files --others --exclude-standard`.",
-    )
-    python_files = [
-        file_path
-        for file_path in [*tracked_files, *untracked_files]
-        if file_path.suffix in (".py", ".pyi") and file_path.is_file() and not _is_ignored_review_path(file_path)
-    ]
-    return list(dict.fromkeys(python_files))
-
-
-def _path_filter_matches(file_path: Path, path_filter: Path) -> bool:
-    return file_path == path_filter or path_filter in file_path.parents
-
-
-def _filtered_files(files: Iterable[Path], *, path_filters: list[Path]) -> list[Path]:
-    if not path_filters:
-        return list(files)
-    normalized_filters = [path_filter for path_filter in path_filters if str(path_filter).strip()]
-    for path_filter in normalized_filters:
-        if path_filter.is_absolute():
-            raise RunCommandError(f"Path filters must be repo-relative: {path_filter}")
-    return [
-        file_path
-        for file_path in files
-        if any(_path_filter_matches(file_path, path_filter) for path_filter in normalized_filters)
-    ]
-
-
-def _auto_scope_message(*, scope: AutoScope, path_filters: list[Path]) -> str:
-    parts = [f"--scope {scope}", *(f"--path {path_filter}" for path_filter in path_filters)]
-    return " ".join(parts)
-
-
-def _raise_if_targeting_styles_conflict(
-    files: list[Path],
-    *,
-    scope: AutoScope | None,
-    path_filters: list[Path],
-) -> None:
-    if files and (scope is not None or path_filters):
-        raise ConflictingScopeError("Choose positional files or auto-scope controls, not both.")
-
-
-def _resolve_positional_files(files: list[Path]) -> list[Path]:
-    resolved = [file_path for file_path in files if not _is_ignored_review_path(file_path)]
-    if resolved:
-        return resolved
-    raise NoReviewableFilesError(
-        "No Python files to review were provided or detected from tracked or untracked changes."
-    )
-
-
-def _resolve_auto_discovered_files(
-    *,
-    include_tests: bool,
-    scope: AutoScope,
-    path_filters: list[Path],
-) -> list[Path]:
-    if scope == "full":
-        return _resolve_full_scope_files(include_tests=include_tests, path_filters=path_filters)
-    return _resolve_changed_scope_files(include_tests=include_tests, path_filters=path_filters)
-
-
-def _resolve_full_scope_files(*, include_tests: bool, path_filters: list[Path]) -> list[Path]:
-    resolved = _all_python_files_from_git()
-    if not include_tests and not path_filters:
-        return [file_path for file_path in resolved if not _is_test_file(file_path)]
-    return resolved
-
-
-def _resolve_changed_scope_files(*, include_tests: bool, path_filters: list[Path]) -> list[Path]:
-    changed_include_tests = include_tests or bool(path_filters)
-    return _changed_files_from_git_diff(include_tests=changed_include_tests)
-
-
-def _raise_for_empty_auto_scope(*, scope: AutoScope, path_filters: list[Path]) -> None:
-    auto_scope_message = _auto_scope_message(scope=scope, path_filters=path_filters)
-    raise NoReviewableFilesError(
-        f"No reviewable files matched the selected auto-scope controls ({auto_scope_message}). "
-        "Adjust --scope/--path or pass positional files."
-    )
-
-
-def _resolve_files(
-    files: list[Path],
-    *,
-    include_tests: bool,
-    scope: AutoScope | None,
-    path_filters: list[Path],
-) -> list[Path]:
-    _raise_if_targeting_styles_conflict(files, scope=scope, path_filters=path_filters)
-    if files:
-        resolved = _resolve_positional_files(files)
-    else:
-        selected_scope: AutoScope = scope or "changed"
-        resolved = _resolve_auto_discovered_files(
-            include_tests=include_tests,
-            scope=selected_scope,
-            path_filters=path_filters,
-        )
-        resolved = _filtered_files(resolved, path_filters=path_filters)
-        resolved = [file_path for file_path in resolved if not _is_ignored_review_path(file_path)]
-
-    if not resolved:
-        _raise_for_empty_auto_scope(scope=scope or "changed", path_filters=path_filters)
-
-    missing = [file_path for file_path in resolved if not file_path.is_file()]
-    if missing:
-        raise NoReviewableFilesError(f"File not found: {missing[0]}")
-
-    return resolved
+    try:
+        return discover_full_python_files(Path.cwd(), include_tests=True)
+    except GitResolutionError as exc:
+        raise RunCommandError("Unable to determine tracked and untracked files from the full scope.") from exc
 
 
 def _apply_fixes(files: list[Path]) -> None:
@@ -761,7 +604,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
 def _as_auto_scope(value: object) -> AutoScope | None:
     if value is None:
         return None
-    if isinstance(value, str) and value in {"changed", "full"}:
+    if isinstance(value, str) and value in {"changed", "worktree", "index", "range", "full"}:
         return cast(AutoScope, value)
     raise RunCommandError(f"Invalid scope value: {value!r}")
 
@@ -856,6 +699,13 @@ def _build_review_run_request(
     path_filters_value = _get_optional_param("path_filters", _as_path_filters)
     out_value = _get_optional_param("out", _as_optional_path)
     requirements_evidence_value = _get_optional_param("requirements_evidence", _as_optional_path)
+    base_ref_value = request_kwargs.pop("base_ref", None)
+    head_ref_value = request_kwargs.pop("head_ref", None)
+    if base_ref_value is not None and not isinstance(base_ref_value, str):
+        raise RunCommandError("base_ref must be a string")
+    if head_ref_value is not None and not isinstance(head_ref_value, str):
+        raise RunCommandError("head_ref must be a string")
+    pr_context_file_value = _get_optional_param("pr_context_file", _as_optional_path)
 
     # Cast the optional parameters to their proper types
     scope = cast(AutoScope | None, scope_value)
@@ -870,6 +720,9 @@ def _build_review_run_request(
         include_tests=include_tests,
         scope=scope,
         path_filters=path_filters,
+        base_ref=cast(str | None, base_ref_value),
+        head_ref=cast(str | None, head_ref_value),
+        pr_context_file=cast(Path | None, pr_context_file_value),
         include_noise=_get_bool_param("include_noise"),
         json_output=_get_bool_param("json_output"),
         out=out,
@@ -907,17 +760,167 @@ def _render_review_result(report: ReviewReport, request: ReviewRunRequest) -> tu
     return report.ci_exit_code or 0, None
 
 
+def _scope_evidence(resolution: ScopeResolution) -> dict[str, object]:
+    """Serialize immutable scope identity without exposing materialization paths."""
+
+    return {
+        "status": resolution.status,
+        "reason": resolution.reason,
+        "assurance_kind": resolution.assurance_kind,
+        "effective_assurance_kind": resolution.effective_assurance_kind,
+        "selected_paths": list(resolution.selected_paths),
+        "merge_base_candidates": list(resolution.merge_base_candidates),
+        "merge_base_candidate_digest": resolution.merge_base_candidate_digest,
+        "context_digest": resolution.context_digest,
+        "resolved_target_commit": resolution.resolved_target_commit,
+        "resolved_target_tree": resolution.resolved_target_tree,
+        "resolved_head_commit": resolution.resolved_head_commit,
+        "resolved_head_tree": resolution.resolved_head_tree,
+        "exact_rename_digest": resolution.exact_rename_digest,
+        "base_source_manifest_digest": resolution.base_source_manifest_digest,
+        "head_source_manifest_digest": resolution.head_source_manifest_digest,
+        "policy_manifest_digest": resolution.policy_manifest_digest,
+        "candidate_policy_change_digest": resolution.candidate_policy_change_digest,
+        "index_tree": resolution.index_tree,
+        "selection_tree": resolution.selection_tree,
+        "input_manifest": {
+            path: {
+                "object_type": identity.object_type,
+                "git_mode": identity.git_mode,
+                "blob_sha": identity.blob_sha,
+                "content_digest": identity.content_digest,
+                "open_policy": identity.open_policy,
+            }
+            for path, identity in sorted(resolution.input_manifest.items())
+        },
+        "index_metadata": {
+            path: {
+                "git_mode": metadata.git_mode,
+                "blob_sha": metadata.blob_sha,
+                "stage": metadata.stage,
+                "intent_to_add": metadata.intent_to_add,
+                "flag_tag": metadata.flag_tag,
+            }
+            for path, metadata in sorted(resolution.index_metadata.items())
+        },
+    }
+
+
+def _repository_slug(repository: Path) -> str | None:
+    result = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"],
+        cwd=repository,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        return None
+    match = re.search(r"github\.com(?::|/)([^/]+)/([^/]+?)(?:\.git)?$", result.stdout.strip())
+    return f"{match.group(1)}/{match.group(2)}" if match is not None else None
+
+
+def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
+    """Resolve immutable scope and execute every active analyzer in its capsule."""
+
+    resolution = resolve_scope(
+        ScopeRequest(
+            repository=Path.cwd(),
+            scope=cast(Literal["index", "range"], request.scope),
+            files=tuple(request.files),
+            base_ref=request.base_ref,
+            head_ref=request.head_ref,
+            enforcement=request.review_mode,
+            include_tests=request.include_tests,
+            focus=request.focus_facets,
+            path_filters=tuple(request.path_filters or ()),
+            no_tests=request.no_tests,
+            level=request.review_level,
+            fix=request.fix,
+            preview_fixes=request.preview_fixes,
+            with_mutation=request.with_mutation,
+            pr_context_file=request.pr_context_file,
+            repository_slug=_repository_slug(Path.cwd()),
+        )
+    )
+    try:
+        status = resolution.status
+        reason = resolution.reason
+        if status == "PASS":
+            return run_immutable_scope_review(
+                resolution,
+                options=ReviewOptions(
+                    no_tests=request.no_tests,
+                    include_noise=request.include_noise,
+                    bug_hunt=request.bug_hunt,
+                    review_level=request.review_level,
+                    review_mode=request.review_mode,
+                    focus=request.review_focus,
+                ),
+                scope_evidence={**_scope_evidence(resolution), "reason": reason},
+            )
+        run_identity = resolution.resolved_head_commit or resolution.index_tree or "unresolved"
+        return ReviewReport(
+            schema_version="1.6",
+            run_id=f"review-scope-{run_identity}",
+            score=0,
+            findings=[],
+            summary=resolution.diagnostics or reason.replace("_", " "),
+            assurance_status=cast(Any, status),
+            has_unknown_required_evidence=status == "UNKNOWN",
+            scope_evidence={**_scope_evidence(resolution), "reason": reason},
+            analyzer_evidence=[],
+            enforcement_mode="shadow" if request.review_mode == "shadow" else "full",
+        )
+    finally:
+        cleanup_scope_resolution(resolution)
+
+
 def _validate_review_request(request: ReviewRunRequest) -> None:
+    _raise_if_targeting_styles_conflict(request.files, scope=request.scope, path_filters=request.path_filters or [])
+    _validate_output_options(request)
+    _validate_simplification_options(request)
+    _validate_immutable_scope_options(request)
+
+
+def _validate_output_options(request: ReviewRunRequest) -> None:
     if request.json_output and request.score_only:
         raise InvalidOptionCombinationError("Use either --json or --score-only, not both.")
     if not request.json_output and request.out is not None:
         raise MissingOutForJsonError("Use --out together with --json.")
+
+
+def _validate_simplification_options(request: ReviewRunRequest) -> None:
     if request.preview_fixes and request.fix:
         raise InvalidOptionCombinationError("Cannot combine --preview-fixes with --fix.")
     if request.preview_fixes and request.review_focus != "simplify":
         raise InvalidOptionCombinationError("Use --preview-fixes only with --focus simplify.")
     if request.with_mutation and request.review_focus != "simplify":
         raise InvalidOptionCombinationError("Use --with-mutation only with --focus simplify.")
+
+
+def _validate_immutable_scope_options(request: ReviewRunRequest) -> None:
+    immutable_options = (
+        request.base_ref is not None or request.head_ref is not None or request.pr_context_file is not None
+    )
+    if immutable_options and request.scope != "range":
+        raise InvalidOptionCombinationError("--base-ref, --head-ref, and --pr-context-file require --scope range.")
+    if request.scope == "range" and (request.base_ref is None or request.head_ref is None):
+        raise InvalidOptionCombinationError("--scope range requires both --base-ref and --head-ref.")
+    if request.pr_context_file is not None and not request.pr_context_file.is_absolute():
+        raise InvalidOptionCombinationError("--pr-context-file must be an absolute path.")
+
+
+def _raise_if_targeting_styles_conflict(
+    files: list[Path], *, scope: AutoScope | None, path_filters: list[Path]
+) -> None:
+    """Reject positional files combined with automatic scope or path controls."""
+
+    if files and scope is not None:
+        raise ConflictingScopeError("Choose positional files or auto-scope controls, not both.")
+    if files and path_filters:
+        raise ConflictingScopeError("Choose positional files or auto-scope controls, not both.")
 
 
 def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
@@ -928,6 +931,9 @@ def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
         include_tests=request.include_tests,
         scope=request.scope,
         path_filters=request.path_filters,
+        base_ref=request.base_ref,
+        head_ref=request.head_ref,
+        pr_context_file=request.pr_context_file,
         include_noise=request.include_noise,
         json_output=request.json_output,
         out=request.out,
@@ -973,6 +979,27 @@ def _requirements_evidence_context(path: Path) -> RequirementsEvidenceContext:
         return RequirementsEvidenceContext.model_validate(values)
     except ValueError as error:
         raise RunCommandError("finalized Requirements evidence has invalid provenance") from error
+
+
+def _attach_requirements_evidence(report: ReviewReport, context: RequirementsEvidenceContext) -> ReviewReport:
+    """Attach Requirements provenance without downgrading authoritative review truth."""
+
+    return report.model_copy(
+        update={
+            "requirements_evidence": context,
+            "schema_version": report.schema_version if _schema_version_at_least(report.schema_version, 5) else "1.5",
+        }
+    )
+
+
+def _schema_version_at_least(value: str, required_minor: int) -> bool:
+    try:
+        major_text, minor_text, *_ = value.split(".")
+        major = int(major_text)
+        minor = int(minor_text)
+    except (ValueError, TypeError):
+        return False
+    return major > 1 or (major == 1 and minor >= required_minor)
 
 
 def _is_complete_final_requirements_proof(decoded: dict[str, Any], execution_proof: dict[str, Any]) -> bool:
@@ -1117,13 +1144,31 @@ def run_command(
     request = _normalize_review_request(request)
     _validate_review_request(request)
 
+    if request.scope in {"index", "range"}:
+        report = _immutable_scope_report(request)
+        if request.requirements_evidence is not None:
+            report = _attach_requirements_evidence(
+                report,
+                _requirements_evidence_context(request.requirements_evidence),
+            )
+        return _render_review_result(report, request)
+
     file_focus_facets = tuple(facet for facet in request.focus_facets if facet in {"source", "tests", "docs"})
     include_for_resolve = request.include_tests or bool(file_focus_facets)
-    resolved_files = _resolve_files(
+    legacy_scope: Literal["changed", "full"] | None = None
+    if request.scope in {"changed", "worktree"}:
+        legacy_scope = "changed"
+    elif request.scope == "full":
+        legacy_scope = "full"
+    resolved_files = resolve_legacy_files(
         request.files,
-        include_tests=include_for_resolve,
-        scope=request.scope,
-        path_filters=request.path_filters or [],
+        LegacyFileSelectionRequest(
+            include_tests=include_for_resolve,
+            scope=legacy_scope,
+            path_filters=request.path_filters or [],
+            changed_discovery=_changed_files_from_git_diff,
+            full_discovery=_all_python_files_from_git,
+        ),
     )
     resolved_files = _filter_files_by_focus(resolved_files, request.focus_facets)
     if not resolved_files:
@@ -1154,12 +1199,7 @@ def run_command(
         ),
     )
     if requirements_evidence is not None:
-        report = report.model_copy(
-            update={
-                "requirements_evidence": requirements_evidence,
-                "schema_version": "1.5",
-            }
-        )
+        report = _attach_requirements_evidence(report, requirements_evidence)
     return _render_review_result(report, request)
 
 

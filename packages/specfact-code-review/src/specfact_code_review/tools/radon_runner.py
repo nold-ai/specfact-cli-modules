@@ -25,6 +25,12 @@ _KISS_NESTING_ERROR = 5
 _KISS_PARAMETER_WARNING = 5
 _KISS_PARAMETER_ERROR = 7
 _CONTROL_FLOW_NODES = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try, ast.With, ast.AsyncWith, ast.Match)
+_FULL_RESULT_COMMANDS = (
+    ("cc", "-j", "-n", "A", "-x", "F", "-e", "", "-i", ""),
+    ("mi", "-j", "-n", "A", "-x", "C", "-e", "", "-i", ""),
+    ("raw", "-j", "-e", "", "-i", ""),
+    ("hal", "-j", "-e", "", "-i", ""),
+)
 
 
 def _normalize_path_variants(path_value: str | Path) -> set[str]:
@@ -296,21 +302,55 @@ def _kiss_parameter_findings(
     return findings
 
 
-def _run_radon_command(files: list[Path]) -> dict[str, Any] | None:
+def _load_radon_payload(command: list[str]) -> dict[str, Any] | None:
     try:
         result = subprocess.run(
-            ["radon", "cc", "-j", *(str(file_path) for file_path in files)],
+            command,
             capture_output=True,
             text=True,
             check=False,
             timeout=30,
         )
+        if result.returncode != 0:
+            return None
         payload = json.loads(result.stdout)
         if not isinstance(payload, dict):
             raise ValueError("radon output must be an object")
         return payload
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired):
         return None
+
+
+def _run_radon_command(files: list[Path]) -> dict[str, Any] | None:
+    return _load_radon_payload(["radon", "cc", "-j", *(str(file_path) for file_path in files)])
+
+
+def _payload_covers_exact_files(payload: dict[str, Any], files: list[Path]) -> bool:
+    expected_variants = tuple(_normalize_path_variants(file_path) for file_path in files)
+    matched: set[int] = set()
+    for raw_path in payload:
+        if not isinstance(raw_path, str):
+            return False
+        candidates = {
+            index
+            for index, variants in enumerate(expected_variants)
+            if not _normalize_path_variants(raw_path).isdisjoint(variants)
+        }
+        if len(candidates) != 1:
+            return False
+        matched.update(candidates)
+    return len(payload) == len(files) and matched == set(range(len(files)))
+
+
+def _run_radon_full_result(files: list[Path]) -> tuple[dict[str, Any], ...] | None:
+    absolute_files = [file_path.resolve() for file_path in files]
+    payloads: list[dict[str, Any]] = []
+    for options in _FULL_RESULT_COMMANDS:
+        payload = _load_radon_payload(["radon", *options, *(str(file_path) for file_path in absolute_files)])
+        if payload is None or not _payload_covers_exact_files(payload, absolute_files):
+            return None
+        payloads.append(payload)
+    return tuple(payloads)
 
 
 def _map_radon_complexity_findings(payload: dict[str, Any], allowed_paths: set[str]) -> list[ReviewFinding]:
@@ -363,12 +403,13 @@ def _ensure_review_findings(result: list[ReviewFinding]) -> bool:
 @beartype
 @require(lambda files: isinstance(files, list), "files must be a list")
 @require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
+@require(lambda full_result: isinstance(full_result, bool), "full_result must be a boolean")
 @ensure(lambda result: isinstance(result, list), "result must be a list")
 @ensure(
     _ensure_review_findings,
     "result must contain ReviewFinding instances",
 )
-def run_radon(files: list[Path]) -> list[ReviewFinding]:
+def run_radon(files: list[Path], *, full_result: bool = False) -> list[ReviewFinding]:
     """Run Radon for the provided files and map complexity findings into ReviewFinding records."""
     files = python_source_paths_for_tools(files)
     if not files:
@@ -378,10 +419,16 @@ def run_radon(files: list[Path]) -> list[ReviewFinding]:
     if skipped:
         return skipped
 
-    payload = _run_radon_command(files)
+    full_payloads = _run_radon_full_result(files) if full_result else None
+    payload = full_payloads[0] if full_payloads is not None else _run_radon_command(files) if not full_result else None
     findings: list[ReviewFinding] = []
     if payload is None:
-        findings.extend(_tool_error(files[0], "Unable to execute Radon"))
+        message = (
+            "Unable to execute or reconcile sealed Radon full-result passes"
+            if full_result
+            else "Unable to execute Radon"
+        )
+        findings.extend(_tool_error(files[0], message))
     else:
         allowed_paths = _allowed_paths(files)
         try:

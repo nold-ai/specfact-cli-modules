@@ -87,7 +87,7 @@ def _findings_from_diagnostics(diagnostics: list[object], *, allowed_paths: set[
 @beartype
 @require(lambda files: isinstance(files, list), "files must be a list")
 @require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
-def run_basedpyright(files: list[Path]) -> list[ReviewFinding]:
+def run_basedpyright(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> list[ReviewFinding]:
     """Run basedpyright and map diagnostics into ReviewFinding records."""
     files = python_source_paths_for_tools(files)
     if not files:
@@ -99,7 +99,12 @@ def run_basedpyright(files: list[Path]) -> list[ReviewFinding]:
 
     try:
         result = subprocess.run(
-            ["basedpyright", "--outputjson", "--project", ".", *[str(file_path) for file_path in files]],
+            [
+                "basedpyright",
+                "--outputjson",
+                *(extra_args or ("--project", ".")),
+                *[str(file_path) for file_path in files],
+            ],
             capture_output=True,
             text=True,
             check=False,

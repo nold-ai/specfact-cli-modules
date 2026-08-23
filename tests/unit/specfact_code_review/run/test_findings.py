@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Literal, TypedDict, Unpack, cast
 
 import pytest
@@ -706,3 +708,268 @@ def test_review_report_blocking_error_forces_fail() -> None:
 
     assert report.overall_verdict == "FAIL"
     assert report.ci_exit_code == 1
+
+
+def test_fixable_error_remains_blocking_until_applied() -> None:
+    finding = ReviewFinding(**_finding_data(severity="error", fixable=True))
+
+    assert finding.is_blocking() is True
+
+
+def test_report_never_says_all_passed_with_mandatory_unknown() -> None:
+    from specfact_code_review.run import findings
+
+    report = findings.build_assurance_report(
+        status="UNKNOWN",
+        enforcement="full",
+        member_evidence=({"id": "contracts", "outcome": "UNKNOWN", "diagnostic": "timeout"},),
+        valid_blockers=(),
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert "all passed" not in report.summary.lower()
+    assert report.has_unknown_required_evidence is True
+
+
+def test_schema_1_6_json_pass_with_unknown_analyzer_is_demoted() -> None:
+    report = ReviewReport.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": "1.6",
+                "assurance_status": "PASS",
+                "run_id": "contradictory-pass",
+                "timestamp": "2026-08-22T00:00:00Z",
+                "score": 120,
+                "findings": [],
+                "summary": "Untrusted producer claims pass.",
+                "overall_verdict": "PASS",
+                "ci_exit_code": 0,
+                "enforcement_mode": "full",
+                "analyzer_evidence": [{"id": "contracts", "evidence_outcome": "UNKNOWN"}],
+            }
+        )
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+    assert report.overall_verdict == "FAIL"
+    assert report.ci_exit_code == 1
+
+
+@pytest.mark.parametrize(
+    "analyzer_evidence",
+    [
+        [],
+        [{"id": "contracts", "execution_state": "ran", "evidence_outcome": "PASS"}],
+    ],
+)
+def test_schema_1_6_json_pass_with_missing_profile_members_is_demoted(
+    analyzer_evidence: list[dict[str, object]],
+) -> None:
+    report = ReviewReport.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": "1.6",
+                "assurance_status": "PASS",
+                "run_id": "incomplete-profile-pass",
+                "timestamp": "2026-08-22T00:00:00Z",
+                "score": 120,
+                "findings": [],
+                "summary": "Untrusted producer omitted required analyzers.",
+                "overall_verdict": "PASS",
+                "ci_exit_code": 0,
+                "enforcement_mode": "full",
+                "analyzer_evidence": analyzer_evidence,
+            }
+        )
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+    assert report.overall_verdict == "FAIL"
+    assert report.ci_exit_code == 1
+
+
+@pytest.mark.parametrize("untrusted_outcome", [None, "UNRECOGNIZED"])
+def test_schema_1_6_json_pass_with_untrusted_analyzer_outcome_is_demoted(
+    untrusted_outcome: str | None,
+) -> None:
+    analyzer_evidence = [
+        {"id": analyzer_id, "execution_state": "ran", "evidence_outcome": "PASS"}
+        for analyzer_id in (
+            "ruff",
+            "radon",
+            "semgrep-clean",
+            "ai-bloat-ast",
+            "ast-clean-code",
+            "basedpyright",
+            "pylint",
+            "contracts",
+            "semgrep-bugs",
+            "targeted-pytest-coverage",
+        )
+    ]
+    if untrusted_outcome is None:
+        analyzer_evidence[0].pop("evidence_outcome")
+    else:
+        analyzer_evidence[0]["evidence_outcome"] = untrusted_outcome
+
+    report = ReviewReport.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": "1.6",
+                "assurance_status": "PASS",
+                "run_id": "untrusted-outcome-pass",
+                "timestamp": "2026-08-22T00:00:00Z",
+                "score": 120,
+                "findings": [],
+                "summary": "Untrusted producer omitted an authoritative outcome.",
+                "overall_verdict": "PASS",
+                "ci_exit_code": 0,
+                "enforcement_mode": "full",
+                "analyzer_evidence": analyzer_evidence,
+            }
+        )
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+    assert report.overall_verdict == "FAIL"
+    assert report.ci_exit_code == 1
+
+
+@pytest.mark.parametrize(
+    ("status", "enforcement", "legacy_verdict", "exit_code"),
+    [
+        ("PASS", "full", "PASS", 0),
+        ("FAIL", "full", "FAIL", 1),
+        ("UNKNOWN", "full", "FAIL", 1),
+        ("NOT_APPLICABLE", "full", "PASS_WITH_ADVISORY", 0),
+        ("PASS", "shadow", "PASS", 0),
+        ("FAIL", "shadow", "FAIL", 0),
+        ("UNKNOWN", "shadow", "FAIL", 0),
+        ("NOT_APPLICABLE", "shadow", "PASS_WITH_ADVISORY", 0),
+    ],
+)
+def test_schema_1_6_assurance_status_legacy_projection_and_exit_matrix(
+    status: str, enforcement: str, legacy_verdict: str, exit_code: int
+) -> None:
+    from specfact_code_review.run import findings
+
+    projection = findings.project_assurance_status(status=status, enforcement=enforcement)
+
+    assert projection.overall_verdict == legacy_verdict
+    assert projection.ci_exit_code == exit_code
+    assert projection.enforcement_mode == enforcement
+
+
+def test_assurance_status_fail_precedes_unknown_with_known_blocker() -> None:
+    from specfact_code_review.run import findings
+
+    report = findings.build_assurance_report(
+        status=None,
+        enforcement="full",
+        member_evidence=({"id": "contracts", "outcome": "UNKNOWN", "diagnostic": "timeout"},),
+        valid_blockers=({"rule": "introduced-blocker", "status": "open"},),
+    )
+
+    assert report.assurance_status == "FAIL"
+    assert report.has_unknown_required_evidence is True
+    assert report.ci_exit_code == 1
+
+
+def test_fixed_baseline_failure_is_excluded_from_aggregate_blockers() -> None:
+    from specfact_code_review.run import findings
+
+    report = findings.build_assurance_report(
+        status=None,
+        enforcement="full",
+        member_evidence=({"id": "ruff", "base": "FAIL", "head": "PASS", "disposition": "fixed"},),
+        valid_blockers=(),
+    )
+
+    assert report.assurance_status == "PASS"
+    assert report.aggregate_blockers == ()
+    assert report.member_evidence[0].disposition == "fixed"
+
+
+@pytest.mark.parametrize("schema_version", ["1.6", "1.10", "2.0"])
+def test_schema_1_6_or_newer_missing_assurance_status_is_unknown(schema_version: str) -> None:
+    from specfact_code_review.run import findings
+
+    payload = {
+        "schema_version": schema_version,
+        "overall_verdict": "PASS",
+        "ci_exit_code": 0,
+        "run_id": "missing-status",
+        "score": 100,
+        "findings": [],
+        "summary": "legacy says pass",
+    }
+
+    result = findings.read_review_report(payload)
+
+    assert result.status == "UNKNOWN"
+    assert result.ci_exit_code == 1
+
+
+def test_schema_1_6_consumer_compatibility_matrix_is_closed() -> None:
+    from specfact_code_review.run import findings
+
+    resource = (
+        Path(__file__).resolve().parents[4]
+        / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/review-report-schema-1.6-consumer-matrix.json"
+    )
+    matrix = json.loads(resource.read_text(encoding="utf-8"))
+
+    result = findings.validate_consumer_matrix(matrix)
+
+    assert result.status == "PASS"
+    assert {case["assurance_status"] for case in matrix["canonical_status_reports"]} == {
+        "PASS",
+        "FAIL",
+        "UNKNOWN",
+        "NOT_APPLICABLE",
+    }
+    assert matrix["legacy_schema_less_ledger_fixture"]["normalized"]["reward_delta"] == 5
+    assert {case["disposition"] for case in matrix["finding_multiset_cases"]} == {
+        "fixed",
+        "introduced",
+        "unchanged",
+        "unknown",
+    }
+    assert {case["expected_status"] for case in matrix["project_runtime_cases"]} == {"PASS", "UNKNOWN"}
+    assert {case["dimension"] for case in matrix["pr_range_boundary_cases"]} == {
+        "accepted",
+        "analyzer_profile",
+        "merge_base",
+        "producer_identity",
+        "project_runtime",
+        "schema",
+        "suppression_catalog",
+    }
+
+
+def test_consumer_matrix_missing_packaged_catalog_is_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    from specfact_code_review.run import findings
+
+    monkeypatch.setattr(findings, "_packaged_suppression_catalog_digest", lambda: None)
+
+    result = findings.validate_consumer_matrix({})
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "suppression_catalog_resource_unavailable"
+
+
+def test_report_binds_suppression_catalog_identity() -> None:
+    from specfact_code_review.run import findings
+
+    report = findings.build_assurance_report(
+        status="PASS",
+        enforcement="full",
+        member_evidence=(),
+        valid_blockers=(),
+        suppression_catalog_digest="sha256:" + "a" * 64,
+    )
+
+    assert report.suppression_catalog_digest == "sha256:" + "a" * 64

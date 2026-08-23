@@ -39,8 +39,11 @@ def test_review_run_instructions_prints_ai_workflow_without_running_review(monke
         "remove AI bloat",
         "safe_mechanical",
         "design_judgment",
-        "branch-delta Python files",
-        "git diff --name-only <base-ref>...HEAD",
+        "--scope range --base-ref <full-base-ref> --head-ref <full-head-ref>",
+        "--pr-context-file <event-derived-absolute-path>",
+        "--enforcement full",
+        "range_preview",
+        "protected consumer",
         "Findings without guidance_kind are unguided advisories",
         "Sort findings by guidance_kind before editing",
         "exact patch preview",
@@ -109,6 +112,50 @@ def test_review_run_explicit_changed_enforcement_does_not_warn(monkeypatch: Any)
 
     assert result.exit_code == 0
     assert "Code review enforcement default is 'changed'" not in result.output
+
+
+def test_review_run_range_defaults_to_full_enforcement(monkeypatch: Any) -> None:
+    recorded: dict[str, object] = {}
+
+    def _fake_run_command(_files: list[Path], **kwargs: object) -> tuple[int, str | None]:
+        recorded.update(kwargs)
+        return 0, None
+
+    monkeypatch.setattr("specfact_code_review.review.commands.run_command", _fake_run_command)
+
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "run",
+            "--scope",
+            "range",
+            "--base-ref",
+            "1" * 40,
+            "--head-ref",
+            "2" * 40,
+            "--pr-context-file",
+            "/tmp/pr-context.json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert recorded["review_mode"] == "full"
+
+
+def test_review_run_accepts_canonical_worktree_scope(monkeypatch: Any) -> None:
+    recorded: dict[str, object] = {}
+
+    def _fake_run_command(_files: list[Path], **kwargs: object) -> tuple[int, str | None]:
+        recorded.update(kwargs)
+        return 0, None
+
+    monkeypatch.setattr("specfact_code_review.review.commands.run_command", _fake_run_command)
+
+    result = runner.invoke(app, ["review", "run", "--scope", "worktree"])
+
+    assert result.exit_code == 0
+    assert recorded["scope"] == "worktree"
 
 
 def test_review_run_rejects_legacy_mode_with_explicit_enforcement(monkeypatch: Any) -> None:
