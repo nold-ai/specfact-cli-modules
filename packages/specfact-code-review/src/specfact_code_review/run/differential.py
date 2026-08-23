@@ -188,6 +188,8 @@ class C14Checkpoint:
 class CatalogActivation:
     status: Literal["PASS", "UNKNOWN"]
     profile_activated: bool
+    digest: str | None = None
+    reason: str = ""
 
 
 class UnsupportedWaiverInput(ValueError):  # noqa: N818 - frozen public C14 contract name
@@ -1092,5 +1094,33 @@ def activate_suppression_catalog(
 
     digests = {checkpoint_digest, resource_digest, package_digest, profile_digest}
     if len(digests) != 1:
-        return CatalogActivation("UNKNOWN", False)
-    return CatalogActivation("PASS", True)
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_mismatch")
+    return CatalogActivation("PASS", True, digest=resource_digest)
+
+
+@ensure(lambda result: result.status in {"PASS", "UNKNOWN"})
+def activate_packaged_suppression_catalog() -> CatalogActivation:
+    """Activate the installed catalog only when every report binding matches its raw bytes."""
+
+    try:
+        resource, checkpoint = load_suppression_catalog_and_checkpoint()
+        package = files("specfact_code_review")
+        matrix = json.loads(
+            package.joinpath("resources", "contracts", "review-report-schema-1.6-consumer-matrix.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        bindings = matrix["suppression_catalog_identity_bindings"]
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_resource_unavailable")
+    required = {"checkpoint", "resource", "package", "profile", "report", "static_envelope"}
+    if not isinstance(bindings, dict) or set(bindings) != required:
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_bindings_invalid")
+    if any(bindings[name] != resource.digest for name in required):
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_mismatch")
+    return activate_suppression_catalog(
+        checkpoint_digest=checkpoint.suppression_catalog_contract.digest,
+        resource_digest=resource.digest,
+        package_digest=str(bindings["package"]),
+        profile_digest=str(bindings["profile"]),
+    )

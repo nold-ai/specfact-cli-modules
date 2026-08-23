@@ -233,3 +233,11 @@ Explicitly forbidden:
 - the Requirements package and archived OpenSpec changes;
 - any module-side protected PR/merge-queue consumer, workflow-native Git recomputation component, verification-envelope emitter, or its runtime tests; those belong only to the paired core adoption change;
 - any new source/test/resource file other than the eight exact `scope.py`/`differential.py`/`sandbox.py`/`toolchain.py` source-and-test files and the four exact contract resources above (schema 1.6 consumer matrix, pr-range-v1 analyzer toolchain lock, project-runtime-layer-v1 schema, and pr-range-v1 suppression catalog).
+
+## 5. Post-merge release-gate remediation
+
+- [x] 5.1 Add focused failing regressions proving schema 1.6 capsule reports carry the activated suppression-catalog digest and catalog-binding drift forces UNKNOWN before a trusted report is emitted.
+- [x] 5.2 Add a focused failing regression proving immutable range analyzers receive only `ScopeResolution.selected_paths` present in each complete snapshot; retain the complete snapshots for imports and the independently reconciled complete pytest inventory.
+- [x] 5.3 Add a focused failing regression proving generated pytest and Coverage writable outputs resolve beneath the Bubblewrap-mounted `/opt/specfact/tmp` root.
+- [x] 5.4 Strengthen the package-manifest resource test to authenticate the raw project-runtime schema bytes, then correct only the stale manifest digest.
+- [x] 5.5 Implement the narrow fixes, advance the unpublished signed payload by one patch version, correct the C14 changelog release identity, and record focused plus complete verification evidence here and in `TDD_EVIDENCE.md`.

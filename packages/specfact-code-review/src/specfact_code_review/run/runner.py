@@ -1354,7 +1354,7 @@ def _bind_pytest_coverage_policy(
     selection = validate_pytest_selection_controls(pytest_policy)
     if selection.status != "PASS":
         raise ValueError(selection.reason)
-    private_root = Path("/opt/specfact/temporary")
+    private_root = Path("/opt/specfact/tmp")
     pytest_projection = project_pytest_policy(
         pytest_policy,
         snapshot_root=Path("/opt/specfact/snapshot"),
@@ -4902,6 +4902,24 @@ def _capsule_evidence_list(evidence: dict[str, dict[str, object]]) -> list[dict[
     return [{"id": member, **evidence[member]} for member in default_pr_range_profile().all_ids]
 
 
+def _activated_capsule_report_evidence(
+    evidence: dict[str, dict[str, object]],
+) -> tuple[differential.CatalogActivation, dict[str, dict[str, object]]]:
+    activation = differential.activate_packaged_suppression_catalog()
+    if activation.status == "PASS" and activation.profile_activated and activation.digest is not None:
+        return activation, evidence
+    return activation, {
+        member: {
+            **evidence.get(member, {}),
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "version": _C14_ANALYZER_VERSIONS[member],
+            "diagnostic": activation.reason or "suppression_catalog_activation_failed",
+        }
+        for member in default_pr_range_profile().all_ids
+    }
+
+
 def _capsule_report(
     evidence: dict[str, dict[str, object]],
     findings_by_member: dict[str, list[ReviewFinding]],
@@ -4909,7 +4927,8 @@ def _capsule_report(
     options: ReviewOptions,
     scope_evidence: dict[str, object],
 ) -> ReviewReport:
-    profile = aggregate_profile_evidence(evidence)
+    activation, report_evidence = _activated_capsule_report_evidence(evidence)
+    profile = aggregate_profile_evidence(report_evidence)
     findings = [
         finding for member in default_pr_range_profile().all_ids for finding in findings_by_member.get(member, [])
     ]
@@ -4931,7 +4950,10 @@ def _capsule_report(
         assurance_status=cast(Any, profile.assurance_status),
         has_unknown_required_evidence=profile.has_unknown_required_evidence,
         scope_evidence=scope_evidence,
-        analyzer_evidence=_capsule_evidence_list(evidence),
+        analyzer_evidence=_capsule_evidence_list(report_evidence),
+        suppression_catalog_digest=(
+            activation.digest if activation.status == "PASS" and activation.profile_activated else None
+        ),
         enforcement_mode=options.review_mode,
     )
 
@@ -5001,10 +5023,13 @@ def run_capsule_review(
     )
 
 
-def _snapshot_python_files(snapshot: object) -> list[Path]:
+def _snapshot_python_files(snapshot: object, resolution: object) -> list[Path]:
     root = cast(Path, snapshot.root)
     contents = cast(dict[str, bytes], snapshot.contents)
-    return [root / path for path in sorted(contents) if Path(path).suffix in {".py", ".pyi"}]
+    selected_paths = getattr(resolution, "selected_paths", None)
+    if not isinstance(selected_paths, tuple) or not all(isinstance(path, str) for path in selected_paths):
+        raise ValueError("selected_paths_missing")
+    return [root / path for path in sorted(selected_paths) if path in contents and Path(path).suffix in {".py", ".pyi"}]
 
 
 def _differential_finding_projection(finding: ReviewFinding) -> dict[str, object]:
@@ -5647,9 +5672,9 @@ def run_immutable_scope_review(
             scope_evidence=scope_evidence,
         )
     policy_bundle = _trusted_policy_bundle(resolution)
-    base_files = _snapshot_python_files(base_snapshot)
-    head_files = _snapshot_python_files(head_snapshot)
     try:
+        base_files = _snapshot_python_files(base_snapshot, resolution)
+        head_files = _snapshot_python_files(head_snapshot, resolution)
         base_bindings = _with_pytest_inventory(
             _snapshot_policy_bindings(
                 policy_bundle,
