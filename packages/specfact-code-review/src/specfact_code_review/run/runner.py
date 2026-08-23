@@ -1945,6 +1945,12 @@ def _module_has_dynamic_test_members(
         class_patterns=class_patterns,
     ):
         return True
+    if any(
+        _class_has_control_flow_test_methods(node, function_patterns)
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+    ):
+        return True
 
     for node in ast.walk(tree):
         if (
@@ -2254,6 +2260,22 @@ def _module_has_control_flow_test_bindings(
     return False
 
 
+def _class_has_control_flow_test_methods(node: ast.ClassDef, function_patterns: tuple[str, ...]) -> bool:
+    direct_statements = {id(child) for child in node.body}
+    pending: list[ast.AST] = list(reversed(node.body))
+    while pending:
+        child = pending.pop()
+        if (
+            id(child) not in direct_statements
+            and isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and _test_name_matches(child.name, function_patterns)
+        ):
+            return True
+        if not isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            pending.extend(reversed(tuple(ast.iter_child_nodes(child))))
+    return False
+
+
 def _assigned_pytest_hook_names(tree: ast.Module) -> set[str]:
     return {
         target.id
@@ -2275,9 +2297,37 @@ def _is_module_namespace_call(node: ast.AST) -> bool:
 
 
 def _module_uses_dynamic_namespace(tree: ast.Module) -> bool:
-    return any(_is_module_namespace_call(node) for node in _module_execution_nodes(tree)) or any(
-        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in {"__dir__", "__getattr__"}
-        for node in tree.body
+    execution_nodes = _module_execution_nodes(tree)
+    return (
+        any(_is_module_namespace_call(node) for node in execution_nodes)
+        or any(
+            isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "exec"
+            for node in execution_nodes
+        )
+        or any(
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in {"__dir__", "__getattr__"}
+            for node in tree.body
+        )
+    )
+
+
+def _conftest_declares_autouse_fixture(tree: ast.Module) -> bool:
+    fixture_names = {
+        *(f"{module}.fixture" for module in _imported_module_aliases(tree, "pytest")),
+        *_imported_member_aliases(tree, "pytest", frozenset({"fixture"})),
+    }
+    return any(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(
+            isinstance(decorator, ast.Call)
+            and _decorator_full_name(decorator.func) in fixture_names
+            and any(
+                keyword.arg == "autouse" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True
+                for keyword in decorator.keywords
+            )
+            for decorator in node.decorator_list
+        )
+        for node in _module_execution_nodes(tree)
     )
 
 
@@ -2307,7 +2357,11 @@ def _repository_pytest_hook_validation(snapshot_root: Path, roots: tuple[str, ..
             tree = ast.parse(path.read_bytes())
         except (OSError, SyntaxError):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_inventory_ambiguous")
-        if _conftest_declares_plugins(tree) or _module_uses_dynamic_namespace(tree):
+        if (
+            _conftest_declares_plugins(tree)
+            or _module_uses_dynamic_namespace(tree)
+            or _conftest_declares_autouse_fixture(tree)
+        ):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
         plugins.append({"origin": "repository", "hooks": sorted(_conftest_hook_names(tree)), "path": str(path)})
     return validate_pytest_plugins(tuple(plugins))

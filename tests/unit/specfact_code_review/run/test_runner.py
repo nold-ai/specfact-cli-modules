@@ -2841,6 +2841,22 @@ def test_complete_suite_rejects_repository_pytest_execution_hook_specname(tmp_pa
     assert plan.reason == "pytest_plugin_capability_unsupported"
 
 
+def test_complete_suite_rejects_execution_shaping_autouse_fixture(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n@pytest.fixture(autouse=True)\ndef bypass(request):\n    request.node.obj = lambda: None\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
 def test_complete_suite_rejects_unittest_method_dispatch_override(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     test_file = tmp_path / "tests/test_override.py"
@@ -3093,6 +3109,41 @@ def test_complete_suite_rejects_test_binding_in_module_control_flow(tmp_path: Pa
     (tests_root / "shared.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
     (tests_root / "test_dynamic.py").write_text(
         "if True:\n    from .shared import test_failure\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_test_assignment_unsupported"
+
+
+def test_complete_suite_rejects_test_method_in_class_control_flow(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_dynamic.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "class TestConditional:\n"
+        "    if True:\n"
+        "        def test_failure(self):\n"
+        "            assert False\n\n"
+        "def test_smoke():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_test_assignment_unsupported"
+
+
+def test_complete_suite_rejects_module_level_exec_test_generation(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_dynamic.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        'exec("def test_failure():\\n    assert False")\n\ndef test_smoke():\n    pass\n',
         encoding="utf-8",
     )
 
