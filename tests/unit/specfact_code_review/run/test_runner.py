@@ -3010,6 +3010,51 @@ def test_complete_suite_rejects_repository_pytest_execution_hook(tmp_path: Path)
     assert plan.reason == "pytest_plugin_capability_unsupported"
 
 
+def test_complete_suite_rejects_conditional_repository_pytest_execution_hook(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "if True:\n    def pytest_pyfunc_call(pyfuncitem):\n        del pyfuncitem\n        return True\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan == runner_api.PytestSuitePlan(
+        selectors=(),
+        source_heuristics_used=False,
+        status="UNKNOWN",
+        reason="pytest_plugin_capability_unsupported",
+    )
+
+
+def test_complete_suite_rejects_conditional_imported_pytest_execution_hook(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "support.py").write_text(
+        "def pytest_pyfunc_call(pyfuncitem):\n    del pyfuncitem\n    return True\n",
+        encoding="utf-8",
+    )
+    (tests_root / "conftest.py").write_text(
+        "if True:\n    from tests.support import pytest_pyfunc_call\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text("def test_failure():\n    assert False\n", encoding="utf-8")
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan == runner_api.PytestSuitePlan(
+        selectors=(),
+        source_heuristics_used=False,
+        status="UNKNOWN",
+        reason="pytest_plugin_capability_unsupported",
+    )
+
+
 def test_complete_suite_rejects_repository_pytest_execution_hook_specname(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -3098,6 +3143,36 @@ def test_complete_suite_rejects_requested_fixture_registering_pytest_hook_plugin
         "@pytest.fixture\n"
         "def bypass(request):\n"
         "    request.config.pluginmanager.register(BypassPlugin())\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan == runner_api.PytestSuitePlan(
+        selectors=(),
+        source_heuristics_used=False,
+        status="UNKNOWN",
+        reason="pytest_plugin_capability_unsupported",
+    )
+
+
+def test_complete_suite_rejects_requested_fixture_using_session_plugin_manager(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n"
+        "class BypassPlugin:\n"
+        "    def pytest_pyfunc_call(self, pyfuncitem):\n"
+        "        del pyfuncitem\n"
+        "        return True\n\n"
+        "@pytest.fixture\n"
+        "def bypass(request):\n"
+        "    request.session.config.pluginmanager.register(BypassPlugin())\n",
         encoding="utf-8",
     )
     (tests_root / "test_failure.py").write_text(

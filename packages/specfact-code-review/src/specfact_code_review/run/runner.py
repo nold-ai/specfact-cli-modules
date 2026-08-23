@@ -2479,7 +2479,7 @@ def _decorated_pytest_hook_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -
 def _imported_pytest_hook_names(tree: ast.Module) -> set[str]:
     return {
         alias.asname or alias.name
-        for node in tree.body
+        for node in _module_execution_nodes(tree)
         if isinstance(node, ast.ImportFrom)
         for alias in node.names
         if (alias.asname or alias.name).startswith("pytest_")
@@ -2672,12 +2672,12 @@ def _fixture_pytest_request_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef
 
 
 def _is_pytest_config(node: ast.AST, request_aliases: frozenset[str]) -> bool:
-    return (
-        isinstance(node, ast.Attribute)
-        and node.attr == "config"
-        and isinstance(node.value, ast.Name)
-        and node.value.id in request_aliases
-    )
+    if not isinstance(node, ast.Attribute) or node.attr != "config":
+        return False
+    owner = node.value
+    while isinstance(owner, ast.Attribute):
+        owner = owner.value
+    return isinstance(owner, ast.Name) and owner.id in request_aliases
 
 
 def _fixture_pytest_config_aliases(
@@ -2987,7 +2987,9 @@ def _module_imports_execution_shaping_fixture(
 
 
 def _conftest_hook_names(tree: ast.Module) -> set[str]:
-    functions = tuple(node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)))
+    functions = tuple(
+        node for node in _module_execution_nodes(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    )
     hooks = {node.name for node in functions if node.name.startswith("pytest_")}
     hooks.update(_imported_pytest_hook_names(tree))
     hooks.update(_assigned_pytest_hook_names(tree))
