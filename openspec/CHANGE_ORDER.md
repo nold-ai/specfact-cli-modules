@@ -7,7 +7,7 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 15 | [`openspec/changes/`](changes/) |
+| **Active** | 16 | [`openspec/changes/`](changes/) |
 | **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
 
@@ -61,6 +61,16 @@ This track is first because no changed-scope assurance claim is trustworthy unti
 The first signed C14 module release advertises only the exact core 0.55.1 identity proven by its immutable compatibility smoke: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Paired core adoption remains downstream; after that core is released, a later module metadata release may advertise that new exact core version only after the same tag/commit/tree matrix smoke. The metadata uses strict `===0.55.1`; ordinary `==0.55.1` and local aliases such as `0.55.1+vendor` are rejected. No single lower-bound test authorizes a future-version range.
 
 Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
+
+## Immediate Release-Safety Track
+
+This bounded corrective change is independent of C14 and must merge to `dev`
+before the C14 release promotion proceeds. Alert-specific evidence remains in
+private GitHub Security records under the repository security policy.
+
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `ci-01-workflow-dispatch-core-ref-trust` | private security tracking | Preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
 ## Active Tracks
 
