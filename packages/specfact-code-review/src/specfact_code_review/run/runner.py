@@ -1037,15 +1037,25 @@ def _capsule_process_request(request_path: Path) -> None:
     os.replace(temporary, destination)
 
 
+def _prepare_capsule_process_roots(process_root: Path) -> tuple[Path, Path, Path, Path]:
+    roots = (
+        process_root / "request",
+        process_root / "output",
+        process_root / "temporary",
+        process_root / "control",
+    )
+    for root in roots:
+        root.mkdir()
+    for projected_root in ("coverage", "pytest"):
+        (roots[2] / projected_root).mkdir()
+    return roots
+
+
 def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix=f"specfact-{request.member}-") as temporary_directory:
-        process_root = Path(temporary_directory)
-        request_root = process_root / "request"
-        output_root = process_root / "output"
-        scratch_root = process_root / "temporary"
-        control_root = process_root / "control"
-        for root in (request_root, output_root, scratch_root, control_root):
-            root.mkdir()
+        request_root, output_root, scratch_root, control_root = _prepare_capsule_process_roots(
+            Path(temporary_directory)
+        )
         resolved_snapshot = request.snapshot_root.resolve()
         relative_paths = tuple(path.resolve().relative_to(resolved_snapshot).as_posix() for path in request.files)
         request_path = request_root / "request.json"
@@ -1137,7 +1147,11 @@ def _dispatch_capsule_member(
     applicability: SnapshotInputClassification,
     sealed_bugs_policy: bool,
 ) -> dict[str, object]:
-    if not request.files:
+    if not request.files and not (
+        request.member == "targeted-pytest-coverage"
+        and request.complete_pytest_inventory
+        and applicability.member(request.member).status != "NOT_APPLICABLE"
+    ):
         return _not_applicable_member("empty_snapshot_input")
     if applicability.member(request.member).status == "NOT_APPLICABLE":
         return _not_applicable_member("member_input_not_applicable")
@@ -1157,6 +1171,7 @@ def _run_capsule_snapshot(
     config_roots: tuple[Path, ...] = (),
     member_argv: dict[str, tuple[str, ...]] | None = None,
     project_runtime_root: Path | None = None,
+    scope_paths: tuple[str, ...] | None = None,
 ) -> CapsuleSnapshotResult:
     evidence: dict[str, dict[str, object]] = {}
     findings_by_member: dict[str, list[ReviewFinding]] = {}
@@ -1166,7 +1181,7 @@ def _run_capsule_snapshot(
         path.relative_to(resolved_snapshot).as_posix() if path.is_relative_to(resolved_snapshot) else path.as_posix()
         for path in resolved_inputs
     )
-    applicability = classify_snapshot_input_kinds(relative_inputs)
+    applicability = classify_snapshot_input_kinds(relative_inputs if scope_paths is None else scope_paths)
     for member in default_pr_range_profile().all_ids:
         sealed_bugs_policy = member_argv is not None and "semgrep-bugs" in member_argv
         raw = _dispatch_capsule_member(
@@ -1354,7 +1369,7 @@ def _bind_pytest_coverage_policy(
     selection = validate_pytest_selection_controls(pytest_policy)
     if selection.status != "PASS":
         raise ValueError(selection.reason)
-    private_root = Path("/opt/specfact/temporary")
+    private_root = Path("/opt/specfact/tmp")
     pytest_projection = project_pytest_policy(
         pytest_policy,
         snapshot_root=Path("/opt/specfact/snapshot"),
@@ -3544,7 +3559,7 @@ def project_pytest_policy(policy: dict[str, object], *, snapshot_root: Path, out
     if policy.get("addopts"):
         values["addopts"] = policy["addopts"]
     for key in ("cache_dir", "log_file"):
-        if key not in config:
+        if key == "log_file" and key not in config:
             continue
         destination = output_root / key.replace("_", "-")
         values[key] = str(destination)
@@ -3673,7 +3688,7 @@ def project_coverage_policy(
     writable: list[Path] = []
     if output_root is not None:
         for key in ("run:data_file", "html:directory", "xml:output", "json:output", "lcov:output"):
-            if key in values:
+            if key == "run:data_file" or key in values:
                 destination = output_root / key.replace(":", "-")
                 values[key] = str(destination)
                 writable.append(destination)
@@ -4902,6 +4917,24 @@ def _capsule_evidence_list(evidence: dict[str, dict[str, object]]) -> list[dict[
     return [{"id": member, **evidence[member]} for member in default_pr_range_profile().all_ids]
 
 
+def _activated_capsule_report_evidence(
+    evidence: dict[str, dict[str, object]],
+) -> tuple[differential.CatalogActivation, dict[str, dict[str, object]]]:
+    activation = differential.activate_packaged_suppression_catalog()
+    if activation.status == "PASS" and activation.profile_activated and activation.digest is not None:
+        return activation, evidence
+    return activation, {
+        member: {
+            **evidence.get(member, {}),
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "version": _C14_ANALYZER_VERSIONS[member],
+            "diagnostic": activation.reason or "suppression_catalog_activation_failed",
+        }
+        for member in default_pr_range_profile().all_ids
+    }
+
+
 def _capsule_report(
     evidence: dict[str, dict[str, object]],
     findings_by_member: dict[str, list[ReviewFinding]],
@@ -4909,7 +4942,8 @@ def _capsule_report(
     options: ReviewOptions,
     scope_evidence: dict[str, object],
 ) -> ReviewReport:
-    profile = aggregate_profile_evidence(evidence)
+    activation, report_evidence = _activated_capsule_report_evidence(evidence)
+    profile = aggregate_profile_evidence(report_evidence)
     findings = [
         finding for member in default_pr_range_profile().all_ids for finding in findings_by_member.get(member, [])
     ]
@@ -4931,7 +4965,10 @@ def _capsule_report(
         assurance_status=cast(Any, profile.assurance_status),
         has_unknown_required_evidence=profile.has_unknown_required_evidence,
         scope_evidence=scope_evidence,
-        analyzer_evidence=_capsule_evidence_list(evidence),
+        analyzer_evidence=_capsule_evidence_list(report_evidence),
+        suppression_catalog_digest=(
+            activation.digest if activation.status == "PASS" and activation.profile_activated else None
+        ),
         enforcement_mode=options.review_mode,
     )
 
@@ -5001,10 +5038,13 @@ def run_capsule_review(
     )
 
 
-def _snapshot_python_files(snapshot: object) -> list[Path]:
+def _snapshot_python_files(snapshot: object, resolution: object) -> list[Path]:
     root = cast(Path, snapshot.root)
     contents = cast(dict[str, bytes], snapshot.contents)
-    return [root / path for path in sorted(contents) if Path(path).suffix in {".py", ".pyi"}]
+    selected_paths = getattr(resolution, "selected_paths", None)
+    if not isinstance(selected_paths, tuple) or not all(isinstance(path, str) for path in selected_paths):
+        raise ValueError("selected_paths_missing")
+    return [root / path for path in sorted(selected_paths) if path in contents and Path(path).suffix in {".py", ".pyi"}]
 
 
 def _differential_finding_projection(finding: ReviewFinding) -> dict[str, object]:
@@ -5591,6 +5631,8 @@ def _run_bound_snapshot_pair(
     project_runtime_root: Path | None,
     base: _BoundSnapshotRun,
     head: _BoundSnapshotRun,
+    *,
+    scope_paths: tuple[str, ...],
 ) -> tuple[CapsuleSnapshotResult, CapsuleSnapshotResult]:
     with ExitStack() as cleanup:
         for root in (*base.bindings.cleanup_roots, *head.bindings.cleanup_roots):
@@ -5604,6 +5646,7 @@ def _run_bound_snapshot_pair(
                 config_roots=side.bindings.config_roots,
                 member_argv=side.bindings.member_argv,
                 project_runtime_root=project_runtime_root,
+                scope_paths=scope_paths,
             )
             for side in (base, head)
         )
@@ -5647,9 +5690,9 @@ def run_immutable_scope_review(
             scope_evidence=scope_evidence,
         )
     policy_bundle = _trusted_policy_bundle(resolution)
-    base_files = _snapshot_python_files(base_snapshot)
-    head_files = _snapshot_python_files(head_snapshot)
     try:
+        base_files = _snapshot_python_files(base_snapshot, resolution)
+        head_files = _snapshot_python_files(head_snapshot, resolution)
         base_bindings = _with_pytest_inventory(
             _snapshot_policy_bindings(
                 policy_bundle,
@@ -5680,6 +5723,7 @@ def run_immutable_scope_review(
         cast(Path | None, getattr(project_runtime, "root", None)),
         _BoundSnapshotRun(base_snapshot.root, base_files, base_bindings),
         _BoundSnapshotRun(head_snapshot.root, head_files, head_bindings),
+        scope_paths=cast(tuple[str, ...], resolution.selected_paths),
     )
     combined, classified_findings = _classify_range_findings(resolution, base, head)
     return _capsule_report(

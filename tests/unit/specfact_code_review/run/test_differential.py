@@ -9,8 +9,8 @@ from typing import Any
 import pytest
 
 
-@pytest.fixture
-def differential_api() -> Any:
+@pytest.fixture(name="differential_api")
+def differential_module_fixture() -> Any:
     from specfact_code_review.run import differential
 
     return differential
@@ -691,3 +691,39 @@ def test_suppression_catalog_drift_is_unknown_before_profile_activation(differen
 
     assert result.status == "UNKNOWN"
     assert result.profile_activated is False
+
+
+def test_consistent_catalog_and_matrix_drift_is_unknown_against_independent_bindings(
+    differential_api: Any,
+) -> None:
+    expected = differential_api._FROZEN_SUPPRESSION_CATALOG_DIGEST
+    drifted = "sha256:" + "b" * 64
+    bindings = dict.fromkeys(("checkpoint", "resource", "package", "profile", "report", "static_envelope"), drifted)
+
+    result = differential_api._activate_bound_suppression_catalog(
+        resource_digest=drifted,
+        matrix_bindings=bindings,
+        package_digest=expected,
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.profile_activated is False
+
+
+def test_invalid_utf8_package_manifest_makes_catalog_binding_unknown(
+    differential_api: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    read_text = differential_api.Path.read_text
+
+    def invalid_utf8(path: Any, *args: object, **kwargs: object) -> str:
+        if path.name == "module-package.yaml":
+            raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+        return read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(differential_api.Path, "read_text", invalid_utf8)
+
+    result = differential_api.activate_packaged_suppression_catalog()
+
+    assert result.status == "UNKNOWN"
+    assert result.profile_activated is False
+    assert result.reason == "suppression_catalog_package_binding_unavailable"

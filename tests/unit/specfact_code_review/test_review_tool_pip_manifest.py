@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -49,3 +50,12 @@ def test_module_package_authenticates_suppression_catalog_resource() -> None:
 
     assert data["authenticated_resources"][resource]["digest"].startswith("sha256:")
     assert data["authenticated_resources"][resource]["checkpoint_contract"] == "suppression_catalog_contract"
+
+
+def test_module_package_authenticates_raw_project_runtime_schema_bytes() -> None:
+    data = yaml.safe_load(MODULE_PACKAGE.read_text(encoding="utf-8"))
+    resource = "resources/contracts/project-runtime-layer-v1.schema.json"
+    resource_path = REPO_ROOT / "packages/specfact-code-review/src/specfact_code_review" / resource
+    expected = "sha256:" + hashlib.sha256(resource_path.read_bytes()).hexdigest()
+
+    assert data["authenticated_resources"][resource]["digest"] == expected

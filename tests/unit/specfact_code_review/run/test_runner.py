@@ -549,6 +549,34 @@ def test_empty_capsule_snapshot_marks_every_member_not_applicable(monkeypatch: M
     assert {item["evidence_outcome"] for item in result.evidence.values()} == {"NOT_APPLICABLE"}
 
 
+def test_deleted_python_head_runs_complete_pytest_inventory(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    launched: list[str] = []
+
+    def execute(request: Any) -> dict[str, object]:
+        launched.append(request.member)
+        return {
+            "execution_state": "ran",
+            "evidence_outcome": "PASS",
+            "findings": [],
+            "diagnostic": "",
+        }
+
+    monkeypatch.setattr(runner_api, "_execute_capsule_member", execute)
+
+    result = runner_api._run_capsule_snapshot(
+        SimpleNamespace(identity="sha256:" + "a" * 64),
+        snapshot_root=Path("/snapshot"),
+        files=[],
+        options=runner_api.ReviewOptions(),
+        member_argv={"targeted-pytest-coverage": ("--", "tests/test_app.py::test_app")},
+        scope_paths=("src/deleted.py",),
+    )
+
+    assert launched == ["targeted-pytest-coverage"]
+    assert result.evidence["targeted-pytest-coverage"]["evidence_outcome"] == "PASS"
+
+
 def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     policy_root = tmp_path / "policy"
@@ -618,6 +646,61 @@ def test_snapshot_policy_bindings_apply_sealed_pytest_and_coverage_projections(t
             shutil.rmtree(root, ignore_errors=True)
 
 
+def test_capsule_policy_outputs_use_the_mounted_private_temp_root(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    policy_root = tmp_path / "policy"
+    policy_root.mkdir()
+    (policy_root / "pytest.ini").write_text(
+        "[pytest]\ncache_dir = .cache\nlog_file = pytest.log\n",
+        encoding="utf-8",
+    )
+    (policy_root / ".coveragerc").write_text(
+        "[run]\ndata_file = .coverage\n[html]\ndirectory = htmlcov\n[xml]\noutput = coverage.xml\n",
+        encoding="utf-8",
+    )
+    builder = runner_api._PolicyBindingBuilder()
+
+    runner_api._bind_pytest_coverage_policy(builder, SimpleNamespace(root=policy_root))
+    bindings = builder.result()
+
+    try:
+        payload = "\n".join(
+            path.read_text(encoding="utf-8") for root in bindings.config_roots for path in root.iterdir()
+        )
+        assert "/opt/specfact/tmp/pytest" in payload
+        assert "/opt/specfact/tmp/coverage" in payload
+        assert "/opt/specfact/temporary" not in payload
+    finally:
+        for root in bindings.cleanup_roots:
+            shutil.rmtree(root, ignore_errors=True)
+
+
+def test_capsule_empty_policies_redirect_default_pytest_and_coverage_outputs() -> None:
+    runner_api = _c14_runner()
+    builder = runner_api._PolicyBindingBuilder()
+
+    runner_api._bind_pytest_coverage_policy(builder, None)
+    bindings = builder.result()
+
+    try:
+        payload = "\n".join(
+            path.read_text(encoding="utf-8") for root in bindings.config_roots for path in root.iterdir()
+        )
+        assert "cache_dir = /opt/specfact/tmp/pytest/cache-dir" in payload
+        assert "data_file = /opt/specfact/tmp/coverage/run-data_file" in payload
+    finally:
+        for root in bindings.cleanup_roots:
+            shutil.rmtree(root, ignore_errors=True)
+
+
+def test_capsule_scratch_layout_includes_projected_pytest_and_coverage_roots(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    _request_root, _output_root, scratch_root, _control_root = runner_api._prepare_capsule_process_roots(tmp_path)
+
+    assert (scratch_root / "pytest").is_dir()
+    assert (scratch_root / "coverage").is_dir()
+
+
 def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshots(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -658,6 +741,7 @@ def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshot
     resolution = SimpleNamespace(
         base_snapshot=snapshot,
         head_snapshot=snapshot,
+        selected_paths=(),
         policy_bundle=None,
         resolved_target_commit="1" * 40,
         claimed_context={"project_runtime": descriptor},
@@ -753,6 +837,7 @@ def test_immutable_review_explicitly_loads_only_authenticated_project_pytest_plu
     resolution = SimpleNamespace(
         base_snapshot=snapshot,
         head_snapshot=snapshot,
+        selected_paths=(),
         policy_bundle=None,
         resolved_target_commit="1" * 40,
         claimed_context={"project_runtime": descriptor},
@@ -893,6 +978,7 @@ def test_index_review_uses_head_policy_for_both_immutable_snapshots(monkeypatch:
         assurance_kind="index",
         base_snapshot=SimpleNamespace(root=base_root, contents={}),
         head_snapshot=SimpleNamespace(root=head_root, contents={}),
+        selected_paths=(),
         policy_bundle=None,
         claimed_context=None,
     )
@@ -939,6 +1025,7 @@ def test_immutable_review_binds_each_complete_pytest_inventory_to_its_snapshot(
             root=head_root,
             contents={"tests/test_a.py": b"", "tests/test_b.py": b""},
         ),
+        selected_paths=("src/app.py",),
         policy_bundle=None,
         path_statuses={"src/app.py": "M"},
         exact_renames=(),
@@ -2381,6 +2468,88 @@ def test_default_pr_range_analyzer_profile_has_closed_membership() -> None:
     )
     assert profile.conditional_ids == ("semgrep-bugs", "targeted-pytest-coverage")
     assert profile.id == "pr-range-v1"
+
+
+def test_complete_capsule_report_carries_activated_suppression_catalog_digest() -> None:
+    runner_api = _c14_runner()
+    resource, _checkpoint = runner_api.differential.load_suppression_catalog_and_checkpoint()
+
+    report = runner_api._capsule_report(
+        _synthetic_complete_profile_evidence(runner_api),
+        {},
+        options=runner_api.ReviewOptions(no_tests=True),
+        scope_evidence={"assurance_kind": "pr_range"},
+    )
+
+    assert report.assurance_status == "PASS"
+    assert report.suppression_catalog_digest == resource.digest
+
+
+def test_suppression_catalog_activation_drift_forces_unknown_report(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setattr(
+        runner_api.differential,
+        "activate_packaged_suppression_catalog",
+        lambda: SimpleNamespace(
+            status="UNKNOWN",
+            profile_activated=False,
+            digest=None,
+            reason="suppression_catalog_identity_mismatch",
+        ),
+        raising=False,
+    )
+
+    report = runner_api._capsule_report(
+        _synthetic_complete_profile_evidence(runner_api),
+        {},
+        options=runner_api.ReviewOptions(no_tests=True),
+        scope_evidence={"assurance_kind": "pr_range"},
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+    assert report.suppression_catalog_digest is None
+
+
+def test_immutable_review_analyzes_only_selected_snapshot_python_files(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    observed: list[list[str]] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda **_kwargs: (SimpleNamespace(), ""))
+
+    def run_snapshot(*_args: object, **kwargs: object) -> Any:
+        snapshot_root = cast(Path, kwargs["snapshot_root"])
+        files = cast(list[Path], kwargs["files"])
+        observed.append([path.relative_to(snapshot_root).as_posix() for path in files])
+        return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", run_snapshot)
+    monkeypatch.setattr(runner_api, "_classify_range_findings", lambda *_args: ({}, {}))
+    monkeypatch.setattr(
+        runner_api,
+        "_capsule_report",
+        lambda *_args, **_kwargs: ReviewReport(run_id="selected", score=100, summary="complete"),
+    )
+    contents = {
+        "src/changed.py": b"VALUE = 1\n",
+        "src/unrelated_blocker.py": b"VALUE = eval('1')\n",
+    }
+    resolution = SimpleNamespace(
+        base_snapshot=SimpleNamespace(root=base_root, contents=contents),
+        head_snapshot=SimpleNamespace(root=head_root, contents=contents),
+        selected_paths=("src/changed.py",),
+        policy_bundle=None,
+        claimed_context=None,
+    )
+
+    runner_api.run_immutable_scope_review(
+        resolution, options=runner_api.ReviewOptions(no_tests=True), scope_evidence={"assurance_kind": "pr_range"}
+    )
+
+    assert observed == [["src/changed.py"], ["src/changed.py"]]
 
 
 def test_report_exposes_mandatory_analyzer_coverage() -> None:

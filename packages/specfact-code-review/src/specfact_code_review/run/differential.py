@@ -10,9 +10,16 @@ import tokenize
 from collections import defaultdict
 from dataclasses import dataclass, field
 from importlib.resources import files
+from pathlib import Path
 from typing import Any, Literal
 
+import yaml
 from icontract import ensure, require
+
+
+_SUPPRESSION_CATALOG_RESOURCE = "resources/contracts/pr-range-v1-suppression-catalog.json"
+_FROZEN_SUPPRESSION_CATALOG_DIGEST = "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+_PR_RANGE_V1_SUPPRESSION_CATALOG_DIGEST = _FROZEN_SUPPRESSION_CATALOG_DIGEST
 
 
 @dataclass(frozen=True)
@@ -188,6 +195,8 @@ class C14Checkpoint:
 class CatalogActivation:
     status: Literal["PASS", "UNKNOWN"]
     profile_activated: bool
+    digest: str | None = None
+    reason: str = ""
 
 
 class UnsupportedWaiverInput(ValueError):  # noqa: N818 - frozen public C14 contract name
@@ -1077,11 +1086,9 @@ def load_suppression_catalog_and_checkpoint() -> tuple[SuppressionCatalogResourc
     package = files("specfact_code_review")
     contracts = package.joinpath("resources", "contracts")
     resource_bytes = contracts.joinpath("pr-range-v1-suppression-catalog.json").read_bytes()
-    matrix = json.loads(contracts.joinpath("review-report-schema-1.6-consumer-matrix.json").read_text(encoding="utf-8"))
-    bindings = matrix["suppression_catalog_identity_bindings"]
     canonical_bytes = _canonical_bytes(json.loads(resource_bytes))
     resource = SuppressionCatalogResource("sha256:" + hashlib.sha256(resource_bytes).hexdigest(), resource_bytes)
-    checkpoint = C14Checkpoint(SuppressionCatalogContract(str(bindings["checkpoint"]), canonical_bytes))
+    checkpoint = C14Checkpoint(SuppressionCatalogContract(_FROZEN_SUPPRESSION_CATALOG_DIGEST, canonical_bytes))
     return resource, checkpoint
 
 
@@ -1092,5 +1099,62 @@ def activate_suppression_catalog(
 
     digests = {checkpoint_digest, resource_digest, package_digest, profile_digest}
     if len(digests) != 1:
-        return CatalogActivation("UNKNOWN", False)
-    return CatalogActivation("PASS", True)
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_mismatch")
+    return CatalogActivation("PASS", True, digest=resource_digest)
+
+
+def _authenticated_package_catalog_digest() -> str | None:
+    try:
+        manifest = yaml.safe_load(
+            (Path(__file__).resolve().parents[3] / "module-package.yaml").read_text(encoding="utf-8")
+        )
+        entry = manifest["authenticated_resources"][_SUPPRESSION_CATALOG_RESOURCE]
+    except (KeyError, OSError, TypeError, UnicodeError, yaml.YAMLError):
+        return None
+    match entry:
+        case {"checkpoint_contract": "suppression_catalog_contract", "digest": str() as digest}:
+            return digest
+        case _:
+            return None
+
+
+def _activate_bound_suppression_catalog(
+    *, resource_digest: str, matrix_bindings: object, package_digest: str | None
+) -> CatalogActivation:
+    required = {"checkpoint", "resource", "package", "profile", "report", "static_envelope"}
+    if not isinstance(matrix_bindings, dict) or set(matrix_bindings) != required:
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_bindings_invalid")
+    if any(matrix_bindings[name] != resource_digest for name in required):
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_mismatch")
+    if package_digest is None:
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_package_binding_unavailable")
+    return activate_suppression_catalog(
+        checkpoint_digest=_FROZEN_SUPPRESSION_CATALOG_DIGEST,
+        resource_digest=resource_digest,
+        package_digest=package_digest,
+        profile_digest=_PR_RANGE_V1_SUPPRESSION_CATALOG_DIGEST,
+    )
+
+
+@ensure(lambda result: result.status in {"PASS", "UNKNOWN"})
+def activate_packaged_suppression_catalog() -> CatalogActivation:
+    """Activate the installed catalog only when every report binding matches its raw bytes."""
+
+    try:
+        resource, checkpoint = load_suppression_catalog_and_checkpoint()
+        package = files("specfact_code_review")
+        matrix = json.loads(
+            package.joinpath("resources", "contracts", "review-report-schema-1.6-consumer-matrix.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        bindings = matrix["suppression_catalog_identity_bindings"]
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_resource_unavailable")
+    if checkpoint.suppression_catalog_contract.digest != _FROZEN_SUPPRESSION_CATALOG_DIGEST:
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_checkpoint_binding_mismatch")
+    return _activate_bound_suppression_catalog(
+        resource_digest=resource.digest,
+        matrix_bindings=bindings,
+        package_digest=_authenticated_package_catalog_digest(),
+    )
