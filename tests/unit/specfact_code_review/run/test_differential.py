@@ -708,3 +708,14 @@ def test_consistent_catalog_and_matrix_drift_is_unknown_against_independent_bind
 
     assert result.status == "UNKNOWN"
     assert result.profile_activated is False
+
+
+def test_invalid_utf8_package_manifest_makes_catalog_binding_unknown(
+    differential_api: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def invalid_utf8(*_args: object, **_kwargs: object) -> str:
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+
+    monkeypatch.setattr(differential_api.Path, "read_text", invalid_utf8)
+
+    assert differential_api._authenticated_package_catalog_digest() is None

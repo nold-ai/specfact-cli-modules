@@ -1109,7 +1109,7 @@ def _authenticated_package_catalog_digest() -> str | None:
             (Path(__file__).resolve().parents[3] / "module-package.yaml").read_text(encoding="utf-8")
         )
         entry = manifest["authenticated_resources"][_SUPPRESSION_CATALOG_RESOURCE]
-    except (KeyError, OSError, TypeError, yaml.YAMLError):
+    except (KeyError, OSError, TypeError, UnicodeError, yaml.YAMLError):
         return None
     match entry:
         case {"checkpoint_contract": "suppression_catalog_contract", "digest": str() as digest}:
