@@ -2674,11 +2674,31 @@ def _call_shapes_pytest_dispatch(node: ast.AST, refs: frozenset[str]) -> bool:
     )
 
 
+def _assignment_exposes_pytest_node_namespace(node: ast.AST, refs: frozenset[str]) -> bool:
+    if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)) or node.value is None:
+        return False
+    return any(
+        isinstance(child, ast.Attribute) and child.attr == "__dict__" and _is_ref(child.value, refs)
+        for child in ast.walk(node.value)
+    )
+
+
+def _call_exposes_pytest_node(node: ast.AST, refs: frozenset[str]) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    expressions = (*node.args, *(keyword.value for keyword in node.keywords))
+    return any(_is_ref(child, refs) for expression in expressions for child in ast.walk(expression)) or (
+        isinstance(node.func, ast.Attribute) and any(_is_ref(child, refs) for child in ast.walk(node.func.value))
+    )
+
+
 def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     aliases = _fixture_pytest_node_aliases(node)
     return any(
         any(_is_pytest_dispatch_target(target, aliases) for target in _assignment_targets(child))
         or _call_shapes_pytest_dispatch(child, aliases)
+        or _assignment_exposes_pytest_node_namespace(child, aliases)
+        or _call_exposes_pytest_node(child, aliases)
         for child in ast.walk(node)
     )
 
