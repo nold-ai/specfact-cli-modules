@@ -2150,12 +2150,52 @@ def _module_has_unsupported_test_decorator(
     )
 
 
+def _control_flow_binding_targets(node: ast.AST) -> tuple[ast.expr, ...]:
+    if isinstance(node, (ast.For, ast.AsyncFor, ast.comprehension)):
+        return (node.target,)
+    if isinstance(node, (ast.With, ast.AsyncWith)):
+        return tuple(item.optional_vars for item in node.items if item.optional_vars is not None)
+    return ()
+
+
+def _module_nonimport_binding_names(tree: ast.Module) -> frozenset[str]:
+    nodes = _module_execution_nodes(tree)
+    target_names = {
+        target.id
+        for node in nodes
+        for binding_target in (*_assignment_targets(node), *_control_flow_binding_targets(node))
+        for target in _assignment_target_nodes(binding_target)
+        if isinstance(target, ast.Name)
+    }
+    definition_names = {
+        node.name for node in nodes if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    }
+    exception_names = {node.name for node in nodes if isinstance(node, ast.ExceptHandler) and node.name is not None}
+    return frozenset(target_names | definition_names | exception_names)
+
+
+def _import_binding_names(node: ast.AST) -> tuple[str, ...]:
+    if isinstance(node, ast.Import):
+        return tuple(alias.asname or alias.name.split(".", maxsplit=1)[0] for alias in node.names)
+    if isinstance(node, ast.ImportFrom):
+        return tuple(alias.asname or alias.name for alias in node.names)
+    return ()
+
+
+def _stable_modeled_import_aliases(tree: ast.Module, aliases: set[str]) -> set[str]:
+    rebound = _module_nonimport_binding_names(tree)
+    imported = tuple(name for node in _module_execution_nodes(tree) for name in _import_binding_names(node))
+    return {alias for alias in aliases if alias not in rebound and imported.count(alias) == 1}
+
+
 def _modeled_test_decorators(tree: ast.Module) -> _ModeledTestDecorators:
-    pytest_modules = _imported_module_aliases(tree, "pytest")
-    pytest_marks = _imported_member_aliases(tree, "pytest", frozenset({"mark"}))
+    pytest_modules = _stable_modeled_import_aliases(tree, _imported_module_aliases(tree, "pytest"))
+    pytest_marks = _stable_modeled_import_aliases(tree, _imported_member_aliases(tree, "pytest", frozenset({"mark"})))
     unittest_members = frozenset({"expectedFailure", "skip", "skipIf", "skipUnless"})
-    unittest_modules = _imported_module_aliases(tree, "unittest")
-    unittest_decorators = _imported_member_aliases(tree, "unittest", unittest_members)
+    unittest_modules = _stable_modeled_import_aliases(tree, _imported_module_aliases(tree, "unittest"))
+    unittest_decorators = _stable_modeled_import_aliases(
+        tree, _imported_member_aliases(tree, "unittest", unittest_members)
+    )
     pytest_prefixes = tuple(f"{module}.mark." for module in pytest_modules) + tuple(f"{mark}." for mark in pytest_marks)
     unittest_names = {
         *(f"{module}.{member}" for module in unittest_modules for member in unittest_members),

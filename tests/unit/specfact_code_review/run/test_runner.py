@@ -2822,6 +2822,52 @@ def test_complete_suite_rejects_test_body_replacing_decorator(tmp_path: Path) ->
     assert plan.reason == "test_execution_decorator_unsupported"
 
 
+def test_complete_suite_rejects_rebound_pytest_decorator_alias(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_decorated.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "from pytest import mark\n\n"
+        "class FakeMark:\n"
+        "    def __getattr__(self, name):\n"
+        "        del name\n"
+        "        def replace(function):\n"
+        "            del function\n"
+        "            return lambda: None\n"
+        "        return replace\n\n"
+        "mark = FakeMark()\n\n"
+        "@mark.bodyless\n"
+        "def test_failure():\n"
+        "    assert False\n\n"
+        "def test_smoke():\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "test_execution_decorator_unsupported"
+
+
+def test_complete_suite_accepts_stable_pytest_decorator_alias(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_decorated.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "from pytest import mark\n\n"
+        "@mark.parametrize('value', [1, 2])\n"
+        "def test_value(value):\n"
+        "    assert value in {1, 2}\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "PASS"
+    assert plan.selectors == ("tests/test_decorated.py::test_value",)
+
+
 def test_complete_suite_rejects_imported_test_body_replacing_decorator(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
