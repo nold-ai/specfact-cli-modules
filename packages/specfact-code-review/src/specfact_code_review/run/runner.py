@@ -2640,14 +2640,23 @@ def _is_ref(node: ast.AST, refs: frozenset[str]) -> bool:
     return _is_pytest_node(node) or (isinstance(node, ast.Name) and node.id in refs)
 
 
+def _is_pytest_collected_callable(node: ast.AST, refs: frozenset[str]) -> bool:
+    return isinstance(node, ast.Attribute) and node.attr in ("_obj", "obj") and _is_ref(node.value, refs)
+
+
 def _is_pytest_dispatch_target(node: ast.AST, refs: frozenset[str]) -> bool:
     return (
-        isinstance(node, ast.Attribute) and node.attr in ("_obj", "obj", "runtest") and _is_ref(node.value, refs)
-    ) or (
-        isinstance(node, ast.Subscript)
-        and isinstance(node.value, ast.Attribute)
-        and node.value.attr == "__dict__"
-        and _is_ref(node.value.value, refs)
+        (isinstance(node, ast.Attribute) and node.attr in ("_obj", "obj", "runtest") and _is_ref(node.value, refs))
+        or (
+            isinstance(node, ast.Subscript)
+            and isinstance(node.value, ast.Attribute)
+            and node.value.attr == "__dict__"
+            and _is_ref(node.value.value, refs)
+        )
+        or (
+            isinstance(node, (ast.Attribute, ast.Subscript))
+            and any(_is_pytest_collected_callable(child, refs) for child in ast.walk(node))
+        )
     )
 
 
@@ -2659,7 +2668,9 @@ def _pytest_dispatch_setter_arguments(node: ast.AST, refs: frozenset[str]) -> tu
         return (node.args[0], node.args[1]) if len(node.args) >= 2 else None
     if setter_name != "__setattr__":
         return None
-    if isinstance(node.func, ast.Attribute) and _is_ref(node.func.value, refs):
+    if isinstance(node.func, ast.Attribute) and (
+        _is_ref(node.func.value, refs) or _is_pytest_collected_callable(node.func.value, refs)
+    ):
         return (node.func.value, node.args[0]) if node.args else None
     return (node.args[0], node.args[1]) if len(node.args) >= 2 else None
 
@@ -2671,7 +2682,7 @@ def _call_shapes_pytest_dispatch(node: ast.AST, refs: frozenset[str]) -> bool:
     target, attribute = arguments
     return (
         isinstance(attribute, ast.Constant) and attribute.value in ("_obj", "obj", "runtest") and _is_ref(target, refs)
-    )
+    ) or _is_pytest_collected_callable(target, refs)
 
 
 def _assignment_exposes_pytest_node_namespace(node: ast.AST, refs: frozenset[str]) -> bool:
@@ -2758,7 +2769,7 @@ def _module_exports_execution_shaping_fixture(
         return True
     forwarded_imports = tuple(
         forwarded
-        for statement in tree.body
+        for statement in _module_execution_nodes(tree)
         if (
             forwarded := _forwarded_fixture_import(
                 statement,
@@ -2791,7 +2802,7 @@ def _module_imports_execution_shaping_fixture(
 ) -> bool:
     imported = tuple(
         resolved
-        for statement in tree.body
+        for statement in _module_execution_nodes(tree)
         if (
             resolved := _forwarded_fixture_import(
                 statement,

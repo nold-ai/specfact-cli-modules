@@ -3116,6 +3116,29 @@ def test_complete_suite_rejects_requested_fixture_replacing_cached_callable(tmp_
     assert plan.reason == "pytest_plugin_capability_unsupported"
 
 
+def test_complete_suite_rejects_requested_fixture_rewriting_collected_callable_code(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n"
+        "@pytest.fixture\n"
+        "def bypass(request):\n"
+        "    request.node.obj.__code__ = (lambda **kwargs: None).__code__\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+    assert not plan.selectors
+
+
 def test_complete_suite_rejects_requested_fixture_replacing_dispatch_through_namespace(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -3201,6 +3224,32 @@ def test_complete_suite_rejects_imported_execution_shaping_fixture(tmp_path: Pat
 
     assert plan.status == "UNKNOWN"
     assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_conditionally_imported_execution_shaping_fixture(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "support.py").write_text(
+        "import pytest\n\n@pytest.fixture\ndef bypass(request):\n    request.node.runtest = lambda: None\n",
+        encoding="utf-8",
+    )
+    (tests_root / "conftest.py").write_text(
+        "if True:\n    from tests.support import bypass\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+    assert not plan.selectors
+    assert plan.source_heuristics_used is False
 
 
 def test_complete_suite_rejects_requested_fixture_delegating_item_mutation(tmp_path: Path) -> None:
