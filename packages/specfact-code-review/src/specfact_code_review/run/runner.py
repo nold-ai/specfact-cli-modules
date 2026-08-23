@@ -1583,6 +1583,10 @@ def _imported_module_path(
     if search is None:
         return None
     module_parts, search_roots = search
+    return _module_path_from_parts(module_parts, search_roots)
+
+
+def _module_path_from_parts(module_parts: tuple[str, ...], search_roots: tuple[Path, ...]) -> Path | None:
     module_parts = tuple(part for part in module_parts if part)
     candidates = tuple(
         candidate
@@ -2748,6 +2752,85 @@ def _forwarded_fixture_import(
     return (module_path, forwarded) if forwarded and module_path is not None else None
 
 
+def _imported_fixture_module_bindings(
+    tree: ast.Module,
+    *,
+    path: Path,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> tuple[tuple[str, Path], ...]:
+    bindings: list[tuple[str, Path]] = []
+    for statement in _module_execution_nodes(tree):
+        if (
+            not isinstance(statement, ast.ImportFrom)
+            or (search := _import_search(statement, path=path, snapshot_root=snapshot_root, import_roots=import_roots))
+            is None
+        ):
+            continue
+        module_parts, search_roots = search
+        for alias in statement.names:
+            module_path = _module_path_from_parts((*module_parts, *alias.name.split(".")), search_roots)
+            if module_path is not None:
+                bindings.append((alias.asname or alias.name, module_path))
+    return tuple(bindings)
+
+
+def _assigned_fixture_imports(
+    tree: ast.Module,
+    *,
+    selected: frozenset[str] | None,
+    path: Path,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> tuple[tuple[Path, frozenset[str]], ...]:
+    bindings = _imported_fixture_module_bindings(
+        tree, path=path, snapshot_root=snapshot_root, import_roots=import_roots
+    )
+    return tuple(
+        (module_path, frozenset({statement.value.attr}))
+        for statement in _module_execution_nodes(tree)
+        if isinstance(statement, (ast.Assign, ast.AnnAssign, ast.NamedExpr))
+        and statement.value is not None
+        and isinstance(statement.value, ast.Attribute)
+        and isinstance(statement.value.value, ast.Name)
+        for alias, module_path in bindings
+        if statement.value.value.id == alias
+        and any(selected is None or target in selected for target in _assignment_name_targets(statement))
+    )
+
+
+def _fixture_imports(
+    tree: ast.Module,
+    *,
+    selected: frozenset[str] | None,
+    path: Path,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> tuple[tuple[Path, frozenset[str]], ...]:
+    direct = (
+        forwarded
+        for statement in _module_execution_nodes(tree)
+        if (
+            forwarded := _forwarded_fixture_import(
+                statement,
+                selected=selected,
+                path=path,
+                snapshot_root=snapshot_root,
+                import_roots=import_roots,
+            )
+        )
+        is not None
+    )
+    assigned = _assigned_fixture_imports(
+        tree,
+        selected=selected,
+        path=path,
+        snapshot_root=snapshot_root,
+        import_roots=import_roots,
+    )
+    return (*direct, *assigned)
+
+
 def _module_exports_execution_shaping_fixture(
     path: Path,
     exported_names: frozenset[str],
@@ -2767,19 +2850,12 @@ def _module_exports_execution_shaping_fixture(
     selected = None if "*" in exported_names else exported_names
     if _selected_fixture_shapes_execution(tree, exported_names):
         return True
-    forwarded_imports = tuple(
-        forwarded
-        for statement in _module_execution_nodes(tree)
-        if (
-            forwarded := _forwarded_fixture_import(
-                statement,
-                selected=selected,
-                path=path,
-                snapshot_root=snapshot_root,
-                import_roots=import_roots,
-            )
-        )
-        is not None
+    forwarded_imports = _fixture_imports(
+        tree,
+        selected=selected,
+        path=path,
+        snapshot_root=snapshot_root,
+        import_roots=import_roots,
     )
     return any(
         _module_exports_execution_shaping_fixture(
@@ -2800,19 +2876,12 @@ def _module_imports_execution_shaping_fixture(
     snapshot_root: Path,
     import_roots: tuple[Path, ...],
 ) -> bool:
-    imported = tuple(
-        resolved
-        for statement in _module_execution_nodes(tree)
-        if (
-            resolved := _forwarded_fixture_import(
-                statement,
-                selected=None,
-                path=path,
-                snapshot_root=snapshot_root,
-                import_roots=import_roots,
-            )
-        )
-        is not None
+    imported = _fixture_imports(
+        tree,
+        selected=None,
+        path=path,
+        snapshot_root=snapshot_root,
+        import_roots=import_roots,
     )
     return any(
         _module_exports_execution_shaping_fixture(
