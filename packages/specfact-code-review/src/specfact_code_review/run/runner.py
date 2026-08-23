@@ -2193,6 +2193,17 @@ def _control_flow_binding_targets(node: ast.AST) -> tuple[ast.expr, ...]:
     return ()
 
 
+def _setter_target_binding_name(node: ast.AST) -> str:
+    if not (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, (ast.Name, ast.Attribute))
+        and (node.func.id if isinstance(node.func, ast.Name) else node.func.attr) == "setattr"
+        and node.args
+    ):
+        return ""
+    return _decorator_full_name(node.args[0]).partition(".")[0]
+
+
 def _module_nonimport_binding_names(tree: ast.Module) -> frozenset[str]:
     nodes = _module_execution_nodes(tree)
     target_names = {
@@ -2206,7 +2217,8 @@ def _module_nonimport_binding_names(tree: ast.Module) -> frozenset[str]:
         node.name for node in nodes if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
     }
     exception_names = {node.name for node in nodes if isinstance(node, ast.ExceptHandler) and node.name is not None}
-    return frozenset(target_names | definition_names | exception_names)
+    setter_target_names = {target for node in nodes if (target := _setter_target_binding_name(node))}
+    return frozenset(target_names | definition_names | exception_names | setter_target_names)
 
 
 def _import_binding_names(node: ast.AST) -> tuple[str, ...]:
@@ -2648,14 +2660,24 @@ def _is_pytest_collected_callable(node: ast.AST, refs: frozenset[str]) -> bool:
     return isinstance(node, ast.Attribute) and node.attr in ("_obj", "obj") and _is_ref(node.value, refs)
 
 
+def _is_pytest_dispatch_owner(node: ast.AST, refs: frozenset[str]) -> bool:
+    return _is_ref(node, refs) or (
+        isinstance(node, ast.Attribute) and node.attr == "__class__" and _is_ref(node.value, refs)
+    )
+
+
 def _is_pytest_dispatch_target(node: ast.AST, refs: frozenset[str]) -> bool:
     return (
-        (isinstance(node, ast.Attribute) and node.attr in ("_obj", "obj", "runtest") and _is_ref(node.value, refs))
+        (
+            isinstance(node, ast.Attribute)
+            and node.attr in ("_obj", "obj", "runtest")
+            and _is_pytest_dispatch_owner(node.value, refs)
+        )
         or (
             isinstance(node, ast.Subscript)
             and isinstance(node.value, ast.Attribute)
             and node.value.attr == "__dict__"
-            and _is_ref(node.value.value, refs)
+            and _is_pytest_dispatch_owner(node.value.value, refs)
         )
         or (
             isinstance(node, (ast.Attribute, ast.Subscript))
@@ -2685,7 +2707,9 @@ def _call_shapes_pytest_dispatch(node: ast.AST, refs: frozenset[str]) -> bool:
         return False
     target, attribute = arguments
     return (
-        isinstance(attribute, ast.Constant) and attribute.value in ("_obj", "obj", "runtest") and _is_ref(target, refs)
+        isinstance(attribute, ast.Constant)
+        and attribute.value in ("_obj", "obj", "runtest")
+        and _is_pytest_dispatch_owner(target, refs)
     ) or _is_pytest_collected_callable(target, refs)
 
 
