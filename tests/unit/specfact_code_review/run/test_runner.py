@@ -647,6 +647,24 @@ def test_capsule_policy_outputs_use_the_mounted_private_temp_root(tmp_path: Path
             shutil.rmtree(root, ignore_errors=True)
 
 
+def test_capsule_empty_policies_redirect_default_pytest_and_coverage_outputs() -> None:
+    runner_api = _c14_runner()
+    builder = runner_api._PolicyBindingBuilder()
+
+    runner_api._bind_pytest_coverage_policy(builder, None)
+    bindings = builder.result()
+
+    try:
+        payload = "\n".join(
+            path.read_text(encoding="utf-8") for root in bindings.config_roots for path in root.iterdir()
+        )
+        assert "cache_dir = /opt/specfact/tmp/pytest/cache-dir" in payload
+        assert "data_file = /opt/specfact/tmp/coverage/run-data_file" in payload
+    finally:
+        for root in bindings.cleanup_roots:
+            shutil.rmtree(root, ignore_errors=True)
+
+
 def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshots(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:

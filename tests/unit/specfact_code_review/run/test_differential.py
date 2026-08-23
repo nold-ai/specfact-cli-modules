@@ -9,8 +9,8 @@ from typing import Any
 import pytest
 
 
-@pytest.fixture
-def differential_api() -> Any:
+@pytest.fixture(name="differential_api")
+def differential_module_fixture() -> Any:
     from specfact_code_review.run import differential
 
     return differential
@@ -687,6 +687,23 @@ def test_suppression_catalog_drift_is_unknown_before_profile_activation(differen
         resource_digest="sha256:" + "b" * 64,
         package_digest="sha256:" + "a" * 64,
         profile_digest="sha256:" + "a" * 64,
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.profile_activated is False
+
+
+def test_consistent_catalog_and_matrix_drift_is_unknown_against_independent_bindings(
+    differential_api: Any,
+) -> None:
+    expected = differential_api._FROZEN_SUPPRESSION_CATALOG_DIGEST
+    drifted = "sha256:" + "b" * 64
+    bindings = dict.fromkeys(("checkpoint", "resource", "package", "profile", "report", "static_envelope"), drifted)
+
+    result = differential_api._activate_bound_suppression_catalog(
+        resource_digest=drifted,
+        matrix_bindings=bindings,
+        package_digest=expected,
     )
 
     assert result.status == "UNKNOWN"

@@ -241,3 +241,4 @@ Explicitly forbidden:
 - [x] 5.3 Add a focused failing regression proving generated pytest and Coverage writable outputs resolve beneath the Bubblewrap-mounted `/opt/specfact/tmp` root.
 - [x] 5.4 Strengthen the package-manifest resource test to authenticate the raw project-runtime schema bytes, then correct only the stale manifest digest.
 - [x] 5.5 Implement the narrow fixes, advance the unpublished signed payload by one patch version, correct the C14 changelog release identity, and record focused plus complete verification evidence here and in `TDD_EVIDENCE.md`.
+- [x] 5.6 Close post-PR review findings by binding catalog activation to the frozen checkpoint/profile and authenticated package-manifest authorities, projecting default pytest/Coverage writes beneath `/opt/specfact/tmp`, and reconciling signature evidence with the CI signing commit.

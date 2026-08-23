@@ -3544,7 +3544,7 @@ def project_pytest_policy(policy: dict[str, object], *, snapshot_root: Path, out
     if policy.get("addopts"):
         values["addopts"] = policy["addopts"]
     for key in ("cache_dir", "log_file"):
-        if key not in config:
+        if key == "log_file" and key not in config:
             continue
         destination = output_root / key.replace("_", "-")
         values[key] = str(destination)
@@ -3673,7 +3673,7 @@ def project_coverage_policy(
     writable: list[Path] = []
     if output_root is not None:
         for key in ("run:data_file", "html:directory", "xml:output", "json:output", "lcov:output"):
-            if key in values:
+            if key == "run:data_file" or key in values:
                 destination = output_root / key.replace(":", "-")
                 values[key] = str(destination)
                 writable.append(destination)
