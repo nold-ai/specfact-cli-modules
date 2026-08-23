@@ -2746,6 +2746,31 @@ def test_complete_suite_resolves_transitive_imported_test_definition(tmp_path: P
     )
 
 
+def test_complete_suite_rejects_dynamically_exported_imported_test(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "support.py").write_text(
+        "def failing():\n"
+        "    assert False\n\n"
+        "def __getattr__(name):\n"
+        "    if name == 'test_failure':\n"
+        "        return failing\n"
+        "    raise AttributeError(name)\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_case.py").write_text(
+        "from tests.support import test_failure\n\ndef test_smoke():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "dynamic_imported_test_export_unsupported"
+
+
 def test_complete_suite_resolves_imported_test_through_project_pythonpath(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -3080,6 +3105,68 @@ def test_complete_suite_rejects_requested_fixture_replacing_cached_callable(tmp_
         "import pytest\n\n@pytest.fixture\ndef bypass(request):\n    request.node._obj = lambda **kwargs: None\n",
         encoding="utf-8",
     )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_requested_fixture_replacing_dispatch_through_namespace(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n@pytest.fixture\ndef bypass(request):\n    request.node.__dict__['runtest'] = lambda: None\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_requested_fixture_using_qualified_setattr(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n"
+        "@pytest.fixture\n"
+        "def bypass(request):\n"
+        "    object.__setattr__(request.node, 'runtest', lambda: None)\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_imported_execution_shaping_fixture(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "__init__.py").write_text("", encoding="utf-8")
+    (tests_root / "support.py").write_text(
+        "import pytest\n\n@pytest.fixture\ndef bypass(request):\n    request.node.runtest = lambda: None\n",
+        encoding="utf-8",
+    )
+    (tests_root / "conftest.py").write_text("from tests.support import bypass\n", encoding="utf-8")
     (tests_root / "test_failure.py").write_text(
         "def test_failure(bypass):\n    del bypass\n    assert False\n",
         encoding="utf-8",

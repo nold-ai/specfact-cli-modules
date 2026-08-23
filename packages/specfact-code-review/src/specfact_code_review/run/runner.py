@@ -1926,6 +1926,37 @@ def _module_has_unsupported_imported_test_base(
     )
 
 
+def _module_imports_dynamic_test_export(
+    path: Path,
+    *,
+    snapshot_root: Path,
+    policy: _PytestDiscoveryPolicy,
+) -> bool:
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return False
+    for statement in tree.body:
+        if not isinstance(statement, ast.ImportFrom):
+            continue
+        exported = tuple(alias.asname or alias.name for alias in statement.names)
+        if not any(_test_name_matches(name, (*policy.function_patterns, *policy.class_patterns)) for name in exported):
+            continue
+        module_path = _imported_module_path(
+            statement,
+            path=path,
+            snapshot_root=snapshot_root,
+            import_roots=policy.import_roots,
+        )
+        if module_path is not None and _module_has_dynamic_test_members(
+            module_path,
+            function_patterns=policy.function_patterns,
+            class_patterns=policy.class_patterns,
+        ):
+            return True
+    return False
+
+
 def _module_has_dynamic_test_members(
     path: Path,
     *,
@@ -2610,28 +2641,158 @@ def _is_ref(node: ast.AST, refs: frozenset[str]) -> bool:
 
 
 def _is_pytest_dispatch_target(node: ast.AST, refs: frozenset[str]) -> bool:
-    return isinstance(node, ast.Attribute) and node.attr in ("_obj", "obj", "runtest") and _is_ref(node.value, refs)
+    return (
+        isinstance(node, ast.Attribute) and node.attr in ("_obj", "obj", "runtest") and _is_ref(node.value, refs)
+    ) or (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == "__dict__"
+        and _is_ref(node.value.value, refs)
+    )
+
+
+def _pytest_dispatch_setter_arguments(node: ast.AST, refs: frozenset[str]) -> tuple[ast.AST, ast.AST] | None:
+    if not isinstance(node, ast.Call) or not isinstance(node.func, (ast.Name, ast.Attribute)):
+        return None
+    setter_name = node.func.id if isinstance(node.func, ast.Name) else node.func.attr
+    if setter_name == "setattr":
+        return (node.args[0], node.args[1]) if len(node.args) >= 2 else None
+    if setter_name != "__setattr__":
+        return None
+    if isinstance(node.func, ast.Attribute) and _is_ref(node.func.value, refs):
+        return (node.func.value, node.args[0]) if node.args else None
+    return (node.args[0], node.args[1]) if len(node.args) >= 2 else None
+
+
+def _call_shapes_pytest_dispatch(node: ast.AST, refs: frozenset[str]) -> bool:
+    arguments = _pytest_dispatch_setter_arguments(node, refs)
+    if arguments is None:
+        return False
+    target, attribute = arguments
+    return (
+        isinstance(attribute, ast.Constant) and attribute.value in ("_obj", "obj", "runtest") and _is_ref(target, refs)
+    )
 
 
 def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     aliases = _fixture_pytest_node_aliases(node)
     return any(
         any(_is_pytest_dispatch_target(target, aliases) for target in _assignment_targets(child))
-        or (
-            isinstance(child, ast.Call)
-            and isinstance(child.func, ast.Name)
-            and child.func.id == "setattr"
-            and len(child.args) >= 2
-            and isinstance(child.args[1], ast.Constant)
-            and child.args[1].value in ("_obj", "obj", "runtest")
-            and _is_ref(child.args[0], aliases)
-        )
+        or _call_shapes_pytest_dispatch(child, aliases)
         for child in ast.walk(node)
     )
 
 
 def _module_declares_execution_shaping_fixture(tree: ast.Module) -> bool:
     return any(_fixture_shapes_test_execution(node) for node in _pytest_fixture_definitions(tree))
+
+
+def _selected_fixture_shapes_execution(tree: ast.Module, exported_names: frozenset[str]) -> bool:
+    selected = None if "*" in exported_names else exported_names
+    return any(
+        (selected is None or node.name in selected) and _fixture_shapes_test_execution(node)
+        for node in _pytest_fixture_definitions(tree)
+    )
+
+
+def _forwarded_fixture_import(
+    statement: ast.AST,
+    *,
+    selected: frozenset[str] | None,
+    path: Path,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> tuple[Path, frozenset[str]] | None:
+    if not isinstance(statement, ast.ImportFrom):
+        return None
+    forwarded = frozenset(
+        alias.name for alias in statement.names if selected is None or (alias.asname or alias.name) in selected
+    )
+    module_path = _imported_module_path(
+        statement,
+        path=path,
+        snapshot_root=snapshot_root,
+        import_roots=import_roots,
+    )
+    return (module_path, forwarded) if forwarded and module_path is not None else None
+
+
+def _module_exports_execution_shaping_fixture(
+    path: Path,
+    exported_names: frozenset[str],
+    *,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+    visiting: frozenset[Path],
+) -> bool:
+    if path in visiting:
+        return False
+    try:
+        tree = ast.parse(path.read_bytes())
+    except (OSError, SyntaxError):
+        return True
+    if _module_uses_dynamic_namespace(tree):
+        return True
+    selected = None if "*" in exported_names else exported_names
+    if _selected_fixture_shapes_execution(tree, exported_names):
+        return True
+    forwarded_imports = tuple(
+        forwarded
+        for statement in tree.body
+        if (
+            forwarded := _forwarded_fixture_import(
+                statement,
+                selected=selected,
+                path=path,
+                snapshot_root=snapshot_root,
+                import_roots=import_roots,
+            )
+        )
+        is not None
+    )
+    return any(
+        _module_exports_execution_shaping_fixture(
+            module_path,
+            forwarded,
+            snapshot_root=snapshot_root,
+            import_roots=import_roots,
+            visiting=visiting | {path},
+        )
+        for module_path, forwarded in forwarded_imports
+    )
+
+
+def _module_imports_execution_shaping_fixture(
+    path: Path,
+    tree: ast.Module,
+    *,
+    snapshot_root: Path,
+    import_roots: tuple[Path, ...],
+) -> bool:
+    imported = tuple(
+        resolved
+        for statement in tree.body
+        if (
+            resolved := _forwarded_fixture_import(
+                statement,
+                selected=None,
+                path=path,
+                snapshot_root=snapshot_root,
+                import_roots=import_roots,
+            )
+        )
+        is not None
+    )
+    return any(
+        _module_exports_execution_shaping_fixture(
+            module_path,
+            exported_names,
+            snapshot_root=snapshot_root,
+            import_roots=import_roots,
+            visiting=frozenset({path}),
+        )
+        for module_path, exported_names in imported
+    )
 
 
 def _conftest_hook_names(tree: ast.Module) -> set[str]:
@@ -2653,7 +2814,11 @@ def _conftest_declares_plugins(tree: ast.Module) -> bool:
     )
 
 
-def _repository_pytest_hook_validation(snapshot_root: Path, roots: tuple[str, ...]) -> CandidateReconciliation:
+def _repository_pytest_hook_validation(
+    snapshot_root: Path,
+    roots: tuple[str, ...],
+    import_roots: tuple[Path, ...],
+) -> CandidateReconciliation:
     plugins: list[dict[str, object]] = []
     for path in _loaded_conftest_paths(snapshot_root, roots):
         try:
@@ -2665,6 +2830,12 @@ def _repository_pytest_hook_validation(snapshot_root: Path, roots: tuple[str, ..
             or _module_uses_dynamic_namespace(tree)
             or _module_declares_autouse_fixture(tree)
             or _module_declares_execution_shaping_fixture(tree)
+            or _module_imports_execution_shaping_fixture(
+                path,
+                tree,
+                snapshot_root=snapshot_root,
+                import_roots=import_roots,
+            )
         ):
             return CandidateReconciliation("UNKNOWN", "pytest_plugin_capability_unsupported")
         plugins.append({"origin": "repository", "hooks": sorted(_conftest_hook_names(tree)), "path": str(path)})
@@ -2733,6 +2904,20 @@ def _has_unsupported_imported_test_base(
     )
 
 
+def _imported_test_rejection_reason(
+    paths: tuple[Path, ...], *, snapshot_root: Path, policy: _PytestDiscoveryPolicy
+) -> str:
+    if _has_unsupported_imported_test_base(
+        paths,
+        snapshot_root=snapshot_root,
+        import_roots=policy.import_roots,
+    ):
+        return "imported_test_base_unsupported"
+    if any(_module_imports_dynamic_test_export(path, snapshot_root=snapshot_root, policy=policy) for path in paths):
+        return "dynamic_imported_test_export_unsupported"
+    return ""
+
+
 def _pytest_candidate_rejection_reason(
     snapshot_root: Path,
     candidates: set[str],
@@ -2742,12 +2927,9 @@ def _pytest_candidate_rejection_reason(
     paths = tuple(snapshot_root / candidate for candidate in candidates)
     if any(_module_uses_wildcard_import(path) for path in paths):
         return "wildcard_import_unsupported"
-    if _has_unsupported_imported_test_base(
-        paths,
-        snapshot_root=snapshot_root,
-        import_roots=policy.import_roots,
-    ):
-        return "imported_test_base_unsupported"
+    imported_reason = _imported_test_rejection_reason(paths, snapshot_root=snapshot_root, policy=policy)
+    if imported_reason:
+        return imported_reason
     if any(
         _module_has_dynamic_test_members(
             path,
@@ -2811,7 +2993,7 @@ def plan_complete_pytest_suite(
     runtime_roots = () if project_runtime_root is None else (project_runtime_root / "site-packages",)
     import_roots = tuple(dict.fromkeys((*projected_roots, snapshot_root, *runtime_roots)))
     discovery_policy = _PytestDiscoveryPolicy(function_patterns, class_patterns, import_roots)
-    plugin_validation = _repository_pytest_hook_validation(snapshot_root, roots)
+    plugin_validation = _repository_pytest_hook_validation(snapshot_root, roots, import_roots)
     if plugin_validation.status != "PASS":
         return PytestSuitePlan((), False, "UNKNOWN", plugin_validation.reason)
     selectors = _collect_pytest_selectors(
