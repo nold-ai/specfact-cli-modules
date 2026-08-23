@@ -2605,26 +2605,26 @@ def _fixture_pytest_node_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef) -
         aliases = expanded
 
 
-def _is_pytest_node_reference(node: ast.AST, aliases: frozenset[str]) -> bool:
+def _is_item_ref(node: ast.AST, aliases: frozenset[str]) -> bool:
     return _is_pytest_node(node) or (isinstance(node, ast.Name) and node.id in aliases)
 
 
-def _is_collected_callable_target(node: ast.AST, aliases: frozenset[str]) -> bool:
-    return isinstance(node, ast.Attribute) and node.attr == "obj" and _is_pytest_node_reference(node.value, aliases)
+def _is_pytest_dispatch_target(node: ast.AST, aliases: frozenset[str]) -> bool:
+    return isinstance(node, ast.Attribute) and node.attr in ("obj", "runtest") and _is_item_ref(node.value, aliases)
 
 
 def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     aliases = _fixture_pytest_node_aliases(node)
     return any(
-        any(_is_collected_callable_target(target, aliases) for target in _assignment_targets(child))
+        any(_is_pytest_dispatch_target(target, aliases) for target in _assignment_targets(child))
         or (
             isinstance(child, ast.Call)
             and isinstance(child.func, ast.Name)
             and child.func.id == "setattr"
             and len(child.args) >= 2
             and isinstance(child.args[1], ast.Constant)
-            and child.args[1].value == "obj"
-            and _is_pytest_node_reference(child.args[0], aliases)
+            and child.args[1].value in ("obj", "runtest")
+            and _is_item_ref(child.args[0], aliases)
         )
         for child in ast.walk(node)
     )

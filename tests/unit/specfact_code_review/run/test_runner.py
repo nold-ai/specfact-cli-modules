@@ -3027,6 +3027,25 @@ def test_complete_suite_rejects_aliased_requested_execution_shaping_fixture(tmp_
     assert plan.reason == "pytest_plugin_capability_unsupported"
 
 
+def test_complete_suite_rejects_requested_fixture_replacing_runtest_dispatch(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n@pytest.fixture\ndef bypass(request):\n    request.node.runtest = lambda: None\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
 def test_complete_suite_rejects_unittest_method_dispatch_override(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     test_file = tmp_path / "tests/test_override.py"
