@@ -2161,11 +2161,11 @@ def _control_flow_binding_targets(node: ast.AST) -> tuple[ast.expr, ...]:
 def _module_nonimport_binding_names(tree: ast.Module) -> frozenset[str]:
     nodes = _module_execution_nodes(tree)
     target_names = {
-        target.id
+        _decorator_full_name(target).partition(".")[0]
         for node in nodes
         for binding_target in (*_assignment_targets(node), *_control_flow_binding_targets(node))
         for target in _assignment_target_nodes(binding_target)
-        if isinstance(target, ast.Name)
+        if isinstance(target, (ast.Name, ast.Attribute))
     }
     definition_names = {
         node.name for node in nodes if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
@@ -2605,12 +2605,12 @@ def _fixture_pytest_node_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef) -
         aliases = expanded
 
 
-def _is_item_ref(node: ast.AST, aliases: frozenset[str]) -> bool:
-    return _is_pytest_node(node) or (isinstance(node, ast.Name) and node.id in aliases)
+def _is_ref(node: ast.AST, refs: frozenset[str]) -> bool:
+    return _is_pytest_node(node) or (isinstance(node, ast.Name) and node.id in refs)
 
 
-def _is_pytest_dispatch_target(node: ast.AST, aliases: frozenset[str]) -> bool:
-    return isinstance(node, ast.Attribute) and node.attr in ("obj", "runtest") and _is_item_ref(node.value, aliases)
+def _is_pytest_dispatch_target(node: ast.AST, refs: frozenset[str]) -> bool:
+    return isinstance(node, ast.Attribute) and node.attr in ("_obj", "obj", "runtest") and _is_ref(node.value, refs)
 
 
 def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
@@ -2623,8 +2623,8 @@ def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef)
             and child.func.id == "setattr"
             and len(child.args) >= 2
             and isinstance(child.args[1], ast.Constant)
-            and child.args[1].value in ("obj", "runtest")
-            and _is_item_ref(child.args[0], aliases)
+            and child.args[1].value in ("_obj", "obj", "runtest")
+            and _is_ref(child.args[0], aliases)
         )
         for child in ast.walk(node)
     )

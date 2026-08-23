@@ -2850,6 +2850,32 @@ def test_complete_suite_rejects_rebound_pytest_decorator_alias(tmp_path: Path) -
     assert plan.reason == "test_execution_decorator_unsupported"
 
 
+def test_complete_suite_rejects_mutated_pytest_mark_attribute(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_decorated.py"
+    test_file.parent.mkdir()
+    test_file.write_text(
+        "import pytest\n\n"
+        "class FakeMark:\n"
+        "    def __getattr__(self, name):\n"
+        "        del name\n"
+        "        def replace(function):\n"
+        "            del function\n"
+        "            return lambda: None\n"
+        "        return replace\n\n"
+        "pytest.mark = FakeMark()\n\n"
+        "@pytest.mark.bodyless\n"
+        "def test_failure():\n"
+        "    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "test_execution_decorator_unsupported"
+
+
 def test_complete_suite_accepts_stable_pytest_decorator_alias(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     test_file = tmp_path / "tests/test_decorated.py"
@@ -3033,6 +3059,25 @@ def test_complete_suite_rejects_requested_fixture_replacing_runtest_dispatch(tmp
     tests_root.mkdir()
     (tests_root / "conftest.py").write_text(
         "import pytest\n\n@pytest.fixture\ndef bypass(request):\n    request.node.runtest = lambda: None\n",
+        encoding="utf-8",
+    )
+    (tests_root / "test_failure.py").write_text(
+        "def test_failure(bypass):\n    del bypass\n    assert False\n",
+        encoding="utf-8",
+    )
+
+    plan = runner_api.plan_complete_pytest_suite(tmp_path, _suite_policy(), changed_paths=("src/app.py",))
+
+    assert plan.status == "UNKNOWN"
+    assert plan.reason == "pytest_plugin_capability_unsupported"
+
+
+def test_complete_suite_rejects_requested_fixture_replacing_cached_callable(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    (tests_root / "conftest.py").write_text(
+        "import pytest\n\n@pytest.fixture\ndef bypass(request):\n    request.node._obj = lambda **kwargs: None\n",
         encoding="utf-8",
     )
     (tests_root / "test_failure.py").write_text(
