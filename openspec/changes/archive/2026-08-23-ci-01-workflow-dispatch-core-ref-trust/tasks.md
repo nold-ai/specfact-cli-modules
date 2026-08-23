@@ -28,6 +28,6 @@
 - [x] 4.2 Record passing and quality evidence in `TDD_EVIDENCE.md`.
 - [x] 4.3 Run fresh SpecFact changed-scope and final review evidence; resolve all
   findings or document an approved exception.
-- [ ] 4.4 Open a narrowly scoped PR to `dev` without public alert details.
-- [ ] 4.5 After merge, archive with
+- [x] 4.4 Open a narrowly scoped PR to `dev` without public alert details.
+- [x] 4.5 After merge, archive with
   `openspec archive ci-01-workflow-dispatch-core-ref-trust`.

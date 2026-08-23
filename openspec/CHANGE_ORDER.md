@@ -7,7 +7,7 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 16 | [`openspec/changes/`](changes/) |
+| **Active** | 15 | [`openspec/changes/`](changes/) |
 | **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
 
@@ -62,15 +62,15 @@ The first signed C14 module release advertises only the exact core 0.55.1 identi
 
 Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
 
-## Immediate Release-Safety Track
+## Recently Archived Release-Safety Work
 
-This bounded corrective change is independent of C14 and must merge to `dev`
-before the C14 release promotion proceeds. Alert-specific evidence remains in
-private GitHub Security records under the repository security policy.
+This bounded corrective change is independent of C14 and merged to `dev` before
+the C14 release promotion. Alert-specific evidence remains in private GitHub
+Security records under the repository security policy.
 
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
-| 1 | `ci-01-workflow-dispatch-core-ref-trust` | private security tracking | Preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
+| 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
 ## Active Tracks
 
