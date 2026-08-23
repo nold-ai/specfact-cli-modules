@@ -54,4 +54,8 @@ literal `main` and `dev` manual checkout paths.
   was rewritten to use only the standard library while retaining both contract
   assertions; the 35-test affected suite passed after that remediation.
 - The changed-scope SpecFact review rerun under exact core 0.55.1 passed with
-  zero findings, warnings, or advisories. CI remains pending.
+  zero findings, warnings, or advisories.
+- PR #422 passed CodeQL for Actions and Python, Socket security checks,
+  CodeRabbit, Docs Review, Requirements evidence, signature verification, the
+  exact-core Python 3.11-3.13 matrix, and all three quality jobs before merge.
+- The post-merge `dev` CodeQL analysis passed at merge commit `66da9417`.
