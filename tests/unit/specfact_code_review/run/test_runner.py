@@ -665,6 +665,14 @@ def test_capsule_empty_policies_redirect_default_pytest_and_coverage_outputs() -
             shutil.rmtree(root, ignore_errors=True)
 
 
+def test_capsule_scratch_layout_includes_projected_pytest_and_coverage_roots(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    _request_root, _output_root, scratch_root, _control_root = runner_api._prepare_capsule_process_roots(tmp_path)
+
+    assert (scratch_root / "pytest").is_dir()
+    assert (scratch_root / "coverage").is_dir()
+
+
 def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshots(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:

@@ -1037,15 +1037,25 @@ def _capsule_process_request(request_path: Path) -> None:
     os.replace(temporary, destination)
 
 
+def _prepare_capsule_process_roots(process_root: Path) -> tuple[Path, Path, Path, Path]:
+    roots = (
+        process_root / "request",
+        process_root / "output",
+        process_root / "temporary",
+        process_root / "control",
+    )
+    for root in roots:
+        root.mkdir()
+    for projected_root in ("coverage", "pytest"):
+        (roots[2] / projected_root).mkdir()
+    return roots
+
+
 def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix=f"specfact-{request.member}-") as temporary_directory:
-        process_root = Path(temporary_directory)
-        request_root = process_root / "request"
-        output_root = process_root / "output"
-        scratch_root = process_root / "temporary"
-        control_root = process_root / "control"
-        for root in (request_root, output_root, scratch_root, control_root):
-            root.mkdir()
+        request_root, output_root, scratch_root, control_root = _prepare_capsule_process_roots(
+            Path(temporary_directory)
+        )
         resolved_snapshot = request.snapshot_root.resolve()
         relative_paths = tuple(path.resolve().relative_to(resolved_snapshot).as_posix() for path in request.files)
         request_path = request_root / "request.json"
