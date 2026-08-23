@@ -2531,13 +2531,52 @@ def _is_pytest_node(node: ast.AST) -> bool:
     return isinstance(node, ast.Attribute) and node.attr == "node"
 
 
-def _is_collected_callable_target(node: ast.AST) -> bool:
-    return isinstance(node, ast.Attribute) and node.attr == "obj" and _is_pytest_node(node.value)
+def _assignment_name_targets(node: ast.AST) -> frozenset[str]:
+    return frozenset(
+        target.id
+        for assignment_target in _assignment_targets(node)
+        for target in _assignment_target_nodes(assignment_target)
+        if isinstance(target, ast.Name)
+    )
+
+
+def _is_pytest_node_alias_assignment(
+    assignment: ast.Assign | ast.AnnAssign | ast.NamedExpr, aliases: frozenset[str]
+) -> bool:
+    value = assignment.value
+    return value is not None and (_is_pytest_node(value) or (isinstance(value, ast.Name) and value.id in aliases))
+
+
+def _fixture_pytest_node_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
+    aliases = frozenset[str]()
+    assignments = tuple(
+        child for child in ast.walk(node) if isinstance(child, (ast.Assign, ast.AnnAssign, ast.NamedExpr))
+    )
+    while True:
+        expanded = aliases.union(
+            *(
+                _assignment_name_targets(assignment)
+                for assignment in assignments
+                if _is_pytest_node_alias_assignment(assignment, aliases)
+            )
+        )
+        if expanded == aliases:
+            return aliases
+        aliases = expanded
+
+
+def _is_pytest_node_reference(node: ast.AST, aliases: frozenset[str]) -> bool:
+    return _is_pytest_node(node) or (isinstance(node, ast.Name) and node.id in aliases)
+
+
+def _is_collected_callable_target(node: ast.AST, aliases: frozenset[str]) -> bool:
+    return isinstance(node, ast.Attribute) and node.attr == "obj" and _is_pytest_node_reference(node.value, aliases)
 
 
 def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    aliases = _fixture_pytest_node_aliases(node)
     return any(
-        any(_is_collected_callable_target(target) for target in _assignment_targets(child))
+        any(_is_collected_callable_target(target, aliases) for target in _assignment_targets(child))
         or (
             isinstance(child, ast.Call)
             and isinstance(child.func, ast.Name)
@@ -2545,7 +2584,7 @@ def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef)
             and len(child.args) >= 2
             and isinstance(child.args[1], ast.Constant)
             and child.args[1].value == "obj"
-            and _is_pytest_node(child.args[0])
+            and _is_pytest_node_reference(child.args[0], aliases)
         )
         for child in ast.walk(node)
     )
@@ -4296,7 +4335,11 @@ def _coverage_threshold_from_policy_argv(policy_argv: tuple[str, ...]) -> float:
 def _complete_pytest_coverage_roots(
     test_roots: tuple[Path, ...], selected_test_files: set[Path], *, snapshot_root: Path
 ) -> tuple[Path, ...]:
-    selected_support_roots = {path.parent for path in selected_test_files if path.parent != snapshot_root}
+    selected_support_roots = {
+        path.parent
+        for path in selected_test_files
+        if path.parent != snapshot_root and _is_test_file(path.relative_to(snapshot_root))
+    }
     return tuple(sorted({root for root in test_roots if root != snapshot_root} | selected_support_roots))
 
 
