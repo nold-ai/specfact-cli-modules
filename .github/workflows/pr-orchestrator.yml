@@ -215,7 +215,6 @@ jobs:
     if: needs.changes.outputs.code_changed == 'true' && needs.changes.outputs.skip_tests_dev_to_main != 'true'
     permissions:
       contents: read
-      packages: read
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -282,12 +281,10 @@ jobs:
         env:
           MATRIX_PYTHON: ${{ matrix.python-version }}
           PYTHONPATH: ${{ github.workspace }}/packages/specfact-code-review/src
-          REGISTRY_ACTOR: ${{ github.actor }}
-          REGISTRY_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           . .exact-core-venv/bin/activate
-          sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN "$PWD/.exact-core-venv/bin/python" - <<'PY'
+          sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH "$PWD/.exact-core-venv/bin/python" - <<'PY'
           import gzip
           import hashlib
           import json
@@ -315,8 +312,6 @@ jobs:
           abi = "cp" + os.environ["MATRIX_PYTHON"].replace(".", "")
           environment = next(item for item in lock["environments"] if item["python_abi"] == abi)
           environment_id = environment["environment_id"]
-          registry_actor = os.environ["REGISTRY_ACTOR"]
-          registry_token = os.environ["REGISTRY_TOKEN"]
           runtime_root = Path(tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp"))
           storage_a = runtime_root / "storage-a"
           storage_b = runtime_root / "storage-b"
@@ -407,7 +402,6 @@ jobs:
               environment["oci"],
               cache_root=cache_a,
               simulate_cache_hit=False,
-              credential=f"{registry_actor}:{registry_token}",
           )
           assert acquisition.status == "PASS", acquisition.reason
           assert acquisition.source == "signed_registry"
@@ -420,7 +414,6 @@ jobs:
               environment_id=environment_id,
               storage_root=runtime_root / "storage-a",
               empty_cache=True,
-              credential=f"{registry_actor}:{registry_token}",
           )
           assert first.status == "PASS", first.reason
           assert set(first.installed_distributions) == set(first.locked_distributions)

@@ -81,21 +81,27 @@ def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
     assert "FALLBACK_REF" not in exact_job
 
 
+def test_exact_core_smoke_does_not_expose_registry_token_to_candidate_python() -> None:
+    exact_job = _job_text(_workflow_text(), "exact-core-schema-compatibility")
+    capsule_step = exact_job[exact_job.index("Run signed analyzer capsule") :]
+
+    assert "packages: read" not in exact_job
+    assert "REGISTRY_TOKEN" not in capsule_step
+    assert "REGISTRY_ACTOR" not in capsule_step
+    assert "github.token" not in capsule_step
+    assert "credential=" not in capsule_step
+    assert "sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH" in capsule_step
+
+
 def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     workflow = _workflow_text()
     exact_job = _job_text(workflow, "exact-core-schema-compatibility")
     capsule_step_name = "Run signed analyzer capsule cache-miss, cache-hit, and empty Bubblewrap smoke"
     capsule_step_offset = exact_job.index(capsule_step_name)
     capsule_step = exact_job[capsule_step_offset:]
-    elevated_python = (
-        "sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH,REGISTRY_ACTOR,REGISTRY_TOKEN "
-        '"$PWD/.exact-core-venv/bin/python" -'
-    )
+    elevated_python = 'sudo --preserve-env=MATRIX_PYTHON,PYTHONPATH "$PWD/.exact-core-venv/bin/python" -'
     required_fragments = (
-        "packages: read",
         capsule_step_name,
-        "REGISTRY_ACTOR: ${{ github.actor }}",
-        "REGISTRY_TOKEN: ${{ github.token }}",
         "import tempfile",
         'tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp")',
         "C14_MANIFEST_DIAGNOSTIC",
@@ -107,7 +113,6 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
         "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
         "c14-manifest-${{ matrix.python-version }}.json.gz",
         "pr-range-v1-toolchain-lock.json",
-        'credential=f"{registry_actor}:{registry_token}"',
         "empty_cache=True",
         "empty_cache=False",
         'storage_root=runtime_root / "storage-a"',
