@@ -2652,6 +2652,72 @@ def _fixture_pytest_node_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef) -
         aliases = expanded
 
 
+def _fixture_pytest_request_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
+    parameters = (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+    aliases = frozenset(parameter.arg for parameter in parameters if parameter.arg == "request")
+    assignments = tuple(
+        child for child in ast.walk(node) if isinstance(child, (ast.Assign, ast.AnnAssign, ast.NamedExpr))
+    )
+    while True:
+        expanded = aliases.union(
+            *(
+                _assignment_name_targets(assignment)
+                for assignment in assignments
+                if isinstance(assignment.value, ast.Name) and assignment.value.id in aliases
+            )
+        )
+        if expanded == aliases:
+            return aliases
+        aliases = expanded
+
+
+def _is_pytest_config(node: ast.AST, request_aliases: frozenset[str]) -> bool:
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == "config"
+        and isinstance(node.value, ast.Name)
+        and node.value.id in request_aliases
+    )
+
+
+def _fixture_pytest_config_aliases(
+    node: ast.FunctionDef | ast.AsyncFunctionDef, request_aliases: frozenset[str]
+) -> frozenset[str]:
+    aliases = frozenset[str]()
+    assignments = tuple(
+        child for child in ast.walk(node) if isinstance(child, (ast.Assign, ast.AnnAssign, ast.NamedExpr))
+    )
+    while True:
+        expanded = aliases.union(
+            *(
+                _assignment_name_targets(assignment)
+                for assignment in assignments
+                if assignment.value is not None
+                and (
+                    _is_pytest_config(assignment.value, request_aliases)
+                    or (isinstance(assignment.value, ast.Name) and assignment.value.id in aliases)
+                )
+            )
+        )
+        if expanded == aliases:
+            return aliases
+        aliases = expanded
+
+
+def _fixture_accesses_pytest_plugin_manager(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    request_aliases = _fixture_pytest_request_aliases(node)
+    config_aliases = _fixture_pytest_config_aliases(node, request_aliases)
+    return any(
+        isinstance(child, ast.Attribute)
+        and child.attr == "pluginmanager"
+        and (
+            _is_pytest_config(child.value, request_aliases)
+            or (isinstance(child.value, ast.Name) and child.value.id in config_aliases)
+        )
+        for child in ast.walk(node)
+    )
+
+
 def _is_ref(node: ast.AST, refs: frozenset[str]) -> bool:
     return _is_pytest_node(node) or (isinstance(node, ast.Name) and node.id in refs)
 
@@ -2733,7 +2799,7 @@ def _call_exposes_pytest_node(node: ast.AST, refs: frozenset[str]) -> bool:
 
 def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     aliases = _fixture_pytest_node_aliases(node)
-    return any(
+    return _fixture_accesses_pytest_plugin_manager(node) or any(
         any(_is_pytest_dispatch_target(target, aliases) for target in _assignment_targets(child))
         or _call_shapes_pytest_dispatch(child, aliases)
         or _assignment_exposes_pytest_node_namespace(child, aliases)
