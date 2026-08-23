@@ -2663,7 +2663,7 @@ def _fixture_pytest_request_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef
             *(
                 _assignment_name_targets(assignment)
                 for assignment in assignments
-                if _is_pytest_request_reference(assignment.value, aliases)
+                if _expression_uses_pytest_request(assignment.value, aliases)
             )
         )
         if expanded == aliases:
@@ -2675,6 +2675,10 @@ def _is_pytest_request_reference(node: ast.AST | None, aliases: frozenset[str]) 
     while isinstance(node, ast.Attribute):
         node = node.value
     return isinstance(node, ast.Name) and node.id in aliases
+
+
+def _expression_uses_pytest_request(node: ast.AST | None, aliases: frozenset[str]) -> bool:
+    return node is not None and any(_is_pytest_request_reference(child, aliases) for child in ast.walk(node))
 
 
 def _is_pytest_config(node: ast.AST, request_aliases: frozenset[str]) -> bool:
@@ -2720,6 +2724,13 @@ def _fixture_accesses_pytest_plugin_manager(node: ast.FunctionDef | ast.AsyncFun
         )
         for child in ast.walk(node)
     )
+
+
+def _call_exposes_pytest_request(node: ast.AST, aliases: frozenset[str]) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    expressions = (*node.args, *(keyword.value for keyword in node.keywords))
+    return any(_expression_uses_pytest_request(expression, aliases) for expression in expressions)
 
 
 def _is_ref(node: ast.AST, refs: frozenset[str]) -> bool:
@@ -2802,12 +2813,14 @@ def _call_exposes_pytest_node(node: ast.AST, refs: frozenset[str]) -> bool:
 
 
 def _fixture_shapes_test_execution(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-    aliases = _fixture_pytest_node_aliases(node)
+    node_aliases = _fixture_pytest_node_aliases(node)
+    request_aliases = _fixture_pytest_request_aliases(node)
     return _fixture_accesses_pytest_plugin_manager(node) or any(
-        any(_is_pytest_dispatch_target(target, aliases) for target in _assignment_targets(child))
-        or _call_shapes_pytest_dispatch(child, aliases)
-        or _assignment_exposes_pytest_node_namespace(child, aliases)
-        or _call_exposes_pytest_node(child, aliases)
+        any(_is_pytest_dispatch_target(target, node_aliases) for target in _assignment_targets(child))
+        or _call_shapes_pytest_dispatch(child, node_aliases)
+        or _assignment_exposes_pytest_node_namespace(child, node_aliases)
+        or _call_exposes_pytest_node(child, node_aliases)
+        or _call_exposes_pytest_request(child, request_aliases)
         for child in ast.walk(node)
     )
 
