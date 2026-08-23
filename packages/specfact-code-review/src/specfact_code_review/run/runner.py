@@ -2683,7 +2683,8 @@ def _is_pytest_config(node: ast.AST, request_aliases: frozenset[str]) -> bool:
 def _fixture_pytest_config_aliases(
     node: ast.FunctionDef | ast.AsyncFunctionDef, request_aliases: frozenset[str]
 ) -> frozenset[str]:
-    aliases = frozenset[str]()
+    parameters = (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+    aliases = frozenset(parameter.arg for parameter in parameters if parameter.arg == "pytestconfig")
     assignments = tuple(
         child for child in ast.walk(node) if isinstance(child, (ast.Assign, ast.AnnAssign, ast.NamedExpr))
     )
