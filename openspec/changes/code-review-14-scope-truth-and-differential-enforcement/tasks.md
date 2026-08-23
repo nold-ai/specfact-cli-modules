@@ -244,3 +244,4 @@ Explicitly forbidden:
 - [x] 5.6 Close post-PR review findings by binding catalog activation to the frozen checkpoint/profile and authenticated package-manifest authorities, projecting default pytest/Coverage writes beneath `/opt/specfact/tmp`, and reconciling signature evidence with the CI signing commit.
 - [x] 5.7 Prove and create the projected pytest/Coverage scratch subdirectories before capsule launch so the redirected defaults have existing writable parents.
 - [x] 5.8 Fail closed when authenticated package-manifest bytes are not valid UTF-8, with a focused regression proving activation returns package-binding `UNKNOWN`.
+- [x] 5.9 Preserve complete head-side pytest execution for deletion-only selected Python ranges by deriving applicability from the immutable selected scope while continuing to pass analyzers only files present in each snapshot; retain empty-range and stub-only `NOT_APPLICABLE` behavior.

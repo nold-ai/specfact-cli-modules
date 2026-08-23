@@ -1147,7 +1147,11 @@ def _dispatch_capsule_member(
     applicability: SnapshotInputClassification,
     sealed_bugs_policy: bool,
 ) -> dict[str, object]:
-    if not request.files:
+    if not request.files and not (
+        request.member == "targeted-pytest-coverage"
+        and request.complete_pytest_inventory
+        and applicability.member(request.member).status != "NOT_APPLICABLE"
+    ):
         return _not_applicable_member("empty_snapshot_input")
     if applicability.member(request.member).status == "NOT_APPLICABLE":
         return _not_applicable_member("member_input_not_applicable")
@@ -1167,6 +1171,7 @@ def _run_capsule_snapshot(
     config_roots: tuple[Path, ...] = (),
     member_argv: dict[str, tuple[str, ...]] | None = None,
     project_runtime_root: Path | None = None,
+    scope_paths: tuple[str, ...] | None = None,
 ) -> CapsuleSnapshotResult:
     evidence: dict[str, dict[str, object]] = {}
     findings_by_member: dict[str, list[ReviewFinding]] = {}
@@ -1176,7 +1181,7 @@ def _run_capsule_snapshot(
         path.relative_to(resolved_snapshot).as_posix() if path.is_relative_to(resolved_snapshot) else path.as_posix()
         for path in resolved_inputs
     )
-    applicability = classify_snapshot_input_kinds(relative_inputs)
+    applicability = classify_snapshot_input_kinds(relative_inputs if scope_paths is None else scope_paths)
     for member in default_pr_range_profile().all_ids:
         sealed_bugs_policy = member_argv is not None and "semgrep-bugs" in member_argv
         raw = _dispatch_capsule_member(
@@ -5626,6 +5631,8 @@ def _run_bound_snapshot_pair(
     project_runtime_root: Path | None,
     base: _BoundSnapshotRun,
     head: _BoundSnapshotRun,
+    *,
+    scope_paths: tuple[str, ...],
 ) -> tuple[CapsuleSnapshotResult, CapsuleSnapshotResult]:
     with ExitStack() as cleanup:
         for root in (*base.bindings.cleanup_roots, *head.bindings.cleanup_roots):
@@ -5639,6 +5646,7 @@ def _run_bound_snapshot_pair(
                 config_roots=side.bindings.config_roots,
                 member_argv=side.bindings.member_argv,
                 project_runtime_root=project_runtime_root,
+                scope_paths=scope_paths,
             )
             for side in (base, head)
         )
@@ -5715,6 +5723,7 @@ def run_immutable_scope_review(
         cast(Path | None, getattr(project_runtime, "root", None)),
         _BoundSnapshotRun(base_snapshot.root, base_files, base_bindings),
         _BoundSnapshotRun(head_snapshot.root, head_files, head_bindings),
+        scope_paths=cast(tuple[str, ...], resolution.selected_paths),
     )
     combined, classified_findings = _classify_range_findings(resolution, base, head)
     return _capsule_report(

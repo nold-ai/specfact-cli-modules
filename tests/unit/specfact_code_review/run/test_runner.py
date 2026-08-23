@@ -549,6 +549,34 @@ def test_empty_capsule_snapshot_marks_every_member_not_applicable(monkeypatch: M
     assert {item["evidence_outcome"] for item in result.evidence.values()} == {"NOT_APPLICABLE"}
 
 
+def test_deleted_python_head_runs_complete_pytest_inventory(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    launched: list[str] = []
+
+    def execute(request: Any) -> dict[str, object]:
+        launched.append(request.member)
+        return {
+            "execution_state": "ran",
+            "evidence_outcome": "PASS",
+            "findings": [],
+            "diagnostic": "",
+        }
+
+    monkeypatch.setattr(runner_api, "_execute_capsule_member", execute)
+
+    result = runner_api._run_capsule_snapshot(
+        SimpleNamespace(identity="sha256:" + "a" * 64),
+        snapshot_root=Path("/snapshot"),
+        files=[],
+        options=runner_api.ReviewOptions(),
+        member_argv={"targeted-pytest-coverage": ("--", "tests/test_app.py::test_app")},
+        scope_paths=("src/deleted.py",),
+    )
+
+    assert launched == ["targeted-pytest-coverage"]
+    assert result.evidence["targeted-pytest-coverage"]["evidence_outcome"] == "PASS"
+
+
 def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     policy_root = tmp_path / "policy"

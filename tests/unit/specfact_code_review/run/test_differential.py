@@ -713,9 +713,17 @@ def test_consistent_catalog_and_matrix_drift_is_unknown_against_independent_bind
 def test_invalid_utf8_package_manifest_makes_catalog_binding_unknown(
     differential_api: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def invalid_utf8(*_args: object, **_kwargs: object) -> str:
-        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+    read_text = differential_api.Path.read_text
+
+    def invalid_utf8(path: Any, *args: object, **kwargs: object) -> str:
+        if path.name == "module-package.yaml":
+            raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+        return read_text(path, *args, **kwargs)
 
     monkeypatch.setattr(differential_api.Path, "read_text", invalid_utf8)
 
-    assert differential_api._authenticated_package_catalog_digest() is None
+    result = differential_api.activate_packaged_suppression_catalog()
+
+    assert result.status == "UNKNOWN"
+    assert result.profile_activated is False
+    assert result.reason == "suppression_catalog_package_binding_unavailable"
