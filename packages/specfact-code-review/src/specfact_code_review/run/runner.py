@@ -2663,7 +2663,7 @@ def _fixture_pytest_request_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef
             *(
                 _assignment_name_targets(assignment)
                 for assignment in assignments
-                if isinstance(assignment.value, ast.Name) and assignment.value.id in aliases
+                if _is_pytest_request_reference(assignment.value, aliases)
             )
         )
         if expanded == aliases:
@@ -2671,13 +2671,16 @@ def _fixture_pytest_request_aliases(node: ast.FunctionDef | ast.AsyncFunctionDef
         aliases = expanded
 
 
+def _is_pytest_request_reference(node: ast.AST | None, aliases: frozenset[str]) -> bool:
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    return isinstance(node, ast.Name) and node.id in aliases
+
+
 def _is_pytest_config(node: ast.AST, request_aliases: frozenset[str]) -> bool:
     if not isinstance(node, ast.Attribute) or node.attr != "config":
         return False
-    owner = node.value
-    while isinstance(owner, ast.Attribute):
-        owner = owner.value
-    return isinstance(owner, ast.Name) and owner.id in request_aliases
+    return _is_pytest_request_reference(node.value, request_aliases)
 
 
 def _fixture_pytest_config_aliases(
