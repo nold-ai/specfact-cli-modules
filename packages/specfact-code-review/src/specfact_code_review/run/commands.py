@@ -1101,7 +1101,10 @@ def _is_complete_plan(plan: object, mapping_digest: object, plan_digest: object 
 
 def _requirements_plan_digest(mapping_digest: str, cases: list[dict[str, Any]]) -> str:
     """Use the Requirements producer's canonical plan identity algorithm."""
-    lifecycle = importlib.import_module("specfact_requirements.requirements.lifecycle")
+    try:
+        lifecycle = importlib.import_module("specfact_requirements.requirements.lifecycle")
+    except ImportError as exc:
+        raise RunCommandError("Requirements bundle is unavailable; install the declared module dependency.") from exc
     plan = lifecycle.build_plan(mapping_digest, cases)
     return str(plan["plan_digest"])
 

@@ -897,3 +897,43 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **WHEN** the report finalizes
 - **THEN** analyzer coverage identifies the gap
 - **AND** no all-passed summary is emitted.
+
+#### Scenario: Projected policy paths match their mounted roots
+
+- **GIVEN** an immutable index or range run generates one or more analyzer policy projections
+- **WHEN** the controller binds those projections into the sandbox invocation
+- **THEN** every projected argument uses the same zero-based config-root index assigned by the sandbox mount manifest
+- **AND** Semgrep policy bundles use that same index contract
+- **AND** a missing or mismatched mounted policy path yields UNKNOWN before analyzer evidence can pass.
+
+#### Scenario: Index scope governs transitive analyzer policy inputs
+
+- **GIVEN** the staged index changes a Ruff extend node or basedpyright referenced policy file without changing its primary configuration
+- **WHEN** index applicability is resolved
+- **THEN** the target policy graphs are resolved from the complete captured index tree
+- **AND** every transitive closure/reference path is included in governed selection
+- **AND** the policy-only change cannot become NOT_APPLICABLE.
+
+#### Scenario: Suppression manifests contain only Python source blobs
+
+- **GIVEN** an immutable snapshot contains Python sources and tracked non-Python or binary blobs
+- **WHEN** suppression-directive continuity is classified
+- **THEN** only `.py` and `.pyi` source blobs are tokenized and bound into the suppression manifest
+- **AND** unrelated archive, registry, documentation, or binary blobs cannot make suppression evidence UNKNOWN
+- **AND** a Python tokenization failure remains fail-closed UNKNOWN.
+
+#### Scenario: Capsule composition is isolated per invocation
+
+- **GIVEN** two immutable review invocations share the controller capsule cache and use the same locked analyzer environment
+- **WHEN** each composes its verified candidate module payload
+- **THEN** each invocation receives an immutable payload-identity-specific composed root
+- **AND** neither invocation deletes, replaces, or executes the other invocation's candidate payload
+- **AND** publication collision or identity drift yields UNKNOWN.
+
+#### Scenario: Semgrep omitted skipped-path evidence means no skipped paths
+
+- **GIVEN** pinned Semgrep emits valid JSON with `paths.scanned` and omits the optional `paths.skipped` member
+- **WHEN** exact eligible-path reconciliation runs
+- **THEN** the omission is interpreted as an empty skipped-path collection
+- **AND** malformed non-list skipped evidence remains UNKNOWN
+- **AND** scanned plus skipped inputs must still reconcile exactly to the eligible manifest.

@@ -465,6 +465,16 @@ def test_requirements_evidence_context_rejects_tampered_plan_digest(tmp_path: Pa
         run_commands._requirements_evidence_context(proof_path)
 
 
+def test_requirements_plan_digest_reports_missing_declared_bundle(monkeypatch: Any) -> None:
+    def missing_bundle(_name: str) -> Any:
+        raise ModuleNotFoundError("No module named 'specfact_requirements'", name="specfact_requirements")
+
+    monkeypatch.setattr(run_commands.importlib, "import_module", missing_bundle)
+
+    with pytest.raises(run_commands.RunCommandError, match="Requirements bundle is unavailable"):
+        run_commands._requirements_plan_digest("sha256:" + "a" * 64, [{"case_id": "REQ-001"}])
+
+
 def test_requirements_evidence_context_rejects_passing_proof_without_basis(tmp_path: Path) -> None:
     proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
     proof = json.loads(proof_path.read_text(encoding="utf-8"))

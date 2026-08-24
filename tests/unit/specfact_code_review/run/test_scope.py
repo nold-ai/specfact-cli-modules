@@ -737,6 +737,44 @@ def test_range_change_to_transitive_ruff_config_is_governed(scope_api: Any, git_
     assert result.selected_paths == ("config/base.toml",)
 
 
+@pytest.mark.parametrize(
+    ("primary_path", "primary_content", "referenced_path", "initial_content", "updated_content"),
+    [
+        ("ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "line-length=80\n", "line-length=88\n"),
+        (
+            "pyrightconfig.json",
+            '{"extends":"config/base.json"}\n',
+            "config/base.json",
+            '{"typeCheckingMode":"basic"}\n',
+            '{"typeCheckingMode":"strict"}\n',
+        ),
+    ],
+    ids=["ruff-extend", "basedpyright-reference"],
+)
+def test_index_change_to_transitive_policy_file_is_governed(
+    scope_api: Any,
+    git_repo: Path,
+    primary_path: str,
+    primary_content: str,
+    referenced_path: str,
+    initial_content: str,
+    updated_content: str,
+) -> None:
+    primary = git_repo / primary_path
+    referenced = git_repo / referenced_path
+    referenced.parent.mkdir(parents=True, exist_ok=True)
+    primary.write_text(primary_content, encoding="utf-8")
+    referenced.write_text(initial_content, encoding="utf-8")
+    _commit(git_repo, "add analyzer policy graph")
+    referenced.write_text(updated_content, encoding="utf-8")
+    _git(git_repo, "add", referenced_path)
+
+    result = scope_api.resolve_scope(scope_api.ScopeRequest(repository=git_repo, scope="index"))
+
+    assert result.status == "PASS"
+    assert result.selected_paths == (referenced_path,)
+
+
 @pytest.mark.parametrize("extend", ["../escape.toml", "missing.toml", "ruff.toml"], ids=["escape", "missing", "cycle"])
 def test_ruff_extend_rejects_escape_cycle_or_missing_input(scope_api: Any, tmp_path: Path, extend: str) -> None:
     (tmp_path / "ruff.toml").write_text(f"extend='{extend}'\n", encoding="utf-8")

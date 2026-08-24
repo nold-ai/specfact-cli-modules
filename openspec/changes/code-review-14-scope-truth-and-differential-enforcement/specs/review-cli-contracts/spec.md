@@ -38,6 +38,7 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **THEN** schema_version, assurance_status, scope_evidence, analyzer_coverage, overall_verdict, and ci_exit_code are preserved unchanged
 - **AND** Requirements attachment adds only the validated requirements context and does not hard-code schema 1.5
 - **AND** enrichment may add its own evidence but cannot downgrade the report to a legacy schema or recompute assurance.
+- **AND** when the declared Requirements bundle is unavailable, attachment fails with the governed run-command validation error rather than an unhandled import traceback.
 
 #### Scenario: Signed consumer matrix covers every authoritative status
 

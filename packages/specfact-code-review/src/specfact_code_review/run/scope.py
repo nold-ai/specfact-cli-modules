@@ -497,6 +497,7 @@ class _IndexResolutionContext:
     metadata: dict[str, IndexMetadata]
     index_tree: str
     manifest: dict[str, InputIdentity]
+    policy_paths: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -2491,6 +2492,7 @@ def _index_unknown(
         index_metadata=metadata,
         index_tree=index_tree,
         selection_tree=index_tree,
+        policy_paths=context.policy_paths if context is not None else (),
     )
 
 
@@ -2532,17 +2534,48 @@ def _materialized_index_context_from_capture(
     head_commit = _resolve_commit(repository, "HEAD")
     base_snapshot = _materialize_commit(repository, head_commit)
     index_snapshot = _materialize_tree(repository, tree, snapshot_identity=f"index-{capture.digest[7:]}")
+    ruff_policy = resolve_ruff_policy(index_snapshot.root, expected_version="0.15.12")
+    basedpyright_policy = resolve_basedpyright_policy(index_snapshot.root, expected_version="1.39.10")
+    try:
+        if ruff_policy.status != "PASS":
+            raise PolicyResolutionError(ruff_policy.reason)
+        if basedpyright_policy.status != "PASS":
+            raise PolicyResolutionError(basedpyright_policy.reason)
+        additional_policy_paths = frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths))
+    except PolicyResolutionError as exc:
+        shutil.rmtree(base_snapshot.root, ignore_errors=True)
+        shutil.rmtree(index_snapshot.root, ignore_errors=True)
+        return _index_unknown("policy_parse_failure", str(exc))
+    finally:
+        if ruff_policy.bundle_root is not None:
+            shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
+        if basedpyright_policy.bundle_root is not None:
+            shutil.rmtree(basedpyright_policy.bundle_root, ignore_errors=True)
     changed_paths = set(_range_paths(repository, head_commit, tree))
     changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
     selected_paths = tuple(
         path
         for path in sorted(changed_paths)
-        if _governed_path(path, frozenset(), base=base_snapshot, head=index_snapshot)
+        if _governed_path(
+            path,
+            frozenset(),
+            base=base_snapshot,
+            head=index_snapshot,
+            additional_policy_paths=additional_policy_paths,
+        )
     )
     manifest = {
         path: identity for path in selected_paths if (identity := _input_identity(index_snapshot, path)) is not None
     }
-    return _IndexResolutionContext(base_snapshot, index_snapshot, selected_paths, metadata, tree, manifest)
+    return _IndexResolutionContext(
+        base_snapshot,
+        index_snapshot,
+        selected_paths,
+        metadata,
+        tree,
+        manifest,
+        tuple(sorted(additional_policy_paths)),
+    )
 
 
 def _unsafe_index_path(context: _IndexResolutionContext) -> str | None:
@@ -2572,6 +2605,7 @@ def _resolved_index(context: _IndexResolutionContext) -> ScopeResolution:
         index_metadata=context.metadata,
         index_tree=context.index_tree,
         selection_tree=context.index_tree,
+        policy_paths=context.policy_paths,
     )
 
 

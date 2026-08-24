@@ -76,7 +76,7 @@ readable finalized proof accepted by the runtime loader: **`schema_version:
 **`mapping_digest`** and **`plan_digest`** values, a 40- or 64-character
 hexadecimal **`execution_proof.source_ref`**, and a **`gate_decision`** of
 `pass` or `fail`.
-The resulting `ReviewReport` uses schema version **`1.5`** and records the
+The resulting `ReviewReport` uses schema version **`1.6`** and records the
 proof path, content digest, mapping and plan digests, source revision, and the
 Requirements gate decision under `requirements_evidence`.
 

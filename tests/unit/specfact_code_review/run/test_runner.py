@@ -609,6 +609,29 @@ def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path:
             shutil.rmtree(root, ignore_errors=True)
 
 
+def test_projected_policy_arguments_use_zero_based_mount_indices(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    first_root = tmp_path / "first"
+    second_root = tmp_path / "second"
+    first_root.mkdir()
+    second_root.mkdir()
+    first = first_root / "ruff.toml"
+    second = second_root / "basedpyright.json"
+    first.write_text("line-length = 88\n", encoding="utf-8")
+    second.write_text("{}\n", encoding="utf-8")
+    builder = runner_api._PolicyBindingBuilder()
+
+    assert builder.register(first) == "/opt/specfact/config/0/ruff.toml"
+    assert builder.register(second) == "/opt/specfact/config/1/basedpyright.json"
+
+    semgrep_root = tmp_path / "semgrep"
+    (semgrep_root / ".semgrep").mkdir(parents=True)
+    semgrep_builder = runner_api._PolicyBindingBuilder()
+    runner_api._bind_semgrep_policy(semgrep_builder, semgrep_root)
+
+    assert semgrep_builder.member_argv["semgrep-clean"] == ("/opt/specfact/config/0",)
+
+
 def test_snapshot_policy_bindings_apply_sealed_pytest_and_coverage_projections(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     policy_root = tmp_path / "policy"

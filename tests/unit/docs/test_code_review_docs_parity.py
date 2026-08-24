@@ -87,6 +87,13 @@ def test_code_review_run_doc_mentions_public_ty_options() -> None:
     assert "review-report.json" in text
 
 
+def test_code_review_run_doc_names_authoritative_schema_1_6() -> None:
+    text = RUN_DOC.read_text(encoding="utf-8")
+
+    assert "schema version **`1.6`**" in text
+    assert "schema version **`1.5`**" not in text
+
+
 def _resolver_messages_for_docs_parity() -> list[str]:
     messages: list[str] = []
     with pytest.raises(typer.BadParameter) as exc:

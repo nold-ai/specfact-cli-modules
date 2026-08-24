@@ -396,6 +396,18 @@ def test_suppression_manifest_failure_is_unknown(differential_api: Any, monkeypa
     assert result.status == "UNKNOWN"
 
 
+def test_suppression_manifest_ignores_non_python_snapshot_blobs(differential_api: Any) -> None:
+    binary = b"\xff\xfe\x00not-python"
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"registry/module.tar.gz": binary, "src/app.py": b"VALUE = 1\n"},
+        head_sources={"registry/module.tar.gz": binary, "src/app.py": b"VALUE = 2\n"},
+    )
+
+    assert result.status == "PASS"
+    assert result.findings == ()
+
+
 def test_suppression_waiver_input_is_unsupported_in_cr14(differential_api: Any) -> None:
     with pytest.raises(differential_api.UnsupportedWaiverInput):
         differential_api.classify_suppression_delta(
