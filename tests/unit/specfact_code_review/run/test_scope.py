@@ -775,6 +775,52 @@ def test_index_change_to_transitive_policy_file_is_governed(
     assert result.selected_paths == (referenced_path,)
 
 
+@pytest.mark.parametrize(
+    ("primary_path", "primary_content", "reference_path", "unsafe_path"),
+    [
+        ("ruff.toml", "line-length=80\n", None, "ruff.toml"),
+        ("ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "config/base.toml"),
+        ("pyrightconfig.json", '{"typeCheckingMode":"basic"}\n', None, "pyrightconfig.json"),
+        (
+            "pyrightconfig.json",
+            '{"extends":"config/base.json"}\n',
+            "config/base.json",
+            "config/base.json",
+        ),
+    ],
+    ids=["ruff-primary", "ruff-reference", "basedpyright-primary", "basedpyright-reference"],
+)
+def test_index_unsafe_policy_entry_preserves_governed_evidence(
+    scope_api: Any,
+    git_repo: Path,
+    primary_path: str,
+    primary_content: str,
+    reference_path: str | None,
+    unsafe_path: str,
+) -> None:
+    primary = git_repo / primary_path
+    primary.write_text(primary_content, encoding="utf-8")
+    if reference_path is not None:
+        reference = git_repo / reference_path
+        reference.parent.mkdir(parents=True, exist_ok=True)
+        reference.write_text("line-length=80\n" if reference.suffix == ".toml" else "{}\n", encoding="utf-8")
+    _commit(git_repo, "add analyzer policy graph")
+    unsafe = git_repo / unsafe_path
+    unsafe.unlink()
+    unsafe.symlink_to("../README.md" if unsafe.parent != git_repo else "README.md")
+    _git(git_repo, "add", unsafe_path)
+
+    result = scope_api.resolve_scope(scope_api.ScopeRequest(repository=git_repo, scope="index"))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "unsafe_governed_input"
+    assert result.selected_paths == (unsafe_path,)
+    assert result.index_tree
+    assert result.index_metadata[unsafe_path].git_mode == "120000"
+    assert result.input_manifest[unsafe_path].git_mode == "120000"
+    assert unsafe_path in result.policy_paths
+
+
 @pytest.mark.parametrize("extend", ["../escape.toml", "missing.toml", "ruff.toml"], ids=["escape", "missing", "cycle"])
 def test_ruff_extend_rejects_escape_cycle_or_missing_input(scope_api: Any, tmp_path: Path, extend: str) -> None:
     (tmp_path / "ruff.toml").write_text(f"extend='{extend}'\n", encoding="utf-8")

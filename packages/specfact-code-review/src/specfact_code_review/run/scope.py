@@ -2521,6 +2521,22 @@ def _materialized_index_context(repository: Path) -> _IndexResolutionContext | S
         shutil.rmtree(capture.path.parent, ignore_errors=True)
 
 
+def _resolved_index_policy_paths(root: Path) -> tuple[frozenset[str], str]:
+    ruff_policy = resolve_ruff_policy(root, expected_version="0.15.12")
+    basedpyright_policy = resolve_basedpyright_policy(root, expected_version="1.39.10")
+    try:
+        if ruff_policy.status != "PASS":
+            return frozenset(), ruff_policy.reason
+        if basedpyright_policy.status != "PASS":
+            return frozenset(), basedpyright_policy.reason
+        return frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths)), ""
+    finally:
+        if ruff_policy.bundle_root is not None:
+            shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
+        if basedpyright_policy.bundle_root is not None:
+            shutil.rmtree(basedpyright_policy.bundle_root, ignore_errors=True)
+
+
 def _materialized_index_context_from_capture(
     repository: Path, capture: _IndexCapture
 ) -> _IndexResolutionContext | ScopeResolution:
@@ -2534,25 +2550,50 @@ def _materialized_index_context_from_capture(
     head_commit = _resolve_commit(repository, "HEAD")
     base_snapshot = _materialize_commit(repository, head_commit)
     index_snapshot = _materialize_tree(repository, tree, snapshot_identity=f"index-{capture.digest[7:]}")
-    ruff_policy = resolve_ruff_policy(index_snapshot.root, expected_version="0.15.12")
-    basedpyright_policy = resolve_basedpyright_policy(index_snapshot.root, expected_version="1.39.10")
-    try:
-        if ruff_policy.status != "PASS":
-            raise PolicyResolutionError(ruff_policy.reason)
-        if basedpyright_policy.status != "PASS":
-            raise PolicyResolutionError(basedpyright_policy.reason)
-        additional_policy_paths = frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths))
-    except PolicyResolutionError as exc:
-        shutil.rmtree(base_snapshot.root, ignore_errors=True)
-        shutil.rmtree(index_snapshot.root, ignore_errors=True)
-        return _index_unknown("policy_parse_failure", str(exc))
-    finally:
-        if ruff_policy.bundle_root is not None:
-            shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
-        if basedpyright_policy.bundle_root is not None:
-            shutil.rmtree(basedpyright_policy.bundle_root, ignore_errors=True)
     changed_paths = set(_range_paths(repository, head_commit, tree))
     changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
+    base_policy_paths, _base_policy_error = _resolved_index_policy_paths(base_snapshot.root)
+    preliminary_paths = tuple(
+        path
+        for path in sorted(changed_paths)
+        if _governed_path(
+            path,
+            frozenset(),
+            base=base_snapshot,
+            head=index_snapshot,
+            additional_policy_paths=base_policy_paths,
+        )
+    )
+    preliminary_manifest = {
+        path: identity for path in preliminary_paths if (identity := _input_identity(index_snapshot, path)) is not None
+    }
+    preliminary_context = _IndexResolutionContext(
+        base_snapshot,
+        index_snapshot,
+        preliminary_paths,
+        metadata,
+        tree,
+        preliminary_manifest,
+        tuple(
+            path
+            for path in preliminary_paths
+            if _is_policy_path(
+                path,
+                frozenset(),
+                base=base_snapshot,
+                head=index_snapshot,
+                additional_policy_paths=base_policy_paths,
+            )
+        ),
+    )
+    if _unsafe_index_path(preliminary_context) is not None:
+        return preliminary_context
+
+    additional_policy_paths, policy_error = _resolved_index_policy_paths(index_snapshot.root)
+    if policy_error:
+        shutil.rmtree(base_snapshot.root, ignore_errors=True)
+        shutil.rmtree(index_snapshot.root, ignore_errors=True)
+        return _index_unknown("policy_parse_failure", policy_error)
     selected_paths = tuple(
         path
         for path in sorted(changed_paths)
