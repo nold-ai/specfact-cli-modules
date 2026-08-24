@@ -2521,6 +2521,95 @@ def _materialized_index_context(repository: Path) -> _IndexResolutionContext | S
         shutil.rmtree(capture.path.parent, ignore_errors=True)
 
 
+def _regular_snapshot_policy_payload(snapshot: Snapshot, relative: PurePosixPath) -> bytes | None:
+    entry = snapshot.entry_or_none(relative.as_posix())
+    if entry is None or entry.object_type != "blob" or entry.git_mode not in _REGULAR_GIT_MODES:
+        return None
+    _input_identity(snapshot, relative.as_posix())
+    return snapshot.bytes_or_none(relative.as_posix()) or b""
+
+
+def _discovered_index_ruff_paths(snapshot: Snapshot) -> frozenset[str]:
+    paths: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(relative: PurePosixPath, *, pyproject_primary: bool = False) -> None:
+        canonical = relative.as_posix()
+        if canonical in visited or len(visited) >= 32:
+            return
+        visited.add(canonical)
+        if snapshot.entry_or_none(canonical) is None:
+            return
+        if not pyproject_primary:
+            paths.add(canonical)
+        payload = _regular_snapshot_policy_payload(snapshot, relative)
+        if payload is None:
+            return
+        try:
+            values = _ruff_values(payload, canonical, pyproject_primary=pyproject_primary)
+        except PolicyResolutionError:
+            return
+        if values is None:
+            return
+        paths.add(canonical)
+        extend = cast(str | None, values.get("extend"))
+        if extend is not None:
+            try:
+                visit(_bounded_relative_path(relative.parent, extend))
+            except PolicyResolutionError:
+                return
+
+    for primary in (".ruff.toml", "ruff.toml"):
+        visit(PurePosixPath(primary))
+    visit(PurePosixPath("pyproject.toml"), pyproject_primary=True)
+    return frozenset(paths)
+
+
+def _discovered_index_basedpyright_paths(snapshot: Snapshot) -> frozenset[str]:
+    paths: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(relative: PurePosixPath, *, pyproject_primary: bool = False) -> None:
+        canonical = relative.as_posix()
+        if canonical in visited or len(visited) >= 32:
+            return
+        visited.add(canonical)
+        if snapshot.entry_or_none(canonical) is None:
+            return
+        if not pyproject_primary:
+            paths.add(canonical)
+        payload = _regular_snapshot_policy_payload(snapshot, relative)
+        if payload is None:
+            return
+        try:
+            values = _basedpyright_values(payload, canonical, pyproject_primary=pyproject_primary)
+        except PolicyResolutionError:
+            return
+        if values is None:
+            return
+        paths.add(canonical)
+        for key in ("extends", "baselineFile"):
+            reference = cast(str | None, values.get(key))
+            if reference is None:
+                continue
+            try:
+                child = _bounded_relative_path(relative.parent, reference)
+            except PolicyResolutionError:
+                continue
+            if key == "extends":
+                visit(child)
+            elif snapshot.entry_or_none(child.as_posix()) is not None:
+                paths.add(child.as_posix())
+
+    visit(PurePosixPath("pyrightconfig.json"))
+    visit(PurePosixPath("pyproject.toml"), pyproject_primary=True)
+    return frozenset(paths)
+
+
+def _discovered_index_policy_paths(snapshot: Snapshot) -> frozenset[str]:
+    return _discovered_index_ruff_paths(snapshot) | _discovered_index_basedpyright_paths(snapshot)
+
+
 def _resolved_index_policy_paths(root: Path) -> tuple[frozenset[str], str]:
     ruff_policy = resolve_ruff_policy(root, expected_version="0.15.12")
     basedpyright_policy = resolve_basedpyright_policy(root, expected_version="1.39.10")
@@ -2552,7 +2641,8 @@ def _materialized_index_context_from_capture(
     index_snapshot = _materialize_tree(repository, tree, snapshot_identity=f"index-{capture.digest[7:]}")
     changed_paths = set(_range_paths(repository, head_commit, tree))
     changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
-    base_policy_paths, _base_policy_error = _resolved_index_policy_paths(base_snapshot.root)
+    base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
+    preliminary_policy_paths = base_policy_paths | _discovered_index_policy_paths(index_snapshot)
     preliminary_paths = tuple(
         path
         for path in sorted(changed_paths)
@@ -2561,7 +2651,7 @@ def _materialized_index_context_from_capture(
             frozenset(),
             base=base_snapshot,
             head=index_snapshot,
-            additional_policy_paths=base_policy_paths,
+            additional_policy_paths=preliminary_policy_paths,
         )
     )
     preliminary_manifest = {
@@ -2582,7 +2672,7 @@ def _materialized_index_context_from_capture(
                 frozenset(),
                 base=base_snapshot,
                 head=index_snapshot,
-                additional_policy_paths=base_policy_paths,
+                additional_policy_paths=preliminary_policy_paths,
             )
         ),
     )

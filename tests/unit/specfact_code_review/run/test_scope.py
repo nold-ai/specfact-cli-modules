@@ -776,19 +776,35 @@ def test_index_change_to_transitive_policy_file_is_governed(
 
 
 @pytest.mark.parametrize(
-    ("primary_path", "primary_content", "reference_path", "unsafe_path"),
+    ("primary_path", "primary_content", "reference_path", "unsafe_path", "stage_graph_together"),
     [
-        ("ruff.toml", "line-length=80\n", None, "ruff.toml"),
-        ("ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "config/base.toml"),
-        ("pyrightconfig.json", '{"typeCheckingMode":"basic"}\n', None, "pyrightconfig.json"),
+        ("ruff.toml", "line-length=80\n", None, "ruff.toml", False),
+        ("ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "config/base.toml", False),
+        ("ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "config/base.toml", True),
+        ("pyrightconfig.json", '{"typeCheckingMode":"basic"}\n', None, "pyrightconfig.json", False),
         (
             "pyrightconfig.json",
             '{"extends":"config/base.json"}\n',
             "config/base.json",
             "config/base.json",
+            False,
+        ),
+        (
+            "pyrightconfig.json",
+            '{"extends":"config/base.json"}\n',
+            "config/base.json",
+            "config/base.json",
+            True,
         ),
     ],
-    ids=["ruff-primary", "ruff-reference", "basedpyright-primary", "basedpyright-reference"],
+    ids=[
+        "ruff-primary",
+        "ruff-reference",
+        "ruff-new-reference",
+        "basedpyright-primary",
+        "basedpyright-reference",
+        "basedpyright-new-reference",
+    ],
 )
 def test_index_unsafe_policy_entry_preserves_governed_evidence(
     scope_api: Any,
@@ -797,6 +813,7 @@ def test_index_unsafe_policy_entry_preserves_governed_evidence(
     primary_content: str,
     reference_path: str | None,
     unsafe_path: str,
+    stage_graph_together: bool,
 ) -> None:
     primary = git_repo / primary_path
     primary.write_text(primary_content, encoding="utf-8")
@@ -804,17 +821,19 @@ def test_index_unsafe_policy_entry_preserves_governed_evidence(
         reference = git_repo / reference_path
         reference.parent.mkdir(parents=True, exist_ok=True)
         reference.write_text("line-length=80\n" if reference.suffix == ".toml" else "{}\n", encoding="utf-8")
-    _commit(git_repo, "add analyzer policy graph")
+    if not stage_graph_together:
+        _commit(git_repo, "add analyzer policy graph")
     unsafe = git_repo / unsafe_path
     unsafe.unlink()
     unsafe.symlink_to("../README.md" if unsafe.parent != git_repo else "README.md")
-    _git(git_repo, "add", unsafe_path)
+    _git(git_repo, "add", primary_path, unsafe_path)
 
     result = scope_api.resolve_scope(scope_api.ScopeRequest(repository=git_repo, scope="index"))
 
     assert result.status == "UNKNOWN"
     assert result.reason == "unsafe_governed_input"
-    assert result.selected_paths == (unsafe_path,)
+    expected_paths = {unsafe_path, primary_path} if stage_graph_together else {unsafe_path}
+    assert set(result.selected_paths) == expected_paths
     assert result.index_tree
     assert result.index_metadata[unsafe_path].git_mode == "120000"
     assert result.input_manifest[unsafe_path].git_mode == "120000"

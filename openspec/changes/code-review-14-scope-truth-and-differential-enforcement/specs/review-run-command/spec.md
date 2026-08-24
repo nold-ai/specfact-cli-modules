@@ -912,7 +912,7 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **WHEN** index applicability is resolved
 - **THEN** the target policy graphs are resolved from the complete captured index tree
 - **AND** every transitive closure/reference path is included in governed selection
-- **AND** a changed primary or previously governed transitive policy entry with a non-regular Git mode yields `unsafe_governed_input` before the staged policy graph is parsed while retaining the captured index tree, metadata, and input manifest
+- **AND** a changed primary or any transitive policy entry referenced by the safe staged primary graph, including a newly staged reference, with a non-regular Git mode yields `unsafe_governed_input` before the staged policy graph is resolved while retaining the captured index tree, metadata, input manifest, and policy paths
 - **AND** the policy-only change cannot become NOT_APPLICABLE.
 
 #### Scenario: Suppression manifests contain only Python source blobs
