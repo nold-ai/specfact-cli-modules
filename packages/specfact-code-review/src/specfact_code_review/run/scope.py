@@ -496,6 +496,7 @@ class _IndexResolutionContext:
     selected_paths: tuple[str, ...]
     metadata: dict[str, IndexMetadata]
     index_tree: str
+    base_manifest: dict[str, InputIdentity]
     manifest: dict[str, InputIdentity]
     policy_paths: tuple[str, ...] = ()
 
@@ -2477,6 +2478,7 @@ def _index_unknown(
     metadata = context.metadata if context is not None else {}
     index_tree = context.index_tree if context is not None else ""
     manifest = context.manifest if context is not None else {}
+    base_manifest = context.base_manifest if context is not None else {}
     return ScopeResolution(
         status="UNKNOWN",
         reason=reason,
@@ -2489,6 +2491,7 @@ def _index_unknown(
         head_snapshot=head_snapshot,
         materialized=head_snapshot is not None,
         input_manifest=manifest,
+        base_input_manifest=base_manifest,
         index_metadata=metadata,
         index_tree=index_tree,
         selection_tree=index_tree,
@@ -2610,6 +2613,15 @@ def _discovered_index_policy_paths(snapshot: Snapshot) -> frozenset[str]:
     return _discovered_index_ruff_paths(snapshot) | _discovered_index_basedpyright_paths(snapshot)
 
 
+def _unsafe_snapshot_policy_paths(snapshot: Snapshot, policy_paths: frozenset[str]) -> frozenset[str]:
+    return frozenset(
+        path
+        for path in policy_paths
+        if (entry := snapshot.entry_or_none(path)) is not None
+        and (entry.object_type != "blob" or entry.git_mode not in _REGULAR_GIT_MODES)
+    )
+
+
 def _resolved_index_policy_paths(root: Path) -> tuple[frozenset[str], str]:
     ruff_policy = resolve_ruff_policy(root, expected_version="0.15.12")
     basedpyright_policy = resolve_basedpyright_policy(root, expected_version="1.39.10")
@@ -2624,6 +2636,10 @@ def _resolved_index_policy_paths(root: Path) -> tuple[frozenset[str], str]:
             shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
         if basedpyright_policy.bundle_root is not None:
             shutil.rmtree(basedpyright_policy.bundle_root, ignore_errors=True)
+
+
+def _snapshot_input_manifest(snapshot: Snapshot, paths: Iterable[str]) -> dict[str, InputIdentity]:
+    return {path: identity for path in paths if (identity := _input_identity(snapshot, path)) is not None}
 
 
 def _materialized_index_context_from_capture(
@@ -2642,10 +2658,12 @@ def _materialized_index_context_from_capture(
     changed_paths = set(_range_paths(repository, head_commit, tree))
     changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
     base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
-    preliminary_policy_paths = base_policy_paths | _discovered_index_policy_paths(index_snapshot)
+    discovered_policy_paths = _discovered_index_policy_paths(index_snapshot)
+    preliminary_policy_paths = base_policy_paths | discovered_policy_paths
+    preliminary_candidates = changed_paths | set(_unsafe_snapshot_policy_paths(index_snapshot, discovered_policy_paths))
     preliminary_paths = tuple(
         path
-        for path in sorted(changed_paths)
+        for path in sorted(preliminary_candidates)
         if _governed_path(
             path,
             frozenset(),
@@ -2654,15 +2672,15 @@ def _materialized_index_context_from_capture(
             additional_policy_paths=preliminary_policy_paths,
         )
     )
-    preliminary_manifest = {
-        path: identity for path in preliminary_paths if (identity := _input_identity(index_snapshot, path)) is not None
-    }
+    preliminary_manifest = _snapshot_input_manifest(index_snapshot, preliminary_paths)
+    preliminary_base_manifest = _snapshot_input_manifest(base_snapshot, preliminary_paths)
     preliminary_context = _IndexResolutionContext(
         base_snapshot,
         index_snapshot,
         preliminary_paths,
         metadata,
         tree,
+        preliminary_base_manifest,
         preliminary_manifest,
         tuple(
             path
@@ -2695,15 +2713,15 @@ def _materialized_index_context_from_capture(
             additional_policy_paths=additional_policy_paths,
         )
     )
-    manifest = {
-        path: identity for path in selected_paths if (identity := _input_identity(index_snapshot, path)) is not None
-    }
+    manifest = _snapshot_input_manifest(index_snapshot, selected_paths)
+    base_manifest = _snapshot_input_manifest(base_snapshot, selected_paths)
     return _IndexResolutionContext(
         base_snapshot,
         index_snapshot,
         selected_paths,
         metadata,
         tree,
+        base_manifest,
         manifest,
         tuple(sorted(additional_policy_paths)),
     )
@@ -2714,6 +2732,8 @@ def _unsafe_index_path(context: _IndexResolutionContext) -> str | None:
         metadata = context.metadata.get(path)
         identity = context.manifest.get(path)
         if metadata is not None and (metadata.intent_to_add or metadata.stage != 0):
+            return path
+        if path in context.policy_paths and identity is None and path in context.base_manifest:
             return path
         if identity is not None and (identity.object_type != "blob" or identity.git_mode not in _REGULAR_GIT_MODES):
             return path
@@ -2733,6 +2753,7 @@ def _resolved_index(context: _IndexResolutionContext) -> ScopeResolution:
         head_snapshot=context.index_snapshot,
         materialized=True,
         input_manifest=context.manifest,
+        base_input_manifest=context.base_manifest,
         index_metadata=context.metadata,
         index_tree=context.index_tree,
         selection_tree=context.index_tree,

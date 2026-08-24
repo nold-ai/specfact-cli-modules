@@ -840,6 +840,102 @@ def test_index_unsafe_policy_entry_preserves_governed_evidence(
     assert unsafe_path in result.policy_paths
 
 
+@pytest.mark.parametrize(
+    ("primary_path", "initial_primary", "updated_primary", "reference_path", "reference_content"),
+    [
+        (
+            "ruff.toml",
+            "extend='config/base.toml'\n",
+            "line-length=88\n",
+            "config/base.toml",
+            "line-length=80\n",
+        ),
+        (
+            "pyrightconfig.json",
+            '{"extends":"config/base.json"}\n',
+            '{"typeCheckingMode":"strict"}\n',
+            "config/base.json",
+            "{}\n",
+        ),
+    ],
+    ids=["ruff-deleted-reference", "basedpyright-deleted-reference"],
+)
+def test_index_deleted_policy_reference_preserves_governed_evidence(
+    scope_api: Any,
+    git_repo: Path,
+    primary_path: str,
+    initial_primary: str,
+    updated_primary: str,
+    reference_path: str,
+    reference_content: str,
+) -> None:
+    primary = git_repo / primary_path
+    reference = git_repo / reference_path
+    reference.parent.mkdir(parents=True, exist_ok=True)
+    primary.write_text(initial_primary, encoding="utf-8")
+    reference.write_text(reference_content, encoding="utf-8")
+    _commit(git_repo, "add analyzer policy graph")
+    primary.write_text(updated_primary, encoding="utf-8")
+    _git(git_repo, "add", primary_path)
+    _git(git_repo, "rm", reference_path)
+
+    result = scope_api.resolve_scope(scope_api.ScopeRequest(repository=git_repo, scope="index"))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "unsafe_governed_input"
+    assert set(result.selected_paths) == {primary_path, reference_path}
+    assert result.index_tree
+    assert result.base_input_manifest[reference_path].git_mode == "100644"
+    assert reference_path not in result.input_manifest
+    assert reference_path in result.policy_paths
+
+
+@pytest.mark.parametrize(
+    ("primary_path", "initial_primary", "updated_primary", "reference_path"),
+    [
+        (
+            "ruff.toml",
+            "line-length=80\n",
+            "extend='config/unsafe.toml'\n",
+            "config/unsafe.toml",
+        ),
+        (
+            "pyrightconfig.json",
+            '{"typeCheckingMode":"basic"}\n',
+            '{"extends":"config/unsafe.json"}\n',
+            "config/unsafe.json",
+        ),
+    ],
+    ids=["ruff-newly-governed-symlink", "basedpyright-newly-governed-symlink"],
+)
+def test_index_unchanged_unsafe_reference_newly_governed_preserves_evidence(
+    scope_api: Any,
+    git_repo: Path,
+    primary_path: str,
+    initial_primary: str,
+    updated_primary: str,
+    reference_path: str,
+) -> None:
+    primary = git_repo / primary_path
+    reference = git_repo / reference_path
+    reference.parent.mkdir(parents=True, exist_ok=True)
+    primary.write_text(initial_primary, encoding="utf-8")
+    reference.symlink_to("../README.md")
+    _commit(git_repo, "add dormant unsafe policy entry")
+    primary.write_text(updated_primary, encoding="utf-8")
+    _git(git_repo, "add", primary_path)
+
+    result = scope_api.resolve_scope(scope_api.ScopeRequest(repository=git_repo, scope="index"))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "unsafe_governed_input"
+    assert set(result.selected_paths) == {primary_path, reference_path}
+    assert result.index_tree
+    assert result.index_metadata[reference_path].git_mode == "120000"
+    assert result.input_manifest[reference_path].git_mode == "120000"
+    assert reference_path in result.policy_paths
+
+
 @pytest.mark.parametrize("extend", ["../escape.toml", "missing.toml", "ruff.toml"], ids=["escape", "missing", "cycle"])
 def test_ruff_extend_rejects_escape_cycle_or_missing_input(scope_api: Any, tmp_path: Path, extend: str) -> None:
     (tmp_path / "ruff.toml").write_text(f"extend='{extend}'\n", encoding="utf-8")
