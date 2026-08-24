@@ -248,7 +248,7 @@ Explicitly forbidden:
 
 ## 6. Final PR #420 promotion remediation
 
-- [x] 6.1 Prove projected policy arguments use the sandbox's zero-based config-root indices, including Semgrep bundles.
+- [x] 6.1 Prove projected policy arguments account for the sandbox's zero-based request-root slot, including Semgrep bundles.
 - [x] 6.2 Prove index selection includes staged Ruff extend and basedpyright reference paths from the captured index policy graph.
 - [x] 6.3 Prove suppression classification tokenizes only `.py` and `.pyi` snapshot blobs.
 - [x] 6.4 Prove concurrent candidate capsule composition uses distinct immutable roots.

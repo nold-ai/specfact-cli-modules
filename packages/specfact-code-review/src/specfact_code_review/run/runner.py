@@ -1264,10 +1264,9 @@ class _PolicyBindingBuilder:
 
     def register(self, path: Path) -> str:
         root = path.parent
-        index = len(self.config_roots)
         self.config_roots.append(root)
         self.cleanup_roots.append(root)
-        return _mounted_config_path(index, path)
+        return _mounted_config_path(len(self.config_roots), path)
 
     def result(self) -> SnapshotPolicyBindings:
         return SnapshotPolicyBindings(
@@ -1335,9 +1334,8 @@ def _bind_radon_policy(builder: _PolicyBindingBuilder) -> None:
 def _bind_semgrep_policy(builder: _PolicyBindingBuilder, policy_root: Path) -> None:
     if not (policy_root / ".semgrep").is_dir():
         return
-    index = len(builder.config_roots)
     builder.config_roots.append(policy_root)
-    mounted = str(Path("/opt/specfact/config") / str(index))
+    mounted = str(Path("/opt/specfact/config") / str(len(builder.config_roots)))
     builder.member_argv["semgrep-clean"] = (mounted,)
     if (policy_root / ".semgrep/bugs.yaml").is_file():
         builder.member_argv["semgrep-bugs"] = (mounted,)

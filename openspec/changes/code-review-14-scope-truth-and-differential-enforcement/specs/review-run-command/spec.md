@@ -902,7 +902,7 @@ The report SHALL list each profile member with required/conditional status; `exe
 
 - **GIVEN** an immutable index or range run generates one or more analyzer policy projections
 - **WHEN** the controller binds those projections into the sandbox invocation
-- **THEN** every projected argument uses the same zero-based config-root index assigned by the sandbox mount manifest
+- **THEN** every projected argument uses the config-root index assigned by the sandbox mount manifest after its zero-based request root
 - **AND** Semgrep policy bundles use that same index contract
 - **AND** a missing or mismatched mounted policy path yields UNKNOWN before analyzer evidence can pass.
 
