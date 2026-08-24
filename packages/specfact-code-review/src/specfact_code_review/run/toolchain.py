@@ -838,8 +838,9 @@ def _capsule_context(
     *,
     environment_id: str,
     storage_root: Path,
+    capsule_root: Path,
 ) -> _CapsuleContext | CapsuleMaterialization:
-    root = storage_root / environment_id
+    root = capsule_root
     identity = canonical_toolchain_identity(lock, storage_root=storage_root)
     validation = validate_toolchain_lock(lock)
     environments = _lock_environments(lock) or []
@@ -909,7 +910,15 @@ def materialize_capsule(
     credential: str | None = None,
     bubblewrap_child_identity: tuple[int, int] | None = None,
 ) -> CapsuleMaterialization:
-    context = _capsule_context(lock, environment_id=environment_id, storage_root=storage_root)
+    invocation_root = storage_root / "invocations"
+    invocation_root.mkdir(parents=True, exist_ok=True)
+    capsule_root = Path(tempfile.mkdtemp(prefix=f".{environment_id}-", dir=invocation_root))
+    context = _capsule_context(
+        lock,
+        environment_id=environment_id,
+        storage_root=storage_root,
+        capsule_root=capsule_root,
+    )
     if isinstance(context, CapsuleMaterialization):
         return context
     if not isinstance(context.oci.get("locator"), str):

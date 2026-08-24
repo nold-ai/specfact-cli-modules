@@ -609,6 +609,100 @@ def test_snapshot_policy_bindings_use_generated_target_tip_projections(tmp_path:
             shutil.rmtree(root, ignore_errors=True)
 
 
+def test_projected_policy_arguments_account_for_request_mount_slot(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    first_root = tmp_path / "first"
+    second_root = tmp_path / "second"
+    first_root.mkdir()
+    second_root.mkdir()
+    first = first_root / "ruff.toml"
+    second = second_root / "basedpyright.json"
+    first.write_text("line-length = 88\n", encoding="utf-8")
+    second.write_text("{}\n", encoding="utf-8")
+    builder = runner_api._PolicyBindingBuilder()
+
+    assert builder.register(first) == "/opt/specfact/config/1/ruff.toml"
+    assert builder.register(second) == "/opt/specfact/config/2/basedpyright.json"
+
+    semgrep_root = tmp_path / "semgrep"
+    (semgrep_root / ".semgrep").mkdir(parents=True)
+    semgrep_builder = runner_api._PolicyBindingBuilder()
+    runner_api._bind_semgrep_policy(semgrep_builder, semgrep_root)
+
+    assert semgrep_builder.member_argv["semgrep-clean"] == ("/opt/specfact/config/1",)
+
+    snapshot_root = tmp_path / "snapshot"
+    capsule_root = tmp_path / "capsule"
+    snapshot_root.mkdir()
+    capsule_root.mkdir()
+    source = snapshot_root / "app.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    observed: dict[str, object] = {}
+
+    monkeypatch.setattr(runner_api, "preflight_reserved_imports", lambda _context: SimpleNamespace(status="PASS"))
+
+    def execute(plan: Any, _bubblewrap: object, *, extra_argv: tuple[str, ...]) -> object:
+        request_mount = plan.mount_for("policy")
+        projected_mount = plan.mount_for("policy-1")
+        observed.update(
+            {
+                "request_destination": request_mount.destination,
+                "projected_destination": projected_mount.destination,
+                "projected_source": projected_mount.source,
+                "extra_argv": extra_argv,
+                "request": json.loads((request_mount.source / "request.json").read_text(encoding="utf-8")),
+            }
+        )
+        plan.mount_for("output").source.joinpath("result.json").write_text(
+            json.dumps(
+                {
+                    "member": "ruff",
+                    "execution_state": "ran",
+                    "evidence_outcome": "PASS",
+                    "findings": [],
+                    "diagnostic": "",
+                }
+            ),
+            encoding="utf-8",
+        )
+        return SimpleNamespace(status="PASS")
+
+    monkeypatch.setattr(runner_api, "execute_launch_plan", execute)
+    response = runner_api._execute_capsule_member(
+        runner_api.CapsuleMemberExecutionRequest(
+            runtime=SimpleNamespace(
+                root=capsule_root,
+                interpreter="/opt/specfact/python/bin/python",
+                bootstrap="/opt/specfact/bootstrap/runner.py",
+                bubblewrap=object(),
+                environment_id="test-environment",
+            ),
+            member="ruff",
+            invocation_id="test-invocation",
+            snapshot_root=snapshot_root,
+            files=[source],
+            options=runner_api.ReviewOptions(),
+            config_roots=(first_root,),
+            adapter_argv=("--config", "/opt/specfact/config/1/ruff.toml"),
+        )
+    )
+
+    assert response["evidence_outcome"] == "PASS"
+    assert observed == {
+        "request_destination": "/opt/specfact/config/0",
+        "projected_destination": "/opt/specfact/config/1",
+        "projected_source": first_root,
+        "extra_argv": ("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json"),
+        "request": {
+            "adapter_argv": ["--config", "/opt/specfact/config/1/ruff.toml"],
+            "bug_hunt": False,
+            "complete_pytest_inventory": False,
+            "member": "ruff",
+            "paths": ["app.py"],
+        },
+    }
+
+
 def test_snapshot_policy_bindings_apply_sealed_pytest_and_coverage_projections(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     policy_root = tmp_path / "policy"

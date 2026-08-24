@@ -191,6 +191,19 @@ def test_runtime_capsule_identity_is_portable_across_storage_roots(toolchain_api
     assert first.root != second.root
 
 
+def test_runtime_capsules_are_isolated_within_shared_storage(toolchain_api: Any, tmp_path: Path) -> None:
+    lock = _valid_lock()
+    storage = tmp_path / "shared"
+
+    first = toolchain_api.materialize_capsule(lock, environment_id="linux-x86_64-cp312", storage_root=storage)
+    second = toolchain_api.materialize_capsule(lock, environment_id="linux-x86_64-cp312", storage_root=storage)
+
+    assert first.status == second.status == "PASS"
+    assert first.root != second.root
+    assert first.root.is_relative_to(storage / "invocations")
+    assert second.root.is_relative_to(storage / "invocations")
+
+
 @pytest.mark.parametrize("cache_hit", [True, False])
 def test_runtime_capsule_acquires_pinned_oci_layers_from_registry_or_verified_cache(
     toolchain_api: Any, tmp_path: Path, cache_hit: bool

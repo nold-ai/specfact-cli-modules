@@ -496,7 +496,9 @@ class _IndexResolutionContext:
     selected_paths: tuple[str, ...]
     metadata: dict[str, IndexMetadata]
     index_tree: str
+    base_manifest: dict[str, InputIdentity]
     manifest: dict[str, InputIdentity]
+    policy_paths: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -2476,6 +2478,7 @@ def _index_unknown(
     metadata = context.metadata if context is not None else {}
     index_tree = context.index_tree if context is not None else ""
     manifest = context.manifest if context is not None else {}
+    base_manifest = context.base_manifest if context is not None else {}
     return ScopeResolution(
         status="UNKNOWN",
         reason=reason,
@@ -2488,9 +2491,11 @@ def _index_unknown(
         head_snapshot=head_snapshot,
         materialized=head_snapshot is not None,
         input_manifest=manifest,
+        base_input_manifest=base_manifest,
         index_metadata=metadata,
         index_tree=index_tree,
         selection_tree=index_tree,
+        policy_paths=context.policy_paths if context is not None else (),
     )
 
 
@@ -2519,6 +2524,135 @@ def _materialized_index_context(repository: Path) -> _IndexResolutionContext | S
         shutil.rmtree(capture.path.parent, ignore_errors=True)
 
 
+def _regular_snapshot_policy_payload(snapshot: Snapshot, relative: PurePosixPath) -> bytes | None:
+    entry = snapshot.entry_or_none(relative.as_posix())
+    if entry is None or entry.object_type != "blob" or entry.git_mode not in _REGULAR_GIT_MODES:
+        return None
+    _input_identity(snapshot, relative.as_posix())
+    return snapshot.bytes_or_none(relative.as_posix()) or b""
+
+
+def _discovered_index_ruff_paths(snapshot: Snapshot) -> frozenset[str]:
+    paths: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(relative: PurePosixPath, *, pyproject_primary: bool = False) -> None:
+        canonical = relative.as_posix()
+        if canonical in visited or len(visited) >= 32:
+            return
+        visited.add(canonical)
+        if snapshot.entry_or_none(canonical) is None:
+            return
+        if not pyproject_primary:
+            paths.add(canonical)
+        payload = _regular_snapshot_policy_payload(snapshot, relative)
+        if payload is None:
+            return
+        try:
+            values = _ruff_values(payload, canonical, pyproject_primary=pyproject_primary)
+        except PolicyResolutionError:
+            return
+        if values is None:
+            return
+        paths.add(canonical)
+        extend = cast(str | None, values.get("extend"))
+        if extend is not None:
+            try:
+                child = _bounded_relative_path(relative.parent, extend)
+            except PolicyResolutionError:
+                return
+            paths.add(child.as_posix())
+            visit(child)
+
+    for primary in (".ruff.toml", "ruff.toml"):
+        visit(PurePosixPath(primary))
+    visit(PurePosixPath("pyproject.toml"), pyproject_primary=True)
+    return frozenset(paths)
+
+
+def _discovered_index_basedpyright_paths(snapshot: Snapshot) -> frozenset[str]:
+    paths: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(relative: PurePosixPath, *, pyproject_primary: bool = False) -> None:
+        canonical = relative.as_posix()
+        if canonical in visited or len(visited) >= 32:
+            return
+        visited.add(canonical)
+        if snapshot.entry_or_none(canonical) is None:
+            return
+        if not pyproject_primary:
+            paths.add(canonical)
+        payload = _regular_snapshot_policy_payload(snapshot, relative)
+        if payload is None:
+            return
+        try:
+            values = _basedpyright_values(payload, canonical, pyproject_primary=pyproject_primary)
+        except PolicyResolutionError:
+            return
+        if values is None:
+            return
+        paths.add(canonical)
+        for key in ("extends", "baselineFile"):
+            reference = cast(str | None, values.get(key))
+            if reference is None:
+                continue
+            try:
+                child = _bounded_relative_path(relative.parent, reference)
+            except PolicyResolutionError:
+                continue
+            paths.add(child.as_posix())
+            if key == "extends":
+                visit(child)
+
+    visit(PurePosixPath("pyrightconfig.json"))
+    visit(PurePosixPath("pyproject.toml"), pyproject_primary=True)
+    return frozenset(paths)
+
+
+def _discovered_index_policy_paths(snapshot: Snapshot) -> frozenset[str]:
+    return _discovered_index_ruff_paths(snapshot) | _discovered_index_basedpyright_paths(snapshot)
+
+
+def _unsafe_snapshot_policy_paths(snapshot: Snapshot, policy_paths: frozenset[str]) -> frozenset[str]:
+    return frozenset(
+        path
+        for path in policy_paths
+        if (entry := snapshot.entry_or_none(path)) is not None
+        and (entry.object_type != "blob" or entry.git_mode not in _REGULAR_GIT_MODES)
+    )
+
+
+def _missing_snapshot_policy_paths(snapshot: Snapshot, policy_paths: frozenset[str]) -> frozenset[str]:
+    return frozenset(path for path in policy_paths if snapshot.entry_or_none(path) is None)
+
+
+def _resolved_index_policy_paths(root: Path) -> tuple[frozenset[str], str]:
+    ruff_policy = resolve_ruff_policy(root, expected_version="0.15.12")
+    basedpyright_policy = resolve_basedpyright_policy(root, expected_version="1.39.10")
+    try:
+        paths: set[str] = set()
+        reasons: list[str] = []
+        if ruff_policy.status == "PASS":
+            paths.update(ruff_policy.closure_paths)
+        else:
+            reasons.append(ruff_policy.reason)
+        if basedpyright_policy.status == "PASS":
+            paths.update(basedpyright_policy.reference_paths)
+        else:
+            reasons.append(basedpyright_policy.reason)
+        return frozenset(paths), "; ".join(reasons)
+    finally:
+        if ruff_policy.bundle_root is not None:
+            shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
+        if basedpyright_policy.bundle_root is not None:
+            shutil.rmtree(basedpyright_policy.bundle_root, ignore_errors=True)
+
+
+def _snapshot_input_manifest(snapshot: Snapshot, paths: Iterable[str]) -> dict[str, InputIdentity]:
+    return {path: identity for path in paths if (identity := _input_identity(snapshot, path)) is not None}
+
+
 def _materialized_index_context_from_capture(
     repository: Path, capture: _IndexCapture
 ) -> _IndexResolutionContext | ScopeResolution:
@@ -2534,15 +2668,77 @@ def _materialized_index_context_from_capture(
     index_snapshot = _materialize_tree(repository, tree, snapshot_identity=f"index-{capture.digest[7:]}")
     changed_paths = set(_range_paths(repository, head_commit, tree))
     changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
+    base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
+    discovered_policy_paths = _discovered_index_policy_paths(index_snapshot)
+    preliminary_policy_paths = base_policy_paths | discovered_policy_paths
+    preliminary_candidates = changed_paths | set(
+        _unsafe_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
+        | _missing_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
+    )
+    preliminary_paths = tuple(
+        path
+        for path in sorted(preliminary_candidates)
+        if _governed_path(
+            path,
+            frozenset(),
+            base=base_snapshot,
+            head=index_snapshot,
+            additional_policy_paths=preliminary_policy_paths,
+        )
+    )
+    preliminary_manifest = _snapshot_input_manifest(index_snapshot, preliminary_paths)
+    preliminary_base_manifest = _snapshot_input_manifest(base_snapshot, preliminary_paths)
+    preliminary_context = _IndexResolutionContext(
+        base_snapshot,
+        index_snapshot,
+        preliminary_paths,
+        metadata,
+        tree,
+        preliminary_base_manifest,
+        preliminary_manifest,
+        tuple(
+            path
+            for path in preliminary_paths
+            if _is_policy_path(
+                path,
+                frozenset(),
+                base=base_snapshot,
+                head=index_snapshot,
+                additional_policy_paths=preliminary_policy_paths,
+            )
+        ),
+    )
+    if _unsafe_index_path(preliminary_context) is not None:
+        return preliminary_context
+
+    additional_policy_paths, policy_error = _resolved_index_policy_paths(index_snapshot.root)
+    if policy_error:
+        shutil.rmtree(base_snapshot.root, ignore_errors=True)
+        shutil.rmtree(index_snapshot.root, ignore_errors=True)
+        return _index_unknown("policy_parse_failure", policy_error)
     selected_paths = tuple(
         path
         for path in sorted(changed_paths)
-        if _governed_path(path, frozenset(), base=base_snapshot, head=index_snapshot)
+        if _governed_path(
+            path,
+            frozenset(),
+            base=base_snapshot,
+            head=index_snapshot,
+            additional_policy_paths=additional_policy_paths,
+        )
     )
-    manifest = {
-        path: identity for path in selected_paths if (identity := _input_identity(index_snapshot, path)) is not None
-    }
-    return _IndexResolutionContext(base_snapshot, index_snapshot, selected_paths, metadata, tree, manifest)
+    manifest = _snapshot_input_manifest(index_snapshot, selected_paths)
+    base_manifest = _snapshot_input_manifest(base_snapshot, selected_paths)
+    return _IndexResolutionContext(
+        base_snapshot,
+        index_snapshot,
+        selected_paths,
+        metadata,
+        tree,
+        base_manifest,
+        manifest,
+        tuple(sorted(additional_policy_paths)),
+    )
 
 
 def _unsafe_index_path(context: _IndexResolutionContext) -> str | None:
@@ -2550,6 +2746,8 @@ def _unsafe_index_path(context: _IndexResolutionContext) -> str | None:
         metadata = context.metadata.get(path)
         identity = context.manifest.get(path)
         if metadata is not None and (metadata.intent_to_add or metadata.stage != 0):
+            return path
+        if path in context.policy_paths and identity is None:
             return path
         if identity is not None and (identity.object_type != "blob" or identity.git_mode not in _REGULAR_GIT_MODES):
             return path
@@ -2569,9 +2767,11 @@ def _resolved_index(context: _IndexResolutionContext) -> ScopeResolution:
         head_snapshot=context.index_snapshot,
         materialized=True,
         input_manifest=context.manifest,
+        base_input_manifest=context.base_manifest,
         index_metadata=context.metadata,
         index_tree=context.index_tree,
         selection_tree=context.index_tree,
+        policy_paths=context.policy_paths,
     )
 
 

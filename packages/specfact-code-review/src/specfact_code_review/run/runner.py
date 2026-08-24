@@ -169,6 +169,7 @@ class CapsuleRuntime:
     interpreter: str
     bootstrap: str
     bubblewrap: BubblewrapIdentity
+    cleanup_root: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -623,6 +624,7 @@ def _prepare_capsule_runtime(*, project_runtime_identity: str = "not-applicable"
 
     if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
         return None, "unsupported_controller_platform"
+    capsule_root: Path | None = None
     try:
         lock_path = Path(__file__).parents[1] / "resources/contracts/pr-range-v1-toolchain-lock.json"
         lock = cast(dict[str, object], json.loads(lock_path.read_text(encoding="utf-8")))
@@ -645,9 +647,12 @@ def _prepare_capsule_runtime(*, project_runtime_identity: str = "not-applicable"
             credential=_capsule_credential(),
         )
         if materialized.status != "PASS":
+            _remove_invocation_capsule(cast(Path | None, getattr(materialized, "root", None)))
             return None, materialized.reason
+        capsule_root = materialized.root
         selected_payload = _selected_module_payload()
         if selected_payload.payload is None:
+            _remove_invocation_capsule(capsule_root)
             return None, selected_payload.reason
         try:
             native = next(
@@ -668,6 +673,7 @@ def _prepare_capsule_runtime(*, project_runtime_identity: str = "not-applicable"
             if selected_payload.staged_source is not None:
                 selected_payload.staged_source.cleanup()
         if composition.status != "PASS":
+            _remove_invocation_capsule(capsule_root)
             return None, composition.reason
         paths = cast(dict[str, object], environment["paths"])
         bubblewrap = BubblewrapIdentity(
@@ -688,11 +694,23 @@ def _prepare_capsule_runtime(*, project_runtime_identity: str = "not-applicable"
                 str(paths["interpreter"]),
                 "/opt/specfact/bootstrap/sealed_bootstrap.py",
                 bubblewrap,
+                capsule_root,
             ),
             "",
         )
     except (KeyError, OSError, StopIteration, TypeError, ValueError, json.JSONDecodeError) as exc:
+        _remove_invocation_capsule(capsule_root)
         return None, f"capsule_runtime_unavailable:{exc}"
+
+
+def _remove_invocation_capsule(root: Path | None) -> None:
+    if root is not None and root.parent.name == "invocations":
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def _cleanup_capsule_runtime(runtime: CapsuleRuntime) -> None:
+    cleanup_root = getattr(runtime, "cleanup_root", None)
+    _remove_invocation_capsule(cleanup_root if isinstance(cleanup_root, Path) else None)
 
 
 def _radon_member_findings(files: list[Path], *, adapter_argv: tuple[str, ...]) -> list[ReviewFinding]:
@@ -5024,18 +5042,21 @@ def run_capsule_review(
         if _allows_development_host_compatibility(reason):
             return run_review(files, review_options)
         return _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence)
-    snapshot = _run_capsule_snapshot(
-        runtime,
-        snapshot_root=Path.cwd(),
-        files=files,
-        options=review_options,
-    )
-    return _capsule_report(
-        snapshot.evidence,
-        snapshot.findings_by_member,
-        options=review_options,
-        scope_evidence=scope_evidence,
-    )
+    try:
+        snapshot = _run_capsule_snapshot(
+            runtime,
+            snapshot_root=Path.cwd(),
+            files=files,
+            options=review_options,
+        )
+        return _capsule_report(
+            snapshot.evidence,
+            snapshot.findings_by_member,
+            options=review_options,
+            scope_evidence=scope_evidence,
+        )
+    finally:
+        _cleanup_capsule_runtime(runtime)
 
 
 def _snapshot_python_files(snapshot: object, resolution: object) -> list[Path]:
@@ -5668,6 +5689,28 @@ def run_immutable_scope_review(
     runtime, reason = _prepare_capsule_runtime(**runtime_kwargs)
     if runtime is None:
         return _unknown_capsule_report(reason, options=options, scope_evidence=scope_evidence)
+    try:
+        return _run_immutable_scope_review_with_runtime(
+            resolution,
+            options=options,
+            scope_evidence=scope_evidence,
+            runtime=runtime,
+            project_runtime=project_runtime,
+            pytest_plugins=pytest_plugins,
+        )
+    finally:
+        _cleanup_capsule_runtime(runtime)
+
+
+def _run_immutable_scope_review_with_runtime(
+    resolution: object,
+    *,
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+    runtime: CapsuleRuntime,
+    project_runtime: toolchain.ProjectRuntimeMaterialization | None,
+    pytest_plugins: tuple[toolchain.PytestPluginIdentity, ...],
+) -> ReviewReport:
     base_snapshot = getattr(resolution, "base_snapshot", None)
     head_snapshot = getattr(resolution, "head_snapshot", None)
     if base_snapshot is None or head_snapshot is None:

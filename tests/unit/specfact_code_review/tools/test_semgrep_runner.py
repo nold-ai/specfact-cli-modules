@@ -143,6 +143,22 @@ def test_sealed_semgrep_pass_rejects_skipped_eligible_input(
     assert findings[0].category == "tool_error"
 
 
+def test_sealed_semgrep_pass_accepts_omitted_optional_skipped_paths(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep/clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {"results": [], "paths": {"scanned": [str(target)]}}
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload))),
+    )
+
+    assert run_semgrep([target], bundle_root=bundle) == []
+
+
 def test_semgrep_pass_union_cannot_hide_rule_exclusion() -> None:
     from specfact_code_review.tools import semgrep_runner
 

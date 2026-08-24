@@ -245,3 +245,18 @@ Explicitly forbidden:
 - [x] 5.7 Prove and create the projected pytest/Coverage scratch subdirectories before capsule launch so the redirected defaults have existing writable parents.
 - [x] 5.8 Fail closed when authenticated package-manifest bytes are not valid UTF-8, with a focused regression proving activation returns package-binding `UNKNOWN`.
 - [x] 5.9 Preserve complete head-side pytest execution for deletion-only selected Python ranges by deriving applicability from the immutable selected scope while continuing to pass analyzers only files present in each snapshot; retain empty-range and stub-only `NOT_APPLICABLE` behavior.
+
+## 6. Final PR #420 promotion remediation
+
+- [x] 6.1 Prove projected policy arguments account for the sandbox's zero-based request-root slot, including Semgrep bundles.
+- [x] 6.2 Prove index selection includes staged Ruff extend and basedpyright reference paths from the captured index policy graph.
+- [x] 6.3 Prove suppression classification tokenizes only `.py` and `.pyi` snapshot blobs.
+- [x] 6.4 Prove concurrent candidate capsule composition uses distinct immutable roots.
+- [x] 6.5 Prove valid Semgrep JSON may omit optional `paths.skipped` while malformed values remain rejected.
+- [x] 6.6 Prove missing Requirements bundle imports become governed `RunCommandError` failures and correct the stale public schema documentation from 1.5 to 1.6.
+- [x] 6.7 Capture failing-before evidence for exactly tasks 6.1-6.6 before changing production or public documentation.
+- [x] 6.8 Implement only tasks 6.1-6.6, advance `specfact-code-review` by one patch version, refresh its checksum, and preserve exact core compatibility `===0.55.1`.
+- [ ] 6.9 Run targeted, strict OpenSpec, formatting, typing, lint, contract, smart, complete, Code Review, manifest, signature, and publish-precheck gates; record passing evidence in `TDD_EVIDENCE.md`.
+- [x] 6.10 Close only the final in-scope review corrections: preserve governed evidence for unsafe staged primary/transitive policy entries, including primary and new reference staged together, deleted prior references, unchanged unsafe entries newly governed by a staged regular config, newly referenced missing entries, and valid per-analyzer base closures when the other analyzer is invalid, before graph resolution and record both collected node IDs for the existing parametrized transitive-policy regression.
+
+Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

@@ -927,6 +927,8 @@ def classify_suppression_delta(
 
     if waiver is not None:
         raise UnsupportedWaiverInput("C14 has no authenticated waiver ingestion path")
+    base_sources = _python_sources(base_sources)
+    head_sources = _python_sources(head_sources)
     try:
         base_occurrences = _suppression_occurrences(base_sources)
         head_occurrences = _suppression_occurrences(head_sources)
@@ -974,6 +976,10 @@ def _suppression_occurrences(sources: dict[str, bytes]) -> tuple[SuppressionOccu
     return tuple(
         occurrence for path, source in sorted(sources.items()) for occurrence in _tokenize_comments(path, source)
     )
+
+
+def _python_sources(sources: dict[str, bytes]) -> dict[str, bytes]:
+    return {path: source for path, source in sources.items() if Path(path).suffix in {".py", ".pyi"}}
 
 
 def _suppression_indexes(

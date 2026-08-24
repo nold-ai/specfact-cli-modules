@@ -432,7 +432,7 @@ def _semgrep_output_paths(payload: dict[str, object]) -> tuple[tuple[str, ...], 
     if not isinstance(paths, dict):
         raise ValueError("semgrep_path_evidence_missing")
     scanned = paths.get("scanned")
-    skipped = paths.get("skipped")
+    skipped = paths.get("skipped", [])
     if not isinstance(scanned, list) or not all(isinstance(path, str) for path in scanned):
         raise ValueError("semgrep_path_evidence_invalid")
     if not isinstance(skipped, list):
