@@ -2558,9 +2558,11 @@ def _discovered_index_ruff_paths(snapshot: Snapshot) -> frozenset[str]:
         extend = cast(str | None, values.get("extend"))
         if extend is not None:
             try:
-                visit(_bounded_relative_path(relative.parent, extend))
+                child = _bounded_relative_path(relative.parent, extend)
             except PolicyResolutionError:
                 return
+            paths.add(child.as_posix())
+            visit(child)
 
     for primary in (".ruff.toml", "ruff.toml"):
         visit(PurePosixPath(primary))
@@ -2599,10 +2601,9 @@ def _discovered_index_basedpyright_paths(snapshot: Snapshot) -> frozenset[str]:
                 child = _bounded_relative_path(relative.parent, reference)
             except PolicyResolutionError:
                 continue
+            paths.add(child.as_posix())
             if key == "extends":
                 visit(child)
-            elif snapshot.entry_or_none(child.as_posix()) is not None:
-                paths.add(child.as_posix())
 
     visit(PurePosixPath("pyrightconfig.json"))
     visit(PurePosixPath("pyproject.toml"), pyproject_primary=True)
@@ -2622,15 +2623,25 @@ def _unsafe_snapshot_policy_paths(snapshot: Snapshot, policy_paths: frozenset[st
     )
 
 
+def _missing_snapshot_policy_paths(snapshot: Snapshot, policy_paths: frozenset[str]) -> frozenset[str]:
+    return frozenset(path for path in policy_paths if snapshot.entry_or_none(path) is None)
+
+
 def _resolved_index_policy_paths(root: Path) -> tuple[frozenset[str], str]:
     ruff_policy = resolve_ruff_policy(root, expected_version="0.15.12")
     basedpyright_policy = resolve_basedpyright_policy(root, expected_version="1.39.10")
     try:
-        if ruff_policy.status != "PASS":
-            return frozenset(), ruff_policy.reason
-        if basedpyright_policy.status != "PASS":
-            return frozenset(), basedpyright_policy.reason
-        return frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths)), ""
+        paths: set[str] = set()
+        reasons: list[str] = []
+        if ruff_policy.status == "PASS":
+            paths.update(ruff_policy.closure_paths)
+        else:
+            reasons.append(ruff_policy.reason)
+        if basedpyright_policy.status == "PASS":
+            paths.update(basedpyright_policy.reference_paths)
+        else:
+            reasons.append(basedpyright_policy.reason)
+        return frozenset(paths), "; ".join(reasons)
     finally:
         if ruff_policy.bundle_root is not None:
             shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
@@ -2660,7 +2671,10 @@ def _materialized_index_context_from_capture(
     base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
     discovered_policy_paths = _discovered_index_policy_paths(index_snapshot)
     preliminary_policy_paths = base_policy_paths | discovered_policy_paths
-    preliminary_candidates = changed_paths | set(_unsafe_snapshot_policy_paths(index_snapshot, discovered_policy_paths))
+    preliminary_candidates = changed_paths | set(
+        _unsafe_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
+        | _missing_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
+    )
     preliminary_paths = tuple(
         path
         for path in sorted(preliminary_candidates)
@@ -2733,7 +2747,7 @@ def _unsafe_index_path(context: _IndexResolutionContext) -> str | None:
         identity = context.manifest.get(path)
         if metadata is not None and (metadata.intent_to_add or metadata.stage != 0):
             return path
-        if path in context.policy_paths and identity is None and path in context.base_manifest:
+        if path in context.policy_paths and identity is None:
             return path
         if identity is not None and (identity.object_type != "blob" or identity.git_mode not in _REGULAR_GIT_MODES):
             return path

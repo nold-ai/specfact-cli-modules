@@ -914,6 +914,8 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** every transitive closure/reference path is included in governed selection
 - **AND** a changed primary or any transitive policy entry referenced by the safe staged primary graph, including a newly staged or newly governed unchanged reference, with a non-regular Git mode yields `unsafe_governed_input` before the staged policy graph is resolved while retaining the captured index tree, metadata, input manifest, and policy paths
 - **AND** deletion of a previously governed transitive policy entry yields `unsafe_governed_input` with its base identity and captured index evidence even when the staged primary removes the reference
+- **AND** a newly referenced missing transitive policy entry yields `unsafe_governed_input` with its recognized path and captured index evidence before graph resolution
+- **AND** each analyzer's valid base policy closure remains governed independently when the other analyzer's base policy is invalid
 - **AND** the policy-only change cannot become NOT_APPLICABLE.
 
 #### Scenario: Suppression manifests contain only Python source blobs

@@ -936,6 +936,105 @@ def test_index_unchanged_unsafe_reference_newly_governed_preserves_evidence(
     assert reference_path in result.policy_paths
 
 
+@pytest.mark.parametrize(
+    "case",
+    [
+        {
+            "valid_primary_path": "pyrightconfig.json",
+            "valid_initial_primary": '{"extends":"config/base.json"}\n',
+            "valid_updated_primary": '{"typeCheckingMode":"strict"}\n',
+            "reference_path": "config/base.json",
+            "reference_content": "{}\n",
+            "invalid_primary_path": "ruff.toml",
+            "invalid_initial_primary": "extend='missing.toml'\n",
+            "invalid_updated_primary": "line-length=88\n",
+        },
+        {
+            "valid_primary_path": "ruff.toml",
+            "valid_initial_primary": "extend='config/base.toml'\n",
+            "valid_updated_primary": "line-length=88\n",
+            "reference_path": "config/base.toml",
+            "reference_content": "line-length=80\n",
+            "invalid_primary_path": "pyrightconfig.json",
+            "invalid_initial_primary": '{"extends":"missing.json"}\n',
+            "invalid_updated_primary": '{"typeCheckingMode":"strict"}\n',
+        },
+    ],
+    ids=["valid-basedpyright-invalid-ruff", "valid-ruff-invalid-basedpyright"],
+)
+def test_index_valid_base_policy_closure_survives_other_invalid_policy(
+    scope_api: Any,
+    git_repo: Path,
+    case: dict[str, str],
+) -> None:
+    valid_primary_path = case["valid_primary_path"]
+    invalid_primary_path = case["invalid_primary_path"]
+    reference_path = case["reference_path"]
+    valid_primary = git_repo / valid_primary_path
+    invalid_primary = git_repo / invalid_primary_path
+    reference = git_repo / reference_path
+    reference.parent.mkdir(parents=True, exist_ok=True)
+    valid_primary.write_text(case["valid_initial_primary"], encoding="utf-8")
+    invalid_primary.write_text(case["invalid_initial_primary"], encoding="utf-8")
+    reference.write_text(case["reference_content"], encoding="utf-8")
+    _commit(git_repo, "add mixed-validity analyzer policy graphs")
+    valid_primary.write_text(case["valid_updated_primary"], encoding="utf-8")
+    invalid_primary.write_text(case["invalid_updated_primary"], encoding="utf-8")
+    _git(git_repo, "add", valid_primary_path, invalid_primary_path)
+    _git(git_repo, "rm", reference_path)
+
+    result = scope_api.resolve_scope(scope_api.ScopeRequest(repository=git_repo, scope="index"))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "unsafe_governed_input"
+    assert set(result.selected_paths) == {valid_primary_path, invalid_primary_path, reference_path}
+    assert result.base_input_manifest[reference_path].git_mode == "100644"
+    assert reference_path not in result.input_manifest
+    assert reference_path in result.policy_paths
+
+
+@pytest.mark.parametrize(
+    ("primary_path", "initial_primary", "updated_primary", "missing_path"),
+    [
+        (
+            "ruff.toml",
+            "line-length=80\n",
+            "extend='config/missing.toml'\n",
+            "config/missing.toml",
+        ),
+        (
+            "pyrightconfig.json",
+            '{"typeCheckingMode":"basic"}\n',
+            '{"extends":"config/missing.json"}\n',
+            "config/missing.json",
+        ),
+    ],
+    ids=["ruff-missing-reference", "basedpyright-missing-reference"],
+)
+def test_index_new_missing_policy_reference_preserves_governed_evidence(
+    scope_api: Any,
+    git_repo: Path,
+    primary_path: str,
+    initial_primary: str,
+    updated_primary: str,
+    missing_path: str,
+) -> None:
+    primary = git_repo / primary_path
+    primary.write_text(initial_primary, encoding="utf-8")
+    _commit(git_repo, "add analyzer primary policy")
+    primary.write_text(updated_primary, encoding="utf-8")
+    _git(git_repo, "add", primary_path)
+
+    result = scope_api.resolve_scope(scope_api.ScopeRequest(repository=git_repo, scope="index"))
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "unsafe_governed_input"
+    assert set(result.selected_paths) == {primary_path, missing_path}
+    assert result.index_tree
+    assert missing_path not in result.input_manifest
+    assert missing_path in result.policy_paths
+
+
 @pytest.mark.parametrize("extend", ["../escape.toml", "missing.toml", "ruff.toml"], ids=["escape", "missing", "cycle"])
 def test_ruff_extend_rejects_escape_cycle_or_missing_input(scope_api: Any, tmp_path: Path, extend: str) -> None:
     (tmp_path / "ruff.toml").write_text(f"extend='{extend}'\n", encoding="utf-8")
