@@ -107,6 +107,15 @@ class _ClassificationState:
     forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
 
 
+@dataclass
+class _CorrespondenceCache:
+    matrices: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]] = field(default_factory=dict)
+    forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
+    forbidden_cells: dict[tuple[bytes, bytes], int] = field(default_factory=dict)
+    source_lines: dict[bytes, list[bytes]] = field(default_factory=dict)
+    source_equal: dict[tuple[bytes, bytes], bool] = field(default_factory=dict)
+
+
 @dataclass(frozen=True)
 class _ContinuityContext:
     base_lines: list[bytes]
@@ -122,7 +131,6 @@ class _SuppressionDeltaContext:
     head_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence]
     base_sources: dict[str, bytes]
     head_sources: dict[str, bytes]
-    renames: dict[str, str]
     base_manifest_digest: str
     head_manifest_digest: str
 
@@ -143,6 +151,53 @@ class SuppressionOccurrence:
     token: str
 
 
+_SuppressionKey = tuple[str, str, str, int]
+_SuppressionEntry = tuple[_SuppressionKey, SuppressionOccurrence]
+
+
+@dataclass(frozen=True)
+class _SuppressionPairEvidence:
+    correspondences: dict[tuple[_SuppressionKey, _SuppressionKey], _SuppressionCorrespondence]
+    base_lines: dict[_SuppressionKey, bytes | None]
+    head_lines: dict[_SuppressionKey, bytes | None]
+
+
+@dataclass(frozen=True)
+class _SuppressionCorrespondence:
+    status: Literal["unchanged", "introduced", "unknown"]
+    evidence: dict[str, object]
+
+
+@dataclass(frozen=True)
+class _SuppressionIntroduction:
+    base_key: _SuppressionKey | None
+    head_key: _SuppressionKey
+    correspondence_evidence: dict[str, object]
+
+
+@dataclass(frozen=True)
+class _SuppressionPairing:
+    base_key: _SuppressionKey | None
+    head_key: _SuppressionKey
+    correspondence_evidence: dict[str, object]
+
+
+@dataclass(frozen=True)
+class _SuppressionSources:
+    base: dict[str, bytes]
+    head: dict[str, bytes]
+
+
+@dataclass(frozen=True)
+class SuppressionTransitionEvidence:
+    base_path: str = ""
+    base_line: int = 0
+    base_occurrence_digest: str = ""
+    correspondence_status: str = ""
+    correspondence_digest: str = ""
+    correspondence_evidence: dict[str, object] = field(default_factory=dict)
+
+
 @dataclass(frozen=True)
 class SuppressionEvidence:
     changed_hunk_digest: str = ""
@@ -153,6 +208,7 @@ class SuppressionEvidence:
     occurrence_digest: str = ""
     base_manifest_digest: str = ""
     head_manifest_digest: str = ""
+    transition: SuppressionTransitionEvidence = field(default_factory=SuppressionTransitionEvidence)
 
 
 @dataclass(frozen=True)
@@ -341,6 +397,7 @@ def _source_for(path: str, sources: dict[str, bytes]) -> bytes | None:
 _MAX_SOURCE_BYTES = 16 * 1024 * 1024
 _MAX_SOURCE_LINES = 20_000
 _MAX_CORRESPONDENCE_CELLS = 4_000_000
+_MAX_AGGREGATE_CORRESPONDENCE_CELLS = 4_000_000
 
 
 def _edit_costs(
@@ -426,11 +483,12 @@ def _continuity_context(
     *,
     base_source: bytes | None,
     head_source: bytes | None,
+    source_line_cache: dict[bytes, list[bytes]] | None = None,
 ) -> tuple[_ContinuityContext | None, dict[str, object]]:
     if base_source is None or head_source is None:
         return None, {"reason": "missing_source"}
-    base_lines = base_source.splitlines()
-    head_lines = head_source.splitlines()
+    base_lines = _cached_source_lines(base_source, source_line_cache)
+    head_lines = _cached_source_lines(head_source, source_line_cache)
     cells = (len(base_lines) + 1) * (len(head_lines) + 1)
     if not _continuity_within_bounds(base_source, head_source, base_lines, head_lines, cells):
         return None, {"cells": cells, "reason": "correspondence_bounds"}
@@ -440,6 +498,16 @@ def _continuity_context(
     if not _continuity_anchor_is_valid(context):
         return None, {"cells": cells, "reason": "invalid_source_anchor"}
     return context, {}
+
+
+def _cached_source_lines(source: bytes, cache: dict[bytes, list[bytes]] | None) -> list[bytes]:
+    if cache is None:
+        return source.splitlines()
+    lines = cache.get(source)
+    if lines is None:
+        lines = source.splitlines()
+        cache[source] = lines
+    return lines
 
 
 def _continuity_within_bounds(
@@ -890,18 +958,20 @@ def _source_manifest_digest(sources: dict[str, bytes]) -> str:
 def _suppression_evidence(
     occurrence: SuppressionOccurrence,
     *,
+    base_occurrence: SuppressionOccurrence | None = None,
     base_source: bytes | None,
     head_source: bytes | None,
     base_manifest_digest: str,
     head_manifest_digest: str,
+    correspondence_evidence: dict[str, object] | None = None,
 ) -> SuppressionEvidence:
-    occurrence_projection = {
-        "family": occurrence.family,
-        "kind": occurrence.kind,
-        "line": occurrence.line,
-        "path": occurrence.path,
-        "token": occurrence.token,
-    }
+    occurrence_projection = _suppression_occurrence_projection(occurrence)
+    base_occurrence_digest = (
+        "sha256:" + hashlib.sha256(_canonical_bytes(_suppression_occurrence_projection(base_occurrence))).hexdigest()
+        if base_occurrence is not None
+        else ""
+    )
+    correspondence = correspondence_evidence or {}
     changed_hunk = (base_source or b"") + b"\0" + (head_source or b"")
     return SuppressionEvidence(
         changed_hunk_digest="sha256:" + hashlib.sha256(changed_hunk).hexdigest(),
@@ -912,7 +982,27 @@ def _suppression_evidence(
         occurrence_digest="sha256:" + hashlib.sha256(_canonical_bytes(occurrence_projection)).hexdigest(),
         base_manifest_digest=base_manifest_digest,
         head_manifest_digest=head_manifest_digest,
+        transition=SuppressionTransitionEvidence(
+            base_path=base_occurrence.path if base_occurrence is not None else "",
+            base_line=base_occurrence.line if base_occurrence is not None else 0,
+            base_occurrence_digest=base_occurrence_digest,
+            correspondence_status=str(correspondence.get("status", "")),
+            correspondence_digest=(
+                "sha256:" + hashlib.sha256(_canonical_bytes(correspondence)).hexdigest() if correspondence else ""
+            ),
+            correspondence_evidence=correspondence,
+        ),
     )
+
+
+def _suppression_occurrence_projection(occurrence: SuppressionOccurrence) -> dict[str, object]:
+    return {
+        "family": occurrence.family,
+        "kind": occurrence.kind,
+        "line": occurrence.line,
+        "path": occurrence.path,
+        "token": occurrence.token,
+    }
 
 
 def classify_suppression_delta(
@@ -934,32 +1024,32 @@ def classify_suppression_delta(
         head_occurrences = _suppression_occurrences(head_sources)
     except (IndentationError, SyntaxError, UnicodeDecodeError, tokenize.TokenError) as exc:
         return SuppressionClassification("UNKNOWN", reason=f"suppression_manifest_error:{type(exc).__name__}")
-    renames = rename_facts or {}
-    base_by_key, head_by_key = _suppression_indexes(base_occurrences, head_occurrences, renames)
-    unchanged_keys = sorted(set(base_by_key) & set(head_by_key))
-    introduced_keys = sorted(set(head_by_key) - set(base_by_key))
-    unchanged = tuple(head_by_key[key] for key in unchanged_keys)
-    introduced = tuple(head_by_key[key] for key in introduced_keys)
-    base_manifest_digest = _source_manifest_digest(base_sources)
-    head_manifest_digest = _source_manifest_digest(head_sources)
+    context = _suppression_delta_context(
+        base_occurrences,
+        head_occurrences,
+        base_sources=base_sources,
+        head_sources=head_sources,
+        renames=rename_facts or {},
+    )
+    correspondence_cache = _CorrespondenceCache()
+    unchanged_pairs, introductions, correspondence_unknown = _classify_suppression_keys(
+        context.base_by_key,
+        context.head_by_key,
+        base_sources=base_sources,
+        head_sources=head_sources,
+        cache=correspondence_cache,
+    )
+    unchanged = tuple(context.head_by_key[pair.head_key] for pair in unchanged_pairs)
+    introduced = tuple(context.head_by_key[item.head_key] for item in introductions)
     findings = _introduced_suppression_findings(
-        introduced,
-        head_sources,
-        base_manifest_digest,
-        head_manifest_digest,
+        introductions,
+        context,
     )
     quarantined = _append_quarantined_suppressions(
         findings,
-        unchanged_keys,
-        _SuppressionDeltaContext(
-            base_by_key,
-            head_by_key,
-            base_sources,
-            head_sources,
-            renames,
-            base_manifest_digest,
-            head_manifest_digest,
-        ),
+        unchanged_pairs,
+        context,
+        cache=correspondence_cache,
     )
     missing_disposition = "unknown" if introduced and missing_base_findings else "ordinary"
     status = _suppression_status(quarantined=quarantined, introduced=bool(introduced))
@@ -969,6 +1059,7 @@ def classify_suppression_delta(
         introduced,
         unchanged,
         missing_disposition,
+        reason="suppression_correspondence_unknown" if correspondence_unknown else "",
     )
 
 
@@ -980,6 +1071,25 @@ def _suppression_occurrences(sources: dict[str, bytes]) -> tuple[SuppressionOccu
 
 def _python_sources(sources: dict[str, bytes]) -> dict[str, bytes]:
     return {path: source for path, source in sources.items() if Path(path).suffix in {".py", ".pyi"}}
+
+
+def _suppression_delta_context(
+    base_occurrences: tuple[SuppressionOccurrence, ...],
+    head_occurrences: tuple[SuppressionOccurrence, ...],
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+    renames: dict[str, str],
+) -> _SuppressionDeltaContext:
+    base_by_key, head_by_key = _suppression_indexes(base_occurrences, head_occurrences, renames)
+    return _SuppressionDeltaContext(
+        base_by_key,
+        head_by_key,
+        base_sources,
+        head_sources,
+        _source_manifest_digest(base_sources),
+        _source_manifest_digest(head_sources),
+    )
 
 
 def _suppression_indexes(
@@ -1013,43 +1123,368 @@ def _suppression_occurrence_index(
     return indexed
 
 
-def _introduced_suppression_findings(
-    introduced: tuple[SuppressionOccurrence, ...],
+def _classify_suppression_keys(
+    base_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence],
+    head_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence],
+    *,
+    base_sources: dict[str, bytes],
     head_sources: dict[str, bytes],
-    base_manifest_digest: str,
-    head_manifest_digest: str,
-) -> list[SuppressionFinding]:
-    return [
-        SuppressionFinding(
-            item.kind,
-            item.path,
-            item.line,
-            True,
-            _suppression_evidence(
-                item,
-                base_source=None,
-                head_source=head_sources.get(item.path),
-                base_manifest_digest=base_manifest_digest,
-                head_manifest_digest=head_manifest_digest,
-            ),
+    cache: _CorrespondenceCache,
+) -> tuple[
+    list[_SuppressionPairing],
+    list[_SuppressionIntroduction],
+    bool,
+]:
+    unchanged: list[_SuppressionPairing] = []
+    introduced: list[_SuppressionIntroduction] = []
+    correspondence_unknown = False
+    base_buckets = _suppression_identity_buckets(base_by_key)
+    head_buckets = _suppression_identity_buckets(head_by_key)
+    sources = _SuppressionSources(base_sources, head_sources)
+    for identity in sorted(set(base_buckets) | set(head_buckets)):
+        identity_unchanged, identity_introduced, identity_unknown = _classify_suppression_identity(
+            base_buckets.get(identity, []),
+            head_buckets.get(identity, []),
+            sources=sources,
+            cache=cache,
         )
-        for item in introduced
+        unchanged.extend(identity_unchanged)
+        introduced.extend(identity_introduced)
+        correspondence_unknown = correspondence_unknown or identity_unknown
+    return (
+        sorted(unchanged, key=_suppression_pairing_sort_key),
+        sorted(introduced, key=lambda item: item.head_key),
+        correspondence_unknown,
+    )
+
+
+def _suppression_pairing_sort_key(
+    pairing: _SuppressionPairing,
+) -> tuple[bool, _SuppressionKey, _SuppressionKey]:
+    return pairing.base_key is None, pairing.base_key or pairing.head_key, pairing.head_key
+
+
+def _classify_suppression_identity(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    sources: _SuppressionSources,
+    cache: _CorrespondenceCache,
+) -> tuple[list[_SuppressionPairing], list[_SuppressionIntroduction], bool]:
+    if not base_bucket:
+        return [], [_SuppressionIntroduction(None, key, {}) for key, _item in head_bucket], False
+    if not head_bucket:
+        return [], [], False
+    base_source = sources.base[base_bucket[0][1].path]
+    head_source = sources.head[head_bucket[0][1].path]
+    if _cached_source_equality(base_source, head_source, cache.source_equal):
+        pair_count = min(len(base_bucket), len(head_bucket))
+        pairs = [_SuppressionPairing(base_bucket[index][0], head_bucket[index][0], {}) for index in range(pair_count)]
+        introduced = [_SuppressionIntroduction(None, key, {}) for key, _item in head_bucket[pair_count:]]
+        return pairs, introduced, False
+    return _classify_changed_suppression_identity(base_bucket, head_bucket, sources=sources, cache=cache)
+
+
+def _classify_changed_suppression_identity(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    sources: _SuppressionSources,
+    cache: _CorrespondenceCache,
+) -> tuple[list[_SuppressionPairing], list[_SuppressionIntroduction], bool]:
+    pair_evidence = _suppression_pair_evidence(
+        base_bucket,
+        head_bucket,
+        base_sources=sources.base,
+        head_sources=sources.head,
+        cache=cache,
+    )
+    correspondence_pairs = [
+        _SuppressionPairing(base_key, head_key, correspondence.evidence)
+        for (base_key, head_key), correspondence in pair_evidence.correspondences.items()
+        if correspondence.status != "introduced"
     ]
+    introduced = [
+        _SuppressionIntroduction(base_key, head_key, correspondence.evidence)
+        for (base_key, head_key), correspondence in pair_evidence.correspondences.items()
+        if correspondence.status == "introduced"
+    ]
+    matched_base = {base_key for base_key, _head_key in pair_evidence.correspondences}
+    matched_head = {head_key for _base_key, head_key in pair_evidence.correspondences}
+    remaining_base = [entry for entry in base_bucket if entry[0] not in matched_base]
+    remaining_head = [entry for entry in head_bucket if entry[0] not in matched_head]
+    fallback_pairs, fallback_introduced, fallback_unknown = _suppression_fallback_pairs(
+        remaining_base,
+        remaining_head,
+        sources=sources,
+        cache=cache,
+    )
+    correspondence_unknown = any(
+        correspondence.status == "unknown" for correspondence in pair_evidence.correspondences.values()
+    )
+    return (
+        correspondence_pairs + fallback_pairs,
+        introduced + fallback_introduced,
+        correspondence_unknown or fallback_unknown,
+    )
+
+
+def _suppression_fallback_pairs(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    sources: _SuppressionSources,
+    cache: _CorrespondenceCache,
+) -> tuple[list[_SuppressionPairing], list[_SuppressionIntroduction], bool]:
+    unchanged: list[_SuppressionPairing] = []
+    introduced: list[_SuppressionIntroduction] = []
+    correspondence_unknown = False
+    pair_count = min(len(base_bucket), len(head_bucket))
+    for base_entry, head_entry in zip(base_bucket[:pair_count], head_bucket[:pair_count], strict=True):
+        base_key, base_item = base_entry
+        head_key, head_item = head_entry
+        correspondence = _suppression_occurrence_continuity(
+            base_item,
+            head_item,
+            base_source=sources.base[base_item.path],
+            head_source=sources.head[head_item.path],
+            cache=cache,
+        )
+        if correspondence.status == "introduced":
+            introduced.append(
+                _SuppressionIntroduction(
+                    base_key,
+                    head_key,
+                    correspondence.evidence,
+                )
+            )
+        else:
+            unchanged.append(_SuppressionPairing(base_key, head_key, correspondence.evidence))
+            correspondence_unknown = correspondence_unknown or correspondence.status == "unknown"
+    surplus = head_bucket[pair_count:]
+    if correspondence_unknown:
+        evidence = {
+            "algorithm": "source-line-correspondence-v1",
+            "base_count": len(base_bucket),
+            "decision": "ambiguous_surplus_candidate",
+            "head_count": len(head_bucket),
+            "status": "unknown",
+        }
+        unchanged.extend(_SuppressionPairing(None, key, evidence) for key, _item in surplus)
+    else:
+        introduced.extend(_SuppressionIntroduction(None, key, {}) for key, _item in surplus)
+    return unchanged, introduced, correspondence_unknown
+
+
+def _suppression_identity_buckets(
+    occurrences: dict[_SuppressionKey, SuppressionOccurrence],
+) -> dict[tuple[str, str, str], list[_SuppressionEntry]]:
+    buckets: dict[tuple[str, str, str], list[_SuppressionEntry]] = defaultdict(list)
+    for key, occurrence in sorted(occurrences.items()):
+        buckets[key[:3]].append((key, occurrence))
+    return buckets
+
+
+def _suppression_pair_evidence(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+    cache: _CorrespondenceCache,
+) -> _SuppressionPairEvidence:
+    base_source = base_sources[base_bucket[0][1].path]
+    head_source = head_sources[head_bucket[0][1].path]
+    base_lines = _suppression_physical_lines(base_bucket, _cached_source_lines(base_source, cache.source_lines))
+    head_lines = _suppression_physical_lines(head_bucket, _cached_source_lines(head_source, cache.source_lines))
+    base_by_line = _suppression_entries_by_line(base_bucket, base_lines)
+    head_by_line = _suppression_entries_by_line(head_bucket, head_lines)
+    correspondences: dict[tuple[_SuppressionKey, _SuppressionKey], _SuppressionCorrespondence] = {}
+    for line in sorted(set(base_by_line) & set(head_by_line)):
+        base_entries = base_by_line[line]
+        head_entries = head_by_line[line]
+        if len(base_entries) != 1 or len(head_entries) != 1:
+            continue
+        base_key, base_item = base_entries[0]
+        head_key, head_item = head_entries[0]
+        correspondences[(base_key, head_key)] = _suppression_occurrence_continuity(
+            base_item,
+            head_item,
+            base_source=base_source,
+            head_source=head_source,
+            cache=cache,
+        )
+    return _SuppressionPairEvidence(correspondences, base_lines, head_lines)
+
+
+def _suppression_physical_lines(
+    bucket: list[_SuppressionEntry],
+    source_lines: list[bytes],
+) -> dict[_SuppressionKey, bytes | None]:
+    return {
+        key: source_lines[occurrence.line - 1] if 0 < occurrence.line <= len(source_lines) else None
+        for key, occurrence in bucket
+    }
+
+
+def _suppression_entries_by_line(
+    bucket: list[_SuppressionEntry],
+    physical_lines: dict[_SuppressionKey, bytes | None],
+) -> dict[bytes, list[_SuppressionEntry]]:
+    entries: dict[bytes, list[_SuppressionEntry]] = defaultdict(list)
+    for entry in bucket:
+        line = physical_lines[entry[0]]
+        if line is not None:
+            entries[line].append(entry)
+    return entries
+
+
+def _suppression_occurrence_continuity(
+    base: SuppressionOccurrence,
+    head: SuppressionOccurrence,
+    *,
+    base_source: bytes,
+    head_source: bytes,
+    cache: _CorrespondenceCache,
+) -> _SuppressionCorrespondence:
+    evidence: dict[str, object] = {
+        "algorithm": "source-line-correspondence-v1",
+        "base_line": base.line,
+        "head_line": head.line,
+        "bounds": {
+            "max_source_bytes": _MAX_SOURCE_BYTES,
+            "max_source_lines": _MAX_SOURCE_LINES,
+            "max_cells": _MAX_CORRESPONDENCE_CELLS,
+            "max_aggregate_cells": _MAX_AGGREGATE_CORRESPONDENCE_CELLS,
+        },
+    }
+    if _cached_source_equality(base_source, head_source, cache.source_equal):
+        return _suppression_correspondence("unchanged", evidence, decision="identical_source")
+    base_finding = DifferentialFinding("suppression", base.family, "error", base.path, base.line, base.token, True)
+    head_finding = DifferentialFinding("suppression", head.family, "error", head.path, head.line, head.token, True)
+    context, reason = _continuity_context(
+        base_finding,
+        head_finding,
+        base_source=base_source,
+        head_source=head_source,
+        source_line_cache=cache.source_lines,
+    )
+    if context is None:
+        return _suppression_correspondence("unknown", {**evidence, **reason}, decision="unavailable")
+    evidence["base_line_sequence_digest"] = "sha256:" + hashlib.sha256(b"\n".join(context.base_lines)).hexdigest()
+    evidence["head_line_sequence_digest"] = "sha256:" + hashlib.sha256(b"\n".join(context.head_lines)).hexdigest()
+    base_line = context.base_lines[context.base_index]
+    head_line = context.head_lines[context.head_index]
+    if base_line != head_line:
+        return _suppression_correspondence("introduced", evidence, decision="physical_line_changed")
+    if context.base_lines.count(base_line) != 1 or context.head_lines.count(head_line) != 1:
+        return _suppression_correspondence("unknown", evidence, decision="ambiguous_physical_line")
+    source_key = (base_source, head_source)
+    if not _reserve_forbidden_correspondence(cache, source_key, context):
+        return _suppression_correspondence("unknown", evidence, decision="aggregate_correspondence_bounds")
+    evidence.update(
+        _continuity_cost_evidence(
+            context,
+            source_key=source_key,
+            matrix_cache=cache.matrices,
+            forbidden_cache=cache.forbidden_costs,
+        )
+    )
+    pair_cost = _integer_evidence(evidence, "pair_cost")
+    global_cost = _integer_evidence(evidence, "global_cost")
+    forced_cost = _integer_evidence(evidence, "forced_cost")
+    forbidden_cost = _integer_evidence(evidence, "forbidden_cost")
+    if pair_cost == 0 and forced_cost == global_cost and forbidden_cost > global_cost:
+        return _suppression_correspondence("unchanged", evidence, decision="unique_optimal_match")
+    return _suppression_correspondence("introduced", evidence, decision="not_unique_optimal_correspondence")
+
+
+def _suppression_correspondence(
+    status: Literal["unchanged", "introduced", "unknown"],
+    evidence: dict[str, object],
+    *,
+    decision: str,
+) -> _SuppressionCorrespondence:
+    return _SuppressionCorrespondence(status, {**evidence, "decision": decision, "status": status})
+
+
+def _cached_source_equality(
+    base_source: bytes,
+    head_source: bytes,
+    cache: dict[tuple[bytes, bytes], bool],
+) -> bool:
+    source_key = (base_source, head_source)
+    equal = cache.get(source_key)
+    if equal is None:
+        equal = base_source == head_source
+        cache[source_key] = equal
+    return equal
+
+
+def _reserve_forbidden_correspondence(
+    cache: _CorrespondenceCache,
+    source_key: tuple[bytes, bytes],
+    context: _ContinuityContext,
+) -> bool:
+    forbidden_key = (*source_key, context.base_index, context.head_index)
+    if forbidden_key in cache.forbidden_costs:
+        return True
+    used_cells = cache.forbidden_cells.get(source_key, 0)
+    if used_cells + context.cells > _MAX_AGGREGATE_CORRESPONDENCE_CELLS:
+        return False
+    cache.forbidden_cells[source_key] = used_cells + context.cells
+    return True
+
+
+def _introduced_suppression_findings(
+    introductions: list[_SuppressionIntroduction],
+    context: _SuppressionDeltaContext,
+) -> list[SuppressionFinding]:
+    findings: list[SuppressionFinding] = []
+    for introduction in introductions:
+        head_item = context.head_by_key[introduction.head_key]
+        base_item = context.base_by_key[introduction.base_key] if introduction.base_key is not None else None
+        findings.append(
+            SuppressionFinding(
+                head_item.kind,
+                head_item.path,
+                head_item.line,
+                True,
+                _suppression_evidence(
+                    head_item,
+                    base_occurrence=base_item,
+                    base_source=context.base_sources.get(base_item.path) if base_item is not None else None,
+                    head_source=context.head_sources.get(head_item.path),
+                    base_manifest_digest=context.base_manifest_digest,
+                    head_manifest_digest=context.head_manifest_digest,
+                    correspondence_evidence=introduction.correspondence_evidence,
+                ),
+            )
+        )
+    return findings
 
 
 def _append_quarantined_suppressions(
     findings: list[SuppressionFinding],
-    unchanged_keys: list[tuple[str, str, str, int]],
+    unchanged_pairs: list[_SuppressionPairing],
     context: _SuppressionDeltaContext,
+    *,
+    cache: _CorrespondenceCache,
 ) -> bool:
     quarantined = False
-    for key in unchanged_keys:
-        base_item = context.base_by_key[key]
-        head_item = context.head_by_key[key]
-        base_source = context.base_sources[base_item.path]
+    for pair in unchanged_pairs:
+        head_item = context.head_by_key[pair.head_key]
+        base_item = context.base_by_key[pair.base_key] if pair.base_key is not None else None
+        base_source = (
+            context.base_sources.get(base_item.path)
+            if base_item is not None
+            else context.base_sources.get(pair.head_key[0])
+        )
         head_source = context.head_sources[head_item.path]
-        pure_rename = context.renames.get(base_item.path) == head_item.path and base_source == head_source
-        if base_source == head_source or pure_rename:
+        sources_equal = base_source is not None and _cached_source_equality(
+            base_source, head_source, cache.source_equal
+        )
+        if base_item is not None and sources_equal:
             continue
         findings.append(
             SuppressionFinding(
@@ -1059,10 +1494,12 @@ def _append_quarantined_suppressions(
                 True,
                 _suppression_evidence(
                     head_item,
+                    base_occurrence=base_item,
                     base_source=base_source,
                     head_source=head_source,
                     base_manifest_digest=context.base_manifest_digest,
                     head_manifest_digest=context.head_manifest_digest,
+                    correspondence_evidence=pair.correspondence_evidence,
                 ),
             )
         )

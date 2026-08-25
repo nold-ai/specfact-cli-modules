@@ -5314,20 +5314,43 @@ def _suppression_review_finding(
         fixable=False,
         differential_state=cast(Any, state),
         blocking=finding.blocking,
-        evidence_refs=[
-            EvidenceRef(
-                path=finding.path,
-                start_line=finding.line,
-                end_line=finding.line,
-                artifact_id=finding.evidence.occurrence_digest,
-                description=(
-                    f"{finding.evidence.family}; base={finding.evidence.base_blob_digest or 'absent'}; "
-                    f"head={finding.evidence.head_blob_digest or 'absent'}; "
-                    f"change={finding.evidence.changed_hunk_digest}"
-                ),
-            )
-        ],
+        evidence_refs=_suppression_evidence_refs(finding),
     )
+
+
+def _suppression_evidence_refs(finding: differential.SuppressionFinding) -> list[EvidenceRef]:
+    evidence = finding.evidence
+    transition = evidence.transition
+    refs = [
+        EvidenceRef(
+            path=finding.path,
+            start_line=finding.line,
+            end_line=finding.line,
+            artifact_id=evidence.occurrence_digest,
+            description=(
+                f"{evidence.family}; base={evidence.base_blob_digest or 'absent'}; "
+                f"head={evidence.head_blob_digest or 'absent'}; change={evidence.changed_hunk_digest}"
+            ),
+        )
+    ]
+    if transition.base_occurrence_digest:
+        refs.append(
+            EvidenceRef(
+                path=transition.base_path,
+                start_line=transition.base_line,
+                end_line=transition.base_line,
+                artifact_id=transition.base_occurrence_digest,
+                description="Baseline suppression occurrence matched to the head transition.",
+            )
+        )
+    if transition.correspondence_digest:
+        refs.append(
+            EvidenceRef(
+                artifact_id=transition.correspondence_digest,
+                description=json.dumps(transition.correspondence_evidence, sort_keys=True, separators=(",", ":")),
+            )
+        )
+    return refs
 
 
 def _apply_suppression_delta(

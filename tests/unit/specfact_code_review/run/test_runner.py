@@ -1484,6 +1484,60 @@ def test_immutable_range_blocks_introduced_suppression_even_when_analyzers_repor
     assert findings["ruff"][0].is_blocking() is True
 
 
+def test_immutable_range_reports_relocated_suppression_baseline_and_correspondence(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    (base_root / "src").mkdir(parents=True)
+    (head_root / "src").mkdir(parents=True)
+    base_source = b"# noqa: F401\nx = 1\n"
+    head_source = b"x = 1\n# noqa: F401\n"
+    (base_root / "src/app.py").write_bytes(base_source)
+    (head_root / "src/app.py").write_bytes(head_source)
+    resolution = SimpleNamespace(
+        base_snapshot=SimpleNamespace(root=base_root, contents={"src/app.py": base_source}),
+        head_snapshot=SimpleNamespace(root=head_root, contents={"src/app.py": head_source}),
+        exact_renames=(),
+        path_statuses={"src/app.py": "M"},
+    )
+
+    _evidence, findings = runner_api._classify_range_findings(
+        resolution,
+        runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {}),
+        runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {}),
+    )
+
+    finding = findings["ruff"][0]
+    refs = finding.evidence_refs or []
+    serialized_refs = json.loads(finding.model_dump_json())["evidence_refs"]
+    correspondence = refs[2].description or ""
+    assert (
+        finding.rule,
+        finding.differential_state,
+        finding.is_blocking(),
+        len(refs),
+        (refs[0].path, refs[0].start_line),
+        (refs[1].path, refs[1].start_line),
+        refs[1].artifact_id.startswith("sha256:") if refs[1].artifact_id else False,
+        refs[2].artifact_id.startswith("sha256:") if refs[2].artifact_id else False,
+        all(token in correspondence for token in ('"global_cost":2', '"forced_cost":2', '"forbidden_cost":2')),
+        (serialized_refs[1]["path"], serialized_refs[1]["start_line"]),
+        '"decision":"not_unique_optimal_correspondence"' in serialized_refs[2]["description"],
+    ) == (
+        "introduced_inline_suppression",
+        "introduced",
+        True,
+        3,
+        ("src/app.py", 2),
+        ("src/app.py", 1),
+        True,
+        True,
+        True,
+        ("src/app.py", 1),
+        True,
+    )
+
+
 def test_immutable_range_preserves_fixed_findings_without_blocking(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     base_root = tmp_path / "base"
