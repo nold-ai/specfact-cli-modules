@@ -1167,6 +1167,21 @@ def test_basedpyright_projection_exposes_flat_project_runtime_site_packages(scop
     assert "reportMissingImports" not in result.stdout
 
 
+def test_project_runtime_source_locks_are_derived_from_target_snapshot(scope_api: Any, tmp_path: Path) -> None:
+    payload = b"version = 1\n"
+    snapshot = scope_api.Snapshot(
+        tmp_path,
+        "1" * 40,
+        "2" * 40,
+        {"uv.lock": payload},
+        {"uv.lock": scope_api.TreeEntry("100644", "blob", "3" * 40, "uv.lock")},
+    )
+
+    identities = scope_api._snapshot_source_lock_identities(snapshot, frozenset({"uv.lock"}))
+
+    assert identities == (("uv.lock", "3" * 40, scope_api.sha256_bytes(payload)),)
+
+
 def test_context_requires_target_and_head_tree_identities(scope_api: Any, git_repo: Path, tmp_path: Path) -> None:
     base, head = _make_range(git_repo)
     context = tmp_path / "context.json"

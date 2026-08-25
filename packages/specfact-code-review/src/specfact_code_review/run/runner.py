@@ -5539,6 +5539,10 @@ def _materialize_claimed_project_runtime(
         cast(dict[str, object], descriptor),
         expected_target=str(getattr(resolution, "resolved_target_commit", "")),
         expected_tree=str(getattr(resolution, "resolved_target_tree", "")),
+        expected_source_locks=cast(
+            tuple[toolchain.SourceLockIdentity, ...],
+            getattr(resolution, "project_runtime_source_locks", ()),
+        ),
     )
     if layer.status != "PASS":
         return None, (), layer.reason
@@ -5552,6 +5556,10 @@ def _materialize_claimed_project_runtime(
         cast(dict[str, object], descriptor),
         expected_target=str(getattr(resolution, "resolved_target_commit", "")),
         expected_tree=str(getattr(resolution, "resolved_target_tree", "")),
+        expected_source_locks=cast(
+            tuple[toolchain.SourceLockIdentity, ...],
+            getattr(resolution, "project_runtime_source_locks", ()),
+        ),
         storage_root=storage_root,
         credential=_capsule_credential(),
     )

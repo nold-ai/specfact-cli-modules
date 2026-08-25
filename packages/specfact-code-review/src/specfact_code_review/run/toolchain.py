@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import gzip
 import hashlib
 import io
@@ -22,6 +23,9 @@ from urllib.parse import urlencode, urljoin, urlparse
 
 import requests
 from packaging.requirements import Requirement
+
+
+SourceLockIdentity = tuple[str, str, str]
 
 
 @dataclass(frozen=True)
@@ -1788,7 +1792,10 @@ def _valid_runtime_target(target: dict[str, object], expected_target: str, expec
     )
 
 
-def _valid_source_locks(source_locks: list[dict[str, object]]) -> bool:
+def _valid_source_locks(
+    source_locks: list[dict[str, object]],
+    expected_source_locks: tuple[SourceLockIdentity, ...],
+) -> bool:
     source_paths = [str(item.get("path", "")) for item in source_locks]
     if source_paths != sorted(set(source_paths)):
         return False
@@ -1797,7 +1804,8 @@ def _valid_source_locks(source_locks: list[dict[str, object]]) -> bool:
             return False
         if not _full_sha(item.get("blob_sha")) or not _valid_digest(item.get("content_sha256")):
             return False
-    return True
+    observed = tuple((str(item["path"]), str(item["blob_sha"]), str(item["content_sha256"])) for item in source_locks)
+    return observed == expected_source_locks
 
 
 def _runtime_distribution_names(distributions: list[dict[str, object]]) -> list[str]:
@@ -1812,7 +1820,7 @@ def _valid_runtime_distributions(distributions: list[dict[str, object]]) -> bool
 def _valid_project_runtime_oci(oci: dict[str, object]) -> bool:
     registry = oci.get("registry")
     repository = oci.get("repository")
-    if not isinstance(registry, str) or not registry.startswith("https://"):
+    if registry != "https://ghcr.io":
         return False
     if not isinstance(repository, str) or not repository:
         return False
@@ -1838,12 +1846,13 @@ def _valid_project_runtime_parts(
     *,
     expected_target: str,
     expected_tree: str,
+    expected_source_locks: tuple[SourceLockIdentity, ...],
 ) -> bool:
     plugin_names = [re.sub(r"[-_.]+", "-", str(plugin.get("distribution", ""))).lower() for plugin in parts.plugins]
     return all(
         (
             _valid_runtime_target(parts.target, expected_target, expected_tree),
-            _valid_source_locks(parts.source_locks),
+            _valid_source_locks(parts.source_locks, expected_source_locks),
             _valid_runtime_distributions(parts.distributions),
             _valid_project_runtime_oci(parts.oci),
             _valid_runtime_provenance(parts.build, parts.attestation),
@@ -1859,6 +1868,7 @@ def validate_project_runtime_layer(
     *,
     expected_target: str,
     expected_tree: str,
+    expected_source_locks: tuple[SourceLockIdentity, ...],
 ) -> ProjectRuntimeLayer:
     parts = _project_runtime_parts(descriptor)
     if (
@@ -1868,6 +1878,7 @@ def validate_project_runtime_layer(
             parts,
             expected_target=expected_target,
             expected_tree=expected_tree,
+            expected_source_locks=expected_source_locks,
         )
     ):
         return ProjectRuntimeLayer("UNKNOWN", "project_runtime_identity_mismatch")
@@ -1966,11 +1977,22 @@ def _project_runtime_manifest_matches(cache_root: Path, oci: dict[str, object]) 
     ] == [(item.get("digest"), item.get("size")) for item in expected_layers]
 
 
+def _publish_project_runtime(extracted: Path, destination: Path, descriptor: dict[str, object]) -> None:
+    try:
+        os.rename(extracted, destination)
+    except OSError as exc:
+        if exc.errno not in {errno.EEXIST, errno.ENOTEMPTY}:
+            raise
+        if not _project_runtime_root_matches(destination, descriptor):
+            raise ValueError("concurrent project runtime identity mismatch") from exc
+
+
 def materialize_project_runtime(
     descriptor: dict[str, object],
     *,
     expected_target: str,
     expected_tree: str,
+    expected_source_locks: tuple[SourceLockIdentity, ...],
     storage_root: Path,
     credential: str | None = None,
 ) -> ProjectRuntimeMaterialization:
@@ -1980,6 +2002,7 @@ def materialize_project_runtime(
         descriptor,
         expected_target=expected_target,
         expected_tree=expected_tree,
+        expected_source_locks=expected_source_locks,
     )
     destination = storage_root / layer.identity.removeprefix("sha256:")
     if layer.status != "PASS":
@@ -1995,7 +2018,7 @@ def materialize_project_runtime(
     acquisition = acquire_oci_distribution(
         acquisition_oci,
         cache_root=cache_root,
-        credential=credential,
+        credential=credential if oci.get("registry") == "https://ghcr.io" else None,
     )
     if acquisition.status != "PASS" or not _project_runtime_manifest_matches(cache_root, oci):
         return ProjectRuntimeMaterialization(
@@ -2020,9 +2043,7 @@ def materialize_project_runtime(
         extracted = rootfs / "opt/specfact/project-runtime"
         if not _project_runtime_root_matches(extracted, descriptor):
             raise ValueError("project runtime root manifest or distribution set mismatch")
-        if destination.exists():
-            shutil.rmtree(destination)
-        os.replace(extracted, destination)
+        _publish_project_runtime(extracted, destination, descriptor)
     except (OSError, tarfile.TarError, TypeError, ValueError) as exc:
         return ProjectRuntimeMaterialization(
             "UNKNOWN", destination, layer.identity, f"project_runtime_materialization_failed:{exc}"

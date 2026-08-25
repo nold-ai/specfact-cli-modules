@@ -423,6 +423,8 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **GIVEN** selected tests or other closed import-capable members require target project/test dependencies outside the signed analyzer DAG
 - **WHEN** the protected target workflow supplies `project-runtime-layer-v1`
 - **THEN** its descriptor binds the authorized target commit/tree, explicit dependency-input blobs, Python ABI/platform, exact distribution/native DAG and payloads, immutable OCI/root manifest, and builder/artifact attestation
+- **AND** every declared source-lock blob SHA and content SHA-256 exactly matches bytes independently resolved from the authenticated target tree before runtime acquisition
+- **AND** the initial project-runtime registry authority is exactly `https://ghcr.io`; controller credentials are never attached for another authority, encoded authority, port, userinfo, path, query, fragment, or lookalike host
 - **AND** the same read-only layer is used for merge-base and head, while the reviewed project's own code is imported only from each active immutable snapshot
 - **AND** a candidate edit to any descriptor-declared dependency input is governed policy impact and UNKNOWN; candidate bytes never rebuild or authorize the layer
 - **AND** an attested external first-party dependency is accepted only with its repository/ref/commit/tree and payload identities
@@ -430,6 +432,14 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** ordinary selectors importing authenticated dependencies can collect and execute without ambient host packages
 - **AND** missing, untrusted, candidate-built, target-input-mismatched, per-side-different, colliding, or import-incomplete runtime evidence produces `error/UNKNOWN`, never NOT_APPLICABLE or host fallback
 - **AND** the module producer remains `range_candidate` until the protected consumer independently verifies target/build/artifact provenance and binds it into `pr_range`.
+
+#### Scenario: Concurrent project-runtime publication is immutable
+
+- **GIVEN** two controller invocations concurrently materialize the same authenticated project-runtime identity
+- **WHEN** one invocation publishes the verified root before the other
+- **THEN** the later invocation re-verifies and reuses the winning immutable root
+- **AND** it never deletes, replaces, or mutates the root that another invocation may already be using
+- **AND** a colliding root that fails identity re-verification yields UNKNOWN.
 
 #### Scenario: Infrastructure errors remain distinct from failing evidence
 
