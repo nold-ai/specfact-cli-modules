@@ -268,5 +268,9 @@ Explicitly forbidden:
 - [x] 6.18 Prove the repeated existing occurrences remain paired by exact physical-line correspondence, the one inserted occurrence remains introduced, and exhausted aggregate correspondence work fails closed without another edit-matrix build.
 - [x] 6.19 Add a focused failing regression for shifted repeated occurrences when the aggregate budget is exhausted, then preserve exact-line candidates as `UNKNOWN` and make bounded candidate order deterministic.
 - [x] 6.20 Prove only the unmatched inserted directive remains introduced while every unproven exact-line candidate is quarantined, independent of hash iteration order.
+- [x] 6.21 Add focused failing regressions proving relocated-suppression findings retain the matched baseline occurrence and bounded correspondence proof through report serialization, while genuinely new suppressions retain no fabricated baseline.
+- [ ] 6.22 Preserve the private base/head transition and `G/F/X` evidence through finding construction and the existing evidence-reference surface; rerun the scoped quality, signing, protected-matrix, and review gates without admitting unrelated findings.
+- [x] 6.23 Add focused failing regressions proving ordinal fallback cannot bypass correspondence resource bounds and retained or `UNKNOWN` pairs do not discard their matched baseline/correspondence evidence.
+- [x] 6.24 Correct only those two candidate-patch evidence paths while preserving the existing public suppression verdict and occurrence APIs.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
