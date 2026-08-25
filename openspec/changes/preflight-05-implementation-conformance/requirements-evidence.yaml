@@ -1,0 +1,107 @@
+schema_version: "2"
+requirements:
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:atomic-optional-persistence:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF05M-001
+        scenario_id: atomic-optional-persistence
+        method: inspection
+        intent: "Inspect the atomic optional persistence planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:core-conformance-evaluation:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF05M-002
+        scenario_id: core-conformance-evaluation
+        method: inspection
+        intent: "Inspect the core conformance evaluation planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:explicit-drift-resolution-paths:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF05M-003
+        scenario_id: explicit-drift-resolution-paths
+        method: inspection
+        intent: "Inspect the explicit drift resolution paths planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:human-and-json-parity:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF05M-004
+        scenario_id: human-and-json-parity
+        method: inspection
+        intent: "Inspect the human and json parity planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:opt-in-delivery-policy:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF05M-005
+        scenario_id: opt-in-delivery-policy
+        method: inspection
+        intent: "Inspect the opt in delivery policy planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:provenance-rich-implementation-evidence:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF05M-006
+        scenario_id: provenance-rich-implementation-evidence
+        method: inspection
+        intent: "Inspect the provenance rich implementation evidence planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:separate-conformance-command:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF05M-007
+        scenario_id: separate-conformance-command
+        method: inspection
+        intent: "Inspect the separate conformance command planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
