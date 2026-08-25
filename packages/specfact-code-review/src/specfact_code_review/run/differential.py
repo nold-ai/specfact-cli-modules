@@ -113,6 +113,7 @@ class _CorrespondenceCache:
     forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
     forbidden_cells: dict[tuple[bytes, bytes], int] = field(default_factory=dict)
     source_lines: dict[bytes, list[bytes]] = field(default_factory=dict)
+    source_equal: dict[tuple[bytes, bytes], bool] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -130,7 +131,6 @@ class _SuppressionDeltaContext:
     head_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence]
     base_sources: dict[str, bytes]
     head_sources: dict[str, bytes]
-    renames: dict[str, str]
     base_manifest_digest: str
     head_manifest_digest: str
 
@@ -1031,11 +1031,13 @@ def classify_suppression_delta(
         head_sources=head_sources,
         renames=rename_facts or {},
     )
+    correspondence_cache = _CorrespondenceCache()
     unchanged_pairs, introductions, correspondence_unknown = _classify_suppression_keys(
         context.base_by_key,
         context.head_by_key,
         base_sources=base_sources,
         head_sources=head_sources,
+        cache=correspondence_cache,
     )
     unchanged = tuple(context.head_by_key[pair.head_key] for pair in unchanged_pairs)
     introduced = tuple(context.head_by_key[item.head_key] for item in introductions)
@@ -1047,6 +1049,7 @@ def classify_suppression_delta(
         findings,
         unchanged_pairs,
         context,
+        cache=correspondence_cache,
     )
     missing_disposition = "unknown" if introduced and missing_base_findings else "ordinary"
     status = _suppression_status(quarantined=quarantined, introduced=bool(introduced))
@@ -1084,7 +1087,6 @@ def _suppression_delta_context(
         head_by_key,
         base_sources,
         head_sources,
-        renames,
         _source_manifest_digest(base_sources),
         _source_manifest_digest(head_sources),
     )
@@ -1127,6 +1129,7 @@ def _classify_suppression_keys(
     *,
     base_sources: dict[str, bytes],
     head_sources: dict[str, bytes],
+    cache: _CorrespondenceCache,
 ) -> tuple[
     list[_SuppressionPairing],
     list[_SuppressionIntroduction],
@@ -1135,7 +1138,6 @@ def _classify_suppression_keys(
     unchanged: list[_SuppressionPairing] = []
     introduced: list[_SuppressionIntroduction] = []
     correspondence_unknown = False
-    correspondence_cache = _CorrespondenceCache()
     base_buckets = _suppression_identity_buckets(base_by_key)
     head_buckets = _suppression_identity_buckets(head_by_key)
     sources = _SuppressionSources(base_sources, head_sources)
@@ -1144,7 +1146,7 @@ def _classify_suppression_keys(
             base_buckets.get(identity, []),
             head_buckets.get(identity, []),
             sources=sources,
-            cache=correspondence_cache,
+            cache=cache,
         )
         unchanged.extend(identity_unchanged)
         introduced.extend(identity_introduced)
@@ -1175,7 +1177,7 @@ def _classify_suppression_identity(
         return [], [], False
     base_source = sources.base[base_bucket[0][1].path]
     head_source = sources.head[head_bucket[0][1].path]
-    if base_source == head_source:
+    if _cached_source_equality(base_source, head_source, cache.source_equal):
         pair_count = min(len(base_bucket), len(head_bucket))
         pairs = [_SuppressionPairing(base_bucket[index][0], head_bucket[index][0], {}) for index in range(pair_count)]
         introduced = [_SuppressionIntroduction(None, key, {}) for key, _item in head_bucket[pair_count:]]
@@ -1356,7 +1358,7 @@ def _suppression_occurrence_continuity(
             "max_aggregate_cells": _MAX_AGGREGATE_CORRESPONDENCE_CELLS,
         },
     }
-    if base_source == head_source:
+    if _cached_source_equality(base_source, head_source, cache.source_equal):
         return _suppression_correspondence("unchanged", evidence, decision="identical_source")
     base_finding = DifferentialFinding("suppression", base.family, "error", base.path, base.line, base.token, True)
     head_finding = DifferentialFinding("suppression", head.family, "error", head.path, head.line, head.token, True)
@@ -1406,6 +1408,19 @@ def _suppression_correspondence(
     return _SuppressionCorrespondence(status, {**evidence, "decision": decision, "status": status})
 
 
+def _cached_source_equality(
+    base_source: bytes,
+    head_source: bytes,
+    cache: dict[tuple[bytes, bytes], bool],
+) -> bool:
+    source_key = (base_source, head_source)
+    equal = cache.get(source_key)
+    if equal is None:
+        equal = base_source == head_source
+        cache[source_key] = equal
+    return equal
+
+
 def _reserve_forbidden_correspondence(
     cache: _CorrespondenceCache,
     source_key: tuple[bytes, bytes],
@@ -1453,6 +1468,8 @@ def _append_quarantined_suppressions(
     findings: list[SuppressionFinding],
     unchanged_pairs: list[_SuppressionPairing],
     context: _SuppressionDeltaContext,
+    *,
+    cache: _CorrespondenceCache,
 ) -> bool:
     quarantined = False
     for pair in unchanged_pairs:
@@ -1464,12 +1481,10 @@ def _append_quarantined_suppressions(
             else context.base_sources.get(pair.head_key[0])
         )
         head_source = context.head_sources[head_item.path]
-        pure_rename = (
-            base_item is not None
-            and context.renames.get(base_item.path) == head_item.path
-            and base_source == head_source
+        sources_equal = base_source is not None and _cached_source_equality(
+            base_source, head_source, cache.source_equal
         )
-        if base_item is not None and (base_source == head_source or pure_rename):
+        if base_item is not None and sources_equal:
             continue
         findings.append(
             SuppressionFinding(

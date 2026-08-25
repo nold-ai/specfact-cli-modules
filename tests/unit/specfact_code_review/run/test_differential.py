@@ -490,6 +490,29 @@ def test_suppression_physical_lines_are_reused_across_directive_identities(diffe
     assert CountingBytes.splitlines_calls == 2
 
 
+def test_suppression_source_equality_is_reused_across_directive_identities(differential_api: Any) -> None:
+    class CountingBytes(bytes):
+        equality_calls = 0
+        __hash__ = bytes.__hash__
+
+        def __eq__(self, other: object) -> bool:
+            type(self).equality_calls += 1
+            return bytes.__eq__(self, other)
+
+    directive_lines = [f"value_{index} = {index}  # noqa: F{index:04d}\n" for index in range(64)]
+    base_source = CountingBytes("".join(directive_lines).encode())
+    head_source = CountingBytes(("".join(directive_lines) + "tail = 1\n").encode())
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": base_source},
+        head_sources={"src/app.py": head_source},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert len(result.unchanged) == 64
+    assert CountingBytes.equality_calls == 1
+
+
 def test_ordinal_fallback_respects_correspondence_resource_bounds(differential_api: Any, monkeypatch: Any) -> None:
     monkeypatch.setattr(differential_api, "_MAX_SOURCE_BYTES", 8)
 

@@ -276,5 +276,7 @@ Explicitly forbidden:
 - [ ] 6.26 Cache immutable physical-line metadata across suppression identities without changing correspondence verdicts, then rerun the scoped gates and approval-time signing.
 - [x] 6.27 Add a focused failing regression proving a count surplus among byte-identical repeated directive lines cannot fabricate the final head ordinal as the introduced location.
 - [ ] 6.28 Quarantine every non-unique repeated-line head candidate, including surplus candidates without a matched baseline occurrence, while preserving uniquely located surplus blockers.
+- [x] 6.29 Add a focused failing regression proving whole-source equality is not rescanned for every distinct directive identity and quarantine finding in one source pair.
+- [ ] 6.30 Reuse the same private source-pair equality cache through classification and finding construction without changing suppression verdicts or evidence.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
