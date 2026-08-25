@@ -6,6 +6,7 @@ import re
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal
 
 import pytest
@@ -305,6 +306,24 @@ def test_index_scope_evidence_serializes_captured_identity() -> None:
     assert index_metadata["src/app.py"]["flag_tag"] == "H"
 
 
+def test_scope_evidence_serializes_resolved_project_runtime_source_locks() -> None:
+    resolution = review_scope.ScopeResolution(
+        status="PASS",
+        reason="resolved",
+        selected_paths=("src/app.py",),
+        assurance_kind="range_candidate",
+        effective_assurance_kind="range_candidate",
+        ci_exit_code=0,
+        project_runtime_source_locks=(("uv.lock", "a" * 40, "sha256:" + "b" * 64),),
+    )
+
+    evidence = run_commands._scope_evidence(resolution)
+
+    assert evidence["project_runtime_source_locks"] == [
+        {"path": "uv.lock", "blob_sha": "a" * 40, "content_sha256": "sha256:" + "b" * 64}
+    ]
+
+
 def test_immutable_scope_report_cleans_materialized_roots(monkeypatch: Any, tmp_path: Path) -> None:
     base_root = tmp_path / "base"
     head_root = tmp_path / "head"
@@ -405,6 +424,63 @@ def test_immutable_scope_request_propagates_repository_identity(monkeypatch: Any
     request = captured["request"]
     assert isinstance(request, review_scope.ScopeRequest)
     assert request.repository_slug == "nold-ai/specfact-cli-modules"
+
+
+def test_no_governed_impact_report_binds_activated_suppression_catalog(monkeypatch: Any) -> None:
+    digest = "sha256:" + "a" * 64
+    resolution = review_scope.ScopeResolution(
+        status="NOT_APPLICABLE",
+        reason="no_governed_impact",
+        selected_paths=(),
+        assurance_kind="range_preview",
+        effective_assurance_kind="range_preview",
+        ci_exit_code=0,
+        resolved_head_commit="b" * 40,
+    )
+    monkeypatch.setattr(run_commands, "resolve_scope", lambda _request: resolution)
+    monkeypatch.setattr(
+        run_commands.differential,
+        "activate_packaged_suppression_catalog",
+        lambda: SimpleNamespace(status="PASS", profile_activated=True, digest=digest, reason=""),
+    )
+
+    report = run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="b" * 40)
+    )
+
+    assert report.assurance_status == "NOT_APPLICABLE"
+    assert report.suppression_catalog_digest == digest
+
+
+def test_no_governed_impact_report_is_unknown_when_suppression_catalog_is_unavailable(monkeypatch: Any) -> None:
+    resolution = review_scope.ScopeResolution(
+        status="NOT_APPLICABLE",
+        reason="no_governed_impact",
+        selected_paths=(),
+        assurance_kind="range_preview",
+        effective_assurance_kind="range_preview",
+        ci_exit_code=0,
+        resolved_head_commit="b" * 40,
+    )
+    monkeypatch.setattr(run_commands, "resolve_scope", lambda _request: resolution)
+    monkeypatch.setattr(
+        run_commands.differential,
+        "activate_packaged_suppression_catalog",
+        lambda: SimpleNamespace(
+            status="UNKNOWN",
+            profile_activated=False,
+            digest=None,
+            reason="suppression_catalog_identity_mismatch",
+        ),
+    )
+
+    report = run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="b" * 40)
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+    assert report.suppression_catalog_digest is None
 
 
 def test_repository_slug_accepts_authenticated_github_origin(monkeypatch: Any) -> None:

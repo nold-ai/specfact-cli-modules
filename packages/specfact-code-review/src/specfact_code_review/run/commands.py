@@ -25,6 +25,7 @@ from icontract import ensure, require
 from rich.console import Console
 from rich.table import Table
 
+from specfact_code_review.run import differential
 from specfact_code_review.run.cleanup_evidence import (
     with_mutation_evidence,
     with_previewed_simplification_findings,
@@ -772,6 +773,10 @@ def _scope_evidence(resolution: ScopeResolution) -> dict[str, object]:
         "merge_base_candidates": list(resolution.merge_base_candidates),
         "merge_base_candidate_digest": resolution.merge_base_candidate_digest,
         "context_digest": resolution.context_digest,
+        "project_runtime_source_locks": [
+            {"path": path, "blob_sha": blob_sha, "content_sha256": content_sha256}
+            for path, blob_sha, content_sha256 in resolution.project_runtime_source_locks
+        ],
         "resolved_target_commit": resolution.resolved_target_commit,
         "resolved_target_tree": resolution.resolved_target_tree,
         "resolved_head_commit": resolution.resolved_head_commit,
@@ -861,6 +866,11 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
                 scope_evidence={**_scope_evidence(resolution), "reason": reason},
             )
         run_identity = resolution.resolved_head_commit or resolution.index_tree or "unresolved"
+        activation = differential.activate_packaged_suppression_catalog()
+        catalog_ready = activation.status == "PASS" and activation.profile_activated and activation.digest is not None
+        if status == "NOT_APPLICABLE" and not catalog_ready:
+            status = "UNKNOWN"
+            reason = activation.reason or "suppression_catalog_activation_failed"
         return ReviewReport(
             schema_version="1.6",
             run_id=f"review-scope-{run_identity}",
@@ -871,6 +881,7 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
             has_unknown_required_evidence=status == "UNKNOWN",
             scope_evidence={**_scope_evidence(resolution), "reason": reason},
             analyzer_evidence=[],
+            suppression_catalog_digest=activation.digest if catalog_ready else None,
             enforcement_mode="shadow" if request.review_mode == "shadow" else "full",
         )
     finally:

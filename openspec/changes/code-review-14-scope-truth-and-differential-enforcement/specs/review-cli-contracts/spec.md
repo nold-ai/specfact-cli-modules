@@ -12,6 +12,13 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** partial facts/findings remain available
 - **AND** the human summary does not say all validations passed.
 
+#### Scenario: No-governed-impact report binds the activated suppression catalog
+
+- **GIVEN** immutable scope resolution proves no governed impact
+- **WHEN** the producer emits schema 1.6 NOT_APPLICABLE evidence without launching analyzers
+- **THEN** the report still activates and binds the authenticated suppression-catalog digest
+- **AND** missing or mismatched catalog identity changes the report to UNKNOWN rather than emitting an incomplete NOT_APPLICABLE report.
+
 #### Scenario: Mixed valid failure and uncertainty has deterministic precedence
 
 - **GIVEN** one required member has valid completed blocking evidence and another required member is UNKNOWN

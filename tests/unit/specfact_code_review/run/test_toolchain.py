@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import io
 import os
@@ -973,9 +974,145 @@ def _project_runtime_descriptor() -> dict[str, Any]:
     }
 
 
-def test_project_runtime_layer_binds_target_tip_dependency_inputs(toolchain_api: Any) -> None:
+def _project_runtime_source_locks(descriptor: dict[str, Any]) -> tuple[tuple[str, str, str], ...]:
+    return tuple((item["path"], item["blob_sha"], item["content_sha256"]) for item in descriptor["source_lock_paths"])
+
+
+@pytest.mark.parametrize(
+    "registry",
+    [
+        "https://attacker.example",
+        "https://ghcr.io.attacker.example",
+        "https://user@ghcr.io",
+        "https://ghcr.io:443",
+        "https://ghcr.io/path",
+        "https://ghcr.io?target=attacker",
+    ],
+)
+def test_project_runtime_rejects_untrusted_registry_before_credential_forwarding(
+    toolchain_api: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, registry: str
+) -> None:
+    descriptor = _project_runtime_descriptor()
+    descriptor["oci"]["registry"] = registry
+    monkeypatch.setattr(
+        toolchain_api,
+        "acquire_oci_distribution",
+        lambda *_args, **_kwargs: pytest.fail("an untrusted registry must not receive controller credentials"),
+    )
+
+    result = toolchain_api.materialize_project_runtime(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
+        storage_root=tmp_path,
+        credential="actor:secret-token",
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "project_runtime_identity_mismatch"
+
+
+def test_project_runtime_forwards_controller_credential_only_to_exact_ghcr(
+    toolchain_api: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    descriptor = _project_runtime_descriptor()
+    observed: list[str | None] = []
+    monkeypatch.setattr(toolchain_api.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(toolchain_api.platform, "machine", lambda: "x86_64")
+
+    def acquire(*_args: object, **kwargs: object) -> object:
+        credential = kwargs.get("credential")
+        assert credential is None or isinstance(credential, str)
+        observed.append(credential)
+        return toolchain_api.AcquisitionResult("UNKNOWN", reason="stop_after_authority_check")
+
+    monkeypatch.setattr(toolchain_api, "acquire_oci_distribution", acquire)
+
+    result = toolchain_api.materialize_project_runtime(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
+        storage_root=tmp_path,
+        credential="actor:secret-token",
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "stop_after_authority_check"
+    assert observed == ["actor:secret-token"]
+
+
+@pytest.mark.parametrize("field", ["blob_sha", "content_sha256"])
+def test_project_runtime_rejects_source_lock_identity_mismatch(toolchain_api: Any, field: str) -> None:
+    descriptor = _project_runtime_descriptor()
+    expected = _project_runtime_source_locks(descriptor)
+    descriptor["source_lock_paths"][0][field] = "4" * 40 if field == "blob_sha" else _digest("4")
+
     result = toolchain_api.validate_project_runtime_layer(
-        _project_runtime_descriptor(), expected_target="1" * 40, expected_tree="2" * 40
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=expected,
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "project_runtime_identity_mismatch"
+
+
+def test_project_runtime_publication_reuses_concurrent_verified_winner(
+    toolchain_api: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    descriptor = _project_runtime_descriptor()
+    winner = tmp_path / "winner"
+    metadata = winner / "site-packages/consumer_dependency-1.0.dist-info/METADATA"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text("Name: consumer-dependency\nVersion: 1.0\n", encoding="utf-8")
+    entries, _regular_bytes = toolchain_api._manifest_entries(winner, include_root=False)
+    descriptor["root_manifest"]["digest"] = toolchain_api.canonical_json_digest(entries)
+    extracted = tmp_path / "extracted"
+    shutil.copytree(winner, extracted)
+    destination = tmp_path / "published"
+
+    def publish_winner(_source: Path, _destination: Path) -> None:
+        shutil.copytree(winner, destination)
+        raise OSError(errno.ENOTEMPTY, "concurrent winner already published")
+
+    monkeypatch.setattr(toolchain_api.os, "rename", publish_winner)
+
+    toolchain_api._publish_project_runtime(extracted, destination, descriptor)
+
+    assert toolchain_api._project_runtime_root_matches(destination, descriptor)
+    assert extracted.exists()
+
+
+def test_project_runtime_publication_rejects_unverified_concurrent_winner(
+    toolchain_api: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    descriptor = _project_runtime_descriptor()
+    extracted = tmp_path / "extracted"
+    extracted.mkdir()
+    destination = tmp_path / "published"
+
+    def publish_invalid_winner(_source: Path, _destination: Path) -> None:
+        destination.mkdir()
+        raise OSError(errno.ENOTEMPTY, "concurrent invalid root")
+
+    monkeypatch.setattr(toolchain_api.os, "rename", publish_invalid_winner)
+
+    with pytest.raises(ValueError, match="identity mismatch"):
+        toolchain_api._publish_project_runtime(extracted, destination, descriptor)
+
+    assert extracted.exists()
+
+
+def test_project_runtime_layer_binds_target_tip_dependency_inputs(toolchain_api: Any) -> None:
+    descriptor = _project_runtime_descriptor()
+    result = toolchain_api.validate_project_runtime_layer(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
     )
 
     assert result.status == "PASS"
@@ -991,6 +1128,7 @@ def test_project_runtime_layer_rejects_target_tree_mismatch(toolchain_api: Any) 
         descriptor,
         expected_target="1" * 40,
         expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
     )
 
     assert result.status == "UNKNOWN"
@@ -1007,7 +1145,12 @@ def test_project_runtime_materialization_reuses_only_reverified_identity_cache(
     metadata.write_text("Name: consumer-dependency\nVersion: 1.0\n", encoding="utf-8")
     entries, _regular_bytes = toolchain_api._manifest_entries(seed, include_root=False)
     descriptor["root_manifest"]["digest"] = toolchain_api.canonical_json_digest(entries)
-    layer = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
+    layer = toolchain_api.validate_project_runtime_layer(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
+    )
     storage = tmp_path / "storage"
     cached_root = storage / layer.identity.removeprefix("sha256:")
     shutil.copytree(seed, cached_root)
@@ -1021,6 +1164,7 @@ def test_project_runtime_materialization_reuses_only_reverified_identity_cache(
         descriptor,
         expected_target="1" * 40,
         expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
         storage_root=storage,
     )
 
@@ -1042,15 +1186,24 @@ def test_project_runtime_layer_cannot_shadow_reserved_runner_components(toolchai
         }
     )
 
-    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
+    result = toolchain_api.validate_project_runtime_layer(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
+    )
 
     assert result.status == "UNKNOWN"
     assert result.reason == "reserved_import_collision"
 
 
 def test_project_runtime_layer_is_identical_across_snapshots(toolchain_api: Any) -> None:
+    descriptor = _project_runtime_descriptor()
     layer = toolchain_api.validate_project_runtime_layer(
-        _project_runtime_descriptor(), expected_target="1" * 40, expected_tree="2" * 40
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
     )
 
     result = toolchain_api.bind_project_runtime_to_snapshots(layer, snapshots=("merge_base", "head"))
@@ -1072,7 +1225,10 @@ def test_project_runtime_layer_rejects_untrusted_or_candidate_inputs(toolchain_a
 
     assert (
         toolchain_api.validate_project_runtime_layer(
-            descriptor, expected_target="1" * 40, expected_tree="2" * 40
+            descriptor,
+            expected_target="1" * 40,
+            expected_tree="2" * 40,
+            expected_source_locks=_project_runtime_source_locks(descriptor),
         ).status
         == "UNKNOWN"
     )
@@ -1135,7 +1291,12 @@ def test_attested_pytest_plugin_identity_is_bound_by_project_runtime(toolchain_a
         }
     ]
 
-    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
+    result = toolchain_api.validate_project_runtime_layer(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
+    )
 
     assert result.status == "PASS"
     assert result.pytest_plugins[0].distribution == "fixture-plugin"
@@ -1167,7 +1328,12 @@ def test_attested_pytest_plugin_manifest_digest_must_match_declared_hooks(toolch
         }
     ]
 
-    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
+    result = toolchain_api.validate_project_runtime_layer(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
+    )
 
     assert result.status == "UNKNOWN"
 
@@ -1218,7 +1384,12 @@ def test_unattested_pytest_plugin_is_unknown(toolchain_api: Any) -> None:
         }
     ]
 
-    result = toolchain_api.validate_project_runtime_layer(descriptor, expected_target="1" * 40, expected_tree="2" * 40)
+    result = toolchain_api.validate_project_runtime_layer(
+        descriptor,
+        expected_target="1" * 40,
+        expected_tree="2" * 40,
+        expected_source_locks=_project_runtime_source_locks(descriptor),
+    )
 
     assert result.status == "UNKNOWN"
 

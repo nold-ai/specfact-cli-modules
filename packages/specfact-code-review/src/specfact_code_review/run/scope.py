@@ -28,6 +28,7 @@ ScopeKind = Literal["worktree", "index", "range", "full", "explicit_files"]
 ScopeStatus = Literal["PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"]
 AssuranceKind = Literal["worktree", "index", "range_preview", "range_candidate", "pr_range", "full", "explicit_files"]
 EnforcementKind = Literal["full", "changed", "shadow"]
+SourceLockIdentity = tuple[str, str, str]
 
 _REGULAR_GIT_MODES = frozenset({"100644", "100755"})
 _PYTHON_SUFFIXES = frozenset({".py", ".pyi"})
@@ -417,6 +418,7 @@ class ScopeResolution:
     merge_base_candidate_digest: str = ""
     context_digest: str = ""
     claimed_context: dict[str, object] | None = None
+    project_runtime_source_locks: tuple[SourceLockIdentity, ...] = ()
     resolved_target_commit: str = ""
     resolved_target_tree: str = ""
     resolved_head_commit: str = ""
@@ -454,6 +456,7 @@ class _ResolvedRange:
     head_snapshot: Snapshot
     selected_paths: tuple[str, ...]
     source_lock_paths: frozenset[str]
+    project_runtime_source_locks: tuple[SourceLockIdentity, ...]
     path_statuses: dict[str, str]
     exact_renames: tuple[ExactRename, ...]
     exact_rename_digest: str
@@ -830,6 +833,20 @@ def _source_manifest_digest(snapshot: Snapshot) -> str:
         for entry in sorted(snapshot.entries.values(), key=lambda item: item.path)
     ]
     return _canonical_json_digest(manifest)
+
+
+def _snapshot_source_lock_identities(
+    snapshot: Snapshot,
+    source_lock_paths: frozenset[str],
+) -> tuple[SourceLockIdentity, ...]:
+    identities: list[SourceLockIdentity] = []
+    for path in sorted(source_lock_paths):
+        entry = snapshot.entry_or_none(path)
+        payload = snapshot.bytes_or_none(path)
+        if entry is None or entry.object_type != "blob" or entry.git_mode not in _REGULAR_GIT_MODES or payload is None:
+            raise GitResolutionError(f"Project-runtime source lock is not a tracked regular target-tree blob: {path}")
+        identities.append((path, entry.object_id, sha256_bytes(payload)))
+    return tuple(identities)
 
 
 def _unknown_range(
@@ -2087,6 +2104,7 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
         target_snapshot = base_snapshot if base == merge_base else _materialize_commit(request.repository, base)
         if target_snapshot is not base_snapshot:
             cleanup.callback(shutil.rmtree, target_snapshot.root, ignore_errors=True)
+        project_runtime_source_locks = _snapshot_source_lock_identities(target_snapshot, source_locks)
         ruff_policy = resolve_ruff_policy(target_snapshot.root, expected_version="0.15.12")
         if ruff_policy.bundle_root is not None:
             cleanup.callback(shutil.rmtree, ruff_policy.bundle_root, ignore_errors=True)
@@ -2139,6 +2157,7 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             head_snapshot,
             selected,
             source_locks,
+            project_runtime_source_locks,
             statuses,
             renames,
             _canonical_json_digest(rename_projection),
@@ -2295,6 +2314,7 @@ def _range_resolution(
         merge_base_candidate_digest=context.candidate_digest,
         context_digest=claimed.digest if claimed is not None else "",
         claimed_context=claimed.document if claimed is not None else None,
+        project_runtime_source_locks=resolved.project_runtime_source_locks,
         resolved_target_commit=resolved.target_commit,
         resolved_target_tree=resolved.target_tree,
         resolved_head_commit=resolved.head_snapshot.commit,

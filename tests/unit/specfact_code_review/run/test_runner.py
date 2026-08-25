@@ -870,7 +870,44 @@ def test_project_runtime_validation_binds_resolved_target_tree(monkeypatch: Monk
     assert materialized is None
     assert plugins == ()
     assert reason == "stop"
-    assert observed == [{"expected_target": "1" * 40, "expected_tree": "2" * 40}]
+    assert observed == [
+        {
+            "expected_target": "1" * 40,
+            "expected_tree": "2" * 40,
+            "expected_source_locks": (),
+        }
+    ]
+
+
+def test_project_runtime_validation_binds_resolved_target_source_locks(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    observed: list[dict[str, object]] = []
+    expected_locks = (("uv.lock", "3" * 40, "sha256:" + "4" * 64),)
+
+    def validate(*_args: object, **kwargs: object) -> object:
+        observed.append(kwargs)
+        return SimpleNamespace(status="UNKNOWN", reason="stop", pytest_plugins=())
+
+    monkeypatch.setattr(runner_api.toolchain, "validate_project_runtime_layer", validate)
+    resolution = SimpleNamespace(
+        claimed_context={"project_runtime": {"schema": "project-runtime-layer-v1"}},
+        resolved_target_commit="1" * 40,
+        resolved_target_tree="2" * 40,
+        project_runtime_source_locks=expected_locks,
+    )
+
+    materialized, plugins, reason = runner_api._materialize_claimed_project_runtime(resolution)
+
+    assert materialized is None
+    assert plugins == ()
+    assert reason == "stop"
+    assert observed == [
+        {
+            "expected_target": "1" * 40,
+            "expected_tree": "2" * 40,
+            "expected_source_locks": expected_locks,
+        }
+    ]
 
 
 def test_immutable_review_explicitly_loads_only_authenticated_project_pytest_plugins(
