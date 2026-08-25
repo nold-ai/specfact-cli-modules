@@ -111,6 +111,7 @@ class _ClassificationState:
 class _CorrespondenceCache:
     matrices: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]] = field(default_factory=dict)
     forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
+    forbidden_cells: dict[tuple[bytes, bytes], int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -147,6 +148,23 @@ class SuppressionOccurrence:
     family: str
     kind: str
     token: str
+
+
+_SuppressionKey = tuple[str, str, str, int]
+_SuppressionEntry = tuple[_SuppressionKey, SuppressionOccurrence]
+
+
+@dataclass(frozen=True)
+class _SuppressionPairEvidence:
+    statuses: dict[tuple[_SuppressionKey, _SuppressionKey], Literal["unchanged", "introduced", "unknown"]]
+    base_lines: dict[_SuppressionKey, bytes | None]
+    head_lines: dict[_SuppressionKey, bytes | None]
+
+
+@dataclass(frozen=True)
+class _SuppressionSources:
+    base: dict[str, bytes]
+    head: dict[str, bytes]
 
 
 @dataclass(frozen=True)
@@ -347,6 +365,7 @@ def _source_for(path: str, sources: dict[str, bytes]) -> bytes | None:
 _MAX_SOURCE_BYTES = 16 * 1024 * 1024
 _MAX_SOURCE_LINES = 20_000
 _MAX_CORRESPONDENCE_CELLS = 4_000_000
+_MAX_AGGREGATE_CORRESPONDENCE_CELLS = 4_000_000
 
 
 def _edit_costs(
@@ -947,13 +966,13 @@ def classify_suppression_delta(
         head_sources=head_sources,
         renames=rename_facts or {},
     )
-    unchanged_keys, introduced_keys, correspondence_unknown = _classify_suppression_keys(
+    unchanged_pairs, introduced_keys, correspondence_unknown = _classify_suppression_keys(
         context.base_by_key,
         context.head_by_key,
         base_sources=base_sources,
         head_sources=head_sources,
     )
-    unchanged = tuple(context.head_by_key[key] for key in unchanged_keys)
+    unchanged = tuple(context.head_by_key[head_key] for _, head_key in unchanged_pairs)
     introduced = tuple(context.head_by_key[key] for key in introduced_keys)
     findings = _introduced_suppression_findings(
         introduced,
@@ -963,7 +982,7 @@ def classify_suppression_delta(
     )
     quarantined = _append_quarantined_suppressions(
         findings,
-        unchanged_keys,
+        unchanged_pairs,
         context,
     )
     missing_disposition = "unknown" if introduced and missing_base_findings else "ordinary"
@@ -1045,27 +1064,155 @@ def _classify_suppression_keys(
     *,
     base_sources: dict[str, bytes],
     head_sources: dict[str, bytes],
-) -> tuple[list[tuple[str, str, str, int]], list[tuple[str, str, str, int]], bool]:
-    unchanged: list[tuple[str, str, str, int]] = []
-    introduced = list(set(head_by_key) - set(base_by_key))
+) -> tuple[
+    list[tuple[_SuppressionKey, _SuppressionKey]],
+    list[_SuppressionKey],
+    bool,
+]:
+    unchanged: list[tuple[_SuppressionKey, _SuppressionKey]] = []
+    introduced: list[_SuppressionKey] = []
     correspondence_unknown = False
     correspondence_cache = _CorrespondenceCache()
-    for key in sorted(set(base_by_key) & set(head_by_key)):
-        base_item = base_by_key[key]
-        head_item = head_by_key[key]
-        continuity = _suppression_occurrence_continuity(
-            base_item,
-            head_item,
-            base_source=base_sources[base_item.path],
-            head_source=head_sources[head_item.path],
+    base_buckets = _suppression_identity_buckets(base_by_key)
+    head_buckets = _suppression_identity_buckets(head_by_key)
+    sources = _SuppressionSources(base_sources, head_sources)
+    for identity in sorted(set(base_buckets) | set(head_buckets)):
+        identity_unchanged, identity_introduced, identity_unknown = _classify_suppression_identity(
+            base_buckets.get(identity, []),
+            head_buckets.get(identity, []),
+            sources=sources,
             cache=correspondence_cache,
         )
-        if continuity == "introduced":
-            introduced.append(key)
-        else:
-            unchanged.append(key)
-            correspondence_unknown = correspondence_unknown or continuity == "unknown"
+        unchanged.extend(identity_unchanged)
+        introduced.extend(identity_introduced)
+        correspondence_unknown = correspondence_unknown or identity_unknown
     return sorted(unchanged), sorted(introduced), correspondence_unknown
+
+
+def _classify_suppression_identity(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    sources: _SuppressionSources,
+    cache: _CorrespondenceCache,
+) -> tuple[list[tuple[_SuppressionKey, _SuppressionKey]], list[_SuppressionKey], bool]:
+    if not base_bucket:
+        return [], [key for key, _item in head_bucket], False
+    if not head_bucket:
+        return [], [], False
+    base_source = sources.base[base_bucket[0][1].path]
+    head_source = sources.head[head_bucket[0][1].path]
+    if base_source == head_source:
+        pair_count = min(len(base_bucket), len(head_bucket))
+        pairs = [(base_bucket[index][0], head_bucket[index][0]) for index in range(pair_count)]
+        return pairs, [key for key, _item in head_bucket[pair_count:]], False
+    pair_evidence = _suppression_pair_evidence(
+        base_bucket,
+        head_bucket,
+        base_sources=sources.base,
+        head_sources=sources.head,
+        cache=cache,
+    )
+    proven_pairs = [pair for pair, status in pair_evidence.statuses.items() if status == "unchanged"]
+    matched_base = {base_key for base_key, _head_key in proven_pairs}
+    matched_head = {head_key for _base_key, head_key in proven_pairs}
+    remaining_base = [entry for entry in base_bucket if entry[0] not in matched_base]
+    remaining_head = [entry for entry in head_bucket if entry[0] not in matched_head]
+    fallback_pairs, introduced, unknown = _suppression_fallback_pairs(
+        remaining_base,
+        remaining_head,
+        pair_evidence,
+    )
+    return proven_pairs + fallback_pairs, introduced, unknown
+
+
+def _suppression_fallback_pairs(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    pair_evidence: _SuppressionPairEvidence,
+) -> tuple[list[tuple[_SuppressionKey, _SuppressionKey]], list[_SuppressionKey], bool]:
+    unchanged: list[tuple[_SuppressionKey, _SuppressionKey]] = []
+    introduced: list[_SuppressionKey] = []
+    correspondence_unknown = False
+    pair_count = min(len(base_bucket), len(head_bucket))
+    for base_entry, head_entry in zip(base_bucket[:pair_count], head_bucket[:pair_count], strict=True):
+        base_key, _base_item = base_entry
+        head_key, _head_item = head_entry
+        continuity = pair_evidence.statuses.get((base_key, head_key))
+        if continuity is None:
+            base_line = pair_evidence.base_lines[base_key]
+            head_line = pair_evidence.head_lines[head_key]
+            continuity = "introduced" if base_line is not None and base_line != head_line else "unknown"
+        if continuity == "introduced":
+            introduced.append(head_key)
+        else:
+            unchanged.append((base_key, head_key))
+            correspondence_unknown = True
+    introduced.extend(key for key, _item in head_bucket[pair_count:])
+    return unchanged, introduced, correspondence_unknown
+
+
+def _suppression_identity_buckets(
+    occurrences: dict[_SuppressionKey, SuppressionOccurrence],
+) -> dict[tuple[str, str, str], list[_SuppressionEntry]]:
+    buckets: dict[tuple[str, str, str], list[_SuppressionEntry]] = defaultdict(list)
+    for key, occurrence in sorted(occurrences.items()):
+        buckets[key[:3]].append((key, occurrence))
+    return buckets
+
+
+def _suppression_pair_evidence(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+    cache: _CorrespondenceCache,
+) -> _SuppressionPairEvidence:
+    base_source = base_sources[base_bucket[0][1].path]
+    head_source = head_sources[head_bucket[0][1].path]
+    base_lines = _suppression_physical_lines(base_bucket, base_source)
+    head_lines = _suppression_physical_lines(head_bucket, head_source)
+    base_by_line = _suppression_entries_by_line(base_bucket, base_lines)
+    head_by_line = _suppression_entries_by_line(head_bucket, head_lines)
+    statuses: dict[tuple[_SuppressionKey, _SuppressionKey], Literal["unchanged", "introduced", "unknown"]] = {}
+    for line in set(base_by_line) & set(head_by_line):
+        base_entries = base_by_line[line]
+        head_entries = head_by_line[line]
+        if len(base_entries) != 1 or len(head_entries) != 1:
+            continue
+        base_key, base_item = base_entries[0]
+        head_key, head_item = head_entries[0]
+        statuses[(base_key, head_key)] = _suppression_occurrence_continuity(
+            base_item,
+            head_item,
+            base_source=base_source,
+            head_source=head_source,
+            cache=cache,
+        )
+    return _SuppressionPairEvidence(statuses, base_lines, head_lines)
+
+
+def _suppression_physical_lines(
+    bucket: list[_SuppressionEntry],
+    source: bytes,
+) -> dict[_SuppressionKey, bytes | None]:
+    lines = source.splitlines()
+    return {
+        key: lines[occurrence.line - 1] if 0 < occurrence.line <= len(lines) else None for key, occurrence in bucket
+    }
+
+
+def _suppression_entries_by_line(
+    bucket: list[_SuppressionEntry],
+    physical_lines: dict[_SuppressionKey, bytes | None],
+) -> dict[bytes, list[_SuppressionEntry]]:
+    entries: dict[bytes, list[_SuppressionEntry]] = defaultdict(list)
+    for entry in bucket:
+        line = physical_lines[entry[0]]
+        if line is not None:
+            entries[line].append(entry)
+    return entries
 
 
 def _suppression_occurrence_continuity(
@@ -1094,9 +1241,12 @@ def _suppression_occurrence_continuity(
         return "introduced"
     if context.base_lines.count(base_line) != 1 or context.head_lines.count(head_line) != 1:
         return "unknown"
+    source_key = (base_source, head_source)
+    if not _reserve_forbidden_correspondence(cache, source_key, context):
+        return "unknown"
     evidence = _continuity_cost_evidence(
         context,
-        source_key=(base_source, head_source),
+        source_key=source_key,
         matrix_cache=cache.matrices,
         forbidden_cache=cache.forbidden_costs,
     )
@@ -1107,6 +1257,21 @@ def _suppression_occurrence_continuity(
     if pair_cost == 0 and forced_cost == global_cost and forbidden_cost > global_cost:
         return "unchanged"
     return "introduced"
+
+
+def _reserve_forbidden_correspondence(
+    cache: _CorrespondenceCache,
+    source_key: tuple[bytes, bytes],
+    context: _ContinuityContext,
+) -> bool:
+    forbidden_key = (*source_key, context.base_index, context.head_index)
+    if forbidden_key in cache.forbidden_costs:
+        return True
+    used_cells = cache.forbidden_cells.get(source_key, 0)
+    if used_cells + context.cells > _MAX_AGGREGATE_CORRESPONDENCE_CELLS:
+        return False
+    cache.forbidden_cells[source_key] = used_cells + context.cells
+    return True
 
 
 def _introduced_suppression_findings(
@@ -1135,13 +1300,13 @@ def _introduced_suppression_findings(
 
 def _append_quarantined_suppressions(
     findings: list[SuppressionFinding],
-    unchanged_keys: list[tuple[str, str, str, int]],
+    unchanged_pairs: list[tuple[_SuppressionKey, _SuppressionKey]],
     context: _SuppressionDeltaContext,
 ) -> bool:
     quarantined = False
-    for key in unchanged_keys:
-        base_item = context.base_by_key[key]
-        head_item = context.head_by_key[key]
+    for base_key, head_key in unchanged_pairs:
+        base_item = context.base_by_key[base_key]
+        head_item = context.head_by_key[head_key]
         base_source = context.base_sources[base_item.path]
         head_source = context.head_sources[head_item.path]
         pure_rename = context.renames.get(base_item.path) == head_item.path and base_source == head_source

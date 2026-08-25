@@ -394,6 +394,41 @@ def test_relocated_identical_inline_suppression_is_introduced(differential_api: 
     assert [finding.kind for finding in result.findings] == ["introduced_inline_suppression"]
 
 
+def test_inserted_repeated_suppression_preserves_existing_correspondence(differential_api: Any) -> None:
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"a = 1  # noqa\nb = 2  # noqa\n"},
+        head_sources={"src/app.py": b"new = 0  # noqa\na = 1  # noqa\nb = 2  # noqa\n"},
+    )
+
+    assert [occurrence.line for occurrence in result.introduced] == [1]
+    assert [occurrence.line for occurrence in result.unchanged] == [2, 3]
+
+
+def test_suppression_correspondence_bounds_aggregate_forbidden_pair_work(
+    differential_api: Any, monkeypatch: Any
+) -> None:
+    forbidden_calls = 0
+    edit_costs = differential_api._edit_costs
+
+    def counted_edit_costs(*args: Any, **kwargs: Any) -> Any:
+        nonlocal forbidden_calls
+        if kwargs.get("forbidden_pair") is not None:
+            forbidden_calls += 1
+        return edit_costs(*args, **kwargs)
+
+    monkeypatch.setattr(differential_api, "_MAX_AGGREGATE_CORRESPONDENCE_CELLS", 15)
+    monkeypatch.setattr(differential_api, "_edit_costs", counted_edit_costs)
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"a = 1  # noqa\nb = 2  # noqa\n"},
+        head_sources={"src/app.py": b"header = 0\na = 1  # noqa\nb = 2  # noqa\n"},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "suppression_correspondence_unknown"
+    assert forbidden_calls == 1
+
+
 def test_suppression_manifest_failure_is_unknown(differential_api: Any, monkeypatch: Any) -> None:
     monkeypatch.setattr(
         differential_api,
