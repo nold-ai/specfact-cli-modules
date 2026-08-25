@@ -168,6 +168,8 @@ Signed `occurrence-continuity-v1` SHALL validate each canonical source span agai
 - **AND** the missing base analyzer fingerprint is `unknown`, never `fixed`
 - **AND** CR14 accepts no suppression-waiver input or injected trusted flag; authenticated exception support is deferred to `governance-02-exception-management`
 - **AND** an unchanged occurrence, including an identical pure one-to-one rename, is retained but not introduced
+- **AND** moving one otherwise identical registered directive from before a source line to after that source line is a relocated occurrence and therefore remains an introduced blocking finding even when its rename-normalized path, family, normalized token, and within-file ordinal are unchanged
+- **AND** an otherwise untouched directive whose complete physical line has a uniquely optimal exact-line correspondence after unrelated line insertion remains the same occurrence; a unique physical directive line with no uniquely optimal correspondence is relocated and introduced, while non-unique, invalid, or resource-unavailable correspondence is `UNKNOWN` rather than guessed
 - **AND** tokenization, registry, normalization, or manifest-comparison failure is UNKNOWN rather than PASS.
 
 #### Scenario: Unchanged suppression in a changed file cannot hide a new defect

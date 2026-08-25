@@ -107,6 +107,12 @@ class _ClassificationState:
     forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
 
 
+@dataclass
+class _CorrespondenceCache:
+    matrices: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]] = field(default_factory=dict)
+    forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
+
+
 @dataclass(frozen=True)
 class _ContinuityContext:
     base_lines: list[bytes]
@@ -934,32 +940,31 @@ def classify_suppression_delta(
         head_occurrences = _suppression_occurrences(head_sources)
     except (IndentationError, SyntaxError, UnicodeDecodeError, tokenize.TokenError) as exc:
         return SuppressionClassification("UNKNOWN", reason=f"suppression_manifest_error:{type(exc).__name__}")
-    renames = rename_facts or {}
-    base_by_key, head_by_key = _suppression_indexes(base_occurrences, head_occurrences, renames)
-    unchanged_keys = sorted(set(base_by_key) & set(head_by_key))
-    introduced_keys = sorted(set(head_by_key) - set(base_by_key))
-    unchanged = tuple(head_by_key[key] for key in unchanged_keys)
-    introduced = tuple(head_by_key[key] for key in introduced_keys)
-    base_manifest_digest = _source_manifest_digest(base_sources)
-    head_manifest_digest = _source_manifest_digest(head_sources)
+    context = _suppression_delta_context(
+        base_occurrences,
+        head_occurrences,
+        base_sources=base_sources,
+        head_sources=head_sources,
+        renames=rename_facts or {},
+    )
+    unchanged_keys, introduced_keys, correspondence_unknown = _classify_suppression_keys(
+        context.base_by_key,
+        context.head_by_key,
+        base_sources=base_sources,
+        head_sources=head_sources,
+    )
+    unchanged = tuple(context.head_by_key[key] for key in unchanged_keys)
+    introduced = tuple(context.head_by_key[key] for key in introduced_keys)
     findings = _introduced_suppression_findings(
         introduced,
         head_sources,
-        base_manifest_digest,
-        head_manifest_digest,
+        context.base_manifest_digest,
+        context.head_manifest_digest,
     )
     quarantined = _append_quarantined_suppressions(
         findings,
         unchanged_keys,
-        _SuppressionDeltaContext(
-            base_by_key,
-            head_by_key,
-            base_sources,
-            head_sources,
-            renames,
-            base_manifest_digest,
-            head_manifest_digest,
-        ),
+        context,
     )
     missing_disposition = "unknown" if introduced and missing_base_findings else "ordinary"
     status = _suppression_status(quarantined=quarantined, introduced=bool(introduced))
@@ -969,6 +974,7 @@ def classify_suppression_delta(
         introduced,
         unchanged,
         missing_disposition,
+        reason="suppression_correspondence_unknown" if correspondence_unknown else "",
     )
 
 
@@ -980,6 +986,26 @@ def _suppression_occurrences(sources: dict[str, bytes]) -> tuple[SuppressionOccu
 
 def _python_sources(sources: dict[str, bytes]) -> dict[str, bytes]:
     return {path: source for path, source in sources.items() if Path(path).suffix in {".py", ".pyi"}}
+
+
+def _suppression_delta_context(
+    base_occurrences: tuple[SuppressionOccurrence, ...],
+    head_occurrences: tuple[SuppressionOccurrence, ...],
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+    renames: dict[str, str],
+) -> _SuppressionDeltaContext:
+    base_by_key, head_by_key = _suppression_indexes(base_occurrences, head_occurrences, renames)
+    return _SuppressionDeltaContext(
+        base_by_key,
+        head_by_key,
+        base_sources,
+        head_sources,
+        renames,
+        _source_manifest_digest(base_sources),
+        _source_manifest_digest(head_sources),
+    )
 
 
 def _suppression_indexes(
@@ -1011,6 +1037,76 @@ def _suppression_occurrence_index(
         counts[identity] = ordinal + 1
         indexed[_suppression_key(occurrence, reverse_renames=reverse_renames, ordinal=ordinal)] = occurrence
     return indexed
+
+
+def _classify_suppression_keys(
+    base_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence],
+    head_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence],
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+) -> tuple[list[tuple[str, str, str, int]], list[tuple[str, str, str, int]], bool]:
+    unchanged: list[tuple[str, str, str, int]] = []
+    introduced = list(set(head_by_key) - set(base_by_key))
+    correspondence_unknown = False
+    correspondence_cache = _CorrespondenceCache()
+    for key in sorted(set(base_by_key) & set(head_by_key)):
+        base_item = base_by_key[key]
+        head_item = head_by_key[key]
+        continuity = _suppression_occurrence_continuity(
+            base_item,
+            head_item,
+            base_source=base_sources[base_item.path],
+            head_source=head_sources[head_item.path],
+            cache=correspondence_cache,
+        )
+        if continuity == "introduced":
+            introduced.append(key)
+        else:
+            unchanged.append(key)
+            correspondence_unknown = correspondence_unknown or continuity == "unknown"
+    return sorted(unchanged), sorted(introduced), correspondence_unknown
+
+
+def _suppression_occurrence_continuity(
+    base: SuppressionOccurrence,
+    head: SuppressionOccurrence,
+    *,
+    base_source: bytes,
+    head_source: bytes,
+    cache: _CorrespondenceCache,
+) -> Literal["unchanged", "introduced", "unknown"]:
+    if base_source == head_source:
+        return "unchanged"
+    base_finding = DifferentialFinding("suppression", base.family, "error", base.path, base.line, base.token, True)
+    head_finding = DifferentialFinding("suppression", head.family, "error", head.path, head.line, head.token, True)
+    context, _reason = _continuity_context(
+        base_finding,
+        head_finding,
+        base_source=base_source,
+        head_source=head_source,
+    )
+    if context is None:
+        return "unknown"
+    base_line = context.base_lines[context.base_index]
+    head_line = context.head_lines[context.head_index]
+    if base_line != head_line:
+        return "introduced"
+    if context.base_lines.count(base_line) != 1 or context.head_lines.count(head_line) != 1:
+        return "unknown"
+    evidence = _continuity_cost_evidence(
+        context,
+        source_key=(base_source, head_source),
+        matrix_cache=cache.matrices,
+        forbidden_cache=cache.forbidden_costs,
+    )
+    pair_cost = _integer_evidence(evidence, "pair_cost")
+    global_cost = _integer_evidence(evidence, "global_cost")
+    forced_cost = _integer_evidence(evidence, "forced_cost")
+    forbidden_cost = _integer_evidence(evidence, "forbidden_cost")
+    if pair_cost == 0 and forced_cost == global_cost and forbidden_cost > global_cost:
+        return "unchanged"
+    return "introduced"
 
 
 def _introduced_suppression_findings(
