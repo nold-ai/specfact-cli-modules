@@ -429,6 +429,19 @@ def test_suppression_correspondence_bounds_aggregate_forbidden_pair_work(
     assert forbidden_calls == 1
 
 
+def test_budget_exhaustion_does_not_shift_repeated_suppression_pairs(differential_api: Any, monkeypatch: Any) -> None:
+    monkeypatch.setattr(differential_api, "_MAX_AGGREGATE_CORRESPONDENCE_CELLS", 20)
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"a = 1  # noqa\nb = 2  # noqa\nc = 3  # noqa\n"},
+        head_sources={"src/app.py": b"new = 0  # noqa\na = 1  # noqa\nb = 2  # noqa\nc = 3  # noqa\n"},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert [occurrence.line for occurrence in result.introduced] == [1]
+    assert [occurrence.line for occurrence in result.unchanged] == [2, 3, 4]
+
+
 def test_suppression_manifest_failure_is_unknown(differential_api: Any, monkeypatch: Any) -> None:
     monkeypatch.setattr(
         differential_api,

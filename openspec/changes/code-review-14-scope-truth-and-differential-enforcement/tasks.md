@@ -266,5 +266,7 @@ Explicitly forbidden:
 - [ ] 6.16 Run focused, strict OpenSpec, formatting, typing, lint, contract, smart, complete, Code Review, manifest, signature, and publish-precheck gates; advance `specfact-code-review` by one patch version and record passing evidence in `TDD_EVIDENCE.md`.
 - [x] 6.17 Add focused failing regressions for review findings on repeated-directive insertion pairing and aggregate forbidden-pair work, then correct only the suppression-correspondence implementation.
 - [x] 6.18 Prove the repeated existing occurrences remain paired by exact physical-line correspondence, the one inserted occurrence remains introduced, and exhausted aggregate correspondence work fails closed without another edit-matrix build.
+- [x] 6.19 Add a focused failing regression for shifted repeated occurrences when the aggregate budget is exhausted, then preserve exact-line candidates as `UNKNOWN` and make bounded candidate order deterministic.
+- [x] 6.20 Prove only the unmatched inserted directive remains introduced while every unproven exact-line candidate is quarantined, independent of hash iteration order.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

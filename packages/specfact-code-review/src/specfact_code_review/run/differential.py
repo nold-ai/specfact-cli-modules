@@ -1106,6 +1106,16 @@ def _classify_suppression_identity(
         pair_count = min(len(base_bucket), len(head_bucket))
         pairs = [(base_bucket[index][0], head_bucket[index][0]) for index in range(pair_count)]
         return pairs, [key for key, _item in head_bucket[pair_count:]], False
+    return _classify_changed_suppression_identity(base_bucket, head_bucket, sources=sources, cache=cache)
+
+
+def _classify_changed_suppression_identity(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    sources: _SuppressionSources,
+    cache: _CorrespondenceCache,
+) -> tuple[list[tuple[_SuppressionKey, _SuppressionKey]], list[_SuppressionKey], bool]:
     pair_evidence = _suppression_pair_evidence(
         base_bucket,
         head_bucket,
@@ -1113,17 +1123,18 @@ def _classify_suppression_identity(
         head_sources=sources.head,
         cache=cache,
     )
-    proven_pairs = [pair for pair, status in pair_evidence.statuses.items() if status == "unchanged"]
-    matched_base = {base_key for base_key, _head_key in proven_pairs}
-    matched_head = {head_key for _base_key, head_key in proven_pairs}
+    correspondence_pairs = [pair for pair, status in pair_evidence.statuses.items() if status != "introduced"]
+    matched_base = {base_key for base_key, _head_key in correspondence_pairs}
+    matched_head = {head_key for _base_key, head_key in correspondence_pairs}
     remaining_base = [entry for entry in base_bucket if entry[0] not in matched_base]
     remaining_head = [entry for entry in head_bucket if entry[0] not in matched_head]
-    fallback_pairs, introduced, unknown = _suppression_fallback_pairs(
+    fallback_pairs, introduced, fallback_unknown = _suppression_fallback_pairs(
         remaining_base,
         remaining_head,
         pair_evidence,
     )
-    return proven_pairs + fallback_pairs, introduced, unknown
+    correspondence_unknown = any(status == "unknown" for status in pair_evidence.statuses.values())
+    return correspondence_pairs + fallback_pairs, introduced, correspondence_unknown or fallback_unknown
 
 
 def _suppression_fallback_pairs(
@@ -1176,7 +1187,7 @@ def _suppression_pair_evidence(
     base_by_line = _suppression_entries_by_line(base_bucket, base_lines)
     head_by_line = _suppression_entries_by_line(head_bucket, head_lines)
     statuses: dict[tuple[_SuppressionKey, _SuppressionKey], Literal["unchanged", "introduced", "unknown"]] = {}
-    for line in set(base_by_line) & set(head_by_line):
+    for line in sorted(set(base_by_line) & set(head_by_line)):
         base_entries = base_by_line[line]
         head_entries = head_by_line[line]
         if len(base_entries) != 1 or len(head_entries) != 1:
