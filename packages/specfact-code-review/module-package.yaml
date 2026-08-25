@@ -31,3 +31,4 @@ category: codebase
 bundle_group_command: code
 integrity:
   checksum: sha256:699517c1bb2b9736336954403397811bf7104315657bf9fcda273921633343da
+  signature: ghs+coqxnNHIGxIKcKbeJ0TENk1oB21FUNX8FmTAr4oRzIbCYMuQRqdn/z0vFhiKzEkJpTWO4zQGGbRwPjAXCw==
