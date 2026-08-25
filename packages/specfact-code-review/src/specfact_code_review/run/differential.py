@@ -177,7 +177,7 @@ class _SuppressionIntroduction:
 
 @dataclass(frozen=True)
 class _SuppressionPairing:
-    base_key: _SuppressionKey
+    base_key: _SuppressionKey | None
     head_key: _SuppressionKey
     correspondence_evidence: dict[str, object]
 
@@ -1150,10 +1150,16 @@ def _classify_suppression_keys(
         introduced.extend(identity_introduced)
         correspondence_unknown = correspondence_unknown or identity_unknown
     return (
-        sorted(unchanged, key=lambda item: (item.base_key, item.head_key)),
+        sorted(unchanged, key=_suppression_pairing_sort_key),
         sorted(introduced, key=lambda item: item.head_key),
         correspondence_unknown,
     )
+
+
+def _suppression_pairing_sort_key(
+    pairing: _SuppressionPairing,
+) -> tuple[bool, _SuppressionKey, _SuppressionKey]:
+    return pairing.base_key is None, pairing.base_key or pairing.head_key, pairing.head_key
 
 
 def _classify_suppression_identity(
@@ -1253,7 +1259,18 @@ def _suppression_fallback_pairs(
         else:
             unchanged.append(_SuppressionPairing(base_key, head_key, correspondence.evidence))
             correspondence_unknown = correspondence_unknown or correspondence.status == "unknown"
-    introduced.extend(_SuppressionIntroduction(None, key, {}) for key, _item in head_bucket[pair_count:])
+    surplus = head_bucket[pair_count:]
+    if correspondence_unknown:
+        evidence = {
+            "algorithm": "source-line-correspondence-v1",
+            "base_count": len(base_bucket),
+            "decision": "ambiguous_surplus_candidate",
+            "head_count": len(head_bucket),
+            "status": "unknown",
+        }
+        unchanged.extend(_SuppressionPairing(None, key, evidence) for key, _item in surplus)
+    else:
+        introduced.extend(_SuppressionIntroduction(None, key, {}) for key, _item in surplus)
     return unchanged, introduced, correspondence_unknown
 
 
@@ -1439,12 +1456,20 @@ def _append_quarantined_suppressions(
 ) -> bool:
     quarantined = False
     for pair in unchanged_pairs:
-        base_item = context.base_by_key[pair.base_key]
         head_item = context.head_by_key[pair.head_key]
-        base_source = context.base_sources[base_item.path]
+        base_item = context.base_by_key[pair.base_key] if pair.base_key is not None else None
+        base_source = (
+            context.base_sources.get(base_item.path)
+            if base_item is not None
+            else context.base_sources.get(pair.head_key[0])
+        )
         head_source = context.head_sources[head_item.path]
-        pure_rename = context.renames.get(base_item.path) == head_item.path and base_source == head_source
-        if base_source == head_source or pure_rename:
+        pure_rename = (
+            base_item is not None
+            and context.renames.get(base_item.path) == head_item.path
+            and base_source == head_source
+        )
+        if base_item is not None and (base_source == head_source or pure_rename):
             continue
         findings.append(
             SuppressionFinding(

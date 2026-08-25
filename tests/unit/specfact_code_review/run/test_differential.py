@@ -519,6 +519,22 @@ def test_budget_exhaustion_does_not_shift_repeated_suppression_pairs(differentia
     assert [occurrence.line for occurrence in result.unchanged] == [2, 3, 4]
 
 
+def test_repeated_identical_suppression_surplus_has_no_fabricated_location(differential_api: Any) -> None:
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"# noqa\n# noqa\n"},
+        head_sources={"src/app.py": b"# noqa\n# noqa\n# noqa\n"},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.introduced == ()
+    assert [occurrence.line for occurrence in result.unchanged] == [1, 2, 3]
+    assert [finding.kind for finding in result.findings] == ["unchanged_suppression_on_changed_file"] * 3
+    surplus = result.findings[2].evidence.transition
+    assert surplus.base_occurrence_digest == ""
+    assert surplus.correspondence_status == "unknown"
+    assert surplus.correspondence_evidence["decision"] == "ambiguous_surplus_candidate"
+
+
 def test_suppression_manifest_failure_is_unknown(differential_api: Any, monkeypatch: Any) -> None:
     monkeypatch.setattr(
         differential_api,
