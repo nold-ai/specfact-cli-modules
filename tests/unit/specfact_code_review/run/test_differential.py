@@ -468,6 +468,28 @@ def test_suppression_correspondence_bounds_aggregate_forbidden_pair_work(
     }
 
 
+def test_suppression_physical_lines_are_reused_across_directive_identities(differential_api: Any) -> None:
+    class CountingBytes(bytes):
+        splitlines_calls = 0
+
+        def splitlines(self, keepends: bool = False) -> list[bytes]:
+            type(self).splitlines_calls += 1
+            return super().splitlines(keepends)
+
+    directive_lines = [f"value_{index} = {index}  # noqa: F{index:04d}\n" for index in range(64)]
+    base_source = CountingBytes("".join(directive_lines).encode())
+    head_source = CountingBytes(("".join(directive_lines) + "tail = 1\n").encode())
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": base_source},
+        head_sources={"src/app.py": head_source},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert len(result.unchanged) == 64
+    assert CountingBytes.splitlines_calls == 2
+
+
 def test_ordinal_fallback_respects_correspondence_resource_bounds(differential_api: Any, monkeypatch: Any) -> None:
     monkeypatch.setattr(differential_api, "_MAX_SOURCE_BYTES", 8)
 

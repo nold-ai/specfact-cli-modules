@@ -112,6 +112,7 @@ class _CorrespondenceCache:
     matrices: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]] = field(default_factory=dict)
     forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
     forbidden_cells: dict[tuple[bytes, bytes], int] = field(default_factory=dict)
+    source_lines: dict[bytes, list[bytes]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -482,11 +483,12 @@ def _continuity_context(
     *,
     base_source: bytes | None,
     head_source: bytes | None,
+    source_line_cache: dict[bytes, list[bytes]] | None = None,
 ) -> tuple[_ContinuityContext | None, dict[str, object]]:
     if base_source is None or head_source is None:
         return None, {"reason": "missing_source"}
-    base_lines = base_source.splitlines()
-    head_lines = head_source.splitlines()
+    base_lines = _cached_source_lines(base_source, source_line_cache)
+    head_lines = _cached_source_lines(head_source, source_line_cache)
     cells = (len(base_lines) + 1) * (len(head_lines) + 1)
     if not _continuity_within_bounds(base_source, head_source, base_lines, head_lines, cells):
         return None, {"cells": cells, "reason": "correspondence_bounds"}
@@ -496,6 +498,16 @@ def _continuity_context(
     if not _continuity_anchor_is_valid(context):
         return None, {"cells": cells, "reason": "invalid_source_anchor"}
     return context, {}
+
+
+def _cached_source_lines(source: bytes, cache: dict[bytes, list[bytes]] | None) -> list[bytes]:
+    if cache is None:
+        return source.splitlines()
+    lines = cache.get(source)
+    if lines is None:
+        lines = source.splitlines()
+        cache[source] = lines
+    return lines
 
 
 def _continuity_within_bounds(
@@ -1264,8 +1276,8 @@ def _suppression_pair_evidence(
 ) -> _SuppressionPairEvidence:
     base_source = base_sources[base_bucket[0][1].path]
     head_source = head_sources[head_bucket[0][1].path]
-    base_lines = _suppression_physical_lines(base_bucket, base_source)
-    head_lines = _suppression_physical_lines(head_bucket, head_source)
+    base_lines = _suppression_physical_lines(base_bucket, _cached_source_lines(base_source, cache.source_lines))
+    head_lines = _suppression_physical_lines(head_bucket, _cached_source_lines(head_source, cache.source_lines))
     base_by_line = _suppression_entries_by_line(base_bucket, base_lines)
     head_by_line = _suppression_entries_by_line(head_bucket, head_lines)
     correspondences: dict[tuple[_SuppressionKey, _SuppressionKey], _SuppressionCorrespondence] = {}
@@ -1288,11 +1300,11 @@ def _suppression_pair_evidence(
 
 def _suppression_physical_lines(
     bucket: list[_SuppressionEntry],
-    source: bytes,
+    source_lines: list[bytes],
 ) -> dict[_SuppressionKey, bytes | None]:
-    lines = source.splitlines()
     return {
-        key: lines[occurrence.line - 1] if 0 < occurrence.line <= len(lines) else None for key, occurrence in bucket
+        key: source_lines[occurrence.line - 1] if 0 < occurrence.line <= len(source_lines) else None
+        for key, occurrence in bucket
     }
 
 
@@ -1336,6 +1348,7 @@ def _suppression_occurrence_continuity(
         head_finding,
         base_source=base_source,
         head_source=head_source,
+        source_line_cache=cache.source_lines,
     )
     if context is None:
         return _suppression_correspondence("unknown", {**evidence, **reason}, decision="unavailable")

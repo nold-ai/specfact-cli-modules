@@ -272,5 +272,7 @@ Explicitly forbidden:
 - [ ] 6.22 Preserve the private base/head transition and `G/F/X` evidence through finding construction and the existing evidence-reference surface; rerun the scoped quality, signing, protected-matrix, and review gates without admitting unrelated findings.
 - [x] 6.23 Add focused failing regressions proving ordinal fallback cannot bypass correspondence resource bounds and retained or `UNKNOWN` pairs do not discard their matched baseline/correspondence evidence.
 - [x] 6.24 Correct only those two candidate-patch evidence paths while preserving the existing public suppression verdict and occurrence APIs.
+- [x] 6.25 Add a focused failing regression proving physical-line sequences are not repeatedly derived for each distinct directive identity in one changed source pair.
+- [ ] 6.26 Cache immutable physical-line metadata across suppression identities without changing correspondence verdicts, then rerun the scoped gates and approval-time signing.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
