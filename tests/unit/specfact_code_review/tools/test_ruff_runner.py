@@ -204,6 +204,22 @@ def test_run_ruff_returns_tool_error_on_operational_exit_with_parseable_payload(
     assert "invalid configuration" in findings[0].message
 
 
+def test_run_ruff_bounds_operational_exit_stderr_including_truncation_marker(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    file_path = tmp_path / "target.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("ruff", stdout="[]", stderr="a" * 4001, returncode=2)),
+    )
+
+    findings = run_ruff([file_path])
+
+    stderr_repr = findings[0].message.rsplit("stderr=", maxsplit=1)[1]
+    assert stderr_repr == repr("…" + "a" * 3999)
+
+
 def test_run_ruff_returns_tool_error_when_ruff_is_unavailable(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     run_mock = Mock(side_effect=FileNotFoundError("ruff not found"))

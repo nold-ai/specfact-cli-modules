@@ -513,6 +513,7 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **GIVEN** mandatory Ruff emits parseable JSON, including an empty finding list
 - **WHEN** the Ruff process exits outside its completed-analysis statuses 0 and 1
 - **THEN** the adapter rejects the payload and records a tool/process error as `UNKNOWN`
+- **AND** retained stderr context is at most 4,000 characters including any truncation marker
 - **AND** an operational, configuration, or illegal-argument exit can never become completed PASS evidence.
 
 #### Scenario: Radon configuration cannot suppress a governed result

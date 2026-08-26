@@ -88,7 +88,7 @@ def _validate_process_completion(result: subprocess.CompletedProcess[str]) -> No
         return
     stderr = (result.stderr or "").strip()
     if len(stderr) > _STDERR_SNIP_MAX:
-        stderr = "…" + stderr[-_STDERR_SNIP_MAX:]
+        stderr = "…" + stderr[-(_STDERR_SNIP_MAX - 1) :]
     raise ValueError(f"ruff process failed (returncode={result.returncode}); stderr={stderr!r}")
 
 
