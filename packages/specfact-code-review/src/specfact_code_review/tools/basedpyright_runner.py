@@ -113,7 +113,8 @@ def run_basedpyright(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> 
         return skipped
 
     try:
-        projected_source_args = () if extra_args else tuple(str(file_path) for file_path in files)
+        uses_project_projection = len(extra_args) == 2 and extra_args[0] == "--project"
+        projected_source_args = () if uses_project_projection else tuple(str(file_path) for file_path in files)
         result = subprocess.run(
             [
                 "basedpyright",

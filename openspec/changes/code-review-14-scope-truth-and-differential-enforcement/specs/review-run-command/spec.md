@@ -580,6 +580,7 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **GIVEN** an immutable index or range side has eligible Python inputs and a generated basedpyright project whose `include` is their exact manifest
 - **WHEN** the basedpyright adapter launches and accepts JSON output
 - **THEN** its argv contains `--project <projection>` and no positional source arguments, so command-line inputs cannot override the signed project include
+- **AND** an ordinary non-project adapter option retains the explicitly requested positional source arguments
 - **AND** only documented completed-analysis exit states may produce findings or PASS evidence
 - **AND** fatal, configuration, or illegal-argument exits yield UNKNOWN even when stdout is parseable JSON with an empty `generalDiagnostics` list.
 

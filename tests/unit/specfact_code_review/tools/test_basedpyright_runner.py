@@ -27,6 +27,17 @@ def test_projected_basedpyright_launch_uses_only_project_include(tmp_path: Path,
     assert_tool_run(run_mock, ["basedpyright", "--outputjson", "--project", project_path])
 
 
+def test_non_project_extra_args_retain_requested_sources(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    run_mock = Mock(return_value=completed_process("basedpyright", stdout='{"generalDiagnostics": []}'))
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    findings = run_basedpyright([file_path], extra_args=("--warnings",))
+
+    assert not findings
+    assert_tool_run(run_mock, ["basedpyright", "--outputjson", "--warnings", str(file_path)])
+
+
 def test_run_basedpyright_returns_tool_error_for_fatal_exit(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     monkeypatch.setattr(
