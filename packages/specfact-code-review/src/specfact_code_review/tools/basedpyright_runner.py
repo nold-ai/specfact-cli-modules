@@ -15,6 +15,10 @@ from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
+_COMPLETED_EXIT_CODES = frozenset({0, 1})
+_STDERR_SNIP_MAX = 4000
+
+
 def _allowed_paths(files: list[Path]) -> set[str]:
     allowed: set[str] = set()
     for file_path in files:
@@ -75,6 +79,17 @@ def _diagnostics_from_output(stdout: str) -> list[object]:
     return diagnostics
 
 
+def _validate_process_completion(result: subprocess.CompletedProcess[str]) -> None:
+    """Reject fatal/configuration/argument exits even when stdout parses."""
+
+    if result.returncode in _COMPLETED_EXIT_CODES:
+        return
+    stderr = result.stderr.strip()
+    if len(stderr) > _STDERR_SNIP_MAX:
+        stderr = "…" + stderr[-_STDERR_SNIP_MAX:]
+    raise ValueError(f"basedpyright process failed (returncode={result.returncode}); stderr={stderr!r}")
+
+
 def _findings_from_diagnostics(diagnostics: list[object], *, allowed_paths: set[str]) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
     for diagnostic in diagnostics:
@@ -98,18 +113,20 @@ def run_basedpyright(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> 
         return skipped
 
     try:
+        projected_source_args = () if extra_args else tuple(str(file_path) for file_path in files)
         result = subprocess.run(
             [
                 "basedpyright",
                 "--outputjson",
                 *(extra_args or ("--project", ".")),
-                *[str(file_path) for file_path in files],
+                *projected_source_args,
             ],
             capture_output=True,
             text=True,
             check=False,
             timeout=30,
         )
+        _validate_process_completion(result)
         diagnostics = _diagnostics_from_output(result.stdout)
     except (OSError, ValueError, json.JSONDecodeError, KeyError, subprocess.TimeoutExpired) as exc:
         return [

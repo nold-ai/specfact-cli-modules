@@ -15,6 +15,40 @@ def test_run_basedpyright_returns_empty_for_no_files() -> None:
     assert run_basedpyright([]) == []
 
 
+def test_projected_basedpyright_launch_uses_only_project_include(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    project_path = "/opt/specfact/config/1/basedpyright.json"
+    run_mock = Mock(return_value=completed_process("basedpyright", stdout='{"generalDiagnostics": []}'))
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    findings = run_basedpyright([file_path], extra_args=("--project", project_path))
+
+    assert not findings
+    assert_tool_run(run_mock, ["basedpyright", "--outputjson", "--project", project_path])
+
+
+def test_run_basedpyright_returns_tool_error_for_fatal_exit(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(
+            return_value=completed_process(
+                "basedpyright",
+                stdout='{"generalDiagnostics": []}',
+                stderr="Configuration file could not be parsed",
+                returncode=3,
+            )
+        ),
+    )
+
+    findings = run_basedpyright([file_path], extra_args=("--project", "/project/basedpyright.json"))
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert "returncode=3" in findings[0].message
+
+
 def test_basedpyright_extends_and_baseline_files_are_governed_but_disabled(tmp_path: Path) -> None:
     from specfact_code_review.run import scope
 

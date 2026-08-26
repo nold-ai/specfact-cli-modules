@@ -575,6 +575,14 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** non-empty target `executionEnvironments` remains unsupported UNKNOWN
 - **AND** a basic-mode non-rename regression whose strict-listed `a.py` otherwise loses its unknown-member diagnostics cannot PASS.
 
+#### Scenario: basedpyright projected invocation and process completion are authoritative
+
+- **GIVEN** an immutable index or range side has eligible Python inputs and a generated basedpyright project whose `include` is their exact manifest
+- **WHEN** the basedpyright adapter launches and accepts JSON output
+- **THEN** its argv contains `--project <projection>` and no positional source arguments, so command-line inputs cannot override the signed project include
+- **AND** only documented completed-analysis exit states may produce findings or PASS evidence
+- **AND** fatal, configuration, or illegal-argument exits yield UNKNOWN even when stdout is parseable JSON with an empty `generalDiagnostics` list.
+
 #### Scenario: Semgrep prohibits per-rule target narrowing and reconciles every pass target
 
 - **GIVEN** a sealed Semgrep bundle contains multiple rules, an eligible governed file, or an eligible file that exceeds the tool's implicit/default target-size limit
@@ -583,6 +591,14 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** for an accepted no-target-narrowing bundle, canonical JSON `paths.scanned` must equal the exact eligible explicit input manifest
 - **AND** `paths.skipped` and its reasons remain evidence
 - **AND** any missing, extra, oversized, unnormalized, or unreconciled pass path yields UNKNOWN rather than empty PASS.
+
+#### Scenario: Semgrep execution errors cannot masquerade as completed evidence
+
+- **GIVEN** a mandatory Semgrep pass emits parseable JSON containing `results` and apparently complete `paths.scanned`
+- **WHEN** the Semgrep process exits with a fatal process/configuration status or the payload contains one or more top-level `errors`
+- **THEN** the pass yields UNKNOWN with process/error diagnostics
+- **AND** its findings or empty result set are not accepted as completed PASS or FAIL evidence
+- **AND** only the documented successful or finding-bearing exit states with no structured execution errors proceed to path reconciliation and finding mapping.
 
 #### Scenario: Required analyzers handle structurally empty source snapshots
 
