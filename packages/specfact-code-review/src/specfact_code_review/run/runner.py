@@ -428,13 +428,24 @@ def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> Profil
         execution = str(raw.get("execution_state", "error"))
         outcome = str(raw.get("evidence_outcome", "UNKNOWN"))
         version = str(raw.get("version", ""))
+        has_member_unknown = _has_required_unknown_reasons(raw.get("required_unknown_reasons", []))
         if execution == "error" or version != _C14_ANALYZER_VERSIONS[member_id]:
             outcome = "UNKNOWN"
-        required_unknown |= outcome == "UNKNOWN"
+        required_unknown |= outcome == "UNKNOWN" or has_member_unknown
         known_fail |= outcome == "FAIL"
         members.append(AnalyzerEvidence(member_id, execution, outcome, version, str(raw.get("diagnostic", ""))))
     assurance = "FAIL" if known_fail else "UNKNOWN" if required_unknown else "PASS"
     return ProfileEvidenceReport(tuple(members), assurance, "PASS" if assurance == "PASS" else "FAIL", required_unknown)
+
+
+def _has_required_unknown_reasons(raw_reasons: object) -> bool:
+    """Treat malformed or non-empty required uncertainty as fail-closed evidence."""
+
+    return (
+        not isinstance(raw_reasons, list)
+        or bool(raw_reasons)
+        or any(not isinstance(reason, str) or not reason for reason in raw_reasons)
+    )
 
 
 def _capsule_environment_id() -> str:
@@ -5361,12 +5372,11 @@ def _apply_suppression_delta(
 ) -> None:
     if suppression.status == "UNKNOWN" and not suppression.findings:
         for member in default_pr_range_profile().all_ids:
-            combined[member] = {
-                **combined[member],
-                "evidence_outcome": "UNKNOWN",
-                "diagnostic": suppression.reason or "suppression_manifest_unknown",
-                "disposition": "unknown",
-            }
+            combined[member] = _merge_member_outcome(
+                combined[member],
+                outcome="UNKNOWN",
+                reason=suppression.reason or "suppression_manifest_unknown",
+            )
         return
     for finding in suppression.findings:
         for member in finding.evidence.analyzers:
@@ -5374,19 +5384,70 @@ def _apply_suppression_delta(
                 continue
             state = "UNKNOWN" if finding.kind == "unchanged_suppression_on_changed_file" else "FAIL"
             findings_by_member.setdefault(member, []).append(_suppression_review_finding(finding, member=member))
-            combined[member] = {
-                **combined[member],
-                "evidence_outcome": state,
-                "diagnostic": finding.kind,
-                "disposition": "unknown" if state == "UNKNOWN" else "introduced",
-            }
+            combined[member] = _merge_member_outcome(combined[member], outcome=state, reason=finding.kind)
             if suppression.missing_base_disposition == "unknown":
-                findings_by_member[member] = [
-                    item.model_copy(update={"differential_state": "unknown", "status": "open", "blocking": True})
-                    if item.file == finding.path and item.differential_state == "fixed"
-                    else item
-                    for item in findings_by_member[member]
-                ]
+                findings_by_member[member] = _reclassify_missing_base_findings(
+                    findings_by_member[member],
+                    path=finding.path,
+                )
+
+
+def _reclassify_missing_base_findings(findings: list[ReviewFinding], *, path: str) -> list[ReviewFinding]:
+    return [
+        ReviewFinding.model_validate(
+            {
+                **item.model_dump(exclude={"blocking"}),
+                "differential_state": "unknown",
+                "status": "open",
+            }
+        )
+        if item.file == path and item.differential_state == "fixed"
+        else item
+        for item in findings
+    ]
+
+
+def _merge_member_outcome(
+    evidence: dict[str, object],
+    *,
+    outcome: Literal["FAIL", "UNKNOWN"],
+    reason: str,
+) -> dict[str, object]:
+    """Merge one fail-closed fact without losing a blocker or uncertainty."""
+
+    existing_outcome = str(evidence.get("evidence_outcome", "UNKNOWN"))
+    existing_diagnostic = str(evidence.get("diagnostic", ""))
+    diagnostics = {value for value in (existing_diagnostic, reason) if value}
+    unknown_reasons = _normalized_unknown_reasons(evidence.get("required_unknown_reasons", []))
+    existing_unknown_reason = _preexisting_unknown_reason(existing_outcome, existing_diagnostic)
+    if existing_unknown_reason:
+        unknown_reasons.add(existing_unknown_reason)
+    if outcome == "UNKNOWN":
+        unknown_reasons.add(reason)
+    merged_outcome = "FAIL" if "FAIL" in {existing_outcome, outcome} else "UNKNOWN"
+    merged = {
+        **evidence,
+        "evidence_outcome": merged_outcome,
+        "diagnostic": ";".join(sorted(diagnostics)),
+        "disposition": "introduced" if merged_outcome == "FAIL" else "unknown",
+    }
+    if unknown_reasons:
+        merged["required_unknown_reasons"] = sorted(unknown_reasons)
+    return merged
+
+
+def _normalized_unknown_reasons(raw_reasons: object) -> set[str]:
+    if not isinstance(raw_reasons, list):
+        return {"invalid_required_unknown_reasons"}
+    return {value for value in raw_reasons if isinstance(value, str) and value}
+
+
+def _preexisting_unknown_reason(outcome: str, diagnostic: str) -> str:
+    if outcome == "UNKNOWN":
+        return diagnostic or "preexisting_member_unknown"
+    if outcome not in {"PASS", "FAIL", "NOT_APPLICABLE"}:
+        return "untrusted_preexisting_member_outcome"
+    return ""
 
 
 def _pytest_toml_values(path: Path, payload: bytes) -> dict[str, object]:

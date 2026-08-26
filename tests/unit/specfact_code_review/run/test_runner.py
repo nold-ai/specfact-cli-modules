@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Literal, cast
@@ -1482,6 +1483,121 @@ def test_immutable_range_blocks_introduced_suppression_even_when_analyzers_repor
     assert findings["ruff"][0].rule == "introduced_inline_suppression"
     assert findings["ruff"][0].differential_state == "introduced"
     assert findings["ruff"][0].is_blocking() is True
+
+
+@pytest.mark.parametrize("reverse_findings", [False, True])
+def test_mixed_suppression_fail_and_unknown_is_order_independent(reverse_findings: bool) -> None:
+    runner_api = _c14_runner()
+    suppression = runner_api.differential.classify_suppression_delta(
+        base_sources={"src/app.py": b"value = 1  # noqa: F401\nother = 1\n"},
+        head_sources={"src/app.py": b"value = 1  # noqa: F401\nother = 2  # noqa: F821\n"},
+    )
+    if reverse_findings:
+        suppression = replace(suppression, findings=tuple(reversed(suppression.findings)))
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    findings: dict[str, list[ReviewFinding]] = {}
+
+    runner_api._apply_suppression_delta(suppression, combined=evidence, findings_by_member=findings)
+    report = runner_api.aggregate_profile_evidence(evidence)
+
+    assert evidence["ruff"]["evidence_outcome"] == "FAIL"
+    assert evidence["ruff"]["required_unknown_reasons"] == ["unchanged_suppression_on_changed_file"]
+    assert {finding.differential_state for finding in findings["ruff"]} == {"introduced", "unknown"}
+    assert report.assurance_status == "FAIL"
+    assert report.has_unknown_required_evidence is True
+
+
+def test_global_suppression_unknown_preserves_preexisting_member_failure() -> None:
+    runner_api = _c14_runner()
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"].update(
+        evidence_outcome="FAIL",
+        diagnostic="introduced_analyzer_finding",
+        disposition="introduced",
+    )
+
+    runner_api._apply_suppression_delta(
+        runner_api.differential.SuppressionClassification(
+            "UNKNOWN",
+            reason="suppression_manifest_unavailable",
+        ),
+        combined=evidence,
+        findings_by_member={},
+    )
+    report = runner_api.aggregate_profile_evidence(evidence)
+
+    assert evidence["ruff"]["evidence_outcome"] == "FAIL"
+    assert evidence["ruff"]["required_unknown_reasons"] == ["suppression_manifest_unavailable"]
+    assert report.assurance_status == "FAIL"
+    assert report.has_unknown_required_evidence is True
+
+
+def test_global_suppression_unknown_does_not_label_not_applicable_as_untrusted() -> None:
+    runner_api = _c14_runner()
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["semgrep-bugs"].update(
+        execution_state="not_applicable",
+        evidence_outcome="NOT_APPLICABLE",
+        diagnostic="not_applicable",
+    )
+
+    runner_api._apply_suppression_delta(
+        runner_api.differential.SuppressionClassification(
+            "UNKNOWN",
+            reason="suppression_manifest_unavailable",
+        ),
+        combined=evidence,
+        findings_by_member={},
+    )
+
+    assert evidence["semgrep-bugs"]["evidence_outcome"] == "UNKNOWN"
+    assert evidence["semgrep-bugs"]["required_unknown_reasons"] == ["suppression_manifest_unavailable"]
+
+
+def test_suppression_failure_retains_untrusted_preexisting_member_outcome() -> None:
+    runner_api = _c14_runner()
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"]["evidence_outcome"] = "UNRECOGNIZED"
+    suppression = runner_api.differential.classify_suppression_delta(
+        base_sources={"src/app.py": b"value = 1\n"},
+        head_sources={"src/app.py": b"value = 1  # noqa: F821\n"},
+    )
+
+    runner_api._apply_suppression_delta(suppression, combined=evidence, findings_by_member={})
+    report = runner_api.aggregate_profile_evidence(evidence)
+
+    assert evidence["ruff"]["evidence_outcome"] == "FAIL"
+    assert evidence["ruff"]["required_unknown_reasons"] == ["untrusted_preexisting_member_outcome"]
+    assert report.assurance_status == "FAIL"
+    assert report.has_unknown_required_evidence is True
+
+
+@pytest.mark.parametrize(
+    ("severity", "expected_blocking"),
+    [("error", True), ("warning", False), ("info", False)],
+)
+def test_missing_base_reclassification_rederives_blocking(
+    severity: Literal["error", "warning", "info"], expected_blocking: bool
+) -> None:
+    runner_api = _c14_runner()
+    finding = ReviewFinding(
+        category="testing",
+        severity=severity,
+        tool="pytest",
+        rule="missing-base-finding",
+        file="src/app.py",
+        line=1,
+        message="Finding exists only in the unavailable base snapshot.",
+        fixable=False,
+        status="fixed",
+        differential_state="fixed",
+    )
+
+    reclassified = runner_api._reclassify_missing_base_findings([finding], path="src/app.py")[0]
+
+    assert reclassified.differential_state == "unknown"
+    assert reclassified.status == "open"
+    assert reclassified.is_blocking() is expected_blocking
 
 
 def test_immutable_range_reports_relocated_suppression_baseline_and_correspondence(tmp_path: Path) -> None:
