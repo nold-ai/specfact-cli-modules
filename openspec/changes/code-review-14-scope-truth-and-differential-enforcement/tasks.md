@@ -288,5 +288,7 @@ Explicitly forbidden:
 - [ ] 6.38 Run the focused runner surfaces plus strict OpenSpec, format, typing, lint, contract, smart, complete, Code Review, manifest, signature, publish-precheck, and protected checks; advance `specfact-code-review` by one patch version and resolve only the corresponding PR #420 threads.
 - [x] 6.39 Add a focused failing regression for PR #440 proving ordinary non-project basedpyright adapter options retain the explicitly requested positional sources.
 - [x] 6.40 Restrict positional-source omission to the exact generated `--project <path>` argument contract, then repeat the scoped gates and approval-time signing without admitting another finding family.
+- [x] 6.41 Add a focused failing regression for the PR #420 finding proving Ruff operational exits cannot become completed evidence even when stdout is parseable empty JSON.
+- [x] 6.42 Reject Ruff exit statuses outside completed-analysis codes 0 and 1 before parsing findings, then repeat the scoped gates and approval-time signing without changing Ruff rules, policy projection, input selection, or another analyzer.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
