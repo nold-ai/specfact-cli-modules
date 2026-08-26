@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import threading
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
@@ -21,6 +22,8 @@ from icontract import ensure, require
 
 ScopeStatus = Literal["PASS", "UNKNOWN"]
 _DEFAULT_RESERVED_IMPORT_PREFIXES = ("pytest", "sitecustomize", "specfact_code_review")
+_PTRACE_TRACEME = 0
+_PTRACE_DETACH = 17
 _PROJECT_RUNTIME_MEMBERS = frozenset(
     {
         "basedpyright",
@@ -277,11 +280,12 @@ def _ptrace(request: int, process_id: int) -> None:
 
 
 def _request_exec_trace() -> None:
-    _ptrace(0, 0)  # PTRACE_TRACEME
+    _ptrace(_PTRACE_TRACEME, 0)
 
 
 def _stop_traced_process(process: subprocess.Popen[str]) -> None:
-    process.kill()
+    with suppress(ProcessLookupError):
+        os.kill(process.pid, signal.SIGKILL)
     process.communicate()
 
 
@@ -319,11 +323,10 @@ def _execute_traced_launch(command: list[str], *, descriptor: int, timeout: int)
                 details = ",".join(validation.host_loader_objects)
                 reason = validation.reason if not details else f"{validation.reason}:{details}"
                 return SandboxExecution("UNKNOWN", reason=reason)
-            _ptrace(7, process.pid)  # PTRACE_CONT
+            _ptrace(_PTRACE_DETACH, process.pid)
             stdout, stderr = process.communicate(timeout=timeout)
         except (OSError, ValueError) as exc:
-            if process.poll() is None:
-                _stop_traced_process(process)
+            _stop_traced_process(process)
             return SandboxExecution("UNKNOWN", reason=f"pre_namespace_observation_failed:{exc}")
         except subprocess.TimeoutExpired:
             _stop_traced_process(process)

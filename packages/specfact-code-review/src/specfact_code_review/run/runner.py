@@ -5394,7 +5394,13 @@ def _apply_suppression_delta(
 
 def _reclassify_missing_base_findings(findings: list[ReviewFinding], *, path: str) -> list[ReviewFinding]:
     return [
-        item.model_copy(update={"differential_state": "unknown", "status": "open", "blocking": True})
+        ReviewFinding.model_validate(
+            {
+                **item.model_dump(exclude={"blocking"}),
+                "differential_state": "unknown",
+                "status": "open",
+            }
+        )
         if item.file == path and item.differential_state == "fixed"
         else item
         for item in findings
@@ -5439,7 +5445,7 @@ def _normalized_unknown_reasons(raw_reasons: object) -> set[str]:
 def _preexisting_unknown_reason(outcome: str, diagnostic: str) -> str:
     if outcome == "UNKNOWN":
         return diagnostic or "preexisting_member_unknown"
-    if outcome not in {"PASS", "FAIL"}:
+    if outcome not in {"PASS", "FAIL", "NOT_APPLICABLE"}:
         return "untrusted_preexisting_member_outcome"
     return ""
 

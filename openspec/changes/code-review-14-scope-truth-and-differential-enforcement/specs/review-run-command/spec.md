@@ -273,6 +273,7 @@ Signed `occurrence-continuity-v1` SHALL validate each canonical source span agai
 - **AND** the controller executes the already-verified no-follow descriptor with loader-injection variables removed rather than resolving the path again
 - **AND** `pre-namespace-mapped-objects-v1` observes only that executable plus kernel pseudo-mappings and no other filesystem-backed mapping or loader/library open
 - **AND** every real analyzer launch is gated on that runtime observation and validation; a standalone validator invocation or static ELF identity check alone cannot authorize execution
+- **AND** successful validation detaches the tracee before the controller waits for completion, while validation or observation failure terminates the stopped tracee without relying on subprocess status polling
 - **AND** a dynamic executable, host loader/library dependency, descriptor/path substitution, or unexpected mapped object is UNKNOWN before any analyzer runs.
 
 #### Scenario: Analyzer capsule boots without host runtime mounts
@@ -455,6 +456,8 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** both non-shadow aggregates exit 1 and may project legacy FAIL, but the authoritative statuses remain distinct
 - **AND** when separate members simultaneously produce valid blocking FAIL and required UNKNOWN, aggregate precedence is FAIL, `has_unknown_required_evidence=true`, and the unknown member evidence remains present.
 - **AND** when one member itself contains both a valid blocker and required uncertainty, its authoritative member outcome is FAIL while a canonical non-empty `required_unknown_reasons` list retains the uncertainty, sets `has_unknown_required_evidence=true`, and remains independent of finding order.
+- **AND** `NOT_APPLICABLE` is a valid pre-existing member outcome and is never relabeled as an untrusted producer when a later global UNKNOWN is merged.
+- **AND** reclassifying a fixed finding to unknown/open re-derives `blocking` from severity and lifecycle, so warning and info findings remain non-blocking.
 
 #### Scenario: Known blocker takes precedence over concurrent uncertainty
 

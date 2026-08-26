@@ -1532,6 +1532,28 @@ def test_global_suppression_unknown_preserves_preexisting_member_failure() -> No
     assert report.has_unknown_required_evidence is True
 
 
+def test_global_suppression_unknown_does_not_label_not_applicable_as_untrusted() -> None:
+    runner_api = _c14_runner()
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["semgrep-bugs"].update(
+        execution_state="not_applicable",
+        evidence_outcome="NOT_APPLICABLE",
+        diagnostic="not_applicable",
+    )
+
+    runner_api._apply_suppression_delta(
+        runner_api.differential.SuppressionClassification(
+            "UNKNOWN",
+            reason="suppression_manifest_unavailable",
+        ),
+        combined=evidence,
+        findings_by_member={},
+    )
+
+    assert evidence["semgrep-bugs"]["evidence_outcome"] == "UNKNOWN"
+    assert evidence["semgrep-bugs"]["required_unknown_reasons"] == ["suppression_manifest_unavailable"]
+
+
 def test_suppression_failure_retains_untrusted_preexisting_member_outcome() -> None:
     runner_api = _c14_runner()
     evidence = _synthetic_complete_profile_evidence(runner_api)
@@ -1548,6 +1570,34 @@ def test_suppression_failure_retains_untrusted_preexisting_member_outcome() -> N
     assert evidence["ruff"]["required_unknown_reasons"] == ["untrusted_preexisting_member_outcome"]
     assert report.assurance_status == "FAIL"
     assert report.has_unknown_required_evidence is True
+
+
+@pytest.mark.parametrize(
+    ("severity", "expected_blocking"),
+    [("error", True), ("warning", False), ("info", False)],
+)
+def test_missing_base_reclassification_rederives_blocking(
+    severity: Literal["error", "warning", "info"], expected_blocking: bool
+) -> None:
+    runner_api = _c14_runner()
+    finding = ReviewFinding(
+        category="testing",
+        severity=severity,
+        tool="pytest",
+        rule="missing-base-finding",
+        file="src/app.py",
+        line=1,
+        message="Finding exists only in the unavailable base snapshot.",
+        fixable=False,
+        status="fixed",
+        differential_state="fixed",
+    )
+
+    reclassified = runner_api._reclassify_missing_base_findings([finding], path="src/app.py")[0]
+
+    assert reclassified.differential_state == "unknown"
+    assert reclassified.status == "open"
+    assert reclassified.is_blocking() is expected_blocking
 
 
 def test_immutable_range_reports_relocated_suppression_baseline_and_correspondence(tmp_path: Path) -> None:

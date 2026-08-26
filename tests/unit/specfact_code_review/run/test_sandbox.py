@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import pytest
 
@@ -278,6 +278,106 @@ def test_traced_launch_fails_closed_when_parent_has_multiple_threads(
 
     assert result.status == "UNKNOWN"
     assert result.reason == "pre_namespace_observation_requires_single_thread"
+
+
+def test_traced_launch_detaches_after_validating_exec_stop(sandbox_api: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    ptrace_requests: list[tuple[int, int]] = []
+
+    class Process:
+        pid = 4321
+        returncode = 0
+
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        @classmethod
+        def __class_getitem__(cls, _item: object) -> type:
+            return cls
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def communicate(self, *, timeout: int | None = None) -> tuple[str, str]:
+            assert timeout == 5
+            return "{}", ""
+
+    monkeypatch.setattr(sandbox_api.sys, "platform", "linux")
+    monkeypatch.setattr(sandbox_api.threading, "active_count", lambda: 1)
+    monkeypatch.setattr(sandbox_api.subprocess, "Popen", Process)
+    monkeypatch.setattr(
+        sandbox_api.os,
+        "waitpid",
+        lambda process_id, _options: (process_id, (sandbox_api.signal.SIGTRAP << 8) | 0x7F),
+    )
+    monkeypatch.setattr(
+        sandbox_api,
+        "_observe_pre_namespace_objects",
+        lambda *_args, **_kwargs: ({"kind": "static_executable", "path": "/bwrap-static"},),
+    )
+    monkeypatch.setattr(
+        sandbox_api,
+        "_ptrace",
+        lambda request, process_id: ptrace_requests.append((request, process_id)),
+    )
+
+    result = sandbox_api._execute_traced_launch(["/proc/self/fd/3"], descriptor=3, timeout=5)
+
+    assert result.status == "PASS"
+    assert ptrace_requests == [(17, 4321)]
+
+
+def test_traced_launch_observation_failure_kills_stopped_tracee_without_polling(
+    sandbox_api: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    signals: list[tuple[int, int]] = []
+
+    class Process:
+        pid = 4321
+        returncode = None
+
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        @classmethod
+        def __class_getitem__(cls, _item: object) -> type:
+            return cls
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def communicate(self, *, timeout: int | None = None) -> tuple[str, str]:
+            assert timeout is None
+            return "", ""
+
+        def poll(self) -> None:
+            pytest.fail("Popen.poll consumed the live ptrace stop")
+
+    monkeypatch.setattr(sandbox_api.sys, "platform", "linux")
+    monkeypatch.setattr(sandbox_api.threading, "active_count", lambda: 1)
+    monkeypatch.setattr(sandbox_api.subprocess, "Popen", Process)
+    monkeypatch.setattr(
+        sandbox_api.os,
+        "waitpid",
+        lambda process_id, _options: (process_id, (sandbox_api.signal.SIGTRAP << 8) | 0x7F),
+    )
+    monkeypatch.setattr(
+        sandbox_api,
+        "_observe_pre_namespace_objects",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("maps unavailable")),
+    )
+    monkeypatch.setattr(sandbox_api.os, "kill", lambda pid, sig: signals.append((pid, sig)))
+
+    result = sandbox_api._execute_traced_launch(["/proc/self/fd/3"], descriptor=3, timeout=5)
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "pre_namespace_observation_failed:maps unavailable"
+    assert signals == [(4321, sandbox_api.signal.SIGKILL)]
 
 
 def test_pre_namespace_observer_reports_runtime_mapping_and_open_closure(sandbox_api: Any, tmp_path: Path) -> None:
