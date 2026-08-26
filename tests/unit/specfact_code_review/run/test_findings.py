@@ -756,6 +756,38 @@ def test_schema_1_6_json_pass_with_unknown_analyzer_is_demoted() -> None:
     assert report.ci_exit_code == 1
 
 
+def test_schema_1_6_fail_retains_member_local_required_unknown_evidence() -> None:
+    report = ReviewReport.model_validate_json(
+        json.dumps(
+            {
+                "schema_version": "1.6",
+                "assurance_status": "FAIL",
+                "run_id": "mixed-member-fail-unknown",
+                "timestamp": "2026-08-26T00:00:00Z",
+                "score": 0,
+                "findings": [],
+                "summary": "One member contains a blocker and uncertainty.",
+                "overall_verdict": "FAIL",
+                "ci_exit_code": 1,
+                "enforcement_mode": "full",
+                "analyzer_evidence": [
+                    {
+                        "id": "ruff",
+                        "execution_state": "ran",
+                        "evidence_outcome": "FAIL",
+                        "required_unknown_reasons": ["unchanged_suppression_on_changed_file"],
+                    }
+                ],
+            }
+        )
+    )
+
+    assert report.assurance_status == "FAIL"
+    assert report.has_unknown_required_evidence is True
+    assert report.overall_verdict == "FAIL"
+    assert report.ci_exit_code == 1
+
+
 @pytest.mark.parametrize(
     "analyzer_evidence",
     [

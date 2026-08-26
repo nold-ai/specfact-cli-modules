@@ -272,6 +272,7 @@ Signed `occurrence-continuity-v1` SHALL validate each canonical source span agai
 - **THEN** the signed payload is a Linux x86_64 static ELF with expected architecture, exact descriptor-byte SHA-256, and no `PT_INTERP` or `DT_NEEDED`
 - **AND** the controller executes the already-verified no-follow descriptor with loader-injection variables removed rather than resolving the path again
 - **AND** `pre-namespace-mapped-objects-v1` observes only that executable plus kernel pseudo-mappings and no other filesystem-backed mapping or loader/library open
+- **AND** every real analyzer launch is gated on that runtime observation and validation; a standalone validator invocation or static ELF identity check alone cannot authorize execution
 - **AND** a dynamic executable, host loader/library dependency, descriptor/path substitution, or unexpected mapped object is UNKNOWN before any analyzer runs.
 
 #### Scenario: Analyzer capsule boots without host runtime mounts
@@ -453,6 +454,7 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** unavailable, launch, timeout, unexpected-exit, parse, identity/config, missing-artifact, or reconciliation error records `execution_state=error`, `evidence_outcome=UNKNOWN`, and, when no valid blocker exists, aggregate UNKNOWN
 - **AND** both non-shadow aggregates exit 1 and may project legacy FAIL, but the authoritative statuses remain distinct
 - **AND** when separate members simultaneously produce valid blocking FAIL and required UNKNOWN, aggregate precedence is FAIL, `has_unknown_required_evidence=true`, and the unknown member evidence remains present.
+- **AND** when one member itself contains both a valid blocker and required uncertainty, its authoritative member outcome is FAIL while a canonical non-empty `required_unknown_reasons` list retains the uncertainty, sets `has_unknown_required_evidence=true`, and remains independent of finding order.
 
 #### Scenario: Known blocker takes precedence over concurrent uncertainty
 

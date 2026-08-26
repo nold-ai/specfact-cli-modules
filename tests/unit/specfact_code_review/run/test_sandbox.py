@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import hashlib
-import subprocess
+import os
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 
-@pytest.fixture
-def sandbox_api() -> Any:
+@pytest.fixture(name="sandbox_api")
+def sandbox_api_fixture() -> Any:
     from specfact_code_review.run import sandbox
 
     return sandbox
@@ -184,13 +184,13 @@ def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor
     payload = b"signed static bubblewrap"
     bubblewrap.write_bytes(payload)
     bubblewrap.chmod(0o755)
-    calls: list[tuple[list[str], dict[str, object]]] = []
+    calls: list[tuple[list[str], int, int]] = []
 
-    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        calls.append((command, kwargs))
-        return subprocess.CompletedProcess(command, 0, "{}", "")
+    def run(command: list[str], *, descriptor: int, timeout: int) -> Any:
+        calls.append((command, descriptor, timeout))
+        return sandbox_api.SandboxExecution("PASS", 0, "{}", "")
 
-    monkeypatch.setattr(sandbox_api.subprocess, "run", run)
+    monkeypatch.setattr(sandbox_api, "_execute_traced_launch", run, raising=False)
     identity = sandbox_api.BubblewrapIdentity(
         path="/opt/specfact/bin/bwrap-static",
         format="ELF",
@@ -208,14 +208,110 @@ def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor
         extra_argv=("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json"),
     )
 
-    command, kwargs = calls[0]
+    command, descriptor, timeout = calls[0]
     assert result.status == "PASS"
     assert command[0].startswith("/proc/self/fd/")
-    assert kwargs["pass_fds"]
-    assert kwargs["env"] == {}
+    assert command[0] == f"/proc/self/fd/{descriptor}"
+    assert timeout == 300
     assert "--unshare-all" in command
     assert "--unshare-net" not in command
     assert "--cap-drop" in command
+
+
+def test_sandbox_executor_rejects_failed_pre_namespace_validation(
+    sandbox_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context = _context(tmp_path, sandbox_api)
+    bubblewrap = context.capsule_root / "opt/specfact/bin/bwrap-static"
+    bubblewrap.parent.mkdir(parents=True)
+    payload = b"signed static bubblewrap"
+    bubblewrap.write_bytes(payload)
+    bubblewrap.chmod(0o755)
+
+    def run(_command: list[str], *, descriptor: int, timeout: int) -> Any:
+        assert descriptor >= 0
+        assert timeout == 300
+        return sandbox_api.SandboxExecution(
+            "UNKNOWN",
+            reason="pre_namespace_host_object:/lib64/ld-linux-x86-64.so.2",
+        )
+
+    monkeypatch.setattr(sandbox_api, "_execute_traced_launch", run, raising=False)
+    monkeypatch.setattr(
+        sandbox_api.subprocess,
+        "run",
+        lambda *_args, **_kwargs: pytest.fail("unvalidated launch bypassed the pre-namespace gate"),
+    )
+    identity = sandbox_api.BubblewrapIdentity(
+        path="/opt/specfact/bin/bwrap-static",
+        format="ELF",
+        architecture="x86_64",
+        linkage="static",
+        interpreter=(),
+        needed=(),
+        sha256="sha256:" + hashlib.sha256(payload).hexdigest(),
+        descriptor_digest="sha256:" + "b" * 64,
+    )
+
+    result = sandbox_api.execute_launch_plan(
+        sandbox_api.build_launch_plan(context),
+        identity,
+        extra_argv=("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json"),
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason.startswith("pre_namespace_host_object:")
+
+
+def test_traced_launch_fails_closed_when_parent_has_multiple_threads(
+    sandbox_api: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sandbox_api.sys, "platform", "linux")
+    monkeypatch.setattr(sandbox_api.threading, "active_count", lambda: 2)
+    monkeypatch.setattr(
+        sandbox_api.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: pytest.fail("unsafe pre-exec launch attempted from a multithreaded parent"),
+    )
+
+    result = sandbox_api._execute_traced_launch(["/proc/self/fd/3"], descriptor=3, timeout=1)
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "pre_namespace_observation_requires_single_thread"
+
+
+def test_pre_namespace_observer_reports_runtime_mapping_and_open_closure(sandbox_api: Any, tmp_path: Path) -> None:
+    process_id = 4321
+    process_root = tmp_path / str(process_id)
+    descriptor_root = process_root / "fd"
+    descriptor_root.mkdir(parents=True)
+    executable = tmp_path / "bwrap-static"
+    executable.write_bytes(b"static")
+    executable.chmod(0o755)
+    descriptor = os.open(executable, os.O_RDONLY)
+    executable_stat = os.fstat(descriptor)
+    device = f"{os.major(executable_stat.st_dev):02x}:{os.minor(executable_stat.st_dev):02x}"
+    (process_root / "maps").write_text(
+        f"00400000-00401000 r-xp 00000000 {device} {executable_stat.st_ino} {executable}\n"
+        "7fff0000-7fff1000 r-xp 00000000 00:00 0 [vdso]\n"
+        "7fff1000-7fff2000 rw-p 00000000 00:00 0\n",
+        encoding="utf-8",
+    )
+    (descriptor_root / "0").symlink_to("pipe:[100]")
+    (descriptor_root / "1").symlink_to("pipe:[101]")
+    (descriptor_root / "2").symlink_to("pipe:[102]")
+    (descriptor_root / str(descriptor)).symlink_to(executable)
+    try:
+        objects = sandbox_api._observe_pre_namespace_objects(
+            process_id,
+            descriptor,
+            proc_root=tmp_path,
+        )
+    finally:
+        os.close(descriptor)
+
+    assert sandbox_api.validate_pre_namespace_objects(objects).status == "PASS"
+    assert {item["kind"] for item in objects} == {"static_executable", "kernel_object"}
 
 
 def test_bwrap_launcher_is_static_elf_without_interp_or_needed(sandbox_api: Any) -> None:
@@ -260,6 +356,13 @@ def test_bwrap_pre_namespace_maps_only_static_payload_and_kernel_objects(sandbox
 
     assert mapped.status == "PASS"
     assert mapped.host_loader_objects == ()
+
+
+def test_bwrap_pre_namespace_rejects_missing_executable_observation(sandbox_api: Any) -> None:
+    mapped = sandbox_api.validate_pre_namespace_objects(({"kind": "kernel_object", "path": "/proc/self/ns/user"},))
+
+    assert mapped.status == "UNKNOWN"
+    assert mapped.reason == "pre_namespace_executable_missing"
 
 
 def test_runtime_observation_declares_non_adversarial_candidate_assumption(sandbox_api: Any, tmp_path: Path) -> None:

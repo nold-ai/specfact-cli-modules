@@ -41,6 +41,18 @@ def _has_untrusted_analyzer_outcome(evidence: list[dict[str, object]] | None) ->
     return any(item.get("evidence_outcome") not in VALID_ANALYZER_OUTCOMES for item in evidence or [])
 
 
+def _has_required_unknown_evidence(evidence: list[dict[str, object]] | None) -> bool:
+    for item in evidence or []:
+        reasons = item.get("required_unknown_reasons", [])
+        if not isinstance(reasons, list):
+            return True
+        if any(not isinstance(reason, str) or not reason for reason in reasons):
+            return True
+        if reasons:
+            return True
+    return False
+
+
 VALID_CATEGORIES = (
     "clean_code",
     "security",
@@ -642,6 +654,7 @@ class ReviewReport(BaseModel):
             or self.assurance_status == "UNKNOWN"
             or profile_incomplete
             or _has_untrusted_analyzer_outcome(self.analyzer_evidence)
+            or _has_required_unknown_evidence(self.analyzer_evidence)
             or any(item.get("evidence_outcome") == "UNKNOWN" for item in self.analyzer_evidence or [])
         )
         if self.has_unknown_required_evidence and self.assurance_status in {"PASS", "NOT_APPLICABLE"}:
