@@ -11,7 +11,7 @@ All tasks below are future implementation and external integration work. This pl
 ## 2. Adapter specs and failing-first tests
 
 - [ ] 2.1 Finalize the shared descriptor and a tested harness/version matrix; remove assumptions contradicted by current upstream primary sources.
-- [ ] 2.2 Add failing contract tests for install, invocation mapping, semantic parity, version rejection, drift, upgrade, and safe uninstall before adapter production edits.
+- [ ] 2.2 Add failing contract tests for install, invocation mapping, semantic parity, exact-version rejection, invalid/untrusted signature rejection, signed workflow-digest binding, drift, upgrade, and safe uninstall before adapter production edits.
 - [ ] 2.3 Capture failing-first results in a newly created `TDD_EVIDENCE.md`.
 
 ## 3. Minimal adapter implementation

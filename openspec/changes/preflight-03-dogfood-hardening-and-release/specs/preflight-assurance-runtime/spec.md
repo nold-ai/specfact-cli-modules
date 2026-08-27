@@ -27,7 +27,7 @@ The stable module SHALL execute a stateful pre-implementation loop that discover
 
 ### Requirement: Canonical skill and slash-command contract
 
-The stable module SHALL bundle and publish one versioned canonical `specfact-preflight` workflow that invokes the deterministic CLI, can be exported to harness-native invocation forms, has tested CLI delegation, and contains no external harness-specific packaging.
+The stable module SHALL bundle and publish one versioned canonical `specfact-preflight` workflow that invokes the deterministic CLI, can be exported to harness-native invocation forms, has tested CLI delegation, and contains no external harness-specific packaging. The official installation or preflight path SHALL load the workflow from the signed installation and verify its workflow version/digest and delegated CLI identity as one release-bound tuple.
 
 #### Scenario: Harness invokes bundled workflow
 
@@ -48,4 +48,5 @@ The stable module SHALL bundle and publish one versioned canonical `specfact-pre
 - **GIVEN** the signed module is installed through the official path
 - **WHEN** a compatible generic installer discovers the workflow asset
 - **THEN** it receives the canonical workflow identity and supported invocation contract
+- **AND** the delegated CLI identity matches the signed release identity
 - **AND** adapter-specific files are not required to execute the underlying CLI.

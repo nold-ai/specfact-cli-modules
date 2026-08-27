@@ -133,6 +133,7 @@ requirements:
         method: inspection
         intent: "Inspect the workflow phase hardening contract before implementation."
         observable: >-
-          Strict OpenSpec validation retains the existing workflow phase
-          behavior and the accepted dogfood regression scenario without
-          claiming implementation or test execution.
+          Strict OpenSpec validation retains the harness-neutral canonical
+          workflow, identical adapter phase, approval, evidence, and stop
+          semantics, and the accepted dogfood regression scenario without
+          claiming downstream adapter implementation or test execution.

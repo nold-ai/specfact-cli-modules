@@ -8,7 +8,7 @@ The unpublished preflight runtime must not become a stable module or a dependenc
 
 - **MODIFY**: Harden only validators, workflow behavior, rendering, persistence, or module contracts that have a reproducible dogfood finding and generalized regression case.
 - **NEW**: A bounded regression corpus covering the accepted C14 findings plus stale-input, unknown-validator, approval, renderer-parity, and cross-repository dependency cases.
-- **NEW**: Stable module versioning, exact core compatibility proof, manifest and registry updates, signing, publication evidence, and install/load smoke through the official module path.
+- **NEW**: Stable module versioning, exact core compatibility proof, manifest, registry, and structured release-history updates, signing, publication evidence, and install/load smoke through the official module path.
 - **NEW**: A published canonical `specfact-preflight` skill/workflow asset consumable by generic skill installation and later harness adapters.
 - **CLARIFY**: Speculative improvements remain follow-ups; release readiness cannot be inferred from one green dogfood narrative or unsigned feature-branch artifacts.
 
@@ -35,7 +35,7 @@ The unpublished preflight runtime must not become a stable module or a dependenc
 - Blocked by modules `preflight-02-assurance-runtime` [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) and paired core `preflight-03-dogfood-hardening-and-release` readiness evidence [#683](https://github.com/nold-ai/specfact-cli/issues/683).
 - Required selection order is core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682) -> modules #431 -> core C14 [#680](https://github.com/nold-ai/specfact-cli/issues/680) -> core #683 -> this change; transitive prerequisites cannot be skipped merely because #431 and #683 are the direct native blockers.
 - Publication is also conditional on a released core installer/registry contract that can reject a withdrawn exact version; absence of that interface requires a separately accepted core change before release work proceeds.
-- Blocks core `ai-integration-01-agent-skill` [#251](https://github.com/nold-ai/specfact-cli/issues/251), both `preflight-05-implementation-conformance` stories, and modules C15 [#417](https://github.com/nold-ai/specfact-cli-modules/issues/417).
+- Blocks core `ai-integration-01-agent-skill` [#251](https://github.com/nold-ai/specfact-cli/issues/251), modules `preflight-04-harness-adapters` [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433), both `preflight-05-implementation-conformance` stories, and modules C15 [#417](https://github.com/nold-ai/specfact-cli-modules/issues/417).
 
 ## Explicit Non-Goals
 

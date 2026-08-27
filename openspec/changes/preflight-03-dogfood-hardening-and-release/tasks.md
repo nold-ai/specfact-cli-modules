@@ -6,7 +6,7 @@ All tasks below are future implementation and release work. This planning change
 
 - [ ] 1.1 In a dedicated issue-linked session, create `feature/preflight-03-dogfood-hardening-and-release` from current `origin/dev` in a new modules worktree before any implementation edit.
 - [ ] 1.2 Refresh hierarchy metadata and verify issue parent, labels, project `Todo`, assignee, blockers, and concurrency status; stop if the issue is already active elsewhere.
-- [ ] 1.3 Verify the complete core #682 -> modules #431 -> core C14 #680 -> core #683 sequence, confirm the paired core dogfood go decision, and identify the exact released registry-withdrawal command/workflow plus core installer-rejection contract; stop for a separate core change if either interface is absent.
+- [ ] 1.3 Verify the complete core #682 -> modules #431 -> core C14 #680 -> core #683 sequence, confirm the paired core dogfood go decision, preserve modules C14 #416 as open and `In Progress` unless separately authorized, and identify the exact released registry-withdrawal command/workflow plus core installer-rejection contract; stop for a separate core change if either interface is absent.
 
 ## 2. Evidence ledger, specs, and failing-first tests
 
@@ -23,14 +23,14 @@ All tasks below are future implementation and release work. This planning change
 ## 4. Stable release preparation and proof
 
 - [ ] 4.1 Select the semver bump, exact supported core identity, and immutable compatibility matrix based on current release state.
-- [ ] 4.2 Update the package manifest, registry metadata, generated references, and signed payload as one release surface through repository tooling; make the publication pre-check reject empty or matrix-unproven core compatibility before signing.
-- [ ] 4.3 Run fresh official install/discovery/load, contract, CLI, renderer, persistence, workflow, C14 corpus, compatibility, withdrawal/supersession, and known-bad installer-rejection smokes.
+- [ ] 4.2 Update the package manifest, registry metadata, structured release-history entry, generated references, and signed payload as one release surface through repository tooling; make the publication pre-check require strict `===0.55.1`, reject empty, matrix-unproven, ordinary `==0.55.1`, local-alias, wildcard, and future-range values, and prove tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337` before signing.
+- [ ] 4.3 Run fresh official install/discovery/load, contract, CLI, renderer, persistence, workflow, C14 corpus, compatibility, withdrawal/supersession, and known-bad installer-rejection smokes; verify the signed workflow digest/version and delegated CLI identity as one tuple and prove the declared persisted-state rollback outcome, including the no-prior-stable-baseline case.
 - [ ] 4.4 Run format, type, lint, YAML, bundle-import, signature/version-bump, contract, smart-test, test, and SpecFact code-review gates; resolve every finding.
 - [ ] 4.5 Run `openspec status --change preflight-03-dogfood-hardening-and-release --json` and `openspec validate preflight-03-dogfood-hardening-and-release --strict` and record observed evidence.
 
 ## 5. Publication, delivery, and cleanup
 
-- [ ] 5.1 Publish only through the official signed module release flow after verifying immutable artifact, registry, checksum, signature, core-compatibility, rollback-operation, and installer-rejection identities.
-- [ ] 5.2 Update downstream issues with the exact stable handoff and unblock them only after readback succeeds.
-- [ ] 5.3 Open the implementation/release PR to `dev` as the final pre-merge task, linking the paired core evidence and issue.
-- [ ] 5.4 After merge/publication, run `openspec archive preflight-03-dogfood-hardening-and-release`, update ordering/source mirrors, and remove the dedicated worktree and merged branch.
+- [ ] 5.1 Open, review, and merge the behavior-ready implementation PR to `dev`, linking the paired core evidence and issue; feature-branch artifacts are not publishable release identities.
+- [ ] 5.2 Allow only the canonical post-merge publish workflow to generate, sign, and propose registry/archive/checksum/signature/history artifacts; review and merge that publication PR only after immutable artifact, registry, checksum, signature, core-compatibility, history, rollback-operation, installer-rejection, and persisted-state rollback identities pass.
+- [ ] 5.3 Update downstream issues with the exact merged stable handoff and unblock #251, #433, conformance, or C15 only after publication-PR merge and registry/install readback succeed.
+- [ ] 5.4 After implementation merge and verified publication, run `openspec archive preflight-03-dogfood-hardening-and-release`, update ordering/source mirrors, and remove the dedicated worktree and merged branch.

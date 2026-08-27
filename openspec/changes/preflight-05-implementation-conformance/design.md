@@ -39,12 +39,17 @@ For unexpected or modified implementation, the workflow offers two explicit path
 
 The first release provides command and workflow evidence without making every PR gate depend on it. A later policy change may require conformance for selected projects only after dogfood demonstrates usable signal.
 
+### 6. Signed identity changes require adapter compatibility evidence
+
+Adding the conformance command or workflow handoff changes the signed module/workflow identity that #433 adapters pin. This change may publish a tested compatible-upgrade descriptor, but it does not silently rewrite external adapter packages. If the existing adapters cannot accept the new exact identity, conformance adoption remains blocked on a separately accepted adapter release.
+
 ## Risks / Trade-offs
 
 - **Duplicate analyzer ownership:** Import existing normalized evidence rather than running parallel analyzers.
 - **Mapping noise:** Require exact contract paths and evidence identities; preserve unknowns.
 - **Approval confusion:** Keep separate command/result vocabulary and never reseal from conform.
 - **Premature blocking rollout:** Start opt-in and require a later policy decision for enforcement.
+- **Adapter identity drift:** Test the new signed identity against every claimed #433 descriptor and block adoption on a follow-up adapter release when compatibility is not proven.
 
 ## Migration and Rollback
 

@@ -90,3 +90,14 @@ The first conformance runtime SHALL remain opt-in and SHALL require a separate a
 - **WHEN** ordinary delivery proceeds
 - **THEN** absence of a conformance run is reported as unavailable where queried
 - **AND** the module does not silently create a new blocking merge rule.
+
+### Requirement: Adapter compatibility across conformance release
+
+When the conformance command or workflow changes the signed module/workflow identity, the release SHALL provide tested compatibility evidence for each claimed #433 adapter through a compatible-upgrade descriptor or SHALL keep adapter-mediated adoption blocked on a separately accepted adapter release.
+
+#### Scenario: Existing adapter pins the prior release identity
+
+- **GIVEN** an installed adapter descriptor pins the exact module/workflow identity published by #433
+- **WHEN** the conformance release presents a different signed identity
+- **THEN** compatibility must be proven through a tested descriptor before that adapter can consume the release
+- **AND** an unproven or mismatched descriptor blocks adapter invocation and downstream adoption.

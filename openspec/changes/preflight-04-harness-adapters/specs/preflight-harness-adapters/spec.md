@@ -2,7 +2,7 @@
 
 ### Requirement: Shared adapter identity contract
 
-Every harness adapter SHALL declare and verify the exact SpecFact module version, artifact digest, signature identity, registry identity, compatible core identity, canonical workflow identity, supported harness versions, native invocation mapping, installed asset inventory, and upgrade/uninstall rules.
+Every harness adapter SHALL declare and verify the exact SpecFact module version, artifact digest, authorized signature/trust-root identity, registry identity, compatible core identity, canonical workflow identity/digest, supported harness versions, native invocation mapping, installed asset inventory, and upgrade/uninstall rules. When the released installer owns cryptographic verification, adapters SHALL consume its verified result and SHALL bind the installed workflow digest to the signed artifact before installation, upgrade, invocation, or packaging.
 
 #### Scenario: Immutable release identity does not match
 
@@ -10,6 +10,13 @@ Every harness adapter SHALL declare and verify the exact SpecFact module version
 - **WHEN** installation or upgrade is requested
 - **THEN** the adapter rejects the mismatched release identity
 - **AND** it does not invoke or package the workflow from that release.
+
+#### Scenario: Signature or installed workflow is invalid or untrusted
+
+- **GIVEN** signature verification fails against the authorized trust root, the verified installer result is absent, or the installed workflow digest differs from the signed artifact and canonical workflow identity
+- **WHEN** installation, upgrade, invocation, or packaging is requested
+- **THEN** the adapter fails closed before the operation
+- **AND** it does not treat descriptor text alone as verification.
 
 #### Scenario: Adapter targets an untested harness version
 

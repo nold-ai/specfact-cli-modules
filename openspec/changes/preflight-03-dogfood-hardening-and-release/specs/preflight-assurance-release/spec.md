@@ -31,7 +31,7 @@ The hardened module SHALL rerun the accepted C14 dogfood corpus and the declared
 
 ### Requirement: Atomic stable release surface
 
-The final module source, workflow assets, manifest, version, core compatibility, registry metadata, checksums, signatures, and publication evidence SHALL describe one exact release identity.
+The final module source, workflow assets, delegated CLI identity, manifest, version, core compatibility, registry metadata, structured release-history entry, checksums, signatures, and publication evidence SHALL describe one exact release identity. The signed workflow version/digest and delegated CLI identity SHALL be verified as one bound tuple through the official installation or preflight path.
 
 #### Scenario: Signed payload and manifest differ
 
@@ -39,6 +39,13 @@ The final module source, workflow assets, manifest, version, core compatibility,
 - **WHEN** release verification runs
 - **THEN** publication is blocked
 - **AND** the versioned payload is regenerated and signed through the official release flow.
+
+#### Scenario: Release history or workflow binding is incomplete
+
+- **GIVEN** the new module version lacks its structured release-history entry or the installed workflow/CLI tuple does not match the signed release identity
+- **WHEN** publication verification runs
+- **THEN** publication is blocked
+- **AND** no downstream handoff is emitted for that version.
 
 ### Requirement: Exact compatibility proof
 
@@ -57,6 +64,13 @@ The stable release SHALL advertise only core identities proven by a fresh offici
 - **WHEN** the official publication pre-check runs
 - **THEN** it fails before signing or registry publication
 - **AND** a warning-only result cannot authorize the release.
+
+#### Scenario: Exact first-release core identity is weakened
+
+- **GIVEN** the first release proposes empty compatibility, ordinary `==0.55.1`, a local alias, wildcard, future range, or an identity other than tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`
+- **WHEN** the official publication pre-check runs
+- **THEN** it fails before signing
+- **AND** only strict `===0.55.1` with matching immutable matrix evidence can authorize the first release.
 
 ### Requirement: Signed publication handoff
 
@@ -86,3 +100,10 @@ The release SHALL have a tested withdrawal or supersession path that prevents do
 - **WHEN** rollback is initiated
 - **THEN** the supported registry operation marks the faulty identity unavailable and the installer rejects it before installation
 - **AND** the last verified identity remains authoritative until a newly verified release exists.
+
+#### Scenario: Candidate persistence cannot survive rollback
+
+- **GIVEN** the candidate can write a persisted schema that the last verified module cannot read, or no prior stable preflight baseline exists
+- **WHEN** release readiness is evaluated
+- **THEN** publication is blocked until a tested backward-read, migration with backup/restore, or explicit no-install/reset outcome is available
+- **AND** rollback evidence does not claim unsupported persisted state remains readable.

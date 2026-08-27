@@ -29,7 +29,7 @@ After each accepted fix, the same C14 dogfood corpus and all declared regression
 
 ### 3. Release surfaces move together
 
-Module source, canonical workflow assets, package manifest, version, core compatibility, registry metadata, checksums, signatures, and publication evidence are one atomic release scope. The change follows the repository's signing and version-bump gates and does not hand-author publication artifacts outside the official scripts/workflows.
+Module source, canonical workflow assets, package manifest, version, core compatibility, registry metadata, structured release-history entry, checksums, signatures, and publication evidence are one atomic release scope. Publication cannot pass unless the new version has its canonical history entry. The change follows the repository's signing and version-bump gates and does not hand-author publication artifacts outside the official scripts/workflows.
 
 ### 4. Compatibility is proven, not inferred
 
@@ -37,7 +37,7 @@ The release advertises only a core version identity exercised through a fresh of
 
 ### 5. Stable workflow remains canonical
 
-The released module contains the canonical `specfact-preflight` workflow and its version identity. Core #251 installs/exports it; core #253 references it from generated instructions; preflight-04 packages thin external adapters. None may fork validator logic.
+The released module contains the canonical `specfact-preflight` workflow and its version/digest identity. The official installer or preflight check verifies the signed workflow identity and its delegated CLI identity as one release-bound tuple. Core #251 installs/exports that verified asset; core #253 references it from generated instructions; preflight-04 packages thin external adapters. None may fork validator logic.
 
 ### 6. Publication is reversible
 
@@ -52,7 +52,7 @@ Publication is blocked until the selected registry and installer expose a suppor
 
 ## Migration and Rollback
 
-The first stable release is opt-in. Users of the unpublished dogfood build migrate by reinstalling the signed stable module and regenerating local workflow exports through the supported installer. Rollback uses the proven registry operation to make the faulty identity unavailable and restores the last verified module identity as authoritative; persisted contracts remain readable only when their schema is supported.
+The first stable release is opt-in. Users of the unpublished dogfood build migrate by reinstalling the signed stable module and regenerating local workflow exports through the supported installer. Before publication, candidate-written persisted state must have a tested backward-read path, migration with backup/restore, or explicit no-install/reset outcome when the last verified module cannot read its schema. When no prior stable preflight baseline exists, publication remains blocked until that first-release outcome is proven. Rollback uses the proven registry operation to make the faulty identity unavailable and restores the last verified module identity as authoritative without claiming that an unsupported persisted schema is readable.
 
 ## Open Questions Deferred to Implementation
 

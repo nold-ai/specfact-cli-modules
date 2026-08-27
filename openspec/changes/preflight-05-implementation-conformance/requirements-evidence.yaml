@@ -1,5 +1,21 @@
 schema_version: "2"
 requirements:
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:adapter-compatibility-across-conformance-release:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF05M-008
+        scenario_id: adapter-compatibility-across-conformance-release
+        method: inspection
+        intent: "Inspect the conformance release adapter compatibility contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the exact signed-identity
+          compatibility proof or separately accepted adapter-release blocker
+          without claiming implementation or test execution.
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:atomic-optional-persistence:
     rationale: "The proposal must make this requirement reviewable before implementation begins."
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
