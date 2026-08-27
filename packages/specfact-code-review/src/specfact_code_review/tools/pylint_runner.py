@@ -127,7 +127,7 @@ def _result_is_review_findings(result: list[ReviewFinding]) -> bool:
 @require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
 @ensure(lambda result: isinstance(result, list), "result must be a list")
 @ensure(_result_is_review_findings, "result must contain ReviewFinding instances")
-def run_pylint(files: list[Path]) -> list[ReviewFinding]:
+def run_pylint(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> list[ReviewFinding]:
     """Run pylint and map message IDs into ReviewFinding records."""
     files = python_source_paths_for_tools(files)
     if not files:
@@ -139,7 +139,7 @@ def run_pylint(files: list[Path]) -> list[ReviewFinding]:
 
     try:
         result = subprocess.run(
-            ["pylint", "--output-format", "json", *[str(file_path) for file_path in files]],
+            ["pylint", "--output-format", "json", *extra_args, *[str(file_path) for file_path in files]],
             capture_output=True,
             text=True,
             check=False,

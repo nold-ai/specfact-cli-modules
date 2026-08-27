@@ -59,6 +59,15 @@ def test_pre_commit_verify_modules_signature_script_omit_branch_remediation_shap
     assert "git diff --cached" in text
 
 
+def test_pre_commit_verify_uses_target_branch_version_baseline() -> None:
+    text = _pre_commit_verify_script_text()
+
+    assert '_target_branch="${GITHUB_BASE_REF:-dev}"' in text
+    assert '_version_check_base="refs/remotes/origin/${_target_branch}"' in text
+    assert 'git rev-parse --verify --quiet "${_version_check_base}^{commit}"' in text
+    assert '--version-check-base "${_version_check_base}"' in text
+
+
 def test_sign_modules_loads_without_icontract(monkeypatch) -> None:
     block_contract_imports(monkeypatch)
 

@@ -259,10 +259,20 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
     if skipped:
         return skipped
 
+    result = _execute_crosshair(files, bug_hunt=bug_hunt)
+    if isinstance(result, ReviewFinding):
+        return [result]
+    if result.returncode not in {0, 1}:
+        diagnostic = (result.stderr or result.stdout or f"process exit {result.returncode}").strip()
+        return [_crosshair_unknown(files[0], f"CrossHair process error: {diagnostic}")]
+    return _parse_crosshair_findings(result.stdout or "", files)
+
+
+def _execute_crosshair(files: list[Path], *, bug_hunt: bool) -> subprocess.CompletedProcess[str] | ReviewFinding:
     per_path_timeout = "10" if bug_hunt else "2"
     proc_timeout = 120 if bug_hunt else 30
     try:
-        result = subprocess.run(
+        return subprocess.run(
             ["crosshair", "check", "--per_path_timeout", per_path_timeout, *(str(file_path) for file_path in files)],
             capture_output=True,
             text=True,
@@ -270,22 +280,22 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
             timeout=proc_timeout,
         )
     except subprocess.TimeoutExpired:
-        return []
-    except (FileNotFoundError, OSError) as exc:
-        return [
-            tool_error(
-                tool="crosshair",
-                file_path=files[0],
-                message=f"Unable to execute CrossHair: {exc}",
-                severity="warning",
-            )
-        ]
+        return _crosshair_unknown(files[0], "CrossHair timed out before mandatory evidence completed.")
+    except OSError as exc:
+        return _crosshair_unknown(files[0], f"Unable to execute CrossHair: {exc}")
 
+
+def _parse_crosshair_findings(output: str, files: list[Path]) -> list[ReviewFinding]:
     allowed_paths = _allowed_paths(files)
     findings: list[ReviewFinding] = []
-    for line in (result.stdout or "").splitlines():
-        match = _CROSSHAIR_LINE_RE.match(line.strip())
+    unrecognized: list[str] = []
+    for line in output.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = _CROSSHAIR_LINE_RE.match(stripped)
         if match is None:
+            unrecognized.append(stripped)
             continue
         filename = match.group("file")
         if normalize_path_variants(filename).isdisjoint(allowed_paths):
@@ -305,7 +315,25 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
                 fixable=False,
             )
         )
+    if unrecognized:
+        diagnostic = "; ".join(unrecognized[:3])
+        findings.append(_crosshair_unknown(files[0], f"Unrecognized CrossHair output: {diagnostic}"))
     return findings
+
+
+def _crosshair_unknown(file_path: Path, message: str) -> ReviewFinding:
+    return ReviewFinding(
+        category="tool_error",
+        severity="warning",
+        tool="crosshair",
+        rule="CROSSHAIR_INCOMPLETE_EVIDENCE",
+        file=str(file_path),
+        line=1,
+        message=message,
+        fixable=False,
+        execution_state="error",
+        evidence_outcome="UNKNOWN",
+    )
 
 
 @beartype
@@ -316,7 +344,12 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
     lambda result: all(isinstance(finding, ReviewFinding) for finding in result),
     "result must contain ReviewFinding instances",
 )
-def run_contract_check(files: list[Path], *, bug_hunt: bool = False) -> list[ReviewFinding]:
+def run_contract_check(
+    files: list[Path],
+    *,
+    bug_hunt: bool = False,
+    crosshair_files: list[Path] | None = None,
+) -> list[ReviewFinding]:
     """Run AST-based contract checks and a CrossHair fast pass for the provided files."""
     py_files = python_source_paths_for_tools(files)
     if not py_files:
@@ -326,5 +359,6 @@ def run_contract_check(files: list[Path], *, bug_hunt: bool = False) -> list[Rev
     if _has_icontract_usage(py_files):
         for file_path in py_files:
             findings.extend(_scan_file(file_path))
-    findings.extend(_run_crosshair(py_files, bug_hunt=bug_hunt))
+    runtime_files = py_files if crosshair_files is None else python_source_paths_for_tools(crosshair_files)
+    findings.extend(_run_crosshair(runtime_files, bug_hunt=bug_hunt))
     return findings

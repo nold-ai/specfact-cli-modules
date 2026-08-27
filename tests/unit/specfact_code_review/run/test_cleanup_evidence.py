@@ -50,6 +50,31 @@ def test_with_previewed_simplification_findings_refreshes_forecast_without_fixab
     assert refreshed.findings[0].guidance_kind == "preserve"
 
 
+def test_cleanup_enrichment_preserves_schema_1_6_assurance_status(tmp_path: Path) -> None:
+    source = tmp_path / "sample.py"
+    source.write_text("def total(values: list[int]) -> int:\n    return sum(values)\n", encoding="utf-8")
+    report = ReviewReport(
+        schema_version="1.6",
+        assurance_status="UNKNOWN",
+        run_id="review",
+        score=90,
+        findings=[],
+        summary="Required analyzer was unavailable.",
+        ci_exit_code=1,
+        overall_verdict="FAIL",
+        scope_evidence={"assurance_kind": "range_candidate"},
+        analyzer_evidence=[{"id": "contracts", "evidence_outcome": "UNKNOWN"}],
+    )
+
+    refreshed = with_refreshed_cleanup_forecast(report, [source])
+
+    assert refreshed.schema_version == "1.6"
+    assert refreshed.assurance_status == "UNKNOWN"
+    assert refreshed.ci_exit_code == 1
+    assert refreshed.scope_evidence == report.scope_evidence
+    assert refreshed.analyzer_evidence == report.analyzer_evidence
+
+
 def test_with_refreshed_cleanup_forecast_preserves_shadow_ci_exit(tmp_path: Path) -> None:
     source = tmp_path / "sample.py"
     source.write_text("def total(values: list[int]) -> int:\n    return sum(values)\n", encoding="utf-8")

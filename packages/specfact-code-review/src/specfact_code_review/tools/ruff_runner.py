@@ -15,6 +15,10 @@ from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
+_COMPLETED_EXIT_CODES = frozenset({0, 1})
+_STDERR_SNIP_MAX = 4000
+
+
 def _allowed_paths(files: list[Path]) -> set[str]:
     allowed: set[str] = set()
     for file_path in files:
@@ -77,6 +81,17 @@ def _payload_from_output(stdout: str) -> list[object]:
     return payload
 
 
+def _validate_process_completion(result: subprocess.CompletedProcess[str]) -> None:
+    """Reject operational exits even when Ruff stdout contains valid JSON."""
+
+    if result.returncode in _COMPLETED_EXIT_CODES:
+        return
+    stderr = (result.stderr or "").strip()
+    if len(stderr) > _STDERR_SNIP_MAX:
+        stderr = "…" + stderr[-(_STDERR_SNIP_MAX - 1) :]
+    raise ValueError(f"ruff process failed (returncode={result.returncode}); stderr={stderr!r}")
+
+
 def _findings_from_payload(payload: list[object], *, allowed_paths: set[str]) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
     for item in payload:
@@ -95,7 +110,7 @@ def _result_is_review_findings(result: list[ReviewFinding]) -> bool:
 @require(lambda files: all(isinstance(file_path, Path) for file_path in files), "files must contain Path instances")
 @ensure(lambda result: isinstance(result, list), "result must be a list")
 @ensure(_result_is_review_findings, "result must contain ReviewFinding instances")
-def run_ruff(files: list[Path]) -> list[ReviewFinding]:
+def run_ruff(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> list[ReviewFinding]:
     """Run Ruff for the provided files and map findings into ReviewFinding records."""
     files = python_source_paths_for_tools(files)
     if not files:
@@ -107,12 +122,13 @@ def run_ruff(files: list[Path]) -> list[ReviewFinding]:
 
     try:
         result = subprocess.run(
-            ["ruff", "check", "--output-format", "json", *[str(file_path) for file_path in files]],
+            ["ruff", "check", "--output-format", "json", *extra_args, *[str(file_path) for file_path in files]],
             capture_output=True,
             text=True,
             check=False,
             timeout=30,
         )
+        _validate_process_completion(result)
         payload = _payload_from_output(result.stdout)
     except (OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
         return [tool_error(tool="ruff", file_path=files[0], message=f"Unable to parse Ruff output: {exc}")]

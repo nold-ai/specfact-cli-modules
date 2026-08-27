@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from collections import Counter
@@ -14,10 +15,10 @@ from beartype import beartype
 from icontract import ensure, require
 from pydantic import BaseModel, Field, ValidationError
 
-from specfact_code_review.run.findings import FAIL, ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import FAIL, ReviewFinding, ReviewReport, schema_version_at_least
 
 
-LedgerVerdict = Literal["PASS", "PASS_WITH_ADVISORY", "FAIL"]
+LedgerVerdict = Literal["PASS", "PASS_WITH_ADVISORY", "FAIL", "UNKNOWN", "NOT_APPLICABLE"]
 DEFAULT_AGENT = "claude-code"
 DEFAULT_LOCAL_PATH = Path.home() / ".specfact" / "ledger.json"
 
@@ -43,6 +44,8 @@ class LedgerRun(BaseModel):
     reward_delta: int = Field(..., description="Raw reward delta from ReviewReport.")
     verdict: LedgerVerdict = Field(..., description="Overall review verdict.")
     findings_json: list[dict[str, Any]] = Field(default_factory=list, description="Serialized findings payload.")
+    report_json: dict[str, Any] | None = Field(default=None, description="Complete canonical review report.")
+    report_digest: str | None = Field(default=None, description="SHA-256 of the canonical review report.")
     house_rules_ver: int = Field(default=1, description="House-rules version observed during the run.")
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), description="UTC creation timestamp.")
 
@@ -123,21 +126,29 @@ class LedgerClient:
         return bool(self._supabase_url and self._supabase_key)
 
     def _apply_report(self, current_state: LedgerState, report: ReviewReport) -> tuple[LedgerState, LedgerRun]:
+        report_json = report.model_dump(mode="json")
+        canonical_report = json.dumps(report_json, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
         run_entry = LedgerRun(
             session_id=report.run_id,
             agent=self._agent,
             changed_files=self._changed_files_for(report),
             score=report.score,
-            reward_delta=report.reward_delta or 0,
+            reward_delta=self._reward_delta_for(report),
             verdict=self._verdict_for(report),
             findings_json=[finding.model_dump(mode="json") for finding in report.findings],
+            report_json=report_json,
+            report_digest="sha256:" + hashlib.sha256(canonical_report).hexdigest(),
             created_at=report.timestamp,
         )
-        next_pass_streak = current_state.streak_pass + 1 if run_entry.verdict != FAIL else 0
-        next_block_streak = current_state.streak_block + 1 if run_entry.verdict == FAIL else 0
+        if run_entry.verdict in {"UNKNOWN", "NOT_APPLICABLE"}:
+            next_pass_streak = current_state.streak_pass
+            next_block_streak = current_state.streak_block
+        else:
+            next_pass_streak = current_state.streak_pass + 1 if run_entry.verdict != FAIL else 0
+            next_block_streak = current_state.streak_block + 1 if run_entry.verdict == FAIL else 0
 
         coin_delta = (run_entry.reward_delta or 0) / 10.0
-        if run_entry.verdict != FAIL and next_pass_streak >= 5:
+        if run_entry.verdict not in {FAIL, "UNKNOWN", "NOT_APPLICABLE"} and next_pass_streak >= 5:
             coin_delta += 0.5
         if run_entry.verdict == FAIL and next_block_streak >= 3:
             coin_delta -= 1.0
@@ -161,9 +172,18 @@ class LedgerClient:
         return sorted({finding.file for finding in report.findings if finding.file})
 
     def _verdict_for(self, report: ReviewReport) -> LedgerVerdict:
+        if schema_version_at_least(report.schema_version, 6):
+            return report.assurance_status or "UNKNOWN"
         if report.overall_verdict is None:
             return "PASS_WITH_ADVISORY"
         return report.overall_verdict
+
+    def _reward_delta_for(self, report: ReviewReport) -> int:
+        if schema_version_at_least(report.schema_version, 6):
+            if report.assurance_status in {"PASS", "FAIL"}:
+                return report.reward_delta or 0
+            return 0
+        return report.reward_delta or 0
 
     def _rule_counts(self, findings: list[ReviewFinding]) -> Counter[str]:
         return Counter(finding.rule for finding in findings)

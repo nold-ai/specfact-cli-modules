@@ -36,6 +36,8 @@ depends_on:
 
 # Agent quality gates and review
 
+For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local range run without matching claimed context is `range_preview`; one with matching claimed context is `range_candidate`. Neither is `pr_range` until a protected consumer independently verifies and promotes the evidence.
+
 ## Quality gate order
 
 Before running quality gates in a fresh worktree, bootstrap the Hatch environment serially. Run one Hatch command first, wait for it to finish, and only then run additional gates. Parallel `hatch run ...` commands are allowed only after the worktree environment is known healthy; otherwise concurrent environment creation can corrupt the local `.venv` and leave partial `pip._internal` imports.

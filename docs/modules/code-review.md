@@ -10,6 +10,8 @@ expertise_level: [intermediate, advanced]
 
 # specfact-code-review module notes
 
+For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local run without matching claimed context is `range_preview`; matching claimed context produces `range_candidate`. Only a protected consumer can independently verify and promote it to `pr_range`.
+
 ## Review run command
 
 `specfact code review run` executes the governed review pipeline end to end.
@@ -27,8 +29,13 @@ specfact code review run [OPTIONS] [FILES...]
 
 Options (aligned with `specfact code review run --help`):
 
-- `--scope changed|full`: choose changed-only or full-repository auto-discovery
+- `--scope changed|full|index|range`: choose changed-only, full-repository,
+  captured-index, or immutable-range discovery
   when positional files are omitted
+- `--base-ref COMMIT` / `--head-ref COMMIT`: bind the immutable range endpoints
+  required by `--scope range`
+- `--pr-context-file PATH`: bind claimed pull-request target/head context; matching
+  context produces `range_candidate`, not protected `pr_range`
 - `--path PATH`: repeatable repo-relative subtree filter for auto-discovered
   review targets
 - `--include-tests` / `--exclude-tests`: include or exclude changed test files when
@@ -69,6 +76,12 @@ Options (aligned with `specfact code review run --help`):
   auto-detected review runs
 - `--instructions`: print AI-facing simplify / clean-code workflow instructions
   and exit without requiring installed slash prompts or skills
+
+Semgrep 1.144.0 runs both governed passes with `--disable-nosem`, so findings
+hidden by `nosem` or `nosemgrep` directives remain visible in evidence. Under
+`--enforcement changed`, only blocking findings on changed lines block the local
+pre-commit gate; unchanged-line legacy findings remain in the report without
+changing that gate's exit code.
 
 ### Invalid combinations
 

@@ -56,6 +56,7 @@ def test_cli_contract_review_run_json_report_file(
     tmp_path: Path, scenario_name: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _skip_if_tools_missing()
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_DEV_HOST_COMPAT", "1")
     monkeypatch.chdir(REPO_ROOT)
     data = _load_scenarios()
     scenario = next(s for s in data["scenarios"] if s["name"] == scenario_name)

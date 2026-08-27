@@ -141,6 +141,23 @@ def test_default_skill_content_stays_within_line_budget() -> None:
     assert "file, line, rule, guidance_kind, recommended_action, action_status, evidence" in skill
 
 
+def test_installed_merge_quality_guidance_uses_pr_range() -> None:
+    """Protected merge guidance must request complete range evidence, not worktree inference."""
+    bundled = load_bundled_skill_content()
+    assert bundled is not None
+    contents = (default_skill_content(updated_on=date(2026, 8, 19)), bundled)
+
+    for content in contents:
+        assert "--scope range" in content
+        assert "--base-ref <full-base-ref>" in content
+        assert "--head-ref <full-head-ref>" in content
+        assert "--pr-context-file <event-derived-absolute-path>" in content
+        assert "--enforcement full" in content
+        assert "range_preview" in content
+        assert "protected consumer" in content
+        assert "--scope changed --enforcement shadow --focus simplify" in content
+
+
 def test_render_cursor_rule_uses_cursor_metadata_and_skill_body() -> None:
     skill = _skill_text()
 

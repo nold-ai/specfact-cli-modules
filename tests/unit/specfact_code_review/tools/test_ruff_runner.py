@@ -3,12 +3,44 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import cast
 from unittest.mock import Mock
 
 from pytest import MonkeyPatch
 
 from specfact_code_review.tools.ruff_runner import run_ruff
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process
+
+
+def test_ruff_snapshot_mode_disables_cache(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    projection = scope.project_ruff_policy(scope.RuffPolicy.default(version="0.15.12"), snapshot_root=tmp_path)
+
+    assert "--no-cache" in projection.argv
+    assert projection.cache_writes == ()
+
+
+def test_ruff_task_tag_cannot_hide_e501(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    policy = scope.RuffPolicy.default(version="0.15.12", task_tags=("TODO",))
+    projection = scope.project_ruff_policy(policy, snapshot_root=tmp_path)
+    lint = cast(dict[str, object], projection.values["lint"])
+    pycodestyle = cast(dict[str, object], lint["pycodestyle"])
+
+    assert pycodestyle["ignore-overlong-task-comments"] is False
+    assert projection.evidence["original_task_tags"] == ["TODO"]
+
+
+def test_ruff_fix_only_cannot_hide_unfixable_finding(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    policy = scope.RuffPolicy.default(version="0.15.12", fix=True, fix_only=True)
+    projection = scope.project_ruff_policy(policy, snapshot_root=tmp_path)
+
+    assert projection.values["fix"] is False
+    assert projection.values["fix-only"] is False
 
 
 def test_run_ruff_maps_categories_and_fixable_flag(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -151,6 +183,41 @@ def test_run_ruff_returns_tool_error_on_parse_error(tmp_path: Path, monkeypatch:
     assert findings[0].category == "tool_error"
     assert findings[0].tool == "ruff"
     assert findings[0].severity == "error"
+
+
+def test_run_ruff_returns_tool_error_on_operational_exit_with_parseable_payload(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    file_path = tmp_path / "target.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("ruff", stdout="[]", stderr="invalid configuration", returncode=2)),
+    )
+
+    findings = run_ruff([file_path])
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert findings[0].tool == "ruff"
+    assert "returncode=2" in findings[0].message
+    assert "invalid configuration" in findings[0].message
+
+
+def test_run_ruff_bounds_operational_exit_stderr_including_truncation_marker(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    file_path = tmp_path / "target.py"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("ruff", stdout="[]", stderr="a" * 4001, returncode=2)),
+    )
+
+    findings = run_ruff([file_path])
+
+    stderr_repr = findings[0].message.rsplit("stderr=", maxsplit=1)[1]
+    assert stderr_repr == repr("…" + "a" * 3999)
 
 
 def test_run_ruff_returns_tool_error_when_ruff_is_unavailable(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:

@@ -28,7 +28,22 @@ sig_policy=$(bash "${_flag_script}")
 sig_policy="${sig_policy//$'\r'/}"
 sig_policy="${sig_policy//$'\n'/}"
 
-_base=(hatch run ./scripts/verify-modules-signature.py --payload-from-filesystem --enforce-version-bump)
+_target_branch="${GITHUB_BASE_REF:-dev}"
+if [[ -z "${GITHUB_BASE_REF:-}" ]] && [[ "$(git branch --show-current 2>/dev/null || true)" == "main" ]]; then
+  _target_branch="main"
+fi
+_version_check_base="refs/remotes/origin/${_target_branch}"
+if ! git rev-parse --verify --quiet "${_version_check_base}^{commit}" >/dev/null; then
+  echo "❌ Missing fetched target branch ${_version_check_base}; fetch it before committing." >&2
+  exit 1
+fi
+
+_base=(
+  hatch run ./scripts/verify-modules-signature.py
+  --payload-from-filesystem
+  --enforce-version-bump
+  --version-check-base "${_version_check_base}"
+)
 
 _staged_module_manifests() {
   local path bundle manifest

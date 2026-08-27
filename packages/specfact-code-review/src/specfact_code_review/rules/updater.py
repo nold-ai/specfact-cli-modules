@@ -32,7 +32,7 @@ DEFAULT_DO_RULES = (
     "- Use this skill when asked to run, interpret, or act on SpecFact code review in Codex CLI or another AI IDE",
     "- Treat `specfact code review run --help` as authoritative; self-heal stale options by checking help "
     "before changing workflow",
-    "- For simplification queues, run `specfact code review run --scope changed --focus simplify "
+    "- For simplification queues, run `specfact code review run --scope changed --enforcement shadow --focus simplify "
     "--preview-fixes --json --out .specfact/code-review-simplify.json`",
     "- Inspect `cleanup_forecast`, then follow each finding's `remediation_packet`; preserve reasons block autofix",
     "- Ask for walkthrough level when interactive: vibe coder, junior developer, senior/pro, or headless agent; "
@@ -43,8 +43,10 @@ DEFAULT_DO_RULES = (
     "or preserved contract",
     "- In headless mode, process one file at a time and emit an action table: file, line, rule, guidance_kind, "
     "recommended_action, action_status, evidence",
-    "- For merge-quality review, run `specfact code review run --scope changed --bug-hunt --json "
-    "--out .specfact/code-review.json`",
+    "- For merge-quality review, run `specfact code review run --scope range --base-ref <full-base-ref> "
+    "--head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`; output is "
+    "range_preview without matching claimed context and range_candidate with it; neither is pr_range until a "
+    "protected consumer verifies and promotes it",
     "- Verify an active OpenSpec change covers the requested scope and follow the sequence: spec delta "
     "→ failing tests → implementation → passing tests → quality gates",
     "- Ask whether tests should be included before repo-wide review; "

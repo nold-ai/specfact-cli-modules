@@ -1,0 +1,1603 @@
+"""Canonical C14 finding locations and differential lifecycle classification."""
+
+from __future__ import annotations
+
+import hashlib
+import io
+import json
+import re
+import tokenize
+from collections import defaultdict
+from dataclasses import dataclass, field
+from importlib.resources import files
+from pathlib import Path
+from typing import Any, Literal
+
+import yaml
+from icontract import ensure, require
+
+
+_SUPPRESSION_CATALOG_RESOURCE = "resources/contracts/pr-range-v1-suppression-catalog.json"
+_FROZEN_SUPPRESSION_CATALOG_DIGEST = "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+_PR_RANGE_V1_SUPPRESSION_CATALOG_DIGEST = _FROZEN_SUPPRESSION_CATALOG_DIGEST
+
+
+@dataclass(frozen=True)
+class SourceSpan:
+    """UTF-8-byte, one-based-line, half-open source location."""
+
+    kind: Literal["source_span"]
+    schema: Literal["source-span-v1"]
+    path: str
+    start_line: int
+    start_column: int
+    end_line: int
+    end_column: int
+    precision: Literal["exact", "line"]
+    coordinate_system: str
+
+
+@dataclass(frozen=True)
+class LocatedFinding:
+    analyzer: str
+    location: SourceSpan
+
+
+@dataclass(frozen=True)
+class ContinuityResult:
+    status: Literal["PASS", "UNKNOWN"]
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class DifferentialSnapshotSelection:
+    baseline_commit: str
+    target_tip_commit: str
+    head_commit: str
+
+
+@dataclass(frozen=True)
+class DifferentialFinding:
+    analyzer: str
+    rule: str
+    severity: str
+    path: str
+    line: int
+    message: str
+    blocking: bool
+
+
+@dataclass(frozen=True)
+class DifferentialClassification:
+    status: Literal["PASS", "FAIL", "UNKNOWN"]
+    introduced: tuple[DifferentialFinding, ...]
+    fixed: tuple[DifferentialFinding, ...]
+    unchanged: tuple[DifferentialFinding, ...]
+    unknown: tuple[DifferentialFinding, ...]
+    evidence_digest: str
+    reason: str = ""
+    correspondence_evidence: tuple[dict[str, object], ...] = ()
+
+
+@dataclass(frozen=True)
+class FindingClassificationRequest:
+    base_findings: list[dict[str, Any]]
+    head_findings: list[dict[str, Any]]
+    base_sources: dict[str, bytes]
+    head_sources: dict[str, bytes]
+    base_analysis_status: str = "pass"
+    rename_facts: dict[str, str] | None = None
+    rename_ambiguities: dict[str, list[str]] | None = None
+    deleted_paths: tuple[str, ...] = ()
+    added_paths: tuple[str, ...] = ()
+    source_size_override: int | None = None
+    changed_lines: dict[str, set[int]] | None = None
+
+
+@dataclass
+class _ClassificationState:
+    introduced: list[DifferentialFinding]
+    fixed: list[DifferentialFinding]
+    unchanged: list[DifferentialFinding]
+    unknown: list[DifferentialFinding]
+    correspondence_evidence: list[dict[str, object]]
+    correspondence_matrices: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]] = field(
+        default_factory=dict
+    )
+    forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
+
+
+@dataclass
+class _CorrespondenceCache:
+    matrices: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]] = field(default_factory=dict)
+    forbidden_costs: dict[tuple[bytes, bytes, int, int], int] = field(default_factory=dict)
+    forbidden_cells: dict[tuple[bytes, bytes], int] = field(default_factory=dict)
+    source_lines: dict[bytes, list[bytes]] = field(default_factory=dict)
+    source_equal: dict[tuple[bytes, bytes], bool] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class _ContinuityContext:
+    base_lines: list[bytes]
+    head_lines: list[bytes]
+    base_index: int
+    head_index: int
+    cells: int
+
+
+@dataclass(frozen=True)
+class _SuppressionDeltaContext:
+    base_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence]
+    head_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence]
+    base_sources: dict[str, bytes]
+    head_sources: dict[str, bytes]
+    base_manifest_digest: str
+    head_manifest_digest: str
+
+
+@dataclass(frozen=True)
+class ExactRenameFacts:
+    pairs: tuple[tuple[str, str], ...]
+    ambiguities: tuple[str, ...]
+    algorithm: Literal["canonical-exact-rename-v1"] = "canonical-exact-rename-v1"
+
+
+@dataclass(frozen=True)
+class SuppressionOccurrence:
+    path: str
+    line: int
+    family: str
+    kind: str
+    token: str
+
+
+_SuppressionKey = tuple[str, str, str, int]
+_SuppressionEntry = tuple[_SuppressionKey, SuppressionOccurrence]
+
+
+@dataclass(frozen=True)
+class _SuppressionPairEvidence:
+    correspondences: dict[tuple[_SuppressionKey, _SuppressionKey], _SuppressionCorrespondence]
+    base_lines: dict[_SuppressionKey, bytes | None]
+    head_lines: dict[_SuppressionKey, bytes | None]
+
+
+@dataclass(frozen=True)
+class _SuppressionCorrespondence:
+    status: Literal["unchanged", "introduced", "unknown"]
+    evidence: dict[str, object]
+
+
+@dataclass(frozen=True)
+class _SuppressionIntroduction:
+    base_key: _SuppressionKey | None
+    head_key: _SuppressionKey
+    correspondence_evidence: dict[str, object]
+
+
+@dataclass(frozen=True)
+class _SuppressionPairing:
+    base_key: _SuppressionKey | None
+    head_key: _SuppressionKey
+    correspondence_evidence: dict[str, object]
+
+
+@dataclass(frozen=True)
+class _SuppressionSources:
+    base: dict[str, bytes]
+    head: dict[str, bytes]
+
+
+@dataclass(frozen=True)
+class SuppressionTransitionEvidence:
+    base_path: str = ""
+    base_line: int = 0
+    base_occurrence_digest: str = ""
+    correspondence_status: str = ""
+    correspondence_digest: str = ""
+    correspondence_evidence: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class SuppressionEvidence:
+    changed_hunk_digest: str = ""
+    analyzers: tuple[str, ...] = ()
+    family: str = ""
+    base_blob_digest: str = ""
+    head_blob_digest: str = ""
+    occurrence_digest: str = ""
+    base_manifest_digest: str = ""
+    head_manifest_digest: str = ""
+    transition: SuppressionTransitionEvidence = field(default_factory=SuppressionTransitionEvidence)
+
+
+@dataclass(frozen=True)
+class SuppressionFinding:
+    kind: str
+    path: str
+    line: int
+    blocking: bool
+    evidence: SuppressionEvidence = SuppressionEvidence()
+
+
+@dataclass(frozen=True)
+class SuppressionClassification:
+    status: Literal["PASS", "FAIL", "UNKNOWN"]
+    findings: tuple[SuppressionFinding, ...] = ()
+    introduced: tuple[SuppressionOccurrence, ...] = ()
+    unchanged: tuple[SuppressionOccurrence, ...] = ()
+    missing_base_disposition: str = "ordinary"
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class SuppressionCatalogResource:
+    digest: str
+    canonical_bytes: bytes
+
+
+@dataclass(frozen=True)
+class SuppressionCatalogContract:
+    digest: str
+    canonical_bytes: bytes
+
+
+@dataclass(frozen=True)
+class C14Checkpoint:
+    suppression_catalog_contract: SuppressionCatalogContract
+
+
+@dataclass(frozen=True)
+class CatalogActivation:
+    status: Literal["PASS", "UNKNOWN"]
+    profile_activated: bool
+    digest: str | None = None
+    reason: str = ""
+
+
+class UnsupportedWaiverInput(ValueError):  # noqa: N818 - frozen public C14 contract name
+    """Raised because C14 has no authenticated suppression-waiver input."""
+
+
+def _physical_lines(source: bytes) -> list[bytes]:
+    return source.splitlines()
+
+
+@require(lambda line: line >= 1, "line numbers are one-based")
+def line_fallback_location(path: str, source: bytes, *, line: int) -> SourceSpan:
+    """Return a deterministic whole-physical-line fallback span."""
+
+    lines = _physical_lines(source)
+    payload = lines[line - 1] if line <= len(lines) else b""
+    payload.decode("utf-8")
+    return SourceSpan(
+        "source_span",
+        "source-span-v1",
+        path,
+        line,
+        0,
+        line,
+        len(payload),
+        "line",
+        "utf8-byte-half-open",
+    )
+
+
+def _utf16_prefix_to_utf8_column(line: str, units: int) -> int:
+    consumed = 0
+    characters: list[str] = []
+    for character in line:
+        width = len(character.encode("utf-16-le")) // 2
+        if consumed + width > units:
+            break
+        consumed += width
+        characters.append(character)
+        if consumed == units:
+            break
+    if consumed != units:
+        raise ValueError("coordinate splits a UTF-16 surrogate pair or exceeds the line")
+    return len("".join(characters).encode())
+
+
+@ensure(lambda result: result.precision == "exact")
+def convert_exact_location(
+    *,
+    path: str,
+    source: bytes,
+    coordinate_system: str,
+    start: tuple[int, int],
+    end: tuple[int, int],
+) -> SourceSpan:
+    """Convert exact adapter coordinates to canonical UTF-8 byte columns."""
+
+    text_lines = source.decode("utf-8").splitlines()
+    start_row, start_column = start
+    end_row, end_column = end
+    if (
+        not 0 <= start_row < len(text_lines)
+        or not 0 <= end_row < len(text_lines)
+        or start_column < 0
+        or end_column < 0
+        or (end_row, end_column) < (start_row, start_column)
+    ):
+        raise ValueError("source coordinate is outside the decoded source")
+    if coordinate_system == "utf16-code-units":
+        canonical_start = _utf16_prefix_to_utf8_column(text_lines[start_row], start_column)
+        canonical_end = _utf16_prefix_to_utf8_column(text_lines[end_row], end_column)
+    else:
+        if start_column > len(text_lines[start_row]) or end_column > len(text_lines[end_row]):
+            raise ValueError("source column is outside the decoded line")
+        canonical_start = len(text_lines[start_row][:start_column].encode())
+        canonical_end = len(text_lines[end_row][:end_column].encode())
+    return SourceSpan(
+        "source_span",
+        "source-span-v1",
+        path,
+        start_row + 1,
+        canonical_start,
+        end_row + 1,
+        canonical_end,
+        "exact",
+        "utf8-byte-half-open",
+    )
+
+
+def normalize_location(
+    *, analyzer: str, path: str, source: bytes, raw: dict[str, int]
+) -> LocatedFinding | ContinuityResult:
+    """Normalize one adapter's exact row/column record."""
+
+    try:
+        location = convert_exact_location(
+            path=path,
+            source=source,
+            coordinate_system="unicode-code-points",
+            start=(raw["row"] - 1, raw["column"]),
+            end=(raw["end_row"] - 1, raw["end_column"]),
+        )
+    except (IndexError, UnicodeDecodeError, ValueError):
+        return ContinuityResult("UNKNOWN", "invalid_source_coordinate")
+    return LocatedFinding(analyzer, location)
+
+
+def source_continuity(*, location: dict[str, str]) -> ContinuityResult:
+    """Exclude selector and infrastructure identities from source continuity."""
+
+    if location.get("kind") != "source_span":
+        return ContinuityResult("UNKNOWN", "non_source_location")
+    return ContinuityResult("PASS")
+
+
+def select_differential_snapshots(*, merge_base: str, base_tip: str, head: str) -> DifferentialSnapshotSelection:
+    """Select the merge-base as evidence baseline while retaining target-tip policy identity."""
+
+    return DifferentialSnapshotSelection(merge_base, base_tip, head)
+
+
+def _finding(value: dict[str, Any]) -> DifferentialFinding:
+    return DifferentialFinding(
+        analyzer=str(value.get("analyzer", "")),
+        rule=str(value.get("rule", "")),
+        severity=str(value.get("severity", "")),
+        path=str(value.get("path", "")),
+        line=int(value.get("line", 1)),
+        message=" ".join(str(value.get("message", "")).split()),
+        blocking=bool(value.get("blocking", False)),
+    )
+
+
+def _source_for(path: str, sources: dict[str, bytes]) -> bytes | None:
+    if path in sources:
+        return sources[path]
+    if len(sources) == 1:
+        return next(iter(sources.values()))
+    return None
+
+
+_MAX_SOURCE_BYTES = 16 * 1024 * 1024
+_MAX_SOURCE_LINES = 20_000
+_MAX_CORRESPONDENCE_CELLS = 4_000_000
+_MAX_AGGREGATE_CORRESPONDENCE_CELLS = 4_000_000
+
+
+def _edit_costs(
+    base_lines: list[bytes],
+    head_lines: list[bytes],
+    *,
+    forbidden_pair: tuple[int, int] | None = None,
+) -> list[list[int]]:
+    """Compute canonical insert/delete/replace/match costs, optionally forbidding one diagonal."""
+
+    rows = len(base_lines) + 1
+    columns = len(head_lines) + 1
+    costs = [[0] * columns for _ in range(rows)]
+    for base_index in range(1, rows):
+        costs[base_index][0] = base_index
+    for head_index in range(1, columns):
+        costs[0][head_index] = head_index
+    for base_index in range(1, rows):
+        for head_index in range(1, columns):
+            candidates = [
+                costs[base_index - 1][head_index] + 1,
+                costs[base_index][head_index - 1] + 1,
+            ]
+            if forbidden_pair != (base_index - 1, head_index - 1):
+                replace_cost = 0 if base_lines[base_index - 1] == head_lines[head_index - 1] else 2
+                candidates.append(costs[base_index - 1][head_index - 1] + replace_cost)
+            costs[base_index][head_index] = min(candidates)
+    return costs
+
+
+def _suffix_edit_costs(base_lines: list[bytes], head_lines: list[bytes]) -> list[list[int]]:
+    reversed_costs = _edit_costs(list(reversed(base_lines)), list(reversed(head_lines)))
+    rows = len(base_lines)
+    columns = len(head_lines)
+    return [
+        [reversed_costs[rows - base_index][columns - head_index] for head_index in range(columns + 1)]
+        for base_index in range(rows + 1)
+    ]
+
+
+def _identity(finding: DifferentialFinding, *, normalized_path: str) -> tuple[str, str, str, str]:
+    return finding.analyzer, finding.rule, normalized_path, finding.message
+
+
+def _continuity(
+    base: DifferentialFinding,
+    head: DifferentialFinding,
+    *,
+    base_source: bytes | None,
+    head_source: bytes | None,
+    matrix_cache: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]],
+    forbidden_cache: dict[tuple[bytes, bytes, int, int], int],
+) -> tuple[Literal["unchanged", "introduced", "unknown"], dict[str, object]]:
+    evidence: dict[str, object] = {
+        "algorithm": "source-line-correspondence-v1",
+        "base_line": base.line,
+        "head_line": head.line,
+        "bounds": {
+            "max_source_bytes": _MAX_SOURCE_BYTES,
+            "max_source_lines": _MAX_SOURCE_LINES,
+            "max_cells": _MAX_CORRESPONDENCE_CELLS,
+        },
+    }
+    context, reason = _continuity_context(base, head, base_source=base_source, head_source=head_source)
+    if context is None:
+        return "unknown", {**evidence, **reason}
+    assert base_source is not None and head_source is not None
+    evidence.update(
+        _continuity_cost_evidence(
+            context,
+            source_key=(base_source, head_source),
+            matrix_cache=matrix_cache,
+            forbidden_cache=forbidden_cache,
+        )
+    )
+    evidence.update(_continuity_anchor_evidence(context))
+    return _continuity_decision(context, evidence)
+
+
+def _continuity_context(
+    base: DifferentialFinding,
+    head: DifferentialFinding,
+    *,
+    base_source: bytes | None,
+    head_source: bytes | None,
+    source_line_cache: dict[bytes, list[bytes]] | None = None,
+) -> tuple[_ContinuityContext | None, dict[str, object]]:
+    if base_source is None or head_source is None:
+        return None, {"reason": "missing_source"}
+    base_lines = _cached_source_lines(base_source, source_line_cache)
+    head_lines = _cached_source_lines(head_source, source_line_cache)
+    cells = (len(base_lines) + 1) * (len(head_lines) + 1)
+    if not _continuity_within_bounds(base_source, head_source, base_lines, head_lines, cells):
+        return None, {"cells": cells, "reason": "correspondence_bounds"}
+    base_index = base.line - 1
+    head_index = head.line - 1
+    context = _ContinuityContext(base_lines, head_lines, base_index, head_index, cells)
+    if not _continuity_anchor_is_valid(context):
+        return None, {"cells": cells, "reason": "invalid_source_anchor"}
+    return context, {}
+
+
+def _cached_source_lines(source: bytes, cache: dict[bytes, list[bytes]] | None) -> list[bytes]:
+    if cache is None:
+        return source.splitlines()
+    lines = cache.get(source)
+    if lines is None:
+        lines = source.splitlines()
+        cache[source] = lines
+    return lines
+
+
+def _continuity_within_bounds(
+    base_source: bytes,
+    head_source: bytes,
+    base_lines: list[bytes],
+    head_lines: list[bytes],
+    cells: int,
+) -> bool:
+    source_sizes_valid = max(len(base_source), len(head_source)) <= _MAX_SOURCE_BYTES
+    source_lines_valid = max(len(base_lines), len(head_lines)) <= _MAX_SOURCE_LINES
+    return source_sizes_valid and source_lines_valid and cells <= _MAX_CORRESPONDENCE_CELLS
+
+
+def _continuity_anchor_is_valid(context: _ContinuityContext) -> bool:
+    base_valid = 0 <= context.base_index < len(context.base_lines)
+    head_valid = 0 <= context.head_index < len(context.head_lines)
+    return base_valid and head_valid
+
+
+def _continuity_cost_evidence(
+    context: _ContinuityContext,
+    *,
+    source_key: tuple[bytes, bytes],
+    matrix_cache: dict[tuple[bytes, bytes], tuple[list[list[int]], list[list[int]]]],
+    forbidden_cache: dict[tuple[bytes, bytes, int, int], int],
+) -> dict[str, object]:
+    matrices = matrix_cache.get(source_key)
+    if matrices is None:
+        matrices = (
+            _edit_costs(context.base_lines, context.head_lines),
+            _suffix_edit_costs(context.base_lines, context.head_lines),
+        )
+        matrix_cache[source_key] = matrices
+    forward, suffix = matrices
+    global_cost = forward[-1][-1]
+    pair_cost = 0 if context.base_lines[context.base_index] == context.head_lines[context.head_index] else 2
+    forced_cost = (
+        forward[context.base_index][context.head_index]
+        + pair_cost
+        + suffix[context.base_index + 1][context.head_index + 1]
+    )
+    forbidden_key = (*source_key, context.base_index, context.head_index)
+    forbidden_cost = forbidden_cache.get(forbidden_key)
+    if forbidden_cost is None:
+        forbidden_cost = _edit_costs(
+            context.base_lines,
+            context.head_lines,
+            forbidden_pair=(context.base_index, context.head_index),
+        )[-1][-1]
+        forbidden_cache[forbidden_key] = forbidden_cost
+    return {
+        "cells": context.cells,
+        "global_cost": global_cost,
+        "forced_cost": forced_cost,
+        "forbidden_cost": forbidden_cost,
+        "pair_cost": pair_cost,
+    }
+
+
+def _line_anchor(lines: list[bytes], index: int) -> tuple[bytes, bytes, bytes]:
+    return (
+        lines[index - 1] if index > 0 else b"<BOF>",
+        lines[index],
+        lines[index + 1] if index + 1 < len(lines) else b"<EOF>",
+    )
+
+
+def _continuity_anchor_evidence(context: _ContinuityContext) -> dict[str, object]:
+    base_anchor = _line_anchor(context.base_lines, context.base_index)
+    head_anchor = _line_anchor(context.head_lines, context.head_index)
+    return {
+        "base_anchor_digest": "sha256:" + hashlib.sha256(b"\0".join(base_anchor)).hexdigest(),
+        "head_anchor_digest": "sha256:" + hashlib.sha256(b"\0".join(head_anchor)).hexdigest(),
+        "base_distinct_location_count": context.base_lines.count(context.base_lines[context.base_index]),
+        "head_distinct_location_count": context.head_lines.count(context.head_lines[context.head_index]),
+    }
+
+
+def _continuity_decision(
+    context: _ContinuityContext,
+    evidence: dict[str, object],
+) -> tuple[Literal["unchanged", "introduced", "unknown"], dict[str, object]]:
+    if evidence["base_distinct_location_count"] != 1 or evidence["head_distinct_location_count"] != 1:
+        return "unknown", {**evidence, "decision": "ambiguous_source_anchor"}
+    base_anchor = _line_anchor(context.base_lines, context.base_index)
+    head_anchor = _line_anchor(context.head_lines, context.head_index)
+    if base_anchor != head_anchor:
+        return "introduced", {**evidence, "decision": "occurrence_anchor_changed"}
+    pair_cost = _integer_evidence(evidence, "pair_cost")
+    global_cost = _integer_evidence(evidence, "global_cost")
+    forced_cost = _integer_evidence(evidence, "forced_cost")
+    forbidden_cost = _integer_evidence(evidence, "forbidden_cost")
+    if pair_cost == 0 and forced_cost == global_cost and forbidden_cost > global_cost:
+        return "unchanged", {**evidence, "decision": "unique_optimal_match"}
+    if forced_cost > global_cost or pair_cost != 0:
+        return "introduced", {**evidence, "decision": "not_on_optimal_correspondence"}
+    return "unknown", {**evidence, "decision": "alternate_optimal_correspondence"}
+
+
+def _integer_evidence(evidence: dict[str, object], key: str) -> int:
+    value = evidence[key]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise TypeError(f"continuity evidence {key} is not an integer")
+    return value
+
+
+def _classification_digest(
+    introduced: list[DifferentialFinding],
+    fixed: list[DifferentialFinding],
+    unchanged: list[DifferentialFinding],
+    unknown: list[DifferentialFinding],
+    correspondence_evidence: list[dict[str, object]],
+) -> str:
+    document = {
+        "fixed": [finding.__dict__ for finding in fixed],
+        "introduced": [finding.__dict__ for finding in introduced],
+        "unchanged": [finding.__dict__ for finding in unchanged],
+        "unknown": [finding.__dict__ for finding in unknown],
+        "correspondence_evidence": correspondence_evidence,
+    }
+    payload = json.dumps(document, sort_keys=True, separators=(",", ":")).encode()
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def classify_findings(request: FindingClassificationRequest) -> DifferentialClassification:
+    """Classify finding multiplicity using conservative exact-source continuity."""
+
+    base_values = [_finding(value) for value in request.base_findings]
+    head_values = [_finding(value) for value in request.head_findings]
+    state = _ClassificationState([], [], [], [], [])
+    early_result = _early_classification(request, base_values, head_values, state)
+    if early_result is not None:
+        return early_result
+    renames = request.rename_facts or {}
+    base_buckets, head_buckets = _finding_buckets(base_values, head_values, renames)
+    for identity in sorted(set(base_buckets) | set(head_buckets)):
+        _classify_identity(identity, base_buckets, head_buckets, request, state)
+    return _final_classification(state)
+
+
+def _early_classification(
+    request: FindingClassificationRequest,
+    base_values: list[DifferentialFinding],
+    head_values: list[DifferentialFinding],
+    state: _ClassificationState,
+) -> DifferentialClassification | None:
+    if request.base_analysis_status != "pass":
+        return _classification_with_reason(state, "baseline_analysis_error")
+    oversized = request.source_size_override is not None and request.source_size_override > _MAX_SOURCE_BYTES
+    if request.rename_ambiguities or oversized:
+        state.unknown.extend(head_values or base_values)
+        return _classification_with_reason(state, "continuity_unavailable")
+    return None
+
+
+def _classification_with_reason(state: _ClassificationState, reason: str) -> DifferentialClassification:
+    digest = _classification_digest(
+        state.introduced,
+        state.fixed,
+        state.unchanged,
+        state.unknown,
+        state.correspondence_evidence,
+    )
+    return DifferentialClassification("UNKNOWN", (), (), (), tuple(state.unknown), digest, reason)
+
+
+def _finding_buckets(
+    base_values: list[DifferentialFinding],
+    head_values: list[DifferentialFinding],
+    renames: dict[str, str],
+) -> tuple[
+    dict[tuple[str, str, str, str], list[DifferentialFinding]],
+    dict[tuple[str, str, str, str], list[DifferentialFinding]],
+]:
+    reverse_renames = {new: old for old, new in renames.items()}
+    base_buckets: dict[tuple[str, str, str, str], list[DifferentialFinding]] = defaultdict(list)
+    head_buckets: dict[tuple[str, str, str, str], list[DifferentialFinding]] = defaultdict(list)
+    for finding in base_values:
+        base_buckets[_identity(finding, normalized_path=finding.path)].append(finding)
+    for finding in head_values:
+        head_buckets[_identity(finding, normalized_path=reverse_renames.get(finding.path, finding.path))].append(
+            finding
+        )
+    return base_buckets, head_buckets
+
+
+def _classify_identity(
+    identity: tuple[str, str, str, str],
+    base_buckets: dict[tuple[str, str, str, str], list[DifferentialFinding]],
+    head_buckets: dict[tuple[str, str, str, str], list[DifferentialFinding]],
+    request: FindingClassificationRequest,
+    state: _ClassificationState,
+) -> None:
+    base_bucket = list(base_buckets.get(identity, ()))
+    head_bucket = list(head_buckets.get(identity, ()))
+    partitions = {(finding.severity, finding.blocking) for finding in (*base_bucket, *head_bucket)}
+    if _severity_multiset_changed(base_bucket, head_bucket):
+        state.unknown.extend(head_bucket or base_bucket)
+        return
+    for severity, blocking in sorted(partitions):
+        base_partition = [item for item in base_bucket if (item.severity, item.blocking) == (severity, blocking)]
+        head_partition = [item for item in head_bucket if (item.severity, item.blocking) == (severity, blocking)]
+        _classify_partition(identity, base_partition, head_partition, request, state)
+
+
+def _severity_multiset_changed(
+    base_bucket: list[DifferentialFinding],
+    head_bucket: list[DifferentialFinding],
+) -> bool:
+    if not base_bucket or not head_bucket:
+        return False
+    return {(item.severity, item.blocking) for item in base_bucket} != {
+        (item.severity, item.blocking) for item in head_bucket
+    }
+
+
+def _classify_partition(
+    identity: tuple[str, str, str, str],
+    base_partition: list[DifferentialFinding],
+    head_partition: list[DifferentialFinding],
+    request: FindingClassificationRequest,
+    state: _ClassificationState,
+) -> None:
+    pairs, remaining_base, remaining_head = _continuity_compatible_pairs(base_partition, head_partition, request, state)
+    for base_item, head_item in pairs:
+        _classify_pair(identity, base_item, head_item, request, state)
+    for base_item in remaining_base:
+        _classify_removed_base(base_item, request, state)
+    state.introduced.extend(remaining_head)
+
+
+def _continuity_compatible_pairs(
+    base_partition: list[DifferentialFinding],
+    head_partition: list[DifferentialFinding],
+    request: FindingClassificationRequest,
+    state: _ClassificationState,
+) -> tuple[
+    list[tuple[DifferentialFinding, DifferentialFinding]],
+    list[DifferentialFinding],
+    list[DifferentialFinding],
+]:
+    remaining_base = sorted(base_partition, key=_pairing_sort_key)
+    remaining_head = sorted(head_partition, key=_pairing_sort_key)
+    pairs: list[tuple[DifferentialFinding, DifferentialFinding]] = []
+    for head_item in list(remaining_head):
+        candidates = [
+            base_item
+            for base_item in remaining_base
+            if _continuity(
+                base_item,
+                head_item,
+                base_source=_source_for(base_item.path, request.base_sources),
+                head_source=_source_for(head_item.path, request.head_sources),
+                matrix_cache=state.correspondence_matrices,
+                forbidden_cache=state.forbidden_costs,
+            )[0]
+            == "unchanged"
+        ]
+        if len(candidates) == 1:
+            base_item = candidates[0]
+            pairs.append((base_item, head_item))
+            remaining_base.remove(base_item)
+            remaining_head.remove(head_item)
+    pair_count = min(len(remaining_base), len(remaining_head))
+    pairs.extend(zip(remaining_base[:pair_count], remaining_head[:pair_count], strict=True))
+    return pairs, remaining_base[pair_count:], remaining_head[pair_count:]
+
+
+def _pairing_sort_key(finding: DifferentialFinding) -> tuple[str, str, str, int, str, str, bool]:
+    return (
+        finding.analyzer,
+        finding.rule,
+        finding.path,
+        finding.line,
+        finding.message,
+        finding.severity,
+        finding.blocking,
+    )
+
+
+def _classify_pair(
+    identity: tuple[str, str, str, str],
+    base_item: DifferentialFinding,
+    head_item: DifferentialFinding,
+    request: FindingClassificationRequest,
+    state: _ClassificationState,
+) -> None:
+    continuity, continuity_evidence = _continuity(
+        base_item,
+        head_item,
+        base_source=_source_for(base_item.path, request.base_sources),
+        head_source=_source_for(head_item.path, request.head_sources),
+        matrix_cache=state.correspondence_matrices,
+        forbidden_cache=state.forbidden_costs,
+    )
+    state.correspondence_evidence.append(
+        {
+            **continuity_evidence,
+            "identity": list(identity),
+            "base_path": base_item.path,
+            "head_path": head_item.path,
+        }
+    )
+    destinations = {
+        "unchanged": state.unchanged,
+        "introduced": state.introduced,
+        "unknown": state.unknown,
+    }
+    destinations[continuity].append(head_item)
+
+
+def _classify_removed_base(
+    base_item: DifferentialFinding,
+    request: FindingClassificationRequest,
+    state: _ClassificationState,
+) -> None:
+    renames = request.rename_facts or {}
+    ambiguous_add_delete = base_item.path in request.deleted_paths and bool(request.added_paths)
+    destination = state.unknown if base_item.path in renames or ambiguous_add_delete else state.fixed
+    destination.append(base_item)
+
+
+def _final_classification(state: _ClassificationState) -> DifferentialClassification:
+    state.correspondence_evidence.sort(key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":")))
+    digest = _classification_digest(
+        state.introduced,
+        state.fixed,
+        state.unchanged,
+        state.unknown,
+        state.correspondence_evidence,
+    )
+    if state.unknown:
+        status: Literal["PASS", "FAIL", "UNKNOWN"] = "UNKNOWN"
+    elif any(finding.blocking for finding in (*state.introduced, *state.unchanged)):
+        status = "FAIL"
+    else:
+        status = "PASS"
+    return DifferentialClassification(
+        status,
+        tuple(state.introduced),
+        tuple(state.fixed),
+        tuple(state.unchanged),
+        tuple(state.unknown),
+        digest,
+        correspondence_evidence=tuple(state.correspondence_evidence),
+    )
+
+
+def canonical_exact_renames(*, deleted: dict[str, str], added: dict[str, str]) -> ExactRenameFacts:
+    """Pair only unique deleted/added paths with the same exact blob identity."""
+
+    deleted_by_blob: dict[str, list[str]] = defaultdict(list)
+    added_by_blob: dict[str, list[str]] = defaultdict(list)
+    for path, blob in deleted.items():
+        deleted_by_blob[blob].append(path)
+    for path, blob in added.items():
+        added_by_blob[blob].append(path)
+    pairs: list[tuple[str, str]] = []
+    ambiguities: list[str] = []
+    for blob in sorted(set(deleted_by_blob) & set(added_by_blob)):
+        old_paths = sorted(deleted_by_blob[blob])
+        new_paths = sorted(added_by_blob[blob])
+        if len(old_paths) == len(new_paths) == 1:
+            pairs.append((old_paths[0], new_paths[0]))
+        else:
+            ambiguities.append(blob)
+    return ExactRenameFacts(tuple(pairs), tuple(ambiguities))
+
+
+_DIRECTIVE_PATTERNS: tuple[tuple[str, str, re.Pattern[str]], ...] = (
+    ("ruff-noqa", "introduced_inline_suppression", re.compile(r"\b(?:noqa|ruff:\s*noqa)\b", re.I)),
+    (
+        "ruff-control",
+        "introduced_inline_suppression",
+        re.compile(r"\bruff:\s*(?:ignore|file-ignore|disable|enable)\s*\["),
+    ),
+    (
+        "ruff-isort",
+        "introduced_inline_suppression",
+        re.compile(r"\b(?:ruff:\s*)?isort:\s*(?:skip_file|on|off|skip|split)\b", re.I),
+    ),
+    (
+        "pylint",
+        "introduced_inline_suppression",
+        re.compile(r"\bpylint:\s*(?:disable(?:-next|-all|-msg)?|skip-file)\b", re.I),
+    ),
+    ("type-ignore", "introduced_inline_suppression", re.compile(r"\btype:\s*ignore(?:\[[^]]*\])?", re.I)),
+    ("nosemgrep", "introduced_inline_suppression", re.compile(r"\bno(?:semgrep|sem)\b", re.I)),
+    ("coverage", "introduced_inline_suppression", re.compile(r"\bpragma:\s*no\s+(?:cover|branch)\b", re.I)),
+    (
+        "basedpyright",
+        "introduced_analyzer_result_control",
+        re.compile(r"\bpyright:\s*(?:ignore(?:\[[^]]*\])?|strict|basic|standard|[A-Za-z][A-Za-z0-9]*\s*=)", re.I),
+    ),
+    (
+        "crosshair",
+        "introduced_analyzer_result_control",
+        re.compile(
+            r"\bcrosshair:\s*(?:on|off|enabled|analysis_kind|specs_complete|max_iterations|per_condition_timeout|per_path_timeout|max_uninteresting_iterations)\b",
+            re.I,
+        ),
+    ),
+)
+
+_SUPPRESSION_ANALYZERS: dict[str, tuple[str, ...]] = {
+    "ruff-noqa": ("ruff",),
+    "ruff-control": ("ruff",),
+    "ruff-isort": ("ruff",),
+    "pylint": ("pylint",),
+    "basedpyright": ("basedpyright",),
+    "crosshair": ("contracts",),
+    "type-ignore": ("basedpyright", "pylint"),
+    "nosemgrep": ("semgrep", "semgrep-bugs"),
+    "coverage": ("targeted-pytest-coverage",),
+}
+
+
+def _tokenize_comments(path: str, source: bytes) -> tuple[SuppressionOccurrence, ...]:
+    occurrences: list[SuppressionOccurrence] = []
+    for token in tokenize.tokenize(io.BytesIO(source).readline):
+        if token.type != tokenize.COMMENT:
+            continue
+        normalized = " ".join(token.string.strip().split())
+        for family, kind, pattern in _DIRECTIVE_PATTERNS:
+            if pattern.search(normalized):
+                occurrences.append(SuppressionOccurrence(path, token.start[0], family, kind, normalized.lower()))
+                break
+    return tuple(occurrences)
+
+
+def _suppression_key(
+    occurrence: SuppressionOccurrence, *, reverse_renames: dict[str, str], ordinal: int
+) -> tuple[str, str, str, int]:
+    return (
+        reverse_renames.get(occurrence.path, occurrence.path),
+        occurrence.family,
+        occurrence.token,
+        ordinal,
+    )
+
+
+def _source_manifest_digest(sources: dict[str, bytes]) -> str:
+    projection = {path: "sha256:" + hashlib.sha256(payload).hexdigest() for path, payload in sorted(sources.items())}
+    return "sha256:" + hashlib.sha256(_canonical_bytes(projection)).hexdigest()
+
+
+def _suppression_evidence(
+    occurrence: SuppressionOccurrence,
+    *,
+    base_occurrence: SuppressionOccurrence | None = None,
+    base_source: bytes | None,
+    head_source: bytes | None,
+    base_manifest_digest: str,
+    head_manifest_digest: str,
+    correspondence_evidence: dict[str, object] | None = None,
+) -> SuppressionEvidence:
+    occurrence_projection = _suppression_occurrence_projection(occurrence)
+    base_occurrence_digest = (
+        "sha256:" + hashlib.sha256(_canonical_bytes(_suppression_occurrence_projection(base_occurrence))).hexdigest()
+        if base_occurrence is not None
+        else ""
+    )
+    correspondence = correspondence_evidence or {}
+    changed_hunk = (base_source or b"") + b"\0" + (head_source or b"")
+    return SuppressionEvidence(
+        changed_hunk_digest="sha256:" + hashlib.sha256(changed_hunk).hexdigest(),
+        analyzers=_SUPPRESSION_ANALYZERS[occurrence.family],
+        family=occurrence.family,
+        base_blob_digest="sha256:" + hashlib.sha256(base_source).hexdigest() if base_source is not None else "",
+        head_blob_digest="sha256:" + hashlib.sha256(head_source).hexdigest() if head_source is not None else "",
+        occurrence_digest="sha256:" + hashlib.sha256(_canonical_bytes(occurrence_projection)).hexdigest(),
+        base_manifest_digest=base_manifest_digest,
+        head_manifest_digest=head_manifest_digest,
+        transition=SuppressionTransitionEvidence(
+            base_path=base_occurrence.path if base_occurrence is not None else "",
+            base_line=base_occurrence.line if base_occurrence is not None else 0,
+            base_occurrence_digest=base_occurrence_digest,
+            correspondence_status=str(correspondence.get("status", "")),
+            correspondence_digest=(
+                "sha256:" + hashlib.sha256(_canonical_bytes(correspondence)).hexdigest() if correspondence else ""
+            ),
+            correspondence_evidence=correspondence,
+        ),
+    )
+
+
+def _suppression_occurrence_projection(occurrence: SuppressionOccurrence) -> dict[str, object]:
+    return {
+        "family": occurrence.family,
+        "kind": occurrence.kind,
+        "line": occurrence.line,
+        "path": occurrence.path,
+        "token": occurrence.token,
+    }
+
+
+def classify_suppression_delta(
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+    rename_facts: dict[str, str] | None = None,
+    missing_base_findings: list[dict[str, Any]] | None = None,
+    waiver: dict[str, Any] | None = None,
+) -> SuppressionClassification:
+    """Classify registered comment-token controls without accepting waivers."""
+
+    if waiver is not None:
+        raise UnsupportedWaiverInput("C14 has no authenticated waiver ingestion path")
+    base_sources = _python_sources(base_sources)
+    head_sources = _python_sources(head_sources)
+    try:
+        base_occurrences = _suppression_occurrences(base_sources)
+        head_occurrences = _suppression_occurrences(head_sources)
+    except (IndentationError, SyntaxError, UnicodeDecodeError, tokenize.TokenError) as exc:
+        return SuppressionClassification("UNKNOWN", reason=f"suppression_manifest_error:{type(exc).__name__}")
+    context = _suppression_delta_context(
+        base_occurrences,
+        head_occurrences,
+        base_sources=base_sources,
+        head_sources=head_sources,
+        renames=rename_facts or {},
+    )
+    correspondence_cache = _CorrespondenceCache()
+    unchanged_pairs, introductions, correspondence_unknown = _classify_suppression_keys(
+        context.base_by_key,
+        context.head_by_key,
+        base_sources=base_sources,
+        head_sources=head_sources,
+        cache=correspondence_cache,
+    )
+    unchanged = tuple(context.head_by_key[pair.head_key] for pair in unchanged_pairs)
+    introduced = tuple(context.head_by_key[item.head_key] for item in introductions)
+    findings = _introduced_suppression_findings(
+        introductions,
+        context,
+    )
+    quarantined = _append_quarantined_suppressions(
+        findings,
+        unchanged_pairs,
+        context,
+        cache=correspondence_cache,
+    )
+    missing_disposition = "unknown" if introduced and missing_base_findings else "ordinary"
+    status = _suppression_status(quarantined=quarantined, introduced=bool(introduced))
+    return SuppressionClassification(
+        status,
+        tuple(findings),
+        introduced,
+        unchanged,
+        missing_disposition,
+        reason="suppression_correspondence_unknown" if correspondence_unknown else "",
+    )
+
+
+def _suppression_occurrences(sources: dict[str, bytes]) -> tuple[SuppressionOccurrence, ...]:
+    return tuple(
+        occurrence for path, source in sorted(sources.items()) for occurrence in _tokenize_comments(path, source)
+    )
+
+
+def _python_sources(sources: dict[str, bytes]) -> dict[str, bytes]:
+    return {path: source for path, source in sources.items() if Path(path).suffix in {".py", ".pyi"}}
+
+
+def _suppression_delta_context(
+    base_occurrences: tuple[SuppressionOccurrence, ...],
+    head_occurrences: tuple[SuppressionOccurrence, ...],
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+    renames: dict[str, str],
+) -> _SuppressionDeltaContext:
+    base_by_key, head_by_key = _suppression_indexes(base_occurrences, head_occurrences, renames)
+    return _SuppressionDeltaContext(
+        base_by_key,
+        head_by_key,
+        base_sources,
+        head_sources,
+        _source_manifest_digest(base_sources),
+        _source_manifest_digest(head_sources),
+    )
+
+
+def _suppression_indexes(
+    base_occurrences: tuple[SuppressionOccurrence, ...],
+    head_occurrences: tuple[SuppressionOccurrence, ...],
+    renames: dict[str, str],
+) -> tuple[
+    dict[tuple[str, str, str, int], SuppressionOccurrence],
+    dict[tuple[str, str, str, int], SuppressionOccurrence],
+]:
+    reverse_renames = {new: old for old, new in renames.items()}
+    base_by_key = _suppression_occurrence_index(base_occurrences, reverse_renames={})
+    head_by_key = _suppression_occurrence_index(head_occurrences, reverse_renames=reverse_renames)
+    return base_by_key, head_by_key
+
+
+def _suppression_occurrence_index(
+    occurrences: tuple[SuppressionOccurrence, ...], *, reverse_renames: dict[str, str]
+) -> dict[tuple[str, str, str, int], SuppressionOccurrence]:
+    counts: dict[tuple[str, str, str], int] = {}
+    indexed: dict[tuple[str, str, str, int], SuppressionOccurrence] = {}
+    for occurrence in occurrences:
+        identity = (
+            reverse_renames.get(occurrence.path, occurrence.path),
+            occurrence.family,
+            occurrence.token,
+        )
+        ordinal = counts.get(identity, 0)
+        counts[identity] = ordinal + 1
+        indexed[_suppression_key(occurrence, reverse_renames=reverse_renames, ordinal=ordinal)] = occurrence
+    return indexed
+
+
+def _classify_suppression_keys(
+    base_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence],
+    head_by_key: dict[tuple[str, str, str, int], SuppressionOccurrence],
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+    cache: _CorrespondenceCache,
+) -> tuple[
+    list[_SuppressionPairing],
+    list[_SuppressionIntroduction],
+    bool,
+]:
+    unchanged: list[_SuppressionPairing] = []
+    introduced: list[_SuppressionIntroduction] = []
+    correspondence_unknown = False
+    base_buckets = _suppression_identity_buckets(base_by_key)
+    head_buckets = _suppression_identity_buckets(head_by_key)
+    sources = _SuppressionSources(base_sources, head_sources)
+    for identity in sorted(set(base_buckets) | set(head_buckets)):
+        identity_unchanged, identity_introduced, identity_unknown = _classify_suppression_identity(
+            base_buckets.get(identity, []),
+            head_buckets.get(identity, []),
+            sources=sources,
+            cache=cache,
+        )
+        unchanged.extend(identity_unchanged)
+        introduced.extend(identity_introduced)
+        correspondence_unknown = correspondence_unknown or identity_unknown
+    return (
+        sorted(unchanged, key=_suppression_pairing_sort_key),
+        sorted(introduced, key=lambda item: item.head_key),
+        correspondence_unknown,
+    )
+
+
+def _suppression_pairing_sort_key(
+    pairing: _SuppressionPairing,
+) -> tuple[bool, _SuppressionKey, _SuppressionKey]:
+    return pairing.base_key is None, pairing.base_key or pairing.head_key, pairing.head_key
+
+
+def _classify_suppression_identity(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    sources: _SuppressionSources,
+    cache: _CorrespondenceCache,
+) -> tuple[list[_SuppressionPairing], list[_SuppressionIntroduction], bool]:
+    if not base_bucket:
+        return [], [_SuppressionIntroduction(None, key, {}) for key, _item in head_bucket], False
+    if not head_bucket:
+        return [], [], False
+    base_source = sources.base[base_bucket[0][1].path]
+    head_source = sources.head[head_bucket[0][1].path]
+    if _cached_source_equality(base_source, head_source, cache.source_equal):
+        pair_count = min(len(base_bucket), len(head_bucket))
+        pairs = [_SuppressionPairing(base_bucket[index][0], head_bucket[index][0], {}) for index in range(pair_count)]
+        introduced = [_SuppressionIntroduction(None, key, {}) for key, _item in head_bucket[pair_count:]]
+        return pairs, introduced, False
+    return _classify_changed_suppression_identity(base_bucket, head_bucket, sources=sources, cache=cache)
+
+
+def _classify_changed_suppression_identity(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    sources: _SuppressionSources,
+    cache: _CorrespondenceCache,
+) -> tuple[list[_SuppressionPairing], list[_SuppressionIntroduction], bool]:
+    pair_evidence = _suppression_pair_evidence(
+        base_bucket,
+        head_bucket,
+        base_sources=sources.base,
+        head_sources=sources.head,
+        cache=cache,
+    )
+    correspondence_pairs = [
+        _SuppressionPairing(base_key, head_key, correspondence.evidence)
+        for (base_key, head_key), correspondence in pair_evidence.correspondences.items()
+        if correspondence.status != "introduced"
+    ]
+    introduced = [
+        _SuppressionIntroduction(base_key, head_key, correspondence.evidence)
+        for (base_key, head_key), correspondence in pair_evidence.correspondences.items()
+        if correspondence.status == "introduced"
+    ]
+    matched_base = {base_key for base_key, _head_key in pair_evidence.correspondences}
+    matched_head = {head_key for _base_key, head_key in pair_evidence.correspondences}
+    remaining_base = [entry for entry in base_bucket if entry[0] not in matched_base]
+    remaining_head = [entry for entry in head_bucket if entry[0] not in matched_head]
+    fallback_pairs, fallback_introduced, fallback_unknown = _suppression_fallback_pairs(
+        remaining_base,
+        remaining_head,
+        sources=sources,
+        cache=cache,
+    )
+    correspondence_unknown = any(
+        correspondence.status == "unknown" for correspondence in pair_evidence.correspondences.values()
+    )
+    return (
+        correspondence_pairs + fallback_pairs,
+        introduced + fallback_introduced,
+        correspondence_unknown or fallback_unknown,
+    )
+
+
+def _suppression_fallback_pairs(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    sources: _SuppressionSources,
+    cache: _CorrespondenceCache,
+) -> tuple[list[_SuppressionPairing], list[_SuppressionIntroduction], bool]:
+    unchanged: list[_SuppressionPairing] = []
+    introduced: list[_SuppressionIntroduction] = []
+    correspondence_unknown = False
+    pair_count = min(len(base_bucket), len(head_bucket))
+    for base_entry, head_entry in zip(base_bucket[:pair_count], head_bucket[:pair_count], strict=True):
+        base_key, base_item = base_entry
+        head_key, head_item = head_entry
+        correspondence = _suppression_occurrence_continuity(
+            base_item,
+            head_item,
+            base_source=sources.base[base_item.path],
+            head_source=sources.head[head_item.path],
+            cache=cache,
+        )
+        if correspondence.status == "introduced":
+            introduced.append(
+                _SuppressionIntroduction(
+                    base_key,
+                    head_key,
+                    correspondence.evidence,
+                )
+            )
+        else:
+            unchanged.append(_SuppressionPairing(base_key, head_key, correspondence.evidence))
+            correspondence_unknown = correspondence_unknown or correspondence.status == "unknown"
+    surplus = head_bucket[pair_count:]
+    if correspondence_unknown:
+        evidence = {
+            "algorithm": "source-line-correspondence-v1",
+            "base_count": len(base_bucket),
+            "decision": "ambiguous_surplus_candidate",
+            "head_count": len(head_bucket),
+            "status": "unknown",
+        }
+        unchanged.extend(_SuppressionPairing(None, key, evidence) for key, _item in surplus)
+    else:
+        introduced.extend(_SuppressionIntroduction(None, key, {}) for key, _item in surplus)
+    return unchanged, introduced, correspondence_unknown
+
+
+def _suppression_identity_buckets(
+    occurrences: dict[_SuppressionKey, SuppressionOccurrence],
+) -> dict[tuple[str, str, str], list[_SuppressionEntry]]:
+    buckets: dict[tuple[str, str, str], list[_SuppressionEntry]] = defaultdict(list)
+    for key, occurrence in sorted(occurrences.items()):
+        buckets[key[:3]].append((key, occurrence))
+    return buckets
+
+
+def _suppression_pair_evidence(
+    base_bucket: list[_SuppressionEntry],
+    head_bucket: list[_SuppressionEntry],
+    *,
+    base_sources: dict[str, bytes],
+    head_sources: dict[str, bytes],
+    cache: _CorrespondenceCache,
+) -> _SuppressionPairEvidence:
+    base_source = base_sources[base_bucket[0][1].path]
+    head_source = head_sources[head_bucket[0][1].path]
+    base_lines = _suppression_physical_lines(base_bucket, _cached_source_lines(base_source, cache.source_lines))
+    head_lines = _suppression_physical_lines(head_bucket, _cached_source_lines(head_source, cache.source_lines))
+    base_by_line = _suppression_entries_by_line(base_bucket, base_lines)
+    head_by_line = _suppression_entries_by_line(head_bucket, head_lines)
+    correspondences: dict[tuple[_SuppressionKey, _SuppressionKey], _SuppressionCorrespondence] = {}
+    for line in sorted(set(base_by_line) & set(head_by_line)):
+        base_entries = base_by_line[line]
+        head_entries = head_by_line[line]
+        if len(base_entries) != 1 or len(head_entries) != 1:
+            continue
+        base_key, base_item = base_entries[0]
+        head_key, head_item = head_entries[0]
+        correspondences[(base_key, head_key)] = _suppression_occurrence_continuity(
+            base_item,
+            head_item,
+            base_source=base_source,
+            head_source=head_source,
+            cache=cache,
+        )
+    return _SuppressionPairEvidence(correspondences, base_lines, head_lines)
+
+
+def _suppression_physical_lines(
+    bucket: list[_SuppressionEntry],
+    source_lines: list[bytes],
+) -> dict[_SuppressionKey, bytes | None]:
+    return {
+        key: source_lines[occurrence.line - 1] if 0 < occurrence.line <= len(source_lines) else None
+        for key, occurrence in bucket
+    }
+
+
+def _suppression_entries_by_line(
+    bucket: list[_SuppressionEntry],
+    physical_lines: dict[_SuppressionKey, bytes | None],
+) -> dict[bytes, list[_SuppressionEntry]]:
+    entries: dict[bytes, list[_SuppressionEntry]] = defaultdict(list)
+    for entry in bucket:
+        line = physical_lines[entry[0]]
+        if line is not None:
+            entries[line].append(entry)
+    return entries
+
+
+def _suppression_occurrence_continuity(
+    base: SuppressionOccurrence,
+    head: SuppressionOccurrence,
+    *,
+    base_source: bytes,
+    head_source: bytes,
+    cache: _CorrespondenceCache,
+) -> _SuppressionCorrespondence:
+    evidence: dict[str, object] = {
+        "algorithm": "source-line-correspondence-v1",
+        "base_line": base.line,
+        "head_line": head.line,
+        "bounds": {
+            "max_source_bytes": _MAX_SOURCE_BYTES,
+            "max_source_lines": _MAX_SOURCE_LINES,
+            "max_cells": _MAX_CORRESPONDENCE_CELLS,
+            "max_aggregate_cells": _MAX_AGGREGATE_CORRESPONDENCE_CELLS,
+        },
+    }
+    if _cached_source_equality(base_source, head_source, cache.source_equal):
+        return _suppression_correspondence("unchanged", evidence, decision="identical_source")
+    base_finding = DifferentialFinding("suppression", base.family, "error", base.path, base.line, base.token, True)
+    head_finding = DifferentialFinding("suppression", head.family, "error", head.path, head.line, head.token, True)
+    context, reason = _continuity_context(
+        base_finding,
+        head_finding,
+        base_source=base_source,
+        head_source=head_source,
+        source_line_cache=cache.source_lines,
+    )
+    if context is None:
+        return _suppression_correspondence("unknown", {**evidence, **reason}, decision="unavailable")
+    evidence["base_line_sequence_digest"] = "sha256:" + hashlib.sha256(b"\n".join(context.base_lines)).hexdigest()
+    evidence["head_line_sequence_digest"] = "sha256:" + hashlib.sha256(b"\n".join(context.head_lines)).hexdigest()
+    base_line = context.base_lines[context.base_index]
+    head_line = context.head_lines[context.head_index]
+    if base_line != head_line:
+        return _suppression_correspondence("introduced", evidence, decision="physical_line_changed")
+    if context.base_lines.count(base_line) != 1 or context.head_lines.count(head_line) != 1:
+        return _suppression_correspondence("unknown", evidence, decision="ambiguous_physical_line")
+    source_key = (base_source, head_source)
+    if not _reserve_forbidden_correspondence(cache, source_key, context):
+        return _suppression_correspondence("unknown", evidence, decision="aggregate_correspondence_bounds")
+    evidence.update(
+        _continuity_cost_evidence(
+            context,
+            source_key=source_key,
+            matrix_cache=cache.matrices,
+            forbidden_cache=cache.forbidden_costs,
+        )
+    )
+    pair_cost = _integer_evidence(evidence, "pair_cost")
+    global_cost = _integer_evidence(evidence, "global_cost")
+    forced_cost = _integer_evidence(evidence, "forced_cost")
+    forbidden_cost = _integer_evidence(evidence, "forbidden_cost")
+    if pair_cost == 0 and forced_cost == global_cost and forbidden_cost > global_cost:
+        return _suppression_correspondence("unchanged", evidence, decision="unique_optimal_match")
+    return _suppression_correspondence("introduced", evidence, decision="not_unique_optimal_correspondence")
+
+
+def _suppression_correspondence(
+    status: Literal["unchanged", "introduced", "unknown"],
+    evidence: dict[str, object],
+    *,
+    decision: str,
+) -> _SuppressionCorrespondence:
+    return _SuppressionCorrespondence(status, {**evidence, "decision": decision, "status": status})
+
+
+def _cached_source_equality(
+    base_source: bytes,
+    head_source: bytes,
+    cache: dict[tuple[bytes, bytes], bool],
+) -> bool:
+    source_key = (base_source, head_source)
+    equal = cache.get(source_key)
+    if equal is None:
+        equal = base_source == head_source
+        cache[source_key] = equal
+    return equal
+
+
+def _reserve_forbidden_correspondence(
+    cache: _CorrespondenceCache,
+    source_key: tuple[bytes, bytes],
+    context: _ContinuityContext,
+) -> bool:
+    forbidden_key = (*source_key, context.base_index, context.head_index)
+    if forbidden_key in cache.forbidden_costs:
+        return True
+    used_cells = cache.forbidden_cells.get(source_key, 0)
+    if used_cells + context.cells > _MAX_AGGREGATE_CORRESPONDENCE_CELLS:
+        return False
+    cache.forbidden_cells[source_key] = used_cells + context.cells
+    return True
+
+
+def _introduced_suppression_findings(
+    introductions: list[_SuppressionIntroduction],
+    context: _SuppressionDeltaContext,
+) -> list[SuppressionFinding]:
+    findings: list[SuppressionFinding] = []
+    for introduction in introductions:
+        head_item = context.head_by_key[introduction.head_key]
+        base_item = context.base_by_key[introduction.base_key] if introduction.base_key is not None else None
+        findings.append(
+            SuppressionFinding(
+                head_item.kind,
+                head_item.path,
+                head_item.line,
+                True,
+                _suppression_evidence(
+                    head_item,
+                    base_occurrence=base_item,
+                    base_source=context.base_sources.get(base_item.path) if base_item is not None else None,
+                    head_source=context.head_sources.get(head_item.path),
+                    base_manifest_digest=context.base_manifest_digest,
+                    head_manifest_digest=context.head_manifest_digest,
+                    correspondence_evidence=introduction.correspondence_evidence,
+                ),
+            )
+        )
+    return findings
+
+
+def _append_quarantined_suppressions(
+    findings: list[SuppressionFinding],
+    unchanged_pairs: list[_SuppressionPairing],
+    context: _SuppressionDeltaContext,
+    *,
+    cache: _CorrespondenceCache,
+) -> bool:
+    quarantined = False
+    for pair in unchanged_pairs:
+        head_item = context.head_by_key[pair.head_key]
+        base_item = context.base_by_key[pair.base_key] if pair.base_key is not None else None
+        base_source = (
+            context.base_sources.get(base_item.path)
+            if base_item is not None
+            else context.base_sources.get(pair.head_key[0])
+        )
+        head_source = context.head_sources[head_item.path]
+        sources_equal = base_source is not None and _cached_source_equality(
+            base_source, head_source, cache.source_equal
+        )
+        if base_item is not None and sources_equal:
+            continue
+        findings.append(
+            SuppressionFinding(
+                "unchanged_suppression_on_changed_file",
+                head_item.path,
+                head_item.line,
+                True,
+                _suppression_evidence(
+                    head_item,
+                    base_occurrence=base_item,
+                    base_source=base_source,
+                    head_source=head_source,
+                    base_manifest_digest=context.base_manifest_digest,
+                    head_manifest_digest=context.head_manifest_digest,
+                    correspondence_evidence=pair.correspondence_evidence,
+                ),
+            )
+        )
+        quarantined = True
+    return quarantined
+
+
+def _suppression_status(
+    *,
+    quarantined: bool,
+    introduced: bool,
+) -> Literal["PASS", "FAIL", "UNKNOWN"]:
+    if quarantined:
+        return "UNKNOWN"
+    if introduced:
+        return "FAIL"
+    return "PASS"
+
+
+def _canonical_bytes(document: object) -> bytes:
+    return json.dumps(document, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+
+
+def load_suppression_catalog_and_checkpoint() -> tuple[SuppressionCatalogResource, C14Checkpoint]:
+    """Load the signed catalog and its checkpoint binding from installed resources."""
+
+    package = files("specfact_code_review")
+    contracts = package.joinpath("resources", "contracts")
+    resource_bytes = contracts.joinpath("pr-range-v1-suppression-catalog.json").read_bytes()
+    canonical_bytes = _canonical_bytes(json.loads(resource_bytes))
+    resource = SuppressionCatalogResource("sha256:" + hashlib.sha256(resource_bytes).hexdigest(), resource_bytes)
+    checkpoint = C14Checkpoint(SuppressionCatalogContract(_FROZEN_SUPPRESSION_CATALOG_DIGEST, canonical_bytes))
+    return resource, checkpoint
+
+
+def activate_suppression_catalog(
+    *, checkpoint_digest: str, resource_digest: str, package_digest: str, profile_digest: str
+) -> CatalogActivation:
+    """Activate the profile only when every independently bound catalog digest agrees."""
+
+    digests = {checkpoint_digest, resource_digest, package_digest, profile_digest}
+    if len(digests) != 1:
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_mismatch")
+    return CatalogActivation("PASS", True, digest=resource_digest)
+
+
+def _authenticated_package_catalog_digest() -> str | None:
+    try:
+        manifest = yaml.safe_load(
+            (Path(__file__).resolve().parents[3] / "module-package.yaml").read_text(encoding="utf-8")
+        )
+        entry = manifest["authenticated_resources"][_SUPPRESSION_CATALOG_RESOURCE]
+    except (KeyError, OSError, TypeError, UnicodeError, yaml.YAMLError):
+        return None
+    match entry:
+        case {"checkpoint_contract": "suppression_catalog_contract", "digest": str() as digest}:
+            return digest
+        case _:
+            return None
+
+
+def _activate_bound_suppression_catalog(
+    *, resource_digest: str, matrix_bindings: object, package_digest: str | None
+) -> CatalogActivation:
+    required = {"checkpoint", "resource", "package", "profile", "report", "static_envelope"}
+    if not isinstance(matrix_bindings, dict) or set(matrix_bindings) != required:
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_bindings_invalid")
+    if any(matrix_bindings[name] != resource_digest for name in required):
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_identity_mismatch")
+    if package_digest is None:
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_package_binding_unavailable")
+    return activate_suppression_catalog(
+        checkpoint_digest=_FROZEN_SUPPRESSION_CATALOG_DIGEST,
+        resource_digest=resource_digest,
+        package_digest=package_digest,
+        profile_digest=_PR_RANGE_V1_SUPPRESSION_CATALOG_DIGEST,
+    )
+
+
+@ensure(lambda result: result.status in {"PASS", "UNKNOWN"})
+def activate_packaged_suppression_catalog() -> CatalogActivation:
+    """Activate the installed catalog only when every report binding matches its raw bytes."""
+
+    try:
+        resource, checkpoint = load_suppression_catalog_and_checkpoint()
+        package = files("specfact_code_review")
+        matrix = json.loads(
+            package.joinpath("resources", "contracts", "review-report-schema-1.6-consumer-matrix.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        bindings = matrix["suppression_catalog_identity_bindings"]
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError):
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_resource_unavailable")
+    if checkpoint.suppression_catalog_contract.digest != _FROZEN_SUPPRESSION_CATALOG_DIGEST:
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_checkpoint_binding_mismatch")
+    return _activate_bound_suppression_catalog(
+        resource_digest=resource.digest,
+        matrix_bindings=bindings,
+        package_digest=_authenticated_package_catalog_digest(),
+    )

@@ -26,6 +26,34 @@ MODULES_REPO_ROOT = Path(__file__).resolve().parents[3]
 RUN_DOC = MODULES_REPO_ROOT / "docs" / "bundles" / "code-review" / "run.md"
 
 
+def test_merge_quality_guidance_requires_complete_pr_range() -> None:
+    paths = (
+        MODULES_REPO_ROOT / "docs/agent-rules/20-repository-context.md",
+        MODULES_REPO_ROOT / "docs/agent-rules/50-quality-gates-and-review.md",
+        MODULES_REPO_ROOT / "docs/modules/code-review.md",
+        MODULES_REPO_ROOT / "docs/bundles/code-review/run.md",
+        MODULES_REPO_ROOT
+        / "packages/specfact-code-review/src/specfact_code_review/resources/skills/specfact-code-review/SKILL.md",
+        MODULES_REPO_ROOT / "skills/specfact-code-review/SKILL.md",
+        MODULES_REPO_ROOT / ".vibe/skills/specfact-code-review/SKILL.md",
+    )
+
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        assert "--scope range" in text, path
+        assert "--base-ref <full-base-ref>" in text, path
+        assert "--head-ref <full-head-ref>" in text, path
+        assert "--pr-context-file <event-derived-absolute-path>" in text, path
+        assert "--enforcement full" in text, path
+        assert "range_preview" in text, path
+        assert "protected consumer" in text, path
+
+    staged_helper = (MODULES_REPO_ROOT / "scripts/pre_commit_code_review.py").read_text(encoding="utf-8")
+    staged_command = staged_helper.split("def build_review_command", 1)[1].split("\ndef ", 1)[0]
+    assert "*files" in staged_command
+    assert '"--scope"' not in staged_command
+
+
 def _review_run_click_command() -> click.Command:
     review_group = typer_get_command(review_commands.review_app)
     run_cmd = review_group.commands.get("run")
@@ -57,6 +85,13 @@ def test_code_review_run_doc_mentions_public_ty_options() -> None:
     assert "--bug-hunt" in text
     assert "exploratory" in text.lower()
     assert "review-report.json" in text
+
+
+def test_code_review_run_doc_names_authoritative_schema_1_6() -> None:
+    text = RUN_DOC.read_text(encoding="utf-8")
+
+    assert "schema version **`1.6`**" in text
+    assert "schema version **`1.5`**" not in text
 
 
 def _resolver_messages_for_docs_parity() -> list[str]:

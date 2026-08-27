@@ -1,0 +1,159 @@
+{
+  "accepted_pr_range_envelope": {
+    "profile_id": "pr-range-v1",
+    "schema_version": "1.6",
+    "suppression_catalog_digest": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+  },
+  "boundary_mismatch_reports": [
+    {
+      "dimension": "checkpoint",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "resource",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "package",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "profile",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "report",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "static_envelope",
+      "expected_status": "UNKNOWN"
+    }
+  ],
+  "canonical_status_reports": [
+    {
+      "assurance_status": "PASS",
+      "ci_exit_code": 0,
+      "overall_verdict": "PASS",
+      "schema_version": "1.6",
+      "suppression_catalog_digest": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+    },
+    {
+      "assurance_status": "FAIL",
+      "ci_exit_code": 1,
+      "overall_verdict": "FAIL",
+      "schema_version": "1.6",
+      "suppression_catalog_digest": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+    },
+    {
+      "assurance_status": "UNKNOWN",
+      "ci_exit_code": 1,
+      "overall_verdict": "FAIL",
+      "schema_version": "1.6",
+      "suppression_catalog_digest": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+    },
+    {
+      "assurance_status": "NOT_APPLICABLE",
+      "ci_exit_code": 0,
+      "overall_verdict": "PASS_WITH_ADVISORY",
+      "schema_version": "1.6",
+      "suppression_catalog_digest": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+    }
+  ],
+  "finding_multiset_cases": [
+    {
+      "base_count": 1,
+      "blocking": false,
+      "disposition": "fixed",
+      "expected_status": "PASS",
+      "head_count": 0
+    },
+    {
+      "base_count": 0,
+      "blocking": true,
+      "disposition": "introduced",
+      "expected_status": "FAIL",
+      "head_count": 1
+    },
+    {
+      "base_count": 1,
+      "blocking": true,
+      "disposition": "unchanged",
+      "expected_status": "FAIL",
+      "head_count": 1
+    },
+    {
+      "base_count": 1,
+      "blocking": true,
+      "disposition": "unknown",
+      "expected_status": "UNKNOWN",
+      "head_count": 1
+    }
+  ],
+  "legacy_schema_less_ledger_fixture": {
+    "input": {
+      "overall_verdict": "PASS",
+      "reward_delta": 5
+    },
+    "normalized": {
+      "reward_delta": 5,
+      "verdict": "PASS"
+    }
+  },
+  "pr_range_boundary_cases": [
+    {
+      "dimension": "accepted",
+      "expected_status": "PASS"
+    },
+    {
+      "dimension": "analyzer_profile",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "merge_base",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "producer_identity",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "project_runtime",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "schema",
+      "expected_status": "UNKNOWN"
+    },
+    {
+      "dimension": "suppression_catalog",
+      "expected_status": "UNKNOWN"
+    }
+  ],
+  "project_runtime_cases": [
+    {
+      "authority": "target-tip-attested",
+      "expected_status": "PASS",
+      "snapshot_identity": "identical"
+    },
+    {
+      "authority": "candidate-controlled",
+      "expected_status": "UNKNOWN",
+      "snapshot_identity": "identical"
+    },
+    {
+      "authority": "target-tip-attested",
+      "expected_status": "UNKNOWN",
+      "snapshot_identity": "mismatched"
+    }
+  ],
+  "schema": "review-report-schema-1.6-consumer-matrix-v1",
+  "suppression_catalog_identity_bindings": {
+    "checkpoint": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375",
+    "package": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375",
+    "profile": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375",
+    "report": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375",
+    "resource": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375",
+    "static_envelope": "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+  }
+}

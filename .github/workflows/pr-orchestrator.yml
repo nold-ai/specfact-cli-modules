@@ -129,7 +129,9 @@ jobs:
           persist-credentials: false
       - name: Resolve paired core CLI ref
         id: core-ref
-        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        if: >-
+          needs.changes.outputs.skip_tests_dev_to_main != 'true' &&
+          github.event_name != 'workflow_dispatch'
         shell: bash
         env:
           CANDIDATE_REF: ${{ github.head_ref || github.ref_name }}
@@ -148,12 +150,38 @@ jobs:
           fi
 
       - name: Checkout paired core CLI
-        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        if: >-
+          needs.changes.outputs.skip_tests_dev_to_main != 'true' &&
+          github.event_name != 'workflow_dispatch'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           repository: nold-ai/specfact-cli
           path: specfact-cli
           ref: ${{ steps.core-ref.outputs.ref }}
+          persist-credentials: false
+
+      - name: Checkout paired core CLI (manual main)
+        if: >-
+          needs.changes.outputs.skip_tests_dev_to_main != 'true' &&
+          github.event_name == 'workflow_dispatch' &&
+          github.ref_name == 'main'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          path: specfact-cli
+          ref: "main"
+          persist-credentials: false
+
+      - name: Checkout paired core CLI (manual dev)
+        if: >-
+          needs.changes.outputs.skip_tests_dev_to_main != 'true' &&
+          github.event_name == 'workflow_dispatch' &&
+          github.ref_name != 'main'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          path: specfact-cli
+          ref: "dev"
           persist-credentials: false
       - name: Export paired core CLI path
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
@@ -208,3 +236,344 @@ jobs:
       - name: Full Test Suite
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run test
+
+  exact-core-schema-compatibility:
+    name: exact-core-schema-compatibility (${{ matrix.python-version }})
+    needs: [changes]
+    if: needs.changes.outputs.code_changed == 'true' && needs.changes.outputs.skip_tests_dev_to_main != 'true'
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout candidate modules
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Checkout immutable core v0.55.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          path: exact-core
+          ref: refs/tags/v0.55.1
+          persist-credentials: false
+      - name: Verify immutable lightweight tag, commit, and tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C exact-core rev-parse HEAD)" = "b1e517e60e669eaba15a18ecfa83ef5a9df65276"
+          test "$(git -C exact-core rev-parse 'HEAD^{tree}')" = "47984be5434d7ae65ed6908bf525a32053290337"
+          test "$(git ls-remote --tags https://github.com/nold-ai/specfact-cli.git refs/tags/v0.55.1 | cut -f1)" = "b1e517e60e669eaba15a18ecfa83ef5a9df65276"
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up immutable ORAS client
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6
+        with:
+          url: https://github.com/oras-project/oras/releases/download/v1.3.3/oras_1.3.3_linux_amd64.tar.gz
+          checksum: 9ce999f8d2de03fc03968b29d743077a58783e545e5eaa53917ca177352d0e59
+      - name: Prefetch signed analyzer capsule into credential-free cache
+        shell: bash
+        env:
+          MATRIX_PYTHON: ${{ matrix.python-version }}
+          REGISTRY_ACTOR: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          abi="cp${MATRIX_PYTHON//./}"
+          case "$abi" in
+            cp311) manifest="sha256:4f9e424f3720ea0807cc0f9f22c0ba28e3c604632ddd719f605c22e878437a72" ;;
+            cp312) manifest="sha256:f00ac813f428b7c2ef3d1ce3400496f67ca2d508064e6efc55af1ba6c4697461" ;;
+            cp313) manifest="sha256:1516be5a113d9176c70fcc4cfac3fe46eaf32d5b66c381b17fbb26a5bcc9fb27" ;;
+            *) echo "unsupported C14 ABI: $abi" >&2; exit 1 ;;
+          esac
+          layout="${RUNNER_TEMP}/c14-oci-layout-${abi}"
+          cache="${RUNNER_TEMP}/c14-prefetched-${abi}/oci-cache"
+          registry_config="${RUNNER_TEMP}/c14-oras-auth-${abi}.json"
+          trap 'rm -f "$registry_config"' EXIT
+          rm -rf "$layout" "$cache"
+          mkdir -p "$cache"
+          printf '%s' "$REGISTRY_TOKEN" | oras login ghcr.io \
+            --username "$REGISTRY_ACTOR" \
+            --password-stdin \
+            --registry-config "$registry_config"
+          oras cp --to-oci-layout \
+            --from-registry-config "$registry_config" \
+            "ghcr.io/nold-ai/specfact-code-review-analyzer-runtime@${manifest}" \
+            "${layout}:${abi}"
+          cp -R "${layout}/blobs" "$cache/"
+          test "$(sha256sum "${cache}/blobs/sha256/${manifest#sha256:}" | cut -d ' ' -f1)" = "${manifest#sha256:}"
+          rm -f "$registry_config"
+          echo "PREFETCHED_OCI_CACHE=$cache" >> "$GITHUB_ENV"
+      - name: Install exact core and candidate module package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv .exact-core-venv
+          . .exact-core-venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir ./exact-core pytest==9.1.1 PyYAML==6.0.3 beartype==0.22.9 icontract==2.7.3 pydantic==2.13.4 requests==2.34.2 typer==0.27.1 packaging==26.3
+          python scripts/link_dev_module.py specfact-code-review --shadow-root "${RUNNER_TEMP}/specfact-modules" --force
+      - name: reject-core-version-alias
+        shell: bash
+        run: |
+          set -euo pipefail
+          . .exact-core-venv/bin/activate
+          python - <<'PY'
+          import importlib.metadata
+          from packaging.specifiers import SpecifierSet
+
+          assert importlib.metadata.version("specfact-cli") == "0.55.1"
+          assert SpecifierSet("===0.55.1").contains("0.55.1")
+          assert not SpecifierSet("===0.55.1").contains("0.55.1+vendor")
+          assert SpecifierSet("==0.55.1").contains("0.55.1+vendor")
+          PY
+      - name: Run schema 1.6 exact-core compatibility smoke
+        shell: bash
+        env:
+          SPECFACT_MODULES_ROOTS: ${{ runner.temp }}/specfact-modules
+          SPECFACT_ALLOW_UNSIGNED: "1"
+          PYTHONPATH: ${{ github.workspace }}/packages/specfact-code-review/src
+        run: |
+          set -euo pipefail
+          . .exact-core-venv/bin/activate
+          python -m pytest -q --import-mode=importlib tests/e2e/specfact_code_review/test_review_run_e2e.py::test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix
+      - name: Run signed analyzer capsule from prefetched cache and empty Bubblewrap smoke
+        shell: bash
+        env:
+          MATRIX_PYTHON: ${{ matrix.python-version }}
+          PREFETCHED_OCI_CACHE: ${{ env.PREFETCHED_OCI_CACHE }}
+          PYTHONPATH: ${{ github.workspace }}/packages/specfact-code-review/src
+        run: |
+          set -euo pipefail
+          . .exact-core-venv/bin/activate
+          sudo --preserve-env=MATRIX_PYTHON,PREFETCHED_OCI_CACHE,PYTHONPATH "$PWD/.exact-core-venv/bin/python" - <<'PY'
+          import gzip
+          import hashlib
+          import json
+          import os
+          import shutil
+          import subprocess
+          import tempfile
+          from itertools import permutations
+          from pathlib import Path
+          from unittest import mock
+          from urllib.parse import urlsplit, urlunsplit
+
+          from specfact_code_review.run import toolchain
+
+          repository = Path.cwd()
+          resource_path = repository / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json"
+          checkpoint_path = repository / "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json"
+          resource_bytes = resource_path.read_bytes()
+          checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+          resource_digest = "sha256:" + hashlib.sha256(resource_bytes).hexdigest()
+          assert resource_digest == checkpoint["toolchain_lock_projection_digest"]
+          lock = json.loads(resource_bytes)
+          assert lock == checkpoint["toolchain_lock_projection"]
+
+          abi = "cp" + os.environ["MATRIX_PYTHON"].replace(".", "")
+          environment = next(item for item in lock["environments"] if item["python_abi"] == abi)
+          environment_id = environment["environment_id"]
+          runtime_root = Path(tempfile.mkdtemp(prefix=f"c14-capsule-{abi}-", dir="/tmp"))
+          storage_a = runtime_root / "storage-a"
+          storage_b = runtime_root / "storage-b"
+          cache_a = storage_a / "oci-cache"
+          shutil.copytree(Path(os.environ["PREFETCHED_OCI_CACHE"]), cache_a)
+
+          strict_manifest_verifier = toolchain._verify_final_root_manifest
+
+          def diagnostic_manifest_verifier(root: Path, selected: dict[str, object]) -> None:
+              expected = selected["final_root_manifest"]
+              entries, regular_bytes = toolchain._manifest_entries(root, include_root=False)
+              diagnostic_path = Path(f"/tmp/c14-manifest-{abi}.json.gz")
+              with gzip.open(diagnostic_path, "wt", encoding="utf-8") as artifact:
+                  json.dump(entries, artifact, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+              diagnostic_path.chmod(0o644)
+              analyzer_prefix = Path(selected["paths"]["analyzers"]).relative_to(
+                  Path(selected["paths"]["root"])
+              ).as_posix()
+
+              def candidate_digest(strategy: str) -> str:
+                  candidate = []
+                  for original in entries:
+                      entry = dict(original)
+                      if entry["path"] == analyzer_prefix or entry["path"].startswith(analyzer_prefix + "/"):
+                          if strategy == "pip-standard":
+                              if entry["type"] == "directory":
+                                  entry["mode"] = 0o755
+                              elif entry["type"] == "regular_file":
+                                  entry["mode"] = 0o755 if int(entry["mode"]) & 0o111 else 0o644
+                              elif entry["type"] == "symlink":
+                                  entry["mode"] = 0o777
+                          elif strategy == "owner-writable":
+                              entry["mode"] = int(entry["mode"]) | 0o200
+                          elif strategy == "umask-022":
+                              entry["mode"] = int(entry["mode"]) & ~0o022
+                      candidate.append(entry)
+                  return toolchain.canonical_json_digest(candidate)
+
+              mode_counts: dict[str, int] = {}
+              for entry in entries:
+                  if entry["path"] == analyzer_prefix or entry["path"].startswith(analyzer_prefix + "/"):
+                      key = f'{entry["type"]}:{int(entry["mode"]):04o}'
+                      mode_counts[key] = mode_counts.get(key, 0) + 1
+              serialized_subroots = {}
+              for name in selected["final_root_manifest"]["subroots"]:
+                  block = [
+                      entry
+                      for entry in entries
+                      if entry["path"] == name or entry["path"].startswith(name + "/")
+                  ]
+                  serialized_subroots[name] = json.dumps(
+                      block,
+                      ensure_ascii=False,
+                      separators=(",", ":"),
+                      sort_keys=True,
+                  ).encode()[1:-1]
+              matching_subroot_orders = []
+              for order in permutations(serialized_subroots):
+                  payload = b"[" + b",".join(serialized_subroots[name] for name in order) + b"]"
+                  digest = "sha256:" + hashlib.sha256(payload).hexdigest()
+                  if digest == expected["manifest_digest"]:
+                      matching_subroot_orders.append(order)
+              subroots = {}
+              for name in sorted(selected["final_root_manifest"]["subroots"]):
+                  subroot_entries, subroot_bytes = toolchain._manifest_entries(root / name, include_root=True)
+                  subroots[name] = {
+                      "digest": toolchain.canonical_json_digest(subroot_entries),
+                      "expected": selected["final_root_manifest"]["subroots"][name]["manifest_digest"],
+                      "regular_bytes": subroot_bytes,
+                  }
+              print("C14_MANIFEST_DIAGNOSTIC=" + json.dumps({
+                  "actual": toolchain.canonical_json_digest(entries),
+                  "candidates": {
+                      strategy: candidate_digest(strategy)
+                      for strategy in ("pip-standard", "owner-writable", "umask-022")
+                  },
+                  "entry_count": len(entries),
+                  "expected": expected["manifest_digest"],
+                  "matching_subroot_orders": matching_subroot_orders,
+                  "mode_counts": mode_counts,
+                  "regular_bytes": regular_bytes,
+                  "subroots": subroots,
+              }, sort_keys=True), flush=True)
+              strict_manifest_verifier(root, selected)
+
+          toolchain._verify_final_root_manifest = diagnostic_manifest_verifier
+
+          acquisition = toolchain.acquire_oci_distribution(
+              environment["oci"],
+              cache_root=cache_a,
+              simulate_cache_hit=True,
+          )
+          assert acquisition.status == "PASS", acquisition.reason
+          assert acquisition.source == "verified_cache"
+          assert acquisition.final_url == ""
+          assert acquisition.redirect_chain == ()
+          assert len(acquisition.records) == 2 + len(environment["oci"]["layers"])
+
+          first = toolchain.materialize_capsule(
+              lock,
+              environment_id=environment_id,
+              storage_root=runtime_root / "storage-a",
+              empty_cache=True,
+          )
+          assert first.status == "PASS", first.reason
+          assert set(first.installed_distributions) == set(first.locked_distributions)
+          shutil.copytree(cache_a, storage_b / "oci-cache")
+          with mock.patch.object(toolchain.requests, "get", side_effect=AssertionError("network used on cache hit")):
+              second = toolchain.materialize_capsule(
+                  lock,
+                  environment_id=environment_id,
+                  storage_root=runtime_root / "storage-b",
+                  empty_cache=False,
+              )
+          assert second.status == "PASS", second.reason
+          assert first.identity == second.identity
+          assert first.installed_distributions == second.installed_distributions
+          assert first.root != second.root
+
+          entries_a, bytes_a = toolchain._manifest_entries(first.root / "opt/specfact", include_root=False)
+          entries_b, bytes_b = toolchain._manifest_entries(second.root / "opt/specfact", include_root=False)
+          final_root_manifest_digest = toolchain.canonical_json_digest(entries_a)
+          assert final_root_manifest_digest == environment["final_root_manifest"]["manifest_digest"]
+          assert toolchain.canonical_json_digest(entries_b) == final_root_manifest_digest
+          assert bytes_a == bytes_b == environment["final_root_manifest"]["regular_file_bytes"]
+          for path_name in ("interpreter", "stdlib", "extensions", "loader", "libraries", "bootstrap"):
+              assert (first.root / environment["paths"][path_name].lstrip("/")).exists()
+
+          bubblewrap = next(item for item in environment["native_tools"] if item["id"] == "bubblewrap-static")
+          bubblewrap_path = first.root / bubblewrap["path"].lstrip("/")
+          assert "sha256:" + hashlib.sha256(bubblewrap_path.read_bytes()).hexdigest() == bubblewrap["executable_sha256"]
+          command = [
+              str(bubblewrap_path),
+              "--unshare-all",
+              "--cap-drop",
+              "ALL",
+              "--die-with-parent",
+              "--new-session",
+              "--ro-bind",
+              str(first.root),
+              "/",
+              "--proc",
+              "/proc",
+              "--dev",
+              "/dev",
+              "--tmpfs",
+              "/tmp",
+              "--clearenv",
+              "--setenv",
+              "PYTHONHOME",
+              "/opt/specfact/python",
+              "--setenv",
+              "PYTHONNOUSERSITE",
+              "1",
+              "--chdir",
+              "/opt/specfact",
+              environment["paths"]["loader"],
+              "--library-path",
+              environment["paths"]["libraries"],
+              environment["paths"]["interpreter"],
+              "-I",
+              "-S",
+              "-c",
+              "import sys; assert sys.prefix == '/opt/specfact/python'; print('c14-capsule-ok')",
+          ]
+          boot = subprocess.run(command, capture_output=True, text=True, check=False, timeout=60, env={})
+          assert boot.returncode == 0, boot.stderr
+          assert boot.stdout.strip() == "c14-capsule-ok"
+
+          def redact_url(url: str) -> str:
+              parsed = urlsplit(url)
+              host = parsed.hostname or ""
+              if ":" in host and not host.startswith("["):
+                  host = f"[{host}]"
+              authority = f"{host}:{parsed.port}" if parsed.port is not None else host
+              return urlunsplit((parsed.scheme, authority, parsed.path, "", ""))
+
+          print(json.dumps({
+              "abi": abi,
+              "acquisition_final_url": redact_url(acquisition.final_url),
+              "cache_hit_source": "verified_cache",
+              "closure_digest": environment["closure_digest"],
+              "final_root_manifest_digest": final_root_manifest_digest,
+              "identity": first.identity.digest,
+              "installed_count": len(first.installed_distributions),
+              "redirects": [redact_url(hop.url) for hop in acquisition.redirect_chain],
+          }, sort_keys=True))
+          PY
+
+      - name: Upload failed C14 capsule manifest diagnostic
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: c14-manifest-${{ matrix.python-version }}.json.gz
+          path: /tmp/c14-manifest-*.json.gz
+          if-no-files-found: error
+          retention-days: 1

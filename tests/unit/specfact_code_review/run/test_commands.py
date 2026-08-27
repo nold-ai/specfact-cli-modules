@@ -6,6 +6,7 @@ import re
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal
 
 import pytest
@@ -13,7 +14,7 @@ import yaml
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
-from specfact_code_review.run import commands as run_commands
+from specfact_code_review.run import commands as run_commands, scope as review_scope
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport
 from specfact_requirements.requirements.lifecycle import build_plan
 
@@ -125,7 +126,7 @@ def test_code_review_manifest_declares_requirements_runtime_dependency() -> None
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
 
     assert "nold-ai/specfact-requirements" in manifest["bundle_dependencies"]
-    assert manifest["core_compatibility"] == ">=0.53.1,<1.0.0"
+    assert manifest["core_compatibility"] == "===0.55.1"
 
 
 def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:
@@ -250,6 +251,253 @@ def test_requirements_evidence_context_canonicalizes_equivalent_json(tmp_path: P
     assert formatted_context.content_digest == f"sha256:{hashlib.sha256(canonical_payload).hexdigest()}"
 
 
+def test_requirements_evidence_attachment_preserves_schema_1_6_assurance_status(tmp_path: Path) -> None:
+    proof_path = _finalized_requirements_proof(tmp_path, decision="pass")
+    context = run_commands._requirements_evidence_context(proof_path)
+    report = ReviewReport(
+        schema_version="1.6",
+        assurance_status="UNKNOWN",
+        run_id="unknown-review",
+        timestamp=datetime(2026, 8, 19, tzinfo=UTC),
+        score=100,
+        findings=[],
+        summary="Analyzer identity mismatch.",
+        overall_verdict="FAIL",
+        ci_exit_code=1,
+        scope_evidence={"assurance_kind": "range_candidate"},
+        analyzer_evidence=[{"id": "ruff", "evidence_outcome": "UNKNOWN"}],
+    )
+
+    attached = run_commands._attach_requirements_evidence(report, context)
+
+    assert attached.requirements_evidence == context
+    assert attached.schema_version == "1.6"
+    assert attached.assurance_status == "UNKNOWN"
+    assert attached.ci_exit_code == 1
+    assert attached.scope_evidence == report.scope_evidence
+    assert attached.analyzer_evidence == report.analyzer_evidence
+
+
+def test_index_scope_evidence_serializes_captured_identity() -> None:
+    identity = review_scope.InputIdentity("blob", "100644", "a" * 40, "sha256:" + "b" * 64)
+    metadata = review_scope.IndexMetadata("100644", "a" * 40, 0, False, "H")
+    resolution = review_scope.ScopeResolution(
+        status="PASS",
+        reason="resolved",
+        selected_paths=("src/app.py",),
+        assurance_kind="index",
+        effective_assurance_kind="index",
+        ci_exit_code=0,
+        input_manifest={"src/app.py": identity},
+        index_metadata={"src/app.py": metadata},
+        index_tree="c" * 40,
+        selection_tree="c" * 40,
+    )
+
+    evidence = run_commands._scope_evidence(resolution)
+
+    assert evidence["index_tree"] == "c" * 40
+    assert evidence["selection_tree"] == "c" * 40
+    input_manifest = evidence["input_manifest"]
+    index_metadata = evidence["index_metadata"]
+    assert isinstance(input_manifest, dict)
+    assert isinstance(index_metadata, dict)
+    assert input_manifest["src/app.py"]["blob_sha"] == "a" * 40
+    assert index_metadata["src/app.py"]["flag_tag"] == "H"
+
+
+def test_scope_evidence_serializes_resolved_project_runtime_source_locks() -> None:
+    resolution = review_scope.ScopeResolution(
+        status="PASS",
+        reason="resolved",
+        selected_paths=("src/app.py",),
+        assurance_kind="range_candidate",
+        effective_assurance_kind="range_candidate",
+        ci_exit_code=0,
+        project_runtime_source_locks=(("uv.lock", "a" * 40, "sha256:" + "b" * 64),),
+    )
+
+    evidence = run_commands._scope_evidence(resolution)
+
+    assert evidence["project_runtime_source_locks"] == [
+        {"path": "uv.lock", "blob_sha": "a" * 40, "content_sha256": "sha256:" + "b" * 64}
+    ]
+
+
+def test_immutable_scope_report_cleans_materialized_roots(monkeypatch: Any, tmp_path: Path) -> None:
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    policy_root = tmp_path / "policy"
+    for root in (base_root, head_root, policy_root):
+        root.mkdir()
+
+    def snapshot(root: Path, commit: str) -> review_scope.Snapshot:
+        return review_scope.Snapshot(root, commit, "b" * 40, {}, {})
+
+    resolution = review_scope.ScopeResolution(
+        status="PASS",
+        reason="resolved",
+        selected_paths=("src/app.py",),
+        assurance_kind="range_preview",
+        effective_assurance_kind="range_preview",
+        ci_exit_code=0,
+        base_snapshot=snapshot(base_root, "a" * 40),
+        head_snapshot=snapshot(head_root, "c" * 40),
+        materialized=True,
+        policy_bundle=review_scope.PolicyBundle(policy_root, "a" * 40, "b" * 40, (), "sha256:" + "d" * 64),
+    )
+    monkeypatch.setattr(run_commands, "resolve_scope", lambda _request: resolution)
+
+    run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="c" * 40)
+    )
+
+    assert not base_root.exists()
+    assert not head_root.exists()
+    assert not policy_root.exists()
+
+
+def test_resolved_immutable_scope_executes_capsule_review_before_cleanup(monkeypatch: Any, tmp_path: Path) -> None:
+    base_root = tmp_path / "base"
+    head_root = tmp_path / "head"
+    for root in (base_root, head_root):
+        root.mkdir()
+    resolution = review_scope.ScopeResolution(
+        status="PASS",
+        reason="resolved",
+        selected_paths=("src/app.py",),
+        assurance_kind="range_preview",
+        effective_assurance_kind="range_preview",
+        ci_exit_code=0,
+        base_snapshot=review_scope.Snapshot(base_root, "a" * 40, "b" * 40, {}, {}),
+        head_snapshot=review_scope.Snapshot(head_root, "c" * 40, "d" * 40, {}, {}),
+        materialized=True,
+    )
+    expected = _report()
+    observed: dict[str, object] = {}
+
+    def execute(resolved: review_scope.ScopeResolution, **_kwargs: object) -> ReviewReport:
+        observed["resolution"] = resolved
+        observed["roots_existed"] = base_root.exists() and head_root.exists()
+        return expected
+
+    monkeypatch.setattr(run_commands, "resolve_scope", lambda _request: resolution)
+    monkeypatch.setattr(run_commands, "run_immutable_scope_review", execute)
+
+    actual = run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="c" * 40)
+    )
+
+    assert actual is expected
+    assert observed == {"resolution": resolution, "roots_existed": True}
+    assert not base_root.exists()
+    assert not head_root.exists()
+
+
+def test_command_layer_uses_capsule_gateway_for_legacy_scopes() -> None:
+    from specfact_code_review.run import runner as runner_api
+
+    assert run_commands.run_review is runner_api.run_capsule_review
+
+
+def test_immutable_scope_request_propagates_repository_identity(monkeypatch: Any) -> None:
+    captured: dict[str, object] = {}
+
+    def resolve(request: object) -> review_scope.ScopeResolution:
+        captured["request"] = request
+        return review_scope.ScopeResolution(
+            status="UNKNOWN",
+            reason="test",
+            selected_paths=(),
+            assurance_kind="range_preview",
+            effective_assurance_kind="range_preview",
+            ci_exit_code=1,
+        )
+
+    monkeypatch.setattr(run_commands, "resolve_scope", resolve)
+    monkeypatch.setattr(run_commands, "_repository_slug", lambda _root: "nold-ai/specfact-cli-modules")
+
+    run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="b" * 40)
+    )
+
+    request = captured["request"]
+    assert isinstance(request, review_scope.ScopeRequest)
+    assert request.repository_slug == "nold-ai/specfact-cli-modules"
+
+
+def test_no_governed_impact_report_binds_activated_suppression_catalog(monkeypatch: Any) -> None:
+    digest = "sha256:" + "a" * 64
+    resolution = review_scope.ScopeResolution(
+        status="NOT_APPLICABLE",
+        reason="no_governed_impact",
+        selected_paths=(),
+        assurance_kind="range_preview",
+        effective_assurance_kind="range_preview",
+        ci_exit_code=0,
+        resolved_head_commit="b" * 40,
+    )
+    monkeypatch.setattr(run_commands, "resolve_scope", lambda _request: resolution)
+    monkeypatch.setattr(
+        run_commands.differential,
+        "activate_packaged_suppression_catalog",
+        lambda: SimpleNamespace(status="PASS", profile_activated=True, digest=digest, reason=""),
+    )
+
+    report = run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="b" * 40)
+    )
+
+    assert report.assurance_status == "NOT_APPLICABLE"
+    assert report.suppression_catalog_digest == digest
+
+
+def test_no_governed_impact_report_is_unknown_when_suppression_catalog_is_unavailable(monkeypatch: Any) -> None:
+    resolution = review_scope.ScopeResolution(
+        status="NOT_APPLICABLE",
+        reason="no_governed_impact",
+        selected_paths=(),
+        assurance_kind="range_preview",
+        effective_assurance_kind="range_preview",
+        ci_exit_code=0,
+        resolved_head_commit="b" * 40,
+    )
+    monkeypatch.setattr(run_commands, "resolve_scope", lambda _request: resolution)
+    monkeypatch.setattr(
+        run_commands.differential,
+        "activate_packaged_suppression_catalog",
+        lambda: SimpleNamespace(
+            status="UNKNOWN",
+            profile_activated=False,
+            digest=None,
+            reason="suppression_catalog_identity_mismatch",
+        ),
+    )
+
+    report = run_commands._immutable_scope_report(
+        run_commands.ReviewRunRequest(files=[], scope="range", base_ref="a" * 40, head_ref="b" * 40)
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.has_unknown_required_evidence is True
+    assert report.suppression_catalog_digest is None
+
+
+def test_repository_slug_accepts_authenticated_github_origin(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        run_commands.subprocess,
+        "run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(
+            command,
+            0,
+            "git@github.com:nold-ai/specfact-cli-modules.git\n",
+            "",
+        ),
+    )
+
+    assert run_commands._repository_slug(Path.cwd()) == "nold-ai/specfact-cli-modules"
+
+
 def test_run_command_rejects_incomplete_requirements_evidence_before_review(monkeypatch: Any, tmp_path: Path) -> None:
     def unexpected_review(*_args: Any, **_kwargs: Any) -> ReviewReport:
         pytest.fail("Requirements evidence validation must run before review execution.")
@@ -291,6 +539,16 @@ def test_requirements_evidence_context_rejects_tampered_plan_digest(tmp_path: Pa
 
     with pytest.raises(run_commands.RunCommandError, match="complete final Requirements proof"):
         run_commands._requirements_evidence_context(proof_path)
+
+
+def test_requirements_plan_digest_reports_missing_declared_bundle(monkeypatch: Any) -> None:
+    def missing_bundle(_name: str) -> Any:
+        raise ModuleNotFoundError("No module named 'specfact_requirements'", name="specfact_requirements")
+
+    monkeypatch.setattr(run_commands.importlib, "import_module", missing_bundle)
+
+    with pytest.raises(run_commands.RunCommandError, match="Requirements bundle is unavailable"):
+        run_commands._requirements_plan_digest("sha256:" + "a" * 64, [{"case_id": "REQ-001"}])
 
 
 def test_requirements_evidence_context_rejects_passing_proof_without_basis(tmp_path: Path) -> None:
@@ -1372,7 +1630,7 @@ def test_changed_files_from_git_diff_filters_python_files(monkeypatch: Any, tmp_
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=0,
-                stdout=f"{python_file}\n{text_file}\nmissing.py\n",
+                stdout=f"{python_file}\0{text_file}\0missing.py\0",
                 stderr="",
             )
         return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
@@ -1397,7 +1655,7 @@ def test_changed_files_from_git_diff_excludes_test_files_by_default(monkeypatch:
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=0,
-                stdout=f"{source_file}\n{test_file}\n",
+                stdout=f"{source_file}\0{test_file}\0",
                 stderr="",
             )
         return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
@@ -1422,14 +1680,14 @@ def test_changed_files_from_git_diff_includes_untracked_python_files(monkeypatch
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=0,
-                stdout=f"{tracked_file}\n",
+                stdout=f"{tracked_file}\0",
                 stderr="",
             )
         if command[:4] == ["git", "ls-files", "--others", "--exclude-standard"]:
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=0,
-                stdout=f"{untracked_file}\n",
+                stdout=f"{untracked_file}\0",
                 stderr="",
             )
         raise AssertionError(f"Unexpected command: {command}")

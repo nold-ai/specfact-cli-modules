@@ -1,0 +1,27 @@
+schema_version: "2"
+requirements:
+  openspec:ci-01-workflow-dispatch-core-ref-trust:paired-core-workflow-ref-trust:manual-runs-use-trusted-paired-core-refs:
+    rationale: Manual workflow runs must execute only explicitly trusted paired-core refs while pull requests retain matching-branch integration.
+    stakeholder_refs:
+      - SECURITY.md
+    touchpoints:
+      - id: paired-core-workflow-checkouts
+        kind: workflow
+        locator: .github/workflows/{docs-review,pr-orchestrator,requirements-evidence}.yml
+    verification_cases:
+      - case_id: CI-01-001
+        scenario_id: manual-runs-use-trusted-paired-core-refs
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_dynamic_paired_core_resolution_excludes_manual_dispatch
+        intent: Preserve non-manual matching-branch validation while excluding manual events from dynamic core-ref resolution.
+        observable: Each workflow guards its dynamic resolver and checkout from manual events while retaining credential-disabled matching-branch checkout.
+      - case_id: CI-01-002
+        scenario_id: manual-runs-use-trusted-paired-core-refs
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_manual_dispatch_uses_mutually_exclusive_literal_core_refs
+        intent: Restrict manual runs to one eligible literal paired-core branch.
+        observable: Each workflow has mutually exclusive literal main/dev manual checkout steps with credentials disabled.

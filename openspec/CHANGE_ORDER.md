@@ -7,7 +7,7 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 14 | [`openspec/changes/`](changes/) |
+| **Active** | 15 | [`openspec/changes/`](changes/) |
 | **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
 
@@ -50,6 +50,28 @@ These archived specs are now the shipped basis for the flagship demo: run review
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
 AI IDE, rerun, and compare improved evidence.
 
+## Immediate Corrective Track
+
+This track is first because no changed-scope assurance claim is trustworthy until its Git boundary and unknown states are explicit.
+
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) | Resolve worktree/index/range/full scope explicitly; compare pinned merge-base/head analyses; authenticate one target-tip project-runtime layer for both snapshots; fail closed on unknown scope, runtime provenance, or analyzer coverage | accepted planning PR [#413](https://github.com/nold-ai/specfact-cli-modules/pull/413); paired core adoption is downstream after the signed release |
+
+The first signed C14 module release advertises only the exact core 0.55.1 identity proven by its immutable compatibility smoke: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Paired core adoption remains downstream; after that core is released, a later module metadata release may advertise that new exact core version only after the same tag/commit/tree matrix smoke. The metadata uses strict `===0.55.1`; ordinary `==0.55.1` and local aliases such as `0.55.1+vendor` are rejected. No single lower-bound test authorizes a future-version range.
+
+Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
+
+## Recently Archived Release-Safety Work
+
+This bounded corrective change is independent of C14 and merged to `dev` before
+the C14 release promotion. Alert-specific evidence remains in private GitHub
+Security records under the repository security policy.
+
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
+
 ## Active Tracks
 
 ### Track A - Validation Runtime Spine
@@ -71,9 +93,10 @@ AI IDE, rerun, and compare improved evidence.
 | 3 | `requirements-04-upstream-source-readiness` | [#346](https://github.com/nold-ai/specfact-cli-modules/issues/346) | Reject incomplete or policy-invalid native OpenSpec and Spec Kit sources before requirement evidence persistence | core [#648](https://github.com/nold-ai/specfact-cli/issues/648) |
 | 4 | `requirements-05-dogfood-evidence-gate` | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352) | CI evidence adapter that reports green/red requirement-source validity and traceability evidence; not test-execution proof | requirements-04 shipped; existing Requirements runtime |
 | 5 | `requirements-06-evidence-enforcement` | [#361](https://github.com/nold-ai/specfact-cli-modules/issues/361) | Reusable Requirements evidence command plus staged pre-commit enforcement and CI parity | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352); paired core [#657](https://github.com/nold-ai/specfact-cli/issues/657) |
-| 6 | `requirements-07-scenario-runtime-proof` | [#368](https://github.com/nold-ai/specfact-cli-modules/issues/368) | Emit safe scenario test plans and reconcile JUnit proof | requirements-06; paired core [#662](https://github.com/nold-ai/specfact-cli/issues/662) consumes the release |
-| 7 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
-| 8 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
+| 6 | `requirements-07-scenario-runtime-proof` | [#368](https://github.com/nold-ai/specfact-cli-modules/issues/368) | Plan exact selectors and reconcile current-run JUnit independently from historical chronology | requirements-06; paired corrected core R07 |
+| 7 | `requirements-08-bounded-red-green-proof` | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Validate a core-emitted structural B < R < H <= D replay capsule as an independent chronology claim; pass requires distinct H/D (`H < D`) | corrected R07; paired core [#675](https://github.com/nold-ai/specfact-cli/issues/675) |
+| 8 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
+| 9 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
 | Parked | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path. Deprioritized 2026-07-13 behind openspec-01 | requirements-02, sync-01 |
 | Gated | `architecture-02-module-well-architected` | [#230](https://github.com/nold-ai/specfact-cli-modules/issues/230) | Architecture-boundary review findings | architecture-01 shipped plus one usage cycle |
 
@@ -115,6 +138,7 @@ ceremony rather than validation evidence:
 
 ### Wave 1 - Cleanup and Scope Alignment
 
+- Accept and implement `code-review-14-scope-truth-and-differential-enforcement` before making changed-range assurance claims.
 - Archive completed/closed changes.
 - Park upstream ceremony expansions.
 - Update active proposals and wiki mirrors to validation positioning.
@@ -138,7 +162,8 @@ ceremony rather than validation evidence:
 - `requirements-04-upstream-source-readiness` (blocked on paired core source-readiness contract)
 - `requirements-05-dogfood-evidence-gate`
 - `requirements-06-evidence-enforcement` (after requirements-05 archival/release evidence)
-- `requirements-07-scenario-runtime-proof` (after requirements-06; paired core delivery consumes its released contract)
+- `requirements-07-scenario-runtime-proof` (current-run reconciliation correction after requirements-06)
+- `requirements-08-bounded-red-green-proof` (paired with core bounded replay after corrected R07)
 - `architecture-01-solution-layer`
 - `sync-01-unified-kernel`
 - `requirements-03-backlog-sync` (parked 2026-07-13)

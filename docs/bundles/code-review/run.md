@@ -12,6 +12,8 @@ expertise_level: [intermediate, advanced]
 
 # Code review run
 
+For merge-quality authority, run `specfact code review run --scope range --base-ref <full-base-ref> --head-ref <full-head-ref> --pr-context-file <event-derived-absolute-path> --enforcement full`. A local run without matching claimed context is `range_preview`; matching claimed context produces `range_candidate`. Only a protected consumer can independently verify and promote it to `pr_range`.
+
 `specfact code review run` executes the governed review pipeline for a set of files or for an auto-detected repo scope.
 
 The command prints **progress** to the terminal (spinner/status while the pipeline prepares and runs). With **`--json`**, it writes a machine-readable **`ReviewReport`** JSON file (defaulting to **`review-report.json`** in the working directory when **`--out`** is omitted).
@@ -26,7 +28,9 @@ The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet
 
 | Option | Purpose |
 |--------|---------|
-| `--scope changed\|full` | Review changed files or the full repository when no positional files are provided |
+| `--scope changed\|full\|index\|range` | Review changed files, the full repository, a captured index, or an immutable commit range when no positional files are provided |
+| `--base-ref <commit>`, `--head-ref <commit>` | Bind the immutable range endpoints for `--scope range` |
+| `--pr-context-file <path>` | Bind claimed pull-request target/head context; matching context produces `range_candidate`, not protected `pr_range` |
 | `--path <prefix>` | Narrow auto-discovered review files to one or more repo-relative prefixes |
 | `--include-tests`, `--exclude-tests` | Control whether changed test files participate in auto-scope review |
 | `--focus <facet>` | Limit auto-discovered scope to **`source`**, **`tests`**, **`docs`**, and/or **`simplify`** (repeatable); mutually exclusive with `--include-tests` / `--exclude-tests` |
@@ -72,7 +76,7 @@ readable finalized proof accepted by the runtime loader: **`schema_version:
 **`mapping_digest`** and **`plan_digest`** values, a 40- or 64-character
 hexadecimal **`execution_proof.source_ref`**, and a **`gate_decision`** of
 `pass` or `fail`.
-The resulting `ReviewReport` uses schema version **`1.5`** and records the
+The resulting `ReviewReport` uses schema version **`1.6`** and records the
 proof path, content digest, mapping and plan digests, source revision, and the
 Requirements gate decision under `requirements_evidence`.
 

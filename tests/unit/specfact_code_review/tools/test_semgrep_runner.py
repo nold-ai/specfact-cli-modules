@@ -54,6 +54,137 @@ AI_BLOAT_GOOD_FIXTURES = [
 ]
 
 
+def test_semgrep_uses_signed_module_fallback_without_target_config(tmp_path: Path) -> None:
+    from specfact_code_review.run import scope
+
+    target = tmp_path / "target"
+    module = tmp_path / "module"
+    target.mkdir()
+    (module / ".semgrep").mkdir(parents=True)
+    (module / "resources/semgrep-rules").mkdir(parents=True)
+    (module / ".semgrep/clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    (module / "resources/semgrep-rules/ai-bloat.yaml").write_text("rules: []\n", encoding="utf-8")
+
+    bundle = scope.resolve_semgrep_bundle(target, signed_module_root=module)
+
+    assert bundle.status == "PASS"
+    assert bundle.clean.identity_kind == "signed_module_payload"
+    assert bundle.ai_bloat.identity_kind == "signed_module_payload"
+
+
+def test_semgrep_scanned_paths_match_every_eligible_input() -> None:
+    from specfact_code_review.tools import semgrep_runner
+
+    result = semgrep_runner.reconcile_scanned_paths(
+        eligible=("src/a.py", "src/b.py"), scanned=("src/a.py", "src/b.py"), skipped=()
+    )
+
+    assert result.status == "PASS"
+
+
+def test_semgrep_rule_target_narrowing_is_unknown() -> None:
+    from specfact_code_review.tools import semgrep_runner
+
+    result = semgrep_runner.validate_rule_pack({"rules": [{"id": "x", "paths": {"exclude": ["tests"]}}]})
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "semgrep_rule_target_narrowing"
+
+
+@pytest.mark.parametrize(
+    ("config_name", "runner"),
+    [("clean_code.yaml", run_semgrep), ("bugs.yaml", run_semgrep_bugs)],
+    ids=["clean", "bugs"],
+)
+def test_sealed_semgrep_pass_rejects_rule_target_narrowing_before_launch(
+    tmp_path: Path, monkeypatch: MonkeyPatch, config_name: str, runner: object
+) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep" / config_name).write_text(
+        "rules:\n  - id: narrowed\n    paths:\n      exclude: [src/ignored.py]\n",
+        encoding="utf-8",
+    )
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    run_mock = Mock(return_value=completed_process("semgrep", stdout='{"results": []}'))
+    monkeypatch.setattr(subprocess, "run", run_mock)
+
+    findings = runner([target], bundle_root=bundle)  # type: ignore[operator]
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    run_mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("config_name", "runner"),
+    [("clean_code.yaml", run_semgrep), ("bugs.yaml", run_semgrep_bugs)],
+    ids=["clean", "bugs"],
+)
+def test_sealed_semgrep_pass_rejects_skipped_eligible_input(
+    tmp_path: Path, monkeypatch: MonkeyPatch, config_name: str, runner: object
+) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep" / config_name).write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {"results": [], "paths": {"scanned": [], "skipped": [str(target)]}}
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload))),
+    )
+
+    findings = runner([target], bundle_root=bundle)  # type: ignore[operator]
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+
+
+def test_sealed_semgrep_pass_accepts_omitted_optional_skipped_paths(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep/clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {"results": [], "paths": {"scanned": [str(target)]}}
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload))),
+    )
+
+    assert run_semgrep([target], bundle_root=bundle) == []
+
+
+def test_semgrep_pass_union_cannot_hide_rule_exclusion() -> None:
+    from specfact_code_review.tools import semgrep_runner
+
+    result = semgrep_runner.reconcile_passes(
+        eligible=("src/a.py",),
+        passes=(
+            {"id": "clean", "scanned": (), "skipped": ("src/a.py",)},
+            {"id": "ai-bloat", "scanned": ("src/a.py",), "skipped": ()},
+        ),
+    )
+
+    assert result.status == "UNKNOWN"
+
+
+def test_semgrep_disable_nosem_preserves_string_literal_finding() -> None:
+    from specfact_code_review.tools import semgrep_runner
+
+    plan = semgrep_runner.build_snapshot_invocation(
+        eligible=("src/app.py",), source=b'VALUE = "nosemgrep"\neval("1")\n'
+    )
+
+    assert "--disable-nosem" in plan.argv
+    assert plan.suppression_controls_disabled is True
+    assert plan.expected_rules == ("python.lang.security.audit.eval-detected",)
+
+
 def test_ai_bloat_guidance_matches_ai_bloat_rule_categories() -> None:
     categorized_ai_bloat_rules = {rule for rule, category in SEMGREP_RULE_CATEGORY.items() if category == "ai_bloat"}
 
@@ -84,6 +215,50 @@ def test_run_semgrep_command_creates_runtime_dirs(tmp_path: Path, monkeypatch: M
     assert captured_env["XDG_CONFIG_HOME"].endswith(".config")
 
 
+def test_sealed_semgrep_rejects_fatal_exit_with_parseable_payload(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep/clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {"results": [], "errors": [], "paths": {"scanned": [str(target)], "skipped": []}}
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=2)),
+    )
+
+    findings = run_semgrep([target], bundle_root=bundle)
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert "returncode=2" in findings[0].message
+
+
+def test_sealed_semgrep_rejects_structured_execution_errors(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep/clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {
+        "results": [],
+        "errors": [{"type": "ParseError", "message": "target parse failed"}],
+        "paths": {"scanned": [str(target)], "skipped": []},
+    }
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=0)),
+    )
+
+    findings = run_semgrep([target], bundle_root=bundle)
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert "structured errors" in findings[0].message
+
+
 @pytest.fixture(autouse=True)
 def _stub_semgrep_on_path(monkeypatch: MonkeyPatch) -> None:  # pyright: ignore[reportUnusedFunction]
     real_which = shutil.which
@@ -106,7 +281,8 @@ def test_run_semgrep_maps_findings_to_review_finding(tmp_path: Path, monkeypatch
                 "start": {"line": 4},
                 "extra": {"message": "Method mixes read and write responsibilities."},
             }
-        ]
+        ],
+        "paths": {"scanned": [str(file_path)], "skipped": []},
     }
     run_mock = Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=1))
     monkeypatch.setattr(subprocess, "run", run_mock)
@@ -195,7 +371,8 @@ def test_run_semgrep_filters_findings_to_requested_files(tmp_path: Path, monkeyp
                 "start": {"line": 9},
                 "extra": {"message": "Avoid print in source files."},
             },
-        ]
+        ],
+        "paths": {"scanned": [str(file_path)], "skipped": []},
     }
     monkeypatch.setattr(
         subprocess,
@@ -373,7 +550,8 @@ def test_run_semgrep_bugs_maps_security_and_clean_code_findings(tmp_path: Path, 
                 "start": {"line": 3},
                 "extra": {"message": "Comparison is always true."},
             },
-        ]
+        ],
+        "paths": {"scanned": [str(file_path)], "skipped": []},
     }
     monkeypatch.setattr(
         subprocess,

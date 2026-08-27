@@ -80,6 +80,7 @@ jobs:
           persist-credentials: false
       - name: Resolve paired core command sources ref
         id: core-ref
+        if: github.event_name != 'workflow_dispatch'
         shell: bash
         env:
           CANDIDATE_REF: ${{ github.head_ref || github.ref_name }}
@@ -98,11 +99,30 @@ jobs:
           fi
 
       - name: Checkout paired core command sources
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           repository: nold-ai/specfact-cli
           path: specfact-cli
           ref: ${{ steps.core-ref.outputs.ref }}
+          persist-credentials: false
+
+      - name: Checkout paired core command sources (manual main)
+        if: github.event_name == 'workflow_dispatch' && github.ref_name == 'main'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          path: specfact-cli
+          ref: "main"
+          persist-credentials: false
+
+      - name: Checkout paired core command sources (manual dev)
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          path: specfact-cli
+          ref: "dev"
           persist-credentials: false
 
       - name: Export paired core source path
