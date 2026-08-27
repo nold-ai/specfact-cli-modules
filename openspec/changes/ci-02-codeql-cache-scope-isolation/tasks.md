@@ -34,8 +34,8 @@
 
 ## 5. Delivery
 
-- [ ] 5.1 Commit the bounded change with a signed Conventional Commit.
-- [ ] 5.2 Push the bugfix branch and open a sanitized PR to `dev`.
+- [x] 5.1 Commit the bounded change with a signed Conventional Commit.
+- [x] 5.2 Push the bugfix branch and open a sanitized PR to `dev`.
 - [ ] 5.3 Confirm required PR checks, including Actions CodeQL analysis, pass;
   inspect the private GitHub Security records for closure.
 - [ ] 5.4 After merge, archive only with
