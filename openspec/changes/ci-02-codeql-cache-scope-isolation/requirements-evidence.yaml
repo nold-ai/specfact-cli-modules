@@ -1,0 +1,38 @@
+schema_version: "2"
+requirements:
+  openspec:ci-02-codeql-cache-scope-isolation:paired-core-workflow-ref-trust:manual-runs-use-trusted-paired-core-refs:
+    rationale: The prior in-workflow manual-run contract is removed because its step guards do not isolate the job-level default-cache trust boundary.
+    stakeholder_refs:
+      - SECURITY.md
+    touchpoints:
+      - id: paired-core-workflow-triggers
+        kind: workflow
+        locator: .github/workflows/{docs-review,pr-orchestrator,requirements-evidence}.yml
+    verification_cases:
+      - case_id: CI-02-001
+        scenario_id: manual-runs-use-trusted-paired-core-refs
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_dynamic_paired_core_workflows_have_no_dead_manual_checkout_paths
+        intent: Verify removal of the superseded manual main and dev checkout paths.
+        observable: None of the three dynamic paired-core workflows retains a manual main or dev checkout path.
+        implementation_task: "3.1"
+  openspec:ci-02-codeql-cache-scope-isolation:paired-core-workflow-ref-trust:dynamic-paired-core-validation-uses-non-manual-triggers:
+    rationale: Dynamic paired-core validation must be isolated from manual default-branch cache-write scope while preserving pull-request and push validation.
+    stakeholder_refs:
+      - SECURITY.md
+    touchpoints:
+      - id: paired-core-workflow-triggers
+        kind: workflow
+        locator: .github/workflows/{docs-review,pr-orchestrator,requirements-evidence}.yml
+    verification_cases:
+      - case_id: CI-02-002
+        scenario_id: dynamic-paired-core-validation-uses-non-manual-triggers
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_dynamic_paired_core_workflows_exclude_manual_dispatch
+        intent: Preserve the expected pull-request and push triggers while excluding manual dispatch from workflows that dynamically resolve paired-core source.
+        observable: Each workflow has its exact allowed trigger set and retains a credential-free dynamic paired-core checkout without a manual-event guard.
+        implementation_task: "3.1"
