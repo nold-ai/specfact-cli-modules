@@ -1,0 +1,107 @@
+schema_version: "2"
+requirements:
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:codex-plugin-adapter:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
+    verification_cases:
+      - case_id: PF04-001
+        scenario_id: codex-plugin-adapter
+        method: inspection
+        intent: "Inspect the codex plugin adapter planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:cross-adapter-semantic-parity:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
+    verification_cases:
+      - case_id: PF04-002
+        scenario_id: cross-adapter-semantic-parity
+        method: inspection
+        intent: "Inspect the cross adapter semantic parity planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:ecc-skills-first-adapter:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
+    verification_cases:
+      - case_id: PF04-003
+        scenario_id: ecc-skills-first-adapter
+        method: inspection
+        intent: "Inspect the ecc skills first adapter planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:hatch3r-inventory-driven-adapter:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
+    verification_cases:
+      - case_id: PF04-004
+        scenario_id: hatch3r-inventory-driven-adapter
+        method: inspection
+        intent: "Inspect the hatch3r inventory driven adapter planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:idempotent-install-and-safe-uninstall:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
+    verification_cases:
+      - case_id: PF04-005
+        scenario_id: idempotent-install-and-safe-uninstall
+        method: inspection
+        intent: "Inspect the idempotent install and safe uninstall planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:shared-adapter-identity-contract:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
+    verification_cases:
+      - case_id: PF04-006
+        scenario_id: shared-adapter-identity-contract
+        method: inspection
+        intent: "Inspect the shared adapter identity contract planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:validator-logic-remains-centralized:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
+    verification_cases:
+      - case_id: PF04-007
+        scenario_id: validator-logic-remains-centralized
+        method: inspection
+        intent: "Inspect the validator logic remains centralized planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.

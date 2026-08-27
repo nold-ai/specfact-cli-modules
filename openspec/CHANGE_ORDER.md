@@ -7,9 +7,9 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 15 | [`openspec/changes/`](changes/) |
+| **Active** | 19 | [`openspec/changes/`](changes/) |
 | **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
-| **Archived** | 43 | [`openspec/changes/archive/`](changes/archive/) |
+| **Archived** | 49 | [`openspec/changes/archive/`](changes/archive/) |
 
 `openspec list` reflects the active set only. Completed changes are archived
 with date-prefixed folders. Parked changes are preserved for later customer pull
@@ -60,6 +60,13 @@ This track is first because no changed-scope assurance claim is trustworthy unti
 
 The first signed C14 module release advertises only the exact core 0.55.1 identity proven by its immutable compatibility smoke: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Paired core adoption remains downstream; after that core is released, a later module metadata release may advertise that new exact core version only after the same tag/commit/tree matrix smoke. The metadata uses strict `===0.55.1`; ordinary `==0.55.1` and local aliases such as `0.55.1+vendor` are rejected. No single lower-bound test authorizes a future-version range.
 
+C14 behavior and publication were delivered by merged PRs
+[#418](https://github.com/nold-ai/specfact-cli-modules/pull/418) and
+[#419](https://github.com/nold-ai/specfact-cli-modules/pull/419). Issue
+[#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) remains open
+and `In Progress`; this planning series records the merged delivery evidence but
+does not close, reparent, relabel, reassign, or otherwise change that issue.
+
 Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
 
 ## Recently Archived Release-Safety Work
@@ -83,6 +90,20 @@ Security records under the repository security policy.
 | 3 | `governance-02-exception-management` | [#167](https://github.com/nold-ai/specfact-cli-modules/issues/167) | Runtime exception handling and waiver evidence | governance-01, policy-02 |
 | 4 | `traceability-01-index-and-orphans` | [#170](https://github.com/nold-ai/specfact-cli-modules/issues/170) | Artifact drift and orphan detection runtime | validation input contracts |
 | 5 | `validation-02-full-chain-engine` | [#171](https://github.com/nold-ai/specfact-cli-modules/issues/171) | Validation evidence graph runtime, not lifecycle orchestration | governance-01, traceability-01 |
+
+### Track A2 - Deterministic Pre-Implementation Assurance
+
+This track consumes core-owned assurance interfaces and keeps executable
+validators, CLI/workflow behavior, publication, and adapters in modules. The
+canonical module skill is the single workflow source; generated instructions
+and adapters reference it without duplicating Python checks.
+
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `preflight-02-assurance-runtime` | [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) | Unpublished runtime, Python validators, CLI/rendering/persistence, and canonical bundled `specfact-preflight` workflow | core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682) |
+| 2 | `preflight-03-dogfood-hardening-and-release` | [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) | Evidence-backed hardening, exact compatibility proof, signing, and stable publication | modules #431; core C14 dogfood/readiness [#683](https://github.com/nold-ai/specfact-cli/issues/683) |
+| 3 | `preflight-04-harness-adapters` | [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433) | Later thin Codex plugin, ECC companion, and hatch3r pack; no duplicate validators | stable modules release #432; core generated instructions [#253](https://github.com/nold-ai/specfact-cli/issues/253) |
+| 4 | `preflight-05-implementation-conformance` | [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434) | Later postimplementation extraction/comparison/rendering; explicitly outside preflight MVP | modules #432 and adapters #433; paired core conformance contract [#684](https://github.com/nold-ai/specfact-cli/issues/684) |
 
 ### Track B - Upstream Context Adapters
 
@@ -136,6 +157,20 @@ ceremony rather than validation evidence:
 
 ## Implementation Waves
 
+### Preflight Assurance Sequence - Mandatory Dependency Gate
+
+1. Core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682).
+2. Unpublished modules runtime [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431).
+3. Core C14 adoption [#680](https://github.com/nold-ai/specfact-cli/issues/680).
+4. Core C14 dogfood/readiness [#683](https://github.com/nold-ai/specfact-cli/issues/683).
+5. Evidence-backed modules hardening and stable publication [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432).
+6. Shared skill installation #251 -> generated instructions #253 -> adapters #433; later conformance #684/#434; modules C15 #417 -> core C15 #679.
+
+Modules C15 #417 keeps its existing policy and exception blockers (#158,
+core #248, and modules #167) plus the stable preflight release. Existing native
+C14/history edges remain preserved. Every implementation change starts in a
+dedicated issue-linked worktree and session.
+
 ### Wave 1 - Cleanup and Scope Alignment
 
 - Accept and implement `code-review-14-scope-truth-and-differential-enforcement` before making changed-range assurance claims.
@@ -173,6 +208,8 @@ ceremony rather than validation evidence:
 - `docs-16-core-accountability-sync`
 - `architecture-02-module-well-architected`
 - `docs-14-module-release-history`
+- `preflight-04-harness-adapters` after core #253 and stable publication
+- `preflight-05-implementation-conformance` after stable publication and core #684
 
 ## Parent Issues And Epic Framing
 
