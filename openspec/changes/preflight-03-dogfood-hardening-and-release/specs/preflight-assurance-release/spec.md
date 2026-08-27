@@ -74,7 +74,7 @@ The stable release SHALL advertise only core identities proven by a fresh offici
 
 ### Requirement: Signed publication handoff
 
-Downstream stories SHALL receive the immutable published module version, artifact digest, signature identity, registry identity, compatible core identity, and completed regression result.
+Downstream stories SHALL receive the immutable published module version, artifact digest, signature identity, registry identity, compatible core identity, signed canonical workflow version/digest, delegated CLI identity, and completed regression result.
 
 #### Scenario: Downstream adoption starts from a feature build
 
@@ -99,7 +99,8 @@ The release SHALL have a tested withdrawal or supersession path that prevents do
 - **GIVEN** a published release fails a required compatibility or integrity check
 - **WHEN** rollback is initiated
 - **THEN** the supported registry operation marks the faulty identity unavailable and the installer rejects it before installation
-- **AND** the last verified identity remains authoritative until a newly verified release exists.
+- **AND** a prior verified identity remains authoritative when one exists
+- **AND** after failure of the first stable publication, no preflight identity remains installable until a newly verified release exists.
 
 #### Scenario: Candidate persistence cannot survive rollback
 
