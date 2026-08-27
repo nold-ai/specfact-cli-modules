@@ -508,6 +508,14 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **THEN** the original controls remain bound as evidence, the effective projection forces both `fix=false` and `fix-only=false`, the snapshot remains unmodified, and native Ruff JSON contains F821
 - **AND** an effective true value, attempted mutation, empty or malformed result artifact, ineffective projection, or pinned schema/catalog drift yields `UNKNOWN`, never an empty PASS.
 
+#### Scenario: Ruff process completion is authoritative
+
+- **GIVEN** mandatory Ruff emits parseable JSON, including an empty finding list
+- **WHEN** the Ruff process exits outside its completed-analysis statuses 0 and 1
+- **THEN** the adapter rejects the payload and records a tool/process error as `UNKNOWN`
+- **AND** retained stderr context is at most 4,000 characters including any truncation marker
+- **AND** an operational, configuration, or illegal-argument exit can never become completed PASS evidence.
+
 #### Scenario: Radon configuration cannot suppress a governed result
 
 - **GIVEN** the authorized target policy or either immutable snapshot contains a Radon source that sets `cc_min = F`, an exclude/ignore pattern, or an outside output file
