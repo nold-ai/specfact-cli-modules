@@ -65,12 +65,12 @@ The stable release SHALL advertise only core identities proven by a fresh offici
 - **THEN** it fails before signing or registry publication
 - **AND** a warning-only result cannot authorize the release.
 
-#### Scenario: Exact first-release core identity is weakened
+#### Scenario: Exact preflight-capable core identity is weakened
 
-- **GIVEN** the first release proposes empty compatibility, ordinary `==0.55.1`, a local alias, wildcard, future range, or an identity other than tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`
+- **GIVEN** the release proposes empty compatibility, ordinary equality (`==`), a local alias, wildcard, future range, or an immutable tag/commit/tree that does not identify the selected released core containing #682
 - **WHEN** the official publication pre-check runs
 - **THEN** it fails before signing
-- **AND** only strict `===0.55.1` with matching immutable matrix evidence can authorize the first release.
+- **AND** only strict arbitrary equality (`===`) to that exact preflight-capable release with matching immutable matrix evidence can authorize publication.
 
 ### Requirement: Signed publication handoff
 

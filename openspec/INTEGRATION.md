@@ -46,7 +46,7 @@ changes without creating runtime behavior.
 ## Delivery Sequence
 
 `core #682 -> modules #431 -> core C14 #680 -> core #683 -> modules #432`.
-After the signed release, `#251 -> #253 -> modules #433`; both modules #433 and
-core #684 block modules #434. Issue #434 remains a later branch; modules C15
-#417 -> core C15 #679 remains the signal-calibration branch. Existing
-policy/exception blockers remain in force.
+After the signed release, `#251 -> #253 -> modules #433`; stable modules #432,
+modules #433, and core #684 all block modules #434. Issue #434 remains a later
+branch; modules C15 `#417` -> core C15 #679 remains the signal-calibration
+branch. Existing policy/exception blockers remain in force.

@@ -2,7 +2,7 @@
 
 ### Requirement: Workflow phase contract
 
-The stable canonical preflight workflow SHALL present the runtime phases in order, SHALL require a new snapshot and validation pass after any approved refinement, and SHALL retain regression evidence for every accepted dogfood defect affecting phase order, CLI delegation, approval, or stop behavior. It SHALL remain harness-neutral so downstream adapters preserve identical phase, approval, evidence, and stop semantics, and official execution SHALL load it from the signed installation path and verify that its delegated CLI identity matches the signed workflow/release identity.
+The stable canonical preflight workflow SHALL present the runtime phases in order, SHALL require a new snapshot and validation pass after any approved refinement, and SHALL retain regression evidence for every accepted dogfood defect affecting phase order, CLI delegation, approval, or stop behavior. It SHALL remain harness-neutral so downstream adapters preserve identical phase, approval, evidence, and stop semantics, and official execution SHALL load it from the signed installation path and verify the bound tuple of workflow version, workflow digest, and delegated CLI identity for the signed release.
 
 #### Scenario: Finding is refined and rechecked
 

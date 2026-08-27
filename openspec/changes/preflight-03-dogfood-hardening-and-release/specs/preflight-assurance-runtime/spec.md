@@ -48,5 +48,5 @@ The stable module SHALL bundle and publish one versioned canonical `specfact-pre
 - **GIVEN** the signed module is installed through the official path
 - **WHEN** a compatible generic installer discovers the workflow asset
 - **THEN** it receives the canonical workflow identity and supported invocation contract
-- **AND** the delegated CLI identity matches the signed release identity
+- **AND** the delegated CLI identity is bound with the canonical workflow version/digest in the signed release tuple
 - **AND** adapter-specific files are not required to execute the underlying CLI.
