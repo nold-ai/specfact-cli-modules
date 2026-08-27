@@ -33,6 +33,8 @@ The unpublished preflight runtime must not become a stable module or a dependenc
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
 - Blocked by modules `preflight-02-assurance-runtime` [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) and paired core `preflight-03-dogfood-hardening-and-release` readiness evidence [#683](https://github.com/nold-ai/specfact-cli/issues/683).
+- Required selection order is core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682) -> modules #431 -> core C14 [#680](https://github.com/nold-ai/specfact-cli/issues/680) -> core #683 -> this change; transitive prerequisites cannot be skipped merely because #431 and #683 are the direct native blockers.
+- Publication is also conditional on a released core installer/registry contract that can reject a withdrawn exact version; absence of that interface requires a separately accepted core change before release work proceeds.
 - Blocks core `ai-integration-01-agent-skill` [#251](https://github.com/nold-ai/specfact-cli/issues/251), both `preflight-05-implementation-conformance` stories, and modules C15 [#417](https://github.com/nold-ai/specfact-cli-modules/issues/417).
 
 ## Explicit Non-Goals

@@ -30,6 +30,7 @@
 - `openspec validate preflight-02-assurance-runtime --strict`: PASS on 2026-08-25.
 - Markdown lint limited to changed planning Markdown: PASS on 2026-08-25.
 - Staged schema-v2 Requirements planning evidence: PASS on 2026-08-25 with inspection-only cases and no test selectors or execution claims.
+- Review follow-up on 2026-08-27: strict OpenSpec validation and staged schema-v2 Requirements planning evidence PASS after the write-safety clarification; the diff remains planning-only.
 
 ## Decision
 

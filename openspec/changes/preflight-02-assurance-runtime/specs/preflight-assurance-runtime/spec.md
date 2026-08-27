@@ -34,6 +34,7 @@ The preflight command SHALL inspect and render without modifying change artifact
 - **GIVEN** the workflow proposes exact edits to an owning artifact
 - **WHEN** the user authorizes those edits
 - **THEN** the orchestration applies only the approved edits through the owning workflow
+- **AND** the owning workflow reuses the paired core safe-write contract, rejects concurrent source drift, and preserves unrelated user-owned content
 - **AND** captures a new source snapshot and reruns every required validator before approval.
 
 ### Requirement: Versioned Python validator registry

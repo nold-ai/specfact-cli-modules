@@ -51,6 +51,13 @@ The stable release SHALL advertise only core identities proven by a fresh offici
 - **THEN** metadata does not advertise a wider version range
 - **AND** future core identities require their own immutable compatibility evidence.
 
+#### Scenario: Compatibility metadata has no matrix proof
+
+- **GIVEN** core compatibility metadata is empty or names an identity or range without matching immutable release-matrix evidence
+- **WHEN** the official publication pre-check runs
+- **THEN** it fails before signing or registry publication
+- **AND** a warning-only result cannot authorize the release.
+
 ### Requirement: Signed publication handoff
 
 Downstream stories SHALL receive the immutable published module version, artifact digest, signature identity, registry identity, compatible core identity, and completed regression result.
@@ -64,11 +71,18 @@ Downstream stories SHALL receive the immutable published module version, artifac
 
 ### Requirement: Release rollback
 
-The release SHALL have a tested withdrawal or supersession path that prevents downstream installers from treating a known-bad identity as current.
+The release SHALL have a tested withdrawal or supersession path that prevents downstream installers from selecting or installing a known-bad identity, and publication SHALL remain blocked until that path is proven.
+
+#### Scenario: Registry cannot make a known-bad identity unavailable
+
+- **GIVEN** the selected registry or installer has no supported version-level withdrawal, supersession, or rejection mechanism
+- **WHEN** release readiness is evaluated
+- **THEN** publication is blocked
+- **AND** a latest-entry update or checksum check alone cannot satisfy rollback readiness.
 
 #### Scenario: Post-publication verification fails
 
 - **GIVEN** a published release fails a required compatibility or integrity check
 - **WHEN** rollback is initiated
-- **THEN** the faulty identity is withdrawn or superseded through the supported registry mechanism
-- **AND** downstream adoption remains blocked until a newly verified release exists.
+- **THEN** the supported registry operation marks the faulty identity unavailable and the installer rejects it before installation
+- **AND** the last verified identity remains authoritative until a newly verified release exists.

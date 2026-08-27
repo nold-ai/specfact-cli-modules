@@ -101,7 +101,9 @@ requirements:
       - case_id: PF05M-007
         scenario_id: separate-conformance-command
         method: inspection
-        intent: "Inspect the separate conformance command planning contract before implementation."
+        intent: "Inspect the separate conformance command, explicit implementation identity, and sealed-base/head separation contract before implementation."
         observable: >-
-          Strict OpenSpec validation retains the requirement and its scenarios
-          without claiming implementation or test execution.
+          Strict OpenSpec validation retains rejection of missing or ambiguous
+          implementation identity and the distinction between the sealed base
+          snapshot and postapproval implementation head without claiming
+          implementation or test execution.

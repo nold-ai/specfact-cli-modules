@@ -21,7 +21,7 @@ This paired modules change executes the core conformance contract after implemen
 
 ### 1. Separate command and result lifecycle
 
-`specfact preflight conform <change-id>` requires a current valid preflight seal and a selected implementation revision/range. It produces a conformance result rather than a new preflight readiness result. It never alters the original seal.
+`specfact preflight conform <change-id>` requires a preflight seal that verifies against its sealed contract and base source snapshot plus an explicit implementation identity in the released core snapshot format. The implementation base/head or exact range is supplied separately; a missing, implicit, or ambiguous identity is rejected. Implementation commits do not by themselves invalidate the base-bound seal, and the command produces a conformance result rather than a new preflight readiness result or altered seal.
 
 ### 2. Evidence adapters reuse existing outputs
 
@@ -52,6 +52,5 @@ The command is additive and optional. Removing the conformance module surface le
 
 ## Open Questions Deferred to Implementation
 
-- Exact default implementation range selection and whether it must always be explicit under strict policy.
 - Which existing test/traceability evidence schemas are mandatory for the first supported profile.
 - Retention policy for multiple conformance runs against one seal.

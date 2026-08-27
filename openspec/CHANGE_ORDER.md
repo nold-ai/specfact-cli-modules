@@ -102,8 +102,8 @@ and adapters reference it without duplicating Python checks.
 |---:|---|---|---|---|
 | 1 | `preflight-02-assurance-runtime` | [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) | Unpublished runtime, Python validators, CLI/rendering/persistence, and canonical bundled `specfact-preflight` workflow | core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682) |
 | 2 | `preflight-03-dogfood-hardening-and-release` | [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) | Evidence-backed hardening, exact compatibility proof, signing, and stable publication | modules #431; core C14 dogfood/readiness [#683](https://github.com/nold-ai/specfact-cli/issues/683) |
-| 3 | `preflight-04-harness-adapters` | [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433) | Later thin Codex plugin, ECC companion, and hatch3r pack; no duplicate validators | core generated instructions [#253](https://github.com/nold-ai/specfact-cli/issues/253) |
-| 4 | `preflight-05-implementation-conformance` | [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434) | Later postimplementation extraction/comparison/rendering; explicitly outside preflight MVP | modules #432; paired core conformance contract [#684](https://github.com/nold-ai/specfact-cli/issues/684) |
+| 3 | `preflight-04-harness-adapters` | [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433) | Later thin Codex plugin, ECC companion, and hatch3r pack; no duplicate validators | stable modules release #432; core generated instructions [#253](https://github.com/nold-ai/specfact-cli/issues/253) |
+| 4 | `preflight-05-implementation-conformance` | [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434) | Later postimplementation extraction/comparison/rendering; explicitly outside preflight MVP | modules #432 and adapters #433; paired core conformance contract [#684](https://github.com/nold-ai/specfact-cli/issues/684) |
 
 ### Track B - Upstream Context Adapters
 

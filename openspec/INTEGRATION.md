@@ -35,8 +35,11 @@ changes without creating runtime behavior.
   must not recompute readiness, approval, or conformance.
 - A seal proves exact reviewed-input identity and recorded approval, not design,
   LLM, implementation, security, or semantic correctness.
-- Any bound-input change invalidates readiness and requires a complete rerun and
-  explicit user approval.
+- Any pre-implementation bound-input change invalidates readiness and requires
+  a complete rerun and explicit user approval. During later conformance, the
+  approved seal is verified against its sealed contract and base source
+  snapshot while the implementation head/range is captured as a separate,
+  explicit identity; implementation commits do not silently rewrite the seal.
 - Native GitHub parents, project status, blockers, and blocked-by relationships
   are required before implementation; body-only references are insufficient.
 

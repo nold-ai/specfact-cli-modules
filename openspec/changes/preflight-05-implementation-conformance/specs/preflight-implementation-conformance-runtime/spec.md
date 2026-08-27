@@ -2,14 +2,28 @@
 
 ### Requirement: Separate conformance command
 
-The module SHALL expose a postimplementation conformance command that requires a valid preflight seal and explicit implementation identity and SHALL produce a distinct conformance result.
+The module SHALL expose a postimplementation conformance command that requires a preflight seal valid against its sealed contract and base source snapshot plus a separate explicit implementation identity in the released core format, and SHALL produce a distinct conformance result.
 
 #### Scenario: No valid preflight seal exists
 
-- **GIVEN** a change has no current valid preflight seal
+- **GIVEN** a change has no seal that verifies against its sealed contract and base source snapshot
 - **WHEN** `specfact preflight conform <change-id>` is invoked
 - **THEN** comparison does not proceed as successful conformance
 - **AND** the user is directed to the pre-implementation review workflow.
+
+#### Scenario: Missing or ambiguous implementation identity
+
+- **GIVEN** the caller omits the implementation base/head or supplies an implicit or ambiguous revision/range
+- **WHEN** `specfact preflight conform <change-id>` is invoked
+- **THEN** comparison does not start
+- **AND** the command requests an explicit implementation identity accepted by the released core snapshot interface.
+
+#### Scenario: Implementation head advances from sealed base
+
+- **GIVEN** a seal verifies against the approved contract and base source snapshot and implementation commits create a distinct head
+- **WHEN** conformance runs with that base/head identity
+- **THEN** the seal remains the reference for approved obligations while the head is captured separately as implementation evidence
+- **AND** the implementation commits alone do not require resealing the unchanged design contract.
 
 ### Requirement: Provenance-rich implementation evidence
 

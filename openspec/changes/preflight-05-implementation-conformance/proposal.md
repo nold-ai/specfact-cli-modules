@@ -6,7 +6,7 @@ After code is written, teams need a separate deterministic comparison between th
 
 ## What Changes
 
-- **NEW**: A later `specfact preflight conform <change-id>` runtime that loads a valid preflight seal, captures an implementation snapshot, imports exact test/evidence identities, and evaluates the core conformance contract.
+- **NEW**: A later `specfact preflight conform <change-id>` runtime that loads a base-bound valid preflight seal, captures implementation evidence through the released paired-core snapshot interface, imports exact test/evidence identities, and evaluates the core conformance contract without defining a second snapshot or obligation-mapping contract.
 - **NEW**: Python extractors and validators for changed-path, interface, acceptance-criterion, test-intent, task, and exclusion mappings.
 - **NEW**: Human and JSON conformance rendering plus optional atomic persistence alongside the original preflight artifacts.
 - **NEW**: A workflow handoff for agents to run conformance after implementation evidence is available and before delivery/archive decisions.
@@ -31,7 +31,7 @@ After code is written, teams need a separate deterministic comparison between th
 ## Dependencies
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
-- Blocked by modules `preflight-03-dogfood-hardening-and-release` [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) and paired core `preflight-05-implementation-conformance` [#684](https://github.com/nold-ai/specfact-cli/issues/684).
+- Blocked by modules `preflight-03-dogfood-hardening-and-release` [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432), modules harness adapters [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433), and paired core `preflight-05-implementation-conformance` [#684](https://github.com/nold-ai/specfact-cli/issues/684).
 - Runs independently of the C15 chain; neither change may silently redefine the other's evidence semantics.
 
 ## Explicit Non-Goals

@@ -33,7 +33,7 @@ Module source, canonical workflow assets, package manifest, version, core compat
 
 ### 4. Compatibility is proven, not inferred
 
-The release advertises only a core version identity exercised through a fresh official install/load and full contract/CLI/workflow regression matrix. A broad future-version range is not inferred from one lower-bound smoke.
+The release advertises only a core version identity exercised through a fresh official install/load and full contract/CLI/workflow regression matrix. A broad future-version range is not inferred from one lower-bound smoke. The publication pre-check must reject empty compatibility metadata or a claimed identity/range that has no matching immutable matrix evidence before signing or registry publication.
 
 ### 5. Stable workflow remains canonical
 
@@ -41,7 +41,7 @@ The released module contains the canonical `specfact-preflight` workflow and its
 
 ### 6. Publication is reversible
 
-If post-publication verification fails, the release is withdrawn or superseded through the existing registry/revocation mechanism, downstream adoption remains blocked, and the last verified version stays authoritative.
+Publication is blocked until the selected registry and installer expose a supported withdrawal or supersession operation and a tested installer-rejection path for the withdrawn identity. The hardening ledger must name the exact official registry command or workflow and released core installer contract that enforce this path; the current latest-entry/checksum flow alone is not treated as revocation. If no such released interface exists when implementation begins, modules work stops for a separately accepted core change. If post-publication verification fails, the supported operation marks the faulty identity unavailable, the installer rejects it before download or installation, downstream adoption remains blocked, and the last verified version stays authoritative.
 
 ## Risks / Trade-offs
 
@@ -52,7 +52,7 @@ If post-publication verification fails, the release is withdrawn or superseded t
 
 ## Migration and Rollback
 
-The first stable release is opt-in. Users of the unpublished dogfood build migrate by reinstalling the signed stable module and regenerating local workflow exports through the supported installer. Rollback removes/revokes the faulty release and restores the last verified module identity; persisted contracts remain readable only when their schema is supported.
+The first stable release is opt-in. Users of the unpublished dogfood build migrate by reinstalling the signed stable module and regenerating local workflow exports through the supported installer. Rollback uses the proven registry operation to make the faulty identity unavailable and restores the last verified module identity as authoritative; persisted contracts remain readable only when their schema is supported.
 
 ## Open Questions Deferred to Implementation
 

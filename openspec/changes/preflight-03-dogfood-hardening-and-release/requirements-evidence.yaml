@@ -120,3 +120,19 @@ requirements:
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-workflow:workflow-phase-contract:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-workflow/spec.md"
+    verification_cases:
+      - case_id: PF03W-001
+        scenario_id: workflow-phase-contract
+        method: inspection
+        intent: "Inspect the workflow phase hardening contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the existing workflow phase
+          behavior and the accepted dogfood regression scenario without
+          claiming implementation or test execution.

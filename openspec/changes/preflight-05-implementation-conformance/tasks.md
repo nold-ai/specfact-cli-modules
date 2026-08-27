@@ -6,12 +6,12 @@ All tasks below are future implementation work. This planning change completes n
 
 - [ ] 1.1 In a dedicated issue-linked session, create `feature/preflight-05-implementation-conformance` from current `origin/dev` in a new modules worktree before any implementation edit.
 - [ ] 1.2 Refresh hierarchy metadata and verify issue type, parent, labels, project `Todo`, assignee, blockers, and concurrency status.
-- [ ] 1.3 Verify the exact stable preflight module and released paired core conformance interface identities.
+- [ ] 1.3 Verify the complete modules #432 -> modules adapters #433 -> paired core #684 delivery sequence plus the exact stable preflight module and released core conformance interface identities.
 
 ## 2. Specification and failing-first evidence
 
 - [ ] 2.1 Finalize command, evidence adapter, validator, rendering, persistence, and workflow deltas without adding preflight MVP or external adapter scope.
-- [ ] 2.2 Add tests mapped to every invalid-seal, stale-evidence, drift, reapproval, renderer-parity, persistence, and opt-in-policy scenario.
+- [ ] 2.2 Add tests mapped to every invalid-seal, explicit implementation-identity, base/head separation, stale-evidence, drift, reapproval, renderer-parity, persistence, and opt-in-policy scenario.
 - [ ] 2.3 Run targeted tests before production edits and record failing-first results in a newly created `TDD_EVIDENCE.md`.
 
 ## 3. Minimal runtime implementation

@@ -20,6 +20,7 @@
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
 - Native blockers verified: stable modules [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) and paired core [#684](https://github.com/nold-ai/specfact-cli/issues/684).
+- Delivery ordering records modules adapters [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433) before this later workflow handoff; its native dependency relationship must be read back again before implementation.
 - GitHub readback verified User Story type, parent #163, project `SpecFact CLI` / `Todo`, assignee `djm81`, and the required labels.
 
 ## Validation Record
@@ -28,6 +29,7 @@
 - `openspec validate preflight-05-implementation-conformance --strict`: PASS on 2026-08-25.
 - Markdown lint limited to changed planning Markdown: PASS on 2026-08-25.
 - Staged schema-v2 Requirements planning evidence: PASS on 2026-08-25 with inspection-only cases and no test selectors or execution claims.
+- Review follow-up on 2026-08-27: strict OpenSpec validation and staged schema-v2 Requirements planning evidence PASS after base/head seal semantics and explicit implementation identity were aligned; the diff remains planning-only.
 
 ## Decision
 

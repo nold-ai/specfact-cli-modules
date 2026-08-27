@@ -33,7 +33,7 @@ The runtime state machine is `DISCOVER -> SNAPSHOT -> VALIDATE -> REVIEW`. A use
 
 ### 2. Read-only default and explicit persistence
 
-`specfact preflight run <change-id>` is read-only by default. `--write` may persist normalized artifacts only after the user confirms exact target paths. The planned project-local layout is `.specfact/preflight/<change-id>/` with a contract, validation result, and approval seal. Final filenames and schemas are derived from the core contract tests before implementation.
+`specfact preflight run <change-id>` is read-only by default. `--write` may persist normalized artifacts only after the user confirms exact target paths. The planned project-local layout is `.specfact/preflight/<change-id>/` with a contract, validation result, and approval seal. Final filenames and schemas are derived from the core contract tests before implementation. Any authorized refinement of a user-owned artifact routes through its owning workflow and the paired core safe-write contract, checks the expected source identity before commit, and preserves unrelated content rather than replacing the file wholesale.
 
 ### 3. Python validator registry
 
@@ -64,7 +64,7 @@ General AGENTS.md/OpenSpec/Spec Kit instructions should contain only the gate: s
 ## Risks / Trade-offs
 
 - **Prompt/runtime divergence:** Version the skill contract with the module and test that it invokes only supported CLI forms.
-- **Accidental artifact edits during review:** Default to read-only and require explicit target confirmation plus source-owner routing for refinement.
+- **Accidental artifact edits during review:** Default to read-only and require explicit target confirmation, source-owner routing, conflict detection, and preservation of unrelated user content.
 - **False-ready result from missing validators:** Required validator absence yields `UNKNOWN`, never success.
 - **Cross-repository race:** Capture repository refs and GitHub identities; stale identities invalidate approval.
 
