@@ -36,6 +36,7 @@ SEMGREP_RULE_CATEGORY = {
 SEMGREP_TIMEOUT_SECONDS = 90
 SEMGREP_RETRY_ATTEMPTS = 2
 _SEMGREP_STDERR_SNIP_MAX = 4000
+_SEMGREP_COMPLETED_EXIT_CODES = frozenset({0, 1})
 _MAX_CONFIG_PARENT_WALK = 32
 SemgrepCategory = Literal["clean_code", "architecture", "naming", "ai_bloat"]
 BugSemgrepCategory = Literal["security", "clean_code"]
@@ -382,6 +383,19 @@ def _snip_stderr_tail(stderr: str) -> str:
     return "…" + err_raw[-_SEMGREP_STDERR_SNIP_MAX:]
 
 
+def _validate_semgrep_completion(result: subprocess.CompletedProcess[str], payload: dict[str, object]) -> None:
+    """Reject process and structured execution errors before accepting results."""
+
+    if result.returncode not in _SEMGREP_COMPLETED_EXIT_CODES:
+        err_tail = _snip_stderr_tail(result.stderr or "")
+        raise ValueError(f"semgrep process failed (returncode={result.returncode}); stderr={err_tail!r}")
+    errors = payload.get("errors", [])
+    if not isinstance(errors, list):
+        raise ValueError("semgrep structured errors must be a list")
+    if errors:
+        raise ValueError(f"semgrep returned structured errors (count={len(errors)})")
+
+
 def _load_semgrep_payload(
     files: list[Path], *, bundle_root: Path | None, config_file: Path | list[Path]
 ) -> dict[str, object]:
@@ -395,6 +409,7 @@ def _load_semgrep_payload(
                 raise ValueError(f"semgrep returned empty stdout (returncode={result.returncode}); stderr={err_tail!r}")
             payload = json.loads(raw_out)
             _parse_semgrep_results(payload)
+            _validate_semgrep_completion(result, payload)
             return payload
         except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
             last_error = exc

@@ -215,6 +215,50 @@ def test_run_semgrep_command_creates_runtime_dirs(tmp_path: Path, monkeypatch: M
     assert captured_env["XDG_CONFIG_HOME"].endswith(".config")
 
 
+def test_sealed_semgrep_rejects_fatal_exit_with_parseable_payload(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep/clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {"results": [], "errors": [], "paths": {"scanned": [str(target)], "skipped": []}}
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=2)),
+    )
+
+    findings = run_semgrep([target], bundle_root=bundle)
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert "returncode=2" in findings[0].message
+
+
+def test_sealed_semgrep_rejects_structured_execution_errors(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    (bundle / ".semgrep/clean_code.yaml").write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {
+        "results": [],
+        "errors": [{"type": "ParseError", "message": "target parse failed"}],
+        "paths": {"scanned": [str(target)], "skipped": []},
+    }
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=0)),
+    )
+
+    findings = run_semgrep([target], bundle_root=bundle)
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert "structured errors" in findings[0].message
+
+
 @pytest.fixture(autouse=True)
 def _stub_semgrep_on_path(monkeypatch: MonkeyPatch) -> None:  # pyright: ignore[reportUnusedFunction]
     real_which = shutil.which

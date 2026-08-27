@@ -168,6 +168,9 @@ Signed `occurrence-continuity-v1` SHALL validate each canonical source span agai
 - **AND** the missing base analyzer fingerprint is `unknown`, never `fixed`
 - **AND** CR14 accepts no suppression-waiver input or injected trusted flag; authenticated exception support is deferred to `governance-02-exception-management`
 - **AND** an unchanged occurrence, including an identical pure one-to-one rename, is retained but not introduced
+- **AND** moving one otherwise identical registered directive from before a source line to after that source line is a relocated occurrence and therefore remains an introduced blocking finding even when its rename-normalized path, family, normalized token, and within-file ordinal are unchanged
+- **AND** a relocated otherwise-identical occurrence retains its matched baseline path, line, occurrence digest, source-blob digest, and the bounded correspondence decision including `G/F/X`; a genuinely new head surplus records no fabricated baseline or correspondence
+- **AND** an otherwise untouched directive whose complete physical line has a uniquely optimal exact-line correspondence after unrelated line insertion remains the same occurrence; correspondence is established in deterministic physical-line order across all same-path/family/token occurrences before any deterministic ordinal fallback, so inserting one repeated directive does not reclassify later proven occurrences; immutable physical-line sequences and whole-blob equality are each derived at most once per source pair and reused across every directive identity and quarantine finding; when aggregate work is exhausted, exact-line candidates not yet proven remain `UNKNOWN` rather than shifting ordinal partners; when repeated byte-identical physical lines make every head location non-unique, a proven count surplus also remains location-ambiguous `UNKNOWN` rather than assigning the last ordinal as introduced; a unique physical directive line with no uniquely optimal correspondence is relocated and introduced, while non-unique, invalid, resource-unavailable, or aggregate-work-bounded correspondence is `UNKNOWN` rather than guessed
 - **AND** tokenization, registry, normalization, or manifest-comparison failure is UNKNOWN rather than PASS.
 
 #### Scenario: Unchanged suppression in a changed file cannot hide a new defect
@@ -269,6 +272,8 @@ Signed `occurrence-continuity-v1` SHALL validate each canonical source span agai
 - **THEN** the signed payload is a Linux x86_64 static ELF with expected architecture, exact descriptor-byte SHA-256, and no `PT_INTERP` or `DT_NEEDED`
 - **AND** the controller executes the already-verified no-follow descriptor with loader-injection variables removed rather than resolving the path again
 - **AND** `pre-namespace-mapped-objects-v1` observes only that executable plus kernel pseudo-mappings and no other filesystem-backed mapping or loader/library open
+- **AND** every real analyzer launch is gated on that runtime observation and validation; a standalone validator invocation or static ELF identity check alone cannot authorize execution
+- **AND** successful validation detaches the tracee before the controller waits for completion, while validation or observation failure terminates the stopped tracee without relying on subprocess status polling
 - **AND** a dynamic executable, host loader/library dependency, descriptor/path substitution, or unexpected mapped object is UNKNOWN before any analyzer runs.
 
 #### Scenario: Analyzer capsule boots without host runtime mounts
@@ -450,6 +455,9 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** unavailable, launch, timeout, unexpected-exit, parse, identity/config, missing-artifact, or reconciliation error records `execution_state=error`, `evidence_outcome=UNKNOWN`, and, when no valid blocker exists, aggregate UNKNOWN
 - **AND** both non-shadow aggregates exit 1 and may project legacy FAIL, but the authoritative statuses remain distinct
 - **AND** when separate members simultaneously produce valid blocking FAIL and required UNKNOWN, aggregate precedence is FAIL, `has_unknown_required_evidence=true`, and the unknown member evidence remains present.
+- **AND** when one member itself contains both a valid blocker and required uncertainty, its authoritative member outcome is FAIL while a canonical non-empty `required_unknown_reasons` list retains the uncertainty, sets `has_unknown_required_evidence=true`, and remains independent of finding order.
+- **AND** `NOT_APPLICABLE` is a valid pre-existing member outcome and is never relabeled as an untrusted producer when a later global UNKNOWN is merged.
+- **AND** reclassifying a fixed finding to unknown/open re-derives `blocking` from severity and lifecycle, so warning and info findings remain non-blocking.
 
 #### Scenario: Known blocker takes precedence over concurrent uncertainty
 
@@ -499,6 +507,14 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **WHEN** the controller builds and runs both Ruff projections
 - **THEN** the original controls remain bound as evidence, the effective projection forces both `fix=false` and `fix-only=false`, the snapshot remains unmodified, and native Ruff JSON contains F821
 - **AND** an effective true value, attempted mutation, empty or malformed result artifact, ineffective projection, or pinned schema/catalog drift yields `UNKNOWN`, never an empty PASS.
+
+#### Scenario: Ruff process completion is authoritative
+
+- **GIVEN** mandatory Ruff emits parseable JSON, including an empty finding list
+- **WHEN** the Ruff process exits outside its completed-analysis statuses 0 and 1
+- **THEN** the adapter rejects the payload and records a tool/process error as `UNKNOWN`
+- **AND** retained stderr context is at most 4,000 characters including any truncation marker
+- **AND** an operational, configuration, or illegal-argument exit can never become completed PASS evidence.
 
 #### Scenario: Radon configuration cannot suppress a governed result
 
@@ -567,6 +583,15 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** non-empty target `executionEnvironments` remains unsupported UNKNOWN
 - **AND** a basic-mode non-rename regression whose strict-listed `a.py` otherwise loses its unknown-member diagnostics cannot PASS.
 
+#### Scenario: basedpyright projected invocation and process completion are authoritative
+
+- **GIVEN** an immutable index or range side has eligible Python inputs and a generated basedpyright project whose `include` is their exact manifest
+- **WHEN** the basedpyright adapter launches and accepts JSON output
+- **THEN** its argv contains `--project <projection>` and no positional source arguments, so command-line inputs cannot override the signed project include
+- **AND** an ordinary non-project adapter option retains the explicitly requested positional source arguments
+- **AND** only documented completed-analysis exit states may produce findings or PASS evidence
+- **AND** fatal, configuration, or illegal-argument exits yield UNKNOWN even when stdout is parseable JSON with an empty `generalDiagnostics` list.
+
 #### Scenario: Semgrep prohibits per-rule target narrowing and reconciles every pass target
 
 - **GIVEN** a sealed Semgrep bundle contains multiple rules, an eligible governed file, or an eligible file that exceeds the tool's implicit/default target-size limit
@@ -575,6 +600,14 @@ The report SHALL list each profile member with required/conditional status; `exe
 - **AND** for an accepted no-target-narrowing bundle, canonical JSON `paths.scanned` must equal the exact eligible explicit input manifest
 - **AND** `paths.skipped` and its reasons remain evidence
 - **AND** any missing, extra, oversized, unnormalized, or unreconciled pass path yields UNKNOWN rather than empty PASS.
+
+#### Scenario: Semgrep execution errors cannot masquerade as completed evidence
+
+- **GIVEN** a mandatory Semgrep pass emits parseable JSON containing `results` and apparently complete `paths.scanned`
+- **WHEN** the Semgrep process exits with a fatal process/configuration status or the payload contains one or more top-level `errors`
+- **THEN** the pass yields UNKNOWN with process/error diagnostics
+- **AND** its findings or empty result set are not accepted as completed PASS or FAIL evidence
+- **AND** only the documented successful or finding-bearing exit states with no structured execution errors proceed to path reconciliation and finding mapping.
 
 #### Scenario: Required analyzers handle structurally empty source snapshots
 

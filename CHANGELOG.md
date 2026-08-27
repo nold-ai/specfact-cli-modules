@@ -11,11 +11,15 @@ and this project follows SemVer for bundle versions.
 
 - Add C14 merge-quality range review with immutable scope manifests,
   differential finding continuity, fail-closed analyzer evidence, signed runtime
-  contracts, and schema 1.6 report truth. Release `specfact-code-review` 0.49.48
+  contracts, and schema 1.6 report truth. Release `specfact-code-review` 0.49.59
   with strict SpecFact CLI compatibility `===0.55.1`.
 
 ### Fixed
 
+- Reject Ruff operational, configuration, and illegal-argument exits before
+  accepting parseable finding JSON as completed analysis evidence.
+- Enforce the signed basedpyright project-only invocation and fail closed on
+  fatal basedpyright exits plus Semgrep fatal or structured execution errors.
 - Close the final C14 promotion blockers for projected policy mounts, staged
   transitive policy selection, Python-only suppression scanning, isolated
   invocation capsules, optional Semgrep skipped-path evidence, governed missing

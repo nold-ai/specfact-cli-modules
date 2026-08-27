@@ -380,6 +380,182 @@ def test_unchanged_inline_suppression_survives_line_shift(differential_api: Any)
     assert result.introduced == ()
     assert [occurrence.line for occurrence in result.unchanged] == [2]
     assert [finding.kind for finding in result.findings] == ["unchanged_suppression_on_changed_file"]
+    transition = result.findings[0].evidence.transition
+    assert transition.base_path == "src/app.py"
+    assert transition.base_line == 1
+    assert transition.correspondence_status == "unchanged"
+    assert transition.correspondence_evidence["decision"] == "unique_optimal_match"
+
+
+def test_relocated_identical_inline_suppression_is_introduced(differential_api: Any) -> None:
+    base_source = b"# noqa: F401\nx = 1\n"
+    head_source = b"x = 1\n# noqa: F401\n"
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": base_source},
+        head_sources={"src/app.py": head_source},
+    )
+
+    assert result.status == "FAIL"
+    assert [occurrence.line for occurrence in result.introduced] == [2]
+    assert result.unchanged == ()
+    assert [finding.kind for finding in result.findings] == ["introduced_inline_suppression"]
+    evidence = result.findings[0].evidence
+    assert evidence.base_blob_digest.startswith("sha256:")
+    assert evidence.transition.base_path == "src/app.py"
+    assert evidence.transition.base_line == 1
+    assert evidence.transition.base_occurrence_digest.startswith("sha256:")
+    assert evidence.transition.correspondence_status == "introduced"
+    assert evidence.transition.correspondence_digest.startswith("sha256:")
+    assert evidence.transition.correspondence_evidence["algorithm"] == "source-line-correspondence-v1"
+    assert evidence.transition.correspondence_evidence["global_cost"] == 2
+    assert evidence.transition.correspondence_evidence["forced_cost"] == 2
+    assert evidence.transition.correspondence_evidence["forbidden_cost"] == 2
+
+
+def test_genuinely_new_suppression_has_no_fabricated_baseline_evidence(differential_api: Any) -> None:
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"x = 1\n"},
+        head_sources={"src/app.py": b"x = 1\n# noqa: F401\n"},
+    )
+
+    evidence = result.findings[0].evidence
+    assert evidence.base_blob_digest == ""
+    assert evidence.transition.base_path == ""
+    assert evidence.transition.base_line == 0
+    assert evidence.transition.base_occurrence_digest == ""
+    assert evidence.transition.correspondence_status == ""
+    assert evidence.transition.correspondence_digest == ""
+    assert evidence.transition.correspondence_evidence == {}
+
+
+def test_inserted_repeated_suppression_preserves_existing_correspondence(differential_api: Any) -> None:
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"a = 1  # noqa\nb = 2  # noqa\n"},
+        head_sources={"src/app.py": b"new = 0  # noqa\na = 1  # noqa\nb = 2  # noqa\n"},
+    )
+
+    assert [occurrence.line for occurrence in result.introduced] == [1]
+    assert [occurrence.line for occurrence in result.unchanged] == [2, 3]
+
+
+def test_suppression_correspondence_bounds_aggregate_forbidden_pair_work(
+    differential_api: Any, monkeypatch: Any
+) -> None:
+    forbidden_calls = 0
+    edit_costs = differential_api._edit_costs
+
+    def counted_edit_costs(*args: Any, **kwargs: Any) -> Any:
+        nonlocal forbidden_calls
+        if kwargs.get("forbidden_pair") is not None:
+            forbidden_calls += 1
+        return edit_costs(*args, **kwargs)
+
+    monkeypatch.setattr(differential_api, "_MAX_AGGREGATE_CORRESPONDENCE_CELLS", 15)
+    monkeypatch.setattr(differential_api, "_edit_costs", counted_edit_costs)
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"a = 1  # noqa\nb = 2  # noqa\n"},
+        head_sources={"src/app.py": b"header = 0\na = 1  # noqa\nb = 2  # noqa\n"},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "suppression_correspondence_unknown"
+    assert forbidden_calls == 1
+    transitions = [finding.evidence.transition for finding in result.findings]
+    assert all(transition.base_occurrence_digest.startswith("sha256:") for transition in transitions)
+    assert "aggregate_correspondence_bounds" in {
+        transition.correspondence_evidence["decision"] for transition in transitions
+    }
+
+
+def test_suppression_physical_lines_are_reused_across_directive_identities(differential_api: Any) -> None:
+    class CountingBytes(bytes):
+        splitlines_calls = 0
+
+        def splitlines(self, keepends: bool = False) -> list[bytes]:
+            type(self).splitlines_calls += 1
+            return super().splitlines(keepends)
+
+    directive_lines = [f"value_{index} = {index}  # noqa: F{index:04d}\n" for index in range(64)]
+    base_source = CountingBytes("".join(directive_lines).encode())
+    head_source = CountingBytes(("".join(directive_lines) + "tail = 1\n").encode())
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": base_source},
+        head_sources={"src/app.py": head_source},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert len(result.unchanged) == 64
+    assert CountingBytes.splitlines_calls == 2
+
+
+def test_suppression_source_equality_is_reused_across_directive_identities(differential_api: Any) -> None:
+    class CountingBytes(bytes):
+        equality_calls = 0
+        __hash__ = bytes.__hash__
+
+        def __eq__(self, other: object) -> bool:
+            type(self).equality_calls += 1
+            return bytes.__eq__(self, other)
+
+    directive_lines = [f"value_{index} = {index}  # noqa: F{index:04d}\n" for index in range(64)]
+    base_source = CountingBytes("".join(directive_lines).encode())
+    head_source = CountingBytes(("".join(directive_lines) + "tail = 1\n").encode())
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": base_source},
+        head_sources={"src/app.py": head_source},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert len(result.unchanged) == 64
+    assert CountingBytes.equality_calls == 1
+
+
+def test_ordinal_fallback_respects_correspondence_resource_bounds(differential_api: Any, monkeypatch: Any) -> None:
+    monkeypatch.setattr(differential_api, "_MAX_SOURCE_BYTES", 8)
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"a = 1  # noqa\n"},
+        head_sources={"src/app.py": b"a = 2  # noqa\n"},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.introduced == ()
+    assert [finding.kind for finding in result.findings] == ["unchanged_suppression_on_changed_file"]
+    transition = result.findings[0].evidence.transition
+    assert transition.correspondence_status == "unknown"
+    assert transition.correspondence_evidence["reason"] == "correspondence_bounds"
+
+
+def test_budget_exhaustion_does_not_shift_repeated_suppression_pairs(differential_api: Any, monkeypatch: Any) -> None:
+    monkeypatch.setattr(differential_api, "_MAX_AGGREGATE_CORRESPONDENCE_CELLS", 20)
+
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"a = 1  # noqa\nb = 2  # noqa\nc = 3  # noqa\n"},
+        head_sources={"src/app.py": b"new = 0  # noqa\na = 1  # noqa\nb = 2  # noqa\nc = 3  # noqa\n"},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert [occurrence.line for occurrence in result.introduced] == [1]
+    assert [occurrence.line for occurrence in result.unchanged] == [2, 3, 4]
+
+
+def test_repeated_identical_suppression_surplus_has_no_fabricated_location(differential_api: Any) -> None:
+    result = differential_api.classify_suppression_delta(
+        base_sources={"src/app.py": b"# noqa\n# noqa\n"},
+        head_sources={"src/app.py": b"# noqa\n# noqa\n# noqa\n"},
+    )
+
+    assert result.status == "UNKNOWN"
+    assert result.introduced == ()
+    assert [occurrence.line for occurrence in result.unchanged] == [1, 2, 3]
+    assert [finding.kind for finding in result.findings] == ["unchanged_suppression_on_changed_file"] * 3
+    surplus = result.findings[2].evidence.transition
+    assert surplus.base_occurrence_digest == ""
+    assert surplus.correspondence_status == "unknown"
+    assert surplus.correspondence_evidence["decision"] == "ambiguous_surplus_candidate"
 
 
 def test_suppression_manifest_failure_is_unknown(differential_api: Any, monkeypatch: Any) -> None:
