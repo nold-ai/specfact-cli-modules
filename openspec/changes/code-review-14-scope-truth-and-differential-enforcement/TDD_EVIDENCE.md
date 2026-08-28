@@ -2017,7 +2017,21 @@ Pre-sign local verification passes format, Ruff, BasedPyright (`0 errors, 0
 warnings, 0 notes`), Pylint (`10.00/10`), strict OpenSpec, seven manifests plus
 registry, bundle imports, all `28` contract-first tests, the publish precheck,
 filesystem checksum/version verification, and `git diff --check`. The complete
-runner surface passes `341` of `342`; its sole expected pre-sign failure is the
-capsule-runtime test rejecting the deliberately unsigned new manifest. Trusted
+runner surface passes `341` of `342`; its sole failure is the already documented
+unsupported local macOS/CPython 3.14 capsule-lock environment. Trusted
 replacement signing, signed-head complete tests, protected final-head checks,
 and verified PR #448 thread disposition remain required by task 6.89.
+
+Trusted Module Signature Hardening run `33192244166` accepted signed human
+commit `8ce0d3b2b0fc128f3468a1d1e4b4a25792db690b` and produced signature-only bot
+commit `51b9d4ec16c2931edd4f5410b9bcbf619022e5b7` for exact checksum
+`sha256:13f208939b69fc54d8d4177dc2260b490be62443da3a428e3c643754fa62c942`
+with signature
+`J/fPBJhNWJP+BcSoBurimOT5PUmNC+VscQmjlSPegRwRZBoBUHtz4XqCa/0HBT0xOxpFW0rnvxqANHhzZGpUDA==`.
+Strict filesystem, cryptographic, and dev-baseline version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. The
+complete exact-core suite passes `1718` of `1719`; the sole failure remains the
+same local macOS/CPython 3.14 capsule-lock selector, with only two existing Lark
+deprecation warnings. The complete runner surface likewise passes `341` of
+`342` with that environment-only exception. This evidence-only checkpoint
+changes no signed payload byte and triggers the protected final-head matrix.
