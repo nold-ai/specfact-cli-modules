@@ -1609,3 +1609,54 @@ Strict filesystem and cryptographic verification against immutable core
 module manifests. This evidence-only commit changes no signed module payload
 byte and triggers the replacement protected matrix on top of the verified
 signing head.
+
+The replacement protected cycle required by task 6.59 completed successfully
+for checksum
+`sha256:d016ee8df7b0f21a3ae9b0d02d1a8c1cd95520085d7cf6430edc5c3dbba8e108`,
+trusted signing commit `c31ec39f4dd6c13dd35f9d9594492088572e911b`,
+and evidence head `8c7446a52c54069b552bdcd94dcbf90d59a24f8f`.
+The protected `pr-orchestrator` run `33175724836` passed quality and minimum-core
+`0.55.1` compatibility on Python 3.11, 3.12, and 3.13 together with signature
+verification and change detection. Module Signature Hardening run `33175724808`,
+Requirements evidence run `33175724806`, Docs Review run `33175724837`, and
+CodeQL run `33175722398` also passed; trusted signing-generation run
+`33175522586` produced the recorded signing commit from signed human commit
+`6e32b8a83f2e5b16132607aa9fdd34e12a924415`. Fresh review then identified new
+Git protocol bypasses, so task 6.60 and publication remain pending while tasks
+6.61-6.64 govern the replacement payload and final-head cycle.
+
+For task 6.61, six new worktree/cached cases failed while eight existing path
+controls passed: repository binary attributes and forced color hid the parsed
+diff headers, and a tracked filename beginning with Git pathspec magic was
+interpreted instead of matched literally. A seventh untracked-file regression
+failed for the same literal-pathspec boundary. This `6 failed, 8 passed` plus
+`1 failed` evidence authorizes only the Git evidence protocol hardening in task
+6.62. Independent validation then identified the same raw-output boundary for
+repository text-conversion drivers; its two worktree/cached regressions failed
+while 14 controls passed. The implementation now forces raw text, disables
+color and text conversion, and uses Git's long-supported global
+literal-pathspec mode for both diff and untracked discovery. The 16-case
+real-repository path matrix and seven adjacent
+unavailable/redirect/untracked controls then pass `23 passed`; binary
+attributes, text-conversion drivers, ambient color, and pathspec syntax can no
+longer convert a changed blocker to advisory evidence. The candidate remains version `0.49.63` with
+compatibility `>=0.55.1,<1.0.0`; checksum refresh, trusted signing, full quality,
+and the replacement protected cycle remain required by task 6.63.
+
+Final local verification for the task 6.62 payload passes format, Ruff,
+BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint (`10.00/10`), strict
+OpenSpec, seven-manifest/registry validation, bundle imports, three CLI-contract
+files, `28` contract-first tests, filesystem checksum/version enforcement,
+publish precheck, and `git diff --check`. The exact-core `0.55.1` complete suite
+passes `1681` of `1682` tests; its sole failure is the documented unsupported
+local macOS/CPython 3.14 capsule-lock environment, and the two warnings are the
+existing third-party Lark deprecations. Exact-core changed-line Code Review
+returns `PASS_WITH_ADVISORY`, exit `0`, with `78` retained findings, one
+pre-existing blocker outside the changed lines, and no changed-line blocker.
+The canonical changed-only signer preserves unpublished version `0.49.63` and
+compatibility `>=0.55.1,<1.0.0`, removes the stale signature, and sets unsigned
+filesystem checksum
+`sha256:58a31dfe44db4cf4de3727cb6c4d1427460c34e42675ef828993f4c1fd90fc83`.
+A signed human commit, trusted approval-time signature, fresh protected matrix,
+and final-head review/thread disposition remain required before task 6.63 or
+6.64 completes.

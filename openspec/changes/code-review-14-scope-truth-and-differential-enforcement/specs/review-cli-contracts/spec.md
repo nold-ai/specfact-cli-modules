@@ -104,6 +104,8 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** Git-quoted path headers, including UTF-8 and control-character filenames in worktree or cached diffs, are decoded to the exact filesystem path or make changed-line evidence unavailable
 - **AND** unquoted Git path headers preserve trailing filename whitespace while removing only Git's header delimiter
 - **AND** changed-line Git commands force canonical `a/` and `b/` diff prefixes independently of ambient mnemonic, no-prefix, or custom-prefix configuration
+- **AND** machine-parsed Git diffs force raw text output and disable color and text-conversion drivers so repository attributes or ambient configuration cannot hide protocol headers
+- **AND** reviewed filenames are passed to diff and untracked-file discovery as literal pathspecs so legal pathspec syntax in a filename cannot change the evidence query
 - **AND** changed-line Git commands ignore repository-local redirect variables such as `GIT_DIR`, `GIT_INDEX_FILE`, and `GIT_WORK_TREE`
 - **AND** untracked-file discovery treats only empty Git output as absence and never trims a non-empty path identity to absence
 - **AND** incomplete required capsule evidence remains `UNKNOWN` with a non-zero exit under changed enforcement and is never rewritten to PASS.

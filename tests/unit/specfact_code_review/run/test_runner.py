@@ -190,9 +190,9 @@ def test_changed_lines_from_git_reports_unavailable_unreadable_untracked_file(
     untracked_file.write_bytes(b"\xff\xfe")
 
     def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        if command[:3] == ["git", "diff", "--unified=0"]:
+        if command[:4] == ["git", "--literal-pathspecs", "diff", "--unified=0"]:
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-        if command[:3] == ["git", "ls-files", "--others"]:
+        if command[:4] == ["git", "--literal-pathspecs", "ls-files", "--others"]:
             return subprocess.CompletedProcess(command, 0, stdout=f"{untracked_file}\n", stderr="")
         raise AssertionError(f"unexpected command: {command}")
 
@@ -237,9 +237,9 @@ def test_changed_lines_from_git_reports_unavailable_untracked_discovery(
     untracked_file.write_text("VALUE = 1\n", encoding="utf-8")
 
     def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        if command[:3] == ["git", "diff", "--unified=0"]:
+        if command[:4] == ["git", "--literal-pathspecs", "diff", "--unified=0"]:
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-        if command[:3] == ["git", "ls-files", "--others"]:
+        if command[:4] == ["git", "--literal-pathspecs", "ls-files", "--others"]:
             return subprocess.CompletedProcess(command, 128, stdout="", stderr="not a git repository")
         raise AssertionError(f"unexpected command: {command}")
 
@@ -249,16 +249,24 @@ def test_changed_lines_from_git_reports_unavailable_untracked_discovery(
 
 
 @pytest.mark.parametrize(
-    ("file_name", "diff_mode", "config_name", "config_value"),
+    ("file_name", "diff_mode", "config_name", "config_value", "attributes"),
     [
-        ("ümlaut.py", "worktree", None, None),
-        ("line\nbreak.py", "cached", None, None),
-        ("trailing.py ", "worktree", None, None),
-        ("cached.py  ", "cached", None, None),
-        ("src/app.py", "worktree", "diff.mnemonicPrefix", "true"),
-        ("src/app.py", "cached", "diff.mnemonicPrefix", "true"),
-        ("b/app.py", "worktree", "diff.noprefix", "true"),
-        ("b/app.py", "cached", "diff.noprefix", "true"),
+        ("ümlaut.py", "worktree", None, None, None),
+        ("line\nbreak.py", "cached", None, None, None),
+        ("trailing.py ", "worktree", None, None, None),
+        ("cached.py  ", "cached", None, None, None),
+        ("src/app.py", "worktree", "diff.mnemonicPrefix", "true", None),
+        ("src/app.py", "cached", "diff.mnemonicPrefix", "true", None),
+        ("b/app.py", "worktree", "diff.noprefix", "true", None),
+        ("b/app.py", "cached", "diff.noprefix", "true", None),
+        ("binary.py", "worktree", None, None, "*.py binary\n"),
+        ("binary.py", "cached", None, None, "*.py binary\n"),
+        ("textconv.py", "worktree", "diff.hide.textconv", "true", "*.py diff=hide\n"),
+        ("textconv.py", "cached", "diff.hide.textconv", "true", "*.py diff=hide\n"),
+        ("colored.py", "worktree", "color.ui", "always", None),
+        ("colored.py", "cached", "color.ui", "always", None),
+        (":(top)literal.py", "worktree", None, None, None),
+        (":(top)literal.py", "cached", None, None, None),
     ],
 )
 def test_run_review_changed_enforcement_normalizes_git_diff_paths(
@@ -268,6 +276,7 @@ def test_run_review_changed_enforcement_normalizes_git_diff_paths(
     diff_mode: str,
     config_name: str | None,
     config_value: str | None,
+    attributes: str | None,
 ) -> None:
     runner_api = _c14_runner()
     git_env = runner_api._candidate_git_environment()
@@ -278,14 +287,17 @@ def test_run_review_changed_enforcement_normalizes_git_diff_paths(
     subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
     if config_name is not None and config_value is not None:
         subprocess.run(["git", "config", config_name, config_value], cwd=repository, check=True, env=git_env)
+    if attributes is not None:
+        (repository / ".gitattributes").write_text(attributes, encoding="utf-8")
+        subprocess.run(["git", "add", ".gitattributes"], cwd=repository, check=True, env=git_env)
     source = repository / file_name
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text("VALUE = 1\n", encoding="utf-8")
-    subprocess.run(["git", "add", "--", file_name], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "--literal-pathspecs", "add", "--", file_name], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
     source.write_text("VALUE = 2\n", encoding="utf-8")
     if diff_mode == "cached":
-        subprocess.run(["git", "add", "--", file_name], cwd=repository, check=True, env=git_env)
+        subprocess.run(["git", "--literal-pathspecs", "add", "--", file_name], cwd=repository, check=True, env=git_env)
 
     for variable in set(os.environ).difference(git_env):
         monkeypatch.delenv(variable)
@@ -351,6 +363,29 @@ def test_untracked_changed_lines_preserves_nonempty_whitespace_path_output(
     monkeypatch.setattr(subprocess, "run", _fake_run)
 
     assert _untracked_changed_lines(source) == {1}
+
+
+def test_changed_lines_from_git_treats_untracked_pathspec_syntax_literally(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    (repository / "README.md").write_text("baseline\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    file_name = ":(top)untracked.py"
+    (repository / file_name).write_text("VALUE = 1\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+
+    assert _changed_lines_from_git([Path(file_name)]) == {file_name: {1}}
 
 
 def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:

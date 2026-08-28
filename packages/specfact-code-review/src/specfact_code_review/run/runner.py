@@ -4118,7 +4118,9 @@ def _run_changed_line_git_command(command: list[str]) -> subprocess.CompletedPro
 
 def _untracked_changed_lines(file_path: Path) -> set[int] | None:
     """Return every line for an untracked file, no lines when tracked, or unavailable evidence."""
-    listed = _run_changed_line_git_command(["git", "ls-files", "--others", "--exclude-standard", "--", str(file_path)])
+    listed = _run_changed_line_git_command(
+        ["git", "--literal-pathspecs", "ls-files", "--others", "--exclude-standard", "--", str(file_path)]
+    )
     if listed is None:
         return None
     if listed.stdout == "":
@@ -4133,7 +4135,18 @@ def _untracked_changed_lines(file_path: Path) -> set[int] | None:
 def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]] | None:
     """Collect changed line numbers for changed enforcement evidence."""
     diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
-    command = ["git", "diff", "--unified=0", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/"]
+    command = [
+        "git",
+        "--literal-pathspecs",
+        "diff",
+        "--unified=0",
+        "--no-ext-diff",
+        "--no-color",
+        "--text",
+        "--no-textconv",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+    ]
     command.append("--cached" if diff_mode == "cached" else "HEAD")
     if files:
         command.extend(["--", *(str(file_path) for file_path in files)])
