@@ -2125,3 +2125,14 @@ selector, with only two existing Lark deprecations. The unsigned candidate is
 `sha256:30a90dd7d43cc84b46177c5fac7aa55ee4b51538c02040c68e3ccd612af8c09d`.
 Signed human commit, trusted replacement signing, protected final-head checks,
 and verified PR #448 thread disposition remain required by task 6.93.
+
+Trusted Module Signature Hardening run `33197304993` accepted signed human
+commit `212092ed5e1377f70e83492545402324d1aab11c` and produced signature-only bot
+commit `ff7ef96280a89bec4821d417be8efe921491d0a7` for exact checksum
+`sha256:30a90dd7d43cc84b46177c5fac7aa55ee4b51538c02040c68e3ccd612af8c09d`
+with signature
+`1srhq755XdZZUJ0VXSjnHATBujnUAOkdgIaAwWdO2dBkstTwaxfdtXW6jsAmAXowun9utJEsipkvP8Ie07EmCA==`.
+Strict filesystem, cryptographic, and `origin/dev` version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. This
+evidence-only checkpoint changes no signed module payload byte and triggers the
+protected final-head matrix.
