@@ -6057,6 +6057,13 @@ def _worktree_snapshot_unknown(
     )
 
 
+def _worktree_analysis_identity_changed(
+    identity: WorktreeAnalysisIdentity | Literal["not_repository"], files: list[Path]
+) -> bool:
+    """Return whether ordinary changed enforcement lost its analyzed identity."""
+    return identity != "not_repository" and _capture_worktree_analysis_identity(files) != identity
+
+
 def _run_worktree_development_host_review(
     files: list[Path],
     options: ReviewOptions,
@@ -6072,7 +6079,7 @@ def _run_worktree_development_host_review(
             scope_evidence=scope_evidence,
         )
     report = run_review(files, options)
-    if identity != "not_repository" and _capture_worktree_analysis_identity(files) != identity:
+    if _worktree_analysis_identity_changed(identity, files):
         return _worktree_snapshot_unknown(
             "worktree_snapshot_changed_during_analysis",
             files=files,
@@ -6273,10 +6280,7 @@ def run_capsule_review(
                 files=snapshot_files,
                 options=review_options,
             )
-            if (
-                worktree_identity != "not_repository"
-                and _capture_worktree_analysis_identity(files) != worktree_identity
-            ):
+            if _worktree_analysis_identity_changed(worktree_identity, files):
                 return _worktree_snapshot_unknown(
                     "worktree_snapshot_changed_during_analysis",
                     files=files,
@@ -6303,7 +6307,7 @@ def run_capsule_review(
                         cached_diff=cached_diff,
                     )
                 findings_by_member = rebased_findings
-            return _with_capsule_enforcement(
+            enforced_report = _with_capsule_enforcement(
                 _capsule_report(
                     snapshot.evidence,
                     findings_by_member,
@@ -6315,6 +6319,14 @@ def run_capsule_review(
                 findings_by_member=findings_by_member,
                 cached_diff=cached_diff,
             )
+            if _worktree_analysis_identity_changed(worktree_identity, files):
+                return _worktree_snapshot_unknown(
+                    "worktree_snapshot_changed_during_analysis",
+                    files=files,
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                )
+            return enforced_report
     finally:
         _cleanup_capsule_runtime(runtime)
 

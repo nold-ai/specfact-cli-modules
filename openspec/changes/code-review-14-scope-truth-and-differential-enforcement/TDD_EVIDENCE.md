@@ -2136,3 +2136,38 @@ Strict filesystem, cryptographic, and `origin/dev` version verification against
 the immutable core `0.55.1` public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed module payload byte and triggers the
 protected final-head matrix.
+
+The final Codex review of head `d1728f459fa1bfd9071e9e3a002c832dad0f3039`
+identified one remaining projection-time window inside the same ordinary
+worktree identity contract. Independent validation reproduced the issue: after
+the post-analysis identity check, moving the analyzed blocker from line 2 to
+line 3 on entry to changed-line enforcement made the live diff contain only
+line 3 while the capsule finding remained on line 2. The completed analyzer
+failure was therefore downgraded to `PASS_WITH_ADVISORY` / exit `0`.
+
+The OpenSpec scenario and tasks were updated before the regression and
+production edit. The exact real-repository regression first failed (`1 failed`)
+with that unintended PASS result. Capsule enforcement now stores its projected
+report and rechecks the original selected raw-path plus immutable `HEAD` tree
+identity after changed-line derivation, returning the existing required
+`worktree_snapshot_changed_during_analysis` UNKNOWN / exit `1` on drift. The
+analysis-time and projection-time controls pass together (`3 passed`). The
+development-host path already enclosed its internal projection within the
+existing post-run identity check and required no semantic change.
+
+Exact-core `0.55.1` smart and complete suites each pass `1728` of `1729`; their
+sole identical failure remains the documented local macOS/CPython 3.14 capsule
+lock selector, with two existing Lark deprecations. Strict OpenSpec, format,
+repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`),
+all `28` contract-first tests, seven manifests plus registry, bundle imports,
+filesystem checksum/version verification, publish precheck, and `git diff
+--check` pass. The first changed-line review exposed a remediation-caused
+cyclomatic-complexity result; centralizing the repeated identity predicate
+removed it without changing behavior. The repeated review is
+`PASS_WITH_ADVISORY`, exit `0`, with no changed-line blocker and only the
+pre-existing `_run_capsule_snapshot` parameter-count error. Candidate module
+version is `0.49.67`, compatibility remains `>=0.55.1,<1.0.0`, and the unsigned
+filesystem checksum is
+`sha256:28a8149c74471166e1c16bd83ec5f2f6072323e41316f495410e8a09e02723cf`.
+Replacement approval-time signing, final-head protected checks, and verified PR
+#448 thread disposition remain required by tasks 6.93 and 6.95.

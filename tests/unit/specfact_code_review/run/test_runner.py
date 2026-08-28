@@ -782,6 +782,55 @@ def test_capsule_worktree_enforcement_rejects_analysis_time_identity_drift(
     }
 
 
+def test_capsule_worktree_enforcement_rejects_projection_time_identity_drift(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("SAFE = 1\nSAFE = 2\nSAFE = 3\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("SAFE = 1\nBLOCKED = True\nSAFE = 3\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "app.py", "line": 2}
+    )
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
+    snapshot = SimpleNamespace(evidence=evidence, findings_by_member={"ruff": [finding]})
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+    original_enforcement = runner_api._with_capsule_enforcement
+    projection_started = False
+
+    def _mutate_during_projection(*args: object, **kwargs: object) -> object:
+        nonlocal projection_started
+        if not projection_started:
+            projection_started = True
+            source.write_text("SAFE = 1\nSAFE = 2\nBLOCKED = True\n", encoding="utf-8")
+        return original_enforcement(*args, **kwargs)
+
+    monkeypatch.setattr(runner_api, "_with_capsule_enforcement", _mutate_during_projection)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+        "worktree_snapshot_changed_during_analysis"
+    }
+
+
 def test_cached_worktree_comparison_fails_closed_for_symlink_and_empty_selection(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
