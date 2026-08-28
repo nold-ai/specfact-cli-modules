@@ -343,5 +343,7 @@ Explicitly forbidden:
 - [ ] 6.93 Bind ordinary worktree analysis to stable pre/post selected-path and base-tree identities, fail required UNKNOWN on drift, then repeat task 6.89 with a replacement signed patch candidate.
 - [x] 6.94 Add a failing real-repository regression for the final PR #448 review proving selected worktree-byte mutation during changed-line projection cannot compare stale capsule findings with newer diff evidence.
 - [ ] 6.95 Bind ordinary worktree identity around changed-line projection, fail required UNKNOWN on drift, then repeat task 6.89 with a replacement signed patch candidate.
+- [x] 6.96 Add failing real-repository regressions for the final PR #448 review proving selected in-repository and escaping worktree symlinks cannot reach analyzer execution through dereferenced target bytes.
+- [ ] 6.97 Reject selected ordinary-worktree symlinks before analyzer execution, then repeat task 6.89 with a replacement signed patch candidate.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

@@ -4362,7 +4362,7 @@ class WorktreePathIdentity:
     """Raw selected-path state observed around ordinary worktree analysis."""
 
     path: str
-    kind: Literal["missing", "regular", "symlink"]
+    kind: Literal["missing", "regular"]
     mode: int
     device: int
     inode: int
@@ -4390,17 +4390,13 @@ def _worktree_path_identity(path: str, absolute: Path) -> WorktreePathIdentity |
     except OSError:
         return None
     if stat.S_ISREG(before.st_mode):
-        kind: Literal["regular", "symlink"] = "regular"
+        kind: Literal["regular"] = "regular"
         try:
             content = absolute.read_bytes()
         except OSError:
             return None
     elif stat.S_ISLNK(before.st_mode):
-        kind = "symlink"
-        try:
-            content = os.fsencode(os.readlink(absolute))
-        except OSError:
-            return None
+        return None
     else:
         return None
     try:

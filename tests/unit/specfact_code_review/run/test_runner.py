@@ -831,6 +831,52 @@ def test_capsule_worktree_enforcement_rejects_projection_time_identity_drift(
     }
 
 
+@pytest.mark.parametrize("target_kind", ["repository", "escaping"])
+def test_capsule_worktree_enforcement_rejects_selected_symlink_before_analysis(
+    monkeypatch: MonkeyPatch, tmp_path: Path, target_kind: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    target = repository / "target.py" if target_kind == "repository" else tmp_path / "outside.py"
+    target.write_text("SAFE = True\n", encoding="utf-8")
+    os.symlink(target.name if target_kind == "repository" else target, source)
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    tracked = ["app.py", "target.py"] if target_kind == "repository" else ["app.py"]
+    subprocess.run(["git", "add", *tracked], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    target.write_text("BLOCKED = True\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot_calls: list[str] = []
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(
+        runner_api,
+        "_run_capsule_snapshot",
+        lambda *_args, **_kwargs: snapshot_calls.append("ran") or snapshot,
+    )
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert snapshot_calls == []
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+        "worktree_snapshot_identity_unavailable"
+    }
+
+
 def test_cached_worktree_comparison_fails_closed_for_symlink_and_empty_selection(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:

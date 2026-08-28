@@ -2183,3 +2183,35 @@ and `origin/dev` version verification against the immutable core `0.55.1`
 public key passes all seven module manifests. This evidence-only checkpoint
 changes no signed module payload byte and triggers the protected final-head
 matrix.
+
+The final Codex review of head `9e2cdb537c02a71bec22f79f49a4fb40e8d675f9`
+identified a selected-symlink mismatch inside the same ordinary worktree input
+identity. Independent validation against that immutable head reproduced both
+states: an in-repository symlink whose unselected target changed returned
+`PASS` / exit `0`, and an escaping symlink raised an uncaught `ValueError` when
+capsule path resolution left the snapshot root. In both cases identity capture
+bound only the symlink text while analyzer preparation dereferenced different,
+unbound target bytes.
+
+The OpenSpec scenario and tasks were updated before the parameterized
+real-repository regression and production edit. Both cases first reached the
+capsule stub and failed (`2 failed`). Ordinary changed worktree identity now
+rejects every selected symlink before analyzer execution; the existing
+`worktree_snapshot_identity_unavailable` path produces required UNKNOWN / exit
+`1`. Cached behavior already rejected selected symlinks and is unchanged. The
+two symlink cases plus the three analysis/projection drift controls pass (`5
+passed`).
+
+Exact-core `0.55.1` smart and complete suites each pass `1730` of `1731`; their
+sole identical failure remains the documented local macOS/CPython 3.14 capsule
+lock selector, with two existing Lark deprecations. Strict OpenSpec, format,
+repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`),
+all `28` contract-first tests, seven manifests plus registry, bundle imports,
+filesystem checksum/version verification, publish precheck, and `git diff
+--check` pass. Changed-line Code Review is `PASS_WITH_ADVISORY`, exit `0`, with
+no changed-line blocker and only the pre-existing `_run_capsule_snapshot`
+parameter-count error. Candidate module version is `0.49.68`, compatibility
+remains `>=0.55.1,<1.0.0`, and the unsigned filesystem checksum is
+`sha256:c1e03e2d7a10839aefd694479d1deb7a965eac546aed51d4274321e74d287b61`.
+Replacement approval-time signing, final-head protected checks, and verified PR
+#448 thread disposition remain required by tasks 6.93, 6.95, and 6.97.
