@@ -1702,3 +1702,13 @@ compatibility remains `>=0.55.1,<1.0.0`, and the refreshed unsigned checksum is
 `sha256:76ce1ecfdd6cd63e400966b6e596239bc72833f557b7290ec134632f8b3aa0d0`.
 Signed commit, trusted replacement signature, protected checks, and final-head
 review/thread disposition remain required by tasks 6.67-6.68.
+
+Trusted signing commit `b13f3525d0ae851026000b4e218e2432c368b905`
+added only signature
+`53a0eIQmoE/w9GupY/1ZRNuBc56knakjUpBMETfXVkR4m/4gFAcQHLw+J58p2jcI8KiSB08LSHgfuXBgQzYIBw==`
+to exact checksum
+`sha256:76ce1ecfdd6cd63e400966b6e596239bc72833f557b7290ec134632f8b3aa0d0`.
+Strict filesystem, cryptographic, and version-baseline verification against the
+public key in immutable core `0.55.1` passes all seven module manifests. This
+documentation-only evidence commit changes no signed payload byte and triggers
+the replacement protected matrix on the verified signing head.
