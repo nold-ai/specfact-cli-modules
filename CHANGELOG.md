@@ -17,6 +17,10 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Release `specfact-code-review` 0.49.66 with pre/post raw selected-path and
+  immutable `HEAD` tree binding for ordinary worktree analysis, so concurrent
+  edits or base advancement cannot project stale blocking findings to PASS;
+  retain compatibility `>=0.55.1,<1.0.0`.
 - Release `specfact-code-review` 0.49.65 with raw HEAD/worktree corroboration
   that prevents clean filters and index hints from hiding analyzer-visible
   changes, cached enforcement before the first commit through a verified empty

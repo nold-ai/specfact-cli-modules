@@ -4357,6 +4357,113 @@ class CachedAnalysisSnapshot:
     diff: CachedDiffIdentity
 
 
+@dataclass(frozen=True)
+class WorktreePathIdentity:
+    """Raw selected-path state observed around ordinary worktree analysis."""
+
+    path: str
+    kind: Literal["missing", "regular", "symlink"]
+    mode: int
+    device: int
+    inode: int
+    size: int
+    modified_ns: int
+    changed_ns: int
+    content_sha256: str
+
+
+@dataclass(frozen=True)
+class WorktreeAnalysisIdentity:
+    """Immutable base and selected-path evidence bound around analysis."""
+
+    repository: Path
+    base_tree: str
+    paths: tuple[WorktreePathIdentity, ...]
+
+
+def _worktree_path_identity(path: str, absolute: Path) -> WorktreePathIdentity | None:
+    """Capture one raw path without accepting a raced type or filesystem identity."""
+    try:
+        before = absolute.lstat()
+    except FileNotFoundError:
+        return WorktreePathIdentity(path, "missing", 0, 0, 0, 0, 0, 0, hashlib.sha256(b"").hexdigest())
+    except OSError:
+        return None
+    if stat.S_ISREG(before.st_mode):
+        kind: Literal["regular", "symlink"] = "regular"
+        try:
+            content = absolute.read_bytes()
+        except OSError:
+            return None
+    elif stat.S_ISLNK(before.st_mode):
+        kind = "symlink"
+        try:
+            content = os.fsencode(os.readlink(absolute))
+        except OSError:
+            return None
+    else:
+        return None
+    try:
+        after = absolute.lstat()
+    except OSError:
+        return None
+    before_state = (
+        before.st_mode,
+        before.st_dev,
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+        before.st_ctime_ns,
+    )
+    after_state = (
+        after.st_mode,
+        after.st_dev,
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
+        after.st_ctime_ns,
+    )
+    if before_state != after_state:
+        return None
+    return WorktreePathIdentity(
+        path=path,
+        kind=kind,
+        mode=before.st_mode,
+        device=before.st_dev,
+        inode=before.st_ino,
+        size=before.st_size,
+        modified_ns=before.st_mtime_ns,
+        changed_ns=before.st_ctime_ns,
+        content_sha256=hashlib.sha256(content).hexdigest(),
+    )
+
+
+def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> WorktreeAnalysisIdentity | None:
+    """Bind one stable HEAD tree and exact selected raw path states."""
+    base_tree = _git_tree_identity(repository, "HEAD")
+    if base_tree is None:
+        return None
+    paths: list[WorktreePathIdentity] = []
+    for path, absolute in sorted(selected.items()):
+        identity = _worktree_path_identity(path, absolute)
+        if identity is None:
+            return None
+        paths.append(identity)
+    if _git_tree_identity(repository, "HEAD") != base_tree:
+        return None
+    return WorktreeAnalysisIdentity(repository=repository, base_tree=base_tree, paths=tuple(paths))
+
+
+def _capture_worktree_analysis_identity(
+    files: list[Path],
+) -> WorktreeAnalysisIdentity | Literal["not_repository"] | None:
+    """Capture ordinary worktree evidence or identify a non-repository review."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return "not_repository"
+    return _worktree_analysis_identity(*repository_paths)
+
+
 def _parse_cached_tree_entry(record: str) -> tuple[str, str, str] | None:
     """Parse one trusted tree record into path, mode, and blob identity."""
     metadata, separator, path = record.partition("\t")
@@ -5934,6 +6041,47 @@ def _with_capsule_enforcement(
     )
 
 
+def _worktree_snapshot_unknown(
+    reason: str,
+    *,
+    files: list[Path],
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+) -> ReviewReport:
+    """Return required uncertainty when ordinary analysis loses input identity."""
+    return _with_capsule_enforcement(
+        _unknown_capsule_report(reason, options=options, scope_evidence=scope_evidence),
+        options,
+        files=files,
+        findings_by_member={},
+    )
+
+
+def _run_worktree_development_host_review(
+    files: list[Path],
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+) -> ReviewReport:
+    """Run development-host analysis while rejecting ordinary worktree drift."""
+    identity = _capture_worktree_analysis_identity(files) if options.review_mode == "changed" else "not_repository"
+    if identity is None:
+        return _worktree_snapshot_unknown(
+            "worktree_snapshot_identity_unavailable",
+            files=files,
+            options=options,
+            scope_evidence=scope_evidence,
+        )
+    report = run_review(files, options)
+    if identity != "not_repository" and _capture_worktree_analysis_identity(files) != identity:
+        return _worktree_snapshot_unknown(
+            "worktree_snapshot_changed_during_analysis",
+            files=files,
+            options=options,
+            scope_evidence=scope_evidence,
+        )
+    return report.model_copy(update={"scope_evidence": scope_evidence})
+
+
 def _rebase_host_snapshot_findings(
     report: ReviewReport,
     *,
@@ -6079,7 +6227,7 @@ def run_capsule_review(
         if _allows_development_host_compatibility(reason):
             if _cached_review_requested(review_options):
                 return _run_cached_development_host_review(files, review_options, scope_evidence)
-            return run_review(files, review_options).model_copy(update={"scope_evidence": scope_evidence})
+            return _run_worktree_development_host_review(files, review_options, scope_evidence)
         return _with_capsule_enforcement(
             _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence),
             review_options,
@@ -6092,6 +6240,7 @@ def run_capsule_review(
             snapshot_files = files
             cached_diff: CachedDiffIdentity | None = None
             cached_snapshot: CachedAnalysisSnapshot | None = None
+            worktree_identity: WorktreeAnalysisIdentity | Literal["not_repository"] = "not_repository"
             if _cached_review_requested(review_options):
                 temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
                 cached_snapshot = _cached_analysis_snapshot(files, temporary_root)
@@ -6108,12 +6257,32 @@ def run_capsule_review(
                     )
                 snapshot_root, snapshot_files = cached_snapshot.root, cached_snapshot.files
                 cached_diff = cached_snapshot.diff
+            elif review_options.review_mode == "changed":
+                captured_identity = _capture_worktree_analysis_identity(files)
+                if captured_identity is None:
+                    return _worktree_snapshot_unknown(
+                        "worktree_snapshot_identity_unavailable",
+                        files=files,
+                        options=review_options,
+                        scope_evidence=scope_evidence,
+                    )
+                worktree_identity = captured_identity
             snapshot = _run_capsule_snapshot(
                 runtime,
                 snapshot_root=snapshot_root,
                 files=snapshot_files,
                 options=review_options,
             )
+            if (
+                worktree_identity != "not_repository"
+                and _capture_worktree_analysis_identity(files) != worktree_identity
+            ):
+                return _worktree_snapshot_unknown(
+                    "worktree_snapshot_changed_during_analysis",
+                    files=files,
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                )
             findings_by_member = snapshot.findings_by_member
             if cached_snapshot is not None:
                 rebased_findings = _rebase_cached_snapshot_findings(

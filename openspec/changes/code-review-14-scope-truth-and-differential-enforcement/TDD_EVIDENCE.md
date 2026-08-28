@@ -2088,3 +2088,40 @@ Strict filesystem, cryptographic, and dev-baseline version verification against
 the immutable core `0.55.1` public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed module payload byte and triggers the
 protected final-head matrix.
+
+The final Codex review of head `918ae73294bee69fdc4f3eb50aee8e71c45c5595`
+identified one additional ordinary-worktree race inside the same changed-line
+identity contract. Independent validation confirmed that capsule analysis used
+the live caller directory, then recomputed changed lines from potentially newer
+bytes. A blocker observed on line 1 could be moved to line 2 during analysis;
+the stale finding then missed the later line map and the analyzer `FAIL` became
+`PASS_WITH_ADVISORY` / exit `0`.
+
+The contract and task boundary were updated before implementation. Two
+real-repository regressions first failed (`2 failed`): selected bytes moved
+during the capsule stub returned `PASS_WITH_ADVISORY` / exit `0`, while a
+concurrent `HEAD` advancement retained ordinary `FAIL` instead of required
+uncertainty. Ordinary changed analysis now captures the immutable `HEAD` tree
+plus exact selected-path kind, mode, filesystem identity, timestamps, size, and
+raw-content digest before analyzer execution, repeats that capture before
+changed-line projection, and emits
+`worktree_snapshot_changed_during_analysis` as required `UNKNOWN` / exit `1` on
+any mismatch. The same guard covers the bounded development-host fallback.
+Both regressions and the three clean-filter/index-hint controls pass (`5
+passed`); the complete runner surface passes `350` of `351`.
+
+Exact-core `0.55.1` format, Ruff, BasedPyright (`0 errors, 0 warnings, 0
+notes`), Pylint (`10.00/10`), strict OpenSpec, seven manifests plus registry,
+bundle imports, all `28` contract-first tests, filesystem checksum/version
+verification with the immutable core public key, publish precheck, and `git
+diff --check` pass. Manual changed-line Code Review with bug-hunt enabled returns
+`PASS_WITH_ADVISORY`, exit `0`, with no changed-line blocker; its two errors are
+the already documented local capsule/test environment findings outside this
+patch. Complete and smart exact-core suites each pass `1727` of `1728`; their
+sole identical failure remains the known macOS/CPython 3.14 capsule-lock
+selector, with only two existing Lark deprecations. The unsigned candidate is
+`specfact-code-review` 0.49.66 with unchanged compatibility
+`>=0.55.1,<1.0.0` and checksum
+`sha256:30a90dd7d43cc84b46177c5fac7aa55ee4b51538c02040c68e3ccd612af8c09d`.
+Signed human commit, trusted replacement signing, protected final-head checks,
+and verified PR #448 thread disposition remain required by task 6.93.
