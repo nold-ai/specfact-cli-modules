@@ -6,6 +6,8 @@
 - [x] 1.3 Define the manual-trigger removal, compatibility limit, and rollback
   before workflow edits.
 - [x] 1.4 Strictly validate this OpenSpec change.
+- [x] 1.5 Confirm the exact-only metadata is a runtime installer boundary and
+  define minimum-only compatibility semantics.
 
 ## 2. Test-first evidence
 
@@ -13,6 +15,10 @@
   preserving pull-request/push matching-branch behavior.
 - [x] 2.2 Run the focused suite before workflow edits and record the expected
   failure in `TDD_EVIDENCE.md`.
+- [x] 2.3 Add focused contracts for the minimum, later compatible versions, and
+  immutable minimum-version CI evidence.
+- [x] 2.4 Run those contracts before manifest/workflow implementation and
+  record the expected failures.
 
 ## 3. Minimal implementation
 
@@ -20,6 +26,12 @@
   three mixed-trust workflows.
 - [x] 3.2 Confirm module packages, manifests, registry data, dependency files,
   signatures, and release artifacts remain unchanged.
+- [x] 3.3 Replace the exact-only runtime constraint with `>=0.55.1` and apply
+  the required patch version/checksum/signature flow.
+- [x] 3.4 Reframe the immutable 0.55.1 workflow as minimum-version evidence and
+  keep current paired-core marketplace validation.
+- [x] 3.5 Correct active change-order guidance without rewriting historical C14
+  evidence or frozen provenance identities.
 
 ## 4. Verification and review
 
@@ -31,6 +43,10 @@
   source-backed finding within scope.
 - [x] 4.4 Ensure `.specfact/code-review.json` is fresh and records a passing
   changed-scope review with `--bug-hunt`.
+- [x] 4.5 Run focused compatibility tests, strict OpenSpec validation, publish
+  precheck, and the required quality sequence.
+- [x] 4.6 Run independent pre-patch and post-patch fix reviews and resolve every
+  source-backed finding in scope.
 
 ## 5. Delivery
 
@@ -39,4 +55,8 @@
 - [ ] 5.3 Confirm required PR checks, including Actions CodeQL analysis, pass;
   inspect the private GitHub Security records for closure.
 - [ ] 5.4 After merge, archive only with
-  `openspec archive ci-02-codeql-cache-scope-isolation`.
+  `openspec archive ci-02-codeql-cache-scope-isolation`; if C14 remains active,
+  record this change as the later compatibility authority and require C14's
+  eventual archive to preserve or be followed by this supersession.
+- [ ] 5.5 Confirm the signing bot updates the PR manifest and the post-merge
+  publisher opens the immutable registry publication PR.

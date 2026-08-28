@@ -18,12 +18,17 @@ pull-request and protected-branch push contexts.
 - Replace the previous manual-ref contract tests with trigger-isolation
   contracts that fail if a default-cache-writing manual trigger is reintroduced
   beside the dynamic checkout.
+- Correct `specfact-code-review` runtime compatibility metadata from an exact
+  core identity to the proven minimum `>=0.55.1`.
+- Keep the immutable core 0.55.1 smoke as minimum-version evidence while the
+  paired-core quality job validates the candidate against the current core.
 
 ## Capabilities
 
 ### New Capabilities
 
-None.
+- `module-core-runtime-compatibility`: module releases declare minimum and,
+  only for known incompatibility, maximum core versions.
 
 ### Modified Capabilities
 
@@ -32,14 +37,19 @@ None.
 
 ## Impact
 
-- Affects only `.github/workflows/docs-review.yml`,
+- The cache-scope correction affects `.github/workflows/docs-review.yml`,
   `.github/workflows/pr-orchestrator.yml`,
   `.github/workflows/requirements-evidence.yml`, the focused workflow contract
   test, and this OpenSpec change.
 - Manual **Run workflow** actions for these three files are removed. Pull
   requests, protected-branch pushes, and GitHub's rerun controls remain.
-- Does not change module source, manifests, registry metadata, versions,
-  signatures, dependency files, package publishing, or C14 artifacts.
+- Bumps and re-signs the `specfact-code-review` manifest for a one-time
+  compatibility correction. The canonical post-merge publisher owns the new
+  immutable archive and registry-index promotion.
+- Updates focused manifest, runtime, and workflow contracts plus active
+  change-order guidance for that correction.
+- Does not change analyzer behavior, frozen C14 provenance identities,
+  dependencies, or source-code contracts.
 - The authoritative scanner records remain in GitHub Security. In accordance
   with `SECURITY.md`, no public vulnerability issue or exploit detail is added.
 
@@ -51,3 +61,6 @@ None.
 - Rollback is a single revert of the workflow triggers, test contract, and
   OpenSpec delta. Reintroducing the old trigger also reintroduces the security
   analysis failure and is not a safe steady state.
+- Assumption: core 0.55.1 is the earliest supported runtime and no later core
+  incompatibility is known. If that changes, publish an evidence-backed upper
+  bound; rollback is a metadata-only patch release that narrows the range.

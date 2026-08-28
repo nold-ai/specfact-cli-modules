@@ -204,8 +204,8 @@ jobs:
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run test
 
-  exact-core-schema-compatibility:
-    name: exact-core-schema-compatibility (${{ matrix.python-version }})
+  minimum-core-schema-compatibility:
+    name: minimum-core-schema-compatibility (${{ matrix.python-version }})
     needs: [changes]
     if: needs.changes.outputs.code_changed == 'true' && needs.changes.outputs.skip_tests_dev_to_main != 'true'
     permissions:
@@ -277,7 +277,7 @@ jobs:
           test "$(sha256sum "${cache}/blobs/sha256/${manifest#sha256:}" | cut -d ' ' -f1)" = "${manifest#sha256:}"
           rm -f "$registry_config"
           echo "PREFETCHED_OCI_CACHE=$cache" >> "$GITHUB_ENV"
-      - name: Install exact core and candidate module package
+      - name: Install minimum core and candidate module package
         shell: bash
         run: |
           set -euo pipefail
@@ -286,7 +286,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir ./exact-core pytest==9.1.1 PyYAML==6.0.3 beartype==0.22.9 icontract==2.7.3 pydantic==2.13.4 requests==2.34.2 typer==0.27.1 packaging==26.3
           python scripts/link_dev_module.py specfact-code-review --shadow-root "${RUNNER_TEMP}/specfact-modules" --force
-      - name: reject-core-version-alias
+      - name: verify-minimum-core-compatibility-range
         shell: bash
         run: |
           set -euo pipefail
@@ -296,11 +296,13 @@ jobs:
           from packaging.specifiers import SpecifierSet
 
           assert importlib.metadata.version("specfact-cli") == "0.55.1"
-          assert SpecifierSet("===0.55.1").contains("0.55.1")
-          assert not SpecifierSet("===0.55.1").contains("0.55.1+vendor")
-          assert SpecifierSet("==0.55.1").contains("0.55.1+vendor")
+          compatibility = SpecifierSet(">=0.55.1")
+          assert not compatibility.contains("0.55.0")
+          assert compatibility.contains("0.55.1")
+          assert compatibility.contains("0.55.2")
+          assert compatibility.contains("1.0.0")
           PY
-      - name: Run schema 1.6 exact-core compatibility smoke
+      - name: Run schema 1.6 minimum-core compatibility smoke
         shell: bash
         env:
           SPECFACT_MODULES_ROOTS: ${{ runner.temp }}/specfact-modules

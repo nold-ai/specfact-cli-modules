@@ -36,3 +36,60 @@ requirements:
         intent: Preserve the expected pull-request and push triggers while excluding manual dispatch from workflows that dynamically resolve paired-core source.
         observable: Each workflow has its exact allowed trigger set and retains a credential-free dynamic paired-core checkout without a manual-event guard.
         implementation_task: "3.1"
+  openspec:ci-02-codeql-cache-scope-isolation:module-core-runtime-compatibility:modules-declare-evidence-backed-core-compatibility-ranges:
+    rationale: Runtime installers must admit every supported core from the proven minimum onward without forcing a module release for each compatible core update.
+    stakeholder_refs:
+      - openspec/CHANGE_ORDER.md
+    touchpoints:
+      - id: code-review-module-compatibility
+        kind: manifest
+        locator: packages/specfact-code-review/module-package.yaml
+      - id: minimum-and-current-core-ci
+        kind: workflow
+        locator: .github/workflows/pr-orchestrator.yml
+    verification_cases:
+      - case_id: CI-02-003
+        scenario_id: modules-declare-evidence-backed-core-compatibility-ranges
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/specfact_code_review/run/test_commands.py::test_code_review_manifest_declares_minimum_core_compatibility
+        intent: Verify 0.55.1 is admitted and 0.55.0 is rejected.
+        observable: The manifest specifier admits the minimum and rejects the preceding patch.
+        implementation_task: "3.3"
+      - case_id: CI-02-004
+        scenario_id: modules-declare-evidence-backed-core-compatibility-ranges
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/specfact_code_review/run/test_commands.py::test_code_review_manifest_has_no_unproven_upper_core_bound
+        intent: Verify the range has no exact-only or upper constraint.
+        observable: Core 0.55.2 and a later major version satisfy the same specifier.
+        implementation_task: "3.3"
+      - case_id: CI-02-005
+        scenario_id: modules-declare-evidence-backed-core-compatibility-ranges
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_pr_orchestrator_signing.py::test_pr_orchestrator_pins_exact_core_schema_smoke
+        intent: Preserve immutable 0.55.1 evidence while labeling it as the minimum.
+        observable: CI pins 0.55.1, asserts the minimum-only range, and keeps current paired-core discovery.
+        implementation_task: "3.4"
+  openspec:ci-02-codeql-cache-scope-isolation:module-core-runtime-compatibility:compatibility-corrections-supersede-release-snapshot-admission-rules:
+    rationale: The delivered C14 checkpoint must remain immutable evidence without becoming a future exact-version admission policy.
+    stakeholder_refs:
+      - openspec/CHANGE_ORDER.md
+    touchpoints:
+      - id: compatibility-supersession
+        kind: specification
+        locator: openspec/changes/ci-02-codeql-cache-scope-isolation/specs/module-core-runtime-compatibility/spec.md
+    verification_cases:
+      - case_id: CI-02-006
+        scenario_id: compatibility-corrections-supersede-release-snapshot-admission-rules
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_pr_orchestrator_signing.py::test_pr_orchestrator_rejects_pep440_local_core_alias
+        intent: Preserve the frozen selector while proving its implementation now rejects exact-only admission and accepts the minimum-only range.
+        observable: The immutable job retains the C14 identity but contains no strict exact specifier or local-alias rejection policy.
+        implementation_task: "3.5"

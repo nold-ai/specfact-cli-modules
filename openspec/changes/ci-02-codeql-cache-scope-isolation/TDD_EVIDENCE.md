@@ -2,6 +2,24 @@
 
 ## Failing-before
 
+### 2026-08-28 Europe/Berlin — runtime compatibility correction
+
+Before editing the manifest or workflow implementation:
+
+```bash
+hatch run pytest \
+  tests/unit/workflows/test_pr_orchestrator_signing.py::test_pr_orchestrator_pins_exact_core_schema_smoke \
+  tests/unit/workflows/test_pr_orchestrator_signing.py::test_pr_orchestrator_rejects_pep440_local_core_alias \
+  tests/e2e/specfact_code_review/test_review_run_e2e.py::test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix \
+  -q -p no:cacheprovider
+```
+
+Result: 3 failed. The workflow still exposed an exact-only compatibility job
+and `===0.55.1`; the runtime E2E observed installed paired core 0.55.2 and the
+manifest rejected it. A broader focused command also exposed an unrelated stale
+local Hatch import (`specfact_cli.common`); the isolated red run above avoids
+misclassifying that environment failure as compatibility evidence.
+
 ### 2026-08-27 Europe/Berlin
 
 Before any workflow edit:
@@ -20,6 +38,40 @@ manual-only checkout paths, and guarded the dynamic checkout with an event
 condition that GitHub's job-level cache analysis does not treat as isolation.
 
 ## Passing-after
+
+### 2026-08-28 Europe/Berlin — runtime compatibility correction
+
+- The focused compatibility suite passed: 15 passed, including the manifest
+  minimum/no-upper-bound contracts, the complete workflow contract file, and
+  schema 1.6 runtime loading under installed paired core 0.55.2.
+- `openspec validate ci-02-codeql-cache-scope-isolation --strict` passed.
+- `python scripts/publish_module.py --bundle specfact-code-review` passed for
+  candidate version 0.49.60 and intentionally reviewed `>=0.55.1` metadata.
+- Filesystem module checksum/version verification passed for all seven modules
+  with the repository-supported missing-local-public-key allowance.
+- YAML/registry validation and `actionlint` passed.
+- The staged Requirements Evidence gate passed at planned maturity with all
+  compatibility requirements mapped to unique collected pytest selectors.
+- `./scripts/pre-commit-quality-checks.sh all` passed both blocks, including
+  generated-command parity, documentation accountability, staged Requirements
+  Evidence, changed-line review enforcement, and 28 contract tests.
+- Format, type-check, lint, bundle-import, and contract gates passed. The
+  contract suite selected 28 tests and all passed.
+- `hatch run smart-test` and `hatch run test` each reached 1,646 passing tests
+  with the same pre-existing platform-bound capsule failure on macOS/Python
+  3.14: `test_capsule_runtime_loads_the_packaged_signed_lock_before_materialization`.
+  The protected Linux/Python 3.11–3.13 workflow owns that capsule proof; all
+  compatibility tests passed locally under paired core 0.55.2.
+- A fresh independent post-patch review found an archive-ordering ambiguity and
+  a missing 0.49.60 changelog entry. The compatibility spec now explicitly
+  supersedes C14 exact-only release-snapshot wording without mutating its frozen
+  checkpoint, the archive task preserves that precedence, and the changelog
+  documents the installer-boundary correction.
+- The changed-scope bug-hunt completed with exit 0 and no blocking findings.
+  Its 20 advisories are explicitly excepted as unchanged legacy findings in the
+  two long pre-existing test modules plus a local CrossHair environment missing
+  pytest; none intersects the added compatibility assertions. The clean-code
+  categories show no changed-line regression.
 
 ### 2026-08-27 Europe/Berlin
 

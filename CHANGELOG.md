@@ -16,6 +16,9 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Release `specfact-code-review` 0.49.60 with minimum-only SpecFact CLI
+  compatibility `>=0.55.1`, so compatible core updates do not require another
+  module metadata release; retain immutable core 0.55.1 as the CI floor proof.
 - Reject Ruff operational, configuration, and illegal-argument exits before
   accepting parseable finding JSON as completed analysis evidence.
 - Enforce the signed basedpyright project-only invocation and fail closed on

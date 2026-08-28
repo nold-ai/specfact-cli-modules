@@ -16,12 +16,15 @@ triggerable default-cache-writing event on the job.
 - Preserve pull-request matching-branch validation and protected-branch push
   validation.
 - Keep the change small enough to audit and revert as one unit.
+- Restore the intended module/core contract: declare the proven minimum core
+  and omit a maximum until an actual incompatibility requires one.
 
 **Non-Goals:**
 
 - Add a replacement manual workflow or reusable-workflow framework.
 - Change paired-core branch resolution for pull requests or pushes.
-- Change module packages, signatures, versions, dependencies, or release jobs.
+- Change analyzer behavior, frozen C14 capsule identities, dependencies, or
+  release-job ownership.
 - Suppress, dismiss, or rewrite GitHub Security findings.
 
 ## Decision
@@ -41,6 +44,26 @@ analyzer intentionally reasons at the job/trigger boundary. It is preferred
 over removing same-named paired-core validation because that integration path
 is an existing repository capability.
 
+The `specfact-code-review` manifest will declare `core_compatibility:
+">=0.55.1"`. The immutable 0.55.1 checkout remains pinned by tag, commit, and
+tree because it proves the lower boundary; it does not define an exact-only
+runtime admission policy. The normal quality matrix installs the current paired
+core and builds a local marketplace archive from the candidate package, so its
+runtime-discovery smoke verifies a compatible version above the minimum.
+
+The signed package manifest is the runtime enforcement source inside the
+downloaded archive. The PR signing workflow owns the candidate signature. The
+post-merge publisher owns the immutable registry archive, checksum and
+signature sidecars, and registry-index promotion; the published 0.49.59 archive
+remains immutable.
+
+C14 remains active and its frozen checkpoint binds the original 0.49.59
+release evidence, so those bytes are not rewritten. This change explicitly
+supersedes C14's exact-only admission policy. If C14 is archived after this
+change, its archive review must preserve this minimum-only rule or this
+corrective delta must be archived again afterward; exact-only wording may remain
+only as historical release evidence.
+
 ## Risks / Trade-offs
 
 - [Manual validation entrypoints disappear] -> Use PR/push execution or GitHub's
@@ -50,6 +73,14 @@ is an existing repository capability.
   workflow can merge.
 - [Scanner findings have a second root cause] -> Read the new Actions analysis
   after the PR run and extend only if concrete code-flow evidence remains.
+- [A future core introduces a breaking change] -> Add an evidence-backed upper
+  bound in a new module release before advertising that core as compatible.
+- [Publication does not promote the candidate] -> Leave the manifest version
+  ahead of the registry without mutating 0.49.59; rerun the canonical publisher
+  or revert the metadata release.
+- [A later C14 archive reintroduces exact-only policy] -> Treat this change as
+  the later normative compatibility authority and verify archive ordering or an
+  explicit follow-up supersession before C14 archival.
 
 ## Verification
 
@@ -59,3 +90,5 @@ is an existing repository capability.
 - Required repository quality and review gates.
 - GitHub Actions CodeQL analysis on the PR; the private alert state is the final
   external proof and is not reproduced in public artifacts.
+- Focused range contracts plus immutable-minimum and current-core runtime jobs.
+- Module checksum/version verification and the repository signing workflow.

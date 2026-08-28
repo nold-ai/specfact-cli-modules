@@ -11,6 +11,7 @@ from typing import Any, Literal
 
 import pytest
 import yaml
+from packaging.specifiers import SpecifierSet
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
@@ -126,7 +127,25 @@ def test_code_review_manifest_declares_requirements_runtime_dependency() -> None
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
 
     assert "nold-ai/specfact-requirements" in manifest["bundle_dependencies"]
-    assert manifest["core_compatibility"] == "===0.55.1"
+
+
+def test_code_review_manifest_declares_minimum_core_compatibility() -> None:
+    manifest_path = REPO_ROOT / "packages" / "specfact-code-review" / "module-package.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    compatibility = SpecifierSet(manifest["core_compatibility"])
+
+    assert str(compatibility) == ">=0.55.1"
+    assert not compatibility.contains("0.55.0")
+    assert compatibility.contains("0.55.1")
+
+
+def test_code_review_manifest_has_no_unproven_upper_core_bound() -> None:
+    manifest_path = REPO_ROOT / "packages" / "specfact-code-review" / "module-package.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    compatibility = SpecifierSet(manifest["core_compatibility"])
+
+    assert compatibility.contains("0.55.2")
+    assert compatibility.contains("1.0.0")
 
 
 def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:
