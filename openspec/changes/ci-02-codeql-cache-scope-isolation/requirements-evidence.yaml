@@ -1,0 +1,95 @@
+schema_version: "2"
+requirements:
+  openspec:ci-02-codeql-cache-scope-isolation:paired-core-workflow-ref-trust:manual-runs-use-trusted-paired-core-refs:
+    rationale: The prior in-workflow manual-run contract is removed because its step guards do not isolate the job-level default-cache trust boundary.
+    stakeholder_refs:
+      - SECURITY.md
+    touchpoints:
+      - id: paired-core-workflow-triggers
+        kind: workflow
+        locator: .github/workflows/{docs-review,pr-orchestrator,requirements-evidence}.yml
+    verification_cases:
+      - case_id: CI-02-001
+        scenario_id: manual-runs-use-trusted-paired-core-refs
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_dynamic_paired_core_workflows_have_no_dead_manual_checkout_paths
+        intent: Verify removal of the superseded manual main and dev checkout paths.
+        observable: None of the three dynamic paired-core workflows retains a manual main or dev checkout path.
+        implementation_task: "3.1"
+  openspec:ci-02-codeql-cache-scope-isolation:paired-core-workflow-ref-trust:dynamic-paired-core-validation-uses-non-manual-triggers:
+    rationale: Dynamic paired-core validation must be isolated from manual default-branch cache-write scope while preserving pull-request and push validation.
+    stakeholder_refs:
+      - SECURITY.md
+    touchpoints:
+      - id: paired-core-workflow-triggers
+        kind: workflow
+        locator: .github/workflows/{docs-review,pr-orchestrator,requirements-evidence}.yml
+    verification_cases:
+      - case_id: CI-02-002
+        scenario_id: dynamic-paired-core-validation-uses-non-manual-triggers
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_dynamic_paired_core_workflows_exclude_manual_dispatch
+        intent: Preserve the expected pull-request and push triggers while excluding manual dispatch from workflows that dynamically resolve paired-core source.
+        observable: Each workflow has its exact allowed trigger set and retains a credential-free dynamic paired-core checkout without a manual-event guard.
+        implementation_task: "3.1"
+  openspec:ci-02-codeql-cache-scope-isolation:module-core-runtime-compatibility:modules-declare-evidence-backed-core-compatibility-ranges:
+    rationale: Runtime installers must admit every supported core from the proven minimum while staying within the compatibility intersection of required module dependencies.
+    stakeholder_refs:
+      - openspec/CHANGE_ORDER.md
+    touchpoints:
+      - id: code-review-module-compatibility
+        kind: manifest
+        locator: packages/specfact-code-review/module-package.yaml
+      - id: minimum-and-current-core-ci
+        kind: workflow
+        locator: .github/workflows/pr-orchestrator.yml
+    verification_cases:
+      - case_id: CI-02-003
+        scenario_id: modules-declare-evidence-backed-core-compatibility-ranges
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/specfact_code_review/run/test_commands.py::test_code_review_manifest_declares_minimum_core_compatibility
+        intent: Verify 0.55.1 is admitted and 0.55.0 is rejected.
+        observable: The manifest specifier admits the minimum and rejects the preceding patch.
+        implementation_task: "3.3"
+      - case_id: CI-02-004
+        scenario_id: modules-declare-evidence-backed-core-compatibility-ranges
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/specfact_code_review/run/test_commands.py::test_code_review_manifest_bounds_core_compatibility_to_dependency_graph
+        intent: Verify the range admits compatible updates but does not exceed required dependency support.
+        observable: Core 0.55.2 satisfies the specifier while core 1.0.0 is rejected consistently with required dependency manifests.
+        implementation_task: "3.3"
+      - case_id: CI-02-005
+        scenario_id: modules-declare-evidence-backed-core-compatibility-ranges
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_pr_orchestrator_signing.py::test_pr_orchestrator_pins_exact_core_schema_smoke
+        intent: Preserve immutable 0.55.1 evidence while labeling it as the minimum.
+        observable: CI pins 0.55.1, reads the dependency-bounded range from the package manifest, and keeps current paired-core discovery.
+        implementation_task: "3.4"
+  openspec:ci-02-codeql-cache-scope-isolation:module-core-runtime-compatibility:compatibility-corrections-supersede-release-snapshot-admission-rules:
+    rationale: The delivered C14 checkpoint must remain immutable evidence without becoming a future exact-version admission policy.
+    stakeholder_refs:
+      - openspec/CHANGE_ORDER.md
+    touchpoints:
+      - id: compatibility-supersession
+        kind: specification
+        locator: openspec/changes/ci-02-codeql-cache-scope-isolation/specs/module-core-runtime-compatibility/spec.md
+    verification_cases:
+      - case_id: CI-02-006
+        scenario_id: compatibility-corrections-supersede-release-snapshot-admission-rules
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_pr_orchestrator_signing.py::test_pr_orchestrator_rejects_pep440_local_core_alias
+        intent: Preserve the historically named frozen selector while proving the immutable job rejects exact-only admission, accepts the evidence-backed range, and does not impose local-alias rejection.
+        observable: The immutable job retains the C14 selector identity as historical evidence while containing neither a strict exact specifier nor a local-alias rejection policy.
+        implementation_task: "3.5"

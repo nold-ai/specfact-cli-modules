@@ -19,6 +19,7 @@ dependencies = [
     "beartype>=0.22.0",
     "json5>=0.9.28",
     "icontract>=2.7.1",
+    "packaging>=24.0",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",

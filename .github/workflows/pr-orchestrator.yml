@@ -12,8 +12,6 @@ on:
     paths-ignore:
       - "**/*.md"
       - "docs/**"
-  workflow_dispatch:
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -46,11 +44,7 @@ jobs:
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "code_changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "code_changed=${{ steps.filter.outputs.code }}" >> "$GITHUB_OUTPUT"
-          fi
+          echo "code_changed=${{ steps.filter.outputs.code }}" >> "$GITHUB_OUTPUT"
           if [ "$EVENT_NAME" = "pull_request" ] && [ "$PR_BASE_REF" = "main" ] && [ "$PR_HEAD_REF" = "dev" ]; then
             echo "skip_tests_dev_to_main=true" >> "$GITHUB_OUTPUT"
           else
@@ -94,7 +88,7 @@ jobs:
               VERIFY_CMD+=(--require-signature)
             fi
           else
-            # Push/workflow_dispatch: compare against the ref tip before this push (not HEAD~1).
+            # Push: compare against the ref tip before this push (not HEAD~1).
             # Merge commits and signing-only updates keep the same semver; HEAD~1 is the wrong
             # parent for three-way merges and falsely fails --enforce-version-bump.
             BEFORE="${{ github.event.before }}"
@@ -129,9 +123,7 @@ jobs:
           persist-credentials: false
       - name: Resolve paired core CLI ref
         id: core-ref
-        if: >-
-          needs.changes.outputs.skip_tests_dev_to_main != 'true' &&
-          github.event_name != 'workflow_dispatch'
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         shell: bash
         env:
           CANDIDATE_REF: ${{ github.head_ref || github.ref_name }}
@@ -150,9 +142,7 @@ jobs:
           fi
 
       - name: Checkout paired core CLI
-        if: >-
-          needs.changes.outputs.skip_tests_dev_to_main != 'true' &&
-          github.event_name != 'workflow_dispatch'
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           repository: nold-ai/specfact-cli
@@ -160,29 +150,6 @@ jobs:
           ref: ${{ steps.core-ref.outputs.ref }}
           persist-credentials: false
 
-      - name: Checkout paired core CLI (manual main)
-        if: >-
-          needs.changes.outputs.skip_tests_dev_to_main != 'true' &&
-          github.event_name == 'workflow_dispatch' &&
-          github.ref_name == 'main'
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          repository: nold-ai/specfact-cli
-          path: specfact-cli
-          ref: "main"
-          persist-credentials: false
-
-      - name: Checkout paired core CLI (manual dev)
-        if: >-
-          needs.changes.outputs.skip_tests_dev_to_main != 'true' &&
-          github.event_name == 'workflow_dispatch' &&
-          github.ref_name != 'main'
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          repository: nold-ai/specfact-cli
-          path: specfact-cli
-          ref: "dev"
-          persist-credentials: false
       - name: Export paired core CLI path
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: echo "SPECFACT_CLI_REPO=${GITHUB_WORKSPACE}/specfact-cli" >> "$GITHUB_ENV"
@@ -237,8 +204,8 @@ jobs:
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run test
 
-  exact-core-schema-compatibility:
-    name: exact-core-schema-compatibility (${{ matrix.python-version }})
+  minimum-core-schema-compatibility:
+    name: minimum-core-schema-compatibility (${{ matrix.python-version }})
     needs: [changes]
     if: needs.changes.outputs.code_changed == 'true' && needs.changes.outputs.skip_tests_dev_to_main != 'true'
     permissions:
@@ -310,7 +277,7 @@ jobs:
           test "$(sha256sum "${cache}/blobs/sha256/${manifest#sha256:}" | cut -d ' ' -f1)" = "${manifest#sha256:}"
           rm -f "$registry_config"
           echo "PREFETCHED_OCI_CACHE=$cache" >> "$GITHUB_ENV"
-      - name: Install exact core and candidate module package
+      - name: Install minimum core and candidate module package
         shell: bash
         run: |
           set -euo pipefail
@@ -319,21 +286,30 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir ./exact-core pytest==9.1.1 PyYAML==6.0.3 beartype==0.22.9 icontract==2.7.3 pydantic==2.13.4 requests==2.34.2 typer==0.27.1 packaging==26.3
           python scripts/link_dev_module.py specfact-code-review --shadow-root "${RUNNER_TEMP}/specfact-modules" --force
-      - name: reject-core-version-alias
+      - name: verify-minimum-core-compatibility-range
         shell: bash
         run: |
           set -euo pipefail
           . .exact-core-venv/bin/activate
           python - <<'PY'
           import importlib.metadata
+          from pathlib import Path
+
+          import yaml
           from packaging.specifiers import SpecifierSet
 
           assert importlib.metadata.version("specfact-cli") == "0.55.1"
-          assert SpecifierSet("===0.55.1").contains("0.55.1")
-          assert not SpecifierSet("===0.55.1").contains("0.55.1+vendor")
-          assert SpecifierSet("==0.55.1").contains("0.55.1+vendor")
+          manifest_path = Path("packages/specfact-code-review/module-package.yaml")
+          manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+          compatibility_text = str(manifest["core_compatibility"])
+          assert compatibility_text == ">=0.55.1,<1.0.0"
+          compatibility = SpecifierSet(compatibility_text)
+          assert not compatibility.contains("0.55.0")
+          assert compatibility.contains("0.55.1")
+          assert compatibility.contains("0.55.2")
+          assert not compatibility.contains("1.0.0")
           PY
-      - name: Run schema 1.6 exact-core compatibility smoke
+      - name: Run schema 1.6 minimum-core compatibility smoke
         shell: bash
         env:
           SPECFACT_MODULES_ROOTS: ${{ runner.temp }}/specfact-modules
