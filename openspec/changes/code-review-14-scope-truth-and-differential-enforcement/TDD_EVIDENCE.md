@@ -1535,3 +1535,12 @@ Version and compatibility remain unpublished `0.49.63` and
 `>=0.55.1,<1.0.0`; the refreshed unsigned checksum is
 `sha256:63cb5a7def001b824bae28b08832a7457cf95f4359b301230dd86a0e29a9de76`.
 Replacement approval-time signing and protected checks remain required.
+
+Approval-time signing commit `19b660cf593fdf78334527abfea8e6b1726fa10c`
+added only the signature
+`dpbKrnaaZQG5sxXCfn/2zeUi8DZMru1/YUIoymrzetK/YEnfcJ7Rze5T6G6+ougptsdO/L2SiyqjJPZ2Xvg5Cw==`
+to the exact `sha256:63cb5a7def001b824bae28b08832a7457cf95f4359b301230dd86a0e29a9de76`
+payload. Strict filesystem verification against the immutable core `0.55.1`
+public key and current `origin/dev` baseline passed all seven module manifests.
+This documentation-only evidence commit changes no signed module payload byte
+and triggers the replacement protected matrix on the verified signing head.
