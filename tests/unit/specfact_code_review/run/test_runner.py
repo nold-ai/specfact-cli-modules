@@ -934,6 +934,58 @@ def test_capsule_worktree_enforcement_binds_ignored_analyzer_inputs(
     }
 
 
+def test_capsule_worktree_enforcement_binds_ignored_runtime_fixture(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    test_directory = repository / "tests"
+    fixture_directory = test_directory / "fixtures"
+    fixture_directory.mkdir(parents=True)
+    selected_test = test_directory / "test_case.py"
+    runtime_fixture = fixture_directory / "case.txt"
+    selected_test.write_text(
+        "from pathlib import Path\n\n"
+        "def test_fixture():\n"
+        "    assert Path('tests/fixtures/case.txt').read_text() == 'safe\\n'\n",
+        encoding="utf-8",
+    )
+    runtime_fixture.write_text("safe\n", encoding="utf-8")
+    (repository / ".gitignore").write_text("/tests/fixtures/case.txt\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "tests/test_case.py", ".gitignore"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    selected_test.write_text(selected_test.read_text(encoding="utf-8") + "# changed\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+
+    def _run_snapshot(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        runtime_fixture.write_text("mutated\n", encoding="utf-8")
+        return snapshot
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("tests/test_case.py")], no_tests=False, review_mode="changed")
+
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+        "worktree_snapshot_changed_during_analysis"
+    }
+
+
 def test_capsule_worktree_enforcement_binds_ignored_in_root_symlink_target(
     monkeypatch: MonkeyPatch,
     tmp_path: Path,
@@ -1216,6 +1268,57 @@ def test_capsule_worktree_enforcement_rejects_unbound_excluded_directory_symlink
     assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
     assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
         "worktree_snapshot_identity_unavailable"
+    }
+
+
+def test_capsule_worktree_enforcement_rejects_directory_symlink_with_excluded_descendant(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    target = repository / "support_pkg"
+    excluded = target / "venv"
+    excluded.mkdir(parents=True)
+    source = repository / "app.py"
+    module = excluded / "dep.py"
+    source.write_text("from pkg.venv.dep import VALUE\n", encoding="utf-8")
+    module.write_text("VALUE = 1\n", encoding="utf-8")
+    (repository / ".gitignore").write_text("/support_pkg/venv\n", encoding="utf-8")
+    os.symlink("support_pkg", repository / "pkg", target_is_directory=True)
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", ".gitignore", "app.py", "pkg"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("from pkg.venv.dep import VALUE\nRESULT = VALUE\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot_calls: list[str] = []
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+
+    def _run_snapshot(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        snapshot_calls.append("ran")
+        module.write_text("VALUE = 2\n", encoding="utf-8")
+        return snapshot
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert snapshot_calls == ["ran"]
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+        "worktree_snapshot_changed_during_analysis"
     }
 
 
@@ -7044,6 +7147,35 @@ def test_partial_parametrized_deselection_is_unknown_from_real_pytest(tmp_path: 
 
     assert process.returncode == 0
     assert result.status == "UNKNOWN"
+
+
+def test_pytest_coverage_data_file_is_redirected_outside_snapshot(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    runner_api = _c14_runner()
+    configured_data_file = tmp_path / "repository.coverage"
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.pytest.ini_options]\ntestpaths = ['tests']\n\n[tool.coverage.run]\ndata_file = 'repository.coverage'\n",
+        encoding="utf-8",
+    )
+    test_file = tmp_path / "tests" / "test_case.py"
+    test_file.parent.mkdir()
+    test_file.write_text("def test_case():\n    assert True\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    process, coverage_path, observer_path, junit_path = runner_api._run_pytest_selection_with_coverage(
+        ("tests/test_case.py",),
+        coverage_source=tmp_path,
+        policy_argv=("--rootdir", str(tmp_path)),
+    )
+    try:
+        assert process.returncode == 0
+        assert not configured_data_file.exists()
+    finally:
+        coverage_path.unlink(missing_ok=True)
+        observer_path.unlink(missing_ok=True)
+        junit_path.unlink(missing_ok=True)
 
 
 def test_pytest_outcome_reconciliation_rejects_unrelated_parameterized_prefix() -> None:

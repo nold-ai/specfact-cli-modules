@@ -99,8 +99,6 @@ _GIT_LOCAL_ENV_VARS = frozenset(
         "GIT_WORK_TREE",
     }
 )
-_ANALYZER_SUPPORT_SUFFIXES = frozenset({".cfg", ".ini", ".json", ".py", ".pyi", ".toml", ".yaml", ".yml"})
-_ANALYZER_SUPPORT_NAMES = frozenset({".coveragerc", ".pylintrc", "py.typed"})
 _ANALYZER_SCAN_EXCLUDED_DIRECTORIES = frozenset(
     {
         ".git",
@@ -3977,6 +3975,8 @@ def _run_pytest_selection_with_coverage(
     policy_argv: tuple[str, ...] = (),
 ) -> tuple[subprocess.CompletedProcess[str], Path, Path, Path]:
     coverage_path, observer_path, junit_path = _temporary_pytest_evidence_paths()
+    coverage_data_path = _temporary_pytest_evidence_path(".coverage")
+    coverage_data_path.unlink(missing_ok=True)
     command = [
         _pytest_python_executable(),
         "-c",
@@ -3991,14 +3991,19 @@ def _run_pytest_selection_with_coverage(
         f"--junitxml={junit_path}",
         *selectors,
     ]
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=_TARGETED_TEST_TIMEOUT,
-        env=_pytest_env(),
-    )
+    pytest_env = _pytest_env()
+    pytest_env["COVERAGE_FILE"] = str(coverage_data_path)
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_TARGETED_TEST_TIMEOUT,
+            env=pytest_env,
+        )
+    finally:
+        coverage_data_path.unlink(missing_ok=True)
     return result, coverage_path, observer_path, junit_path
 
 
@@ -4525,7 +4530,7 @@ def _git_visible_worktree_paths(repository: Path) -> tuple[str, ...] | None:
 
 
 def _repository_analyzer_support_paths(repository: Path) -> tuple[str, ...] | None:
-    """Discover source, test, and policy files repository analyzers may consume."""
+    """Discover every repository-root path analyzers may consume."""
     paths: set[str] = set()
     try:
         for directory, directory_names, file_names in os.walk(repository, followlinks=False):
@@ -4537,23 +4542,25 @@ def _repository_analyzer_support_paths(repository: Path) -> tuple[str, ...] | No
                 absolute = Path(directory, name)
                 if name in directory_names and not absolute.is_symlink():
                     continue
-                if (
-                    absolute.is_symlink()
-                    or name in _ANALYZER_SUPPORT_NAMES
-                    or absolute.suffix.lower() in _ANALYZER_SUPPORT_SUFFIXES
-                ):
-                    relative = relative_directory / name
-                    paths.add(relative.as_posix())
+                relative = relative_directory / name
+                paths.add(relative.as_posix())
     except OSError:
         return None
     return tuple(sorted(paths))
 
 
 def _with_contained_symlink_targets(repository: Path, paths: set[str]) -> tuple[str, ...] | None:
-    """Bind each listed symlink and its contained final target."""
+    """Bind each listed symlink and every reachable contained target path."""
     expanded = set(paths)
-    for path in tuple(paths):
+    pending = list(paths)
+    processed: set[str] = set()
+    while pending:
+        path = pending.pop()
+        if path in processed:
+            continue
+        processed.add(path)
         absolute = repository.joinpath(*PurePosixPath(path).parts)
+        target_paths: tuple[str, ...] = ()
         try:
             if not absolute.is_symlink():
                 continue
@@ -4561,14 +4568,38 @@ def _with_contained_symlink_targets(repository: Path, paths: set[str]) -> tuple[
                 return None
             resolved_target = absolute.resolve(strict=True)
             relative_target = resolved_target.relative_to(repository.resolve(strict=True))
-            if resolved_target.is_dir() and any(
-                part in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES for part in relative_target.parts
-            ):
-                return None
+            if resolved_target.is_dir():
+                if any(part in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES for part in relative_target.parts):
+                    return None
+                directory_paths = _directory_symlink_target_paths(repository, resolved_target)
+                if directory_paths is None:
+                    return None
+                target_paths = directory_paths
         except (OSError, ValueError):
             return None
-        expanded.add(relative_target.as_posix())
+        additions = {relative_target.as_posix()}
+        additions.update(target_paths)
+        pending.extend(additions.difference(expanded))
+        expanded.update(additions)
     return tuple(sorted(expanded))
+
+
+def _directory_symlink_target_paths(repository: Path, directory: Path) -> tuple[str, ...] | None:
+    """List a contained directory target subtree without pruning reachable inputs."""
+    paths: set[str] = set()
+    walk_errors: list[OSError] = []
+    try:
+        for current, directory_names, file_names in os.walk(
+            directory,
+            followlinks=False,
+            onerror=walk_errors.append,
+        ):
+            relative_directory = Path(current).relative_to(repository)
+            for name in (*directory_names, *file_names):
+                paths.add((relative_directory / name).as_posix())
+    except (OSError, ValueError):
+        return None
+    return None if walk_errors else tuple(sorted(paths))
 
 
 def _symlink_resolution_is_contained(root: Path, link: Path) -> bool:

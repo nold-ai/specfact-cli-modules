@@ -2537,3 +2537,53 @@ and `origin/dev` version verification against the immutable core `0.55.1`
 public key passes all seven module manifests. This evidence-only checkpoint
 changes no signed module payload byte and triggers the protected final-head
 matrix.
+
+The exact-head Codex review of `70f9a0bf31dd145877a9d579cd4ff1842dca0814`
+added one P2 finding: an ignored arbitrary fixture such as
+`tests/fixtures/case.txt` remained analyzer-visible through the repository-root
+mount but absent from the suffix-limited ordinary worktree identity. Independent
+validation reproduced both that gap and a second directory-link form left by
+the preceding fix: `pkg -> support_pkg` admitted a nested
+`support_pkg/venv/dep.py` descendant pruned by ordinary discovery, and changing
+that descendant changed real Basedpyright evidence while the identity remained
+equal.
+
+The OpenSpec scenario and tasks were updated before implementation. The ignored
+runtime-fixture lifecycle regression first returned stale `PASS` / `PASS` /
+exit `0` instead of required UNKNOWN (`1 failed`). The independent nested
+directory-link regression first reached analyzer execution instead of rejecting
+or binding the descendant (`1 failed`). Ordinary discovery now binds every
+tracked, non-ignored untracked, and ignored file outside deliberately excluded
+trees, while a contained directory link recursively adds its complete reachable
+target subtree without pruning. A target that itself aliases an excluded tree
+is still rejected. The ignored fixture, stable directory link, direct excluded
+target, nested excluded descendant, ignored policy/import, and contained target
+controls pass together (`7 passed` in the initial neighborhood; the final
+five-selector review neighborhood also passes).
+
+The strengthened identity then correctly exposed an existing analyzer-owned
+write: pytest-cov honored the repository `run:data_file` and rewrote
+`logs/tests/coverage/.coverage` during analysis, making the manual Code Review
+fail closed with `worktree_snapshot_changed_during_analysis`. A focused
+repository-config regression first proved the configured coverage file was
+created (`1 failed`). Targeted pytest now supplies a private temporary
+`COVERAGE_FILE`, removes it after execution, and preserves the existing private
+JSON, observer, and JUnit evidence paths; the same selector passes and the
+manual review no longer mutates the bound repository input.
+
+The final complete runner surface passes `381` of `382`; exact-core `0.55.1`
+smart and complete suites each pass `1758` of `1759`. Their sole identical
+failure remains the documented local macOS/CPython 3.14 capsule-lock selector,
+with two existing Lark deprecations. Strict OpenSpec, canonical format,
+repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`),
+all `28` contract-first tests, seven manifests plus registry, bundle imports,
+filesystem checksum/version verification, publish precheck, and `git diff
+--check` pass. The final changed-line Code Review is `PASS_WITH_ADVISORY`, exit
+`0`, with `93` findings and no changed-line blocker; only the inherited
+`_run_capsule_snapshot` parameter-count finding and documented host test remain
+blocking evidence outside changed lines. Candidate module version is `0.49.74`,
+compatibility remains `>=0.55.1,<1.0.0`, and the unsigned filesystem checksum
+is `sha256:f543ac74c1dce4cb94a792367665513980a01307ad935ed6fc1424b86cbc0e0f`.
+Replacement trusted signing, protected checks, exact signed-head review, and
+verified PR #448 thread disposition remain required by tasks 6.112, 6.114,
+6.116, and 6.118.

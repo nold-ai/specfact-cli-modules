@@ -17,11 +17,13 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
-- Release `specfact-code-review` 0.49.73 with complete analyzer-visible
+- Release `specfact-code-review` 0.49.74 with complete analyzer-visible
   worktree identity checks around ordinary changed analysis and every-hop
   cached-tree symlink containment, preventing ignored configuration/import
-  support, symlinked parents, or escaping indexed links from changing analyzer
-  evidence outside the bound snapshot while retaining stable gitlink support;
+  support, arbitrary ignored runtime fixtures, symlinked parents, partially
+  bound directory-link descendants, or escaping indexed links from changing
+  analyzer evidence outside the bound snapshot while retaining stable gitlink
+  support;
   retain compatibility `>=0.55.1,<1.0.0`.
 - Release `specfact-code-review` 0.49.66 with pre/post raw selected-path and
   immutable `HEAD` tree binding for ordinary worktree analysis, so concurrent
