@@ -57,17 +57,16 @@ def test_pr_orchestrator_installs_pinned_specfact_cli() -> None:
 
 def test_pr_orchestrator_pins_exact_core_schema_smoke() -> None:
     """Preserve the frozen C14 selector; the pinned identity proves the minimum."""
-    workflow = _workflow_text()
+    minimum_job = _job_text(_workflow_text(), "minimum-core-schema-compatibility")
 
-    assert "minimum-core-schema-compatibility" in workflow
-    assert '["3.11", "3.12", "3.13"]' in workflow
-    assert "refs/tags/v0.55.1" in workflow
-    assert "b1e517e60e669eaba15a18ecfa83ef5a9df65276" in workflow
-    assert "47984be5434d7ae65ed6908bf525a32053290337" in workflow
-    assert ">=0.55.1" in workflow
-    assert "test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix" in workflow
-    assert "pip install" in workflow
-    assert "--no-cache-dir" in workflow
+    assert '["3.11", "3.12", "3.13"]' in minimum_job
+    assert "refs/tags/v0.55.1" in minimum_job
+    assert "b1e517e60e669eaba15a18ecfa83ef5a9df65276" in minimum_job
+    assert "47984be5434d7ae65ed6908bf525a32053290337" in minimum_job
+    assert ">=0.55.1,<1.0.0" in minimum_job
+    assert "test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix" in minimum_job
+    assert "pip install" in minimum_job
+    assert "--no-cache-dir" in minimum_job
 
 
 def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
@@ -78,6 +77,8 @@ def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
     assert "0.55.0" in minimum_job
     assert "0.55.2" in minimum_job
     assert "1.0.0" in minimum_job
+    assert "module-package.yaml" in minimum_job
+    assert "yaml.safe_load" in minimum_job
     assert "verify-minimum-core-compatibility-range" in minimum_job
     assert "===0.55.1" not in minimum_job
     assert "ref: dev" not in minimum_job

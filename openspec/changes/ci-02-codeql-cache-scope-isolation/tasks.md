@@ -7,7 +7,7 @@
   before workflow edits.
 - [x] 1.4 Strictly validate this OpenSpec change.
 - [x] 1.5 Confirm the exact-only metadata is a runtime installer boundary and
-  define minimum-only compatibility semantics.
+  define evidence-backed range semantics.
 
 ## 2. Test-first evidence
 
@@ -26,8 +26,9 @@
   three mixed-trust workflows.
 - [x] 3.2 Confirm module packages, manifests, registry data, dependency files,
   signatures, and release artifacts remain unchanged.
-- [x] 3.3 Replace the exact-only runtime constraint with `>=0.55.1` and apply
-  the required patch version/checksum/signature flow.
+- [x] 3.3 Replace the exact-only runtime constraint with the dependency-bounded
+  `>=0.55.1,<1.0.0` range and apply the required patch
+  version/checksum/signature flow.
 - [x] 3.4 Reframe the immutable 0.55.1 workflow as minimum-version evidence and
   keep current paired-core marketplace validation.
 - [x] 3.5 Correct active change-order guidance without rewriting historical C14
@@ -47,6 +48,8 @@
   precheck, and the required quality sequence.
 - [x] 4.6 Run independent pre-patch and post-patch fix reviews and resolve every
   source-backed finding in scope.
+- [x] 4.7 Address PR review findings with specification-first updates, focused
+  failing/passing evidence, and refreshed signature verification.
 
 ## 5. Delivery
 

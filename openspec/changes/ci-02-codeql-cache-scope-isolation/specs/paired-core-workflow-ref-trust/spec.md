@@ -13,8 +13,7 @@ validation is required later, add a separate literal-ref-only workflow.
 ### Requirement: Dynamic Paired-Core Validation Uses Non-Manual Triggers
 
 Modules validation workflows that dynamically resolve and execute paired-core
-source SHALL NOT expose an externally triggered manual event with default-
-branch cache-write access in the same workflow.
+source SHALL NOT declare `workflow_dispatch` in the same workflow.
 
 #### Scenario: Pull request retains matching paired-core validation
 

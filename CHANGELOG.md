@@ -9,16 +9,18 @@ and this project follows SemVer for bundle versions.
 
 ### Added
 
-- Add C14 merge-quality range review with immutable scope manifests,
+- Document the previously published C14 merge-quality range review with immutable scope manifests,
   differential finding continuity, fail-closed analyzer evidence, signed runtime
-  contracts, and schema 1.6 report truth. Release `specfact-code-review` 0.49.59
-  with strict SpecFact CLI compatibility `===0.55.1`.
+  contracts, and schema 1.6 report truth. Historical release
+  `specfact-code-review` 0.49.59 used strict SpecFact CLI compatibility
+  `===0.55.1`; 0.49.61 supersedes that runtime admission rule.
 
 ### Fixed
 
-- Release `specfact-code-review` 0.49.60 with minimum-only SpecFact CLI
-  compatibility `>=0.55.1`, so compatible core updates do not require another
-  module metadata release; retain immutable core 0.55.1 as the CI floor proof.
+- Release `specfact-code-review` 0.49.61 with dependency-bounded SpecFact CLI
+  compatibility `>=0.55.1,<1.0.0`, so compatible core updates within the
+  required module graph do not require another metadata release; retain
+  immutable core 0.55.1 as the CI floor proof.
 - Reject Ruff operational, configuration, and illegal-argument exits before
   accepting parseable finding JSON as completed analysis evidence.
 - Enforce the signed basedpyright project-only invocation and fail closed on

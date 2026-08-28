@@ -1,5 +1,5 @@
 name: nold-ai/specfact-code-review
-version: 0.49.60
+version: 0.49.61
 commands:
   - code
 tier: official
@@ -25,10 +25,9 @@ authenticated_resources:
   resources/contracts/review-report-schema-1.6-consumer-matrix.json:
     digest: sha256:bb826ae8317039eb5da7ce11822d5a54a2043af6341b4f6ec08b14eb4a5b52fc
     checkpoint_contract: schema-1.6-consumer-matrix-v1
-core_compatibility: '>=0.55.1'
+core_compatibility: '>=0.55.1,<1.0.0'
 description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:0209a45c32771bdcc62780291a5d4bbcf1850515ed522876befbdcef2a2d8547
-  signature: fDnykX2vVJnwO7sBPo/SavkrbxiMNSlT3Le/hGeG1uO83vFdmVziLjmcbRbb3/1odbzlpRTSHiGOp0pjPRiuBA==
+  checksum: sha256:c3aaaace93debc8da4941bf804c1eea5140bc8b9a12967bbae7b762268c70b6e

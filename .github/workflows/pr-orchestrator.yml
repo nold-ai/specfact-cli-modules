@@ -293,14 +293,21 @@ jobs:
           . .exact-core-venv/bin/activate
           python - <<'PY'
           import importlib.metadata
+          from pathlib import Path
+
+          import yaml
           from packaging.specifiers import SpecifierSet
 
           assert importlib.metadata.version("specfact-cli") == "0.55.1"
-          compatibility = SpecifierSet(">=0.55.1")
+          manifest_path = Path("packages/specfact-code-review/module-package.yaml")
+          manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+          compatibility_text = str(manifest["core_compatibility"])
+          assert compatibility_text == ">=0.55.1,<1.0.0"
+          compatibility = SpecifierSet(compatibility_text)
           assert not compatibility.contains("0.55.0")
           assert compatibility.contains("0.55.1")
           assert compatibility.contains("0.55.2")
-          assert compatibility.contains("1.0.0")
+          assert not compatibility.contains("1.0.0")
           PY
       - name: Run schema 1.6 minimum-core compatibility smoke
         shell: bash

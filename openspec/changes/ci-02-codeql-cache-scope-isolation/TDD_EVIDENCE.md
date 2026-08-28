@@ -2,6 +2,15 @@
 
 ## Failing-before
 
+### 2026-08-28 Europe/Berlin — PR review follow-up
+
+After the specification was corrected for required dependency ranges and before
+editing the manifest, workflow, or test-environment implementation, five
+focused contracts failed. They proved that the manifest still admitted core
+1.0.0, the dedicated workflow step still used a hard-coded specifier rather
+than reading the manifest, `packaging` remained transitive-only, and the C14
+assertions were not yet scoped to the minimum-core job.
+
 ### 2026-08-28 Europe/Berlin — runtime compatibility correction
 
 Before editing the manifest or workflow implementation:
@@ -39,14 +48,31 @@ condition that GitHub's job-level cache analysis does not treat as isolation.
 
 ## Passing-after
 
+### 2026-08-28 Europe/Berlin — PR review follow-up
+
+- The same five focused contracts passed after the manifest adopted
+  `>=0.55.1,<1.0.0`, the workflow loaded that value from the package manifest,
+  the immutable C14 assertions were scoped to the minimum-core job, and the
+  default test environment declared `packaging>=24.0` directly.
+- The bound is not an arbitrary core pin: recursive installation validates the
+  required Codebase and Requirements manifests, and both currently reject core
+  1.x. Core 0.55.2 remains admitted without another module release.
+- The canonical GitHub PR signing workflow owns the refreshed checksum and
+  Ed25519 signature after push; the stale pre-push signature is not accepted as
+  final evidence.
+- Repository version enforcement advanced the changed, previously signed
+  0.49.60 candidate to 0.49.61 before commit.
+
 ### 2026-08-28 Europe/Berlin — runtime compatibility correction
 
-- The focused compatibility suite passed: 15 passed, including the manifest
-  minimum/no-upper-bound contracts, the complete workflow contract file, and
+- The initial focused compatibility suite passed 15 tests before dependency-
+  graph review, including the then-current minimum/no-upper-bound contracts,
+  the complete workflow contract file, and
   schema 1.6 runtime loading under installed paired core 0.55.2.
 - `openspec validate ci-02-codeql-cache-scope-isolation --strict` passed.
 - `python scripts/publish_module.py --bundle specfact-code-review` passed for
-  candidate version 0.49.60 and intentionally reviewed `>=0.55.1` metadata.
+  candidate version 0.49.60 and the then-current `>=0.55.1` metadata; the PR
+  review follow-up above supersedes that range with the dependency-backed cap.
 - Filesystem module checksum/version verification passed for all seven modules
   with the repository-supported missing-local-public-key allowance.
 - YAML/registry validation and `actionlint` passed.
@@ -63,7 +89,7 @@ condition that GitHub's job-level cache analysis does not treat as isolation.
   The protected Linux/Python 3.11–3.13 workflow owns that capsule proof; all
   compatibility tests passed locally under paired core 0.55.2.
 - A fresh independent post-patch review found an archive-ordering ambiguity and
-  a missing 0.49.60 changelog entry. The compatibility spec now explicitly
+  a missing compatibility-fix changelog entry. The compatibility spec now explicitly
   supersedes C14 exact-only release-snapshot wording without mutating its frozen
   checkpoint, the archive task preserves that precedence, and the changelog
   documents the installer-boundary correction.
