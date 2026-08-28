@@ -90,6 +90,15 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** explicit range plus changed mode is rejected
 - **AND** strict range writes enforcement_mode full, shadow range writes shadow, and scope_evidence alone identifies range.
 
+#### Scenario: Local capsule reports preserve scope truth and changed-line policy
+
+- **GIVEN** a local capsule review resolves the default or deprecated changed scope, explicit full scope, or positional files
+- **WHEN** the capsule report is serialized
+- **THEN** `scope_evidence.assurance_kind` is respectively `worktree`, `full`, or `explicit_files`
+- **AND** the selected enforcement mode remains independent from that scope identity
+- **AND** changed enforcement blocks only blocking findings on changed lines while retaining unchanged-line blockers as advisory evidence
+- **AND** incomplete required capsule evidence remains `UNKNOWN` with a non-zero exit under changed enforcement and is never rewritten to PASS.
+
 #### Scenario: Versioned readers never infer new truth from old fields
 
 - **GIVEN** a report older than schema 1.6

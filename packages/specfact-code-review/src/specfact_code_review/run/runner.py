@@ -99,6 +99,7 @@ _GIT_LOCAL_ENV_VARS = frozenset(
 )
 ReviewFocus = Literal["simplify"]
 ReviewEnforcementMode = Literal["full", "changed", "shadow"]
+LocalAssuranceKind = Literal["worktree", "full", "explicit_files"]
 
 
 @dataclass(frozen=True)
@@ -4089,6 +4090,53 @@ def _finding_targets_changed_line(finding: ReviewFinding, changed_lines: dict[st
     return finding.line in line_numbers
 
 
+def _with_changed_enforcement(report: ReviewReport, files: list[Path]) -> ReviewReport:
+    """Apply changed-line policy without discarding findings or uncertainty."""
+    if report.assurance_status == "UNKNOWN" or report.has_unknown_required_evidence:
+        return report.model_copy(
+            update={
+                "enforcement_mode": "changed",
+                "enforcement_summary": "Changed enforcement cannot pass while required evidence is UNKNOWN.",
+            }
+        )
+    changed_lines = _changed_lines_from_git(files)
+    blocking_changed = [
+        finding
+        for finding in report.findings
+        if finding.is_blocking() and _finding_targets_changed_line(finding, changed_lines)
+    ]
+    if blocking_changed:
+        summary = f"Changed enforcement blocks on {len(blocking_changed)} blocking finding(s) on changed lines."
+        return report.model_copy(
+            update={
+                "assurance_status": "FAIL" if report.assurance_status is not None else None,
+                "overall_verdict": "FAIL",
+                "ci_exit_code": 1,
+                "enforcement_mode": "changed",
+                "enforcement_summary": summary,
+            }
+        )
+    legacy_blocking = sum(finding.is_blocking() for finding in report.findings)
+    summary = (
+        "Changed enforcement found no blocking findings on changed lines."
+        if legacy_blocking == 0
+        else (
+            "Changed enforcement found no blocking findings on changed lines; "
+            f"{legacy_blocking} legacy blocking finding(s) remain as evidence."
+        )
+    )
+    verdict = "PASS" if not report.findings else "PASS_WITH_ADVISORY"
+    return report.model_copy(
+        update={
+            "assurance_status": "PASS" if report.assurance_status is not None else None,
+            "overall_verdict": verdict,
+            "ci_exit_code": 0,
+            "enforcement_mode": "changed",
+            "enforcement_summary": summary,
+        }
+    )
+
+
 def _with_enforcement(report: ReviewReport, *, mode: ReviewEnforcementMode, files: list[Path]) -> ReviewReport:
     """Apply enforcement mode to report exit code while preserving all findings as evidence."""
     if mode == "full":
@@ -4106,35 +4154,7 @@ def _with_enforcement(report: ReviewReport, *, mode: ReviewEnforcementMode, file
                 "enforcement_summary": "Shadow enforcement records findings as evidence and never blocks CI.",
             }
         )
-    changed_lines = _changed_lines_from_git(files)
-    blocking_changed = [
-        finding
-        for finding in report.findings
-        if finding.is_blocking() and _finding_targets_changed_line(finding, changed_lines)
-    ]
-    if blocking_changed:
-        summary = f"Changed enforcement blocks on {len(blocking_changed)} blocking finding(s) on changed lines."
-        return report.model_copy(
-            update={"ci_exit_code": 1, "enforcement_mode": "changed", "enforcement_summary": summary}
-        )
-    legacy_blocking = sum(finding.is_blocking() for finding in report.findings)
-    summary = (
-        "Changed enforcement found no blocking findings on changed lines."
-        if legacy_blocking == 0
-        else (
-            "Changed enforcement found no blocking findings on changed lines; "
-            f"{legacy_blocking} legacy blocking finding(s) remain as evidence."
-        )
-    )
-    verdict = "PASS" if not report.findings else "PASS_WITH_ADVISORY"
-    return report.model_copy(
-        update={
-            "overall_verdict": verdict,
-            "ci_exit_code": 0,
-            "enforcement_mode": "changed",
-            "enforcement_summary": summary,
-        }
-    )
+    return _with_changed_enforcement(report, files)
 
 
 def _suppress_known_noise(findings: list[ReviewFinding]) -> list[ReviewFinding]:
@@ -5036,23 +5056,31 @@ def _allows_development_host_compatibility(reason: str) -> bool:
     )
 
 
+def _with_capsule_enforcement(report: ReviewReport, options: ReviewOptions, files: list[Path]) -> ReviewReport:
+    """Finalize one capsule report under the requested local enforcement policy."""
+    return _with_enforcement(report, mode=options.review_mode, files=files)
+
+
 def run_capsule_review(
     files: list[Path],
     options: ReviewOptions | None = None,
+    *,
+    assurance_kind: LocalAssuranceKind = "explicit_files",
     **overrides: object,
 ) -> ReviewReport:
     """Run legacy/local review scopes only through the signed analyzer capsule."""
 
     review_options = _review_options_from_kwargs(options, overrides)
     runtime, reason = _prepare_capsule_runtime()
-    scope_evidence: dict[str, object] = {
-        "assurance_kind": "explicit_files",
-        "capsule_execution": "required",
-    }
+    scope_evidence: dict[str, object] = {"assurance_kind": assurance_kind, "capsule_execution": "required"}
     if runtime is None:
         if _allows_development_host_compatibility(reason):
-            return run_review(files, review_options)
-        return _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence)
+            return run_review(files, review_options).model_copy(update={"scope_evidence": scope_evidence})
+        return _with_capsule_enforcement(
+            _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence),
+            review_options,
+            files=files,
+        )
     try:
         snapshot = _run_capsule_snapshot(
             runtime,
@@ -5060,11 +5088,15 @@ def run_capsule_review(
             files=files,
             options=review_options,
         )
-        return _capsule_report(
-            snapshot.evidence,
-            snapshot.findings_by_member,
-            options=review_options,
-            scope_evidence=scope_evidence,
+        return _with_capsule_enforcement(
+            _capsule_report(
+                snapshot.evidence,
+                snapshot.findings_by_member,
+                options=review_options,
+                scope_evidence=scope_evidence,
+            ),
+            review_options,
+            files=files,
         )
     finally:
         _cleanup_capsule_runtime(runtime)

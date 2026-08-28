@@ -292,5 +292,8 @@ Explicitly forbidden:
 - [x] 6.42 Reject Ruff exit statuses outside completed-analysis codes 0 and 1 before parsing findings, then repeat the scoped gates and approval-time signing without changing Ruff rules, policy projection, input selection, or another analyzer.
 - [x] 6.43 Add a focused failing regression for the PR #442 review finding proving the complete retained Ruff stderr snippet, including its truncation marker, never exceeds the declared 4,000-character bound.
 - [x] 6.44 Correct only the Ruff stderr truncation off-by-one, rerun the scoped gates, and obtain replacement approval-time signing.
+- [x] 6.45 Add focused failing regressions for PR #446 proving local capsule reports preserve `worktree`, `full`, and `explicit_files` scope identity and apply changed-line enforcement without converting required `UNKNOWN` evidence to PASS.
+- [x] 6.46 Thread resolved local assurance kind through command execution, apply changed-line policy to completed capsule reports, and preserve fail-closed capsule uncertainty.
+- [ ] 6.47 Run focused, strict OpenSpec, format, typing, lint, contract, smart, complete, Code Review, manifest, signature, and publish-precheck gates; advance `specfact-code-review` by one patch version and resolve the corresponding PR #446 threads after protected evidence passes.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

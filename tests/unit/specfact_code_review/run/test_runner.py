@@ -13,7 +13,7 @@ from typing import Any, Literal, cast
 import pytest
 from pytest import MonkeyPatch
 
-from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+from specfact_code_review.run.findings import ReviewFinding, ReviewReport, read_review_report
 from specfact_code_review.run.runner import (
     _changed_lines_from_git,
     _coverage_findings,
@@ -265,12 +265,77 @@ def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
 
     monkeypatch.setattr(runner_api, "_execute_capsule_member", execute_member)
 
-    report = runner_api.run_capsule_review([source], no_tests=False, bug_hunt=True)
+    report = runner_api.run_capsule_review([source], no_tests=False, bug_hunt=True, assurance_kind="full")
 
     assert [member for member, _invocation in launches] == list(runner_api.default_pr_range_profile().all_ids)
     assert len({invocation for _member, invocation in launches}) == len(launches)
     assert report.schema_version == "1.6"
     assert report.assurance_status == "PASS"
+    assert report.scope_evidence == {"assurance_kind": "full", "capsule_execution": "required"}
+
+
+def test_capsule_review_changed_enforcement_keeps_unchanged_blocker_advisory(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    runner_api = _c14_runner()
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
+    snapshot = SimpleNamespace(
+        evidence=evidence,
+        findings_by_member={"ruff": [finding]},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+    monkeypatch.setattr(runner_api, "_changed_lines_from_git", lambda _files: {finding.file: {99}})
+
+    report = runner_api.run_capsule_review([Path(finding.file)], no_tests=True, review_mode="changed")
+    readback = read_review_report(report.model_dump())
+
+    assert (
+        report.assurance_status,
+        report.ci_exit_code,
+        report.overall_verdict,
+        report.enforcement_mode,
+        "legacy blocking" in (report.enforcement_summary or ""),
+        readback.status,
+        readback.ci_exit_code,
+    ) == ("PASS", 0, "PASS_WITH_ADVISORY", "changed", True, "PASS", 0)
+
+
+def test_capsule_review_changed_enforcement_blocks_changed_line(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
+    snapshot = SimpleNamespace(evidence=evidence, findings_by_member={"ruff": [finding]})
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+    monkeypatch.setattr(runner_api, "_changed_lines_from_git", lambda _files: {finding.file: {finding.line}})
+
+    report = runner_api.run_capsule_review([Path(finding.file)], no_tests=True, review_mode="changed")
+
+    assert (report.assurance_status, report.ci_exit_code, report.overall_verdict) == ("FAIL", 1, "FAIL")
+
+
+def test_capsule_review_changed_enforcement_preserves_unknown(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (None, "capsule_unavailable"))
+
+    report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True, review_mode="changed")
+
+    readback = read_review_report(report.model_dump())
+    assert (
+        report.assurance_status,
+        report.ci_exit_code,
+        report.overall_verdict,
+        readback.status,
+        readback.ci_exit_code,
+    ) == ("UNKNOWN", 1, "FAIL", "UNKNOWN", 1)
 
 
 def test_capsule_member_passes_explicit_target_policy_to_adapter(monkeypatch: MonkeyPatch) -> None:
@@ -1348,7 +1413,10 @@ def test_source_checkout_legacy_scope_uses_bounded_host_compatibility(monkeypatc
     monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
     monkeypatch.setattr(runner_api, "run_review", lambda *_args, **_kwargs: expected)
 
-    assert runner_api.run_capsule_review([Path("src/app.py")], no_tests=True) is expected
+    report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True)
+
+    assert report.run_id == expected.run_id
+    assert report.scope_evidence == {"assurance_kind": "explicit_files", "capsule_execution": "required"}
 
 
 def test_source_checkout_legacy_scope_explicitly_opts_into_linux_cache_miss_compatibility(
@@ -1365,7 +1433,10 @@ def test_source_checkout_legacy_scope_explicitly_opts_into_linux_cache_miss_comp
     monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
     monkeypatch.setattr(runner_api, "run_review", lambda *_args, **_kwargs: expected)
 
-    assert runner_api.run_capsule_review([Path("src/app.py")], no_tests=True) is expected
+    report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True)
+
+    assert report.run_id == expected.run_id
+    assert report.scope_evidence == {"assurance_kind": "explicit_files", "capsule_execution": "required"}
 
 
 def test_source_checkout_linux_cache_miss_without_opt_in_fails_closed(monkeypatch: MonkeyPatch) -> None:

@@ -17,6 +17,9 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Release `specfact-code-review` 0.49.62 with truthful local capsule scope
+  evidence and changed-line enforcement that remains fail-closed for incomplete
+  required analyzer evidence.
 - Release `specfact-code-review` 0.49.61 with dependency-bounded SpecFact CLI
   compatibility `>=0.55.1,<1.0.0`, so compatible core updates within the
   required module graph do not require another metadata release; retain
