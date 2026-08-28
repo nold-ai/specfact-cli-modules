@@ -2332,6 +2332,17 @@ commit, replacement approval-time signing, protected Linux CPython 3.11-3.13
 checks, another final-head review, and verified PR #448 thread disposition
 remain required.
 
+Trusted Module Signature Hardening accepted signed human commit
+`b3ee0b89cfb08ab2c21f2f798ff519a606c96d3d` and produced signature-only bot
+commit `ba46e854bff360e25d35634723c22364c1d43715` for exact checksum
+`sha256:2b5824fff6749f2442a44f954b9904f664fcd02b5c09a097ac247b96163c3a79`
+with signature
+`t28MCLFPDka/y6kGgBNwW692UpldDHQZpjXMivpqwQVz8bwxZTDt11SXoNxUGw7wI6Io9qjxd8cRU0eIpsHdDg==`.
+The bot diff is exactly one signature line, and strict filesystem,
+cryptographic, and `origin/dev` version verification against immutable core
+`0.55.1` passes all seven manifests. This signed evidence-only checkpoint
+changes no module payload byte and triggers the replacement protected matrix.
+
 The final Codex review of head `9e2cdb537c02a71bec22f79f49a4fb40e8d675f9`
 identified a selected-symlink mismatch inside the same ordinary worktree input
 identity. Independent validation against that immutable head reproduced both
