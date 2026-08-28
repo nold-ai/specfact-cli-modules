@@ -1598,3 +1598,14 @@ local evidence with `PASS_WITH_ADVISORY`, exit `0`, `87` retained findings,
 three legacy blockers, and no blocking finding on a changed line. The signed
 human commit, trusted approval-time module signature, protected matrix, and
 fresh final-head review remain required before task 6.59 is complete.
+
+Trusted signing commit `c31ec39f4dd6c13dd35f9d9594492088572e911b`
+added only signature
+`I+ZLGzON19lto5uH7+iLwXPeb644Fmvs/OnJqPvhu/I8xqlw6eJjzNIzzWbW8Xi2+LhtSUa5On445Oy/dsLqAg==`
+to exact checksum
+`sha256:d016ee8df7b0f21a3ae9b0d02d1a8c1cd95520085d7cf6430edc5c3dbba8e108`.
+Strict filesystem and cryptographic verification against immutable core
+`0.55.1`'s public key and the `origin/dev` release baseline passes all seven
+module manifests. This evidence-only commit changes no signed module payload
+byte and triggers the replacement protected matrix on top of the verified
+signing head.
