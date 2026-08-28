@@ -342,6 +342,130 @@ def test_run_review_changed_enforcement_normalizes_git_diff_paths(
 
 
 @pytest.mark.parametrize("diff_mode", ["worktree", "cached"])
+@pytest.mark.parametrize("file_name", ["new.py", "space name.py", "ümlaut.py", "line\nbreak.py"])
+def test_run_review_changed_enforcement_counts_staged_empty_added_file(
+    monkeypatch: MonkeyPatch, tmp_path: Path, diff_mode: str, file_name: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    (repository / "README.md").write_text("baseline\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source = repository / file_name
+    source.write_text("", encoding="utf-8")
+    subprocess.run(["git", "--literal-pathspecs", "add", "--", file_name], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", diff_mode)
+    finding = _finding(tool="ruff", rule="TEST_FILE_MISSING", severity="error", category="testing").model_copy(
+        update={"file": file_name, "line": 1}
+    )
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([Path(file_name)], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([Path(file_name)]) == {file_name: {1}}
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+
+
+def test_changed_lines_from_frozen_cached_tree_count_empty_added_file_after_live_index_changes(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    (repository / "README.md").write_text("baseline\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source = repository / "new.py"
+    source.write_text("", encoding="utf-8")
+    subprocess.run(["git", "add", "new.py"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    snapshot_root = tmp_path / "snapshot"
+    snapshot_root.mkdir()
+    snapshot = runner_api._cached_analysis_snapshot([Path("new.py")], snapshot_root)
+    assert snapshot is not None
+
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "add", "new.py"], cwd=repository, check=True, env=git_env)
+
+    assert _changed_lines_from_git([Path("new.py")], cached_diff=snapshot.diff) == {"new.py": {1}}
+
+
+def test_run_review_changed_enforcement_counts_untracked_empty_added_file(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    (repository / "README.md").write_text("baseline\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source = repository / "new.py"
+    source.write_text("", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    finding = _finding(tool="ruff", rule="TEST_FILE_MISSING", severity="error", category="testing").model_copy(
+        update={"file": "new.py", "line": 1}
+    )
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([Path("new.py")], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([Path("new.py")]) == {"new.py": {1}}
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+
+
+def test_run_review_changed_enforcement_does_not_count_unchanged_empty_file(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    source = repository / "existing.py"
+    source.write_text("", encoding="utf-8")
+    subprocess.run(["git", "add", "existing.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    finding = _finding(tool="ruff", rule="TEST_FILE_MISSING", severity="error", category="testing").model_copy(
+        update={"file": "existing.py", "line": 1}
+    )
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([Path("existing.py")], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([Path("existing.py")]) == {}
+    assert (report.overall_verdict, report.ci_exit_code) == ("PASS_WITH_ADVISORY", 0)
+
+
+@pytest.mark.parametrize("diff_mode", ["worktree", "cached"])
 @pytest.mark.parametrize("path_kind", ["relative", "absolute"])
 def test_run_review_changed_enforcement_normalizes_nested_working_directory_paths(
     monkeypatch: MonkeyPatch,

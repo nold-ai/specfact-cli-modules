@@ -17,6 +17,10 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Release `specfact-code-review` 0.49.75 with file-level changed anchors for
+  empty added staged, cached-tree, and explicitly reviewed untracked files, so
+  a line-1 blocker cannot be projected as legacy merely because Git emits no
+  text hunk; retain compatibility `>=0.55.1,<1.0.0`.
 - Release `specfact-code-review` 0.49.74 with complete analyzer-visible
   worktree identity checks around ordinary changed analysis and every-hop
   cached-tree symlink containment, preventing ignored configuration/import

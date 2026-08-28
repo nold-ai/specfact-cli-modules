@@ -4099,17 +4099,71 @@ def _decode_git_diff_path(raw_path: str) -> str | None:
     return os.fsdecode(bytes(decoded))
 
 
+def _new_file_destination_from_diff_header(raw_header: str) -> str | None:
+    """Return the repeated destination path from one no-rename diff header."""
+    quoted_separator = raw_header.rfind('" "b/')
+    if raw_header.startswith('"a/') and quoted_separator >= 0:
+        source = _decode_git_diff_path(raw_header[: quoted_separator + 1])
+        destination = _decode_git_diff_path(raw_header[quoted_separator + 2 :])
+        if (
+            source is not None
+            and destination is not None
+            and source.removeprefix("a/") == destination.removeprefix("b/")
+        ):
+            return destination.removeprefix("b/")
+        return None
+    separator = raw_header.find(" b/")
+    while separator >= 0:
+        source = raw_header[:separator]
+        destination = raw_header[separator + 1 :]
+        if source.startswith("a/") and source[2:] == destination.removeprefix("b/"):
+            return destination.removeprefix("b/")
+        separator = raw_header.find(" b/", separator + 1)
+    return None
+
+
+def _record_added_hunk_lines(
+    line: str,
+    *,
+    current_file: str | None,
+    destination_header_seen: bool,
+    changed_lines: dict[str, set[int]],
+) -> bool:
+    """Record one added-line hunk or reject a hunk without its file header."""
+    if not line.startswith("@@ "):
+        return True
+    if not destination_header_seen:
+        return False
+    if current_file is None:
+        return True
+    match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+    if match is None:
+        return True
+    start = int(match.group(1))
+    count = int(match.group(2) or "1")
+    if count > 0:
+        changed_lines[current_file].update(range(start, start + count))
+    return True
+
+
 def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]] | None:
     """Return added new-file line numbers from a zero-context git diff."""
     changed_lines: dict[str, set[int]] = {}
     current_file: str | None = None
+    header_destination: str | None = None
     awaiting_destination_header = False
     destination_header_seen = False
     for line in diff_text.splitlines():
         if line.startswith("diff --git "):
             current_file = None
+            header_destination = _new_file_destination_from_diff_header(line.removeprefix("diff --git "))
             awaiting_destination_header = True
             destination_header_seen = False
+            continue
+        if awaiting_destination_header and line.startswith("new file mode "):
+            if header_destination is None:
+                return None
+            changed_lines.setdefault(header_destination, {1})
             continue
         if awaiting_destination_header and line.startswith("+++ "):
             destination = _decode_git_diff_path(line[4:])
@@ -4121,19 +4175,13 @@ def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]] | None:
             if current_file is not None:
                 changed_lines.setdefault(current_file, set())
             continue
-        if not line.startswith("@@ "):
-            continue
-        if not destination_header_seen:
+        if not _record_added_hunk_lines(
+            line,
+            current_file=current_file,
+            destination_header_seen=destination_header_seen,
+            changed_lines=changed_lines,
+        ):
             return None
-        if current_file is None:
-            continue
-        match = re.search(r"\+(\d+)(?:,(\d+))?", line)
-        if match is None:
-            continue
-        start = int(match.group(1))
-        count = int(match.group(2) or "1")
-        if count > 0:
-            changed_lines[current_file].update(range(start, start + count))
     return changed_lines
 
 
@@ -5043,7 +5091,7 @@ def _untracked_changed_lines(file_path: Path) -> set[int] | None:
         line_count = len(file_path.read_text(encoding="utf-8").splitlines())
     except (OSError, UnicodeDecodeError):
         return None
-    return set(range(1, line_count + 1))
+    return set(range(1, line_count + 1)) if line_count else {1}
 
 
 def _changed_diff_command(files: list[Path], revision: tuple[str, ...]) -> list[str]:
@@ -5154,6 +5202,8 @@ def _raw_selected_worktree_lines(
         return None
     if worktree_content == "missing":
         return set()
+    if entry is None and worktree_content == b"":
+        return {1}
     base_content = b"" if entry is None else base_contents[entry[1]]
     if entry is not None and _git_blob_oid(worktree_content, entry[1]) == entry[1]:
         return set()

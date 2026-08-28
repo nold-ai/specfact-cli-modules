@@ -2599,3 +2599,46 @@ cryptographic, and `origin/dev` version verification against the immutable
 core `0.55.1` bundled public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed module payload byte and triggers the
 replacement protected and final-head review cycle.
+
+The exact signed-head Codex review of
+`82e4674ec8d7e5c5e68d750eab9747de6ee22965` added one P2 finding: Git emits no
+destination header or text hunk for a newly added empty file, so staged and
+explicit untracked `new.py` inputs produced no changed-line entry and a
+file-level line-1 blocker could be projected as legacy. Independent validation
+reproduced both paths and confirmed the immutable cached-tree route required the
+same file-level representation.
+
+The staged worktree, live cached, and explicit untracked regressions first
+returned `{}` rather than `{"new.py": {1}}`; their reports therefore failed to
+retain the blocker (`3 failed`). The tracked unchanged-empty control remained
+non-blocking. The parser now retains a line-1 anchor from authenticated `new file
+mode` metadata using the repeated canonical `a/` and `b/` path identity, explicit
+untracked discovery maps a zero-line added file to the same anchor, and raw
+HEAD/worktree corroboration independently represents the absent-base empty blob
+as changed. A frozen cached-tree regression captures immutable base/index OIDs,
+restages different live index bytes, and still derives the empty-file anchor from
+the captured trees.
+
+The final focused surface passes all `11` cases, including ordinary worktree,
+live cached, frozen cached-tree, explicit untracked, unchanged tracked, space,
+UTF-8, and Git-quoted newline filenames. The complete runner surface passes
+`392` of `393`; exact-core `0.55.1` smart and complete suites each pass `1769`
+of `1770`. Their sole identical failure remains the documented unsupported
+local macOS/CPython 3.14 capsule-lock selector, with two existing Lark
+deprecations. Strict OpenSpec, canonical format, repository typing (`0 errors,
+0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), all `28` contract-first
+tests, seven manifests plus registry, bundle imports, filesystem
+checksum/version verification, publish precheck, and `git diff --check` pass.
+The first staged review found one patch-caused `CC17` blocker after the new
+metadata branch crossed the parser complexity threshold; extracting focused
+hunk decoding removed that blocker without changing the evidence protocol. The
+repeated complete staged pipeline passes with Code Review
+`PASS_WITH_ADVISORY`, exit `0`, `215` retained findings, and only the inherited
+`_run_capsule_snapshot` parameter-count and documented local capsule test
+errors outside changed lines; the `28` contract-first tests also pass.
+Candidate module version is `0.49.75`, compatibility remains
+`>=0.55.1,<1.0.0`, and the unsigned filesystem checksum is
+`sha256:b4f44be52b073d7e3e471ba5f406918d1efe08e7e63728908c6ea23a16614305`.
+Replacement trusted signing, protected checks, exact signed-head review, and
+verified PR #448 thread disposition remain required by tasks 6.112, 6.114,
+6.116, 6.118, and 6.120.
