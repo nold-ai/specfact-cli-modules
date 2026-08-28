@@ -4275,6 +4275,68 @@ def _git_tree_identity(repository: Path, revision: str) -> str | None:
     )
 
 
+def _symbolic_head_is_unborn(repository: Path) -> bool:
+    """Return whether HEAD names a branch whose ref does not exist yet."""
+    try:
+        symbolic = subprocess.run(
+            ["git", "symbolic-ref", "-q", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+        ref = symbolic.stdout.removesuffix("\n")
+        if (
+            symbolic.returncode != 0
+            or not symbolic.stdout.endswith("\n")
+            or not ref.startswith("refs/heads/")
+            or ref == "refs/heads/"
+        ):
+            return False
+        present = subprocess.run(
+            ["git", "show-ref", "--verify", "--quiet", ref],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return False
+    return present.returncode == 1 and present.stdout == "" and present.stderr == ""
+
+
+def _cached_base_tree_identity(repository: Path) -> str | None:
+    """Resolve HEAD or the format-correct empty tree for a proven unborn branch."""
+    base_tree = _git_tree_identity(repository, "HEAD")
+    if base_tree is not None or not _symbolic_head_is_unborn(repository):
+        return base_tree
+    try:
+        result = subprocess.run(
+            ["git", "mktree"],
+            input="",
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    tree_oid = result.stdout.removesuffix("\n")
+    return (
+        tree_oid
+        if result.returncode == 0
+        and result.stdout.endswith("\n")
+        and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", tree_oid)
+        else None
+    )
+
+
 @dataclass(frozen=True)
 class CachedDiffIdentity:
     """Immutable base/index identities and caller coordinates for cached diff."""
@@ -4513,11 +4575,11 @@ def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAna
         return None
     repository, selected = repository_paths
     caller_prefix = _cached_caller_prefix(repository)
-    base_tree = _git_tree_identity(repository, "HEAD")
+    base_tree = _cached_base_tree_identity(repository)
     tree_oid = _git_tree_identity(repository, "index")
     if caller_prefix is None or base_tree is None or tree_oid is None:
         return None
-    if _git_tree_identity(repository, "HEAD") != base_tree:
+    if _cached_base_tree_identity(repository) != base_tree:
         return None
     entries = _cached_tree_entries(repository, tree_oid)
     selected_unsupported = entries is not None and any(
@@ -4600,6 +4662,106 @@ def _changed_diff_command(files: list[Path], diff_mode: str, cached_diff: Cached
     return command
 
 
+def _raw_no_index_added_lines(base_content: bytes, worktree_content: bytes) -> set[int] | None:
+    """Diff two raw blobs without repository attributes or index hints."""
+    with tempfile.TemporaryDirectory(prefix="specfact-raw-diff-") as temporary_directory:
+        root = Path(temporary_directory)
+        base_path = root / "base"
+        worktree_path = root / "worktree"
+        try:
+            base_path.write_bytes(base_content)
+            worktree_path.write_bytes(worktree_content)
+            result = subprocess.run(
+                [
+                    "git",
+                    "--literal-pathspecs",
+                    "diff",
+                    "--no-index",
+                    "--no-renames",
+                    "--unified=0",
+                    "--no-ext-diff",
+                    "--no-color",
+                    "--text",
+                    "--no-textconv",
+                    "--src-prefix=a/",
+                    "--dst-prefix=b/",
+                    "--",
+                    base_path.name,
+                    worktree_path.name,
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+                env=_candidate_git_environment(),
+                cwd=root,
+            )
+        except (OSError, subprocess.SubprocessError, UnicodeError):
+            return None
+    if result.returncode == 0:
+        return set() if result.stdout == "" else None
+    if result.returncode != 1:
+        return None
+    parsed = _parse_added_lines_from_diff(result.stdout)
+    if parsed is None or len(parsed) > 1:
+        return None
+    return next(iter(parsed.values()), set())
+
+
+def _selected_head_blob_evidence(
+    repository: Path,
+    selected: dict[str, Path],
+    entries: dict[str, tuple[str, str]],
+) -> tuple[dict[str, tuple[str, str]], dict[str, bytes]] | None:
+    """Load supported raw HEAD blobs for the exact selected identities."""
+    selected_entries = {path: entries[path] for path in selected if path in entries}
+    if any(mode not in {"100644", "100755"} for mode, _oid in selected_entries.values()):
+        return None
+    base_contents = _cached_blob_contents(repository, tuple(oid for _mode, oid in selected_entries.values()))
+    return None if base_contents is None else (selected_entries, base_contents)
+
+
+def _raw_selected_worktree_lines(
+    absolute: Path,
+    entry: tuple[str, str] | None,
+    base_contents: dict[str, bytes],
+) -> set[int] | None:
+    """Derive raw changed lines for one selected regular worktree path."""
+    mode = entry[0] if entry is not None else "100644"
+    worktree_content = _raw_worktree_blob(absolute, mode)
+    if worktree_content is None:
+        return None
+    if worktree_content == "missing":
+        return set()
+    base_content = b"" if entry is None else base_contents[entry[1]]
+    if entry is not None and _git_blob_oid(worktree_content, entry[1]) == entry[1]:
+        return set()
+    return _raw_no_index_added_lines(base_content, worktree_content)
+
+
+def _raw_worktree_changed_lines(files: list[Path]) -> dict[str, set[int]] | None:
+    """Derive selected-file line evidence from raw HEAD and filesystem bytes."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return None
+    repository, selected = repository_paths
+    base_tree = _git_tree_identity(repository, "HEAD")
+    entries = _cached_tree_entries(repository, base_tree) if base_tree is not None else None
+    if entries is None:
+        return None
+    blob_evidence = _selected_head_blob_evidence(repository, selected, entries)
+    if blob_evidence is None:
+        return None
+    selected_entries, base_contents = blob_evidence
+    changed_lines: dict[str, set[int]] = {}
+    for path, absolute in selected.items():
+        line_numbers = _raw_selected_worktree_lines(absolute, selected_entries.get(path), base_contents)
+        if line_numbers is None:
+            return None
+        changed_lines[_normalize_report_path(absolute)] = line_numbers
+    return changed_lines
+
+
 def _add_untracked_changed_lines(files: list[Path], changed_lines: dict[str, set[int]]) -> bool:
     """Add explicit untracked inputs and report whether their evidence was available."""
     for file_path in files:
@@ -4614,6 +4776,18 @@ def _add_untracked_changed_lines(files: list[Path], changed_lines: dict[str, set
         if line_numbers:
             changed_lines[relative] = line_numbers
     return True
+
+
+def _worktree_lines_match_raw_bytes(files: list[Path], changed_lines: dict[str, set[int]], diff_mode: str) -> bool:
+    """Corroborate parsed worktree evidence against raw HEAD/filesystem bytes."""
+    if diff_mode != "worktree":
+        return True
+    raw_changed_lines = _raw_worktree_changed_lines(files)
+    if raw_changed_lines is None:
+        return False
+    parsed_nonempty = {path: lines for path, lines in changed_lines.items() if lines}
+    raw_nonempty = {path: lines for path, lines in raw_changed_lines.items() if lines}
+    return parsed_nonempty == raw_nonempty
 
 
 def _changed_lines_from_git(
@@ -4635,7 +4809,11 @@ def _changed_lines_from_git(
     changed_lines = _changed_lines_relative_to_caller(changed_lines, caller_prefix)
     if changed_lines is None:
         return None
-    return changed_lines if cached_diff is not None or _add_untracked_changed_lines(files, changed_lines) else None
+    if cached_diff is not None:
+        return changed_lines
+    if not _add_untracked_changed_lines(files, changed_lines):
+        return None
+    return changed_lines if _worktree_lines_match_raw_bytes(files, changed_lines, diff_mode) else None
 
 
 def _finding_targets_changed_line(finding: ReviewFinding, changed_lines: dict[str, set[int]]) -> bool:
@@ -5775,6 +5953,44 @@ def _rebase_host_snapshot_findings(
     return report.model_copy(update={"findings": findings})
 
 
+def _cached_snapshot_finding_relative_path(raw_path: str, snapshot_root: Path) -> PurePosixPath | None:
+    """Resolve one capsule finding to its repository-root snapshot identity."""
+    path = Path(raw_path)
+    if path.is_absolute():
+        for root in (snapshot_root, Path("/opt/specfact/snapshot")):
+            try:
+                relative = path.relative_to(root)
+            except ValueError:
+                continue
+            candidate = PurePosixPath(relative.as_posix())
+            return candidate if candidate.parts and ".." not in candidate.parts else None
+        return None
+    candidate = PurePosixPath(raw_path)
+    if not candidate.parts or candidate.is_absolute() or ".." in candidate.parts:
+        return None
+    return candidate
+
+
+def _rebase_cached_snapshot_findings(
+    findings_by_member: dict[str, list[ReviewFinding]],
+    *,
+    snapshot_root: Path,
+    repository: Path,
+) -> dict[str, list[ReviewFinding]] | None:
+    """Translate capsule snapshot paths to the frozen caller coordinate."""
+    rebased: dict[str, list[ReviewFinding]] = {}
+    for member, findings in findings_by_member.items():
+        member_findings: list[ReviewFinding] = []
+        for finding in findings:
+            relative = _cached_snapshot_finding_relative_path(finding.file, snapshot_root)
+            if relative is None:
+                return None
+            caller_path = _normalize_report_path(repository.joinpath(*relative.parts))
+            member_findings.append(finding.model_copy(update={"file": caller_path}))
+        rebased[member] = member_findings
+    return rebased
+
+
 def _run_cached_development_host_review(
     files: list[Path],
     options: ReviewOptions,
@@ -5875,6 +6091,7 @@ def run_capsule_review(
             snapshot_root = Path.cwd()
             snapshot_files = files
             cached_diff: CachedDiffIdentity | None = None
+            cached_snapshot: CachedAnalysisSnapshot | None = None
             if _cached_review_requested(review_options):
                 temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
                 cached_snapshot = _cached_analysis_snapshot(files, temporary_root)
@@ -5897,16 +6114,36 @@ def run_capsule_review(
                 files=snapshot_files,
                 options=review_options,
             )
+            findings_by_member = snapshot.findings_by_member
+            if cached_snapshot is not None:
+                rebased_findings = _rebase_cached_snapshot_findings(
+                    findings_by_member,
+                    snapshot_root=cached_snapshot.root,
+                    repository=cached_snapshot.repository,
+                )
+                if rebased_findings is None:
+                    return _with_capsule_enforcement(
+                        _unknown_capsule_report(
+                            "cached_capsule_finding_path_unavailable",
+                            options=review_options,
+                            scope_evidence=scope_evidence,
+                        ),
+                        review_options,
+                        files=files,
+                        findings_by_member={},
+                        cached_diff=cached_diff,
+                    )
+                findings_by_member = rebased_findings
             return _with_capsule_enforcement(
                 _capsule_report(
                     snapshot.evidence,
-                    snapshot.findings_by_member,
+                    findings_by_member,
                     options=review_options,
                     scope_evidence=scope_evidence,
                 ),
                 review_options,
                 files=files,
-                findings_by_member=snapshot.findings_by_member,
+                findings_by_member=findings_by_member,
                 cached_diff=cached_diff,
             )
     finally:

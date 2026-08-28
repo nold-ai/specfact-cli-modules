@@ -2035,3 +2035,45 @@ same local macOS/CPython 3.14 capsule-lock selector, with only two existing Lark
 deprecation warnings. The complete runner surface likewise passes `341` of
 `342` with that environment-only exception. This evidence-only checkpoint
 changes no signed payload byte and triggers the protected final-head matrix.
+
+The final Codex review of evidence head `84ac4c2bfe04618a3d0170146396289e471b460b`
+identified four further changed-enforcement identity gaps. Independent agents
+validated each against the active contract and current source: cached capsule
+findings were not rebased from a repository-root snapshot to a nested caller;
+an unborn repository had no immutable base tree; and ordinary worktree Git
+diffs could hide analyzer-visible raw bytes through a clean filter,
+`assume-unchanged`, or `skip-worktree`. Contract clauses and real-repository
+regressions were authored first. The initial focused run failed all five
+behavior cases (`5 failed`); the expanded boundary includes relative and
+capsule-absolute nested findings plus outside-snapshot rejection and now passes
+`7 passed`.
+
+Cached capture now accepts only a proven unborn symbolic branch as an empty
+base, creates its object-format-correct empty tree, and repeats the base
+identity check so a racing first commit fails closed. Cached capsule findings
+are translated from the frozen snapshot to the repository and caller
+coordinate before both report construction and member-evidence projection;
+outside-snapshot identities yield required `UNKNOWN`. Ordinary worktree line
+evidence remains Git-derived but is accepted only when a second raw
+`HEAD`-blob versus filesystem-byte diff produces the same non-empty line map,
+independently of repository attributes and index hints. The broader
+changed/cached selection passes `73 passed`.
+
+The clean-code gate first rejected the raw corroboration implementation for a
+new changed-line `CC18` complexity blocker. Splitting blob loading, one-path
+raw comparison, and final corroboration into single-purpose helpers reduced
+the touched functions below the blocking threshold without changing behavior;
+the repeated changed-line review returns `PASS_WITH_ADVISORY`, exit `0`, with
+`86` retained findings, two legacy blockers outside changed lines, and no
+changed-line blocker. Exact-core `0.55.1` format, Ruff, BasedPyright (`0 errors,
+0 warnings, 0 notes`), Pylint (`10.00/10`), YAML, bundle imports, strict
+OpenSpec, all `28` contract tests, filesystem checksum/version verification,
+publish precheck, and `git diff --check` pass. Both complete and smart suites
+pass `1725` of `1726`; the sole failure remains the documented local
+macOS/CPython 3.14 capsule-lock selector, with only the two existing Lark
+deprecations. The unpublished module advances to `0.49.65`, preserves
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and has
+unsigned filesystem checksum
+`sha256:6a13bb1eb0e590faf5cbe5df9b9ff232e53c7722569a4021d7952829a53b3694`.
+Signed human commit, trusted replacement signing, protected final-head checks,
+and verified PR #448 thread disposition remain required by task 6.91.

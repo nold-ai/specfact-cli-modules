@@ -337,5 +337,7 @@ Explicitly forbidden:
 - [x] 6.87 Add a failing regression for PR #448 proving unavailable changed-line evidence preserves a completed blocker-free PASS exactly as the existing local-capsule contract requires.
 - [x] 6.88 Preserve completed ordinary PASS and FAIL verdicts when changed-line discovery is unavailable without weakening cached or required-UNKNOWN behavior.
 - [ ] 6.89 Repeat focused, complete, strict OpenSpec, format, typing, lint, contract, manifest, signature, publish-precheck, Code Review, and protected checks for `specfact-code-review` 0.49.64, then resolve only verified PR #448 threads; leave the original PR #446 threads open until PR #448 merges.
+- [x] 6.90 Add failing real-repository regressions for the final PR #448 review findings: cached capsule paths from nested callers, cached enforcement before the first commit, and ordinary worktree diffs hidden by clean filters or index hints.
+- [ ] 6.91 Bind ordinary worktree evidence to raw HEAD/filesystem bytes, use an empty cached base tree for unborn repositories, rebase cached capsule findings to the caller coordinate, then repeat task 6.89 with a replacement signed patch candidate.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

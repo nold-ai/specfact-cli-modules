@@ -17,7 +17,11 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
-- Release `specfact-code-review` 0.49.64 with verdict-preserving ordinary
+- Release `specfact-code-review` 0.49.65 with raw HEAD/worktree corroboration
+  that prevents clean filters and index hints from hiding analyzer-visible
+  changes, cached enforcement before the first commit through a verified empty
+  base tree, and caller-relative cached capsule findings for nested invocations;
+  retain the 0.49.64 verdict-preserving ordinary
   changed enforcement when Git line evidence is unavailable, while cached
   immutable-tree enforcement remains required `UNKNOWN`; retain fail-closed
   changed-line evidence discovery plus state-aware, raw, color-free,

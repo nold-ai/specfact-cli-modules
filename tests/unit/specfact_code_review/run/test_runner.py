@@ -542,6 +542,197 @@ def test_capsule_cached_enforcement_runs_when_worktree_matches_index(monkeypatch
     assert snapshot_calls == ["VALUE = 2\n"]
 
 
+@pytest.mark.parametrize("finding_path", ["sub/app.py", "/opt/specfact/snapshot/sub/app.py"])
+def test_capsule_cached_enforcement_rebases_nested_snapshot_findings(
+    monkeypatch: MonkeyPatch, tmp_path: Path, finding_path: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    nested = repository / "sub"
+    nested.mkdir(parents=True)
+    source = nested / "app.py"
+    source.write_text("SAFE = True\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "sub/app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("BLOCKED = True\n", encoding="utf-8")
+    subprocess.run(["git", "add", "app.py"], cwd=nested, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(nested)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": finding_path, "line": 1}
+    )
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={"ruff": [finding]},
+    )
+    snapshot_calls: list[str] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+
+    def _run_snapshot(*_args: object, **kwargs: object) -> SimpleNamespace:
+        snapshot_root = cast(Path, kwargs["snapshot_root"])
+        snapshot_calls.append((snapshot_root / "sub/app.py").read_text(encoding="utf-8"))
+        return snapshot
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("FAIL", "FAIL", 1)
+    assert [finding.file for finding in report.findings] == ["app.py"]
+    assert snapshot_calls == ["BLOCKED = True\n"]
+
+
+def test_capsule_cached_enforcement_rejects_finding_outside_snapshot(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("SAFE = True\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("BLOCKED = True\n", encoding="utf-8")
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "/outside/app.py", "line": 1}
+    )
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={"ruff": [finding]},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+        "cached_capsule_finding_path_unavailable"
+    }
+
+
+def test_capsule_cached_enforcement_uses_empty_base_before_first_commit(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("BLOCKED = True\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "app.py", "line": 1}
+    )
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={"ruff": [finding]},
+    )
+    snapshot_calls: list[str] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+
+    def _run_snapshot(*_args: object, **kwargs: object) -> SimpleNamespace:
+        snapshot_root = cast(Path, kwargs["snapshot_root"])
+        snapshot_calls.append((snapshot_root / "app.py").read_text(encoding="utf-8"))
+        return snapshot
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("FAIL", "FAIL", 1)
+    assert snapshot_calls == ["BLOCKED = True\n"]
+
+
+@pytest.mark.parametrize("bypass_kind", ["clean_filter", "assume_unchanged", "skip_worktree"])
+def test_capsule_worktree_enforcement_binds_diff_to_raw_filesystem_bytes(
+    monkeypatch: MonkeyPatch, tmp_path: Path, bypass_kind: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("SAFE\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    if bypass_kind == "clean_filter":
+        (repository / ".gitattributes").write_text("app.py filter=hide\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "config", "filter.hide.clean", "sed s/BLOCKED/SAFE/"],
+            cwd=repository,
+            check=True,
+            env=git_env,
+        )
+        subprocess.run(["git", "add", ".gitattributes"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    if bypass_kind != "clean_filter":
+        subprocess.run(
+            ["git", "update-index", f"--{bypass_kind.replace('_', '-')}", "app.py"],
+            cwd=repository,
+            check=True,
+            env=git_env,
+        )
+    source.write_text("BLOCKED\n", encoding="utf-8")
+    semantic_diff = subprocess.run(
+        ["git", "diff", "--quiet", "HEAD", "--", "app.py"],
+        cwd=repository,
+        check=False,
+        env=git_env,
+    )
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "app.py", "line": 1}
+    )
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
+    snapshot = SimpleNamespace(
+        evidence=evidence,
+        findings_by_member={"ruff": [finding]},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert semantic_diff.returncode == 0
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("FAIL", "FAIL", 1)
+
+
 def test_cached_worktree_comparison_fails_closed_for_symlink_and_empty_selection(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -1215,6 +1406,7 @@ def test_capsule_cached_changed_enforcement_fails_closed_without_changed_line_ev
         findings_by_member={},
     )
     cached_snapshot = SimpleNamespace(
+        repository=Path.cwd(),
         root=Path.cwd(),
         files=[Path("src/app.py")],
         diff=runner_api.CachedDiffIdentity(base_tree="a" * 40, index_tree="b" * 40, caller_prefix=""),
