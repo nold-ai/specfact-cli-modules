@@ -1125,6 +1125,100 @@ def test_capsule_worktree_enforcement_accepts_stable_unselected_in_root_symlink(
     assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("PASS", "PASS", 0)
 
 
+def test_capsule_worktree_enforcement_accepts_bound_directory_symlink(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    target = repository / "support_pkg"
+    target.mkdir(parents=True)
+    source = repository / "app.py"
+    module = target / "mod.py"
+    source.write_text("from pkg.mod import VALUE\n", encoding="utf-8")
+    module.write_text("VALUE = 1\n", encoding="utf-8")
+    os.symlink("support_pkg", repository / "pkg", target_is_directory=True)
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "app.py", "pkg", "support_pkg/mod.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("from pkg.mod import VALUE\nRESULT = VALUE\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot_calls: list[str] = []
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(
+        runner_api,
+        "_run_capsule_snapshot",
+        lambda *_args, **_kwargs: snapshot_calls.append("ran") or snapshot,
+    )
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert snapshot_calls == ["ran"]
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("PASS", "PASS", 0)
+
+
+def test_capsule_worktree_enforcement_rejects_unbound_excluded_directory_symlink(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    target = repository / ".venv" / "support_pkg"
+    target.mkdir(parents=True)
+    source = repository / "app.py"
+    module = target / "mod.py"
+    source.write_text("from pkg.mod import VALUE\n", encoding="utf-8")
+    module.write_text("VALUE = 1\n", encoding="utf-8")
+    (repository / ".gitignore").write_text("/.venv\n", encoding="utf-8")
+    os.symlink(".venv/support_pkg", repository / "pkg", target_is_directory=True)
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", ".gitignore", "app.py", "pkg"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("from pkg.mod import VALUE\nRESULT = VALUE\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot_calls: list[str] = []
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+
+    def _run_snapshot(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        snapshot_calls.append("ran")
+        module.write_text("VALUE = 2\n", encoding="utf-8")
+        return snapshot
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert snapshot_calls == []
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+        "worktree_snapshot_identity_unavailable"
+    }
+
+
 @pytest.mark.parametrize("mutation_kind", ["stable", "selected_bytes"])
 def test_capsule_worktree_enforcement_binds_non_repository_selected_files(
     monkeypatch: MonkeyPatch, tmp_path: Path, mutation_kind: str

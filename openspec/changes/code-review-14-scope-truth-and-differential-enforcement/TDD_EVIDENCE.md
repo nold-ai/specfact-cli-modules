@@ -2295,6 +2295,43 @@ checkpoint changes no signed module payload byte and triggers the protected
 final-head matrix; final review and verified PR #448 thread disposition remain
 required.
 
+The requested final Codex review of signed human head
+`55a8df76a09dabf8da9a8007aeeccbccf88dd556` opened P2 thread
+`PRRT_kwDORVEFbs6dTMvm`. Independent exact-head validation confirmed that a
+contained tracked directory symlink into an intentionally excluded `.venv`
+tree bound only the target directory metadata, not an imported descendant:
+mutating that descendant changed real BasedPyright output while the complete
+ordinary worktree identity remained equal.
+
+The OpenSpec contract and tasks were updated before an exact failing regression
+and stable control. The stable bound-directory link passed, while
+`pkg -> .venv/support_pkg` reached analyzer dispatch and retained the incomplete
+identity (`1 failed`, `1 passed`, `377 deselected`). Ordinary identity discovery
+now rejects a directory symlink when any contained target component is one of
+the deliberately scan-excluded directories; contained file links, bound normal
+directory links, selected special-path rejection, and stable gitlink behavior
+remain unchanged. Both exact cases pass, and the complete worktree-enforcement
+neighborhood passes `24` tests.
+
+Replacement local verification for unpublished `specfact-code-review` 0.49.73
+passes strict C14 OpenSpec, canonical formatting, repository typing (`0 errors,
+0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), seven manifests plus registry,
+bundle imports, filesystem checksum/version verification with the immutable
+core `0.55.1` public key, publish precheck, `28` contract-first tests, and
+`git diff --check`. The runner surface passes `378` of `379`; independent smart
+and complete suites each pass `1755` of `1756`, with only the same documented
+local macOS/CPython 3.14 capsule-lock failure and two existing Lark
+deprecations. Compatibility remains `>=0.55.1,<1.0.0`; the unsigned filesystem
+checksum is
+`sha256:2b5824fff6749f2442a44f954b9904f664fcd02b5c09a097ac247b96163c3a79`.
+The full staged pipeline passes, including generated command/docs checks and
+changed-line Code Review (`PASS_WITH_ADVISORY`, exit `0`, `211` inherited or
+tool-environment findings); its two error records remain the same pre-existing
+parameter-count and host-test findings, with neither on a changed line. Signed
+commit, replacement approval-time signing, protected Linux CPython 3.11-3.13
+checks, another final-head review, and verified PR #448 thread disposition
+remain required.
+
 The final Codex review of head `9e2cdb537c02a71bec22f79f49a4fb40e8d675f9`
 identified a selected-symlink mismatch inside the same ordinary worktree input
 identity. Independent validation against that immutable head reproduced both

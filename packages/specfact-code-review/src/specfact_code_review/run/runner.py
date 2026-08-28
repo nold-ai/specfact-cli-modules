@@ -4559,10 +4559,15 @@ def _with_contained_symlink_targets(repository: Path, paths: set[str]) -> tuple[
                 continue
             if not _symlink_resolution_is_contained(repository, absolute):
                 return None
-            target = absolute.resolve(strict=True).relative_to(repository.resolve(strict=True)).as_posix()
+            resolved_target = absolute.resolve(strict=True)
+            relative_target = resolved_target.relative_to(repository.resolve(strict=True))
+            if resolved_target.is_dir() and any(
+                part in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES for part in relative_target.parts
+            ):
+                return None
         except (OSError, ValueError):
             return None
-        expanded.add(target)
+        expanded.add(relative_target.as_posix())
     return tuple(sorted(expanded))
 
 
