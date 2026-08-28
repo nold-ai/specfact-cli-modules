@@ -299,5 +299,7 @@ Explicitly forbidden:
 - [ ] 6.49 Fail closed when Git diff or untracked-file discovery cannot establish changed-line evidence, rerun the scoped gates for candidate `specfact-code-review` 0.49.63, and obtain replacement approval-time signing.
 - [x] 6.50 Add real-repository worktree and cached regressions proving Git-quoted UTF-8 and newline-containing paths cannot bypass changed-line enforcement.
 - [ ] 6.51 Decode Git-quoted diff paths to exact filesystem identities, fail closed on malformed path evidence, and repeat the scoped verification and review cycle.
+- [x] 6.52 Add a real-repository regression proving an unquoted tracked filename ending in whitespace cannot bypass changed-line enforcement.
+- [ ] 6.53 Preserve trailing filename whitespace while removing only Git's diff-header delimiter, then repeat the scoped verification, signing, and protected review cycle.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

@@ -1467,3 +1467,29 @@ temporary command and removes inherited repository-local Git variables before
 exercising production discovery. Replaying both cases with explicit hook-style
 Git variables passed and left parent `core.bare=false`; this test-only
 correction does not change the signed module payload checksum.
+
+The final-head Codex review found one further path-identity bypass in the same
+parser: `.strip()` removed a tracked filename's trailing space together with
+Git's tab header delimiter. A real temporary-repository regression was added
+before production edits. The two existing UTF-8/newline controls passed, while
+the trailing-space case failed because changed-line collection returned
+`{'trailing.py': {1}}` instead of `{'trailing.py ': {1}}` (`1 failed, 2
+passed`). This is the failing-before evidence for task 6.52 and authorizes only
+delimiter-aware path extraction under task 6.53.
+
+The correction removes exactly one terminal tab delimiter before quoted-path
+decoding and never trims path content. Real Git worktree and cached cases now
+preserve one and two trailing spaces respectively; the expanded
+changed-enforcement matrix passes `17` cases. The exact-core `0.55.1` supported
+runner surface passes `289` cases with the documented local CPython 3.14 capsule
+selector deselected, and the complete supported repository suite passes `1662`
+cases with that same selector deselected and two third-party Lark deprecation
+warnings. Strict OpenSpec, formatting, typing (`0 errors, 0 warnings, 0 notes`),
+Ruff, Pylint (`10.00/10`), seven-manifest validation, bundle imports, `28`
+contract tests, filesystem checksum/version verification, and publish precheck
+pass. Exact-core changed-line Code Review returns `PASS_WITH_ADVISORY`, exit `0`,
+with `74` inherited/tool-environment findings, one legacy blocker, and no finding
+on either corrected parser line. Version and compatibility remain `0.49.63` and
+`>=0.55.1,<1.0.0`; the refreshed unsigned checksum is
+`sha256:a3d4148f4e70f3b3ad8fc0643ef838eb612920077683dce69d45600b0d4c3045`.
+Trusted signing and the replacement protected review cycle remain required.

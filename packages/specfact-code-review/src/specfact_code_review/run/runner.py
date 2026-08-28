@@ -4052,6 +4052,7 @@ def _decode_git_path_escape(raw_path: str, index: int, content_end: int) -> tupl
 
 def _decode_git_diff_path(raw_path: str) -> str | None:
     """Decode one Git C-quoted path into the exact filesystem path."""
+    raw_path = raw_path.removesuffix("\t")
     if not raw_path.startswith('"'):
         return raw_path
     if len(raw_path) < 2 or not raw_path.endswith('"'):
@@ -4080,7 +4081,7 @@ def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]] | None:
     current_file: str | None = None
     for line in diff_text.splitlines():
         if line.startswith("+++ "):
-            destination = _decode_git_diff_path(line[4:].strip())
+            destination = _decode_git_diff_path(line[4:])
             if destination is None:
                 return None
             current_file = None if destination == "/dev/null" else destination.removeprefix("b/")

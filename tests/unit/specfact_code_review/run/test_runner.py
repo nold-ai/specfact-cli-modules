@@ -249,9 +249,14 @@ def test_changed_lines_from_git_reports_unavailable_untracked_discovery(
 
 @pytest.mark.parametrize(
     ("file_name", "diff_mode"),
-    [("ümlaut.py", "worktree"), ("line\nbreak.py", "cached")],
+    [
+        ("ümlaut.py", "worktree"),
+        ("line\nbreak.py", "cached"),
+        ("trailing.py ", "worktree"),
+        ("cached.py  ", "cached"),
+    ],
 )
-def test_run_review_changed_enforcement_decodes_git_quoted_paths(
+def test_run_review_changed_enforcement_normalizes_git_diff_paths(
     monkeypatch: MonkeyPatch, tmp_path: Path, file_name: str, diff_mode: str
 ) -> None:
     runner_api = _c14_runner()
