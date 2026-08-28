@@ -4195,7 +4195,55 @@ def _changed_enforcement_precondition(
     return None, changed_lines
 
 
-def _with_changed_enforcement(report: ReviewReport, files: list[Path]) -> ReviewReport:
+def _project_unchanged_member_failures(
+    report: ReviewReport,
+    findings_by_member: dict[str, list[ReviewFinding]],
+    changed_lines: dict[str, set[int]],
+) -> list[dict[str, object]] | None:
+    """Project fully explained unchanged member failures while retaining their raw outcome."""
+    if report.analyzer_evidence is None:
+        return None
+    projected: list[dict[str, object]] = []
+    failure_count = 0
+    for item in report.analyzer_evidence:
+        if item.get("evidence_outcome") != "FAIL":
+            projected.append(dict(item))
+            continue
+        failure_count += 1
+        blockers = [finding for finding in findings_by_member.get(str(item.get("id", "")), []) if finding.is_blocking()]
+        blockers_are_retained = all(finding in report.findings for finding in blockers)
+        if (
+            not blockers
+            or not blockers_are_retained
+            or any(_finding_targets_changed_line(finding, changed_lines) for finding in blockers)
+        ):
+            return None
+        projected.append(
+            {
+                **item,
+                "pre_enforcement_evidence_outcome": "FAIL",
+                "evidence_outcome": "PASS",
+                "enforcement_disposition": "unchanged_blockers_advisory",
+            }
+        )
+    if report.assurance_status == "FAIL" and failure_count == 0:
+        return None
+    return projected
+
+
+def _revalidated_report(report: ReviewReport, updates: dict[str, object]) -> ReviewReport:
+    """Apply governance updates through the public report validator."""
+    payload = report.model_dump()
+    payload.update(updates)
+    return ReviewReport.model_validate(payload)
+
+
+def _with_changed_enforcement(
+    report: ReviewReport,
+    files: list[Path],
+    *,
+    findings_by_member: dict[str, list[ReviewFinding]] | None = None,
+) -> ReviewReport:
     """Apply changed-line policy without discarding findings or uncertainty."""
     precondition, changed_lines = _changed_enforcement_precondition(report, files)
     if precondition is not None:
@@ -4208,15 +4256,34 @@ def _with_changed_enforcement(report: ReviewReport, files: list[Path]) -> Review
     ]
     if blocking_changed:
         summary = f"Changed enforcement blocks on {len(blocking_changed)} blocking finding(s) on changed lines."
-        return report.model_copy(
-            update={
+        return _revalidated_report(
+            report,
+            {
                 "assurance_status": "FAIL" if report.assurance_status is not None else None,
                 "overall_verdict": "FAIL",
                 "ci_exit_code": 1,
                 "enforcement_mode": "changed",
                 "enforcement_summary": summary,
-            }
+            },
         )
+    projected_evidence = report.analyzer_evidence
+    if report.assurance_status is not None:
+        projected_evidence = _project_unchanged_member_failures(
+            report,
+            findings_by_member or {},
+            changed_lines,
+        )
+        if projected_evidence is None:
+            return _revalidated_report(
+                report,
+                {
+                    "enforcement_mode": "changed",
+                    "enforcement_summary": (
+                        "Changed enforcement cannot pass because failing analyzer evidence is not fully explained "
+                        "by proven unchanged blocking findings."
+                    ),
+                },
+            )
     legacy_blocking = sum(finding.is_blocking() for finding in report.findings)
     summary = (
         "Changed enforcement found no blocking findings on changed lines."
@@ -4227,18 +4294,26 @@ def _with_changed_enforcement(report: ReviewReport, files: list[Path]) -> Review
         )
     )
     verdict = "PASS" if not report.findings else "PASS_WITH_ADVISORY"
-    return report.model_copy(
-        update={
+    return _revalidated_report(
+        report,
+        {
             "assurance_status": "PASS" if report.assurance_status is not None else None,
             "overall_verdict": verdict,
             "ci_exit_code": 0,
+            "analyzer_evidence": projected_evidence,
             "enforcement_mode": "changed",
             "enforcement_summary": summary,
-        }
+        },
     )
 
 
-def _with_enforcement(report: ReviewReport, *, mode: ReviewEnforcementMode, files: list[Path]) -> ReviewReport:
+def _with_enforcement(
+    report: ReviewReport,
+    *,
+    mode: ReviewEnforcementMode,
+    files: list[Path],
+    findings_by_member: dict[str, list[ReviewFinding]] | None = None,
+) -> ReviewReport:
     """Apply enforcement mode to report exit code while preserving all findings as evidence."""
     if mode == "full":
         return report.model_copy(
@@ -4255,7 +4330,7 @@ def _with_enforcement(report: ReviewReport, *, mode: ReviewEnforcementMode, file
                 "enforcement_summary": "Shadow enforcement records findings as evidence and never blocks CI.",
             }
         )
-    return _with_changed_enforcement(report, files)
+    return _with_changed_enforcement(report, files, findings_by_member=findings_by_member)
 
 
 def _suppress_known_noise(findings: list[ReviewFinding]) -> list[ReviewFinding]:
@@ -5157,9 +5232,20 @@ def _allows_development_host_compatibility(reason: str) -> bool:
     )
 
 
-def _with_capsule_enforcement(report: ReviewReport, options: ReviewOptions, files: list[Path]) -> ReviewReport:
+def _with_capsule_enforcement(
+    report: ReviewReport,
+    options: ReviewOptions,
+    files: list[Path],
+    *,
+    findings_by_member: dict[str, list[ReviewFinding]],
+) -> ReviewReport:
     """Finalize one capsule report under the requested local enforcement policy."""
-    return _with_enforcement(report, mode=options.review_mode, files=files)
+    return _with_enforcement(
+        report,
+        mode=options.review_mode,
+        files=files,
+        findings_by_member=findings_by_member,
+    )
 
 
 def run_capsule_review(
@@ -5181,6 +5267,7 @@ def run_capsule_review(
             _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence),
             review_options,
             files=files,
+            findings_by_member={},
         )
     try:
         snapshot = _run_capsule_snapshot(
@@ -5198,6 +5285,7 @@ def run_capsule_review(
             ),
             review_options,
             files=files,
+            findings_by_member=snapshot.findings_by_member,
         )
     finally:
         _cleanup_capsule_runtime(runtime)

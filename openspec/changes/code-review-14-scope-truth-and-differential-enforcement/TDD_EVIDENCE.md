@@ -1544,3 +1544,57 @@ payload. Strict filesystem verification against the immutable core `0.55.1`
 public key and current `origin/dev` baseline passed all seven module manifests.
 This documentation-only evidence commit changes no signed module payload byte
 and triggers the replacement protected matrix on the verified signing head.
+
+The final-head review then exposed a schema round-trip inconsistency in local
+changed enforcement. A completed capsule member `FAIL` with only an unchanged-
+line blocker was projected in memory to aggregate `PASS_WITH_ADVISORY`, but its
+serialized member outcome remained `FAIL`; `ReviewReport.model_validate_json`
+therefore re-derived `UNKNOWN/FAIL/1`, and the first-party ledger persisted that
+different result. The contract and task boundary were amended before production
+edits. The exact three-case regression command failed `3 failed`: the generated
+report lacked `pre_enforcement_evidence_outcome`, an unexplained member `FAIL`
+without any corresponding finding became in-memory `PASS`, and ledger ingestion
+re-derived a changed advisory report as plain `PASS` rather than
+`PASS_WITH_ADVISORY`. This is the failing-before evidence for task 6.57 and
+authorizes only the member-evidence projection, validated report reconstruction,
+and advisory legacy projection described by task 6.58.
+An additional retained-evidence negative control then failed exactly as expected:
+a raw member blocker removed by the requested finding focus still authorized
+`PASS/0` despite the serialized report retaining no advisory finding. Task 6.58
+therefore requires every explaining blocker to remain in the final report.
+
+The implementation now projects a failing capsule member only when it has at
+least one blocking finding, every explaining blocker remains in the serialized
+report, and changed-line evidence proves every one outside the changed set. The
+member retains `pre_enforcement_evidence_outcome=FAIL` and records
+`enforcement_disposition=unchanged_blockers_advisory` while its authoritative
+post-enforcement `evidence_outcome` becomes `PASS`. Any missing mapping,
+unexplained failure, filtered blocker, changed-line blocker, required UNKNOWN,
+or unavailable Git evidence remains non-passing. The exact focused selection
+passes `7 passed`; the complete affected runner/findings/ledger surface passes
+`399 passed` with only the documented local macOS/CPython 3.14 capsule-lock
+selector deselected. JSON model and first-party ledger reload retain
+`PASS_WITH_ADVISORY/0`, the advisory finding, and raw outcome provenance.
+Independent read-only implementation and bypass reviews found no remaining
+functional or clean-code issue. Format, Ruff, BasedPyright (`0 errors, 0
+warnings, 0 notes`), Pylint (`10.00/10`), YAML/manifests, bundle imports, `28`
+contract tests, strict OpenSpec, and `git diff --check` pass. After restoring the
+declared minimum core `0.55.1` from Hatch's local `0.54.0` bootstrap, the
+complete supported repository suite passes `1672 passed` with that same one
+unsupported-host selector deselected and two third-party Lark deprecation
+warnings. The canonical changed-only signer preserved the already-unpublished
+PR release identity `0.49.63`, which remains two patch versions above
+`origin/dev`'s `0.49.61`, retained compatibility `>=0.55.1,<1.0.0`, removed the
+stale signature, and refreshed the unsigned checksum to
+`sha256:d016ee8df7b0f21a3ae9b0d02d1a8c1cd95520085d7cf6430edc5c3dbba8e108`.
+Publish precheck, signed commit, trusted approval-time signing, replacement
+protected checks, and final thread resolution remain required.
+
+Filesystem manifest verification against the public key bundled by immutable
+core `0.55.1` passes all seven module manifests, and the `specfact-code-review`
+publish precheck accepts the candidate while reminding that compatibility was
+reviewed. The minimum-core manual changed-line Code Review writes schema 1.4
+local evidence with `PASS_WITH_ADVISORY`, exit `0`, `87` retained findings,
+three legacy blockers, and no blocking finding on a changed line. The signed
+human commit, trusted approval-time module signature, protected matrix, and
+fresh final-head review remain required before task 6.59 is complete.

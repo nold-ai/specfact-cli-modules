@@ -448,6 +448,8 @@ def test_capsule_review_changed_enforcement_keeps_unchanged_blocker_advisory(
 
     report = runner_api.run_capsule_review([Path(finding.file)], no_tests=True, review_mode="changed")
     readback = read_review_report(report.model_dump())
+    model_readback = ReviewReport.model_validate_json(report.model_dump_json())
+    ruff_evidence = next(item for item in model_readback.analyzer_evidence or [] if item["id"] == "ruff")
 
     assert (
         report.assurance_status,
@@ -457,7 +459,82 @@ def test_capsule_review_changed_enforcement_keeps_unchanged_blocker_advisory(
         "legacy blocking" in (report.enforcement_summary or ""),
         readback.status,
         readback.ci_exit_code,
-    ) == ("PASS", 0, "PASS_WITH_ADVISORY", "changed", True, "PASS", 0)
+        model_readback.assurance_status,
+        model_readback.overall_verdict,
+        model_readback.ci_exit_code,
+        ruff_evidence["evidence_outcome"],
+        ruff_evidence["pre_enforcement_evidence_outcome"],
+        ruff_evidence["enforcement_disposition"],
+    ) == (
+        "PASS",
+        0,
+        "PASS_WITH_ADVISORY",
+        "changed",
+        True,
+        "PASS",
+        0,
+        "PASS",
+        "PASS_WITH_ADVISORY",
+        0,
+        "PASS",
+        "FAIL",
+        "unchanged_blockers_advisory",
+    )
+
+
+def test_capsule_review_changed_enforcement_preserves_unexplained_member_failure(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    runner_api = _c14_runner()
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
+    snapshot = SimpleNamespace(evidence=evidence, findings_by_member={})
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+    monkeypatch.setattr(runner_api, "_changed_lines_from_git", lambda _files: {})
+
+    report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True, review_mode="changed")
+    model_readback = ReviewReport.model_validate_json(report.model_dump_json())
+
+    assert (
+        report.assurance_status,
+        report.overall_verdict,
+        report.ci_exit_code,
+        model_readback.assurance_status,
+        model_readback.overall_verdict,
+        model_readback.ci_exit_code,
+    ) == ("FAIL", "FAIL", 1, "FAIL", "FAIL", 1)
+
+
+def test_capsule_review_changed_enforcement_preserves_failure_without_retained_blocker(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    runner_api = _c14_runner()
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
+    snapshot = SimpleNamespace(evidence=evidence, findings_by_member={"ruff": [finding]})
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+    monkeypatch.setattr(runner_api, "_changed_lines_from_git", lambda _files: {})
+
+    report = runner_api.run_capsule_review(
+        [Path(finding.file)],
+        no_tests=True,
+        review_mode="changed",
+        focus="simplify",
+    )
+
+    assert (report.findings, report.assurance_status, report.overall_verdict, report.ci_exit_code) == (
+        [],
+        "FAIL",
+        "FAIL",
+        1,
+    )
 
 
 def test_capsule_review_changed_enforcement_blocks_changed_line(monkeypatch: MonkeyPatch) -> None:
@@ -473,8 +550,16 @@ def test_capsule_review_changed_enforcement_blocks_changed_line(monkeypatch: Mon
     monkeypatch.setattr(runner_api, "_changed_lines_from_git", lambda _files: {finding.file: {finding.line}})
 
     report = runner_api.run_capsule_review([Path(finding.file)], no_tests=True, review_mode="changed")
+    model_readback = ReviewReport.model_validate_json(report.model_dump_json())
 
-    assert (report.assurance_status, report.ci_exit_code, report.overall_verdict) == ("FAIL", 1, "FAIL")
+    assert (
+        report.assurance_status,
+        report.ci_exit_code,
+        report.overall_verdict,
+        model_readback.assurance_status,
+        model_readback.ci_exit_code,
+        model_readback.overall_verdict,
+    ) == ("FAIL", 1, "FAIL", "FAIL", 1, "FAIL")
 
 
 def test_capsule_review_changed_enforcement_preserves_unknown(monkeypatch: MonkeyPatch) -> None:

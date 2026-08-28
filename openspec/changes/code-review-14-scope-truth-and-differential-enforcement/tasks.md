@@ -304,5 +304,9 @@ Explicitly forbidden:
 - [x] 6.54 Add failing real-repository regressions proving ambient mnemonic/no-prefix configuration and repository-local Git redirect variables cannot hide changed lines, plus a helper regression proving non-empty whitespace-only untracked path output is not absence.
 - [x] 6.55 Force compatibility-safe canonical diff prefixes, sanitize the environment of every changed-line Git command, and distinguish empty untracked output from non-empty path identity without changing changed-enforcement verdict semantics.
 - [ ] 6.56 Repeat the scoped verification, signing, and protected review cycle for the corrected `specfact-code-review` 0.49.63 candidate, then resolve only the addressed PR #448 threads.
+- [x] 6.57 Add failing regressions proving a changed-mode unchanged blocker survives JSON and ledger reload while an unexplained failing analyzer member cannot be projected to PASS.
+- [x] 6.58 Project only fully explained unchanged-blocker member failures to authoritative PASS, retain the pre-enforcement FAIL evidence and advisory findings, and rebuild the report through schema validation.
+- [ ] 6.59 Repeat focused, complete, strict OpenSpec, format, typing, lint, contract, manifest, signature, publish-precheck, Code Review, and protected checks for the unchanged `specfact-code-review` 0.49.63 candidate.
+- [ ] 6.60 Reply to and resolve only the addressed PR #448 serialization thread after final-head protected evidence passes; leave the original PR #446 threads open until PR #448 merges.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
