@@ -192,6 +192,8 @@ def test_changed_lines_from_git_reports_unavailable_unreadable_untracked_file(
     def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         if command[:4] == ["git", "--literal-pathspecs", "diff", "--unified=0"]:
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command == ["git", "rev-parse", "--show-prefix"]:
+            return subprocess.CompletedProcess(command, 0, stdout="\n", stderr="")
         if command[:4] == ["git", "--literal-pathspecs", "ls-files", "--others"]:
             return subprocess.CompletedProcess(command, 0, stdout=f"{untracked_file}\n", stderr="")
         raise AssertionError(f"unexpected command: {command}")
@@ -239,6 +241,8 @@ def test_changed_lines_from_git_reports_unavailable_untracked_discovery(
     def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         if command[:4] == ["git", "--literal-pathspecs", "diff", "--unified=0"]:
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command == ["git", "rev-parse", "--show-prefix"]:
+            return subprocess.CompletedProcess(command, 0, stdout="\n", stderr="")
         if command[:4] == ["git", "--literal-pathspecs", "ls-files", "--others"]:
             return subprocess.CompletedProcess(command, 128, stdout="", stderr="not a git repository")
         raise AssertionError(f"unexpected command: {command}")
@@ -311,6 +315,90 @@ def test_run_review_changed_enforcement_normalizes_git_diff_paths(
     report = run_review([Path(file_name)], no_tests=True, review_mode="changed")
 
     assert _changed_lines_from_git([Path(file_name)]) == {file_name: {1}}
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+
+
+@pytest.mark.parametrize("diff_mode", ["worktree", "cached"])
+@pytest.mark.parametrize("path_kind", ["relative", "absolute"])
+def test_run_review_changed_enforcement_normalizes_nested_working_directory_paths(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+    diff_mode: str,
+    path_kind: str,
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    nested = repository / "sub"
+    nested.mkdir(parents=True)
+    source = nested / "app.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "sub/app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+    if diff_mode == "cached":
+        subprocess.run(["git", "add", "app.py"], cwd=nested, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(nested)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", diff_mode)
+    reviewed_path = Path("app.py") if path_kind == "relative" else source
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": str(reviewed_path), "line": 1}
+    )
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([reviewed_path], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([reviewed_path]) == {"app.py": {1}}
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+
+
+@pytest.mark.parametrize("diff_mode", ["worktree", "cached"])
+@pytest.mark.parametrize("path_kind", ["absolute_parent", "redundant_relative"])
+def test_run_review_changed_enforcement_uses_one_lexical_caller_identity(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+    diff_mode: str,
+    path_kind: str,
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    nested = repository / "sub"
+    nested.mkdir(parents=True)
+    nested_source = nested / "app.py"
+    parent_source = repository / "root.py"
+    nested_source.write_text("VALUE = 1\n", encoding="utf-8")
+    parent_source.write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "sub/app.py", "root.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source = parent_source if path_kind == "absolute_parent" else nested_source
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+    if diff_mode == "cached":
+        subprocess.run(["git", "add", str(source)], cwd=nested, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(nested)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", diff_mode)
+    reviewed_path = parent_source if path_kind == "absolute_parent" else Path("../sub/app.py")
+    expected_path = "../root.py" if path_kind == "absolute_parent" else "app.py"
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": str(reviewed_path), "line": 1}
+    )
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([reviewed_path], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([reviewed_path]) == {expected_path: {1}}
     assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
 
 

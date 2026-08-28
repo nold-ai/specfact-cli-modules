@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import platform
+import posixpath
 import re
 import shutil
 import subprocess
@@ -20,7 +21,7 @@ from collections.abc import Callable, Iterable
 from contextlib import ExitStack, suppress
 from dataclasses import dataclass, field
 from functools import lru_cache, partial
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Literal, cast
 from uuid import uuid4
 
@@ -4012,13 +4013,12 @@ def _is_test_file(file_path: str | Path) -> bool:
 
 
 def _normalize_report_path(raw_path: str | Path) -> str:
-    path = Path(raw_path)
-    if path.is_absolute():
-        try:
-            return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
-        except ValueError:
-            return path.as_posix()
-    return path.as_posix()
+    path = os.fspath(raw_path)
+    try:
+        relative = os.path.relpath(os.path.abspath(path), start=os.getcwd())
+    except (OSError, ValueError):
+        return Path(path).as_posix()
+    return Path(relative).as_posix()
 
 
 _GIT_QUOTED_PATH_ESCAPES = {
@@ -4130,6 +4130,32 @@ def _run_changed_line_git_command(command: list[str]) -> subprocess.CompletedPro
     return result if result.returncode == 0 else None
 
 
+def _caller_git_prefix() -> str | None:
+    """Return the caller directory's exact repository-root-relative Git prefix."""
+    result = _run_changed_line_git_command(["git", "rev-parse", "--show-prefix"])
+    if result is None or not result.stdout.endswith("\n"):
+        return None
+    prefix = result.stdout.removesuffix("\n")
+    prefix_path = PurePosixPath(prefix)
+    if prefix_path.is_absolute() or ".." in prefix_path.parts or (prefix and not prefix.endswith("/")):
+        return None
+    return prefix
+
+
+def _changed_lines_relative_to_caller(
+    changed_lines: dict[str, set[int]], caller_prefix: str
+) -> dict[str, set[int]] | None:
+    """Translate repository-root Git paths to the caller's report identity."""
+    normalized: dict[str, set[int]] = {}
+    for raw_path, line_numbers in changed_lines.items():
+        git_path = PurePosixPath(raw_path)
+        if not raw_path or git_path.is_absolute() or ".." in git_path.parts:
+            return None
+        relative = posixpath.relpath(raw_path, start=caller_prefix or ".")
+        normalized.setdefault(relative, set()).update(line_numbers)
+    return normalized
+
+
 def _untracked_changed_lines(file_path: Path) -> set[int] | None:
     """Return every line for an untracked file, no lines when tracked, or unavailable evidence."""
     listed = _run_changed_line_git_command(["git", "--literal-pathspecs", "ls-files", "--others", "--", str(file_path)])
@@ -4166,6 +4192,12 @@ def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]] | None:
     if result is None:
         return None
     changed_lines = _parse_added_lines_from_diff(result.stdout)
+    if changed_lines is None:
+        return None
+    caller_prefix = _caller_git_prefix()
+    if caller_prefix is None:
+        return None
+    changed_lines = _changed_lines_relative_to_caller(changed_lines, caller_prefix)
     if changed_lines is None:
         return None
     for file_path in files:

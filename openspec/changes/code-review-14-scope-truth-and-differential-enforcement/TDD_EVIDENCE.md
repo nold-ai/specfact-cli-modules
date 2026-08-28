@@ -1765,3 +1765,48 @@ Strict filesystem, cryptographic, and dev-baseline version verification against
 the immutable core `0.55.1` public key passes all seven module manifests. This
 evidence-only commit changes no signed payload byte and triggers the protected
 matrix on the verified signing head.
+
+Protected run `33181631366` then passed minimum-core compatibility and full
+quality on Python 3.11, 3.12, and 3.13. Docs Review, Requirements Evidence,
+CodeQL, Socket, CodeRabbit, and both module-signature checks also completed
+without a failure, pending job, or action-required state on evidence head
+`cff5a876fb76b44fc0afbac812978f5b3b6ee56e`. The authoritative final-head
+thread inventory nevertheless exposed one new valid P1: Git emits tracked diff
+paths relative to the repository root, while findings and absolute reviewed
+paths are normalized relative to the caller working directory. A review from
+`repo/sub` therefore recorded `sub/app.py` but looked up `app.py`, allowing a
+changed blocker to become advisory.
+
+The first real-repository regression was authored before production changes and
+failed in all four worktree/cached and relative/absolute combinations (`4
+failed`), each returning `sub/app.py` instead of `app.py`. Independent
+validation then exposed the remaining shared-coordinate defect for an absolute
+parent-repository file and a redundant relative spelling; the second four-case
+regression failed with `PASS_WITH_ADVISORY` / exit `0` in every combination.
+Changed-line discovery now obtains the sanitized Git `--show-prefix` identity
+and translates each parsed repository-root path to caller-relative POSIX
+identity before finding matching. Report paths use the same lexical
+absolute-plus-relative normalization without following symlinks. The
+implementation does not use `git diff --relative`, so explicitly reviewed paths
+outside a nested caller directory are not excluded. Malformed or unavailable
+prefix/path evidence remains fail closed. The combined new selector passes `8
+passed`; the expanded changed-line/enforcement surface passes `46 passed`.
+Complete gates, refreshed signing, protected checks, and final PR #448 thread
+disposition remain required by tasks 6.77-6.78.
+
+Local final-byte gates pass strict OpenSpec, format, Ruff, BasedPyright (`0
+errors, 0 warnings, 0 notes`), Pylint (`10.00/10`), seven manifests plus
+registry, bundle imports, three CLI contract files, all `28` contract-first
+tests, filesystem checksum/version verification with the immutable core
+`0.55.1` public key, publish precheck, and `git diff --check`. The complete
+exact-core `0.55.1` suite passes `1702` of `1703`; the sole failure remains the
+documented unsupported local macOS/CPython 3.14 capsule-lock selector, with only
+the two existing third-party Lark warnings. Exact-core changed-line Code Review
+returns `PASS_WITH_ADVISORY`, exit `0`, with `81` retained findings, two
+pre-existing blockers outside changed lines, and no changed-line blocker. The
+canonical changed-only signer preserves unpublished version `0.49.63` and
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and sets
+unsigned filesystem checksum
+`sha256:318ce26ebba75a4b8301153707f61c467da07ffe2c6da50e2d53460cb99bef6c`.
+A signed human commit, trusted replacement signature, protected matrix, and
+final review/thread disposition remain required.

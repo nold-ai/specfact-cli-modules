@@ -320,7 +320,11 @@ Explicitly forbidden:
 - [x] 6.70 Validate local assurance kinds before runtime preparation or report construction while preserving the supported `worktree`, `full`, and `explicit_files` identities.
 - [x] 6.71 Add a failing real-repository regression proving an explicitly reviewed ignored/untracked file cannot lose its changed-line identity or downgrade a blocker to advisory evidence.
 - [x] 6.72 Count caller-selected untracked files independently of repository ignore filtering while preserving literal path identity and fail-closed discovery.
-- [ ] 6.73 Repeat the scoped verification, signing, and protected review cycle for the unchanged unpublished `specfact-code-review` 0.49.63 candidate.
+- [x] 6.73 Repeat the scoped verification, signing, and protected review cycle for the unchanged unpublished `specfact-code-review` 0.49.63 candidate.
 - [ ] 6.74 Reply with evidence for the assurance-provenance and ignored-file findings and resolve only the still-addressed PR #448 threads; leave the original PR #446 threads open until PR #448 merges.
+- [x] 6.75 Add failing real-repository worktree and cached regressions proving nested-directory invocations and absolute reviewed paths cannot split Git diff identity from analyzer finding identity.
+- [x] 6.76 Normalize repository-root tracked diff paths to the caller working directory before changed-line matching without weakening exact path or fail-closed evidence handling.
+- [ ] 6.77 Repeat the scoped verification, signing, and protected review cycle for the unchanged unpublished `specfact-code-review` 0.49.63 candidate.
+- [ ] 6.78 Reply with evidence and resolve only the verified PR #448 threads after the replacement final-head cycle; leave the original PR #446 threads open until PR #448 merges.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
