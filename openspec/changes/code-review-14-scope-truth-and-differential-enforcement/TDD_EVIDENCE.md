@@ -2328,3 +2328,41 @@ and `origin/dev` version verification against the immutable core `0.55.1`
 public key passes all seven module manifests. This evidence-only checkpoint
 changes no signed module payload byte and triggers the protected final-head
 matrix.
+
+The final Codex review of head `41e6834959893ff731de7e289e3f141ed8fe5e78`
+identified one remaining cached development-host gap inside the existing
+materialized-directory identity contract. Independent validation dynamically
+reproduced the exact public fallback: a host analyzer renamed the materialized
+parent, replaced it with a symlink to an external directory containing the same
+expected selected-file bytes plus attacker-controlled configuration, and
+returned a clean report. The byte-only post-check returned true and the command
+returned `PASS` / exit `0` with no diagnostic.
+
+The OpenSpec scenario and tasks were updated before stable, same-byte real
+directory replacement, and same-byte symlink replacement regressions. The
+stable case passed while both replacements first failed exactly because they
+returned `PASS` / exit `0` (`2 failed, 1 passed`). Cached materialization now
+binds the root plus every created logical directory's real-directory type,
+device, and inode during construction. Verification requires every directory
+identity before and after immutable blob checks, so missing, symlinked, or
+replaced directories produce `cached_host_snapshot_mutated` UNKNOWN / exit `1`
+even when selected file bytes are unchanged. The three new cases plus existing
+cached host-byte mutation, staged-tree analysis, and case/Unicode collision
+controls pass (`7 passed`).
+
+The complete runner surface passes `360` of `361`; exact-core `0.55.1` smart
+and complete suites each pass `1737` of `1738`. Their sole identical failure
+remains the documented local macOS/CPython 3.14 capsule-lock selector, with two
+existing Lark deprecations. Strict OpenSpec, canonical format, repository
+typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), all `28`
+contract-first tests, three CLI-contract fixtures, seven manifests plus
+registry, bundle imports, filesystem checksum/version verification with the
+immutable core public key, publish precheck, and `git diff --check` pass. The
+changed-line Code Review is `PASS_WITH_ADVISORY`, exit `0`, with no changed-line
+blocker, no introduced finding, and only the two documented legacy/tool-host
+blockers. Candidate module version is `0.49.71`, compatibility remains
+`>=0.55.1,<1.0.0`, and the unsigned filesystem checksum is
+`sha256:f8d09ae0ce76efff33c3b33994c5571ed2c8111812f5abd6fee35ccdd00d40d8`.
+Replacement approval-time signing, final-head protected checks, final Codex
+review, and verified PR #448 thread disposition remain required by tasks 6.93,
+6.95, 6.97, 6.99, 6.101, and 6.103.

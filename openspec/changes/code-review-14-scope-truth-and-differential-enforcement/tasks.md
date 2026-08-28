@@ -349,5 +349,7 @@ Explicitly forbidden:
 - [ ] 6.99 Use the proven-unborn empty tree consistently for ordinary worktree identity plus raw and Git changed-line evidence, then repeat task 6.89 with a replacement signed patch candidate.
 - [x] 6.100 Add failing regressions for the final PR #448 review proving stable non-repository positional input remains accepted while a selected file changed during capsule analysis cannot retain a stale clean PASS.
 - [ ] 6.101 Bind proven non-repository positional analysis to exact absolute raw selected-path identities at both existing checkpoints without weakening repository base-tree binding, then repeat task 6.89 with a replacement signed patch candidate.
+- [x] 6.102 Add failing cached development-host regressions for the final PR #448 review proving stable materialized directories remain accepted while same-byte real-directory or symlink replacement cannot retain a stale clean PASS.
+- [ ] 6.103 Bind the materialized root and every logical directory type/device/inode identity during construction, recheck them without following symlink components after host analysis, then repeat task 6.89 with a replacement signed patch candidate.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

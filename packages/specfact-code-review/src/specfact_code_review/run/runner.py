@@ -4347,6 +4347,15 @@ class CachedDiffIdentity:
 
 
 @dataclass(frozen=True)
+class MaterializedDirectoryIdentity:
+    """Filesystem identity for one directory in a cached analysis tree."""
+
+    path: str
+    device: int
+    inode: int
+
+
+@dataclass(frozen=True)
 class CachedAnalysisSnapshot:
     """Materialized staged tree and identities used by analysis and enforcement."""
 
@@ -4354,6 +4363,7 @@ class CachedAnalysisSnapshot:
     root: Path
     files: list[Path]
     entries: dict[str, tuple[str, str]]
+    directories: tuple[MaterializedDirectoryIdentity, ...]
     diff: CachedDiffIdentity
 
 
@@ -4639,8 +4649,36 @@ def _materialized_target_is_available(target: Path) -> bool:
     return False
 
 
-def _materialized_tree_matches_entries(destination: Path, entries: dict[str, tuple[str, str]]) -> bool:
+def _materialized_directories_match(destination: Path, directories: tuple[MaterializedDirectoryIdentity, ...]) -> bool:
+    """Verify that no bound materialized directory identity was replaced."""
+    for identity in directories:
+        logical = PurePosixPath(identity.path)
+        if identity.path == ".":
+            target = destination
+        elif logical.is_absolute() or not logical.parts or ".." in logical.parts:
+            return False
+        else:
+            target = destination.joinpath(*logical.parts)
+        try:
+            path_stat = target.lstat()
+        except OSError:
+            return False
+        if not stat.S_ISDIR(path_stat.st_mode) or (path_stat.st_dev, path_stat.st_ino) != (
+            identity.device,
+            identity.inode,
+        ):
+            return False
+    return True
+
+
+def _materialized_tree_matches_entries(
+    destination: Path,
+    entries: dict[str, tuple[str, str]],
+    directories: tuple[MaterializedDirectoryIdentity, ...],
+) -> bool:
     """Verify every materialized identity and byte against its immutable blob."""
+    if not _materialized_directories_match(destination, directories):
+        return False
     for path, (mode, expected_oid) in entries.items():
         if mode == "160000":
             continue
@@ -4648,7 +4686,7 @@ def _materialized_tree_matches_entries(destination: Path, entries: dict[str, tup
         content = _raw_worktree_blob(target, mode)
         if content is None or content == "missing" or _git_blob_oid(content, expected_oid) != expected_oid:
             return False
-    return True
+    return _materialized_directories_match(destination, directories)
 
 
 def _write_materialized_regular_file(target: Path, content: bytes, mode: str) -> bool:
@@ -4670,31 +4708,40 @@ def _write_materialized_regular_file(target: Path, content: bytes, mode: str) ->
     return True
 
 
-def _materialize_cached_tree(repository: Path, destination: Path, entries: dict[str, tuple[str, str]]) -> bool:
+def _materialize_cached_tree(
+    repository: Path, destination: Path, entries: dict[str, tuple[str, str]]
+) -> tuple[MaterializedDirectoryIdentity, ...] | None:
     """Materialize exact index blobs without filters or filesystem identity loss."""
     contents = _cached_blob_contents(repository, tuple(oid for mode, oid in entries.values() if mode != "160000"))
     if contents is None:
-        return False
-    directory_identities: dict[tuple[int, int], PurePosixPath] = {}
+        return None
     try:
+        root_stat = destination.lstat()
+        if not stat.S_ISDIR(root_stat.st_mode):
+            return None
+        directory_identities = {(root_stat.st_dev, root_stat.st_ino): PurePosixPath()}
         for path, (mode, oid) in sorted(entries.items()):
             if mode == "160000":
                 continue
             tree_path = PurePosixPath(path)
             target = destination.joinpath(*tree_path.parts)
             if not _materialized_parent_is_unique(destination, tree_path.parent, directory_identities):
-                return False
+                return None
             if not _materialized_target_is_available(target):
-                return False
+                return None
             content = contents[oid]
             if mode == "120000":
                 os.symlink(os.fsdecode(content), target)
                 continue
             if not _write_materialized_regular_file(target, content, mode):
-                return False
+                return None
     except (KeyError, OSError):
-        return False
-    return _materialized_tree_matches_entries(destination, entries)
+        return None
+    frozen_directories = tuple(
+        MaterializedDirectoryIdentity(path=logical.as_posix(), device=device, inode=inode)
+        for (device, inode), logical in sorted(directory_identities.items(), key=lambda item: item[1].as_posix())
+    )
+    return frozen_directories if _materialized_tree_matches_entries(destination, entries, frozen_directories) else None
 
 
 def _selected_paths_match_cached_tree_presence(selected: dict[str, Path], entries: dict[str, tuple[str, str]]) -> bool:
@@ -4739,12 +4786,10 @@ def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAna
     selected_unsupported = entries is not None and any(
         entries.get(path, ("", ""))[0] in {"120000", "160000"} for path in selected
     )
-    if (
-        entries is None
-        or selected_unsupported
-        or not _selected_paths_match_cached_tree_presence(selected, entries)
-        or not _materialize_cached_tree(repository, destination, entries)
-    ):
+    if entries is None or selected_unsupported or not _selected_paths_match_cached_tree_presence(selected, entries):
+        return None
+    directories = _materialize_cached_tree(repository, destination, entries)
+    if directories is None:
         return None
     snapshot_files = [destination.joinpath(*PurePosixPath(path).parts) for path in selected]
     return CachedAnalysisSnapshot(
@@ -4752,6 +4797,7 @@ def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAna
         root=destination,
         files=snapshot_files,
         entries=entries,
+        directories=directories,
         diff=CachedDiffIdentity(base_tree=base_tree, index_tree=tree_oid, caller_prefix=caller_prefix),
     )
 
@@ -6244,7 +6290,9 @@ def _run_cached_development_host_review(
             )
         with chdir(cached_snapshot.root):
             host_report = run_review(cached_snapshot.files, replace(options, review_mode="full"))
-        if not _materialized_tree_matches_entries(cached_snapshot.root, cached_snapshot.entries):
+        if not _materialized_tree_matches_entries(
+            cached_snapshot.root, cached_snapshot.entries, cached_snapshot.directories
+        ):
             return _with_capsule_enforcement(
                 _unknown_capsule_report(
                     "cached_host_snapshot_mutated",

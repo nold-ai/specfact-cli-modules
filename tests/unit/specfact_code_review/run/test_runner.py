@@ -1116,7 +1116,7 @@ def test_cached_tree_materialization_rejects_case_collisions(
     destination = tmp_path / "snapshot"
     destination.mkdir()
 
-    assert runner_api._materialize_cached_tree(repository, destination, entries) is False
+    assert runner_api._materialize_cached_tree(repository, destination, entries) is None
 
 
 @pytest.mark.parametrize("bypass_kind", ["clean_filter", "assume_unchanged", "runtime_mutation", "replace_ref"])
@@ -2858,6 +2858,59 @@ def test_source_checkout_cached_scope_rejects_host_analyzer_snapshot_mutation(
 
     assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
     assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {"cached_host_snapshot_mutated"}
+
+
+@pytest.mark.parametrize("mutation_kind", ["stable", "directory", "symlink"])
+def test_source_checkout_cached_scope_binds_materialized_directory_identities(
+    monkeypatch: MonkeyPatch, tmp_path: Path, mutation_kind: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    source = repository / "pkg" / "app.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("BASELINE\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "pkg/app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("BLOCKED\n", encoding="utf-8")
+    subprocess.run(["git", "add", "pkg/app.py"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (None, "unsupported_controller_platform"))
+    monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
+    observed: list[bytes] = []
+
+    def _host_review(files: list[Path], _options: object) -> ReviewReport:
+        observed.append(files[0].read_bytes())
+        if mutation_kind != "stable":
+            materialized_parent = files[0].parent
+            original_parent = tmp_path / f"original-{mutation_kind}"
+            replacement_parent = tmp_path / f"replacement-{mutation_kind}"
+            replacement_parent.mkdir()
+            (replacement_parent / "app.py").write_text("BLOCKED\n", encoding="utf-8")
+            materialized_parent.rename(original_parent)
+            if mutation_kind == "symlink":
+                os.symlink(replacement_parent, materialized_parent, target_is_directory=True)
+            else:
+                replacement_parent.rename(materialized_parent)
+        return ReviewReport(run_id="dev-host", score=100, findings=[], summary="complete")
+
+    monkeypatch.setattr(runner_api, "run_review", _host_review)
+
+    report = runner_api.run_capsule_review([Path("pkg/app.py")], no_tests=True, review_mode="changed")
+
+    assert observed == [b"BLOCKED\n"]
+    if mutation_kind == "stable":
+        assert (report.overall_verdict, report.ci_exit_code) == ("PASS", 0)
+    else:
+        assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+        assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {"cached_host_snapshot_mutated"}
 
 
 def test_source_checkout_legacy_scope_explicitly_opts_into_linux_cache_miss_compatibility(
