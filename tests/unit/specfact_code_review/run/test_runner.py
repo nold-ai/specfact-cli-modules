@@ -435,7 +435,7 @@ def test_run_review_cached_enforcement_rejects_partially_staged_worktree(
     assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
 
 
-def test_capsule_cached_enforcement_rejects_mismatch_before_clean_worktree_analysis(
+def test_capsule_cached_enforcement_analyzes_staged_snapshot_instead_of_clean_worktree(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
     runner_api = _c14_runner()
@@ -459,14 +459,18 @@ def test_capsule_cached_enforcement_rejects_mismatch_before_clean_worktree_analy
     monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
     snapshot_calls: list[str] = []
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "app.py", "line": 1}
+    )
     snapshot = SimpleNamespace(
         evidence=_synthetic_complete_profile_evidence(runner_api),
-        findings_by_member={},
+        findings_by_member={"ruff": [finding]},
     )
     monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
 
-    def _run_snapshot(*_args: object, **_kwargs: object) -> SimpleNamespace:
-        snapshot_calls.append("ran")
+    def _run_snapshot(*_args: object, **kwargs: object) -> SimpleNamespace:
+        snapshot_root = cast(Path, kwargs["snapshot_root"])
+        snapshot_calls.append((snapshot_root / "app.py").read_text(encoding="utf-8"))
         return snapshot
 
     monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
@@ -474,9 +478,8 @@ def test_capsule_cached_enforcement_rejects_mismatch_before_clean_worktree_analy
 
     report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
 
-    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
-    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {"cached_snapshot_mismatch"}
-    assert snapshot_calls == []
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("FAIL", "FAIL", 1)
+    assert snapshot_calls == ["VIOLATION = True\n"]
 
 
 def test_capsule_cached_enforcement_runs_when_worktree_matches_index(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
@@ -506,8 +509,9 @@ def test_capsule_cached_enforcement_runs_when_worktree_matches_index(monkeypatch
     )
     monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
 
-    def _run_snapshot(*_args: object, **_kwargs: object) -> SimpleNamespace:
-        snapshot_calls.append("ran")
+    def _run_snapshot(*_args: object, **kwargs: object) -> SimpleNamespace:
+        snapshot_root = cast(Path, kwargs["snapshot_root"])
+        snapshot_calls.append((snapshot_root / "app.py").read_text(encoding="utf-8"))
         return snapshot
 
     monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
@@ -516,7 +520,229 @@ def test_capsule_cached_enforcement_runs_when_worktree_matches_index(monkeypatch
     report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
 
     assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("PASS", "PASS", 0)
-    assert snapshot_calls == ["ran"]
+    assert snapshot_calls == ["VALUE = 2\n"]
+
+
+def test_cached_worktree_comparison_fails_closed_for_symlink_and_empty_selection(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    (repository / "target.py").write_text("VALUE = 1\n", encoding="utf-8")
+    os.symlink("target.py", repository / "link.py")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "target.py", "link.py"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+
+    assert runner_api._cached_worktree_matches_index([Path("link.py")]) is None
+    assert runner_api._cached_worktree_matches_index([]) is None
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot_calls: list[str] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot_calls.append("ran"))
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("link.py")], no_tests=True, review_mode="changed")
+
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+        "cached_snapshot_materialization_unavailable"
+    }
+    assert snapshot_calls == []
+
+
+@pytest.mark.parametrize("selected_kind", ["untracked", "gitlink"])
+def test_capsule_cached_enforcement_rejects_unbound_selected_path(
+    monkeypatch: MonkeyPatch, tmp_path: Path, selected_kind: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    (repository / "README.md").write_text("baseline\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    selected_path = "evil.py" if selected_kind == "untracked" else "submodule"
+    if selected_kind == "untracked":
+        (repository / selected_path).write_text("BLOCKED = True\n", encoding="utf-8")
+    else:
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=repository, capture_output=True, text=True, check=True, env=git_env
+        ).stdout.strip()
+        subprocess.run(
+            ["git", "update-index", "--add", "--cacheinfo", f"160000,{head},{selected_path}"],
+            cwd=repository,
+            check=True,
+            env=git_env,
+        )
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot_calls: list[str] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot_calls.append("ran"))
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path(selected_path)], no_tests=True, review_mode="changed")
+
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert snapshot_calls == []
+
+
+@pytest.mark.parametrize("collision_kind", ["file", "directory"])
+def test_cached_tree_materialization_rejects_case_collisions(
+    tmp_path: Path,
+    collision_kind: str,
+) -> None:
+    probe = tmp_path / "probe"
+    probe.mkdir()
+    (probe / "Case").write_text("probe", encoding="utf-8")
+    if not (probe / "case").exists():
+        pytest.skip("filesystem preserves case-distinct identities")
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+
+    def _blob_oid(content: bytes) -> str:
+        result = subprocess.run(
+            ["git", "hash-object", "-w", "--stdin"],
+            cwd=repository,
+            input=content,
+            capture_output=True,
+            check=True,
+            env=git_env,
+        )
+        return result.stdout.decode("ascii").strip()
+
+    upper_oid = _blob_oid(b"UPPER\n")
+    lower_oid = _blob_oid(b"lower\n")
+    entries = (
+        {"Foo.py": ("100644", upper_oid), "foo.py": ("100644", lower_oid)}
+        if collision_kind == "file"
+        else {"Foo/a.py": ("100644", upper_oid), "foo/b.py": ("100644", lower_oid)}
+    )
+    destination = tmp_path / "snapshot"
+    destination.mkdir()
+
+    assert runner_api._materialize_cached_tree(repository, destination, entries) is False
+
+
+@pytest.mark.parametrize("bypass_kind", ["clean_filter", "assume_unchanged", "runtime_mutation", "replace_ref"])
+def test_capsule_cached_enforcement_compares_raw_worktree_bytes_to_index_blob(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+    bypass_kind: str,
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    if bypass_kind == "clean_filter":
+        (repository / ".gitattributes").write_text("app.py filter=hide\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "config", "filter.hide.clean", "sed s/SAFE/BLOCKED/"],
+            cwd=repository,
+            check=True,
+            env=git_env,
+        )
+        subprocess.run(["git", "add", ".gitattributes"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("BLOCKED\n", encoding="utf-8")
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    if bypass_kind in {"clean_filter", "assume_unchanged"}:
+        source.write_text("SAFE\n", encoding="utf-8")
+    if bypass_kind == "assume_unchanged":
+        subprocess.run(
+            ["git", "update-index", "--assume-unchanged", "app.py"],
+            cwd=repository,
+            check=True,
+            env=git_env,
+        )
+    if bypass_kind == "replace_ref":
+        safe_tree = subprocess.run(
+            ["git", "write-tree"], cwd=repository, capture_output=True, text=True, check=True, env=git_env
+        ).stdout.strip()
+        malicious_blob = (
+            subprocess.run(
+                ["git", "hash-object", "-w", "--stdin"],
+                cwd=repository,
+                input=b"SAFE\n",
+                capture_output=True,
+                check=True,
+                env=git_env,
+            )
+            .stdout.decode("ascii")
+            .strip()
+        )
+        malicious_tree = subprocess.run(
+            ["git", "mktree"],
+            cwd=repository,
+            input=f"100644 blob {malicious_blob}\tapp.py\n",
+            capture_output=True,
+            text=True,
+            check=True,
+            env=git_env,
+        ).stdout.strip()
+        subprocess.run(["git", "replace", safe_tree, malicious_tree], cwd=repository, check=True, env=git_env)
+    semantic_diff = subprocess.run(
+        ["git", "--literal-pathspecs", "diff", "--quiet", "--no-ext-diff", "--no-textconv", "--", "app.py"],
+        cwd=repository,
+        check=False,
+        env=git_env,
+    )
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    snapshot_calls: list[str] = []
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "app.py", "line": 1}
+    )
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={"ruff": [finding]},
+    )
+
+    def _prepare_runtime() -> tuple[SimpleNamespace, str]:
+        if bypass_kind == "runtime_mutation":
+            source.write_text("SAFE\n", encoding="utf-8")
+        return runtime, ""
+
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", _prepare_runtime)
+
+    def _run_snapshot(*_args: object, **kwargs: object) -> SimpleNamespace:
+        snapshot_root = cast(Path, kwargs["snapshot_root"])
+        snapshot_calls.append((snapshot_root / "app.py").read_text(encoding="utf-8"))
+        return snapshot
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert semantic_diff.returncode == 0
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("FAIL", "FAIL", 1)
+    assert snapshot_calls == ["BLOCKED\n"]
 
 
 @pytest.mark.parametrize("diff_mode", ["worktree", "cached"])
@@ -927,10 +1153,10 @@ def test_capsule_review_changed_enforcement_fails_closed_without_changed_line_ev
         "unavailable" in (report.enforcement_summary or ""),
         readback.status,
         readback.ci_exit_code,
-    ) == ("FAIL", False, 1, "FAIL", True, "FAIL", 1)
+    ) == ("UNKNOWN", True, 1, "FAIL", True, "UNKNOWN", 1)
 
 
-def test_capsule_review_changed_enforcement_preserves_pass_without_changed_line_evidence(
+def test_capsule_review_changed_enforcement_rejects_pass_without_changed_line_evidence(
     monkeypatch: MonkeyPatch,
 ) -> None:
     runner_api = _c14_runner()
@@ -955,7 +1181,7 @@ def test_capsule_review_changed_enforcement_preserves_pass_without_changed_line_
         "unavailable" in (report.enforcement_summary or ""),
         readback.status,
         readback.ci_exit_code,
-    ) == ("PASS", False, 0, "PASS", True, "PASS", 0)
+    ) == ("UNKNOWN", True, 1, "FAIL", True, "UNKNOWN", 1)
 
 
 def test_capsule_member_passes_explicit_target_policy_to_adapter(monkeypatch: MonkeyPatch) -> None:
@@ -2037,6 +2263,81 @@ def test_source_checkout_legacy_scope_uses_bounded_host_compatibility(monkeypatc
 
     assert report.run_id == expected.run_id
     assert report.scope_evidence == {"assurance_kind": "explicit_files", "capsule_execution": "required"}
+
+
+def test_source_checkout_cached_scope_analyzes_and_enforces_the_staged_tree(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("BASELINE\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("BLOCKED\n", encoding="utf-8")
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    source.write_text("SAFE\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (None, "unsupported_controller_platform"))
+    monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
+    observed: list[tuple[bytes, bool]] = []
+
+    def _host_review(files: list[Path], _options: object) -> ReviewReport:
+        observed.append((files[0].read_bytes(), os.path.samefile(Path.cwd(), files[0].parent)))
+        subprocess.run(["git", "-C", str(repository), "commit", "-qm", "advance head"], check=True, env=git_env)
+        finding = _finding(tool="ruff", rule="E501", severity="error").model_copy(
+            update={"file": str(files[0]), "line": 1}
+        )
+        return ReviewReport(run_id="dev-host", score=0, findings=[finding], summary="blocked")
+
+    monkeypatch.setattr(runner_api, "run_review", _host_review)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert observed == [(b"BLOCKED\n", True)]
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+    assert [finding.file for finding in report.findings] == ["app.py"]
+
+
+def test_source_checkout_cached_scope_rejects_host_analyzer_snapshot_mutation(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("BASELINE\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("BLOCKED\n", encoding="utf-8")
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (None, "unsupported_controller_platform"))
+    monkeypatch.setattr(runner_api, "_is_development_source_checkout", lambda: True, raising=False)
+
+    def _host_review(files: list[Path], _options: object) -> ReviewReport:
+        files[0].write_text("SAFE\n", encoding="utf-8")
+        return ReviewReport(run_id="dev-host", score=100, findings=[], summary="complete")
+
+    monkeypatch.setattr(runner_api, "run_review", _host_review)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {"cached_host_snapshot_mutated"}
 
 
 def test_source_checkout_legacy_scope_explicitly_opts_into_linux_cache_miss_compatibility(

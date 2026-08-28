@@ -12,14 +12,15 @@ import platform
 import posixpath
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import tomllib
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Iterable
-from contextlib import ExitStack, suppress
-from dataclasses import dataclass, field
+from contextlib import ExitStack, chdir, suppress
+from dataclasses import dataclass, field, replace
 from functools import lru_cache, partial
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal, cast
@@ -494,6 +495,7 @@ def _candidate_git_environment() -> dict[str, str]:
     return {
         **{key: value for key, value in os.environ.items() if key not in _GIT_LOCAL_ENV_VARS},
         "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_NO_REPLACE_OBJECTS": "1",
         "GIT_TERMINAL_PROMPT": "0",
     }
 
@@ -4130,11 +4132,33 @@ def _run_changed_line_git_command(command: list[str]) -> subprocess.CompletedPro
     return result if result.returncode == 0 else None
 
 
-def _cached_worktree_matches_index(files: list[Path]) -> bool | None:
-    """Return whether cached enforcement would analyze the staged file state."""
-    command = ["git", "--literal-pathspecs", "diff", "--quiet", "--no-ext-diff", "--no-textconv"]
-    if files:
-        command.extend(["--", *(str(file_path) for file_path in files)])
+def _cached_repository_paths(files: list[Path]) -> tuple[Path, dict[str, Path]] | None:
+    """Return exact repository-root identities for reviewed worktree paths."""
+    if not files:
+        return None
+    root_result = _run_changed_line_git_command(["git", "rev-parse", "--show-toplevel"])
+    if root_result is None or not root_result.stdout.endswith("\n"):
+        return None
+    repository = Path(root_result.stdout.removesuffix("\n"))
+    if not repository.is_absolute():
+        return None
+    repository = Path(os.path.abspath(repository))
+    selected: dict[str, Path] = {}
+    for file_path in files:
+        absolute = Path(os.path.abspath(file_path))
+        try:
+            relative = absolute.relative_to(repository).as_posix()
+        except ValueError:
+            return None
+        if not relative or relative in selected:
+            return None
+        selected[relative] = absolute
+    return repository, selected
+
+
+def _cached_index_blobs(repository: Path, paths: tuple[str, ...]) -> dict[str, tuple[str, str]] | None:
+    """Read unfiltered stage-zero index blob identities for exact reviewed paths."""
+    command = ["git", "--literal-pathspecs", "ls-files", "--stage", "-z", "--", *paths]
     try:
         result = subprocess.run(
             command,
@@ -4143,23 +4167,377 @@ def _cached_worktree_matches_index(files: list[Path]) -> bool | None:
             check=False,
             timeout=30,
             env=_candidate_git_environment(),
+            cwd=repository,
         )
     except (OSError, subprocess.SubprocessError, UnicodeError):
         return None
-    if result.returncode not in {0, 1}:
+    if result.returncode != 0:
         return None
-    return result.returncode == 0
+    entries: dict[str, tuple[str, str]] = {}
+    selected = set(paths)
+    for record in result.stdout.split("\0"):
+        if not record:
+            continue
+        metadata, separator, path = record.partition("\t")
+        fields = metadata.split()
+        if separator != "\t" or len(fields) != 3 or path not in selected or fields[2] != "0" or path in entries:
+            return None
+        mode, oid, _stage = fields
+        if mode not in {"100644", "100755", "120000"} or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", oid):
+            return None
+        entries[path] = (mode, oid)
+    return entries
 
 
-def _cached_snapshot_mismatch_reason(options: ReviewOptions, files: list[Path]) -> str | None:
-    """Reject cached enforcement before analyzers observe different worktree bytes."""
+def _raw_worktree_blob(path: Path, mode: str) -> bytes | Literal["missing"] | None:
+    """Read the exact bytes an analyzer would observe without Git filters."""
+    try:
+        path_stat = path.lstat()
+    except FileNotFoundError:
+        return "missing"
+    except OSError:
+        return None
+    try:
+        if mode == "120000":
+            return os.fsencode(os.readlink(path)) if stat.S_ISLNK(path_stat.st_mode) else None
+        return path.read_bytes() if stat.S_ISREG(path_stat.st_mode) else None
+    except OSError:
+        return None
+
+
+def _git_blob_oid(content: bytes, expected_oid: str) -> str | None:
+    """Hash raw bytes with the repository object format implied by the index OID."""
+    payload = b"blob " + str(len(content)).encode("ascii") + b"\0" + content
+    if len(expected_oid) == 40:
+        return hashlib.sha1(payload).hexdigest()
+    if len(expected_oid) == 64:
+        return hashlib.sha256(payload).hexdigest()
+    return None
+
+
+def _cached_worktree_matches_index(files: list[Path]) -> bool | None:
+    """Return whether analyzers would read the exact selected stage-zero blobs."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return None
+    repository, selected = repository_paths
+    index_blobs = _cached_index_blobs(repository, tuple(selected))
+    if index_blobs is None:
+        return None
+    for path, absolute in selected.items():
+        index_entry = index_blobs.get(path)
+        if index_entry is None:
+            try:
+                absolute.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError:
+                return None
+            return False
+        mode, expected_oid = index_entry
+        if mode == "120000":
+            return None
+        content = _raw_worktree_blob(absolute, mode)
+        if content is None:
+            return None
+        if content == "missing" or _git_blob_oid(content, expected_oid) != expected_oid:
+            return False
+    return True
+
+
+def _cached_review_requested(options: ReviewOptions) -> bool:
+    """Return whether changed enforcement targets the staged index snapshot."""
     diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
-    if options.review_mode != "changed" or diff_mode != "cached":
+    return options.review_mode == "changed" and diff_mode == "cached"
+
+
+def _git_tree_identity(repository: Path, revision: str) -> str | None:
+    """Resolve one immutable tree identity without replacement objects."""
+    try:
+        result = subprocess.run(
+            ["git", *(["write-tree"] if revision == "index" else ["rev-parse", "--verify", f"{revision}^{{tree}}"])],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
         return None
-    matches_index = _cached_worktree_matches_index(files)
-    if matches_index is True:
+    tree_oid = result.stdout.removesuffix("\n")
+    return (
+        tree_oid
+        if result.returncode == 0
+        and result.stdout.endswith("\n")
+        and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", tree_oid)
+        else None
+    )
+
+
+@dataclass(frozen=True)
+class CachedDiffIdentity:
+    """Immutable base/index identities and caller coordinates for cached diff."""
+
+    base_tree: str
+    index_tree: str
+    caller_prefix: str
+
+
+@dataclass(frozen=True)
+class CachedAnalysisSnapshot:
+    """Materialized staged tree and identities used by analysis and enforcement."""
+
+    repository: Path
+    root: Path
+    files: list[Path]
+    entries: dict[str, tuple[str, str]]
+    diff: CachedDiffIdentity
+
+
+def _parse_cached_tree_entry(record: str) -> tuple[str, str, str] | None:
+    """Parse one trusted tree record into path, mode, and blob identity."""
+    metadata, separator, path = record.partition("\t")
+    fields = metadata.split()
+    tree_path = PurePosixPath(path)
+    if separator != "\t" or len(fields) != 3 or not path:
         return None
-    return "cached_snapshot_mismatch" if matches_index is False else "cached_snapshot_comparison_unavailable"
+    if tree_path.is_absolute() or ".." in tree_path.parts:
+        return None
+    mode, object_type, oid = fields
+    valid_object = (object_type == "commit" and mode == "160000") or (
+        object_type == "blob" and mode in {"100644", "100755", "120000"}
+    )
+    return (path, mode, oid) if valid_object and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", oid) else None
+
+
+def _cached_tree_entries(repository: Path, tree_oid: str) -> dict[str, tuple[str, str]] | None:
+    """List immutable blob identities without consulting worktree attributes."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-tree", "-r", "-z", tree_oid],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    if result.returncode != 0:
+        return None
+    entries: dict[str, tuple[str, str]] = {}
+    for record in result.stdout.split("\0"):
+        if not record:
+            continue
+        parsed = _parse_cached_tree_entry(record)
+        if parsed is None:
+            return None
+        path, mode, oid = parsed
+        if path in entries:
+            return None
+        entries[path] = (mode, oid)
+    return entries
+
+
+def _parse_cached_batch_blob(output: bytes, cursor: int, expected_oid: str) -> tuple[bytes, int] | None:
+    """Parse one size-delimited blob from `git cat-file --batch` output."""
+    header_end = output.find(b"\n", cursor)
+    if header_end < 0:
+        return None
+    fields = output[cursor:header_end].split()
+    if len(fields) != 3 or fields[0] != expected_oid.encode("ascii") or fields[1] != b"blob":
+        return None
+    try:
+        size = int(fields[2])
+    except ValueError:
+        return None
+    content_start = header_end + 1
+    content_end = content_start + size
+    valid_content = size >= 0 and output[content_end : content_end + 1] == b"\n"
+    return (output[content_start:content_end], content_end + 1) if valid_content else None
+
+
+def _cached_blob_contents(repository: Path, oids: tuple[str, ...]) -> dict[str, bytes] | None:
+    """Read exact Git blobs in one non-filtered batch operation."""
+    unique_oids = tuple(dict.fromkeys(oids))
+    request = b"".join(oid.encode("ascii") + b"\n" for oid in unique_oids)
+    try:
+        result = subprocess.run(
+            ["git", "cat-file", "--batch"],
+            input=request,
+            capture_output=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    contents: dict[str, bytes] = {}
+    cursor = 0
+    for expected_oid in unique_oids:
+        parsed = _parse_cached_batch_blob(result.stdout, cursor, expected_oid)
+        if parsed is None:
+            return None
+        contents[expected_oid], cursor = parsed
+    return contents if cursor == len(result.stdout) else None
+
+
+def _materialized_parent_is_unique(
+    destination: Path,
+    parent: PurePosixPath,
+    identities: dict[tuple[int, int], PurePosixPath],
+) -> bool:
+    """Reject logical directories collapsed by case or Unicode normalization."""
+    current = destination
+    logical = PurePosixPath()
+    try:
+        for part in parent.parts:
+            logical /= part
+            current /= part
+            current.mkdir(exist_ok=True)
+            path_stat = current.lstat()
+            if not stat.S_ISDIR(path_stat.st_mode):
+                return False
+            identity = (path_stat.st_dev, path_stat.st_ino)
+            previous = identities.setdefault(identity, logical)
+            if previous != logical:
+                return False
+    except OSError:
+        return False
+    return True
+
+
+def _materialized_target_is_available(target: Path) -> bool:
+    """Return whether a tree entry has one fresh filesystem identity."""
+    try:
+        target.lstat()
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    return False
+
+
+def _materialized_tree_matches_entries(destination: Path, entries: dict[str, tuple[str, str]]) -> bool:
+    """Verify every materialized identity and byte against its immutable blob."""
+    for path, (mode, expected_oid) in entries.items():
+        if mode == "160000":
+            continue
+        target = destination.joinpath(*PurePosixPath(path).parts)
+        content = _raw_worktree_blob(target, mode)
+        if content is None or content == "missing" or _git_blob_oid(content, expected_oid) != expected_oid:
+            return False
+    return True
+
+
+def _write_materialized_regular_file(target: Path, content: bytes, mode: str) -> bool:
+    """Create one regular file atomically without following a raced symlink."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(target, flags, 0o600)
+    except OSError:
+        return False
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fchmod(stream.fileno(), 0o755 if mode == "100755" else 0o644)
+    except OSError:
+        return False
+    return True
+
+
+def _materialize_cached_tree(repository: Path, destination: Path, entries: dict[str, tuple[str, str]]) -> bool:
+    """Materialize exact index blobs without filters or filesystem identity loss."""
+    contents = _cached_blob_contents(repository, tuple(oid for mode, oid in entries.values() if mode != "160000"))
+    if contents is None:
+        return False
+    directory_identities: dict[tuple[int, int], PurePosixPath] = {}
+    try:
+        for path, (mode, oid) in sorted(entries.items()):
+            if mode == "160000":
+                continue
+            tree_path = PurePosixPath(path)
+            target = destination.joinpath(*tree_path.parts)
+            if not _materialized_parent_is_unique(destination, tree_path.parent, directory_identities):
+                return False
+            if not _materialized_target_is_available(target):
+                return False
+            content = contents[oid]
+            if mode == "120000":
+                os.symlink(os.fsdecode(content), target)
+                continue
+            if not _write_materialized_regular_file(target, content, mode):
+                return False
+    except (KeyError, OSError):
+        return False
+    return _materialized_tree_matches_entries(destination, entries)
+
+
+def _selected_paths_match_cached_tree_presence(selected: dict[str, Path], entries: dict[str, tuple[str, str]]) -> bool:
+    """Distinguish staged deletions from unbound untracked or gitlink inputs."""
+    for path, worktree_path in selected.items():
+        if path in entries:
+            continue
+        try:
+            worktree_path.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return False
+        return False
+    return True
+
+
+def _cached_caller_prefix(repository: Path) -> str | None:
+    """Freeze the caller's repository-relative coordinate before analysis."""
+    try:
+        relative = Path(os.path.abspath(Path.cwd())).relative_to(repository)
+    except ValueError:
+        return None
+    prefix = relative.as_posix()
+    return "" if prefix == "." else f"{prefix}/"
+
+
+def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAnalysisSnapshot | None:
+    """Bind selected paths and analyzer input to one immutable staged tree."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return None
+    repository, selected = repository_paths
+    caller_prefix = _cached_caller_prefix(repository)
+    base_tree = _git_tree_identity(repository, "HEAD")
+    tree_oid = _git_tree_identity(repository, "index")
+    if caller_prefix is None or base_tree is None or tree_oid is None:
+        return None
+    if _git_tree_identity(repository, "HEAD") != base_tree:
+        return None
+    entries = _cached_tree_entries(repository, tree_oid)
+    selected_unsupported = entries is not None and any(
+        entries.get(path, ("", ""))[0] in {"120000", "160000"} for path in selected
+    )
+    if (
+        entries is None
+        or selected_unsupported
+        or not _selected_paths_match_cached_tree_presence(selected, entries)
+        or not _materialize_cached_tree(repository, destination, entries)
+    ):
+        return None
+    snapshot_files = [destination.joinpath(*PurePosixPath(path).parts) for path in selected]
+    return CachedAnalysisSnapshot(
+        repository=repository,
+        root=destination,
+        files=snapshot_files,
+        entries=entries,
+        diff=CachedDiffIdentity(base_tree=base_tree, index_tree=tree_oid, caller_prefix=caller_prefix),
+    )
 
 
 def _caller_git_prefix() -> str | None:
@@ -4169,9 +4547,8 @@ def _caller_git_prefix() -> str | None:
         return None
     prefix = result.stdout.removesuffix("\n")
     prefix_path = PurePosixPath(prefix)
-    if prefix_path.is_absolute() or ".." in prefix_path.parts or (prefix and not prefix.endswith("/")):
-        return None
-    return prefix
+    valid_prefix = not prefix_path.is_absolute() and ".." not in prefix_path.parts
+    return prefix if valid_prefix and (not prefix or prefix.endswith("/")) else None
 
 
 def _changed_lines_relative_to_caller(
@@ -4202,11 +4579,8 @@ def _untracked_changed_lines(file_path: Path) -> set[int] | None:
     return set(range(1, line_count + 1))
 
 
-def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]] | None:
-    """Collect changed line numbers for changed enforcement evidence."""
-    diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
-    if diff_mode == "cached" and _cached_worktree_matches_index(files) is not True:
-        return None
+def _changed_diff_command(files: list[Path], diff_mode: str, cached_diff: CachedDiffIdentity | None) -> list[str]:
+    """Build one literal, filter-free changed-line evidence command."""
     command = [
         "git",
         "--literal-pathspecs",
@@ -4219,21 +4593,15 @@ def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]] | None:
         "--src-prefix=a/",
         "--dst-prefix=b/",
     ]
-    command.append("--cached" if diff_mode == "cached" else "HEAD")
+    revision = [cached_diff.base_tree, cached_diff.index_tree] if diff_mode == "cached" and cached_diff else []
+    command.extend(revision or ["--cached" if diff_mode == "cached" else "HEAD"])
     if files:
         command.extend(["--", *(str(file_path) for file_path in files)])
-    result = _run_changed_line_git_command(command)
-    if result is None:
-        return None
-    changed_lines = _parse_added_lines_from_diff(result.stdout)
-    if changed_lines is None:
-        return None
-    caller_prefix = _caller_git_prefix()
-    if caller_prefix is None:
-        return None
-    changed_lines = _changed_lines_relative_to_caller(changed_lines, caller_prefix)
-    if changed_lines is None:
-        return None
+    return command
+
+
+def _add_untracked_changed_lines(files: list[Path], changed_lines: dict[str, set[int]]) -> bool:
+    """Add explicit untracked inputs and report whether their evidence was available."""
     for file_path in files:
         if not file_path.exists():
             continue
@@ -4242,10 +4610,32 @@ def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]] | None:
             continue
         line_numbers = _untracked_changed_lines(file_path)
         if line_numbers is None:
-            return None
+            return False
         if line_numbers:
             changed_lines[relative] = line_numbers
-    return changed_lines
+    return True
+
+
+def _changed_lines_from_git(
+    files: list[Path], *, cached_diff: CachedDiffIdentity | None = None
+) -> dict[str, set[int]] | None:
+    """Collect changed line numbers for changed enforcement evidence."""
+    diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
+    if diff_mode == "cached" and cached_diff is None and _cached_worktree_matches_index(files) is not True:
+        return None
+    result = _run_changed_line_git_command(_changed_diff_command(files, diff_mode, cached_diff))
+    if result is None:
+        return None
+    changed_lines = _parse_added_lines_from_diff(result.stdout)
+    if changed_lines is None:
+        return None
+    caller_prefix = cached_diff.caller_prefix if cached_diff is not None else _caller_git_prefix()
+    if caller_prefix is None:
+        return None
+    changed_lines = _changed_lines_relative_to_caller(changed_lines, caller_prefix)
+    if changed_lines is None:
+        return None
+    return changed_lines if cached_diff is not None or _add_untracked_changed_lines(files, changed_lines) else None
 
 
 def _finding_targets_changed_line(finding: ReviewFinding, changed_lines: dict[str, set[int]]) -> bool:
@@ -4257,7 +4647,7 @@ def _finding_targets_changed_line(finding: ReviewFinding, changed_lines: dict[st
 
 
 def _changed_enforcement_precondition(
-    report: ReviewReport, files: list[Path]
+    report: ReviewReport, files: list[Path], *, cached_diff: CachedDiffIdentity | None = None
 ) -> tuple[ReviewReport | None, dict[str, set[int]] | None]:
     """Preserve required uncertainty and completed verdicts before line classification."""
     if report.assurance_status == "UNKNOWN" or report.has_unknown_required_evidence:
@@ -4270,15 +4660,21 @@ def _changed_enforcement_precondition(
             ),
             None,
         )
-    changed_lines = _changed_lines_from_git(files)
+    changed_lines = (
+        _changed_lines_from_git(files)
+        if cached_diff is None
+        else _changed_lines_from_git(files, cached_diff=cached_diff)
+    )
     if changed_lines is None:
         return (
             report.model_copy(
                 update={
+                    "assurance_status": "UNKNOWN" if report.assurance_status is not None else None,
+                    "has_unknown_required_evidence": True,
+                    "overall_verdict": "FAIL",
+                    "ci_exit_code": 1,
                     "enforcement_mode": "changed",
-                    "enforcement_summary": (
-                        "Changed-line evidence is unavailable; changed enforcement preserves the completed verdict."
-                    ),
+                    "enforcement_summary": "Changed-line evidence is unavailable; changed enforcement fails closed.",
                 }
             ),
             None,
@@ -4334,9 +4730,10 @@ def _with_changed_enforcement(
     files: list[Path],
     *,
     findings_by_member: dict[str, list[ReviewFinding]] | None = None,
+    cached_diff: CachedDiffIdentity | None = None,
 ) -> ReviewReport:
     """Apply changed-line policy without discarding findings or uncertainty."""
-    precondition, changed_lines = _changed_enforcement_precondition(report, files)
+    precondition, changed_lines = _changed_enforcement_precondition(report, files, cached_diff=cached_diff)
     if precondition is not None:
         return precondition
     assert changed_lines is not None
@@ -4404,6 +4801,7 @@ def _with_enforcement(
     mode: ReviewEnforcementMode,
     files: list[Path],
     findings_by_member: dict[str, list[ReviewFinding]] | None = None,
+    cached_diff: CachedDiffIdentity | None = None,
 ) -> ReviewReport:
     """Apply enforcement mode to report exit code while preserving all findings as evidence."""
     if mode == "full":
@@ -4421,7 +4819,12 @@ def _with_enforcement(
                 "enforcement_summary": "Shadow enforcement records findings as evidence and never blocks CI.",
             }
         )
-    return _with_changed_enforcement(report, files, findings_by_member=findings_by_member)
+    return _with_changed_enforcement(
+        report,
+        files,
+        findings_by_member=findings_by_member,
+        cached_diff=cached_diff,
+    )
 
 
 def _suppress_known_noise(findings: list[ReviewFinding]) -> list[ReviewFinding]:
@@ -5329,6 +5732,7 @@ def _with_capsule_enforcement(
     files: list[Path],
     *,
     findings_by_member: dict[str, list[ReviewFinding]],
+    cached_diff: CachedDiffIdentity | None = None,
 ) -> ReviewReport:
     """Finalize one capsule report under the requested local enforcement policy."""
     return _with_enforcement(
@@ -5336,7 +5740,97 @@ def _with_capsule_enforcement(
         mode=options.review_mode,
         files=files,
         findings_by_member=findings_by_member,
+        cached_diff=cached_diff,
     )
+
+
+def _rebase_host_snapshot_findings(
+    report: ReviewReport,
+    *,
+    snapshot_root: Path,
+    repository: Path,
+) -> ReviewReport | None:
+    """Translate development-host analyzer paths back to caller identities."""
+    findings: list[ReviewFinding] = []
+    for finding in report.findings:
+        raw_path = Path(finding.file)
+        snapshot_path = raw_path if raw_path.is_absolute() else snapshot_root / raw_path
+        try:
+            relative = Path(os.path.abspath(snapshot_path)).relative_to(snapshot_root)
+        except ValueError:
+            return None
+        findings.append(finding.model_copy(update={"file": _normalize_report_path(repository / relative)}))
+    return report.model_copy(update={"findings": findings})
+
+
+def _run_cached_development_host_review(
+    files: list[Path],
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+) -> ReviewReport:
+    """Run unsupported-platform development analysis on the frozen staged tree."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return _with_capsule_enforcement(
+            _unknown_capsule_report(
+                "cached_snapshot_materialization_unavailable",
+                options=options,
+                scope_evidence=scope_evidence,
+            ),
+            options,
+            files=files,
+            findings_by_member={},
+        )
+    repository, _selected = repository_paths
+    with tempfile.TemporaryDirectory(prefix="specfact-index-") as temporary_directory:
+        cached_snapshot = _cached_analysis_snapshot(files, Path(temporary_directory))
+        if cached_snapshot is None:
+            return _with_capsule_enforcement(
+                _unknown_capsule_report(
+                    "cached_snapshot_materialization_unavailable",
+                    options=options,
+                    scope_evidence=scope_evidence,
+                ),
+                options,
+                files=files,
+                findings_by_member={},
+            )
+        with chdir(cached_snapshot.root):
+            host_report = run_review(cached_snapshot.files, replace(options, review_mode="full"))
+        if not _materialized_tree_matches_entries(cached_snapshot.root, cached_snapshot.entries):
+            return _with_capsule_enforcement(
+                _unknown_capsule_report(
+                    "cached_host_snapshot_mutated",
+                    options=options,
+                    scope_evidence=scope_evidence,
+                ),
+                options,
+                files=files,
+                findings_by_member={},
+            )
+        rebased_report = _rebase_host_snapshot_findings(
+            host_report,
+            snapshot_root=cached_snapshot.root,
+            repository=repository,
+        )
+        if rebased_report is None:
+            return _with_capsule_enforcement(
+                _unknown_capsule_report(
+                    "cached_host_finding_path_unavailable",
+                    options=options,
+                    scope_evidence=scope_evidence,
+                ),
+                options,
+                files=files,
+                findings_by_member={},
+            )
+        return _with_capsule_enforcement(
+            rebased_report.model_copy(update={"scope_evidence": scope_evidence}),
+            options,
+            files=files,
+            findings_by_member={},
+            cached_diff=cached_snapshot.diff,
+        )
 
 
 def run_capsule_review(
@@ -5352,21 +5846,11 @@ def run_capsule_review(
         raise ValueError(f"unsupported_local_assurance_kind:{assurance_kind!r}")
     review_options = _review_options_from_kwargs(options, overrides)
     scope_evidence: dict[str, object] = {"assurance_kind": assurance_kind, "capsule_execution": "required"}
-    cached_snapshot_reason = _cached_snapshot_mismatch_reason(review_options, files)
-    if cached_snapshot_reason is not None:
-        return _with_capsule_enforcement(
-            _unknown_capsule_report(
-                cached_snapshot_reason,
-                options=review_options,
-                scope_evidence=scope_evidence,
-            ),
-            review_options,
-            files=files,
-            findings_by_member={},
-        )
     runtime, reason = _prepare_capsule_runtime()
     if runtime is None:
         if _allows_development_host_compatibility(reason):
+            if _cached_review_requested(review_options):
+                return _run_cached_development_host_review(files, review_options, scope_evidence)
             return run_review(files, review_options).model_copy(update={"scope_evidence": scope_evidence})
         return _with_capsule_enforcement(
             _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence),
@@ -5375,23 +5859,44 @@ def run_capsule_review(
             findings_by_member={},
         )
     try:
-        snapshot = _run_capsule_snapshot(
-            runtime,
-            snapshot_root=Path.cwd(),
-            files=files,
-            options=review_options,
-        )
-        return _with_capsule_enforcement(
-            _capsule_report(
-                snapshot.evidence,
-                snapshot.findings_by_member,
+        with ExitStack() as stack:
+            snapshot_root = Path.cwd()
+            snapshot_files = files
+            cached_diff: CachedDiffIdentity | None = None
+            if _cached_review_requested(review_options):
+                temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
+                cached_snapshot = _cached_analysis_snapshot(files, temporary_root)
+                if cached_snapshot is None:
+                    return _with_capsule_enforcement(
+                        _unknown_capsule_report(
+                            "cached_snapshot_materialization_unavailable",
+                            options=review_options,
+                            scope_evidence=scope_evidence,
+                        ),
+                        review_options,
+                        files=files,
+                        findings_by_member={},
+                    )
+                snapshot_root, snapshot_files = cached_snapshot.root, cached_snapshot.files
+                cached_diff = cached_snapshot.diff
+            snapshot = _run_capsule_snapshot(
+                runtime,
+                snapshot_root=snapshot_root,
+                files=snapshot_files,
                 options=review_options,
-                scope_evidence=scope_evidence,
-            ),
-            review_options,
-            files=files,
-            findings_by_member=snapshot.findings_by_member,
-        )
+            )
+            return _with_capsule_enforcement(
+                _capsule_report(
+                    snapshot.evidence,
+                    snapshot.findings_by_member,
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                ),
+                review_options,
+                files=files,
+                findings_by_member=snapshot.findings_by_member,
+                cached_diff=cached_diff,
+            )
     finally:
         _cleanup_capsule_runtime(runtime)
 

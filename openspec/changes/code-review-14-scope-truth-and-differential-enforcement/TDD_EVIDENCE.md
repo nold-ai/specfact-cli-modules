@@ -1877,3 +1877,87 @@ Strict filesystem, cryptographic, and dev-baseline version verification against
 the immutable core `0.55.1` public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed payload byte and triggers the
 protected final-head matrix.
+
+An independent exact-head audit superseded that matrix before any thread was
+resolved. Git clean filters and the `assume-unchanged` index flag can both make
+`git diff --quiet --no-textconv` report equality while analyzers read raw bytes
+that differ from the staged blob. Two real-repository regressions were authored
+before the replacement implementation and both failed with capsule `PASS` /
+exit `0`; each also proved the semantic Git diff returned `0`. Cached snapshot
+comparison now reads literal stage-zero index entries, hashes raw regular-file
+or symlink bytes with the repository object format, and fails closed for
+missing, unmerged, unsupported, unreadable, outside-repository, or ambiguous
+evidence. A fresh Codex review then exposed the remaining time-of-check/time-of-
+use gap: worktree bytes could change during runtime preparation or between
+sequential analyzer launches. Cached capsule review now freezes the index with
+one immutable Git tree object, batch-reads and materializes its raw regular-file
+and symlink blobs without checkout/export filters, runs every analyzer against
+that read-only snapshot, and derives changed-line evidence from the same tree
+identity rather than the live index. Unavailable changed-line evidence now
+forces `UNKNOWN` / exit `1` instead of preserving a completed clean verdict.
+Clean-filter, `assume-unchanged`, runtime-mutation, ordinary partial-staging,
+direct-host fail-closed, and fully staged controls initially passed together
+(`6 passed`). Independent edge validation then exposed selected-symlink finding
+identity drift and case/Unicode-normalizing filesystem collisions that could
+overwrite or redirect a later materialized path. Selected staged symlinks now
+fail closed; logical directories cannot collapse to one device/inode identity;
+regular files use exclusive no-follow creation; and every final regular/symlink
+entry is re-hashed against its immutable blob. The expanded focused matrix
+passes `9 passed`, including both macOS file and directory case-collision
+regressions. Complete gates, refreshed signing, protected checks, and final PR
+#448 thread disposition remain required by tasks 6.85-6.86.
+
+The expanded independent audit then closed four additional identity edges in
+the same cached-snapshot contract. An extant selected untracked path and a
+selected staged gitlink cannot be represented as analyzer input from the
+frozen tree and now fail closed instead of being confused with a staged
+deletion. Git replacement objects are disabled for all candidate Git commands,
+so `refs/replace` cannot substitute a different tree after `write-tree`.
+Finally, the bounded development-source fallback no longer analyzes live
+worktree files when the capsule runtime is unavailable: it analyzes the same
+materialized staged tree in full host mode, rebases finding paths to caller
+identities, applies changed-line enforcement against the frozen tree, and
+re-hashes every materialized entry after the host analyzers return. The exact
+host regression first observed staged `BLOCKED` bytes despite live `SAFE`
+bytes, and an independent adversarial analyzer reproduced the remaining gap by
+rewriting its snapshot to `SAFE` and returning `PASS` / exit `0`; post-analysis
+verification now converts that mutation to required `UNKNOWN` / exit `1` with
+`cached_host_snapshot_mutated`. The focused cached-snapshot and host-fallback
+selection passes `14 passed`. Complete final-byte gates, refreshed signing,
+protected checks, and final PR #448 thread disposition remain required by
+tasks 6.85-6.86.
+
+Independent fallback validation then advanced live `HEAD` from inside a host
+analyzer after returning a real staged-snapshot blocker. Although snapshot
+re-hashing passed, the former late `HEAD` versus frozen-index diff became empty
+and downgraded the blocker to `PASS_WITH_ADVISORY` / exit `0`. Cached capture
+now records the base tree before `write-tree`, verifies that `HEAD` still names
+the same tree immediately afterward, freezes the caller coordinate, and later
+diffs only that immutable base/index pair. Host fallback tools execute with the
+materialized root as their working directory, so tool configuration discovery
+is staged-snapshot-bound. The regression advances the repository `HEAD` during
+host analysis while confirming the host saw staged `BLOCKED` bytes from the
+snapshot root; the frozen diff still classifies its line-1 blocker and returns
+`FAIL` / exit `1`. The focused cached and host matrix remains `14 passed`.
+
+Final local-byte verification passes strict OpenSpec, format, Ruff,
+BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint (`10.00/10`), and all
+`28` contract-first tests, plus seven manifests and registry, bundle imports,
+three CLI contract files, filesystem checksum/version verification against the
+immutable core `0.55.1` public key, publish precheck, and `git diff --check`.
+The complete exact-core `0.55.1` suite passes `1716` of `1717`; the sole failure
+remains the documented unsupported local macOS/CPython 3.14 capsule-lock
+selector, with only the two existing third-party
+Lark deprecations. The complete runner surface passes `339` of `340` with that
+same environment-only exception. Exact-core changed-line Code Review returns
+`PASS_WITH_ADVISORY`, exit `0`, with `83` retained findings, two pre-existing
+blockers outside changed lines, and no changed-line blocker. Independent
+adversarial revalidation replayed live-`HEAD` advance and snapshot mutation:
+the former remains `FAIL` / exit `1` on the frozen diff, the latter is required
+`UNKNOWN` / exit `1`, and no further byte/diff binding fail-open was found.
+The canonical changed-only signer preserves unpublished version `0.49.63` and
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and sets
+unsigned filesystem checksum
+`sha256:80857465b9997fefbe94c4b89bd6bab9e772a34d1c05187feaf2edb6ec1f9c2c`.
+A signed human commit, trusted replacement signature, protected checks, and
+final PR #448 thread disposition remain required by tasks 6.85-6.86.
