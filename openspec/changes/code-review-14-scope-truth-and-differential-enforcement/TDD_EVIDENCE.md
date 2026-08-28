@@ -1985,3 +1985,39 @@ Strict filesystem, cryptographic, and dev-baseline version verification against
 the immutable core `0.55.1` public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed payload byte and triggers the
 protected final-head matrix.
+
+Protected replacement run `33190719624` passed the complete quality and
+minimum-core compatibility matrices on Linux CPython 3.11, 3.12, and 3.13;
+Docs Review, requirements evidence, CodeQL, Socket, CodeRabbit, and both module
+signature checks also passed on fixture-corrected commit
+`7c34f93e223c66f0832ecd9633c1117bc0550337`. A Codex review of the preceding
+evidence head then identified a contract regression in ordinary changed
+enforcement: unavailable Git line evidence rewrote even a completed
+blocker-free PASS to required `UNKNOWN` / exit `1`. Independent validation
+confirmed that the active local-capsule scenario requires ordinary
+worktree/explicit-file reviews to preserve completed PASS and FAIL verdicts,
+while the later cached immutable-tree clause separately requires unavailable
+cached line evidence to remain `UNKNOWN` / exit `1`.
+
+The blocker-free PASS expectation failed first (`1 failed`) against the prior
+implementation. Expanding the boundary to completed FAIL, completed PASS,
+required UNKNOWN, and cached PASS produced `2 failed, 2 passed`: ordinary FAIL
+was incorrectly downgraded to UNKNOWN, and the first narrow correction
+incorrectly let cached PASS survive unavailable frozen-tree evidence. The
+precondition now preserves an already-completed report only when no cached
+identity is present; required UNKNOWN is returned before discovery, and cached
+unavailable evidence retains its fail-closed UNKNOWN result. Those four
+controls pass, a real explicit-file review outside Git retains PASS / exit `0`,
+and the broader changed-line/cached enforcement selection passes `52 passed`.
+The production correction advances the unpublished module to `0.49.64`, keeps
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and sets
+unsigned filesystem checksum
+`sha256:13f208939b69fc54d8d4177dc2260b490be62443da3a428e3c643754fa62c942`.
+Pre-sign local verification passes format, Ruff, BasedPyright (`0 errors, 0
+warnings, 0 notes`), Pylint (`10.00/10`), strict OpenSpec, seven manifests plus
+registry, bundle imports, all `28` contract-first tests, the publish precheck,
+filesystem checksum/version verification, and `git diff --check`. The complete
+runner surface passes `341` of `342`; its sole expected pre-sign failure is the
+capsule-runtime test rejecting the deliberately unsigned new manifest. Trusted
+replacement signing, signed-head complete tests, protected final-head checks,
+and verified PR #448 thread disposition remain required by task 6.89.

@@ -4666,6 +4666,18 @@ def _changed_enforcement_precondition(
         else _changed_lines_from_git(files, cached_diff=cached_diff)
     )
     if changed_lines is None:
+        if cached_diff is None:
+            return (
+                report.model_copy(
+                    update={
+                        "enforcement_mode": "changed",
+                        "enforcement_summary": (
+                            "Changed-line evidence is unavailable; the completed report retains its existing verdict."
+                        ),
+                    }
+                ),
+                None,
+            )
         return (
             report.model_copy(
                 update={

@@ -17,14 +17,18 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
-- Release `specfact-code-review` 0.49.63 with fail-closed changed-line evidence
-  discovery plus state-aware, raw, color-free, literal-path Git parsing, so
+- Release `specfact-code-review` 0.49.64 with verdict-preserving ordinary
+  changed enforcement when Git line evidence is unavailable, while cached
+  immutable-tree enforcement remains required `UNKNOWN`; retain fail-closed
+  changed-line evidence discovery plus state-aware, raw, color-free,
+  literal-path Git parsing, so
   failed or configuration-altered inspection and hunk content cannot be
   mistaken for a clean diff; normalize repository-root diff paths for nested
   invocations, materialize cached enforcement from one immutable stage-zero
-  index tree plus its stable base tree and derive changed lines only from those immutable identities so Git filters, index
-  flags, replacement refs, runtime worktree mutation, and development-host
-  analyzer mutation cannot change or silently detach analyzer input, validate
+  index tree plus its stable base tree and derive changed lines only from those
+  immutable identities so Git filters, index flags, replacement refs, runtime
+  worktree mutation, and development-host analyzer mutation cannot change or
+  silently detach analyzer input, validate
   local assurance provenance at the runtime boundary, and count explicitly
   reviewed ignored/untracked files as changed.
 - Release `specfact-code-review` 0.49.62 with truthful local capsule scope

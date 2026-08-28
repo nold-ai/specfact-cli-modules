@@ -157,6 +157,25 @@ def test_run_review_changed_enforcement_blocks_changed_line_findings(monkeypatch
     assert "changed lines" in (report.enforcement_summary or "")
 
 
+def test_run_review_changed_enforcement_preserves_pass_outside_git(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    _stub_review_tools(monkeypatch, [])
+
+    report = run_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert (
+        report.overall_verdict,
+        report.ci_exit_code,
+        report.has_unknown_required_evidence,
+        "unavailable" in (report.enforcement_summary or ""),
+    ) == ("PASS", 0, None, True)
+
+
 def test_run_review_changed_enforcement_normalizes_absolute_finding_paths(monkeypatch: MonkeyPatch) -> None:
     relative = "packages/specfact-code-review/src/specfact_code_review/run/scorer.py"
     finding = _finding(tool="radon", rule="complexity", severity="error", category="kiss")
@@ -1130,7 +1149,7 @@ def test_capsule_review_changed_enforcement_preserves_unknown(monkeypatch: Monke
     ) == ("UNKNOWN", 1, "FAIL", "UNKNOWN", 1)
 
 
-def test_capsule_review_changed_enforcement_fails_closed_without_changed_line_evidence(
+def test_capsule_review_changed_enforcement_preserves_fail_without_changed_line_evidence(
     monkeypatch: MonkeyPatch,
 ) -> None:
     runner_api = _c14_runner()
@@ -1155,10 +1174,10 @@ def test_capsule_review_changed_enforcement_fails_closed_without_changed_line_ev
         "unavailable" in (report.enforcement_summary or ""),
         readback.status,
         readback.ci_exit_code,
-    ) == ("UNKNOWN", True, 1, "FAIL", True, "UNKNOWN", 1)
+    ) == ("FAIL", False, 1, "FAIL", True, "FAIL", 1)
 
 
-def test_capsule_review_changed_enforcement_rejects_pass_without_changed_line_evidence(
+def test_capsule_review_changed_enforcement_preserves_pass_without_changed_line_evidence(
     monkeypatch: MonkeyPatch,
 ) -> None:
     runner_api = _c14_runner()
@@ -1181,6 +1200,41 @@ def test_capsule_review_changed_enforcement_rejects_pass_without_changed_line_ev
         report.ci_exit_code,
         report.overall_verdict,
         "unavailable" in (report.enforcement_summary or ""),
+        readback.status,
+        readback.ci_exit_code,
+    ) == ("PASS", False, 0, "PASS", True, "PASS", 0)
+
+
+def test_capsule_cached_changed_enforcement_fails_closed_without_changed_line_evidence(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    runner_api = _c14_runner()
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    cached_snapshot = SimpleNamespace(
+        root=Path.cwd(),
+        files=[Path("src/app.py")],
+        diff=runner_api.CachedDiffIdentity(base_tree="a" * 40, index_tree="b" * 40, caller_prefix=""),
+    )
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_cached_analysis_snapshot", lambda *_args: cached_snapshot)
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+    monkeypatch.setattr(runner_api, "_changed_lines_from_git", lambda _files, **_kwargs: None)
+
+    report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True, review_mode="changed")
+    readback = read_review_report(report.model_dump())
+
+    assert (
+        report.assurance_status,
+        report.has_unknown_required_evidence,
+        report.ci_exit_code,
+        report.overall_verdict,
+        "fails closed" in (report.enforcement_summary or ""),
         readback.status,
         readback.ci_exit_code,
     ) == ("UNKNOWN", True, 1, "FAIL", True, "UNKNOWN", 1)
