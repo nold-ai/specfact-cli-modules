@@ -2600,6 +2600,44 @@ core `0.55.1` bundled public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed module payload byte and triggers the
 replacement protected and final-head review cycle.
 
+The continuing PR #446 review on published head
+`facfbf82d50e2985f5479609fa0be1403cb14042` added two more CodeRabbit
+threads. Independent validation rejected the request to erase post-0.49.61 C14
+evidence because #448/#449 truthfully delivered and published 0.49.75. It
+confirmed one new runtime defect: any
+`SPECFACT_CODE_REVIEW_CHANGED_DIFF` value other than `cached` or
+`worktree` selected `HEAD`, and the same unknown mode bypassed raw worktree
+corroboration.
+
+The contract was extended before tests. The focused revision selector then
+proved both valid controls and reproduced the invalid values: `cached` and
+`worktree` passed, while `worktee` and the empty string returned
+`("HEAD",)` instead of unavailable evidence (`2 failed, 2 passed`). The
+minimal implementation returns unavailable evidence for every unrecognized
+mode; the same selector now passes all four cases.
+
+The independent patch challenge then found a second validation-to-use gap: a
+previously frozen cached identity was returned before the mode was checked, so
+environment drift from `cached` to `worktree`, `worktee`, or empty could still
+consume cached changed-line evidence. The contract now binds a frozen cached
+identity to normalized `cached` mode. Its focused regression passed the cached
+control but failed all three drift cases (`3 failed, 1 passed`); moving that
+mode check ahead of cached identity consumption made the combined invalid-mode,
+mode-drift, and cached-control set pass (`10 passed`).
+
+The earlier PR #446 planning review was also revalidated against current
+`dev`: C14 provenance now retains original 0.49.46, intermediate 0.49.61,
+and current 0.49.75 delivery/publication identities; post-publication
+correction requires a new patch while preserving every prior signed record;
+future preflight compatibility uses a bounded range whose minimum is the first
+immutable released core containing #682 rather than historical core 0.55.1;
+and hatch3r packaging is blocked until a documented supported extension
+surface or accepted upstream contribution exists. Existing release rollback
+specs/tasks already own withdrawal, installer-rejection, and persisted-state
+gates, so no fictitious core registry owner was added. The workflow regression
+now proves no hard-coded local-alias path while separately confirming that the
+current C14 metadata range retains PEP 440 range semantics.
+
 The exact signed-head Codex review of
 `82e4674ec8d7e5c5e68d750eab9747de6ee22965` added one P2 finding: Git emits no
 destination header or text hunk for a newly added empty file, so staged and

@@ -17,6 +17,11 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Release `specfact-code-review` 0.49.76 with fail-closed validation of
+  `SPECFACT_CODE_REVIEW_CHANGED_DIFF`, so an unrecognized value cannot select
+  an uncorroborated `HEAD` diff and mode drift cannot consume a frozen cached
+  identity or weaken changed-line enforcement; retain compatibility
+  `>=0.55.1,<1.0.0`.
 - Release `specfact-code-review` 0.49.75 with file-level changed anchors for
   empty added staged, cached-tree, and explicitly reviewed untracked files, so
   a line-1 blocker cannot be projected as legacy merely because Git emits no

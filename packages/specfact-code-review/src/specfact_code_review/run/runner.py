@@ -5119,11 +5119,11 @@ def _changed_diff_revision(
 ) -> tuple[str, ...] | None:
     """Select the immutable baseline arguments for changed-line evidence."""
     if cached_diff is not None:
-        return (cached_diff.base_tree, cached_diff.index_tree)
+        return (cached_diff.base_tree, cached_diff.index_tree) if diff_mode == "cached" else None
     if diff_mode == "cached":
         return ("--cached",) if _cached_worktree_matches_index(files) is True else None
     if diff_mode != "worktree":
-        return ("HEAD",)
+        return None
     repository_paths = _cached_repository_paths(files)
     if repository_paths is None:
         return ("HEAD",)

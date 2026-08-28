@@ -31,7 +31,7 @@ The hardened module SHALL rerun the accepted C14 dogfood corpus and the declared
 
 ### Requirement: Atomic stable release surface
 
-The final module source, workflow assets, delegated CLI identity, manifest, version, core compatibility, registry metadata, structured release-history entry, checksums, signatures, and publication evidence SHALL describe one exact release identity. The signed workflow version/digest and delegated CLI identity SHALL be verified as one bound tuple through the official installation or preflight path.
+The final module source, workflow assets, delegated CLI identity, manifest, version, core compatibility, registry metadata, structured release-history entry, checksums, signatures, and publication evidence SHALL describe one exact release identity. The signed workflow version/digest and delegated CLI identity SHALL be verified as one bound tuple through the official installation or preflight path. Every correction or withdrawal after publication SHALL use a new patch version, while the prior artifact, digest, signature, registry record, and release-history entry remain immutable and retained as historical evidence.
 
 #### Scenario: Signed payload and manifest differ
 
@@ -47,16 +47,23 @@ The final module source, workflow assets, delegated CLI identity, manifest, vers
 - **THEN** publication is blocked
 - **AND** no downstream handoff is emitted for that version.
 
-### Requirement: Exact compatibility proof
+#### Scenario: Post-publication correction reuses a version
 
-The stable release SHALL advertise only core identities proven by a fresh official installation, module discovery/load, contract verification, CLI matrix, and canonical workflow invocation test.
+- **GIVEN** a published identity requires correction, withdrawal, or supersession
+- **WHEN** release tooling prepares replacement bytes or metadata under the same version
+- **THEN** publication is blocked
+- **AND** the correction uses a new patch version without replacing or deleting the prior artifact, digest, signature, registry record, or release-history entry.
 
-#### Scenario: Proposed compatibility range admits untested core versions
+### Requirement: Bounded compatibility proof
 
-- **GIVEN** the release matrix proves only one exact core version
+The stable release SHALL advertise a dependency-backed bounded core range. Its inclusive minimum SHALL be the first immutable released core containing the accepted #682 preflight contracts, proven by official tag, full commit, and full tree; its exclusive maximum SHALL remain aligned with every required module dependency. The release matrix SHALL exercise that exact minimum and selected current in-range core versions across supported Python versions, while versions below the minimum or at or above the upper bound are rejected. A compatible in-range core update SHALL NOT require a module metadata release; changing either bound SHALL require new dependency and matrix evidence.
+
+#### Scenario: Proposed compatibility range exceeds dependency bounds
+
+- **GIVEN** compatibility metadata lowers the proven minimum, removes or widens the dependency-backed upper bound, or otherwise admits a core version rejected by a required module dependency
 - **WHEN** compatibility metadata is prepared
-- **THEN** metadata does not advertise a wider version range
-- **AND** future core identities require their own immutable compatibility evidence.
+- **THEN** publication is blocked
+- **AND** the range is not widened until matching dependency manifests and the supported matrix prove the new bounds.
 
 #### Scenario: Compatibility metadata has no matrix proof
 
@@ -65,12 +72,12 @@ The stable release SHALL advertise only core identities proven by a fresh offici
 - **THEN** it fails before signing or registry publication
 - **AND** a warning-only result cannot authorize the release.
 
-#### Scenario: Exact preflight-capable core identity is weakened
+#### Scenario: Minimum provenance or bounded admission is weakened
 
-- **GIVEN** the release proposes empty compatibility, ordinary equality (`==`), a local alias, wildcard, future range, or an immutable tag/commit/tree that does not identify the selected released core containing #682
+- **GIVEN** the release proposes empty compatibility, exact-only equality, ordinary equality (`==`), wildcard, an unbounded range, a minimum before the first immutable core release containing #682, an upper bound above the required dependency graph, or a tag/commit/tree that does not identify the declared minimum
 - **WHEN** the official publication pre-check runs
 - **THEN** it fails before signing
-- **AND** only strict arbitrary equality (`===`) to that exact preflight-capable release with matching immutable matrix evidence can authorize publication.
+- **AND** only a bounded range with matching immutable-minimum, dependency, and supported-matrix evidence can authorize publication.
 
 ### Requirement: Signed publication handoff
 

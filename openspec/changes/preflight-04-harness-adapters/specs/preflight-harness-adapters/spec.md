@@ -58,9 +58,16 @@ The ECC adapter SHALL install the canonical workflow as a skill and SHALL add a 
 - **THEN** it does not add a redundant command shim
 - **AND** generated instructions reference the native skill invocation.
 
-### Requirement: hatch3r inventory-driven adapter
+### Requirement: hatch3r distribution prerequisite
 
-The hatch3r integration SHALL register the canonical workflow in the supported package inventory/generation model and SHALL generate only adapters supported by the selected hatch3r release.
+The hatch3r integration SHALL ship only through a documented distribution/extension surface supported by the selected hatch3r release or through a separately accepted upstream hatch3r contribution that provides one. In the absence of either path, hatch3r packaging SHALL remain blocked and SHALL NOT write internal inventory data or depend on private package layout.
+
+#### Scenario: Selected hatch3r release has no supported extension surface
+
+- **GIVEN** the selected hatch3r release documents no third-party pack, inventory-registration, or equivalent supported distribution API
+- **WHEN** SpecFact adapter packaging is requested
+- **THEN** hatch3r packaging is blocked pending an accepted upstream prerequisite
+- **AND** no internal inventory or private package content is modified.
 
 #### Scenario: Removed hatch3r adapter is requested
 

@@ -45,7 +45,7 @@ requirements:
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.
-  openspec:preflight-04-harness-adapters:preflight-harness-adapters:hatch3r-inventory-driven-adapter:
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:hatch3r-distribution-prerequisite:
     rationale: "The proposal must make this requirement reviewable before implementation begins."
     stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]
     touchpoints:
@@ -54,9 +54,9 @@ requirements:
         locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
     verification_cases:
       - case_id: PF04-004
-        scenario_id: hatch3r-inventory-driven-adapter
+        scenario_id: hatch3r-distribution-prerequisite
         method: inspection
-        intent: "Inspect the hatch3r inventory driven adapter planning contract before implementation."
+        intent: "Inspect the hatch3r distribution prerequisite planning contract before implementation."
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.
