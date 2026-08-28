@@ -21,6 +21,7 @@ from specfact_code_review.run.runner import (
     _pytest_python_executable,
     _pytest_targets,
     _run_pytest_with_coverage,
+    _untracked_changed_lines,
     run_review,
     run_tdd_gate,
 )
@@ -248,16 +249,25 @@ def test_changed_lines_from_git_reports_unavailable_untracked_discovery(
 
 
 @pytest.mark.parametrize(
-    ("file_name", "diff_mode"),
+    ("file_name", "diff_mode", "config_name", "config_value"),
     [
-        ("ümlaut.py", "worktree"),
-        ("line\nbreak.py", "cached"),
-        ("trailing.py ", "worktree"),
-        ("cached.py  ", "cached"),
+        ("ümlaut.py", "worktree", None, None),
+        ("line\nbreak.py", "cached", None, None),
+        ("trailing.py ", "worktree", None, None),
+        ("cached.py  ", "cached", None, None),
+        ("src/app.py", "worktree", "diff.mnemonicPrefix", "true"),
+        ("src/app.py", "cached", "diff.mnemonicPrefix", "true"),
+        ("b/app.py", "worktree", "diff.noprefix", "true"),
+        ("b/app.py", "cached", "diff.noprefix", "true"),
     ],
 )
 def test_run_review_changed_enforcement_normalizes_git_diff_paths(
-    monkeypatch: MonkeyPatch, tmp_path: Path, file_name: str, diff_mode: str
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+    file_name: str,
+    diff_mode: str,
+    config_name: str | None,
+    config_value: str | None,
 ) -> None:
     runner_api = _c14_runner()
     git_env = runner_api._candidate_git_environment()
@@ -266,7 +276,10 @@ def test_run_review_changed_enforcement_normalizes_git_diff_paths(
     subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    if config_name is not None and config_value is not None:
+        subprocess.run(["git", "config", config_name, config_value], cwd=repository, check=True, env=git_env)
     source = repository / file_name
+    source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text("VALUE = 1\n", encoding="utf-8")
     subprocess.run(["git", "add", "--", file_name], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
@@ -287,6 +300,57 @@ def test_run_review_changed_enforcement_normalizes_git_diff_paths(
 
     assert _changed_lines_from_git([Path(file_name)]) == {file_name: {1}}
     assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+
+
+@pytest.mark.parametrize("diff_mode", ["worktree", "cached"])
+def test_changed_lines_ignore_repository_redirect_environment(
+    monkeypatch: MonkeyPatch, tmp_path: Path, diff_mode: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    intended = tmp_path / "intended"
+    redirect = tmp_path / "redirect"
+    for repository in (intended, redirect):
+        repository.mkdir()
+        source = repository / "app.py"
+        source.write_text("VALUE = 1\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+        subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+        subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+        subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+        subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    (intended / "app.py").write_text("VALUE = 2\n", encoding="utf-8")
+    if diff_mode == "cached":
+        subprocess.run(["git", "add", "app.py"], cwd=intended, check=True, env=git_env)
+
+    monkeypatch.chdir(intended)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", diff_mode)
+    monkeypatch.setenv("GIT_DIR", str(redirect / ".git"))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(redirect / ".git/index"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(redirect))
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "app.py", "line": 1}
+    )
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([Path("app.py")]) == {"app.py": {1}}
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+
+
+def test_untracked_changed_lines_preserves_nonempty_whitespace_path_output(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    source = tmp_path / "   "
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+
+    def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 0, stdout="   \n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    assert _untracked_changed_lines(source) == {1}
 
 
 def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:

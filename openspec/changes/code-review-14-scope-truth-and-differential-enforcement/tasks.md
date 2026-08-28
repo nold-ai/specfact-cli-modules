@@ -296,10 +296,13 @@ Explicitly forbidden:
 - [x] 6.46 Thread resolved local assurance kind through command execution, apply changed-line policy to completed capsule reports, and preserve fail-closed capsule uncertainty.
 - [ ] 6.47 Run focused, strict OpenSpec, format, typing, lint, contract, smart, complete, Code Review, manifest, signature, and publish-precheck gates; sign and verify the exact `specfact-code-review` 0.49.63 candidate and resolve the corresponding PR #446 threads after protected evidence passes.
 - [x] 6.48 Add focused failing regressions for PR #448 proving changed-line discovery failures cannot be interpreted as an empty changed-line set while a successful clean diff retains advisory behavior.
-- [ ] 6.49 Fail closed when Git diff or untracked-file discovery cannot establish changed-line evidence, rerun the scoped gates for candidate `specfact-code-review` 0.49.63, and obtain replacement approval-time signing.
+- [x] 6.49 Fail closed when Git diff or untracked-file discovery cannot establish changed-line evidence, rerun the scoped gates for candidate `specfact-code-review` 0.49.63, and obtain replacement approval-time signing.
 - [x] 6.50 Add real-repository worktree and cached regressions proving Git-quoted UTF-8 and newline-containing paths cannot bypass changed-line enforcement.
-- [ ] 6.51 Decode Git-quoted diff paths to exact filesystem identities, fail closed on malformed path evidence, and repeat the scoped verification and review cycle.
+- [x] 6.51 Decode Git-quoted diff paths to exact filesystem identities, fail closed on malformed path evidence, and repeat the scoped verification and review cycle.
 - [x] 6.52 Add a real-repository regression proving an unquoted tracked filename ending in whitespace cannot bypass changed-line enforcement.
-- [ ] 6.53 Preserve trailing filename whitespace while removing only Git's diff-header delimiter, then repeat the scoped verification, signing, and protected review cycle.
+- [x] 6.53 Preserve trailing filename whitespace while removing only Git's diff-header delimiter, then repeat the scoped verification, signing, and protected review cycle.
+- [x] 6.54 Add failing real-repository regressions proving ambient mnemonic/no-prefix configuration and repository-local Git redirect variables cannot hide changed lines, plus a helper regression proving non-empty whitespace-only untracked path output is not absence.
+- [x] 6.55 Force compatibility-safe canonical diff prefixes, sanitize the environment of every changed-line Git command, and distinguish empty untracked output from non-empty path identity without changing changed-enforcement verdict semantics.
+- [ ] 6.56 Repeat the scoped verification, signing, and protected review cycle for the corrected `specfact-code-review` 0.49.63 candidate, then resolve only the addressed PR #448 threads.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

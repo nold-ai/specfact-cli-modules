@@ -4103,7 +4103,14 @@ def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]] | None:
 def _run_changed_line_git_command(command: list[str]) -> subprocess.CompletedProcess[str] | None:
     """Run one Git evidence command and represent unavailable output explicitly."""
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+        )
     except (OSError, subprocess.SubprocessError, UnicodeError):
         return None
     return result if result.returncode == 0 else None
@@ -4114,7 +4121,7 @@ def _untracked_changed_lines(file_path: Path) -> set[int] | None:
     listed = _run_changed_line_git_command(["git", "ls-files", "--others", "--exclude-standard", "--", str(file_path)])
     if listed is None:
         return None
-    if not listed.stdout.strip():
+    if listed.stdout == "":
         return set()
     try:
         line_count = len(file_path.read_text(encoding="utf-8").splitlines())
@@ -4126,7 +4133,7 @@ def _untracked_changed_lines(file_path: Path) -> set[int] | None:
 def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]] | None:
     """Collect changed line numbers for changed enforcement evidence."""
     diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
-    command = ["git", "diff", "--unified=0", "--no-ext-diff"]
+    command = ["git", "diff", "--unified=0", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/"]
     command.append("--cached" if diff_mode == "cached" else "HEAD")
     if files:
         command.extend(["--", *(str(file_path) for file_path in files)])

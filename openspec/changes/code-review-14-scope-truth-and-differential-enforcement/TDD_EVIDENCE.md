@@ -1501,3 +1501,37 @@ to that exact checksum. Strict filesystem verification against the immutable
 core `0.55.1` public key passed all seven module manifests. The following
 documentation-only commit changes no signed module payload byte and exists to
 run the replacement protected matrix on top of the verified signing commit.
+
+The next final-head review identified ambient Git state that could still make
+changed-line evidence point at the wrong identity while Git returned success.
+The contract and task boundary were amended before production edits. Real
+temporary-repository regressions then produced seven failures and four passing
+controls: mnemonic prefixes yielded `w/src/app.py` or `i/src/app.py`, no-prefix
+configuration collapsed the legitimate path `b/app.py` to `app.py`, poisoned
+`GIT_DIR`/`GIT_INDEX_FILE`/`GIT_WORK_TREE` variables yielded an empty change map
+in both worktree and cached modes, and non-empty whitespace-only `ls-files`
+output was treated as absence. This is the failing-before evidence for task
+6.54. The generic request to preserve every incoming capsule `FAIL` was rejected
+because the signed scenario and existing changed/unchanged/unavailable
+regressions require proven-unchanged blockers to become advisory while changed
+blockers and unavailable evidence remain failing.
+
+The correction forces explicit `a/` and `b/` prefixes with the long-supported
+`--src-prefix`/`--dst-prefix` options instead of introducing the newer
+`--default-prefix` Git runtime floor, runs every changed-line Git command with
+the existing repository-local-variable scrubber, and treats only exactly empty
+untracked output as absence. All 11 new/adjacent path controls and the expanded
+24-case changed-enforcement selection pass. The supported runner surface passes
+`296` tests and the supported repository suite passes `1669` tests; both
+deselect only the documented local macOS/CPython 3.14 capsule-lock selector.
+The unfiltered smart-test replacement confirms the same `1669` passes and only
+that known environment-specific selector failure. Strict OpenSpec, formatting,
+typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), seven
+manifests, bundle imports, `28` contract tests, filesystem checksum/version
+verification, and publish precheck pass. Exact-core changed-line Code Review
+returns `PASS_WITH_ADVISORY`, exit `0`, with `75` inherited/tool-environment
+findings, two legacy blockers, and no blocking finding on a changed line.
+Version and compatibility remain unpublished `0.49.63` and
+`>=0.55.1,<1.0.0`; the refreshed unsigned checksum is
+`sha256:63cb5a7def001b824bae28b08832a7457cf95f4359b301230dd86a0e29a9de76`.
+Replacement approval-time signing and protected checks remain required.
