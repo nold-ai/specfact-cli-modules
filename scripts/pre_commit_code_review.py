@@ -50,6 +50,17 @@ apply_specfact_workspace_env = _dev_bootstrap.apply_specfact_workspace_env
 REVIEW_JSON_OUT = ".specfact/code-review.json"
 VALID_ENFORCEMENT_MODES = frozenset({"full", "changed", "shadow"})
 DEFAULT_ENFORCEMENT_MODE = "changed"
+_GIT_REPOSITORY_REDIRECT_ENV_VARS = frozenset(
+    {
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_DIR",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_PREFIX",
+        "GIT_WORK_TREE",
+    }
+)
 # Staged positional-file review retains the legacy explicit_files assurance kind.
 
 
@@ -272,28 +283,37 @@ def _repo_relative_report_path(repo_root: Path, raw_path: object) -> str | None:
     return path.as_posix()
 
 
-def _parse_added_lines_from_cached_diff(diff_text: str) -> dict[str, set[int]]:
+def _parse_added_lines_from_cached_diff(diff_text: str) -> dict[str, set[int]] | None:
     """Return staged new-line numbers by repo-relative file from a zero-context diff."""
     changed_lines: dict[str, set[int]] = {}
     current_file: str | None = None
-    previous_was_source_header = False
+    awaiting_destination_header = False
+    destination_header_seen = False
     for line in diff_text.splitlines():
-        if line.startswith("--- "):
-            previous_was_source_header = True
+        if line.startswith("diff --git "):
+            current_file = None
+            awaiting_destination_header = True
+            destination_header_seen = False
             continue
-        if previous_was_source_header and line.startswith("+++ "):
-            previous_was_source_header = False
-            destination = line[4:].strip()
+        if awaiting_destination_header and line.startswith("+++ "):
+            destination = line[4:].removesuffix("\t")
+            if destination.startswith('"'):
+                return None
             current_file = None if destination == "/dev/null" else destination.removeprefix("b/")
+            awaiting_destination_header = False
+            destination_header_seen = True
             if current_file is not None:
                 changed_lines.setdefault(current_file, set())
             continue
-        previous_was_source_header = False
-        if current_file is None or not line.startswith("@@ "):
+        if not line.startswith("@@ "):
+            continue
+        if not destination_header_seen:
+            return None
+        if current_file is None:
             continue
         match = re.search(r"\+(\d+)(?:,(\d+))?", line)
         if match is None:
-            continue
+            return None
         start = int(match.group(1))
         count = int(match.group(2) or "1")
         if count > 0:
@@ -301,17 +321,29 @@ def _parse_added_lines_from_cached_diff(diff_text: str) -> dict[str, set[int]]:
     return changed_lines
 
 
-def _staged_changed_lines(repo_root: Path) -> dict[str, set[int]]:
+def _staged_changed_lines(repo_root: Path) -> dict[str, set[int]] | None:
     """Collect staged new-line numbers so legacy file findings do not block unrelated commits."""
     completed = subprocess.run(
-        ["git", "diff", "--cached", "--unified=0", "--no-ext-diff"],
+        [
+            "git",
+            "diff",
+            "--cached",
+            "--unified=0",
+            "--no-ext-diff",
+            "--no-color",
+            "--text",
+            "--no-textconv",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
+        ],
         cwd=repo_root,
         check=False,
         capture_output=True,
         text=True,
+        env={key: value for key, value in os.environ.items() if key not in _GIT_REPOSITORY_REDIRECT_ENV_VARS},
     )
     if completed.returncode != 0:
-        return {}
+        return None
     return _parse_added_lines_from_cached_diff(completed.stdout)
 
 
@@ -386,14 +418,16 @@ def _authoritative_report_exit_code(report: dict[str, Any], *, enforcement: str)
     return 1
 
 
-def _changed_line_blockers(repo_root: Path, findings_raw: list[object]) -> list[object]:
-    """Return blocking findings that point at staged changed lines."""
+def _changed_line_blockers(repo_root: Path, findings_raw: list[object]) -> tuple[list[object], bool]:
+    """Return staged-line blockers and whether cached-diff evidence is available."""
     changed_lines = _staged_changed_lines(repo_root)
-    return [
-        item
-        for item in findings_raw
-        if _finding_is_blocking(item) and _finding_targets_staged_line(repo_root, item, changed_lines)
-    ]
+    blocking_findings = [item for item in findings_raw if _finding_is_blocking(item)]
+    if changed_lines is None:
+        return blocking_findings, False
+    return (
+        [item for item in blocking_findings if _finding_targets_staged_line(repo_root, item, changed_lines)],
+        True,
+    )
 
 
 def _enforced_exit_code(
@@ -404,7 +438,9 @@ def _enforced_exit_code(
         return raw_ci_exit_code, []
     if enforcement == "shadow":
         return 0, []
-    blockers = _changed_line_blockers(repo_root, findings_raw)
+    blockers, changed_line_evidence_available = _changed_line_blockers(repo_root, findings_raw)
+    if not changed_line_evidence_available:
+        return (1 if blockers or raw_ci_exit_code else 0), blockers
     return (1 if blockers else 0), blockers
 
 

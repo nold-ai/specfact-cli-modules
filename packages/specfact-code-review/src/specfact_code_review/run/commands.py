@@ -32,6 +32,7 @@ from specfact_code_review.run.cleanup_evidence import (
 )
 from specfact_code_review.run.findings import EvidenceRef, RequirementsEvidenceContext, ReviewFinding, ReviewReport
 from specfact_code_review.run.runner import (
+    LocalAssuranceKind,
     ReviewFocus,
     ReviewOptions,
     run_capsule_review as run_review,
@@ -108,6 +109,7 @@ class _ReviewLoopFlags:
     review_mode: ReviewRunMode
     review_level: ReviewLevelFilter | None
     review_focus: ReviewFocus | None
+    assurance_kind: LocalAssuranceKind = "explicit_files"
 
 
 def _changed_files_from_git_diff(*, include_tests: bool) -> list[Path]:
@@ -515,6 +517,7 @@ def _run_review_with_progress(
             review_mode=flags.review_mode,
             review_level=flags.review_level,
             review_focus=flags.review_focus,
+            assurance_kind=flags.assurance_kind,
         ),
     )
 
@@ -535,6 +538,7 @@ def _run_review_with_status(
             review_mode=flags.review_mode,
             review_level=flags.review_level,
             review_focus=flags.review_focus,
+            assurance_kind=flags.assurance_kind,
         )
         report = _run_review_once(files, base)
         applied_simplification_findings: list[ReviewFinding] = []
@@ -566,6 +570,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
         review_mode=flags.review_mode,
         review_level=flags.review_level,
         focus=flags.review_focus,
+        assurance_kind=flags.assurance_kind,
     )
     applied_simplification_findings: list[ReviewFinding] = []
     if flags.fix:
@@ -593,6 +598,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
             review_mode=flags.review_mode,
             review_level=flags.review_level,
             focus=flags.review_focus,
+            assurance_kind=flags.assurance_kind,
         )
         report = _with_applied_simplification_findings(report, applied_simplification_findings)
     if flags.preview_fixes:
@@ -1210,6 +1216,7 @@ def run_command(
             review_mode=request.review_mode,
             review_level=request.review_level,
             review_focus=request.review_focus,
+            assurance_kind=("explicit_files" if request.files else "full" if request.scope == "full" else "worktree"),
         ),
     )
     if requirements_evidence is not None:

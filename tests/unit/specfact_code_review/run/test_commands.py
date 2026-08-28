@@ -707,8 +707,13 @@ def test_run_command_score_only_prints_reward_delta(monkeypatch: Any) -> None:
     assert result.output == "92\n"
 
 
-def test_run_command_uses_git_diff_when_files_are_omitted(monkeypatch: Any, tmp_path: Path) -> None:
-    recorded: dict[str, list[Path]] = {}
+@pytest.mark.parametrize("scope_args", [(), ("--scope", "worktree")], ids=["default", "worktree"])
+def test_run_command_uses_git_diff_when_files_are_omitted(
+    monkeypatch: Any,
+    tmp_path: Path,
+    scope_args: tuple[str, ...],
+) -> None:
+    recorded: dict[str, object] = {}
     out = tmp_path / "review-report.json"
 
     monkeypatch.setattr(
@@ -718,14 +723,18 @@ def test_run_command_uses_git_diff_when_files_are_omitted(monkeypatch: Any, tmp_
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
+        recorded["assurance_kind"] = _kwargs.get("assurance_kind")
         return _report()
 
     monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
 
-    result = runner.invoke(app, ["review", "run", "--json", "--out", str(out)])
+    result = runner.invoke(app, ["review", "run", *scope_args, "--json", "--out", str(out)])
 
     assert result.exit_code == 0
-    assert recorded["files"] == [Path("tests/fixtures/review/clean_module.py")]
+    assert recorded == {
+        "files": [Path("tests/fixtures/review/clean_module.py")],
+        "assurance_kind": "worktree",
+    }
     assert out.exists()
 
 
@@ -737,7 +746,7 @@ def test_run_command_supports_full_scope_and_path_filters(monkeypatch: Any, tmp_
     _write_repo_file(tmp_path, "packages/specfact-backlog/src/specfact_backlog/commands.py")
     monkeypatch.chdir(tmp_path)
 
-    recorded: dict[str, list[Path]] = {}
+    recorded: dict[str, object] = {}
     monkeypatch.setattr(
         "specfact_code_review.run.commands._all_python_files_from_git",
         lambda: [package_file, Path("packages/specfact-backlog/src/specfact_backlog/commands.py")],
@@ -746,6 +755,7 @@ def test_run_command_supports_full_scope_and_path_filters(monkeypatch: Any, tmp_
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
+        recorded["assurance_kind"] = _kwargs.get("assurance_kind")
         return _report()
 
     monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
@@ -766,7 +776,27 @@ def test_run_command_supports_full_scope_and_path_filters(monkeypatch: Any, tmp_
     )
 
     assert result.exit_code == 0
-    assert recorded["files"] == [package_file]
+    assert recorded == {"files": [package_file], "assurance_kind": "full"}
+
+
+def test_run_command_labels_positional_files_as_explicit_assurance(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    recorded: dict[str, object] = {}
+
+    def fake_run_review(files: list[Path], **kwargs: Any) -> ReviewReport:
+        recorded.update(files=files, assurance_kind=kwargs.get("assurance_kind"))
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(app, ["review", "run", "--json", str(package_file)])
+
+    assert result.exit_code == 0
+    assert recorded == {"files": [package_file], "assurance_kind": "explicit_files"}
 
 
 def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeypatch: Any, tmp_path: Path) -> None:
@@ -782,7 +812,7 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
     _write_repo_file(tmp_path, "packages/specfact-backlog/src/specfact_backlog/commands.py")
     monkeypatch.chdir(tmp_path)
 
-    recorded: dict[str, list[Path]] = {}
+    recorded: dict[str, object] = {}
     monkeypatch.setattr(
         "specfact_code_review.run.commands._changed_files_from_git_diff",
         lambda *, include_tests: [
@@ -794,6 +824,7 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
+        recorded["assurance_kind"] = _kwargs.get("assurance_kind")
         return _report()
 
     monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
@@ -816,7 +847,7 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
     )
 
     assert result.exit_code == 0
-    assert recorded["files"] == [package_file, test_file]
+    assert recorded == {"files": [package_file, test_file], "assurance_kind": "worktree"}
 
 
 def test_run_command_passes_simplify_focus_after_scope_resolution(monkeypatch: Any, tmp_path: Path) -> None:

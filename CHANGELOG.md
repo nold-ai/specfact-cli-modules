@@ -17,6 +17,43 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Release `specfact-code-review` 0.49.75 with file-level changed anchors for
+  empty added staged, cached-tree, and explicitly reviewed untracked files, so
+  a line-1 blocker cannot be projected as legacy merely because Git emits no
+  text hunk; retain compatibility `>=0.55.1,<1.0.0`.
+- Release `specfact-code-review` 0.49.74 with complete analyzer-visible
+  worktree identity checks around ordinary changed analysis and every-hop
+  cached-tree symlink containment, preventing ignored configuration/import
+  support, arbitrary ignored runtime fixtures, symlinked parents, partially
+  bound directory-link descendants, or escaping indexed links from changing
+  analyzer evidence outside the bound snapshot while retaining stable gitlink
+  support;
+  retain compatibility `>=0.55.1,<1.0.0`.
+- Release `specfact-code-review` 0.49.66 with pre/post raw selected-path and
+  immutable `HEAD` tree binding for ordinary worktree analysis, so concurrent
+  edits or base advancement cannot project stale blocking findings to PASS;
+  retain compatibility `>=0.55.1,<1.0.0`.
+- Release `specfact-code-review` 0.49.65 with raw HEAD/worktree corroboration
+  that prevents clean filters and index hints from hiding analyzer-visible
+  changes, cached enforcement before the first commit through a verified empty
+  base tree, and caller-relative cached capsule findings for nested invocations;
+  retain the 0.49.64 verdict-preserving ordinary
+  changed enforcement when Git line evidence is unavailable, while cached
+  immutable-tree enforcement remains required `UNKNOWN`; retain fail-closed
+  changed-line evidence discovery plus state-aware, raw, color-free,
+  literal-path Git parsing, so
+  failed or configuration-altered inspection and hunk content cannot be
+  mistaken for a clean diff; normalize repository-root diff paths for nested
+  invocations, materialize cached enforcement from one immutable stage-zero
+  index tree plus its stable base tree and derive changed lines only from those
+  immutable identities so Git filters, index flags, replacement refs, runtime
+  worktree mutation, and development-host analyzer mutation cannot change or
+  silently detach analyzer input, validate
+  local assurance provenance at the runtime boundary, and count explicitly
+  reviewed ignored/untracked files as changed.
+- Release `specfact-code-review` 0.49.62 with truthful local capsule scope
+  evidence and changed-line enforcement that remains fail-closed for incomplete
+  required analyzer evidence.
 - Release `specfact-code-review` 0.49.61 with dependency-bounded SpecFact CLI
   compatibility `>=0.55.1,<1.0.0`, so compatible core updates within the
   required module graph do not require another metadata release; retain
