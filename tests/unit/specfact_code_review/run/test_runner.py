@@ -428,6 +428,7 @@ def test_changed_lines_from_frozen_cached_tree_count_empty_added_file_after_live
 
     for variable in set(os.environ).difference(git_env):
         monkeypatch.delenv(variable)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
     monkeypatch.chdir(repository)
     snapshot_root = tmp_path / "snapshot"
     snapshot_root.mkdir()

@@ -1,0 +1,77 @@
+schema_version: "2"
+requirements:
+  openspec:docs-14-module-release-history:module-release-history-registry:official-module-publishes-shall-persist-structured-release-history-entries:
+    rationale: "The proposal must make the immutable publish-history contract reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#124"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/docs-14-module-release-history/specs/module-release-history-registry/spec.md"
+    verification_cases:
+      - case_id: DOCS14-001
+        scenario_id: official-module-publishes-shall-persist-structured-release-history-entries
+        method: inspection
+        intent: "Inspect the immutable structured release-history planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the publish and correction
+          scenarios without claiming implementation or test execution.
+  openspec:docs-14-module-release-history:module-release-history-registry:ai-assisted-module-release-notes-shall-stay-user-focused:
+    rationale: "The proposal must make the release-note quality contract reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#124"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/docs-14-module-release-history/specs/module-release-history-registry/spec.md"
+    verification_cases:
+      - case_id: DOCS14-002
+        scenario_id: ai-assisted-module-release-notes-shall-stay-user-focused
+        method: inspection
+        intent: "Inspect the user-focused release-note planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the user-facing summary and lean
+          registry-index scenarios without claiming implementation or test execution.
+  openspec:docs-14-module-release-history:module-release-history-registry:existing-published-module-versions-shall-be-backfilled-through-a-reviewable-extraction-flow:
+    rationale: "The proposal must make the historical backfill review contract reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#124"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/docs-14-module-release-history/specs/module-release-history-registry/spec.md"
+    verification_cases:
+      - case_id: DOCS14-003
+        scenario_id: existing-published-module-versions-shall-be-backfilled-through-a-reviewable-extraction-flow
+        method: inspection
+        intent: "Inspect the reviewable historical backfill planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the candidate-entry review flow
+          without claiming implementation or test execution.
+  openspec:docs-14-module-release-history:module-release-history-docs:modules-docs-overview-shall-show-recent-published-module-releases:
+    rationale: "The proposal must make the release-history docs rendering contract reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#124"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/docs-14-module-release-history/specs/module-release-history-docs/spec.md"
+    verification_cases:
+      - case_id: DOCS14-004
+        scenario_id: modules-docs-overview-shall-show-recent-published-module-releases
+        method: inspection
+        intent: "Inspect the build-time release-history rendering contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the recent-release and sparse-history
+          scenarios without claiming implementation or test execution.
+  openspec:docs-14-module-release-history:module-release-history-docs:openspec-project-rules-shall-describe-release-history-update-expectations:
+    rationale: "The proposal must make future release-history update guidance reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#124"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/docs-14-module-release-history/specs/module-release-history-docs/spec.md"
+    verification_cases:
+      - case_id: DOCS14-005
+        scenario_id: openspec-project-rules-shall-describe-release-history-update-expectations
+        method: inspection
+        intent: "Inspect the future release-history rule-guidance contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the release-oriented change and
+          AI-note guidance scenarios without claiming implementation or test execution.

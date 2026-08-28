@@ -5,7 +5,7 @@
 
 ## 2. Release History Data Model
 
-- [ ] 2.1 Define a canonical structured schema for per-module release history with fields for module id, version, published date, shipped features, shipped improvements, and optional links/notes
+- [ ] 2.1 Define a canonical structured schema for immutable per-module/version release-history records with fields for module id, version, published date, shipped features, shipped improvements, and optional links/notes; require corrections, withdrawals, or supersessions to create a new patch-version record while retaining the prior record unchanged
 - [ ] 2.2 Decide repository ownership for the canonical history source and any docs-consumable projection derived from it
 - [ ] 2.3 Document why `CHANGELOG.md` remains a repo-level narrative changelog rather than the canonical module release-history source
 

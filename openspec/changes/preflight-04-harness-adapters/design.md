@@ -41,7 +41,7 @@ The ECC companion maps the canonical workflow to its skill layout. A `commands/`
 
 ### 4. hatch3r distribution is an explicit upstream prerequisite
 
-hatch3r 1.9.0 exposes no documented third-party pack or inventory-registration API. The SpecFact adapter therefore ships only after a selected hatch3r release documents a supported distribution/extension surface or a separately authorized upstream contribution adds and accepts one. Until then, hatch3r remains a blocked target: implementation must not write internal inventory data, depend on private package layout, reintroduce removed adapters, or materialize `.agents/` content contrary to the supported release.
+hatch3r 1.9.0 exposes no documented third-party pack or inventory-registration API. The SpecFact adapter therefore ships only after the selected hatch3r release contains and documents a supported distribution/extension surface. A separately authorized upstream contribution qualifies only after it is merged, included in that release, and documented there. Until then, hatch3r remains a blocked target: implementation must not write internal inventory data, depend on private package layout, reintroduce removed adapters, or materialize `.agents/` content contrary to the supported release.
 
 ### 5. Contract tests compare semantics, not file sameness
 
@@ -66,4 +66,4 @@ Installations are opt-in. Upgrade replaces only adapter-owned assets after drift
 
 - Exact Codex marketplace/distribution channel available when the adapter work begins.
 - Whether ECC needs a command shim for every supported target or only Claude Code compatibility.
-- Whether a selected hatch3r release has gained a documented extension surface or an upstream contribution has been accepted; absence of either outcome blocks hatch3r packaging.
+- Whether a selected hatch3r release contains and documents a supported extension surface, including any merged upstream contribution; absence of that released and documented surface blocks hatch3r packaging.

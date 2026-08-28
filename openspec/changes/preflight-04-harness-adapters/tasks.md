@@ -6,7 +6,7 @@ All tasks below are future implementation and external integration work. This pl
 
 - [ ] 1.1 In a dedicated issue-linked session, create `feature/preflight-04-harness-adapters` from current `origin/dev` in a new modules worktree before any implementation edit.
 - [ ] 1.2 Refresh hierarchy metadata and verify this issue is `Todo`, correctly parented/labeled/assigned, blocked by core #253, and not concurrently `In Progress`.
-- [ ] 1.3 Verify the exact signed preflight module identity, completed #251/#253 contracts, and current Codex/ECC/hatch3r contribution and packaging rules. For hatch3r, require a documented supported distribution/extension surface or a separately accepted upstream change; stop hatch3r work if neither exists.
+- [ ] 1.3 Verify the exact signed preflight module identity, completed #251/#253 contracts, and current Codex/ECC/hatch3r contribution and packaging rules. For hatch3r, require the selected release to contain and document a supported distribution/extension surface; an upstream contribution qualifies only after it is merged, included in that release, and documented there. Stop hatch3r work otherwise.
 
 ## 2. Adapter specs and failing-first tests
 
@@ -18,7 +18,7 @@ All tasks below are future implementation and external integration work. This pl
 
 - [ ] 3.1 Implement the Codex plugin shell using the canonical workflow identity and installed CLI.
 - [ ] 3.2 Implement the ECC skills-first companion and only the command shims required by the supported matrix.
-- [ ] 3.3 Implement hatch3r packaging only through the documented supported surface or accepted upstream prerequisite verified in 1.3; never write internal inventory data or depend on private package layout.
+- [ ] 3.3 Implement hatch3r packaging only through the released and documented supported surface verified in 1.3; an accepted or merged upstream prerequisite alone is insufficient until the selected release contains and documents it. Never write internal inventory data or depend on private package layout.
 - [ ] 3.4 Keep all validators, approval decisions, and readiness aggregation in the released SpecFact runtime.
 
 ## 4. Verification and upstream coordination

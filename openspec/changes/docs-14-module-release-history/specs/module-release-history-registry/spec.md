@@ -4,7 +4,7 @@
 
 ### Requirement: Official module publishes SHALL persist structured release-history entries
 
-The modules repository SHALL maintain a canonical structured release-history source for official modules, and each newly published module version SHALL add a corresponding release-history entry as part of the publish workflow.
+The modules repository SHALL maintain a canonical structured release-history source for official modules, and each newly published module version SHALL add a corresponding release-history entry as part of the publish workflow. Each accepted published module/version entry SHALL be immutable. Corrections, withdrawals, or supersessions SHALL use a new patch-version entry while retaining the prior entry unchanged.
 
 #### Scenario: Publish writes release-history entry
 
@@ -12,6 +12,13 @@ The modules repository SHALL maintain a canonical structured release-history sou
 - **WHEN** the workflow updates registry metadata for that published version
 - **THEN** it also records a structured release-history entry for that module id and version
 - **AND** the entry includes user-facing shipped features and/or improvements for that release
+
+#### Scenario: Published release-history entry needs correction
+
+- **GIVEN** an accepted release-history entry exists for a published module version
+- **WHEN** that release requires correction, withdrawal, or supersession
+- **THEN** the original entry remains unchanged and retained
+- **AND** the corrected identity is recorded under a new patch version
 
 ### Requirement: AI-assisted module release notes SHALL stay user-focused
 

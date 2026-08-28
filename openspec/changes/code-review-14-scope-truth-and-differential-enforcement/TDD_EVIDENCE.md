@@ -2600,6 +2600,51 @@ core `0.55.1` bundled public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed module payload byte and triggers the
 replacement protected and final-head review cycle.
 
+## PR #450 final review and matrix remediation
+
+CodeRabbit's review of signed head
+`ad2eb26641ca7c4d593db1bdabfee7afc7a92022` and the GitHub Actions matrix
+identified one failing frozen cached-tree regression on Python 3.11, 3.12, and
+3.13. Each matrix run reported `1 failed, 1776 passed, 2 skipped`: the test
+constructed a cached snapshot but left `SPECFACT_CODE_REVIEW_CHANGED_DIFF` at
+its default `worktree` mode, so the new fail-closed mode binding correctly
+returned unavailable changed-line evidence. The exact focused test reproduced
+the failure locally (`None` instead of `{"new.py": {1}}`). Declaring the
+fixture's intended `cached` mode made that same test pass without relaxing the
+runtime contract.
+
+Independent review also validated two planning-contract gaps. The canonical
+release-history proposal still allowed corrective edits to a published entry,
+contradicting the immutable publication identity required by preflight-03; the
+docs-14 design, normative requirement, scenario, and task now require a new
+patch-version record while retaining the prior record unchanged. The hatch3r
+proposal treated an accepted upstream contribution as sufficient for
+packaging; proposal, design, requirement, scenarios, and tasks now require the
+selected hatch3r release itself to contain and document the surface, including
+any merged upstream contribution.
+
+The remaining review claims were rejected against the exact signed head. The
+0.49.76 candidate remains outside published-history enumeration until its
+post-merge publication record exists; the strict canonical Ed25519 verifier
+accepts all seven manifests and the current `specfact-code-review` signature;
+and existing bounded compatibility tests already accept the exact minimum and
+current in-range core while rejecting below-minimum and at-cap identities.
+Strict validation passes for C14, docs-14, preflight-03, and preflight-04.
+The focused corrected regression passes, the complete compatibility/command
+surface passes all `90` tests, contract-first verification passes all `28`
+tests, and bundle import, YAML/registry validation, canonical formatting,
+Ruff, basedpyright (`0 errors, 0 warnings, 0 notes`), Pylint (`10.00/10`),
+strict seven-manifest signature/version verification, `git diff --check`, and
+all `82` strict OpenSpec validations pass. The complete smart-test run passes
+`1778` of `1779`; its sole failure is the previously documented unsupported
+local macOS/CPython 3.14 capsule-lock selector. The protected Linux Python
+3.11-3.13 matrix remains the authority for that environment-specific case.
+The staged evidence gate initially failed because docs-14 had no schema-v2
+planning sidecar. A complete inspection-only mapping for all five source
+requirements now passes without claiming implementation evidence. The complete
+staged Block 2 gate passes requirements evidence, changed-line code review
+(`PASS_WITH_ADVISORY`, zero errors), and all `28` contract-first tests.
+
 The continuing PR #446 review on published head
 `facfbf82d50e2985f5479609fa0be1403cb14042` added two more CodeRabbit
 threads. Independent validation rejected the request to erase post-0.49.61 C14
