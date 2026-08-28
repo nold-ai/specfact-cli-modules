@@ -4079,16 +4079,29 @@ def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]] | None:
     """Return added new-file line numbers from a zero-context git diff."""
     changed_lines: dict[str, set[int]] = {}
     current_file: str | None = None
+    awaiting_destination_header = False
+    destination_header_seen = False
     for line in diff_text.splitlines():
-        if line.startswith("+++ "):
+        if line.startswith("diff --git "):
+            current_file = None
+            awaiting_destination_header = True
+            destination_header_seen = False
+            continue
+        if awaiting_destination_header and line.startswith("+++ "):
             destination = _decode_git_diff_path(line[4:])
             if destination is None:
                 return None
             current_file = None if destination == "/dev/null" else destination.removeprefix("b/")
+            awaiting_destination_header = False
+            destination_header_seen = True
             if current_file is not None:
                 changed_lines.setdefault(current_file, set())
             continue
-        if current_file is None or not line.startswith("@@ "):
+        if not line.startswith("@@ "):
+            continue
+        if not destination_header_seen:
+            return None
+        if current_file is None:
             continue
         match = re.search(r"\+(\d+)(?:,(\d+))?", line)
         if match is None:

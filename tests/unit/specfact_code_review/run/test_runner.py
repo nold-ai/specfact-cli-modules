@@ -315,6 +315,42 @@ def test_run_review_changed_enforcement_normalizes_git_diff_paths(
 
 
 @pytest.mark.parametrize("diff_mode", ["worktree", "cached"])
+def test_changed_lines_do_not_parse_added_content_as_destination_header(
+    monkeypatch: MonkeyPatch, tmp_path: Path, diff_mode: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    source = repository / "app.py"
+    baseline = [f"VALUE_{line} = {line}" for line in range(1, 11)]
+    source.write_text("\n".join(baseline) + "\n", encoding="utf-8")
+    subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    changed = [*baseline]
+    changed[0] = "++ masquerade.py"
+    changed[9] = "VALUE_10 = 11"
+    source.write_text("\n".join(changed) + "\n", encoding="utf-8")
+    if diff_mode == "cached":
+        subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", diff_mode)
+    finding = _finding(tool="ruff", rule="E501", severity="error").model_copy(update={"file": "app.py", "line": 10})
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([Path("app.py")]) == {"app.py": {1, 10}}
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+
+
+@pytest.mark.parametrize("diff_mode", ["worktree", "cached"])
 def test_changed_lines_ignore_repository_redirect_environment(
     monkeypatch: MonkeyPatch, tmp_path: Path, diff_mode: str
 ) -> None:

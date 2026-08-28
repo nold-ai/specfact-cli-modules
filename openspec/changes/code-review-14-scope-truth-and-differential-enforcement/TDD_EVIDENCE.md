@@ -1660,3 +1660,45 @@ filesystem checksum
 A signed human commit, trusted approval-time signature, fresh protected matrix,
 and final-head review/thread disposition remain required before task 6.63 or
 6.64 completes.
+
+Trusted signing run `33177626568` accepted signed human commit
+`73cea7fbe37039545d115e57de4f99f5d71140ab` and produced signing commit
+`3b8e33ad37d0d8bd7286a88d06229bbceb5588e6` for checksum
+`sha256:58a31dfe44db4cf4de3727cb6c4d1427460c34e42675ef828993f4c1fd90fc83`
+with signature
+`zoOzqm7CrMXr/VZ8S7Tuw7nTg9DGRtVxGPoeVwSJmkhgRk7YR5cHN77HF3ghrIP/fTdKEHyCu1UZf1bTdpmdCA==`.
+Fresh review then found that added hunk content beginning with `++ ` was emitted
+as `+++ ` and accepted as a new destination header, causing later hunks to be
+recorded under a forged path. Real Git worktree and cached regressions failed
+`2 failed` with line 10 assigned to `masquerade.py` instead of `app.py`. An
+independent pass confirmed the same state error in the legacy staged helper
+when paired deleted/added content forged `---` and `+++` headers; that exact
+regression and an unavailable cached-diff control both failed (`2 failed`), the
+latter proving a Git error became an empty staged change set and exit `0`.
+The final independent bypass pass then reproduced a successful wrong-repository
+query: inherited `GIT_DIR`, `GIT_INDEX_FILE`, and `GIT_WORK_TREE` redirected the
+cached diff to a clean repository and again produced exit `0`; its two-real-
+repository regression failed before environment sanitization.
+
+Both parsers now open one destination-header slot at each exact `diff --git`
+file boundary and never change file identity from hunk content. The staged Git
+query additionally forces canonical prefixes, raw text, no text conversion,
+and no color, and scrubs repository/index redirect variables; unavailable or
+quoted-path evidence returns the complete legacy blocking set instead of
+passing. The exact combined regression selection passes `6 passed`, staged-hook
+parity passes `11 passed`, and the supported affected
+runner/findings/ledger surface passes `835 passed` with only the documented
+local capsule-lock selector deselected. The complete exact-core `0.55.1` suite
+passes `1686` of `1687`; its sole failure is the same unsupported local
+macOS/CPython 3.14 capsule-lock environment, with only the two existing
+third-party Lark warnings. Format, Ruff, BasedPyright (`0 errors, 0 warnings, 0
+notes`), Pylint (`10.00/10`), strict OpenSpec, seven manifests plus registry,
+bundle imports, three CLI-contract files, `28` contract-first tests, filesystem
+checksum/version enforcement, publish precheck, and `git diff --check` pass.
+Exact-core changed-line Code Review returns `PASS_WITH_ADVISORY`, exit `0`, with
+`84` retained findings, one pre-existing blocker outside changed lines, and no
+changed-line blocker. Candidate version remains unpublished `0.49.63`,
+compatibility remains `>=0.55.1,<1.0.0`, and the refreshed unsigned checksum is
+`sha256:76ce1ecfdd6cd63e400966b6e596239bc72833f557b7290ec134632f8b3aa0d0`.
+Signed commit, trusted replacement signature, protected checks, and final-head
+review/thread disposition remain required by tasks 6.67-6.68.

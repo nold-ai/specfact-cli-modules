@@ -18,8 +18,9 @@ and this project follows SemVer for bundle versions.
 ### Fixed
 
 - Release `specfact-code-review` 0.49.63 with fail-closed changed-line evidence
-  discovery and raw, color-free, literal-path Git queries, so failed or
-  configuration-altered Git inspection cannot be mistaken for a clean diff.
+  discovery plus state-aware, raw, color-free, literal-path Git parsing, so
+  failed or configuration-altered inspection and hunk content cannot be
+  mistaken for a clean diff.
 - Release `specfact-code-review` 0.49.62 with truthful local capsule scope
   evidence and changed-line enforcement that remains fail-closed for incomplete
   required analyzer evidence.

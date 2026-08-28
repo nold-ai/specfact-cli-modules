@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import importlib.util
 import itertools
+import subprocess
 from pathlib import Path
 
 import yaml
+from pytest import MonkeyPatch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -194,6 +196,89 @@ index 1111111..2222222 100644
     changed_lines = review_gate._parse_added_lines_from_cached_diff(diff_text)
 
     assert changed_lines == {"pkg/example.py": {10, 11}}
+
+
+def test_code_review_gate_does_not_treat_paired_hunk_content_as_file_headers() -> None:
+    review_gate = _load_pre_commit_code_review_module()
+    diff_text = """\
+diff --git a/pkg/example.py b/pkg/example.py
+index 1111111..2222222 100644
+--- a/pkg/example.py
++++ b/pkg/example.py
+@@ -2 +2 @@
+--- forged source header
++++ forged.py
+@@ -10 +10 @@
+-old()
++new()
+"""
+
+    changed_lines = review_gate._parse_added_lines_from_cached_diff(diff_text)
+
+    assert changed_lines == {"pkg/example.py": {2, 10}}
+
+
+def test_code_review_gate_fails_closed_when_cached_diff_is_unavailable(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    review_gate = _load_pre_commit_code_review_module()
+    captured: list[str] = []
+
+    def _failed_diff(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        captured.extend(command)
+        return subprocess.CompletedProcess(command, 128, stdout="", stderr="diff failed")
+
+    monkeypatch.setattr(review_gate.subprocess, "run", _failed_diff)
+    finding = {"severity": "error", "file": "pkg/example.py", "line": 10}
+
+    exit_code, blockers = review_gate._enforced_exit_code(
+        tmp_path, [finding], enforcement="changed", raw_ci_exit_code=1
+    )
+
+    assert (exit_code, blockers) == (1, [finding])
+    captured.clear()
+    unknown_exit_code, unknown_blockers = review_gate._enforced_exit_code(
+        tmp_path, [], enforcement="changed", raw_ci_exit_code=1
+    )
+    assert (unknown_exit_code, unknown_blockers) == (1, [])
+    assert captured == [
+        "git",
+        "diff",
+        "--cached",
+        "--unified=0",
+        "--no-ext-diff",
+        "--no-color",
+        "--text",
+        "--no-textconv",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+    ]
+
+
+def test_code_review_gate_ignores_cached_diff_repository_redirects(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    review_gate = _load_pre_commit_code_review_module()
+    intended = tmp_path / "intended"
+    redirect = tmp_path / "redirect"
+    for repository in (intended, redirect):
+        repository.mkdir()
+        (repository / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=repository, check=True)
+        subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True)
+        subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True)
+        subprocess.run(["git", "add", "app.py"], cwd=repository, check=True)
+        subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True)
+    (intended / "app.py").write_text("VALUE = 2\n", encoding="utf-8")
+    subprocess.run(["git", "add", "app.py"], cwd=intended, check=True)
+    monkeypatch.setenv("GIT_DIR", str(redirect / ".git"))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(redirect / ".git/index"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(redirect))
+    finding = {"severity": "error", "file": "app.py", "line": 1}
+
+    exit_code, blockers = review_gate._enforced_exit_code(
+        intended, [finding], enforcement="changed", raw_ci_exit_code=1
+    )
+
+    assert (exit_code, blockers) == (1, [finding])
 
 
 def test_code_review_gate_blocks_only_findings_on_staged_lines() -> None:

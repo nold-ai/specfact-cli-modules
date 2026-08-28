@@ -66,6 +66,9 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **THEN** authoritative schema 1.6 status and exit remain UNKNOWN/non-zero
 - **AND** changed-line blocker fallback is not applied to schema 1.6 or newer
 - **AND** only reports older than 1.6 retain the existing staged-line compatibility calculation
+- **AND** that legacy staged-line calculation accepts file headers only in Git file-metadata state, never from paired `---`/`+++` hunk content
+- **AND** unavailable cached-diff evidence preserves every legacy blocking finding instead of treating the staged change set as empty
+- **AND** cached-diff discovery ignores inherited repository/index redirect variables so evidence always comes from the governed repository and index
 - **AND** the helper remains `explicit_files` and does not claim `pr_range`.
 
 #### Scenario: Exact advertised core runtime loads schema 1.6
@@ -106,6 +109,7 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** changed-line Git commands force canonical `a/` and `b/` diff prefixes independently of ambient mnemonic, no-prefix, or custom-prefix configuration
 - **AND** machine-parsed Git diffs force raw text output and disable color and text-conversion drivers so repository attributes or ambient configuration cannot hide protocol headers
 - **AND** reviewed filenames are passed to diff and untracked-file discovery as literal pathspecs so legal pathspec syntax in a filename cannot change the evidence query
+- **AND** destination headers are accepted only in file-header state, never from added hunk content, so later hunks retain the exact reviewed file identity
 - **AND** changed-line Git commands ignore repository-local redirect variables such as `GIT_DIR`, `GIT_INDEX_FILE`, and `GIT_WORK_TREE`
 - **AND** untracked-file discovery treats only empty Git output as absence and never trims a non-empty path identity to absence
 - **AND** incomplete required capsule evidence remains `UNKNOWN` with a non-zero exit under changed enforcement and is never rewritten to PASS.
