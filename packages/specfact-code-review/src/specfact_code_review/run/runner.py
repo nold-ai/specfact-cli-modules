@@ -100,6 +100,7 @@ _GIT_LOCAL_ENV_VARS = frozenset(
 ReviewFocus = Literal["simplify"]
 ReviewEnforcementMode = Literal["full", "changed", "shadow"]
 LocalAssuranceKind = Literal["worktree", "full", "explicit_files"]
+_LOCAL_ASSURANCE_KINDS = frozenset({"worktree", "full", "explicit_files"})
 
 
 @dataclass(frozen=True)
@@ -4131,9 +4132,7 @@ def _run_changed_line_git_command(command: list[str]) -> subprocess.CompletedPro
 
 def _untracked_changed_lines(file_path: Path) -> set[int] | None:
     """Return every line for an untracked file, no lines when tracked, or unavailable evidence."""
-    listed = _run_changed_line_git_command(
-        ["git", "--literal-pathspecs", "ls-files", "--others", "--exclude-standard", "--", str(file_path)]
-    )
+    listed = _run_changed_line_git_command(["git", "--literal-pathspecs", "ls-files", "--others", "--", str(file_path)])
     if listed is None:
         return None
     if listed.stdout == "":
@@ -5283,6 +5282,8 @@ def run_capsule_review(
 ) -> ReviewReport:
     """Run legacy/local review scopes only through the signed analyzer capsule."""
 
+    if not isinstance(assurance_kind, str) or assurance_kind not in _LOCAL_ASSURANCE_KINDS:
+        raise ValueError(f"unsupported_local_assurance_kind:{assurance_kind!r}")
     review_options = _review_options_from_kwargs(options, overrides)
     runtime, reason = _prepare_capsule_runtime()
     scope_evidence: dict[str, object] = {"assurance_kind": assurance_kind, "capsule_execution": "required"}

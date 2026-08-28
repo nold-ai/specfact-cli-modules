@@ -1712,3 +1712,45 @@ Strict filesystem, cryptographic, and version-baseline verification against the
 public key in immutable core `0.55.1` passes all seven module manifests. This
 documentation-only evidence commit changes no signed payload byte and triggers
 the replacement protected matrix on the verified signing head.
+
+Protected run `33179305438` then passed minimum-core compatibility and full
+quality on Python 3.11, 3.12, and 3.13; current-head Docs Review, Requirements
+Evidence, CodeQL, Socket, CodeRabbit, and both module-signature checks also
+passed. Final review inventory nevertheless exposed two additional valid
+boundary findings. First, `LocalAssuranceKind` was only a static annotation, so
+a direct runtime call could serialize an unsupported value such as `pr_range`.
+The runtime-boundary regression failed by reaching capsule preparation instead
+of raising. Second, the exact literal-path untracked probe still used
+`--exclude-standard`; a real repository with an explicitly selected ignored
+`ignored.py` returned an empty changed-line map and downgraded its blocking
+line-1 finding to `PASS_WITH_ADVISORY` / exit `0`.
+
+`run_capsule_review` now rejects non-string and unsupported local assurance
+kinds before option parsing, runtime preparation, or report construction while
+preserving `worktree`, `full`, and `explicit_files`. Exact untracked probing no
+longer applies ignore filtering because it runs only for already-selected file
+paths; automatic discovery remains unchanged. The focused runtime matrix now
+passes seven invalid assurance values plus the supported full-scope control,
+and the ignored-file real-Git regression now records `ignored.py:1` and returns
+`FAIL` / exit `1`. The combined initial green selection passes `9 passed`; the
+expanded boundary selection passes `8 passed`. A refreshed checksum, trusted
+signature, complete quality gates, protected checks, and final thread
+disposition remain required by tasks 6.73-6.74.
+
+Final local gates for the two boundary corrections pass strict OpenSpec,
+format, Ruff, BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint
+(`10.00/10`), seven manifests plus registry, bundle imports, three CLI contract
+files, `28` contract-first tests, filesystem checksum/version verification with
+the immutable core `0.55.1` public key, publish precheck, and
+`git diff --check`. The complete exact-core `0.55.1` suite passes `1694` of
+`1695`; the sole failure is the same documented unsupported local
+macOS/CPython 3.14 capsule-lock selector, and the only warnings are the two
+existing third-party Lark deprecations. Exact-core changed-line Code Review
+returns `PASS_WITH_ADVISORY`, exit `0`, with `79` retained findings, two
+pre-existing blockers outside changed lines, and no changed-line blocker. The
+canonical changed-only signer preserves unpublished version `0.49.63` and
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and sets
+unsigned filesystem checksum
+`sha256:cbce5f8197758054b7cf54a371cce1fd072d7cb2af02e66a3b0bad637a0e662d`.
+A signed human commit, trusted replacement signature, protected matrix, and
+final review/thread disposition remain required.

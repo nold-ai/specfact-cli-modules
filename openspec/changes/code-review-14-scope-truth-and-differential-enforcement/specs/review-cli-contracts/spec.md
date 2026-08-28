@@ -98,6 +98,7 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **GIVEN** a local capsule review resolves the default or deprecated changed scope, explicit full scope, or positional files
 - **WHEN** the capsule report is serialized
 - **THEN** `scope_evidence.assurance_kind` is respectively `worktree`, `full`, or `explicit_files`
+- **AND** the capsule runtime boundary rejects every other assurance kind before runtime preparation or report construction, so a type-checking annotation alone cannot admit unsupported provenance
 - **AND** the selected enforcement mode remains independent from that scope identity
 - **AND** changed enforcement blocks only blocking findings on changed lines while retaining unchanged-line blockers as advisory evidence
 - **AND** when every blocking finding reported by a failing analyzer member is proven outside changed lines, serialized member evidence retains `pre_enforcement_evidence_outcome=FAIL`, projects authoritative `evidence_outcome=PASS`, and records the unchanged-blocker advisory disposition without removing the findings
@@ -109,6 +110,7 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** changed-line Git commands force canonical `a/` and `b/` diff prefixes independently of ambient mnemonic, no-prefix, or custom-prefix configuration
 - **AND** machine-parsed Git diffs force raw text output and disable color and text-conversion drivers so repository attributes or ambient configuration cannot hide protocol headers
 - **AND** reviewed filenames are passed to diff and untracked-file discovery as literal pathspecs so legal pathspec syntax in a filename cannot change the evidence query
+- **AND** an explicitly reviewed untracked file remains fully changed even when repository ignore rules match it; ignore filtering cannot erase caller-selected line evidence
 - **AND** destination headers are accepted only in file-header state, never from added hunk content, so later hunks retain the exact reviewed file identity
 - **AND** changed-line Git commands ignore repository-local redirect variables such as `GIT_DIR`, `GIT_INDEX_FILE`, and `GIT_WORK_TREE`
 - **AND** untracked-file discovery treats only empty Git output as absence and never trims a non-empty path identity to absence

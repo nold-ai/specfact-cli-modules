@@ -424,6 +424,36 @@ def test_changed_lines_from_git_treats_untracked_pathspec_syntax_literally(
     assert _changed_lines_from_git([Path(file_name)]) == {file_name: {1}}
 
 
+def test_changed_lines_from_git_counts_explicit_ignored_untracked_file(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    (repository / ".gitignore").write_text("ignored.py\n", encoding="utf-8")
+    subprocess.run(["git", "add", ".gitignore"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source = repository / "ignored.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "ignored.py", "line": 1}
+    )
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([Path("ignored.py")], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([Path("ignored.py")]) == {"ignored.py": {1}}
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
+
+
 def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
     calls: list[str] = []
 
@@ -498,6 +528,24 @@ def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
     assert report.schema_version == "1.6"
     assert report.assurance_status == "PASS"
     assert report.scope_evidence == {"assurance_kind": "full", "capsule_execution": "required"}
+
+
+@pytest.mark.parametrize(
+    "assurance_kind", ["pr_range", "range_candidate", "range_preview", "index", "unknown", None, ["worktree"]]
+)
+def test_capsule_review_rejects_unsupported_assurance_kind_before_runtime(
+    monkeypatch: MonkeyPatch, tmp_path: Path, assurance_kind: Any
+) -> None:
+    runner_api = _c14_runner()
+    source = tmp_path / "src/app.py"
+    monkeypatch.setattr(
+        runner_api,
+        "_prepare_capsule_runtime",
+        lambda: pytest.fail("unsupported assurance provenance reached runtime preparation"),
+    )
+
+    with pytest.raises(ValueError, match="unsupported_local_assurance_kind"):
+        runner_api.run_capsule_review([source], assurance_kind=assurance_kind)
 
 
 def test_capsule_review_changed_enforcement_keeps_unchanged_blocker_advisory(
