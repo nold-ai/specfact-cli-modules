@@ -347,5 +347,7 @@ Explicitly forbidden:
 - [ ] 6.97 Reject selected ordinary-worktree symlinks before analyzer execution, then repeat task 6.89 with a replacement signed patch candidate.
 - [x] 6.98 Add failing real-repository regressions for the final PR #448 review proving ordinary worktree changed enforcement analyzes initial untracked Python files against the format-correct empty tree and rejects a first commit created during analysis as identity drift.
 - [ ] 6.99 Use the proven-unborn empty tree consistently for ordinary worktree identity plus raw and Git changed-line evidence, then repeat task 6.89 with a replacement signed patch candidate.
+- [x] 6.100 Add failing regressions for the final PR #448 review proving stable non-repository positional input remains accepted while a selected file changed during capsule analysis cannot retain a stale clean PASS.
+- [ ] 6.101 Bind proven non-repository positional analysis to exact absolute raw selected-path identities at both existing checkpoints without weakening repository base-tree binding, then repeat task 6.89 with a replacement signed patch candidate.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.

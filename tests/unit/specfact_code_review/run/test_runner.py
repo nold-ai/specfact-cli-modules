@@ -835,6 +835,45 @@ def test_capsule_worktree_enforcement_rejects_projection_time_identity_drift(
     }
 
 
+@pytest.mark.parametrize("mutation_kind", ["stable", "selected_bytes"])
+def test_capsule_worktree_enforcement_binds_non_repository_selected_files(
+    monkeypatch: MonkeyPatch, tmp_path: Path, mutation_kind: str
+) -> None:
+    runner_api = _c14_runner()
+    review_root = tmp_path / "standalone"
+    review_root.mkdir()
+    source = review_root / "app.py"
+    source.write_text("SAFE = True\n", encoding="utf-8")
+    monkeypatch.chdir(review_root)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    snapshot_calls: list[str] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+
+    def _run_snapshot(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        snapshot_calls.append("ran")
+        if mutation_kind == "selected_bytes":
+            source.write_text("BLOCKED = True\n", encoding="utf-8")
+        return snapshot
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert snapshot_calls == ["ran"]
+    if mutation_kind == "stable":
+        assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("PASS", "PASS", 0)
+    else:
+        assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+        assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+            "worktree_snapshot_changed_during_analysis"
+        }
+
+
 @pytest.mark.parametrize("target_kind", ["repository", "escaping"])
 def test_capsule_worktree_enforcement_rejects_selected_symlink_before_analysis(
     monkeypatch: MonkeyPatch, tmp_path: Path, target_kind: str

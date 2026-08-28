@@ -4381,6 +4381,16 @@ class WorktreeAnalysisIdentity:
     paths: tuple[WorktreePathIdentity, ...]
 
 
+@dataclass(frozen=True)
+class StandaloneWorktreeAnalysisIdentity:
+    """Raw selected-path evidence for a proven non-repository review."""
+
+    paths: tuple[WorktreePathIdentity, ...]
+
+
+WorktreeReviewIdentity = WorktreeAnalysisIdentity | StandaloneWorktreeAnalysisIdentity
+
+
 def _worktree_path_identity(path: str, absolute: Path) -> WorktreePathIdentity | None:
     """Capture one raw path without accepting a raced type or filesystem identity."""
     try:
@@ -4450,14 +4460,55 @@ def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> 
     return WorktreeAnalysisIdentity(repository=repository, base_tree=base_tree, paths=tuple(paths))
 
 
+def _git_metadata_ancestor_state(directory: Path) -> Literal["absent", "present"] | None:
+    """Prove whether a lexical directory ancestry contains Git metadata."""
+    for candidate in (directory, *directory.parents):
+        try:
+            (candidate / ".git").lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return None
+        return "present"
+    return "absent"
+
+
+def _standalone_worktree_analysis_identity(files: list[Path]) -> StandaloneWorktreeAnalysisIdentity | None:
+    """Bind exact raw paths only after proving Git metadata is absent."""
+    try:
+        working_directory = Path.cwd()
+    except OSError:
+        return None
+    selected: dict[str, Path] = {}
+    directories = {working_directory}
+    for file_path in files:
+        absolute = Path(os.path.abspath(file_path))
+        path = absolute.as_posix()
+        if path in selected:
+            return None
+        selected[path] = absolute
+        directories.add(absolute.parent)
+    if any(_git_metadata_ancestor_state(directory) != "absent" for directory in directories):
+        return None
+    paths: list[WorktreePathIdentity] = []
+    for path, absolute in sorted(selected.items()):
+        identity = _worktree_path_identity(path, absolute)
+        if identity is None:
+            return None
+        paths.append(identity)
+    return StandaloneWorktreeAnalysisIdentity(paths=tuple(paths))
+
+
 def _capture_worktree_analysis_identity(
     files: list[Path],
-) -> WorktreeAnalysisIdentity | Literal["not_repository"] | None:
+) -> WorktreeReviewIdentity | Literal["not_repository"] | None:
     """Capture ordinary worktree evidence or identify a non-repository review."""
     repository_paths = _cached_repository_paths(files)
-    if repository_paths is None:
+    if repository_paths is not None:
+        return _worktree_analysis_identity(*repository_paths)
+    if not files:
         return "not_repository"
-    return _worktree_analysis_identity(*repository_paths)
+    return _standalone_worktree_analysis_identity(files)
 
 
 def _parse_cached_tree_entry(record: str) -> tuple[str, str, str] | None:
@@ -6071,7 +6122,7 @@ def _worktree_snapshot_unknown(
 
 
 def _worktree_analysis_identity_changed(
-    identity: WorktreeAnalysisIdentity | Literal["not_repository"], files: list[Path]
+    identity: WorktreeReviewIdentity | Literal["not_repository"], files: list[Path]
 ) -> bool:
     """Return whether ordinary changed enforcement lost its analyzed identity."""
     return identity != "not_repository" and _capture_worktree_analysis_identity(files) != identity
@@ -6260,7 +6311,7 @@ def run_capsule_review(
             snapshot_files = files
             cached_diff: CachedDiffIdentity | None = None
             cached_snapshot: CachedAnalysisSnapshot | None = None
-            worktree_identity: WorktreeAnalysisIdentity | Literal["not_repository"] = "not_repository"
+            worktree_identity: WorktreeReviewIdentity | Literal["not_repository"] = "not_repository"
             if _cached_review_requested(review_options):
                 temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
                 cached_snapshot = _cached_analysis_snapshot(files, temporary_root)

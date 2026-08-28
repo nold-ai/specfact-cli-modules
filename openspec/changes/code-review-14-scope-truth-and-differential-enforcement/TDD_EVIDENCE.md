@@ -2278,3 +2278,41 @@ and `origin/dev` version verification against the immutable core `0.55.1`
 public key passes all seven module manifests. This evidence-only checkpoint
 changes no signed module payload byte and triggers the protected final-head
 matrix.
+
+The final Codex review of head `64a5dea06d00aeff32dbd17611feb28db8ead41e`
+identified one remaining non-repository positional-file gap in the same
+ordinary worktree identity contract. Independent validation against that
+immutable head confirmed that `_capture_worktree_analysis_identity` returned
+the `not_repository` sentinel, both post-analysis checks skipped comparison,
+and unavailable Git line evidence preserved a stale clean capsule result as
+`PASS` / exit `0` after the selected file changed.
+
+The OpenSpec scenario and tasks were updated before a stable control and
+analysis-time mutation regression. The stable non-Git positional review passed,
+while the mutation case first failed exactly because it returned `PASS` /
+`PASS` / `0` (`1 failed, 1 passed`). Proven non-repository positional reviews
+now bind the exact absolute raw selected-path identities at both existing
+checkpoints. Standalone capture is admitted only when lexical filesystem
+ancestry proves Git metadata absent for both the caller and selected paths;
+repository detection failure, duplicate paths, symlinks, raced filesystem
+identity, or unprovable ancestry remains unavailable rather than discarding an
+available base-tree requirement. The new stable/mutation cases plus all seven
+selected-byte, base-tree, projection, symlink, and unborn controls pass (`9
+passed`).
+
+The complete runner surface passes `357` of `358`; exact-core `0.55.1` smart
+and complete suites each pass `1734` of `1735`. Their sole identical failure
+remains the documented local macOS/CPython 3.14 capsule-lock selector, with two
+existing Lark deprecations. Strict OpenSpec, canonical format, repository
+typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), all `28`
+contract-first tests, three CLI-contract fixtures, seven manifests plus
+registry, bundle imports, filesystem checksum/version verification with the
+immutable core public key, publish precheck, and `git diff --check` pass. The
+changed-line Code Review is `PASS_WITH_ADVISORY`, exit `0`, with no changed-line
+blocker and only the pre-existing `_run_capsule_snapshot` parameter-count error
+plus the documented local test outcome. Candidate module version is `0.49.70`,
+compatibility remains `>=0.55.1,<1.0.0`, and the unsigned filesystem checksum
+is `sha256:1e916ad06d0470548cde4011aff9eb0002ebb31c0c5c20c814cf9dc2497fcdff`.
+Replacement approval-time signing, final-head protected checks, final Codex
+review, and verified PR #448 thread disposition remain required by tasks 6.93,
+6.95, 6.97, 6.99, and 6.101.
