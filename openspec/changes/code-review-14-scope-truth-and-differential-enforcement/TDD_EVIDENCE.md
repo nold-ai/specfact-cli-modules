@@ -2184,6 +2184,104 @@ public key passes all seven module manifests. This evidence-only checkpoint
 changes no signed module payload byte and triggers the protected final-head
 matrix.
 
+The final Codex review of head `66ad60c26e530e0502b56f4d8af78f8c21d6ef32`
+identified two further local snapshot-identity gaps. Independent validation
+reproduced both on those exact bytes: changing only an unselected
+`pyproject.toml` changed Ruff from an F401 finding to a clean result while the
+selected-file identity remained equal, and pinned BasedPyright followed an
+unselected indexed symlink outside the cached root while the materialized-tree
+verifier remained true as the external target changed.
+
+The OpenSpec contract and tasks were updated before the focused regressions.
+The initial run produced exactly five failures and three passing controls: both
+unselected configuration/import mutations retained `PASS` / exit `0`, and
+direct absolute, relative-parent, and chained cached symlink escapes all
+materialized successfully; stable worktree inputs and the contained cached
+symlink passed. Ordinary repository identity now binds the complete tracked
+plus non-ignored untracked Git-visible path set, unioned with explicit selected
+paths, using raw no-follow type/filesystem/content identities and stable
+pre/post path-set plus base-tree checks. Cached materialization now verifies
+every symlink's terminal resolution remains beneath the already bound real
+root during both initial and post-host tree checks. The eight focused cases
+then passed, followed by all 26 neighboring ordinary-worktree and cached-host
+identity controls. Formatting, repository typing (`0 errors, 0 warnings, 0
+notes`), Ruff, and Pylint (`10.00/10`) pass. The complete runner surface passes
+`369` of `370`; its sole failure remains the documented local macOS/CPython
+3.14 capsule-lock selector. Candidate module version is `0.49.72`, compatibility
+remains `>=0.55.1,<1.0.0`, and the refreshed unsigned filesystem checksum is
+`sha256:12bb3e10b77dc00f85bbe3c8be30bb47a6c1fdc529c091ffadac747cd23f1acd`.
+
+Independent review of the candidate patch then found two edge cases before
+commit. A stable unselected in-root symlink made ordinary identity unavailable,
+while terminal-only cached containment admitted a link that lexically left the
+snapshot through mutable external state and re-entered it. The OpenSpec contract
+and tasks were extended before both focused regressions failed exactly (`2
+failed`): the safe worktree link prevented analyzer dispatch, and the
+leave-and-re-enter cached link materialized. Raw unselected symlink bytes are
+now bound only when selected-link rejection remains inactive and a bounded
+component walk proves every lexical and terminal hop stays beneath the real
+repository root. The same every-hop proof runs for cached links before and
+after host analysis. Both cases pass, and the full focused set passes `11`
+tests. Approval-time signing, remaining repository and protected checks, final
+review, and verified PR #448 thread disposition remain required by tasks 6.106
+and 6.108.
+
+Final local gates on 2026-08-28 passed strict C14 OpenSpec, canonical format,
+explicit repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint
+(`10.00/10`), seven manifests plus registry, bundle imports, filesystem
+checksum/version verification with the immutable core `0.55.1` public key,
+publish precheck, `28` contract-first tests, and `git diff --check`. The final
+runner surface passes `371` of `372`. Independent smart and complete suites
+each pass `1748` of `1749`; the sole identical failure remains the documented
+local macOS/CPython 3.14 capsule-lock selector, with two existing Lark
+deprecations. The mandatory changed-line Code Review is
+`PASS_WITH_ADVISORY`, exit `0`, with `91` inherited/tool-environment findings,
+the same two documented legacy blockers, and no blocker on a changed line.
+Candidate module version is `0.49.72`, compatibility remains
+`>=0.55.1,<1.0.0`, and unsigned filesystem checksum is
+`sha256:12bb3e10b77dc00f85bbe3c8be30bb47a6c1fdc529c091ffadac747cd23f1acd`.
+Signed human commit, approval-time module signature, protected Linux
+CPython 3.11-3.13 checks, final-head review, and verified PR #448 thread
+disposition remain required.
+
+A fresh security-bypass review of that candidate found three additional
+ordinary-worktree boundary cases before commit: ignored analyzer configuration
+or Python support was absent from the bound set, a tracked file reached through
+an ignored symlinked parent was validated only by its final regular-file type,
+and a stable unselected gitlink directory made identity unavailable. Five exact
+regressions were authored before the replacement implementation and failed
+together (`5 failed`, `372 deselected`): mutations of ignored
+`pyproject.toml`, ignored imported Python, and an ignored contained symlink
+target retained stale `PASS`; an escaping symlinked parent reached analyzer
+dispatch; and a stable gitlink prevented analyzer dispatch.
+
+Repository-root discovery now adds analyzer-relevant source, test-support, and
+policy paths regardless of Git ignore status, plus each contained final
+symlink target. Every non-missing bound path undergoes the bounded every-hop
+containment proof, and unselected stable directories receive an explicit raw
+filesystem identity while selected special paths remain rejected. All five
+security regressions pass, and the complete ordinary-worktree enforcement
+neighborhood passes `22` tests. The complete runner surface passes `376` of
+`377`; independent smart and complete suites each pass `1753` of `1754`. Their
+sole identical failure remains the documented local macOS/CPython 3.14
+capsule-lock selector, with two existing Lark deprecations.
+
+Replacement final-byte verification on 2026-08-28 passes strict C14 OpenSpec,
+canonical formatting, repository typing (`0 errors, 0 warnings, 0 notes`),
+Ruff, Pylint (`10.00/10`), seven manifests plus registry, bundle imports,
+filesystem checksum/version verification with the immutable core `0.55.1`
+public key, publish precheck, `28` contract-first tests, and `git diff --check`.
+Candidate module version remains `0.49.72`, compatibility remains
+`>=0.55.1,<1.0.0`, and the replacement unsigned filesystem checksum is
+`sha256:f077348644a3cf06f432876e74f268e6495622898cfbc108b77e98bdcaa554db`.
+The full staged pipeline passes, including generated command/docs checks and
+the changed-line Code Review (`PASS_WITH_ADVISORY`, exit `0`, `208` inherited
+or tool-environment findings). Its only two error-severity records are the
+pre-existing `_run_capsule_snapshot` parameter-count finding and the documented
+host test outcome; neither is on a changed line. Signed commit, approval-time
+module signing, protected Linux CPython 3.11-3.13 checks, final-head review, and
+verified PR #448 thread disposition remain required.
+
 The final Codex review of head `9e2cdb537c02a71bec22f79f49a4fb40e8d675f9`
 identified a selected-symlink mismatch inside the same ordinary worktree input
 identity. Independent validation against that immutable head reproduced both

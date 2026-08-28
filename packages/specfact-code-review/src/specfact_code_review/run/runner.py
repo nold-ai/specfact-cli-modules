@@ -99,6 +99,22 @@ _GIT_LOCAL_ENV_VARS = frozenset(
         "GIT_WORK_TREE",
     }
 )
+_ANALYZER_SUPPORT_SUFFIXES = frozenset({".cfg", ".ini", ".json", ".py", ".pyi", ".toml", ".yaml", ".yml"})
+_ANALYZER_SUPPORT_NAMES = frozenset({".coveragerc", ".pylintrc", "py.typed"})
+_ANALYZER_SCAN_EXCLUDED_DIRECTORIES = frozenset(
+    {
+        ".git",
+        ".mypy_cache",
+        ".nox",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".tox",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+        "venv",
+    }
+)
 ReviewFocus = Literal["simplify"]
 ReviewEnforcementMode = Literal["full", "changed", "shadow"]
 LocalAssuranceKind = Literal["worktree", "full", "explicit_files"]
@@ -4372,7 +4388,7 @@ class WorktreePathIdentity:
     """Raw selected-path state observed around ordinary worktree analysis."""
 
     path: str
-    kind: Literal["missing", "regular"]
+    kind: Literal["directory", "missing", "regular", "symlink"]
     mode: int
     device: int
     inode: int
@@ -4384,7 +4400,7 @@ class WorktreePathIdentity:
 
 @dataclass(frozen=True)
 class WorktreeAnalysisIdentity:
-    """Immutable base and selected-path evidence bound around analysis."""
+    """Immutable base and Git-visible worktree evidence bound around analysis."""
 
     repository: Path
     base_tree: str
@@ -4401,7 +4417,13 @@ class StandaloneWorktreeAnalysisIdentity:
 WorktreeReviewIdentity = WorktreeAnalysisIdentity | StandaloneWorktreeAnalysisIdentity
 
 
-def _worktree_path_identity(path: str, absolute: Path) -> WorktreePathIdentity | None:
+def _worktree_path_identity(
+    path: str,
+    absolute: Path,
+    *,
+    allow_directory: bool = False,
+    allow_symlink: bool = False,
+) -> WorktreePathIdentity | None:
     """Capture one raw path without accepting a raced type or filesystem identity."""
     try:
         before = absolute.lstat()
@@ -4410,13 +4432,20 @@ def _worktree_path_identity(path: str, absolute: Path) -> WorktreePathIdentity |
     except OSError:
         return None
     if stat.S_ISREG(before.st_mode):
-        kind: Literal["regular"] = "regular"
+        kind: Literal["directory", "regular", "symlink"] = "regular"
         try:
             content = absolute.read_bytes()
         except OSError:
             return None
-    elif stat.S_ISLNK(before.st_mode):
-        return None
+    elif stat.S_ISLNK(before.st_mode) and allow_symlink:
+        kind = "symlink"
+        try:
+            content = os.fsencode(os.readlink(absolute))
+        except OSError:
+            return None
+    elif stat.S_ISDIR(before.st_mode) and allow_directory:
+        kind = "directory"
+        content = b""
     else:
         return None
     try:
@@ -4454,18 +4483,153 @@ def _worktree_path_identity(path: str, absolute: Path) -> WorktreePathIdentity |
     )
 
 
-def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> WorktreeAnalysisIdentity | None:
-    """Bind one stable committed or proven-unborn base and selected raw paths."""
-    base_tree = _cached_base_tree_identity(repository)
-    if base_tree is None:
+def _git_visible_worktree_paths(repository: Path) -> tuple[str, ...] | None:
+    """List tracked, untracked, and ignored analyzer-support worktree paths."""
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-c",
+                "core.fsmonitor=false",
+                "--literal-pathspecs",
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+            ],
+            capture_output=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError):
         return None
+    if result.returncode != 0:
+        return None
+    paths: set[str] = set()
+    for raw_path in result.stdout.split(b"\0"):
+        if not raw_path:
+            continue
+        path = os.fsdecode(raw_path)
+        logical = PurePosixPath(path)
+        if logical.is_absolute() or not logical.parts or ".." in logical.parts or path in paths:
+            return None
+        paths.add(path)
+    support_paths = _repository_analyzer_support_paths(repository)
+    if support_paths is None:
+        return None
+    paths.update(support_paths)
+    return _with_contained_symlink_targets(repository, paths)
+
+
+def _repository_analyzer_support_paths(repository: Path) -> tuple[str, ...] | None:
+    """Discover source, test, and policy files repository analyzers may consume."""
+    paths: set[str] = set()
+    try:
+        for directory, directory_names, file_names in os.walk(repository, followlinks=False):
+            directory_names[:] = sorted(
+                name for name in directory_names if name not in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES
+            )
+            relative_directory = Path(directory).relative_to(repository)
+            for name in sorted((*directory_names, *file_names)):
+                absolute = Path(directory, name)
+                if name in directory_names and not absolute.is_symlink():
+                    continue
+                if (
+                    absolute.is_symlink()
+                    or name in _ANALYZER_SUPPORT_NAMES
+                    or absolute.suffix.lower() in _ANALYZER_SUPPORT_SUFFIXES
+                ):
+                    relative = relative_directory / name
+                    paths.add(relative.as_posix())
+    except OSError:
+        return None
+    return tuple(sorted(paths))
+
+
+def _with_contained_symlink_targets(repository: Path, paths: set[str]) -> tuple[str, ...] | None:
+    """Bind each listed symlink and its contained final target."""
+    expanded = set(paths)
+    for path in tuple(paths):
+        absolute = repository.joinpath(*PurePosixPath(path).parts)
+        try:
+            if not absolute.is_symlink():
+                continue
+            if not _symlink_resolution_is_contained(repository, absolute):
+                return None
+            target = absolute.resolve(strict=True).relative_to(repository.resolve(strict=True)).as_posix()
+        except (OSError, ValueError):
+            return None
+        expanded.add(target)
+    return tuple(sorted(expanded))
+
+
+def _symlink_resolution_is_contained(root: Path, link: Path) -> bool:
+    """Require every symlink-resolution hop to remain beneath one real root."""
+    lexical_root = Path(os.path.abspath(root))
+    lexical_link = Path(os.path.abspath(link))
+    try:
+        pending = list(lexical_link.relative_to(lexical_root).parts)
+        resolved_root = lexical_root.resolve(strict=True)
+    except (OSError, ValueError):
+        return False
+    resolved_parts: list[str] = []
+    symlink_hops = 0
+    while pending:
+        part = pending.pop(0)
+        current = resolved_root.joinpath(*resolved_parts, part)
+        try:
+            path_stat = current.lstat()
+        except OSError:
+            return False
+        if not stat.S_ISLNK(path_stat.st_mode):
+            if pending and not stat.S_ISDIR(path_stat.st_mode):
+                return False
+            resolved_parts.append(part)
+            continue
+        symlink_hops += 1
+        if symlink_hops > 40:
+            return False
+        try:
+            raw_target = Path(os.readlink(current))
+        except OSError:
+            return False
+        lexical_target = raw_target if raw_target.is_absolute() else current.parent / raw_target
+        normalized_target = Path(os.path.normpath(lexical_target))
+        try:
+            target_parts = list(normalized_target.relative_to(resolved_root).parts)
+        except ValueError:
+            return False
+        pending = target_parts + pending
+        resolved_parts = []
+    return True
+
+
+def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> WorktreeAnalysisIdentity | None:
+    """Bind one stable base and complete Git-visible raw worktree input set."""
+    base_tree = _cached_base_tree_identity(repository)
+    visible_paths = _git_visible_worktree_paths(repository)
+    if base_tree is None or visible_paths is None:
+        return None
+    bound_paths = tuple(sorted(set(visible_paths).union(selected)))
     paths: list[WorktreePathIdentity] = []
-    for path, absolute in sorted(selected.items()):
-        identity = _worktree_path_identity(path, absolute)
-        if identity is None:
+    for path in bound_paths:
+        absolute = selected.get(path, repository.joinpath(*PurePosixPath(path).parts))
+        is_unselected = path not in selected
+        identity = _worktree_path_identity(
+            path,
+            absolute,
+            allow_directory=is_unselected,
+            allow_symlink=is_unselected,
+        )
+        if identity is None or (
+            identity.kind != "missing" and not _symlink_resolution_is_contained(repository, absolute)
+        ):
             return None
         paths.append(identity)
-    if _cached_base_tree_identity(repository) != base_tree:
+    if _git_visible_worktree_paths(repository) != visible_paths or _cached_base_tree_identity(repository) != base_tree:
         return None
     return WorktreeAnalysisIdentity(repository=repository, base_tree=base_tree, paths=tuple(paths))
 
@@ -4679,6 +4843,11 @@ def _materialized_tree_matches_entries(
     """Verify every materialized identity and byte against its immutable blob."""
     if not _materialized_directories_match(destination, directories):
         return False
+    for path, (mode, _expected_oid) in entries.items():
+        if mode == "120000" and not _symlink_resolution_is_contained(
+            destination, destination.joinpath(*PurePosixPath(path).parts)
+        ):
+            return False
     for path, (mode, expected_oid) in entries.items():
         if mode == "160000":
             continue
