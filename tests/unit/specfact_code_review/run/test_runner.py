@@ -566,6 +566,8 @@ def test_capsule_cached_enforcement_rejects_unbound_selected_path(
     repository = tmp_path / "repo"
     repository.mkdir()
     subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
     (repository / "README.md").write_text("baseline\n", encoding="utf-8")
     subprocess.run(["git", "add", "README.md"], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
@@ -2275,6 +2277,8 @@ def test_source_checkout_cached_scope_analyzes_and_enforces_the_staged_tree(
     source = repository / "app.py"
     source.write_text("BASELINE\n", encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
     source.write_text("BLOCKED\n", encoding="utf-8")
@@ -2316,6 +2320,8 @@ def test_source_checkout_cached_scope_rejects_host_analyzer_snapshot_mutation(
     source = repository / "app.py"
     source.write_text("BASELINE\n", encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
     subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
     source.write_text("BLOCKED\n", encoding="utf-8")

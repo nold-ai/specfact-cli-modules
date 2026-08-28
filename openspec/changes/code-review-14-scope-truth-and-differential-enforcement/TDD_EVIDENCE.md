@@ -1878,6 +1878,19 @@ the immutable core `0.55.1` public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed payload byte and triggers the
 protected final-head matrix.
 
+Protected run `33189563881` then passed immutable-core compatibility on Python
+3.11, 3.12, and 3.13 but exposed a test-fixture portability defect in all three
+quality jobs. The two selected-path cases and two development-host cases
+created temporary commits without repository-local author identity; the local
+developer Git configuration masked that omission, while clean GitHub runners
+failed four tests before exercising the intended assertions. Each temporary
+repository now configures its own deterministic test name and email. Repeating
+the exact four cases with `GIT_CONFIG_GLOBAL=/dev/null` passes `4 passed`, and
+format, Ruff, BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint
+(`10.00/10`), and `git diff --check` remain green. This fixture-only correction
+does not alter the signed module payload or checksum. A replacement protected
+quality cycle and final review/thread disposition remain required.
+
 An independent exact-head audit superseded that matrix before any thread was
 resolved. Git clean filters and the `assume-unchanged` index flag can both make
 `git diff --quiet --no-textconv` report equality while analyzers read raw bytes
