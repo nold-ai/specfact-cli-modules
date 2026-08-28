@@ -211,6 +211,8 @@ def test_changed_lines_from_git_reports_unavailable_unreadable_untracked_file(
     def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         if command[:4] == ["git", "--literal-pathspecs", "diff", "--unified=0"]:
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command == ["git", "rev-parse", "--show-toplevel"]:
+            return subprocess.CompletedProcess(command, 128, stdout="", stderr="not a git repository")
         if command == ["git", "rev-parse", "--show-prefix"]:
             return subprocess.CompletedProcess(command, 0, stdout="\n", stderr="")
         if command[:4] == ["git", "--literal-pathspecs", "ls-files", "--others"]:
@@ -260,6 +262,8 @@ def test_changed_lines_from_git_reports_unavailable_untracked_discovery(
     def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         if command[:4] == ["git", "--literal-pathspecs", "diff", "--unified=0"]:
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command == ["git", "rev-parse", "--show-toplevel"]:
+            return subprocess.CompletedProcess(command, 128, stdout="", stderr="not a git repository")
         if command == ["git", "rev-parse", "--show-prefix"]:
             return subprocess.CompletedProcess(command, 0, stdout="\n", stderr="")
         if command[:4] == ["git", "--literal-pathspecs", "ls-files", "--others"]:
@@ -874,6 +878,87 @@ def test_capsule_worktree_enforcement_rejects_selected_symlink_before_analysis(
     assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
     assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
         "worktree_snapshot_identity_unavailable"
+    }
+
+
+def test_capsule_worktree_enforcement_uses_empty_tree_for_unborn_head(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("SAFE = 1\nBLOCKED = True\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": "app.py", "line": 2}
+    )
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
+    snapshot = SimpleNamespace(evidence=evidence, findings_by_member={"ruff": [finding]})
+    snapshot_calls: list[str] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(
+        runner_api,
+        "_run_capsule_snapshot",
+        lambda *_args, **_kwargs: snapshot_calls.append("ran") or snapshot,
+    )
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    identity = runner_api._capture_worktree_analysis_identity([Path("app.py")])
+    assert identity is not None and identity != "not_repository"
+    assert identity.base_tree == runner_api._cached_base_tree_identity(repository)
+    assert runner_api._raw_worktree_changed_lines([Path("app.py")]) == {"app.py": {1, 2}}
+    assert runner_api._changed_lines_from_git([Path("app.py")]) == {"app.py": {1, 2}}
+    assert snapshot_calls == ["ran"]
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("FAIL", "FAIL", 1)
+
+
+def test_capsule_worktree_enforcement_rejects_first_commit_during_analysis(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    source = repository / "app.py"
+    source.write_text("BLOCKED = True\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    snapshot_calls: list[str] = []
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+
+    def _run_snapshot(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        snapshot_calls.append("ran")
+        subprocess.run(["git", "add", "app.py"], cwd=repository, check=True, env=git_env)
+        subprocess.run(["git", "commit", "-qm", "initial"], cwd=repository, check=True, env=git_env)
+        return snapshot
+
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", _run_snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+
+    report = runner_api.run_capsule_review([Path("app.py")], no_tests=True, review_mode="changed")
+
+    assert snapshot_calls == ["ran"]
+    assert (report.assurance_status, report.overall_verdict, report.ci_exit_code) == ("UNKNOWN", "FAIL", 1)
+    assert {item.get("diagnostic") for item in report.analyzer_evidence or []} == {
+        "worktree_snapshot_changed_during_analysis"
     }
 
 

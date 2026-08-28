@@ -2227,3 +2227,42 @@ and `origin/dev` version verification against the immutable core `0.55.1`
 public key passes all seven module manifests. This evidence-only checkpoint
 changes no signed module payload byte and triggers the protected final-head
 matrix.
+
+The final Codex review of head `492872c97598b31352a6839416305fc11e8576b2`
+identified one remaining initial-repository gap inside the same ordinary
+worktree identity contract. Independent validation against that immutable head
+reproduced the issue in a freshly initialized repository: the format-correct
+empty-tree identity was available, but ordinary identity capture and raw-line
+derivation returned unavailable, capsule analysis never ran, and the result was
+`worktree_snapshot_identity_unavailable` UNKNOWN / exit `1`.
+
+The OpenSpec scenario and tasks were updated before two real-repository
+regressions and production code. Both tests first failed (`2 failed`): the
+initial untracked file could not capture an identity, and creating the first
+commit during the capsule stub never reached analysis. Ordinary worktree
+identity now reuses the existing proven-unborn empty-tree resolver before and
+after analysis. Raw filesystem comparison and the ordinary Git diff use that
+same object-format-correct base, while malformed, detached, or otherwise
+unproven missing `HEAD` states remain unavailable. Initial untracked files are
+therefore analyzed with every raw line changed, and a racing first commit is
+still rejected as `worktree_snapshot_changed_during_analysis` UNKNOWN / exit
+`1`. The two new tests plus all five selected-byte, base-tree, projection, and
+symlink controls pass (`7 passed`).
+
+The complete runner surface passes `355` of `356`; exact-core `0.55.1` smart and
+complete suites each pass `1732` of `1733`. Their sole identical failure remains
+the documented local macOS/CPython 3.14 capsule-lock selector, with two existing
+Lark deprecations. Strict OpenSpec, canonical format, repository typing (`0
+errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), all `28`
+contract-first tests, seven manifests plus registry, bundle imports,
+filesystem checksum/version verification, publish precheck, and `git diff
+--check` pass. The first changed-line Code Review exposed one patch-caused
+`CC17`; extracting the immutable baseline-selection decision removed it without
+changing behavior. The repeated review is `PASS_WITH_ADVISORY`, exit `0`, with
+no changed-line blocker and only the pre-existing `_run_capsule_snapshot`
+parameter-count error plus the documented local test outcome. Candidate module
+version is `0.49.69`, compatibility remains `>=0.55.1,<1.0.0`, and the unsigned
+filesystem checksum is
+`sha256:bcde7845f91d5aeb2e44091428b37cabef2da0897eb9c7728a316000422f3e8a`.
+Replacement approval-time signing, final-head protected checks, and verified PR
+#448 thread disposition remain required by tasks 6.93, 6.95, 6.97, and 6.99.

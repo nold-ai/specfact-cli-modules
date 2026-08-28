@@ -4435,8 +4435,8 @@ def _worktree_path_identity(path: str, absolute: Path) -> WorktreePathIdentity |
 
 
 def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> WorktreeAnalysisIdentity | None:
-    """Bind one stable HEAD tree and exact selected raw path states."""
-    base_tree = _git_tree_identity(repository, "HEAD")
+    """Bind one stable committed or proven-unborn base and selected raw paths."""
+    base_tree = _cached_base_tree_identity(repository)
     if base_tree is None:
         return None
     paths: list[WorktreePathIdentity] = []
@@ -4445,7 +4445,7 @@ def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> 
         if identity is None:
             return None
         paths.append(identity)
-    if _git_tree_identity(repository, "HEAD") != base_tree:
+    if _cached_base_tree_identity(repository) != base_tree:
         return None
     return WorktreeAnalysisIdentity(repository=repository, base_tree=base_tree, paths=tuple(paths))
 
@@ -4744,7 +4744,7 @@ def _untracked_changed_lines(file_path: Path) -> set[int] | None:
     return set(range(1, line_count + 1))
 
 
-def _changed_diff_command(files: list[Path], diff_mode: str, cached_diff: CachedDiffIdentity | None) -> list[str]:
+def _changed_diff_command(files: list[Path], revision: tuple[str, ...]) -> list[str]:
     """Build one literal, filter-free changed-line evidence command."""
     command = [
         "git",
@@ -4758,11 +4758,27 @@ def _changed_diff_command(files: list[Path], diff_mode: str, cached_diff: Cached
         "--src-prefix=a/",
         "--dst-prefix=b/",
     ]
-    revision = [cached_diff.base_tree, cached_diff.index_tree] if diff_mode == "cached" and cached_diff else []
-    command.extend(revision or ["--cached" if diff_mode == "cached" else "HEAD"])
+    command.extend(revision)
     if files:
         command.extend(["--", *(str(file_path) for file_path in files)])
     return command
+
+
+def _changed_diff_revision(
+    files: list[Path], diff_mode: str, cached_diff: CachedDiffIdentity | None
+) -> tuple[str, ...] | None:
+    """Select the immutable baseline arguments for changed-line evidence."""
+    if cached_diff is not None:
+        return (cached_diff.base_tree, cached_diff.index_tree)
+    if diff_mode == "cached":
+        return ("--cached",) if _cached_worktree_matches_index(files) is True else None
+    if diff_mode != "worktree":
+        return ("HEAD",)
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return ("HEAD",)
+    base_tree = _cached_base_tree_identity(repository_paths[0])
+    return None if base_tree is None else (base_tree,)
 
 
 def _raw_no_index_added_lines(base_content: bytes, worktree_content: bytes) -> set[int] | None:
@@ -4843,12 +4859,12 @@ def _raw_selected_worktree_lines(
 
 
 def _raw_worktree_changed_lines(files: list[Path]) -> dict[str, set[int]] | None:
-    """Derive selected-file line evidence from raw HEAD and filesystem bytes."""
+    """Derive selected-file lines from raw base-tree and filesystem bytes."""
     repository_paths = _cached_repository_paths(files)
     if repository_paths is None:
         return None
     repository, selected = repository_paths
-    base_tree = _git_tree_identity(repository, "HEAD")
+    base_tree = _cached_base_tree_identity(repository)
     entries = _cached_tree_entries(repository, base_tree) if base_tree is not None else None
     if entries is None:
         return None
@@ -4898,9 +4914,10 @@ def _changed_lines_from_git(
 ) -> dict[str, set[int]] | None:
     """Collect changed line numbers for changed enforcement evidence."""
     diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
-    if diff_mode == "cached" and cached_diff is None and _cached_worktree_matches_index(files) is not True:
+    revision = _changed_diff_revision(files, diff_mode, cached_diff)
+    if revision is None:
         return None
-    result = _run_changed_line_git_command(_changed_diff_command(files, diff_mode, cached_diff))
+    result = _run_changed_line_git_command(_changed_diff_command(files, revision))
     if result is None:
         return None
     changed_lines = _parse_added_lines_from_diff(result.stdout)

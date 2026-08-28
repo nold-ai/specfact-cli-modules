@@ -345,5 +345,7 @@ Explicitly forbidden:
 - [ ] 6.95 Bind ordinary worktree identity around changed-line projection, fail required UNKNOWN on drift, then repeat task 6.89 with a replacement signed patch candidate.
 - [x] 6.96 Add failing real-repository regressions for the final PR #448 review proving selected in-repository and escaping worktree symlinks cannot reach analyzer execution through dereferenced target bytes.
 - [ ] 6.97 Reject selected ordinary-worktree symlinks before analyzer execution, then repeat task 6.89 with a replacement signed patch candidate.
+- [x] 6.98 Add failing real-repository regressions for the final PR #448 review proving ordinary worktree changed enforcement analyzes initial untracked Python files against the format-correct empty tree and rejects a first commit created during analysis as identity drift.
+- [ ] 6.99 Use the proven-unborn empty tree consistently for ordinary worktree identity plus raw and Git changed-line evidence, then repeat task 6.89 with a replacement signed patch candidate.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
