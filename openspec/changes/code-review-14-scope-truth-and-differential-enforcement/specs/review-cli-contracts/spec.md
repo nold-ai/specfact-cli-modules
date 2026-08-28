@@ -97,6 +97,8 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **THEN** `scope_evidence.assurance_kind` is respectively `worktree`, `full`, or `explicit_files`
 - **AND** the selected enforcement mode remains independent from that scope identity
 - **AND** changed enforcement blocks only blocking findings on changed lines while retaining unchanged-line blockers as advisory evidence
+- **AND** unavailable changed-line discovery, including Git diff failure or incomplete untracked-file evidence, cannot downgrade a completed `FAIL` or required `UNKNOWN` report, while a completed blocker-free report retains its existing pass state
+- **AND** Git-quoted path headers, including UTF-8 and control-character filenames in worktree or cached diffs, are decoded to the exact filesystem path or make changed-line evidence unavailable
 - **AND** incomplete required capsule evidence remains `UNKNOWN` with a non-zero exit under changed enforcement and is never rewritten to PASS.
 
 #### Scenario: Versioned readers never infer new truth from old fields

@@ -182,7 +182,9 @@ def test_run_review_shadow_enforcement_never_blocks(monkeypatch: MonkeyPatch) ->
     assert report.enforcement_mode == "shadow"
 
 
-def test_changed_lines_from_git_skips_unreadable_untracked_files(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_changed_lines_from_git_reports_unavailable_unreadable_untracked_file(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
     untracked_file = tmp_path / "binary.py"
     untracked_file.write_bytes(b"\xff\xfe")
 
@@ -195,7 +197,91 @@ def test_changed_lines_from_git_skips_unreadable_untracked_files(monkeypatch: Mo
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
 
-    assert _changed_lines_from_git([untracked_file]) == {}
+    assert _changed_lines_from_git([untracked_file]) is None
+
+
+def test_changed_lines_from_git_reports_unavailable_git_diff(monkeypatch: MonkeyPatch) -> None:
+    def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 128, stdout="", stderr="not a git repository")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    assert _changed_lines_from_git([Path("src/app.py")]) is None
+
+
+def test_changed_lines_from_git_reports_unavailable_git_exception(monkeypatch: MonkeyPatch) -> None:
+    def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        raise subprocess.TimeoutExpired(command, 30)
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    assert _changed_lines_from_git([Path("src/app.py")]) is None
+
+
+def test_changed_lines_from_git_reports_unavailable_malformed_quoted_path(monkeypatch: MonkeyPatch) -> None:
+    diff = '+++ "b/bad\\q.py"\n@@ -1 +1 @@\n-old\n+new\n'
+
+    def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 0, stdout=diff, stderr="")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    assert _changed_lines_from_git([]) is None
+
+
+def test_changed_lines_from_git_reports_unavailable_untracked_discovery(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    untracked_file = tmp_path / "app.py"
+    untracked_file.write_text("VALUE = 1\n", encoding="utf-8")
+
+    def _fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        if command[:3] == ["git", "diff", "--unified=0"]:
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command[:3] == ["git", "ls-files", "--others"]:
+            return subprocess.CompletedProcess(command, 128, stdout="", stderr="not a git repository")
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    assert _changed_lines_from_git([untracked_file]) is None
+
+
+@pytest.mark.parametrize(
+    ("file_name", "diff_mode"),
+    [("ümlaut.py", "worktree"), ("line\nbreak.py", "cached")],
+)
+def test_run_review_changed_enforcement_decodes_git_quoted_paths(
+    monkeypatch: MonkeyPatch, tmp_path: Path, file_name: str, diff_mode: str
+) -> None:
+    runner_api = _c14_runner()
+    git_env = runner_api._candidate_git_environment()
+    repository = tmp_path / "repo"
+    repository.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.email", "tests@example.com"], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "config", "user.name", "Tests"], cwd=repository, check=True, env=git_env)
+    source = repository / file_name
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "add", "--", file_name], cwd=repository, check=True, env=git_env)
+    subprocess.run(["git", "commit", "-qm", "baseline"], cwd=repository, check=True, env=git_env)
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+    if diff_mode == "cached":
+        subprocess.run(["git", "add", "--", file_name], cwd=repository, check=True, env=git_env)
+
+    for variable in set(os.environ).difference(git_env):
+        monkeypatch.delenv(variable)
+    monkeypatch.chdir(repository)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", diff_mode)
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style").model_copy(
+        update={"file": file_name, "line": 1}
+    )
+    _stub_review_tools(monkeypatch, [finding])
+
+    report = run_review([Path(file_name)], no_tests=True, review_mode="changed")
+
+    assert _changed_lines_from_git([Path(file_name)]) == {file_name: {1}}
+    assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
 
 
 def test_run_review_calls_runners_in_order(monkeypatch: MonkeyPatch) -> None:
@@ -336,6 +422,62 @@ def test_capsule_review_changed_enforcement_preserves_unknown(monkeypatch: Monke
         readback.status,
         readback.ci_exit_code,
     ) == ("UNKNOWN", 1, "FAIL", "UNKNOWN", 1)
+
+
+def test_capsule_review_changed_enforcement_fails_closed_without_changed_line_evidence(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    runner_api = _c14_runner()
+    finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    evidence = _synthetic_complete_profile_evidence(runner_api)
+    evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
+    snapshot = SimpleNamespace(evidence=evidence, findings_by_member={"ruff": [finding]})
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+    monkeypatch.setattr(runner_api, "_changed_lines_from_git", lambda _files: None)
+
+    report = runner_api.run_capsule_review([Path(finding.file)], no_tests=True, review_mode="changed")
+    readback = read_review_report(report.model_dump())
+
+    assert (
+        report.assurance_status,
+        report.has_unknown_required_evidence,
+        report.ci_exit_code,
+        report.overall_verdict,
+        "unavailable" in (report.enforcement_summary or ""),
+        readback.status,
+        readback.ci_exit_code,
+    ) == ("FAIL", False, 1, "FAIL", True, "FAIL", 1)
+
+
+def test_capsule_review_changed_enforcement_preserves_pass_without_changed_line_evidence(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    runner_api = _c14_runner()
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
+    snapshot = SimpleNamespace(
+        evidence=_synthetic_complete_profile_evidence(runner_api),
+        findings_by_member={},
+    )
+    monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda: (runtime, ""))
+    monkeypatch.setattr(runner_api, "_run_capsule_snapshot", lambda *_args, **_kwargs: snapshot)
+    monkeypatch.setattr(runner_api, "_cleanup_capsule_runtime", lambda _runtime: None)
+    monkeypatch.setattr(runner_api, "_changed_lines_from_git", lambda _files: None)
+
+    report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True, review_mode="changed")
+    readback = read_review_report(report.model_dump())
+
+    assert (
+        report.assurance_status,
+        report.has_unknown_required_evidence,
+        report.ci_exit_code,
+        report.overall_verdict,
+        "unavailable" in (report.enforcement_summary or ""),
+        readback.status,
+        readback.ci_exit_code,
+    ) == ("PASS", False, 0, "PASS", True, "PASS", 0)
 
 
 def test_capsule_member_passes_explicit_target_policy_to_adapter(monkeypatch: MonkeyPatch) -> None:

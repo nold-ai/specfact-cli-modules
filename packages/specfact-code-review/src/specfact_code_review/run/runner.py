@@ -4020,13 +4020,69 @@ def _normalize_report_path(raw_path: str | Path) -> str:
     return path.as_posix()
 
 
-def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]]:
+_GIT_QUOTED_PATH_ESCAPES = {
+    "a": b"\a",
+    "b": b"\b",
+    "t": b"\t",
+    "n": b"\n",
+    "v": b"\v",
+    "f": b"\f",
+    "r": b"\r",
+    "\\": b"\\",
+    '"': b'"',
+}
+
+
+def _decode_git_path_escape(raw_path: str, index: int, content_end: int) -> tuple[bytes | None, int]:
+    """Decode one backslash escape and return its bytes plus the next index."""
+    if index >= content_end:
+        return None, index
+    escape = raw_path[index]
+    escaped_byte = _GIT_QUOTED_PATH_ESCAPES.get(escape)
+    if escaped_byte is not None:
+        return escaped_byte, index + 1
+    if escape not in "01234567":
+        return None, index
+    octal_end = index + 1
+    while octal_end < content_end and octal_end - index < 3 and raw_path[octal_end] in "01234567":
+        octal_end += 1
+    decoded_byte = int(raw_path[index:octal_end], 8)
+    return (bytes([decoded_byte]), octal_end) if decoded_byte <= 0xFF else (None, index)
+
+
+def _decode_git_diff_path(raw_path: str) -> str | None:
+    """Decode one Git C-quoted path into the exact filesystem path."""
+    if not raw_path.startswith('"'):
+        return raw_path
+    if len(raw_path) < 2 or not raw_path.endswith('"'):
+        return None
+    decoded = bytearray()
+    index = 1
+    content_end = len(raw_path) - 1
+    while index < content_end:
+        character = raw_path[index]
+        if character != "\\":
+            if character == '"':
+                return None
+            decoded.extend(os.fsencode(character))
+            index += 1
+            continue
+        escaped_byte, index = _decode_git_path_escape(raw_path, index + 1, content_end)
+        if escaped_byte is None:
+            return None
+        decoded.extend(escaped_byte)
+    return os.fsdecode(bytes(decoded))
+
+
+def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]] | None:
     """Return added new-file line numbers from a zero-context git diff."""
     changed_lines: dict[str, set[int]] = {}
     current_file: str | None = None
     for line in diff_text.splitlines():
         if line.startswith("+++ "):
-            destination = line[4:].strip()
+            destination = _decode_git_diff_path(line[4:].strip())
+            if destination is None:
+                return None
             current_file = None if destination == "/dev/null" else destination.removeprefix("b/")
             if current_file is not None:
                 changed_lines.setdefault(current_file, set())
@@ -4043,42 +4099,53 @@ def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]]:
     return changed_lines
 
 
-def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]]:
+def _run_changed_line_git_command(command: list[str]) -> subprocess.CompletedProcess[str] | None:
+    """Run one Git evidence command and represent unavailable output explicitly."""
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    return result if result.returncode == 0 else None
+
+
+def _untracked_changed_lines(file_path: Path) -> set[int] | None:
+    """Return every line for an untracked file, no lines when tracked, or unavailable evidence."""
+    listed = _run_changed_line_git_command(["git", "ls-files", "--others", "--exclude-standard", "--", str(file_path)])
+    if listed is None:
+        return None
+    if not listed.stdout.strip():
+        return set()
+    try:
+        line_count = len(file_path.read_text(encoding="utf-8").splitlines())
+    except (OSError, UnicodeDecodeError):
+        return None
+    return set(range(1, line_count + 1))
+
+
+def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]] | None:
     """Collect changed line numbers for changed enforcement evidence."""
     diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
     command = ["git", "diff", "--unified=0", "--no-ext-diff"]
-    if diff_mode == "cached":
-        command.append("--cached")
-    else:
-        command.append("HEAD")
+    command.append("--cached" if diff_mode == "cached" else "HEAD")
     if files:
         command.extend(["--", *(str(file_path) for file_path in files)])
-    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
-    if result.returncode != 0:
-        return {}
+    result = _run_changed_line_git_command(command)
+    if result is None:
+        return None
     changed_lines = _parse_added_lines_from_diff(result.stdout)
+    if changed_lines is None:
+        return None
     for file_path in files:
         if not file_path.exists():
             continue
         relative = _normalize_report_path(file_path)
         if relative in changed_lines:
             continue
-        try:
-            listed = subprocess.run(
-                ["git", "ls-files", "--others", "--exclude-standard", "--", str(file_path)],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=30,
-            )
-        except subprocess.SubprocessError:
-            continue
-        if listed.returncode == 0 and listed.stdout.strip():
-            try:
-                line_count = len(file_path.read_text(encoding="utf-8").splitlines())
-            except (OSError, UnicodeDecodeError):
-                continue
-            changed_lines[relative] = set(range(1, line_count + 1))
+        line_numbers = _untracked_changed_lines(file_path)
+        if line_numbers is None:
+            return None
+        if line_numbers:
+            changed_lines[relative] = line_numbers
     return changed_lines
 
 
@@ -4090,16 +4157,42 @@ def _finding_targets_changed_line(finding: ReviewFinding, changed_lines: dict[st
     return finding.line in line_numbers
 
 
-def _with_changed_enforcement(report: ReviewReport, files: list[Path]) -> ReviewReport:
-    """Apply changed-line policy without discarding findings or uncertainty."""
+def _changed_enforcement_precondition(
+    report: ReviewReport, files: list[Path]
+) -> tuple[ReviewReport | None, dict[str, set[int]] | None]:
+    """Preserve required uncertainty and completed verdicts before line classification."""
     if report.assurance_status == "UNKNOWN" or report.has_unknown_required_evidence:
-        return report.model_copy(
-            update={
-                "enforcement_mode": "changed",
-                "enforcement_summary": "Changed enforcement cannot pass while required evidence is UNKNOWN.",
-            }
+        return (
+            report.model_copy(
+                update={
+                    "enforcement_mode": "changed",
+                    "enforcement_summary": "Changed enforcement cannot pass while required evidence is UNKNOWN.",
+                }
+            ),
+            None,
         )
     changed_lines = _changed_lines_from_git(files)
+    if changed_lines is None:
+        return (
+            report.model_copy(
+                update={
+                    "enforcement_mode": "changed",
+                    "enforcement_summary": (
+                        "Changed-line evidence is unavailable; changed enforcement preserves the completed verdict."
+                    ),
+                }
+            ),
+            None,
+        )
+    return None, changed_lines
+
+
+def _with_changed_enforcement(report: ReviewReport, files: list[Path]) -> ReviewReport:
+    """Apply changed-line policy without discarding findings or uncertainty."""
+    precondition, changed_lines = _changed_enforcement_precondition(report, files)
+    if precondition is not None:
+        return precondition
+    assert changed_lines is not None
     blocking_changed = [
         finding
         for finding in report.findings

@@ -17,6 +17,9 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Release `specfact-code-review` 0.49.63 with fail-closed changed-line evidence
+  discovery, so Git or untracked-file inspection failures cannot be mistaken
+  for a clean diff.
 - Release `specfact-code-review` 0.49.62 with truthful local capsule scope
   evidence and changed-line enforcement that remains fail-closed for incomplete
   required analyzer evidence.

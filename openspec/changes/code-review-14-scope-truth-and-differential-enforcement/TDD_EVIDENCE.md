@@ -1389,3 +1389,81 @@ On 2026-08-28, two independent reviews confirmed that the current promotion head
 The implementation now carries `worktree`, `full`, or `explicit_files` through every local rerun, writes that identity into capsule scope evidence, and applies changed-line enforcement after capsule aggregation. A completed report with no blocking finding on a changed line retains every finding as advisory evidence and projects authoritative PASS/readback exit 0; a blocking changed-line finding remains FAIL/exit 1; required UNKNOWN evidence remains UNKNOWN/exit 1. The expanded focused run covered default, explicit worktree, changed, full, positional, changed-line blocker, unchanged-line advisory, UNKNOWN, and serialized schema-1.6 readback behavior and passed. Full gates, patch-version/checksum refresh, approval-time signing, protected checks, and PR #446 thread resolution remain required.
 
 Local final-byte verification passed strict C14 OpenSpec; formatting; repository type checking (`0 errors, 0 warnings, 0 notes`); Ruff and Pylint (`10.00/10`); YAML/registry validation; bundle imports; the `28` contract-first tests; manifest checksum/version verification against the immutable core 0.55.1 public key; and the Code Review publish precheck. The complete affected command surface passed `78` tests, and the supported local runner surface passed `279` tests with only the signed capsule-lock selector deselected because the frozen runtime has no local CPython 3.14 environment. After clearing generated coverage state from an invalid parallel-suite attempt, the serial complete suite passed `1652` tests with that same one selector deselected and two third-party Lark deprecation warnings. The final changed-line Code Review emitted `PASS_WITH_ADVISORY`, exit `0`, truthful `worktree` scope evidence, `80` inherited/tool-environment findings, and no changed-line blocker; two patch-caused maintainability warnings found on the first review were removed by separating changed policy from capsule finalization. Candidate module version is `0.49.62` with unsigned filesystem checksum `sha256:db96a041e9d6564669dd6108be4f8c6937da9a3eee0d2d9176960e4580a8dabf` and unchanged compatibility `>=0.55.1,<1.0.0`. Approval-time signing, protected Linux checks, and PR #446 thread resolution remain required.
+
+### PR #448 changed-line evidence correction
+
+The first Codex review of signed PR #448 found one P2 inside the new local
+changed-enforcement boundary: `_changed_lines_from_git` returned an empty
+mapping when `git diff` failed, so the caller could not distinguish unavailable
+evidence from a successful clean diff and could rewrite a blocking capsule
+report to PASS. The same ambiguity existed when untracked-file discovery failed
+or an identified untracked file could not be read.
+
+After the OpenSpec scenario and tasks were extended, five focused cases were
+collected before production edits. Git diff failure, untracked discovery
+failure, unreadable untracked content, and capsule fail-closed projection all
+failed at the intended boundary (`4 failed`); the successful clean-diff control
+already passed. Changed-line collection now returns an explicit unavailable
+state for command, decoding, or file-read failures. Changed enforcement cannot
+downgrade a completed FAIL or required UNKNOWN report when that state is
+present, while a completed blocker-free report retains PASS. The six original
+cases and a separate subprocess-exception challenge pass (`7 passed`). The
+complete runner surface initially passed `282` of `283`; the sole failure was
+the previously documented local CPython 3.14 signed-capsule-lock environment
+gap.
+
+The first changed-line review of the correction passed but identified two
+patch-caused complexity warnings in the changed-line collection and enforcement
+functions. Extracting the Git command, untracked-file, and enforcement
+precondition helpers reduced the affected Radon scores to `10`, `4`, `4`, `3`,
+and `12`; collapsing one pass-through `None` branch removed the remaining
+patch-caused informational finding. The final changed-line review returned
+`PASS_WITH_ADVISORY`, exit `0`, with `75` inherited/tool-environment findings,
+two legacy blockers, no blocker on a changed line, and no finding on the five
+new or refactored helpers.
+
+Final local evidence passed the eight focused failure/PASS/UNKNOWN controls;
+the complete supported local suite (`1657 passed`, one documented CPython 3.14
+capsule-lock selector deselected, two third-party Lark deprecation warnings);
+strict OpenSpec; formatting; repository type checking (`0 errors, 0 warnings,
+0 notes`); Ruff; Pylint (`10.00/10`); manifest/registry validation; bundle
+imports; all `28` contract-first tests; filesystem checksum/version validation;
+and the publish precheck. Candidate module version is `0.49.63`, unsigned
+filesystem checksum is
+`sha256:66cb812b4d4c9372893bfb441a777d9a57b4ce9ec9adbdc87ba58a1d605647fe`,
+and compatibility remains `>=0.55.1,<1.0.0`. Replacement approval-time signing,
+protected checks, and review-thread resolution remain required.
+
+The independent final candidate review then found a second path-identity bypass
+inside the same boundary: Git's default C-quoted `+++` headers for UTF-8 or
+control-character filenames remained literal keys, so changed blockers on those
+paths could still be classified as legacy. Real temporary-repository worktree
+and cached regressions for `ümlaut.py` and a newline-containing filename, plus a
+malformed quoted-header case, all failed before the parser correction (`3
+failed`).
+
+The diff parser now decodes Git's closed C-quoted byte grammar, including named
+escapes and bounded octal bytes, through the filesystem codec. Invalid quoting
+returns unavailable evidence and therefore cannot trigger a downgrade. The
+three exact regressions pass; the expanded changed-enforcement matrix passes
+`12` tests; the complete supported runner surface passes `287` tests with the
+known capsule selector deselected; and the complete supported local suite passes
+`1660` tests with that same selector deselected and two third-party Lark
+deprecation warnings. Final strict OpenSpec, formatting, typing (`0 errors, 0
+warnings, 0 notes`), Ruff, Pylint (`10.00/10`), manifests, bundle imports,
+checksum/version verification, publish precheck, and changed-line Code Review
+pass. The final review retains `75` inherited/tool-environment findings and two
+legacy blockers, with no changed-line blocker or finding on the corrected
+helpers. Version remains unpublished `0.49.63`, checksum is
+`sha256:eb2ad8de757a700a4522c558f1f4d83a158b4d74545d9a064f3dfb62cc38b9b6`,
+and compatibility remains `>=0.55.1,<1.0.0`.
+
+The first commit-hook replay exposed a test-isolation defect in the new real-Git
+fixture: hook-exported `GIT_DIR`/`GIT_WORK_TREE` reached its temporary `git init`
+and changed the parent repository's local Git config. The exact test mutation
+(`core.bare=true` plus the fixture identity) was restored immediately. The
+fixture now uses the existing sanitized candidate-Git environment for every
+temporary command and removes inherited repository-local Git variables before
+exercising production discovery. Replaying both cases with explicit hook-style
+Git variables passed and left parent `core.bare=false`; this test-only
+correction does not change the signed module payload checksum.

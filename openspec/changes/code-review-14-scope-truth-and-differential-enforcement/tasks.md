@@ -295,5 +295,9 @@ Explicitly forbidden:
 - [x] 6.45 Add focused failing regressions for PR #446 proving local capsule reports preserve `worktree`, `full`, and `explicit_files` scope identity and apply changed-line enforcement without converting required `UNKNOWN` evidence to PASS.
 - [x] 6.46 Thread resolved local assurance kind through command execution, apply changed-line policy to completed capsule reports, and preserve fail-closed capsule uncertainty.
 - [ ] 6.47 Run focused, strict OpenSpec, format, typing, lint, contract, smart, complete, Code Review, manifest, signature, and publish-precheck gates; advance `specfact-code-review` by one patch version and resolve the corresponding PR #446 threads after protected evidence passes.
+- [x] 6.48 Add focused failing regressions for PR #448 proving changed-line discovery failures cannot be interpreted as an empty changed-line set while a successful clean diff retains advisory behavior.
+- [ ] 6.49 Fail closed when Git diff or untracked-file discovery cannot establish changed-line evidence, then rerun the scoped gates, advance `specfact-code-review` by one patch version, and obtain replacement approval-time signing.
+- [x] 6.50 Add real-repository worktree and cached regressions proving Git-quoted UTF-8 and newline-containing paths cannot bypass changed-line enforcement.
+- [ ] 6.51 Decode Git-quoted diff paths to exact filesystem identities, fail closed on malformed path evidence, and repeat the scoped verification and review cycle.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
