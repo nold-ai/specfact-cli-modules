@@ -24,8 +24,8 @@
 
 - [x] 3.1 Remove `workflow_dispatch` and dead manual checkout steps from all
   three mixed-trust workflows.
-- [x] 3.2 Confirm module packages, manifests, registry data, dependency files,
-  signatures, and release artifacts remain unchanged.
+- [x] 3.2 Confirm registry data, dependency files, and module packages other than
+  the candidate `specfact-code-review` release artifacts remain unchanged.
 - [x] 3.3 Replace the exact-only runtime constraint with the dependency-bounded
   `>=0.55.1,<1.0.0` range and apply the required patch
   version/checksum/signature flow.

@@ -48,6 +48,25 @@ condition that GitHub's job-level cache analysis does not treat as isolation.
 
 ## Passing-after
 
+### 2026-08-28 Europe/Berlin — second PR review follow-up
+
+- The dependency-bound contract now traverses the complete bundle-dependency
+  graph with cycle protection and proves every dependency admits core 0.55.1
+  and 0.55.2 while rejecting 1.0.0. This closes a test-coverage gap; the
+  current manifests were already compatible, so there was no production
+  runtime failure to reproduce before strengthening the assertion.
+- CI-02-006 now explicitly identifies its local-alias selector name as frozen
+  historical evidence while documenting the active bounded-range policy, and
+  tasks 3.2/3.3 now distinguish immutable repository artifacts from the
+  intentionally changed Code Review candidate release artifacts.
+- The two focused compatibility tests passed, the complete workflow contract
+  file passed 12 tests, strict OpenSpec validation passed, and format, lint,
+  and YAML/registry validation passed.
+- The contract gate passed all 28 selected tests. The changed-scope SpecFact
+  review exited 0 with no errors or changed-line findings; its 17 reported
+  items are the already documented legacy findings in the long pre-existing
+  test module plus the local CrossHair environment's missing pytest package.
+
 ### 2026-08-28 Europe/Berlin — PR review follow-up
 
 - The same five focused contracts passed after the manifest adopted

@@ -90,6 +90,6 @@ requirements:
         selector:
           runner: pytest
           node_id: tests/unit/workflows/test_pr_orchestrator_signing.py::test_pr_orchestrator_rejects_pep440_local_core_alias
-        intent: Preserve the frozen selector while proving its implementation now rejects exact-only admission and accepts the evidence-backed range.
-        observable: The immutable job retains the C14 identity but contains no strict exact specifier or local-alias rejection policy.
+        intent: Preserve the historically named frozen selector while proving the immutable job rejects exact-only admission, accepts the evidence-backed range, and does not impose local-alias rejection.
+        observable: The immutable job retains the C14 selector identity as historical evidence while containing neither a strict exact specifier nor a local-alias rejection policy.
         implementation_task: "3.5"

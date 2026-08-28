@@ -147,12 +147,21 @@ def test_code_review_manifest_bounds_core_compatibility_to_dependency_graph() ->
 
     assert compatibility.contains("0.55.2")
     assert not compatibility.contains("1.0.0")
-    for dependency_id in manifest["bundle_dependencies"]:
+    pending_dependency_ids = list(manifest["bundle_dependencies"])
+    checked_dependency_ids: set[str] = set()
+    while pending_dependency_ids:
+        dependency_id = pending_dependency_ids.pop()
+        if dependency_id in checked_dependency_ids:
+            continue
+        checked_dependency_ids.add(dependency_id)
         dependency_name = dependency_id.split("/", maxsplit=1)[1]
         dependency_path = REPO_ROOT / "packages" / dependency_name / "module-package.yaml"
         dependency_manifest = yaml.safe_load(dependency_path.read_text(encoding="utf-8"))
         dependency_compatibility = SpecifierSet(dependency_manifest["core_compatibility"])
+        assert dependency_compatibility.contains("0.55.1")
+        assert dependency_compatibility.contains("0.55.2")
         assert not dependency_compatibility.contains("1.0.0")
+        pending_dependency_ids.extend(dependency_manifest.get("bundle_dependencies", []))
 
 
 def test_packaging_is_a_direct_default_test_dependency() -> None:
