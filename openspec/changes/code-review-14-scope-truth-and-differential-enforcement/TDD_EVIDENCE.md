@@ -1493,3 +1493,11 @@ on either corrected parser line. Version and compatibility remain `0.49.63` and
 `>=0.55.1,<1.0.0`; the refreshed unsigned checksum is
 `sha256:a3d4148f4e70f3b3ad8fc0643ef838eb612920077683dce69d45600b0d4c3045`.
 Trusted signing and the replacement protected review cycle remain required.
+
+Approval-time signing commit `31c51b3e54d34de0385cadd72532cdb23e46808d`
+added only the signature
+`A5FcNR6MejjLoz1Gu+t6Wx2bkc6EaB+hTDtrvqUVl8n5BNr+xFOsLYaOMfOy3dcR8iY7nJT0E2WXbcwTPrg4CA==`
+to that exact checksum. Strict filesystem verification against the immutable
+core `0.55.1` public key passed all seven module manifests. The following
+documentation-only commit changes no signed module payload byte and exists to
+run the replacement protected matrix on top of the verified signing commit.
