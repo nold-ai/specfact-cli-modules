@@ -1766,6 +1766,34 @@ the immutable core `0.55.1` public key passes all seven module manifests. This
 evidence-only commit changes no signed payload byte and triggers the protected
 matrix on the verified signing head.
 
+Protected run `33183601497` then passed signature verification, immutable-core
+schema/capsule compatibility, and full quality on Python 3.11, 3.12, and 3.13.
+Docs Review, Requirements Evidence, CodeQL, Socket, CodeRabbit, and module
+signature checks also passed on final head
+`9645648b965fb6e76b23d446426b9bb218c049dd`. A fresh exact-head Codex review
+nevertheless found one new valid cached-snapshot boundary: the documented
+direct pre-commit helper sets cached line evidence while the capsule analyzes
+worktree bytes. A partially staged insertion can shift a retained blocker away
+from the staged line, and unstaged removal of the staged violation can produce
+no worktree finding at all. Normal `git commit` stashing does not close the
+supported direct script and `pre-commit --all-files` / `--files` routes.
+
+The first real-repository regression was authored before production changes
+and failed because cached discovery returned `app.py:1` and projected the
+worktree line-2 blocker as unchanged. An independent clean-worktree refinement
+then proved that a late unavailable-evidence result is insufficient: with bad
+bytes staged but absent from the worktree, capsule analysis returned `PASS` /
+exit `0`. The second regression failed with that exact result before the early
+guard. Cached changed enforcement now compares the selected literal-path state
+between index and worktree before capsule preparation and returns required
+`UNKNOWN` / exit `1` with `cached_snapshot_mismatch` or comparison-unavailable
+diagnostics without launching an analyzer. The late check remains defense in
+depth for direct changed-line classification. Both mismatch regressions and a
+fully staged success control pass (`3 passed`); the expanded changed-line and
+cached-enforcement surface passes `49 passed`. Complete gates, refreshed
+signing, protected checks, and final PR #448 thread disposition remain required
+by tasks 6.81-6.82.
+
 Trusted signing run `33181374925` accepted signed human commit
 `7138692239f94ff9d97ea7747acdf627a5eaa45d` and produced signature-only commit
 `994f013cb8060517988ab98691e3ae9817b47599` for exact checksum
@@ -1821,3 +1849,20 @@ unsigned filesystem checksum
 `sha256:318ce26ebba75a4b8301153707f61c467da07ffe2c6da50e2d53460cb99bef6c`.
 A signed human commit, trusted replacement signature, protected matrix, and
 final review/thread disposition remain required.
+
+Final local gates for the cached-snapshot correction pass strict OpenSpec,
+format, Ruff, BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint
+(`10.00/10`), seven manifests plus registry, bundle imports, three CLI contract
+files, and all `28` contract-first tests. The complete exact-core `0.55.1`
+suite passes `1705` of `1706`; the sole failure is the same documented
+unsupported local macOS/CPython 3.14 capsule-lock selector, with only the two
+existing third-party Lark warnings. The complete runner surface passes `328`
+of `329` with that same environment-only exception. Exact-core changed-line
+Code Review returns `PASS_WITH_ADVISORY`, exit `0`, with `83` retained
+findings, two pre-existing blockers outside changed lines, and no changed-line
+blocker. The canonical changed-only signer preserves unpublished version
+`0.49.63` and compatibility `>=0.55.1,<1.0.0`, removes the superseded
+signature, and sets unsigned filesystem checksum
+`sha256:1ecc197485ea8c3a742c0d4b54d8e1ac0e5f3a56150307aa64d1b5462e5be5be`.
+A signed human commit, trusted replacement signature, protected matrix, and
+final PR #448 thread disposition remain required.

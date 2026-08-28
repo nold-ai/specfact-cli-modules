@@ -4130,6 +4130,38 @@ def _run_changed_line_git_command(command: list[str]) -> subprocess.CompletedPro
     return result if result.returncode == 0 else None
 
 
+def _cached_worktree_matches_index(files: list[Path]) -> bool | None:
+    """Return whether cached enforcement would analyze the staged file state."""
+    command = ["git", "--literal-pathspecs", "diff", "--quiet", "--no-ext-diff", "--no-textconv"]
+    if files:
+        command.extend(["--", *(str(file_path) for file_path in files)])
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    if result.returncode not in {0, 1}:
+        return None
+    return result.returncode == 0
+
+
+def _cached_snapshot_mismatch_reason(options: ReviewOptions, files: list[Path]) -> str | None:
+    """Reject cached enforcement before analyzers observe different worktree bytes."""
+    diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
+    if options.review_mode != "changed" or diff_mode != "cached":
+        return None
+    matches_index = _cached_worktree_matches_index(files)
+    if matches_index is True:
+        return None
+    return "cached_snapshot_mismatch" if matches_index is False else "cached_snapshot_comparison_unavailable"
+
+
 def _caller_git_prefix() -> str | None:
     """Return the caller directory's exact repository-root-relative Git prefix."""
     result = _run_changed_line_git_command(["git", "rev-parse", "--show-prefix"])
@@ -4173,6 +4205,8 @@ def _untracked_changed_lines(file_path: Path) -> set[int] | None:
 def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]] | None:
     """Collect changed line numbers for changed enforcement evidence."""
     diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
+    if diff_mode == "cached" and _cached_worktree_matches_index(files) is not True:
+        return None
     command = [
         "git",
         "--literal-pathspecs",
@@ -5317,8 +5351,20 @@ def run_capsule_review(
     if not isinstance(assurance_kind, str) or assurance_kind not in _LOCAL_ASSURANCE_KINDS:
         raise ValueError(f"unsupported_local_assurance_kind:{assurance_kind!r}")
     review_options = _review_options_from_kwargs(options, overrides)
-    runtime, reason = _prepare_capsule_runtime()
     scope_evidence: dict[str, object] = {"assurance_kind": assurance_kind, "capsule_execution": "required"}
+    cached_snapshot_reason = _cached_snapshot_mismatch_reason(review_options, files)
+    if cached_snapshot_reason is not None:
+        return _with_capsule_enforcement(
+            _unknown_capsule_report(
+                cached_snapshot_reason,
+                options=review_options,
+                scope_evidence=scope_evidence,
+            ),
+            review_options,
+            files=files,
+            findings_by_member={},
+        )
+    runtime, reason = _prepare_capsule_runtime()
     if runtime is None:
         if _allows_development_host_compatibility(reason):
             return run_review(files, review_options).model_copy(update={"scope_evidence": scope_evidence})

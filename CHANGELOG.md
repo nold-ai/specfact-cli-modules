@@ -21,8 +21,9 @@ and this project follows SemVer for bundle versions.
   discovery plus state-aware, raw, color-free, literal-path Git parsing, so
   failed or configuration-altered inspection and hunk content cannot be
   mistaken for a clean diff; normalize repository-root diff paths for nested
-  invocations, validate local assurance provenance at the runtime boundary,
-  and count explicitly reviewed ignored/untracked files as changed.
+  invocations, reject cached enforcement when worktree bytes differ from the
+  staged index snapshot, validate local assurance provenance at the runtime
+  boundary, and count explicitly reviewed ignored/untracked files as changed.
 - Release `specfact-code-review` 0.49.62 with truthful local capsule scope
   evidence and changed-line enforcement that remains fail-closed for incomplete
   required analyzer evidence.
