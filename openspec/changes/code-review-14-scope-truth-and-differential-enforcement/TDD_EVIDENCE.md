@@ -1754,3 +1754,14 @@ unsigned filesystem checksum
 `sha256:cbce5f8197758054b7cf54a371cce1fd072d7cb2af02e66a3b0bad637a0e662d`.
 A signed human commit, trusted replacement signature, protected matrix, and
 final review/thread disposition remain required.
+
+Trusted signing run `33181374925` accepted signed human commit
+`7138692239f94ff9d97ea7747acdf627a5eaa45d` and produced signature-only commit
+`994f013cb8060517988ab98691e3ae9817b47599` for exact checksum
+`sha256:cbce5f8197758054b7cf54a371cce1fd072d7cb2af02e66a3b0bad637a0e662d`
+with signature
+`2zYqZACLeZ7szErUdYJY6LuiqTfoEM420vkIeDFDgrOSxsQID7+QVysHdRn0pvibL2h1h3kE5S5+Lg/Gc7gSAw==`.
+Strict filesystem, cryptographic, and dev-baseline version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. This
+evidence-only commit changes no signed payload byte and triggers the protected
+matrix on the verified signing head.
