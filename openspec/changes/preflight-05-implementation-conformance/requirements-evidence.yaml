@@ -16,7 +16,7 @@ requirements:
       - case_id: PF05M-001
         scenario_id: separate-development-checkpoint-command
         method: inspection
-        intent: "Inspect checkpoint scopes, statuses, seal behavior, partial-coverage failure, and pre-commit applicability before implementation."
+        intent: "Inspect checkpoint scopes, statuses, seal behavior, partial-coverage failure, and source/test/config/evidence pre-commit applicability before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:bounded-checkpoint-profiles:
     rationale: *planning-rationale
@@ -26,7 +26,7 @@ requirements:
       - case_id: PF05M-002
         scenario_id: bounded-checkpoint-profiles
         method: inspection
-        intent: "Inspect cumulative slice/commit/deep execution, bounded bug-hunt/prepush checks, and deferred CI semantics before implementation."
+        intent: "Inspect the scope/profile matrix, cumulative slice/commit/deep execution, bounded bug-hunt/prepush checks, and deferred CI semantics before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:complete-implementation-scope-evidence:
     rationale: *planning-rationale
@@ -76,7 +76,12 @@ requirements:
       - case_id: PF05M-011
         scenario_id: immutable-range-conformance-evaluation
         method: inspection
-        intent: "Inspect exact range extraction, sealed obligation comparison, and fail-closed final conformance rendering before implementation."
+        intent: "Inspect exact range extraction, exhaustive sealed-obligation comparison, and fail-closed final conformance rendering before implementation."
+        observable: *planning-observable
+      - case_id: PF05M-012
+        scenario_id: immutable-range-conformance-evaluation
+        method: inspection
+        intent: "Inspect rejection of omitted, duplicate, ambiguous, or empty final obligation closures for affected ranges."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:compact-bounded-remediation-workflow:
     rationale: *planning-rationale
@@ -116,5 +121,5 @@ requirements:
       - case_id: PF05M-010
         scenario_id: signed-publication-before-adapter-consumption
         method: inspection
-        intent: "Inspect the signed #434 module plus separate preflight and implementation-check workflow identity/digest handoff to #251/#253/#433 before implementation."
+        intent: "Inspect post-merge publication and the signed #434 module plus separate preflight and implementation-check workflow identity/digest handoff to #251/#253/#433 before implementation."
         observable: *planning-observable

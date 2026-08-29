@@ -11,7 +11,7 @@ All tasks below are future implementation work. This planning change completes n
 ## 2. Specification and failing-first evidence
 
 - [ ] 2.1 Finalize checkpoint/conform CLI, profile, evidence adapter, cache, pre-commit, remediation packet, bounded workflow, persistence, signing, and publication deltas without external adapter packaging.
-- [ ] 2.2 Add mapped tests for upstream verifier inputs, seal selection/reseal boundaries, the normative worktree/index/range matrix, complete Git transitions, immutable-range conformance evaluation and fail-closed rendering, scope/component/risk mapping, Requirements selectors/JUnit, all core finding classes and precedence, code-review import, cache invalidation, statuses/authority, cumulative profile behavior including deep bug-hunt/prepush execution, renderer parity, persistence, and publication.
+- [ ] 2.2 Add mapped tests for upstream verifier inputs, seal selection/reseal boundaries, the normative worktree/index/range and scope/profile matrices, complete Git transitions, exhaustive immutable-range obligation selection, conformance evaluation and fail-closed rendering, source/test/config/evidence applicability, scope/component/risk mapping, Requirements selectors/JUnit, all core finding classes and precedence, code-review import, cache invalidation, statuses/authority, cumulative profile behavior including deep bug-hunt/prepush execution, renderer parity, persistence, and post-merge publication.
 - [ ] 2.3 Add workflow tests for deterministic packets, three-cycle maximum, repeated fingerprints, scope expansion, unknown/design stops, and non-mutation of sealed artifacts.
 - [ ] 2.4 Run targeted tests before production edits and record failing-first results in a new `TDD_EVIDENCE.md`.
 
@@ -20,7 +20,7 @@ All tasks below are future implementation work. This planning change completes n
 - [ ] 3.1 Implement `specfact preflight checkpoint <change-id> --scope worktree|index --profile slice|commit|deep` against released core #684 interfaces.
 - [ ] 3.2 Reuse C14 scope/capsule/toolchain extraction, Requirements plans/selectors/JUnit, and code-review JSON; add no duplicate selector or analyzer schema.
 - [ ] 3.3 Implement obligation selection, pytest execution, status aggregation, digest-bound caching, human/JSON rendering, compact remediation packets, and optional atomic persistence.
-- [ ] 3.4 Implement the seal-aware index pre-commit wrapper and harness-neutral implementation-check workflow; keep the deterministic CLI LLM/network/write free.
+- [ ] 3.4 Implement the seal-aware index pre-commit wrapper and harness-neutral implementation-check workflow; keep the deterministic CLI free of LLM/network calls and implementation or sealed-artifact mutation while permitting only explicitly requested atomic snapshot/result persistence.
 - [ ] 3.5 Implement `specfact preflight conform <change-id>` as explicit immutable-range extraction, sealed-obligation mapping, core comparison, and non-passing result preservation with separate authority.
 
 ## 4. Dogfood and passing evidence
@@ -32,7 +32,8 @@ All tasks below are future implementation work. This planning change completes n
 
 ## 5. Release and downstream handoff
 
-- [ ] 5.1 Version, sign, verify, compatibility-test, and publish one immutable #434 module identity whose manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest containing checkpoint, conform, and bounded remediation behavior.
-- [ ] 5.2 Hand the exact signed module identity and both named workflow identities/digests to core #251/#253 and modules #433; do not create external adapter packages in this change.
-- [ ] 5.3 Open the implementation PR to `dev` as the final pre-merge task, linking core #684, dogfood, assurance limits, metrics, and rollback evidence.
-- [ ] 5.4 After merge, run `openspec archive preflight-05-implementation-conformance`, update ordering/source mirrors, and remove the dedicated worktree and merged branch.
+- [ ] 5.1 Prepare the proposed semver bump, manifest bindings for the existing preflight and new implementation-check workflow identities/digests, compatibility matrix, and publication inputs; feature-branch artifacts are not publishable identities.
+- [ ] 5.2 Open, review, and merge the behavior-ready implementation PR to `dev` as the final pre-merge task, linking core #684, dogfood, assurance limits, metrics, and rollback evidence.
+- [ ] 5.3 Allow only the canonical post-merge publication workflow to generate, sign, verify, compatibility-test, and propose the immutable #434 module, registry, checksum, signature, and history artifacts; review and merge that publication PR only after every identity and rollback check passes.
+- [ ] 5.4 After merged publication and official registry/install readback, hand the exact signed module identity and both named workflow identities/digests to core #251/#253 and modules #433; do not create external adapter packages in this change.
+- [ ] 5.5 After implementation merge and verified publication, run `openspec archive preflight-05-implementation-conformance` from the repository root, update ordering/source mirrors, and remove the dedicated worktree and merged branch.

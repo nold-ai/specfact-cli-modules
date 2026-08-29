@@ -21,13 +21,13 @@ This paired modules change executes the released core implementation-assurance c
 
 ### 1. Separate checkpoint and conformance commands
 
-`specfact preflight checkpoint <change-id>` accepts only `--scope worktree|index` and `--profile slice|commit|deep`. It returns the released core `DevelopmentCheckpointResult` with local authority. `specfact preflight conform <change-id>` verifies the upstream contract/result/seal/policy/current-source bundle, resolves exact repository plus base/head commit and tree identities, extracts the immutable range manifest and range-bound evidence through C14, maps sealed final-delivery obligations, and invokes the core comparator. It preserves `FAIL` and `UNKNOWN` rather than synthesizing success from immutable references or prior local evidence. Neither command changes the seal.
+`specfact preflight checkpoint <change-id>` accepts `slice` with `worktree` or `index`, `commit` with `index` only, and `deep` with `worktree` or `index`. Any other scope/profile pair is rejected before extraction rather than silently overriding the requested scope. It returns the released core `DevelopmentCheckpointResult` with local authority. `specfact preflight conform <change-id>` verifies the upstream contract/result/seal/policy/current-source bundle, resolves exact repository plus base/head commit and tree identities, extracts the immutable range manifest and range-bound evidence through C14, derives the exhaustive affected final-delivery obligation closure, and invokes the core comparator. It preserves `FAIL` and `UNKNOWN` rather than synthesizing success from immutable references or prior local evidence. Neither command changes the seal.
 
 ### 2. Three bounded checkpoint profiles
 
 - `slice` verifies the seal, compares the complete changed-path manifest with sealed roles, runs affected exact Requirements cases, and imports changed-scope code-review evidence.
-- `commit` requires the index snapshot, adds every affected component's bounded pytest targets, and is the pre-commit profile.
-- `deep` adds bounded bug-hunt analysis and all locally executable `prepush` obligations. `ci` obligations are reported as deferred with identity and reason, never silently passed.
+- `commit` requires the index snapshot, includes applicable `slice` checks, adds every affected component's bounded pytest targets, and is the pre-commit profile.
+- `deep` includes all lower-profile checks applicable to its worktree or index snapshot, bounded bug-hunt analysis, and all locally executable `prepush` obligations. `ci` obligations are reported as deferred with identity and reason, never silently passed.
 
 V1 invokes pytest through the active Python environment using repository-contained selectors. Other runners remain later adapters.
 
@@ -37,7 +37,7 @@ Worktree and index extraction reuses C14 scope, sandbox, and toolchain primitive
 
 ### 4. Seal-bound semantic selection
 
-Changed source paths map through sealed component ownership to existing Requirements verification cases and bounded component pytest targets. Selection may use only requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal. Any addition, removal, replacement, or change of a bound identity returns to preflight validation and reapproval. Missing ownership, stale plan identity, invalid/uncollected selectors, ambiguous scope, or unavailable required evidence produces `UNKNOWN`. Work outside sealed roles produces `FAIL` and routes intentional expansion to preflight reapproval.
+Changed source paths map through sealed component ownership to existing Requirements verification cases and bounded component pytest targets. A checkpoint may select only the affected subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal. Final conformance has no discretionary subset: it deterministically closes over every changed governed path and interface plus every applicable component, acceptance criterion, risk row, Requirements case, component target, verification stage (including `ci`), and exclusion bound to the affected range. The closure and its digest are result-bound. An incomplete, empty-for-an-affected-range, duplicate, or ambiguous closure produces `UNKNOWN`; determinate unsatisfied obligations produce `FAIL`. Any addition, removal, replacement, or change of a seal-bound identity returns to preflight validation and reapproval. Missing ownership, stale plan identity, invalid/uncollected selectors, ambiguous scope, or unavailable required evidence produces `UNKNOWN`. Work outside sealed roles produces `FAIL` and routes intentional expansion to preflight reapproval.
 
 ### 5. Evidence aggregation and cache identity
 
@@ -45,15 +45,15 @@ The runtime supplies the upstream design contract, validation result, seal, poli
 
 ### 6. Seal-aware pre-commit rollout
 
-The pre-commit wrapper auto-selects only when exactly one valid seal covers every staged production path. No staged production path, or no seal associated with any staged production path, is `NOT_APPLICABLE` and exits zero. If at least one staged path associates with a seal but that seal does not cover every staged production path, the uncovered paths are `unexpected`, the result is `FAIL`, and intentional expansion returns to preflight refinement. Multiple/stale matching seals, ambiguous Git state, missing ownership, or missing required evidence is `UNKNOWN` and exits one. Dogfood begins in shadow mode; blocking is enabled only after the accepted corpus shows no false PASS or destructive behavior.
+The pre-commit wrapper classifies every staged path against sealed `source`, `test`, `docs`, `generated`, `evidence`, and `excluded` roles plus seal-bound test, dependency, policy, toolchain, and relevant configuration inputs. It auto-selects only when exactly one valid seal covers every staged non-excluded seal-relevant path. `NOT_APPLICABLE` is limited to an empty staged set or staged paths genuinely unrelated to every seal and seal-bound input. If any staged path associates with a seal but another non-excluded seal-relevant path is uncovered, the uncovered path is `unexpected`, the result is `FAIL`, and intentional expansion returns to preflight refinement. Multiple/stale matching seals, ambiguous Git state, missing ownership, or missing required evidence is `UNKNOWN` and exits one. Dogfood begins in shadow mode; blocking is enabled only after the accepted corpus shows no false PASS or destructive behavior.
 
 ### 7. Compact bounded agent handoff
 
 Each finding packet contains a stable fingerprint, action class (`fix_implementation`, `fix_or_add_test`, `rerun`, `return_to_preflight`, or `human_decision`), contract/risk reference, implementation evidence, expected observable, recommended action, and validation selectors. The harness-neutral workflow may hand packets to the current coding agent for at most three fix/rerun cycles. It stops on a repeated consecutive fingerprint, scope expansion, `UNKNOWN`, contract/design judgment, or requested sealed-artifact change.
 
-### 8. Publication precedes adapters
+### 8. Post-merge publication precedes adapters
 
-The implementation versions, signs, compatibility-tests, and publishes one immutable #434 module release. Its signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest; the latter owns checkpoint, conform, and bounded remediation semantics. Core #251/#253 and modules #433 consume the exact module identity plus both named workflow identities and digests. #434 does not need an existing adapter and packages none.
+The implementation PR prepares the version, manifest bindings, and compatibility proof but produces no publishable feature-branch identity. After that implementation is merged to `dev`, only the canonical post-merge workflow may generate, sign, verify, and propose the immutable #434 module, registry, checksum, signature, and history artifacts. Downstream handoff occurs only after that publication PR is merged and official registry/install readback passes. The signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest; the latter owns checkpoint, conform, and bounded remediation semantics. Core #251/#253 and modules #433 consume the exact module identity plus both named workflow identities and digests. #434 does not need an existing adapter and packages none.
 
 ## Risks / Trade-offs
 

@@ -12,8 +12,8 @@ Preflight approval records what was reviewed, but defects and mismatches can sti
 - **NEW**: Import of current-run JUnit and `specfact code review run` evidence with cache identity bound to the seal, snapshot, selected obligations/targets, runner, policy, and configuration.
 - **NEW**: `specfact preflight conform <change-id>` for explicit immutable base/head comparison and a separate final conformance result.
 - **NEW**: Human/JSON parity, compact remediation packets, a harness-neutral implementation-check workflow with at most three fix/rerun cycles, and optional atomic persistence.
-- **NEW**: Seal-aware staged pre-commit integration that is non-applicable for unsealed repositories, fail-closed for ambiguous applicable evidence, and shadow-dogfooded before blocking rollout.
-- **NEW**: Version, sign, compatibility-test, and publish one #434 module release identity that separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest before #251/#253/#433 consume them.
+- **NEW**: Seal-aware staged pre-commit integration that evaluates sealed tests/configuration/evidence as well as source, is non-applicable only for paths unrelated to every seal, fails closed for ambiguous applicable evidence, and is shadow-dogfooded before blocking rollout.
+- **NEW**: After the implementation merges, use the canonical post-merge publication workflow to version, sign, compatibility-test, and publish one #434 module release identity that separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest before #251/#253/#433 consume them.
 - **CLARIFY**: The deterministic CLI never invokes an LLM, edits implementation, mutates/reseals a contract, or promotes local evidence to protected PR authority.
 
 ## Capabilities

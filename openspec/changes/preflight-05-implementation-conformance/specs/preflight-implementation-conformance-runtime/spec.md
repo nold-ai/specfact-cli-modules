@@ -2,19 +2,19 @@
 
 ### Requirement: Separate development checkpoint command
 
-The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal.
+The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal. Allowed pairs are `slice/worktree`, `slice/index`, `commit/index`, `deep/worktree`, and `deep/index`; every other pair SHALL be rejected as invalid usage before snapshot extraction, without silently overriding either argument.
 
-#### Scenario: No staged production change or associated seal
+#### Scenario: No staged seal-relevant change or associated seal
 
-- **GIVEN** the pre-commit wrapper finds no staged production path or no seal associated with any staged production path
+- **GIVEN** the pre-commit wrapper finds no staged path associated with any seal or seal-bound test, dependency, policy, toolchain, or relevant configuration input
 - **WHEN** automatic checkpoint selection runs
 - **THEN** the result is `NOT_APPLICABLE` and exits zero
 - **AND** an unsealed repository does not acquire a universal blocking policy.
 
-#### Scenario: A matching seal covers only part of the staged production scope
+#### Scenario: A matching seal covers only part of the staged seal-relevant scope
 
-- **GIVEN** at least one staged production path associates with a valid seal
-- **AND** another staged production path is outside that seal
+- **GIVEN** at least one staged source, test, docs, generated, evidence, or seal-bound configuration path associates with a valid seal
+- **AND** another staged non-excluded seal-relevant path is outside that seal
 - **WHEN** automatic checkpoint selection runs
 - **THEN** every uncovered path is reported as `unexpected`
 - **AND** the result is `FAIL` and exits non-zero
@@ -22,7 +22,7 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 
 #### Scenario: Applicable checkpoint evidence is ambiguous
 
-- **GIVEN** one or more staged production paths are covered by a seal but the seal, Git identity, component owner, selector, runner, or required evidence is stale, multiple, missing, or ambiguous
+- **GIVEN** one or more staged seal-relevant paths are covered by a seal but the seal, Git identity, component owner, selector, runner, or required evidence is stale, multiple, missing, or ambiguous
 - **WHEN** checkpoint status is aggregated
 - **THEN** the result is `UNKNOWN` and exits non-zero
 - **AND** no renderer or workflow converts it to pass.
@@ -30,6 +30,13 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 ### Requirement: Bounded checkpoint profiles
 
 The module SHALL define cumulative `slice`, `commit`, and `deep` profiles whose selected obligations are derived from the sealed execution stages. `commit` SHALL include all applicable `slice` checks plus affected-component bounded targets. `deep` SHALL include all applicable lower-profile checks for its snapshot, bounded bug-hunt analysis, and every locally executable `prepush` obligation.
+
+#### Scenario: Scope and profile are incompatible
+
+- **GIVEN** a caller requests `--scope worktree --profile commit` or any scope/profile pair outside the allowed matrix
+- **WHEN** checkpoint argument validation runs
+- **THEN** the command rejects the request before Git extraction or evidence execution
+- **AND** it neither evaluates worktree state as staged evidence nor silently switches to the index.
 
 #### Scenario: Slice profile runs immediate semantic evidence
 
@@ -40,7 +47,7 @@ The module SHALL define cumulative `slice`, `commit`, and `deep` profiles whose 
 
 #### Scenario: Commit profile evaluates the staged index
 
-- **GIVEN** exactly one valid seal covers staged production paths
+- **GIVEN** exactly one valid seal covers all staged non-excluded seal-relevant paths and `--scope index --profile commit` is selected
 - **WHEN** the commit profile runs
 - **THEN** it adds every affected component's bounded pytest targets and current-run JUnit evidence
 - **AND** execution is bound to the captured index capsule rather than a differing worktree.
@@ -72,7 +79,7 @@ The runtime SHALL reuse C14 worktree/index/range primitives and implement the re
 
 ### Requirement: Seal-bound semantic evidence selection
 
-The runtime SHALL map changed source paths through sealed component ownership, risk rows, Requirements plan identities, exact pytest cases, bounded component targets, and execution stages. It MAY select a subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal.
+The runtime SHALL map changed source paths through sealed component ownership, risk rows, Requirements plan identities, exact pytest cases, bounded component targets, and execution stages. A checkpoint MAY select the affected subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal.
 
 #### Scenario: Production path lacks semantic ownership
 
@@ -119,7 +126,7 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 
 ### Requirement: Immutable-range conformance evaluation
 
-`specfact preflight conform <change-id>` SHALL verify the supplied design contract, validation result, seal, policy, and current source identities; resolve repository identity plus full immutable base/head commit and tree identities; extract the complete range manifest and range-bound evidence through C14 primitives; map the sealed obligations selected for final delivery; and invoke the released core implementation-assurance verifier. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
+`specfact preflight conform <change-id>` SHALL verify the supplied design contract, validation result, seal, policy, and current source identities; resolve repository identity plus full immutable base/head commit and tree identities; extract the complete range manifest and range-bound evidence through C14 primitives; derive the deterministic exhaustive final-delivery obligation set; and invoke the released core implementation-assurance verifier. The exhaustive set SHALL include every changed governed path/interface and every applicable sealed component, acceptance criterion, risk row, Requirements verification case, component target, verification stage including `ci`, and exclusion in their transitive obligation closure. The set and its digest SHALL be bound to the result. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
 
 #### Scenario: Final range is evaluated against the seal
 
@@ -127,6 +134,13 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 - **WHEN** final conformance runs
 - **THEN** the runtime verifies upstream identities, extracts the exact immutable-range manifest and evidence, maps sealed final-delivery obligations, and invokes the core comparator
 - **AND** the result remains independent from prior local checkpoint authority and protected PR review.
+
+#### Scenario: Final obligation selection is incomplete
+
+- **GIVEN** an immutable range affects one or more sealed paths, interfaces, behaviors, components, acceptance criteria, risk rows, Requirements cases, targets, stages, or exclusions
+- **WHEN** final conformance omits, duplicates, or cannot deterministically resolve any member of the exhaustive transitive obligation closure, or selects an empty set for that affected range
+- **THEN** the result is `UNKNOWN` with the incomplete selection identities
+- **AND** comparison cannot pass until the complete result-bound obligation set is available.
 
 #### Scenario: Final range comparison cannot be completed or does not conform
 
@@ -177,11 +191,12 @@ The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL ena
 
 ### Requirement: Signed publication before adapter consumption
 
-The implementation SHALL version, sign, compatibility-test, and publish one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest before #251/#253/#433 consume them.
+After the implementation PR is merged to `dev`, the canonical post-merge publication workflow SHALL version, sign, compatibility-test, and publish one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. No feature-branch artifact SHALL be handed downstream; #251/#253/#433 MAY consume the identities only after the generated publication PR is merged and official registry/install readback passes.
 
 #### Scenario: Adapter requests the new workflow
 
-- **GIVEN** #433 prepares a harness adapter
+- **GIVEN** the #434 implementation and canonical publication PRs are merged and official registry/install readback passes
+- **AND** #433 prepares a harness adapter
 - **WHEN** it resolves the canonical module and workflow identities
 - **THEN** it consumes the exact signed #434 module identity, preflight workflow identity/digest, and implementation-check workflow identity/digest
 - **AND** #434 contains no harness-specific adapter package.
