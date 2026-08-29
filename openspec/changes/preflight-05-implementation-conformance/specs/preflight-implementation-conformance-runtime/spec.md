@@ -4,12 +4,21 @@
 
 The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal.
 
-#### Scenario: No staged production change or applicable seal
+#### Scenario: No staged production change or associated seal
 
-- **GIVEN** the pre-commit wrapper finds no staged production path or no valid seal whose scope covers the staged production paths
+- **GIVEN** the pre-commit wrapper finds no staged production path or no seal associated with any staged production path
 - **WHEN** automatic checkpoint selection runs
 - **THEN** the result is `NOT_APPLICABLE` and exits zero
 - **AND** an unsealed repository does not acquire a universal blocking policy.
+
+#### Scenario: A matching seal covers only part of the staged production scope
+
+- **GIVEN** at least one staged production path associates with a valid seal
+- **AND** another staged production path is outside that seal
+- **WHEN** automatic checkpoint selection runs
+- **THEN** every uncovered path is reported as `unexpected`
+- **AND** the result is `FAIL` and exits non-zero
+- **AND** intentional expansion returns to preflight refinement and reapproval.
 
 #### Scenario: Applicable checkpoint evidence is ambiguous
 

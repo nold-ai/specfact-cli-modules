@@ -45,7 +45,7 @@ The runtime imports current-run JUnit and `specfact code review run` JSON and de
 
 ### 6. Seal-aware pre-commit rollout
 
-The pre-commit wrapper auto-selects only when exactly one valid seal covers every staged production path. No staged production path or no applicable seal is `NOT_APPLICABLE` and exits zero. Multiple/stale matching seals, ambiguous Git state, missing ownership, or missing required evidence is `UNKNOWN` and exits one. Dogfood begins in shadow mode; blocking is enabled only after the accepted corpus shows no false PASS or destructive behavior.
+The pre-commit wrapper auto-selects only when exactly one valid seal covers every staged production path. No staged production path, or no seal associated with any staged production path, is `NOT_APPLICABLE` and exits zero. If at least one staged path associates with a seal but that seal does not cover every staged production path, the uncovered paths are `unexpected`, the result is `FAIL`, and intentional expansion returns to preflight refinement. Multiple/stale matching seals, ambiguous Git state, missing ownership, or missing required evidence is `UNKNOWN` and exits one. Dogfood begins in shadow mode; blocking is enabled only after the accepted corpus shows no false PASS or destructive behavior.
 
 ### 7. Compact bounded agent handoff
 

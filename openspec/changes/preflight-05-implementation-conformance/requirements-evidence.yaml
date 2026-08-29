@@ -16,7 +16,7 @@ requirements:
       - case_id: PF05M-001
         scenario_id: separate-development-checkpoint-command
         method: inspection
-        intent: "Inspect checkpoint scopes, statuses, seal behavior, and pre-commit applicability before implementation."
+        intent: "Inspect checkpoint scopes, statuses, seal behavior, partial-coverage failure, and pre-commit applicability before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:bounded-checkpoint-profiles:
     rationale: *planning-rationale

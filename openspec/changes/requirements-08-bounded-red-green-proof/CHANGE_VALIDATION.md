@@ -23,6 +23,9 @@ requirements into the canonical specification.
 - Modules issue #414: closed `not planned` on 2026-08-29.
 - Core issue #675: closed `not planned` on 2026-08-29.
 - Replacement planning: modules #431/#434 and core #682/#684.
-- Rollback of this planning decision is recoverable by moving the folder back to
-  `openspec/changes/`; do not use `openspec archive` unless the behavior is first
+- The folder remains at its governed `openspec/changes/` path because repository
+  rules prohibit a manual move or rename. It is parked by explicit status and
+  roadmap exclusion, not by filesystem relocation.
+- Un-parking requires fresh evidence, an explicit roadmap decision, and strict
+  revalidation. Do not use `openspec archive` unless the behavior is first
   implemented and verified.
