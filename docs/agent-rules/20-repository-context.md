@@ -78,4 +78,4 @@ In this checkout:
 
 - Prefer **`specfact module init --scope project --repo .`** (and project-scoped installs) so bundled modules live under the repo, not only under user scope.
 - **`SPECFACT_MODULES_REPO`** is set to the modules repo root for every **`hatch run`** (`pyproject.toml` env-vars) and via **`apply_specfact_workspace_env`** from `specfact_cli_modules.dev_bootstrap` (also used by `ensure_core_dependency`, pytest `conftest`, and `scripts/pre_commit_code_review.py`). **`SPECFACT_REPO_ROOT`** defaults to the resolved sibling/core specfact-cli checkout when discoverable.
-- If you still see a precedence warning for a module id, remove the stale user copy: **`specfact module uninstall <module-id> --scope user`**, then confirm with **`specfact module list --show-origin`**.
+- A user-scoped copy shadowed here remains installed and available outside this repository. Normal precedence requires no uninstall or cleanup action; use **`specfact module list --show-origin`** only when you need to inspect the effective source.
