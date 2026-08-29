@@ -1,0 +1,42 @@
+schema_version: "2"
+requirements:
+  openspec:module-scope-02-preserve-user-installs:agent-governance-loading:repository-bootstrap-guidance-preserves-user-scoped-modules:
+    rationale: "Repository and bootstrap guidance must preserve valid user-scoped installations during normal project shadowing."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli-modules#452"
+      - "nold-ai/specfact-cli#699"
+    touchpoints:
+      - id: workspace-bootstrap-guidance
+        kind: source_file
+        locator: "src/specfact_cli_modules/dev_bootstrap.py"
+      - id: repository-scope-guidance
+        kind: documentation
+        locator: "docs/agent-rules/20-repository-context.md"
+      - id: local-source-alignment
+        kind: test_file
+        locator: "tests/unit/test_local_bundle_source_alignment.py"
+    verification_cases:
+      - case_id: MSI-MOD-001
+        scenario_id: repository-bootstrap-guidance-preserves-user-scoped-modules
+        method: test
+        intent: "Prevent bootstrap guidance from recommending user-scope uninstall."
+        observable: "Bootstrap states that the user copy remains installed and available elsewhere."
+        selector:
+          runner: pytest
+          node_id: tests/unit/test_dev_bootstrap.py::test_workspace_env_guidance_preserves_user_scoped_modules
+      - case_id: MSI-MOD-002
+        scenario_id: repository-bootstrap-guidance-preserves-user-scoped-modules
+        method: test
+        intent: "Prevent repository rules from recommending user-scope uninstall."
+        observable: "Repository guidance states that the user copy remains installed and available elsewhere."
+        selector:
+          runner: pytest
+          node_id: tests/unit/test_dev_bootstrap.py::test_repository_scope_guidance_preserves_user_scoped_modules
+      - case_id: MSI-MOD-003
+        scenario_id: repository-bootstrap-guidance-preserves-user-scoped-modules
+        method: test
+        intent: "Keep in-memory import eviction distinct from filesystem module removal."
+        observable: "Local source alignment passes without deleting or uninstalling user-scoped files."
+        selector:
+          runner: pytest
+          node_id: tests/unit/test_local_bundle_source_alignment.py::test_enforce_local_bundle_sources_evicts_loaded_user_bundle_imports

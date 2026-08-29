@@ -65,6 +65,24 @@ def test_apply_specfact_workspace_env_sets_defaults(monkeypatch: pytest.MonkeyPa
     assert os.environ["SPECFACT_REPO_ROOT"] == str(core.resolve())
 
 
+def test_workspace_env_guidance_preserves_user_scoped_modules() -> None:
+    guidance = apply_specfact_workspace_env.__doc__ or ""
+
+    assert "remains installed" in guidance
+    assert "available outside this workspace" in guidance
+    assert "module uninstall" not in guidance
+
+
+def test_repository_scope_guidance_preserves_user_scoped_modules() -> None:
+    repository_root = Path(__file__).resolve().parents[2]
+    guidance = (repository_root / "docs" / "agent-rules" / "20-repository-context.md").read_text(encoding="utf-8")
+    scope_guidance = guidance.split("## SpecFact module scopes", maxsplit=1)[1]
+
+    assert "remains installed" in scope_guidance
+    assert "available outside this repository" in scope_guidance
+    assert "module uninstall <module-id> --scope user" not in scope_guidance
+
+
 def test_apply_specfact_workspace_env_without_core_repo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     repo_root = tmp_path / "modules-repo"
     repo_root.mkdir()
@@ -119,9 +137,13 @@ def test_ensure_core_dependency_allows_matching_editable_core(monkeypatch: pytes
     core = _make_core_repo(tmp_path / "paired-core")
 
     monkeypatch.setenv("SPECFACT_CLI_REPO", str(core))
+
+    def _installed_core_root() -> Path:
+        return core.resolve()
+
     monkeypatch.setattr(
         "specfact_cli_modules.dev_bootstrap._installed_core_root",
-        lambda: core.resolve(),
+        _installed_core_root,
     )
 
     assert ensure_core_dependency(repo_root) == 0
@@ -136,14 +158,18 @@ def test_ensure_core_dependency_reinstalls_when_editable_core_mismatches(
     core_wanted = _make_core_repo(tmp_path / "core-wanted")
 
     monkeypatch.setenv("SPECFACT_CLI_REPO", str(core_wanted))
+
+    def _installed_core_root() -> Path:
+        return core_wrong.resolve()
+
     monkeypatch.setattr(
         "specfact_cli_modules.dev_bootstrap._installed_core_root",
-        lambda: core_wrong.resolve(),
+        _installed_core_root,
     )
 
     recorded: list[list[str]] = []
 
-    def _fake_run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
+    def _fake_run(cmd: list[str], **_kwargs: object) -> SimpleNamespace:
         recorded.append(list(cmd))
         return SimpleNamespace(returncode=0)
 

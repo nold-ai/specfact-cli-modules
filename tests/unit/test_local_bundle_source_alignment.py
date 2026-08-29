@@ -8,7 +8,7 @@ from tests import conftest as test_bootstrap
 
 
 # pylint: disable=protected-access
-def test_enforce_local_bundle_sources_removes_shadowed_user_bundle_modules(monkeypatch) -> None:
+def test_enforce_local_bundle_sources_evicts_loaded_user_bundle_imports(monkeypatch) -> None:
     user_bundle_src = str((Path.home() / ".specfact" / "modules" / "specfact-backlog" / "src").resolve())
     local_bundle_src = str((test_bootstrap.MODULES_REPO_ROOT / "packages" / "specfact-backlog" / "src").resolve())
     fake_module_path = f"{user_bundle_src}/specfact_backlog/backlog/commands.py"
