@@ -89,7 +89,7 @@ The module SHALL define cumulative `slice`, `commit`, and `deep` profiles whose 
 
 ### Requirement: Complete implementation scope evidence
 
-The runtime SHALL reuse C14 worktree/index/range primitives and implement the released core snapshot matrix without guessing or lossy path parsing. Every snapshot base SHALL equal the seal-bound implementation-lineage origin repository/base commit/base tree. Worktree snapshots SHALL additionally bind a worktree-manifest digest and include staged, unstaged, and untracked state. Index snapshots SHALL additionally bind the exact index tree ID and exclude untracked paths unless staged as additions. Range snapshots SHALL bind full head commit/tree, policy-authorized current delivery-target commit/tree, plus origin-to-head ancestry and SHALL NOT represent untracked paths. Every manifest SHALL preserve additions, deletions, both rename endpoints, before/after modes, symlink target identity, and byte-preserving path identity; rename interpretation SHALL be bound to producer, policy, and toolchain identity. For every affected source path that repository policy classifies as capable of defining a public interface, the runtime SHALL extract or import normalized base/current public-interface records using the released core snapshot schema. Those records SHALL bind extractor identity/version/configuration digest, policy/toolchain identity, source path, and exact base/current snapshot provenance; changed-interface identities SHALL be derived by deterministic comparison rather than accepted as a caller-supplied set.
+The runtime SHALL reuse C14 worktree/index/range primitives and implement the released core snapshot matrix without guessing or lossy path parsing. Every snapshot base SHALL equal the seal-bound implementation-lineage origin repository/base commit/base tree. Worktree snapshots SHALL additionally bind a worktree-manifest digest and include staged, unstaged, and untracked state. Index snapshots SHALL additionally bind the exact index tree ID and exclude untracked paths unless staged as additions. Range snapshots SHALL bind full head commit/tree, policy-authorized current delivery-target commit/tree, plus origin-to-head ancestry and SHALL NOT represent untracked paths. Every manifest SHALL preserve additions, deletions, both rename endpoints, before/after modes, symlink target identity, and byte-preserving path identity; rename interpretation SHALL be bound to producer, policy, and toolchain identity. For every affected governed path that repository policy classifies as capable of defining a public interface, regardless of whether its role is `source`, `test`, `docs`, `generated`, or `evidence`, the runtime SHALL extract or import normalized base/current public-interface records using the released core snapshot schema. Those records SHALL bind extractor identity/version/configuration digest, policy/toolchain identity, path, role, and exact base/current snapshot provenance; changed-interface identities SHALL be derived by deterministic comparison rather than accepted as a caller-supplied set.
 
 #### Scenario: Repository contains difficult path transitions
 
@@ -100,10 +100,17 @@ The runtime SHALL reuse C14 worktree/index/range primitives and implement the re
 
 #### Scenario: Public-interface delta cannot be established
 
-- **GIVEN** an affected source path can define a public interface but its base/current interface records are missing, unsupported, incomplete, stale, ambiguously normalized, or bound to a different snapshot or extractor configuration
+- **GIVEN** an affected governed path in any role can define a public interface but its base/current interface records are missing, unsupported, incomplete, stale, ambiguously normalized, or bound to a different snapshot or extractor configuration
 - **WHEN** implementation scope evidence is assembled
 - **THEN** changed-interface discovery is `unverifiable` and the checkpoint or conformance result is `UNKNOWN`
 - **AND** an empty caller-supplied changed-interface set cannot close or omit interface obligations.
+
+#### Scenario: Generated path defines a public interface
+
+- **GIVEN** an affected governed path is classified as `generated` and repository policy classifies it as capable of defining a public interface
+- **WHEN** checkpoint or conform extracts the snapshot-bound interface delta
+- **THEN** the same complete base/current observations and extractor provenance required for any interface-capable role are enforced
+- **AND** missing or unverifiable observations return `UNKNOWN` rather than an empty changed-interface set.
 
 ### Requirement: Seal-bound semantic evidence selection
 

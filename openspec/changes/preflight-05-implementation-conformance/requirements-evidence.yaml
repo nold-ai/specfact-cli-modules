@@ -36,7 +36,7 @@ requirements:
       - case_id: PF05M-003
         scenario_id: complete-implementation-scope-evidence
         method: inspection
-        intent: "Inspect complete C14-backed Git transition identity plus policy-authorized, snapshot-bound public-interface extraction and fail-closed changed-interface discovery before implementation."
+        intent: "Inspect complete C14-backed Git transition identity plus role-independent policy-authorized, snapshot-bound public-interface extraction and fail-closed changed-interface discovery before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:seal-bound-semantic-evidence-selection:
     rationale: *planning-rationale
