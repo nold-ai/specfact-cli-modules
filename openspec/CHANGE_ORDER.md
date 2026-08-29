@@ -7,15 +7,17 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 19 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 21 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 49 | [`openspec/changes/archive/`](changes/archive/) |
 
-`openspec list` reflects the active tree, including one closed R08 proposal that
-is parked in place because repository governance prohibits manually moving a
-change and native archive would merge its unimplemented delta. Completed
-changes are archived with date-prefixed folders. Parking-lot changes are
-preserved for later customer pull but are not implementation-ready.
+`openspec list` reflects all 21 direct active-tree entries: 19 are
+implementation-active, while `requirements-03-backlog-sync` and the closed R08
+proposal are parked in place. R08 remains there because repository governance
+prohibits manually moving a change and native archive would merge its
+unimplemented delta. Completed changes are archived with date-prefixed folders.
+Parking-lot changes are preserved for later customer pull but are not
+implementation-ready.
 
 ## Product Thesis
 
