@@ -23,4 +23,4 @@
 - [x] 4.1 Run focused passing tests and record passing-after evidence.
 - [x] 4.2 Run format, type-check, lint, yaml-lint, bundle-import, contract, smart-test, full test, and applicable signature gates; document reproducible `origin/dev` baseline failures.
 - [x] 4.3 Run SpecFact changed-scope bug-hunt review, resolve every finding, and record fresh JSON evidence.
-- [ ] 4.4 Commit with a signed Conventional Commit, push the bugfix branch, and open a PR to `dev` cross-linked to both issues and the paired core PR.
+- [x] 4.4 Commit with a signed Conventional Commit, push the bugfix branch, and open PR #454 to `dev` cross-linked to both issues and paired core PR #700.
