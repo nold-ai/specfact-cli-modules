@@ -11,7 +11,7 @@ All tasks below are future implementation work. This planning change completes n
 ## 2. Specification and failing-first evidence
 
 - [ ] 2.1 Finalize checkpoint/conform CLI, profile, evidence adapter, cache, pre-commit, remediation packet, bounded workflow, persistence, signing, and publication deltas without external adapter packaging.
-- [ ] 2.2 Add mapped tests for seal selection, worktree/index/range identity, complete Git transitions, scope/component/risk mapping, Requirements selectors/JUnit, code-review import, cache invalidation, statuses/authority, profile behavior, renderer parity, persistence, and publication.
+- [ ] 2.2 Add mapped tests for upstream verifier inputs, seal selection/reseal boundaries, the normative worktree/index/range matrix, complete Git transitions, scope/component/risk mapping, Requirements selectors/JUnit, all core finding classes and precedence, code-review import, cache invalidation, statuses/authority, profile behavior, renderer parity, persistence, and publication.
 - [ ] 2.3 Add workflow tests for deterministic packets, three-cycle maximum, repeated fingerprints, scope expansion, unknown/design stops, and non-mutation of sealed artifacts.
 - [ ] 2.4 Run targeted tests before production edits and record failing-first results in a new `TDD_EVIDENCE.md`.
 

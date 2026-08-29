@@ -33,15 +33,15 @@ V1 invokes pytest through the active Python environment using repository-contain
 
 ### 3. C14 provides scope and execution identity
 
-Worktree and index extraction reuses C14 scope, sandbox, and toolchain primitives. Complete manifests retain additions, deletions, both rename endpoints, modes, symlinks, untracked paths where applicable, quoted paths, Unicode, and trailing characters. Index claims execute against the captured index capsule; a differing worktree cannot satisfy staged evidence.
+Worktree and index extraction reuses C14 scope, sandbox, and toolchain primitives and implements the released core matrix exactly. A worktree snapshot binds repository identity, full base commit ID, and worktree-manifest digest and includes staged, unstaged, and untracked state. An index snapshot binds repository identity, full base commit ID, and exact index tree ID; untracked paths are absent unless staged as additions. A range snapshot binds repository identity, full base/head commit IDs, and base/head tree IDs; untracked paths are not representable. Every manifest retains additions, deletions, both rename endpoints, before/after modes, symlink target identity, and byte-preserving path identity. Rename classification is bound to producer, toolchain, and policy identity. Index claims execute against the captured index capsule; a differing worktree cannot satisfy staged evidence.
 
 ### 4. Seal-bound semantic selection
 
-Changed source paths map through sealed component ownership to existing Requirements verification cases and bounded component pytest targets. Missing ownership, stale plan identity, invalid/uncollected selectors, ambiguous scope, or unavailable required evidence produces `UNKNOWN`. Work outside sealed roles produces `FAIL` and routes intentional expansion to preflight reapproval.
+Changed source paths map through sealed component ownership to existing Requirements verification cases and bounded component pytest targets. Selection may use only requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal. Any addition, removal, replacement, or change of a bound identity returns to preflight validation and reapproval. Missing ownership, stale plan identity, invalid/uncollected selectors, ambiguous scope, or unavailable required evidence produces `UNKNOWN`. Work outside sealed roles produces `FAIL` and routes intentional expansion to preflight reapproval.
 
 ### 5. Evidence aggregation and cache identity
 
-The runtime imports current-run JUnit and `specfact code review run` JSON and delegates status/finding semantics to released core interfaces. Cache reuse requires exact seal, snapshot, obligation-set, pytest-target, runner, policy, toolchain, and relevant configuration digests. Any identity change invalidates the cache.
+The runtime supplies the upstream design contract, validation result, seal, policy, and current source identities to core verification before selecting implementation obligations. It imports current-run JUnit and `specfact code review run` JSON and delegates mutually exclusive finding classification, precedence, and status aggregation to released core interfaces. Cache reuse requires exact seal, snapshot, obligation-set, pytest-target, runner, policy, toolchain, and relevant configuration digests. Any identity change invalidates the cache.
 
 ### 6. Seal-aware pre-commit rollout
 

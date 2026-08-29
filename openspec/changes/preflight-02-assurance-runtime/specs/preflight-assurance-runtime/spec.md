@@ -57,7 +57,7 @@ The module SHALL run validators identified by stable ID and version and SHALL di
 
 ### Requirement: Required MVP validation domains
 
-The initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work.
+The initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work. Risk validation SHALL require every affected behavior or interface to contain the closed core dimensions `boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`.
 
 #### Scenario: Scope has no acceptance or test trace
 

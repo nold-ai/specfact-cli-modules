@@ -54,7 +54,7 @@ The module SHALL define `slice`, `commit`, and `deep` profiles whose selected ob
 
 ### Requirement: Complete implementation scope evidence
 
-The runtime SHALL reuse C14 worktree/index/range primitives and preserve all supported changed-path transitions without guessing or lossy path parsing.
+The runtime SHALL reuse C14 worktree/index/range primitives and implement the released core snapshot matrix without guessing or lossy path parsing. Worktree snapshots SHALL bind repository identity, full base commit ID, and worktree-manifest digest and include staged, unstaged, and untracked state. Index snapshots SHALL bind repository identity, full base commit ID, and exact index tree ID and exclude untracked paths unless staged as additions. Range snapshots SHALL bind repository identity, full base/head commit IDs, and base/head tree IDs and SHALL NOT represent untracked paths. Every manifest SHALL preserve additions, deletions, both rename endpoints, before/after modes, symlink target identity, and byte-preserving path identity; rename interpretation SHALL be bound to producer, policy, and toolchain identity.
 
 #### Scenario: Repository contains difficult path transitions
 
@@ -65,7 +65,7 @@ The runtime SHALL reuse C14 worktree/index/range primitives and preserve all sup
 
 ### Requirement: Seal-bound semantic evidence selection
 
-The runtime SHALL map changed source paths through sealed component ownership, risk rows, Requirements plan identities, exact pytest cases, bounded component targets, and execution stages.
+The runtime SHALL map changed source paths through sealed component ownership, risk rows, Requirements plan identities, exact pytest cases, bounded component targets, and execution stages. It MAY select a subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal.
 
 #### Scenario: Production path lacks semantic ownership
 
@@ -83,7 +83,7 @@ The runtime SHALL map changed source paths through sealed component ownership, r
 
 ### Requirement: Current-run pytest and code-review evidence
 
-The runtime SHALL reuse existing Requirements pytest/JUnit and SpecFact code-review JSON contracts with exact producer and snapshot identities.
+The runtime SHALL first supply the upstream design contract, validation result, seal, policy, and current source identities to released core verification, then reuse existing Requirements pytest/JUnit and SpecFact code-review JSON contracts with exact producer and snapshot identities. It SHALL use released core finding precedence and deterministic `FAIL`/`UNKNOWN`/`PASS` aggregation rather than redefining them.
 
 #### Scenario: Selector is missing, duplicate, uncollected, failed, or stale
 
@@ -101,7 +101,7 @@ The runtime SHALL reuse existing Requirements pytest/JUnit and SpecFact code-rev
 
 ### Requirement: Local and range authority separation
 
-The runtime SHALL preserve core checkpoint authority for worktree/index results and SHALL require explicit immutable base/head identity for `specfact preflight conform <change-id>`.
+The runtime SHALL preserve core checkpoint authority for worktree/index results and SHALL require repository identity, full immutable base/head commit IDs, and base/head tree identities for `specfact preflight conform <change-id>`. Tree attestations and the complete path manifest SHALL bind to that exact repository and range.
 
 #### Scenario: Local pass is presented as PR proof
 

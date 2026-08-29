@@ -46,7 +46,7 @@ Validators are Python implementations registered under stable IDs and versions. 
 - interface ownership and cross-repository counterpart consistency;
 - role-classified implementation paths and explicit exclusions;
 - component ownership with bounded pytest targets;
-- risk dimensions marked `covered` or `not_applicable`, with rationale where not applicable;
+- every closed core risk dimension (`boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`) marked `covered` or `not_applicable`, with rationale where not applicable;
 - covered risk rows mapped to existing Requirements requirement/scenario/case identities and exact pytest selectors;
 - earliest execution stage from `slice`, `commit`, `prepush`, or `ci`;
 - acceptance criteria, failing-first plan, rollback, and non-goals;
