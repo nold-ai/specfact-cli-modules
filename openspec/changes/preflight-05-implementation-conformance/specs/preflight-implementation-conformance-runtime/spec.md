@@ -40,7 +40,7 @@ The module SHALL define cumulative `slice`, `commit`, and `deep` profiles whose 
 
 #### Scenario: Slice profile runs immediate semantic evidence
 
-- **GIVEN** changed source paths map to sealed `slice` obligations
+- **GIVEN** changed seal-relevant paths or inputs in any non-excluded role map to sealed `slice` obligations
 - **WHEN** the slice profile runs
 - **THEN** it verifies the seal and scope, runs the affected exact Requirements pytest cases, and imports changed-scope code-review evidence
 - **AND** it does not run unrelated component or full-repository tests.
@@ -79,7 +79,7 @@ The runtime SHALL reuse C14 worktree/index/range primitives and implement the re
 
 ### Requirement: Seal-bound semantic evidence selection
 
-The runtime SHALL map changed source paths through sealed component ownership, risk rows, Requirements plan identities, exact pytest cases, bounded component targets, and execution stages. A checkpoint MAY select the affected subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal.
+The runtime SHALL classify every changed non-excluded seal-relevant path and input across `source`, `test`, `docs`, `generated`, and `evidence` roles plus seal-bound test, dependency, policy, toolchain, and relevant configuration inputs. It SHALL map each applicable change through the sealed ownership and influence relationships to the corresponding risk rows, Requirements plan identities, exact pytest cases, bounded component targets, review/evidence obligations, and execution stages. A checkpoint MAY select only the affected subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal. If a seal-relevant changed path/input has no deterministic mapping to the obligations it can affect, selection SHALL return `UNKNOWN` rather than an empty set.
 
 #### Scenario: Production path lacks semantic ownership
 
@@ -87,6 +87,13 @@ The runtime SHALL map changed source paths through sealed component ownership, r
 - **WHEN** checkpoint selection runs
 - **THEN** the result is `UNKNOWN`
 - **AND** overall pytest success cannot satisfy the missing obligation.
+
+#### Scenario: Test or execution input changes without source changes
+
+- **GIVEN** only a sealed test, pytest configuration, dependency, policy, toolchain, generated/evidence path, or other relevant execution input changes
+- **WHEN** checkpoint selection runs
+- **THEN** the runtime selects every corresponding sealed case, target, review, and evidence obligation through the approved influence mapping
+- **AND** an absent or ambiguous mapping returns `UNKNOWN` rather than an empty affected set or `NOT_APPLICABLE`.
 
 #### Scenario: Implementation exceeds sealed scope
 
@@ -108,10 +115,17 @@ The runtime SHALL first supply the upstream design contract, validation result, 
 
 #### Scenario: Cache identity changes
 
-- **GIVEN** the seal, snapshot, obligation set, pytest targets, runner, policy, toolchain, or relevant configuration changes
+- **GIVEN** the seal, snapshot, obligation set, pytest targets, runner, policy, toolchain, attested execution-environment/dependency state, allowlisted relevant environment, or relevant configuration changes
 - **WHEN** cached evidence is considered
 - **THEN** the prior cache entry is rejected
 - **AND** required checks execute again.
+
+#### Scenario: Execution environment cannot be attested
+
+- **GIVEN** the active Python environment or a policy-allowlisted relevant environment variable cannot be deterministically identified without exposing secret values
+- **WHEN** cached evidence is considered
+- **THEN** cache reuse is disabled for that checkpoint
+- **AND** the runtime reruns required checks, or returns `UNKNOWN` if the required execution itself cannot be performed.
 
 ### Requirement: Local and range authority separation
 
