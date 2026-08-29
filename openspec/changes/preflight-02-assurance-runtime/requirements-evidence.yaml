@@ -71,7 +71,7 @@ requirements:
       - case_id: PF02-005
         scenario_id: persisted-approval-artifacts
         method: inspection
-        intent: "Inspect atomic approval artifacts and canonical lineage-tip advance, rollback, fork, and ambiguity handling before implementation."
+        intent: "Inspect separate normalized validation-result persistence, atomic approval artifacts, canonical lineage-tip advance, missing/stale/rollback/fork/ambiguity handling, and rejection of older-ancestor fallback before implementation."
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.

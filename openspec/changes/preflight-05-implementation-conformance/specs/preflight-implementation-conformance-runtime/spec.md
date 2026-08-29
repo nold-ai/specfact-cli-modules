@@ -2,7 +2,7 @@
 
 ### Requirement: Separate development checkpoint command
 
-The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal. Allowed pairs are `slice/worktree`, `slice/index`, `commit/index`, `deep/worktree`, and `deep/index`; every other pair SHALL be rejected as invalid usage before snapshot extraction, without silently overriding either argument.
+The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal. Allowed pairs are `slice/worktree`, `slice/index`, `commit/index`, `deep/worktree`, and `deep/index`; every other pair SHALL be rejected as invalid usage before snapshot extraction, without silently overriding either argument. Automatic selection SHALL validate the canonical tip, complete predecessor chain, approval authority, and required Git identities before evaluating path coverage. Missing, stale, multiple, rolled-back, forked, or ambiguous canonical/Git state SHALL return `UNKNOWN`; uncovered governed-path `FAIL` applies only after one valid canonical seal and snapshot identity are established.
 
 #### Scenario: No staged seal-relevant change or associated seal
 
@@ -40,6 +40,13 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 - **WHEN** checkpoint status is aggregated
 - **THEN** the result is `UNKNOWN` and exits non-zero
 - **AND** no renderer or workflow converts it to pass.
+
+#### Scenario: Ambiguous canonical state overlaps uncovered scope
+
+- **GIVEN** a staged governed path appears uncovered while the canonical tip, predecessor chain, approval authority, or required Git identity is missing, stale, multiple, rolled back, forked, or ambiguous
+- **WHEN** automatic checkpoint selection runs
+- **THEN** canonical and Git validation runs first and returns `UNKNOWN` with exit one
+- **AND** uncovered-path `FAIL` is not asserted until a single valid canonical seal and snapshot identity make coverage determinate.
 
 ### Requirement: Bounded checkpoint profiles
 
@@ -264,7 +271,7 @@ Human and JSON renderers SHALL derive from one normalized result, and explicit p
 
 ### Requirement: Shadow dogfood before seal-aware blocking
 
-The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exercise both accepted defect fixtures and representative known-green controls. Blocking SHALL remain disabled until every corpus case produces its predeclared status, authority, finding set, and exit behavior; the corpus has zero false PASS, zero false block, and no destructive/ambiguous behavior; and live shadow observations meet a rollout-policy threshold declared before collection. The default threshold SHALL require at least 100 applicable known-good checkpoint observations spanning every enabled scope/profile pair with a false-block rate no greater than 1%; repository policy MAY require a larger sample or lower rate but SHALL NOT weaken that default.
+The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exercise both accepted defect fixtures and representative known-green controls. Blocking SHALL remain disabled until every corpus case produces its predeclared status, authority, finding set, and exit behavior; the corpus has zero false PASS, zero false block, and no destructive/ambiguous behavior; and live shadow observations meet a rollout-policy threshold declared before collection. The default threshold SHALL require at least 20 applicable known-good observations for each enabled scope/profile pair and at least 100 in aggregate, with both each pair's false-block rate and the aggregate rate no greater than 1%. Repository policy MAY require a larger per-pair or aggregate sample or lower rate but SHALL NOT weaken those defaults.
 
 #### Scenario: C14 regression fixture is exercised
 
@@ -280,20 +287,27 @@ The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exe
 - **THEN** it produces the predeclared passing status, local authority, empty blocking-finding set, and exit zero
 - **AND** a blanket `FAIL` or `UNKNOWN` implementation is recorded as a false block and cannot enable blocking.
 
-#### Scenario: Shadow sample is too small or false-blocking exceeds policy
+#### Scenario: Pairwise shadow sample is too small or false-blocking exceeds policy
 
-- **GIVEN** fewer than 100 applicable known-good observations cover the enabled scope/profile pairs, the observed false-block rate exceeds 1%, or any corpus expectation is mismatched
+- **GIVEN** an enabled scope/profile pair has fewer than 20 applicable known-good observations, the aggregate has fewer than 100, a pairwise or aggregate observed false-block rate exceeds 1%, or any corpus expectation is mismatched
 - **WHEN** rollout promotion is evaluated
 - **THEN** seal-aware blocking remains disabled and shadow measurement continues
-- **AND** promotion cannot rely only on the absence of false PASS.
+- **AND** one high-volume passing pair cannot hide an under-sampled or false-blocking pair.
 
 ### Requirement: Signed publication before adapter consumption
 
-After the implementation PR is merged to `dev`, the canonical post-merge publication workflow SHALL version, sign, compatibility-test, and publish one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. No feature-branch artifact SHALL be handed downstream. After the generated publication PR is merged and official registry/install readback passes, #434 SHALL hand the identities to core #251. Core #253 SHALL follow completed #251, and modules #433 SHALL consume the identities only after both #251 and #253 complete.
+After the implementation PR is merged to `dev`, the canonical post-merge publication workflow SHALL version, sign, compatibility-test, and publish one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. Publication SHALL set `core_compatibility` in both the bundle manifest and registry entry to a lower-bound released core identity that contains the final #684 interfaces; those values SHALL match, a core below the bound SHALL be rejected, and the exact bound plus supported newer cores SHALL pass the compatibility matrix. No feature-branch artifact SHALL be handed downstream. After the generated publication PR is merged and official registry/install readback passes, #434 SHALL hand the identities to core #251. Core #253 SHALL follow completed #251, and modules #433 SHALL consume the identities only after both #251 and #253 complete.
+
+#### Scenario: Installation uses a core older than implementation assurance
+
+- **GIVEN** the #434 module is resolved with a core identity below the manifest/registry `core_compatibility` lower bound containing #684
+- **WHEN** compatibility or installation validation runs
+- **THEN** the combination is rejected before checkpoint or conform execution
+- **AND** manifest and registry metadata cannot advertise an unusable older core.
 
 #### Scenario: Adapter requests the new workflow
 
-- **GIVEN** the #434 implementation and canonical publication PRs are merged, official registry/install readback passes, and core #251 then #253 are complete
+- **GIVEN** the #434 implementation and canonical publication PRs are merged, matching manifest/registry `core_compatibility` metadata and its lower-bound/newer-core matrix pass, official registry/install readback passes, and core #251 then #253 are complete
 - **AND** #433 prepares a harness adapter
 - **WHEN** it resolves the canonical module and workflow identities
 - **THEN** it consumes the exact signed #434 module identity, preflight workflow identity/digest, and implementation-check workflow identity/digest

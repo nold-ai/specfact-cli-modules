@@ -16,7 +16,7 @@ requirements:
       - case_id: PF05M-001
         scenario_id: separate-development-checkpoint-command
         method: inspection
-        intent: "Inspect checkpoint scopes, statuses, seal behavior, never-sealed versus staged last-seal/tip removal, partial and wholly uncovered governed-path failure versus missing-influence UNKNOWN, and the complete source/test/docs/generated/evidence/excluded plus seal-bound approval/test/dependency/policy/toolchain/relevant-configuration pre-commit applicability matrix before implementation."
+        intent: "Inspect canonical-tip/chain/Git UNKNOWN precedence before uncovered-scope FAIL, checkpoint scopes/statuses, seal behavior, never-sealed versus staged last-seal/tip removal, partial and wholly uncovered governed-path failure versus missing-influence UNKNOWN, and the complete source/test/docs/generated/evidence/excluded plus seal-bound approval/test/dependency/policy/toolchain/relevant-configuration pre-commit applicability matrix before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:bounded-checkpoint-profiles:
     rationale: *planning-rationale
@@ -111,7 +111,7 @@ requirements:
       - case_id: PF05M-009
         scenario_id: shadow-dogfood-before-seal-aware-blocking
         method: inspection
-        intent: "Inspect negative C14 regression fixtures, representative known-green controls, exact expected-result parity, minimum live sample, bounded false-block rate, metrics, and the blocking promotion gate before implementation."
+        intent: "Inspect negative C14 regression fixtures, representative known-green controls, exact expected-result parity, per-scope/profile and aggregate minimum live samples, pairwise and aggregate bounded false-block rates, metrics, and the blocking promotion gate before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:signed-publication-before-adapter-consumption:
     rationale: *planning-rationale
@@ -121,5 +121,5 @@ requirements:
       - case_id: PF05M-010
         scenario_id: signed-publication-before-adapter-consumption
         method: inspection
-        intent: "Inspect post-merge publication, role-specific signed #434 workflow identity/digest bindings, and the mandatory ordered handoff #434 to #251 to #253 to #433 before implementation."
+        intent: "Inspect post-merge publication, matching bundle-manifest/registry core_compatibility lower bounds at the first released #684 core, below-bound rejection and bound/newer compatibility, role-specific signed #434 workflow identity/digest bindings, and the mandatory ordered handoff #434 to #251 to #253 to #433 before implementation."
         observable: *planning-observable
