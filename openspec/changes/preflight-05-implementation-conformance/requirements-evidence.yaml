@@ -26,7 +26,7 @@ requirements:
       - case_id: PF05M-002
         scenario_id: bounded-checkpoint-profiles
         method: inspection
-        intent: "Inspect slice, commit, deep, and deferred CI profile semantics before implementation."
+        intent: "Inspect cumulative slice/commit/deep execution, bounded bug-hunt/prepush checks, and deferred CI semantics before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:complete-implementation-scope-evidence:
     rationale: *planning-rationale

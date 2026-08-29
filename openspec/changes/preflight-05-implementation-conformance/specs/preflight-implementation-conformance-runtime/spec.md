@@ -29,7 +29,7 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 
 ### Requirement: Bounded checkpoint profiles
 
-The module SHALL define `slice`, `commit`, and `deep` profiles whose selected obligations are derived from the sealed execution stages.
+The module SHALL define cumulative `slice`, `commit`, and `deep` profiles whose selected obligations are derived from the sealed execution stages. `commit` SHALL include all applicable `slice` checks plus affected-component bounded targets. `deep` SHALL include all applicable lower-profile checks for its snapshot, bounded bug-hunt analysis, and every locally executable `prepush` obligation.
 
 #### Scenario: Slice profile runs immediate semantic evidence
 
@@ -51,6 +51,13 @@ The module SHALL define `slice`, `commit`, and `deep` profiles whose selected ob
 - **WHEN** the deep local profile runs
 - **THEN** the obligation is reported as deferred with identity and reason
 - **AND** it is not described as locally passed or missing.
+
+#### Scenario: Deep profile executes local pre-push assurance
+
+- **GIVEN** the selected snapshot has applicable slice and affected-component checks, bounded bug-hunt analysis, and locally executable `prepush` obligations
+- **WHEN** the deep profile runs
+- **THEN** it executes the applicable lower-profile checks, bounded bug-hunt, and every locally executable `prepush` obligation
+- **AND** missing or non-passing required evidence is aggregated through the released core result semantics rather than skipped or deferred.
 
 ### Requirement: Complete implementation scope evidence
 
