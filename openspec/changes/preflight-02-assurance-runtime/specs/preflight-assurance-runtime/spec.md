@@ -57,7 +57,7 @@ The module SHALL run validators identified by stable ID and version and SHALL di
 
 ### Requirement: Required MVP validation domains
 
-The initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work. Risk validation SHALL require every affected behavior or interface to contain the closed core dimensions `boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`.
+The initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, per-input influence or no-impact disposition, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work. Risk validation SHALL require every affected behavior or interface to contain the closed core dimensions `boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`.
 
 #### Scenario: Scope has no acceptance or test trace
 
@@ -72,6 +72,13 @@ The initial runtime SHALL validate artifact completeness, source freshness, role
 - **WHEN** scope and testability validators run
 - **THEN** they emit a blocking finding against the source scope entry
 - **AND** later implementation checkpoints are not described as selectable.
+
+#### Scenario: Sealed input lacks an influence disposition
+
+- **GIVEN** a non-excluded source, test, docs, generated, or evidence path or a seal-bound test, dependency, policy, toolchain, or relevant configuration input has neither approved influence mappings to every obligation it can affect nor an explicit no-impact disposition with a non-empty rationale
+- **WHEN** scope and testability validators run
+- **THEN** readiness is blocked or unknown according to source availability
+- **AND** no approval seal is issued with an input that a downstream checkpoint would have to map by inference.
 
 #### Scenario: Risk dimension lacks an explicit disposition
 

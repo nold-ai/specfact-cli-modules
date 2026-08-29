@@ -101,7 +101,11 @@ requirements:
       - case_id: PF02-007
         scenario_id: required-mvp-validation-domains
         method: inspection
-        intent: "Inspect the required mvp validation domains planning contract before implementation."
+        intent: >-
+          Inspect the required MVP validation domains, including approved
+          influence mappings or justified no-impact dispositions for every
+          non-excluded sealed path and seal-bound test, dependency, policy,
+          toolchain, or relevant configuration input, before implementation.
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.

@@ -46,6 +46,7 @@ Validators are Python implementations registered under stable IDs and versions. 
 - interface ownership and cross-repository counterpart consistency;
 - role-classified implementation paths and explicit exclusions;
 - component ownership with bounded pytest targets;
+- approved influence mappings for every non-excluded sealed path and seal-bound test, dependency, policy, toolchain, or relevant configuration input, or an explicit no-impact disposition with a non-empty rationale;
 - every closed core risk dimension (`boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`) marked `covered` or `not_applicable`, with rationale where not applicable;
 - covered risk rows mapped at `planned` maturity to existing Requirements requirement/scenario/case identities, method, intent, observable, and touchpoints without fabricating selectors;
 - test-authored refinement that reconciles the Requirements-owned exact pytest selector to the same planned case, requires explicit successor-seal approval before production implementation, and preserves the original implementation-lineage baseline;
