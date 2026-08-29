@@ -39,9 +39,9 @@ The Codex plugin packages the canonical skill and any minimal discovery metadata
 
 The ECC companion maps the canonical workflow to its skill layout. A `commands/` shim is added only if the supported ECC/Claude Code path requires explicit legacy slash compatibility. Root AGENTS.md changes are limited to the generated gate reference owned by #253.
 
-### 4. hatch3r integration uses its canonical inventory/generator
+### 4. hatch3r distribution is an explicit upstream prerequisite
 
-The hatch3r pack registers the canonical SpecFact workflow with the package inventory and lets hatch3r generate only its currently supported adapters. It does not reintroduce removed adapters or materialize `.agents/` content contrary to the supported hatch3r version.
+hatch3r 1.9.0 exposes no documented third-party pack or inventory-registration API. The SpecFact adapter therefore ships only after the selected hatch3r release contains and documents a supported distribution/extension surface. A separately authorized upstream contribution qualifies only after it is merged, included in that release, and documented there. Until then, hatch3r remains a blocked target: implementation must not write internal inventory data, depend on private package layout, reintroduce removed adapters, or materialize `.agents/` content contrary to the supported release.
 
 ### 5. Contract tests compare semantics, not file sameness
 
@@ -66,4 +66,4 @@ Installations are opt-in. Upgrade replaces only adapter-owned assets after drift
 
 - Exact Codex marketplace/distribution channel available when the adapter work begins.
 - Whether ECC needs a command shim for every supported target or only Claude Code compatibility.
-- Exact hatch3r pack API at the selected supported release.
+- Whether a selected hatch3r release contains and documents a supported extension surface, including any merged upstream contribution; absence of that released and documented surface blocks hatch3r packaging.

@@ -26,13 +26,19 @@ Suggested canonical record fields:
 - `fixes`
 - `breaking_changes`
 - `source_refs`
+- `affected_version` (required for a correction, withdrawal, or supersession)
+- `disposition` (`correction`, `withdrawal`, or `supersession` when `affected_version` is present)
 
 Suggested authoring split:
 
 - structured fields hold normalized release facts (`module_id`, `version`, `published_at`, categorized bullets)
 - AI-generated summary fields turn those facts into concise user-facing release and patch notes for docs consumption
 
-The canonical store should be append-only by module/version, with updates allowed only for corrective edits to already-recorded entries.
+The canonical store should be append-only by module/version. Once a published
+entry is accepted, it is immutable: corrections, withdrawals, or supersessions
+must create a new patch-version entry while retaining the prior entry unchanged.
+The new entry's `(module_id, affected_version)` tuple references that immutable
+record, and its machine-readable `disposition` identifies the action.
 
 ## Repository Placement
 

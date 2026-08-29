@@ -2600,6 +2600,104 @@ core `0.55.1` bundled public key passes all seven module manifests. This
 evidence-only checkpoint changes no signed module payload byte and triggers the
 replacement protected and final-head review cycle.
 
+## PR #450 final review and matrix remediation
+
+CodeRabbit's review of signed head
+`ad2eb26641ca7c4d593db1bdabfee7afc7a92022` and the GitHub Actions matrix
+identified one failing frozen cached-tree regression on Python 3.11, 3.12, and
+3.13. Each matrix run reported `1 failed, 1776 passed, 2 skipped`: the test
+constructed a cached snapshot but left `SPECFACT_CODE_REVIEW_CHANGED_DIFF` at
+its default `worktree` mode, so the new fail-closed mode binding correctly
+returned unavailable changed-line evidence. The exact focused test reproduced
+the failure locally (`None` instead of `{"new.py": {1}}`). Declaring the
+fixture's intended `cached` mode made that same test pass without relaxing the
+runtime contract.
+
+Independent review also validated two planning-contract gaps. The canonical
+release-history proposal still allowed corrective edits to a published entry,
+contradicting the immutable publication identity required by preflight-03; the
+docs-14 design, normative requirement, scenario, and task now require a new
+patch-version record while retaining the prior record unchanged. The hatch3r
+proposal treated an accepted upstream contribution as sufficient for
+packaging; proposal, design, requirement, scenarios, and tasks now require the
+selected hatch3r release itself to contain and document the surface, including
+any merged upstream contribution.
+
+The remaining review claims were rejected against the exact signed head. The
+0.49.76 candidate remains outside published-history enumeration until its
+post-merge publication record exists; the strict canonical Ed25519 verifier
+accepts all seven manifests and the current `specfact-code-review` signature;
+and existing bounded compatibility tests already accept the exact minimum and
+current in-range core while rejecting below-minimum and at-cap identities.
+Strict validation passes for C14, docs-14, preflight-03, and preflight-04.
+The focused corrected regression passes, the complete compatibility/command
+surface passes all `90` tests, contract-first verification passes all `28`
+tests, and bundle import, YAML/registry validation, canonical formatting,
+Ruff, basedpyright (`0 errors, 0 warnings, 0 notes`), Pylint (`10.00/10`),
+strict seven-manifest signature/version verification, `git diff --check`, and
+all `82` strict OpenSpec validations pass. The complete smart-test run passes
+`1778` of `1779`; its sole failure is the previously documented unsupported
+local macOS/CPython 3.14 capsule-lock selector. The protected Linux Python
+3.11-3.13 matrix remains the authority for that environment-specific case.
+The staged evidence gate initially failed because docs-14 had no schema-v2
+planning sidecar. A complete inspection-only mapping for all five source
+requirements now passes without claiming implementation evidence. The complete
+staged Block 2 gate passes requirements evidence, changed-line code review
+(`PASS_WITH_ADVISORY`, zero errors), and all `28` contract-first tests.
+
+The final-head Codex and CodeRabbit reviews identified two remaining planning
+consistency gaps. An earlier C14 evidence summary still allowed an accepted but
+unreleased hatch3r contribution even though the authoritative preflight-04
+contract requires the selected release itself to contain and document the
+surface. The summary now preserves that selected-release predicate. Separately,
+immutable docs-14 correction records named no structured relationship to the
+record they correct, withdraw, or supersede. The normative contract and design
+now require the new patch record's `(module_id, affected_version)` tuple to
+reference the unchanged original and require a machine-readable `disposition`.
+All `82` strict OpenSpec validations, staged requirements evidence, YAML and
+registry validation, `git diff --check`, and strict verification of all seven
+signed manifests pass; the staged gate classifies this as a safe planning-only
+change and requires no runtime contract-test rerun.
+
+The continuing PR #446 review on published head
+`facfbf82d50e2985f5479609fa0be1403cb14042` added two more CodeRabbit
+threads. Independent validation rejected the request to erase post-0.49.61 C14
+evidence because #448/#449 truthfully delivered and published 0.49.75. It
+confirmed one new runtime defect: any
+`SPECFACT_CODE_REVIEW_CHANGED_DIFF` value other than `cached` or
+`worktree` selected `HEAD`, and the same unknown mode bypassed raw worktree
+corroboration.
+
+The contract was extended before tests. The focused revision selector then
+proved both valid controls and reproduced the invalid values: `cached` and
+`worktree` passed, while `worktee` and the empty string returned
+`("HEAD",)` instead of unavailable evidence (`2 failed, 2 passed`). The
+minimal implementation returns unavailable evidence for every unrecognized
+mode; the same selector now passes all four cases.
+
+The independent patch challenge then found a second validation-to-use gap: a
+previously frozen cached identity was returned before the mode was checked, so
+environment drift from `cached` to `worktree`, `worktee`, or empty could still
+consume cached changed-line evidence. The contract now binds a frozen cached
+identity to normalized `cached` mode. Its focused regression passed the cached
+control but failed all three drift cases (`3 failed, 1 passed`); moving that
+mode check ahead of cached identity consumption made the combined invalid-mode,
+mode-drift, and cached-control set pass (`10 passed`).
+
+The earlier PR #446 planning review was also revalidated against current
+`dev`: C14 provenance now retains original 0.49.46, intermediate 0.49.61,
+and current 0.49.75 delivery/publication identities; post-publication
+correction requires a new patch while preserving every prior signed record;
+future preflight compatibility uses a bounded range whose minimum is the first
+immutable released core containing #682 rather than historical core 0.55.1;
+and hatch3r packaging is blocked until the selected release contains and
+documents a supported extension surface, including any merged upstream
+contribution. Existing release rollback
+specs/tasks already own withdrawal, installer-rejection, and persisted-state
+gates, so no fictitious core registry owner was added. The workflow regression
+now proves no hard-coded local-alias path while separately confirming that the
+current C14 metadata range retains PEP 440 range semantics.
+
 The exact signed-head Codex review of
 `82e4674ec8d7e5c5e68d750eab9747de6ee22965` added one P2 finding: Git emits no
 destination header or text hunk for a newly added empty file, so staged and

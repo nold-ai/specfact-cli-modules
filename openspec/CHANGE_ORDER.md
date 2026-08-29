@@ -60,9 +60,17 @@ This track is first because no changed-scope assurance claim is trustworthy unti
 
 The immutable C14 compatibility smoke establishes core 0.55.1 as the minimum: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Runtime metadata therefore uses `>=0.55.1,<1.0.0`: the ceiling is required because recursive installation includes Codebase and Requirements modules whose current manifests reject core 1.x. Current paired-core validation exercises compatible versions above the minimum; a routine compatible core update within the dependency graph does not require a module metadata release. Remove the ceiling only after widening and validating the required dependency graph. This correction supersedes C14's exact-only admission wording without changing its frozen provenance identities or historical evidence.
 
-C14 behavior and publication were delivered by merged PRs
+C14 behavior was first delivered and published as module 0.49.46 by merged PRs
 [#418](https://github.com/nold-ai/specfact-cli-modules/pull/418) and
-[#419](https://github.com/nold-ai/specfact-cli-modules/pull/419). Issue
+[#419](https://github.com/nold-ai/specfact-cli-modules/pull/419). The bounded
+compatibility correction was delivered and published as 0.49.61 by
+[#444](https://github.com/nold-ai/specfact-cli-modules/pull/444) and
+[#445](https://github.com/nold-ai/specfact-cli-modules/pull/445). Promotion
+review remediation and its immutable publication then produced 0.49.75 through
+[#448](https://github.com/nold-ai/specfact-cli-modules/pull/448) and
+[#449](https://github.com/nold-ai/specfact-cli-modules/pull/449). These release
+identities remain distinct historical evidence; later patches do not rewrite
+the earlier artifacts or records. Issue
 [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) remains open
 and `In Progress`; this planning series records the merged delivery evidence but
 does not close, reparent, relabel, reassign, or otherwise change that issue.
@@ -101,7 +109,7 @@ and adapters reference it without duplicating Python checks.
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
 | 1 | `preflight-02-assurance-runtime` | [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) | Unpublished runtime, Python validators, CLI/rendering/persistence, and canonical bundled `specfact-preflight` workflow | core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682) |
-| 2 | `preflight-03-dogfood-hardening-and-release` | [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) | Evidence-backed hardening, exact compatibility proof, signing, and stable publication | modules #431; core C14 dogfood/readiness [#683](https://github.com/nold-ai/specfact-cli/issues/683) |
+| 2 | `preflight-03-dogfood-hardening-and-release` | [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) | Evidence-backed hardening, bounded compatibility proof, signing, and stable publication | modules #431; core C14 dogfood/readiness [#683](https://github.com/nold-ai/specfact-cli/issues/683) |
 | 3 | `preflight-04-harness-adapters` | [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433) | Later thin Codex plugin, ECC companion, and hatch3r pack; no duplicate validators | stable modules release #432; core generated instructions [#253](https://github.com/nold-ai/specfact-cli/issues/253) |
 | 4 | `preflight-05-implementation-conformance` | [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434) | Later postimplementation extraction/comparison/rendering; explicitly outside preflight MVP | modules #432 and adapters #433; paired core conformance contract [#684](https://github.com/nold-ai/specfact-cli/issues/684) |
 

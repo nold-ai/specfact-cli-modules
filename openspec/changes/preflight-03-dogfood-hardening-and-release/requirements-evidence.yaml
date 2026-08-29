@@ -45,7 +45,7 @@ requirements:
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.
-  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-release:exact-compatibility-proof:
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-release:bounded-compatibility-proof:
     rationale: "The proposal must make this requirement reviewable before implementation begins."
     stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
     touchpoints:
@@ -54,9 +54,9 @@ requirements:
         locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-release/spec.md"
     verification_cases:
       - case_id: PF03M-004
-        scenario_id: exact-compatibility-proof
+        scenario_id: bounded-compatibility-proof
         method: inspection
-        intent: "Inspect the exact compatibility proof planning contract before implementation."
+        intent: "Inspect the bounded compatibility proof planning contract before implementation."
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.

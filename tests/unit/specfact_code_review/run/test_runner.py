@@ -27,6 +27,40 @@ from specfact_code_review.run.runner import (
 )
 
 
+@pytest.mark.parametrize(
+    ("diff_mode", "expected_revision"),
+    [("cached", ("--cached",)), ("worktree", ("HEAD",)), ("worktee", None), ("", None)],
+)
+def test_changed_diff_revision_rejects_unrecognized_modes(
+    monkeypatch: MonkeyPatch,
+    diff_mode: str,
+    expected_revision: tuple[str, ...] | None,
+) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setattr(runner_api, "_cached_worktree_matches_index", lambda _files: True)
+    monkeypatch.setattr(runner_api, "_cached_repository_paths", lambda _files: None)
+
+    assert runner_api._changed_diff_revision([], diff_mode, None) == expected_revision
+
+
+@pytest.mark.parametrize(
+    ("diff_mode", "expected_revision"),
+    [
+        ("cached", ("a" * 40, "b" * 40)),
+        ("worktree", None),
+        ("worktee", None),
+        ("", None),
+    ],
+)
+def test_changed_diff_revision_requires_cached_mode_for_frozen_cached_identity(
+    diff_mode: str, expected_revision: tuple[str, ...] | None
+) -> None:
+    runner_api = _c14_runner()
+    cached_diff = runner_api.CachedDiffIdentity(base_tree="a" * 40, index_tree="b" * 40, caller_prefix="")
+
+    assert runner_api._changed_diff_revision([], diff_mode, cached_diff) == expected_revision
+
+
 def _finding(
     *,
     tool: str,
@@ -394,6 +428,7 @@ def test_changed_lines_from_frozen_cached_tree_count_empty_added_file_after_live
 
     for variable in set(os.environ).difference(git_env):
         monkeypatch.delenv(variable)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
     monkeypatch.chdir(repository)
     snapshot_root = tmp_path / "snapshot"
     snapshot_root.mkdir()

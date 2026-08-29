@@ -3,6 +3,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import yaml
+from packaging.specifiers import SpecifierSet
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -69,8 +72,8 @@ def test_pr_orchestrator_pins_exact_core_schema_smoke() -> None:
     assert "--no-cache-dir" in minimum_job
 
 
-def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
-    """Preserve the frozen C14 selector while superseding its exact-only rule."""
+def test_pr_orchestrator_uses_range_without_hardcoded_local_core_alias() -> None:
+    """Keep immutable-minimum proof separate from range-based admission."""
     workflow = _workflow_text()
     minimum_job = _job_text(workflow, "minimum-core-schema-compatibility")
 
@@ -81,9 +84,19 @@ def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
     assert "yaml.safe_load" in minimum_job
     assert "verify-minimum-core-compatibility-range" in minimum_job
     assert "===0.55.1" not in minimum_job
+    assert "0.55.1+vendor" not in minimum_job
     assert "ref: dev" not in minimum_job
     assert "ref: main" not in minimum_job
     assert "FALLBACK_REF" not in minimum_job
+
+
+def test_code_review_manifest_range_admits_local_core_alias() -> None:
+    """Treat a compatible PEP 440 local version as range-based runtime admission."""
+    manifest = yaml.safe_load(
+        (REPO_ROOT / "packages" / "specfact-code-review" / "module-package.yaml").read_text(encoding="utf-8")
+    )
+
+    assert SpecifierSet(str(manifest["core_compatibility"])).contains("0.55.1+vendor")
 
 
 def _assert_pinned_credentialed_prefetch(exact_job: str, prefetch_step: str) -> None:
