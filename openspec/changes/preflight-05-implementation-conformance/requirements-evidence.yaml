@@ -16,7 +16,7 @@ requirements:
       - case_id: PF05M-001
         scenario_id: separate-development-checkpoint-command
         method: inspection
-        intent: "Inspect checkpoint scopes, statuses, seal behavior, partial and wholly uncovered governed-path failure versus missing-influence UNKNOWN, and the complete source/test/docs/generated/evidence/excluded plus seal-bound test/dependency/policy/toolchain/relevant-configuration pre-commit applicability matrix before implementation."
+        intent: "Inspect checkpoint scopes, statuses, seal behavior, never-sealed versus staged last-seal/tip removal, partial and wholly uncovered governed-path failure versus missing-influence UNKNOWN, and the complete source/test/docs/generated/evidence/excluded plus seal-bound approval/test/dependency/policy/toolchain/relevant-configuration pre-commit applicability matrix before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:bounded-checkpoint-profiles:
     rationale: *planning-rationale

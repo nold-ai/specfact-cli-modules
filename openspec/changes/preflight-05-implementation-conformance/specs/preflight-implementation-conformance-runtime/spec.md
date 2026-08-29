@@ -6,10 +6,17 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 
 #### Scenario: No staged seal-relevant change or associated seal
 
-- **GIVEN** the repository has no preflight seals, or every staged path is deterministically classified outside the repository's configured preflight-governed path/input universe and unrelated to every seal
+- **GIVEN** neither the authoritative base nor the staged index contains preflight approval state and no approval-artifact path is changed, or every staged path is deterministically classified outside the repository's configured preflight-governed path/input universe and unrelated to every current or prior seal
 - **WHEN** automatic checkpoint selection runs
 - **THEN** the result is `NOT_APPLICABLE` and exits zero
 - **AND** an unsealed repository does not acquire a universal blocking policy.
+
+#### Scenario: Staged change removes the last approval state
+
+- **GIVEN** the authoritative base contains a seal or canonical lineage-tip artifact and the staged index deletes, relocates, or replaces that approval state so current-index discovery finds no valid seal
+- **WHEN** automatic checkpoint selection runs
+- **THEN** the base-to-index approval-state transition is classified as governed and the result is `UNKNOWN` with exit one
+- **AND** the repository is not treated as never sealed, whether or not other governed paths are staged.
 
 #### Scenario: Governed staged paths have no covering seal
 
@@ -86,7 +93,7 @@ The runtime SHALL reuse C14 worktree/index/range primitives and implement the re
 
 ### Requirement: Seal-bound semantic evidence selection
 
-The runtime SHALL classify every changed non-excluded seal-relevant path and input across `source`, `test`, `docs`, `generated`, and `evidence` roles plus seal-bound test, dependency, policy, toolchain, and relevant configuration inputs. It SHALL map each applicable change through the sealed ownership and influence relationships to the corresponding risk rows, Requirements plan identities, exact pytest cases, bounded component targets, review/evidence obligations, and execution stages. A checkpoint MAY select only the affected subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal. If a seal-relevant changed path/input has no deterministic mapping to the obligations it can affect, selection SHALL return `UNKNOWN` rather than an empty set.
+The runtime SHALL classify every changed non-excluded seal-relevant path and input across `source`, `test`, `docs`, `generated`, and `evidence` roles plus seal-bound approval, test, dependency, policy, toolchain, and relevant configuration inputs. Approval-state discovery SHALL compare the authoritative base with the selected worktree/index snapshot so deletion, relocation, or replacement of the last seal or canonical lineage-tip artifact cannot be reclassified as a never-sealed repository. The runtime SHALL map each applicable change through the sealed ownership and influence relationships to the corresponding risk rows, Requirements plan identities, exact pytest cases, bounded component targets, review/evidence obligations, and execution stages. A checkpoint MAY select only the affected subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal. If a seal-relevant changed path/input has no deterministic mapping to the obligations it can affect, selection SHALL return `UNKNOWN` rather than an empty set.
 
 #### Scenario: Production path lacks semantic ownership
 
