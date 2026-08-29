@@ -126,7 +126,7 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 
 ### Requirement: Immutable-range conformance evaluation
 
-`specfact preflight conform <change-id>` SHALL verify the supplied design contract, validation result, seal, policy, and current source identities; resolve repository identity plus full immutable base/head commit and tree identities; extract the complete range manifest and range-bound evidence through C14 primitives; derive the deterministic exhaustive final-delivery obligation set; and invoke the released core implementation-assurance verifier. The exhaustive set SHALL include every changed governed path/interface and every applicable sealed component, acceptance criterion, risk row, Requirements verification case, component target, verification stage including `ci`, and exclusion in their transitive obligation closure. The set and its digest SHALL be bound to the result. For an obligation whose earliest stage is `ci`, the runtime SHALL accept satisfaction only from a seal/policy-authorized protected-CI producer whose authenticated provenance is bound to the exact immutable range. Missing, local, self-asserted, unauthenticated, or wrong-range CI evidence SHALL remain `UNKNOWN`/deferred and SHALL prevent `PASS`. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
+`specfact preflight conform <change-id>` SHALL verify the supplied design contract, validation result, seal, policy, and current source identities; require the range base commit/tree to equal the seal-approved source baseline; use C14 to prove that the full head descends from that base and to extract the complete immutable sealed-base-to-head manifest and range-bound evidence; derive the deterministic exhaustive final-delivery obligation set; and invoke the released core implementation-assurance verifier. The exhaustive set SHALL include every changed governed path/interface and every applicable sealed component, acceptance criterion, risk row, Requirements verification case, component target, verification stage including `ci`, and exclusion in their transitive obligation closure. The set and its digest SHALL be bound to the result. For an obligation whose earliest stage is `ci`, the runtime SHALL accept satisfaction only from a seal/policy-authorized protected-CI producer whose authenticated provenance is bound to the exact immutable range. Missing, local, self-asserted, unauthenticated, or wrong-range CI evidence SHALL remain `UNKNOWN`/deferred and SHALL prevent `PASS`. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
 
 #### Scenario: Final range is evaluated against the seal
 
@@ -141,6 +141,13 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 - **WHEN** final conformance omits, duplicates, or cannot deterministically resolve any member of the exhaustive transitive obligation closure, or selects an empty set for that affected range
 - **THEN** the result is `UNKNOWN` with the incomplete selection identities
 - **AND** comparison cannot pass until the complete result-bound obligation set is available.
+
+#### Scenario: Caller attempts a truncated final range
+
+- **GIVEN** implementation changes exist after the seal-approved source baseline
+- **WHEN** a caller supplies a later range base, a different base tree, or a head without valid ancestry from the sealed base
+- **THEN** conform returns the released core `stale` or `unverifiable` finding and `UNKNOWN`
+- **AND** it does not extract or compare a caller-selected shorter range.
 
 #### Scenario: CI-only final obligation has no protected evidence
 
