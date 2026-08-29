@@ -111,7 +111,7 @@ requirements:
       - case_id: PF05M-009
         scenario_id: shadow-dogfood-before-seal-aware-blocking
         method: inspection
-        intent: "Inspect C14 regression corpus, metrics, and blocking promotion gate before implementation."
+        intent: "Inspect negative C14 regression fixtures, representative known-green controls, exact expected-result parity, minimum live sample, bounded false-block rate, metrics, and the blocking promotion gate before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:signed-publication-before-adapter-consumption:
     rationale: *planning-rationale

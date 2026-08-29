@@ -250,7 +250,7 @@ Human and JSON renderers SHALL derive from one normalized result, and explicit p
 
 ### Requirement: Shadow dogfood before seal-aware blocking
 
-The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL enable blocking only for repositories with an applicable valid seal after the accepted defect corpus shows no false PASS or destructive/ambiguous behavior.
+The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exercise both accepted defect fixtures and representative known-green controls. Blocking SHALL remain disabled until every corpus case produces its predeclared status, authority, finding set, and exit behavior; the corpus has zero false PASS, zero false block, and no destructive/ambiguous behavior; and live shadow observations meet a rollout-policy threshold declared before collection. The default threshold SHALL require at least 100 applicable known-good checkpoint observations spanning every enabled scope/profile pair with a false-block rate no greater than 1%; repository policy MAY require a larger sample or lower rate but SHALL NOT weaken that default.
 
 #### Scenario: C14 regression fixture is exercised
 
@@ -258,6 +258,20 @@ The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL ena
 - **WHEN** slice or commit checkpoint dogfood runs
 - **THEN** the defect is non-passing before simulated PR delivery
 - **AND** duration, local detection, cycles, packet size, repeated class, and later-review outcome are recorded.
+
+#### Scenario: Known-green control is exercised
+
+- **GIVEN** a valid sealed fixture has complete scope, interface, ownership, selectors, evidence, and cache identity for an enabled scope/profile pair
+- **WHEN** checkpoint dogfood runs
+- **THEN** it produces the predeclared passing status, local authority, empty blocking-finding set, and exit zero
+- **AND** a blanket `FAIL` or `UNKNOWN` implementation is recorded as a false block and cannot enable blocking.
+
+#### Scenario: Shadow sample is too small or false-blocking exceeds policy
+
+- **GIVEN** fewer than 100 applicable known-good observations cover the enabled scope/profile pairs, the observed false-block rate exceeds 1%, or any corpus expectation is mismatched
+- **WHEN** rollout promotion is evaluated
+- **THEN** seal-aware blocking remains disabled and shadow measurement continues
+- **AND** promotion cannot rely only on the absence of false PASS.
 
 ### Requirement: Signed publication before adapter consumption
 

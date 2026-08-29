@@ -25,8 +25,8 @@ All tasks below are future implementation work. This planning change completes n
 
 ## 4. Dogfood and passing evidence
 
-- [ ] 4.1 Run shadow dogfood against C14-derived fixtures for illegal analyzer exits, cache identity/mode drift, malformed input, deletion-only changes, quoted/trailing/Unicode paths, suppression relocation, and FAIL/UNKNOWN precedence; every accepted fixture must fail before simulated PR delivery.
-- [ ] 4.2 Record duration, locally detected defects, cycles-to-green, packet size, repeated finding classes, false PASS, and later PR findings; enable seal-aware blocking only when the accepted corpus has zero false PASS and no destructive/ambiguous behavior.
+- [ ] 4.1 Run shadow dogfood against C14-derived negative fixtures for illegal analyzer exits, cache identity/mode drift, malformed input, deletion-only changes, quoted/trailing/Unicode paths, suppression relocation, and FAIL/UNKNOWN precedence, plus representative known-green fixtures for every enabled scope/profile pair; require exact predeclared status, authority, finding-set, and exit behavior for every fixture.
+- [ ] 4.2 Record duration, locally detected defects, cycles-to-green, packet size, repeated finding classes, false PASS, false block, and later PR findings; enable seal-aware blocking only after zero false PASS, zero known-green corpus false block, no destructive/ambiguous behavior, and at least 100 applicable known-good live shadow observations spanning every enabled scope/profile pair with a false-block rate no greater than 1%. Repository policy may require a larger sample or lower rate but not a weaker threshold.
 - [ ] 4.3 Run format, type, lint, YAML, bundle-import, contract, smart-test, full test, independent analysis where applicable, and SpecFact code-review gates; resolve all findings.
 - [ ] 4.4 Run strict OpenSpec and Requirements planning/evidence gates and record only observed results.
 
