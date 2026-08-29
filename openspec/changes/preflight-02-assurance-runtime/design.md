@@ -22,7 +22,7 @@ The integration research reviewed on 2026-08-25 supports a canonical-skill plus 
 
 - Publish or sign the module in this change.
 - Generate harness-specific files or edit project AGENTS.md.
-- Implement postimplementation conformance.
+- Implement worktree/index checkpoints or final range conformance.
 - Let prompts decide structural readiness independently of Python validators.
 
 ## Decisions
@@ -44,7 +44,12 @@ Validators are Python implementations registered under stable IDs and versions. 
 - request-to-scope and task-to-requirement traceability;
 - dependency graph completeness, native GitHub metadata, cycles, and readiness;
 - interface ownership and cross-repository counterpart consistency;
-- acceptance criteria, test selectors, failing-first plan, rollback, and non-goals;
+- role-classified implementation paths and explicit exclusions;
+- component ownership with bounded pytest targets;
+- risk dimensions marked `covered` or `not_applicable`, with rationale where not applicable;
+- covered risk rows mapped to existing Requirements requirement/scenario/case identities and exact pytest selectors;
+- earliest execution stage from `slice`, `commit`, `prepush`, or `ci`;
+- acceptance criteria, failing-first plan, rollback, and non-goals;
 - active-issue/worktree collision and planning-only boundary checks.
 
 Validators return structured findings only. Rendering, policy aggregation, and persistence consume those results.
@@ -67,6 +72,8 @@ General AGENTS.md/OpenSpec/Spec Kit instructions should contain only the gate: s
 - **Accidental artifact edits during review:** Default to read-only and require explicit target confirmation, source-owner routing, conflict detection, and preservation of unrelated user content.
 - **False-ready result from missing validators:** Required validator absence yields `UNKNOWN`, never success.
 - **Cross-repository race:** Capture repository refs and GitHub identities; stale identities invalidate approval.
+- **False semantic coverage:** Missing component ownership, unresolved risk disposition, or stale Requirements plan identity is blocking or `UNKNOWN`, never inferred ready.
+- **Duplicate selector ownership:** Validate references to existing Requirements plans and selectors rather than creating a preflight-specific selector grammar.
 
 ## Migration and Rollback
 

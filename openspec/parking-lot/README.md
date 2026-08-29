@@ -41,6 +41,7 @@ A modules-side proposal can return to `openspec/changes/` only after:
 | `backlog-safe-01-pi-planning` | none active | [#154](https://github.com/nold-ai/specfact-cli-modules/issues/154) | Paying customer needs PI-planning data as validation input |
 | `backlog-safe-02-risk-rollups` | none active | [#156](https://github.com/nold-ai/specfact-cli-modules/issues/156) | Paying customer needs risk rollups as validation input |
 | `ceremony-02-requirements-aware-output` | none active | [#159](https://github.com/nold-ai/specfact-cli-modules/issues/159) | Validation evidence needs ceremony output fields from a real workflow |
+| `requirements-08-bounded-red-green-proof` | `requirements-08-bounded-red-green-proof` | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Fresh evidence that historical replay prevents materially more defects than seal-bound checkpoints at acceptable local runtime cost |
 
 ## Still Active
 

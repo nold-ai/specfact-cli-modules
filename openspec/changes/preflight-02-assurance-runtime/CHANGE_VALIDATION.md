@@ -12,8 +12,8 @@
 
 ## Scope and Ownership Review
 
-- Modules owns CLI orchestration, Python validators, rendering, persistence, and canonical bundled workflow content.
-- Core `preflight-01-design-contract-core` owns the durable contract/result/seal/verifier interfaces.
+- Modules owns CLI orchestration, Python validators for scope/component/risk/Requirements-plan readiness, rendering, persistence, and canonical bundled workflow content.
+- Core `preflight-01-design-contract-core` owns the durable contract/result/seal/verifier interfaces and closed scope/risk/stage vocabulary.
 - Core #251 owns generic skill installation/export; core #253 owns generated instruction references; `preflight-04-harness-adapters` owns external packages.
 - Stable signing and publication remain downstream in modules `preflight-03-dogfood-hardening-and-release`.
 

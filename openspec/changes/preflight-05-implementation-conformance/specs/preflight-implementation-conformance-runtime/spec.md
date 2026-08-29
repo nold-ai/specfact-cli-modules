@@ -1,103 +1,153 @@
 ## ADDED Requirements
 
-### Requirement: Separate conformance command
+### Requirement: Separate development checkpoint command
 
-The module SHALL expose a postimplementation conformance command that requires a preflight seal valid against its sealed contract and base source snapshot plus a separate explicit implementation identity in the released core format, and SHALL produce a distinct conformance result.
+The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal.
 
-#### Scenario: No valid preflight seal exists
+#### Scenario: No staged production change or applicable seal
 
-- **GIVEN** a change has no seal that verifies against its sealed contract and base source snapshot
-- **WHEN** `specfact preflight conform <change-id>` is invoked
-- **THEN** comparison does not proceed as successful conformance
-- **AND** the user is directed to the pre-implementation review workflow.
+- **GIVEN** the pre-commit wrapper finds no staged production path or no valid seal whose scope covers the staged production paths
+- **WHEN** automatic checkpoint selection runs
+- **THEN** the result is `NOT_APPLICABLE` and exits zero
+- **AND** an unsealed repository does not acquire a universal blocking policy.
 
-#### Scenario: Missing or ambiguous implementation identity
+#### Scenario: Applicable checkpoint evidence is ambiguous
 
-- **GIVEN** the caller omits the implementation base/head or supplies an implicit or ambiguous revision/range
-- **WHEN** `specfact preflight conform <change-id>` is invoked
-- **THEN** comparison does not start
-- **AND** the command requests an explicit implementation identity accepted by the released core snapshot interface.
+- **GIVEN** one or more staged production paths are covered by a seal but the seal, Git identity, component owner, selector, runner, or required evidence is stale, multiple, missing, or ambiguous
+- **WHEN** checkpoint status is aggregated
+- **THEN** the result is `UNKNOWN` and exits non-zero
+- **AND** no renderer or workflow converts it to pass.
 
-#### Scenario: Implementation head advances from sealed base
+### Requirement: Bounded checkpoint profiles
 
-- **GIVEN** a seal verifies against the approved contract and base source snapshot and implementation commits create a distinct head
-- **WHEN** conformance runs with that base/head identity
-- **THEN** the seal remains the reference for approved obligations while the head is captured separately as implementation evidence
-- **AND** the implementation commits alone do not require resealing the unchanged design contract.
+The module SHALL define `slice`, `commit`, and `deep` profiles whose selected obligations are derived from the sealed execution stages.
 
-### Requirement: Provenance-rich implementation evidence
+#### Scenario: Slice profile runs immediate semantic evidence
 
-The runtime SHALL capture or import changed paths, public interfaces, traceability, acceptance/test evidence, and extractor identities with exact revisions or digests.
+- **GIVEN** changed source paths map to sealed `slice` obligations
+- **WHEN** the slice profile runs
+- **THEN** it verifies the seal and scope, runs the affected exact Requirements pytest cases, and imports changed-scope code-review evidence
+- **AND** it does not run unrelated component or full-repository tests.
 
-#### Scenario: Historical test result is supplied for new implementation
+#### Scenario: Commit profile evaluates the staged index
 
-- **GIVEN** test evidence does not bind to the selected implementation revision
-- **WHEN** the runtime normalizes evidence
-- **THEN** the evidence is stale or unverifiable
-- **AND** it cannot satisfy a sealed acceptance or test-intent obligation.
+- **GIVEN** exactly one valid seal covers staged production paths
+- **WHEN** the commit profile runs
+- **THEN** it adds every affected component's bounded pytest targets and current-run JUnit evidence
+- **AND** execution is bound to the captured index capsule rather than a differing worktree.
 
-### Requirement: Core conformance evaluation
+#### Scenario: Deep profile encounters CI-only obligation
 
-The runtime SHALL delegate obligation comparison and drift semantics to the released core conformance interface and SHALL not invent additional success states in rendering.
+- **GIVEN** a sealed obligation has earliest stage `ci`
+- **WHEN** the deep local profile runs
+- **THEN** the obligation is reported as deferred with identity and reason
+- **AND** it is not described as locally passed or missing.
 
-#### Scenario: Core verifier returns unexpected drift
+### Requirement: Complete implementation scope evidence
 
-- **GIVEN** implementation includes a governed public change outside sealed scope
-- **WHEN** conformance is evaluated and rendered
-- **THEN** human and JSON output preserve the core unexpected finding and evidence identity
-- **AND** rendering cannot convert it to conforming.
+The runtime SHALL reuse C14 worktree/index/range primitives and preserve all supported changed-path transitions without guessing or lossy path parsing.
 
-### Requirement: Explicit drift resolution paths
+#### Scenario: Repository contains difficult path transitions
 
-The workflow SHALL require the user to choose between correcting implementation and returning to preflight for contract refinement/reapproval when material drift is intentional.
+- **GIVEN** a change adds, deletes, renames, changes mode, symlinks, or uses quoted, Unicode, or trailing-character paths
+- **WHEN** the implementation snapshot is extracted
+- **THEN** every path and both rename endpoints are preserved with exact transition identity
+- **AND** unresolved Git evidence yields `UNKNOWN`.
 
-#### Scenario: User accepts a new implementation behavior
+### Requirement: Seal-bound semantic evidence selection
 
-- **GIVEN** conformance reports material unexpected or modified behavior
-- **WHEN** the user decides the behavior is desired
-- **THEN** the current conformance result remains non-passing
-- **AND** the workflow returns to the preflight review loop for a new contract and seal.
+The runtime SHALL map changed source paths through sealed component ownership, risk rows, Requirements plan identities, exact pytest cases, bounded component targets, and execution stages.
 
-### Requirement: Human and JSON parity
+#### Scenario: Production path lacks semantic ownership
 
-Conformance human and JSON renderers SHALL derive from the same normalized result and preserve seal, implementation, extractor, evidence, finding, and assurance-limit identities.
+- **GIVEN** a changed production path has no sealed component or required semantic evidence mapping
+- **WHEN** checkpoint selection runs
+- **THEN** the result is `UNKNOWN`
+- **AND** overall pytest success cannot satisfy the missing obligation.
 
-#### Scenario: Renderers process an unknown result
+#### Scenario: Implementation exceeds sealed scope
 
-- **GIVEN** required evidence is unavailable
-- **WHEN** both renderers emit output
-- **THEN** each reports the same unknown status and missing evidence
-- **AND** neither describes the implementation as conforming.
+- **GIVEN** a changed path or behavior lies outside sealed roles and exclusions
+- **WHEN** checkpoint comparison runs
+- **THEN** it returns an `unexpected` failure and a `return_to_preflight` remediation class
+- **AND** intentional expansion requires a new preflight review and seal.
 
-### Requirement: Atomic optional persistence
+### Requirement: Current-run pytest and code-review evidence
 
-When explicitly requested, the runtime SHALL persist the implementation snapshot and conformance result atomically without modifying the original contract or seal.
+The runtime SHALL reuse existing Requirements pytest/JUnit and SpecFact code-review JSON contracts with exact producer and snapshot identities.
 
-#### Scenario: Persistence fails after comparison
+#### Scenario: Selector is missing, duplicate, uncollected, failed, or stale
 
-- **GIVEN** the result is computed but the complete persistence set cannot be verified
-- **WHEN** the command exits
-- **THEN** no partial record is treated as durable conformance evidence
+- **GIVEN** required pytest evidence cannot be reconciled exactly to the selected snapshot and plan
+- **WHEN** checkpoint evidence is normalized
+- **THEN** the result is `FAIL` for a determinate violation or `UNKNOWN` for unresolved provenance
+- **AND** no alternate selector grammar or historical overall exit code is accepted.
+
+#### Scenario: Cache identity changes
+
+- **GIVEN** the seal, snapshot, obligation set, pytest targets, runner, policy, toolchain, or relevant configuration changes
+- **WHEN** cached evidence is considered
+- **THEN** the prior cache entry is rejected
+- **AND** required checks execute again.
+
+### Requirement: Local and range authority separation
+
+The runtime SHALL preserve core checkpoint authority for worktree/index results and SHALL require explicit immutable base/head identity for `specfact preflight conform <change-id>`.
+
+#### Scenario: Local pass is presented as PR proof
+
+- **GIVEN** a worktree or index checkpoint passed
+- **WHEN** a consumer requests final or protected PR authority
+- **THEN** the runtime rejects promotion
+- **AND** requires a new immutable-range conformance or protected consumer run.
+
+### Requirement: Compact bounded remediation workflow
+
+The module SHALL emit deterministic compact remediation packets and bundle a harness-neutral workflow that permits at most three agent fix/rerun cycles.
+
+#### Scenario: Finding can return to implementation
+
+- **GIVEN** a determinate finding is classified `fix_implementation`, `fix_or_add_test`, or `rerun`
+- **WHEN** the workflow hands it to the current coding agent
+- **THEN** the packet includes fingerprint, contract/risk reference, implementation evidence, expected observable, recommended action, and validation selectors
+- **AND** the deterministic CLI itself performs no LLM or network call.
+
+#### Scenario: Workflow must stop
+
+- **GIVEN** a fingerprint repeats consecutively, three cycles are exhausted, scope expands, status is `UNKNOWN`, design judgment is required, or a sealed artifact would change
+- **WHEN** the workflow evaluates the next action
+- **THEN** it stops and reports the human or preflight handoff
+- **AND** it does not edit or reseal the contract automatically.
+
+### Requirement: Human and JSON parity with optional persistence
+
+Human and JSON renderers SHALL derive from one normalized result, and explicit persistence SHALL atomically retain the complete snapshot/result without modifying the original contract or seal.
+
+#### Scenario: Persistence or rendering is incomplete
+
+- **GIVEN** output cannot preserve all status, authority, finding, packet, evidence, policy, and assurance-limit identities
+- **WHEN** rendering or persistence runs
+- **THEN** no partial artifact is treated as valid checkpoint or conformance evidence
 - **AND** the original preflight artifacts remain unchanged.
 
-### Requirement: Opt-in delivery policy
+### Requirement: Shadow dogfood before seal-aware blocking
 
-The first conformance runtime SHALL remain opt-in and SHALL require a separate accepted policy change before becoming a universal blocking PR or archive gate.
+The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL enable blocking only for repositories with an applicable valid seal after the accepted defect corpus shows no false PASS or destructive/ambiguous behavior.
 
-#### Scenario: Repository has no conformance policy
+#### Scenario: C14 regression fixture is exercised
 
-- **GIVEN** the command is installed but no project policy requires it
-- **WHEN** ordinary delivery proceeds
-- **THEN** absence of a conformance run is reported as unavailable where queried
-- **AND** the module does not silently create a new blocking merge rule.
+- **GIVEN** an accepted fixture represents an illegal exit, cache identity drift, malformed input, deletion-only change, difficult path, suppression relocation, or FAIL/UNKNOWN precedence defect
+- **WHEN** slice or commit checkpoint dogfood runs
+- **THEN** the defect is non-passing before simulated PR delivery
+- **AND** duration, local detection, cycles, packet size, repeated class, and later-review outcome are recorded.
 
-### Requirement: Adapter compatibility across conformance release
+### Requirement: Signed publication before adapter consumption
 
-When the conformance command or workflow changes the signed module/workflow identity, the release SHALL provide tested compatibility evidence for each claimed #433 adapter through a compatible-upgrade descriptor or SHALL keep adapter-mediated adoption blocked on a separately accepted adapter release.
+The implementation SHALL version, sign, compatibility-test, and publish one immutable checkpoint/conformance module and workflow identity before #251/#253/#433 consume it.
 
-#### Scenario: Existing adapter pins the prior release identity
+#### Scenario: Adapter requests the new workflow
 
-- **GIVEN** an installed adapter descriptor pins the exact module/workflow identity published by #433
-- **WHEN** the conformance release presents a different signed identity
-- **THEN** compatibility must be proven through a tested descriptor before that adapter can consume the release
-- **AND** an unproven or mismatched descriptor blocks adapter invocation and downstream adoption.
+- **GIVEN** #433 prepares a harness adapter
+- **WHEN** it resolves the canonical workflow identity
+- **THEN** it consumes the exact published #434 identity
+- **AND** #434 contains no harness-specific adapter package.

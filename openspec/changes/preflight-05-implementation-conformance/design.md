@@ -1,61 +1,73 @@
 ## Context
 
-This paired modules change executes the core conformance contract after implementation. It deliberately has a different command, result, policy phase, and evidence boundary from `specfact preflight run` so pre-implementation approval cannot be mistaken for delivery proof.
+This paired modules change executes the released core implementation-assurance contracts throughout development and at final delivery. It keeps `specfact preflight run`, local checkpoints, and immutable-range conformance as distinct result lifecycles so approval identity, local feedback, and PR authority cannot be confused.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Capture exact implementation and test evidence without mutating the sealed contract.
-- Evaluate approved obligations and unexpected drift through the released core verifier.
-- Give humans and agents one actionable, provenance-rich result before PR/archive decisions.
-- Require explicit reapproval when implementation intentionally changes the contract.
+- Catch seal/scope/test mismatches and known semantic boundary defects before a PR.
+- Reuse Requirements exact selectors, C14 scope/capsule identities, and code-review JSON rather than duplicate analyzers.
+- Return one compact remediation contract to the current coding agent with bounded reruns.
+- Preserve explicit unknowns and distinct local versus range authority.
 
 **Non-Goals:**
 
-- Implement general code review, coverage, architecture analysis, or security scanning already owned elsewhere.
-- Generate missing tests or change production code.
-- Treat unavailable evidence as success.
+- Invoke an LLM or network from the deterministic CLI.
+- Generate tests, edit implementation, or mutate/reseal the approved contract.
+- Replace platform CI, protected PR review, security analysis, or architecture judgment.
 
 ## Decisions
 
-### 1. Separate command and result lifecycle
+### 1. Separate checkpoint and conformance commands
 
-`specfact preflight conform <change-id>` requires a preflight seal that verifies against its sealed contract and base source snapshot plus an explicit implementation identity in the released core snapshot format. The implementation base/head or exact range is supplied separately; a missing, implicit, or ambiguous identity is rejected. Implementation commits do not by themselves invalidate the base-bound seal, and the command produces a conformance result rather than a new preflight readiness result or altered seal.
+`specfact preflight checkpoint <change-id>` accepts only `--scope worktree|index` and `--profile slice|commit|deep`. It returns the released core `DevelopmentCheckpointResult` with local authority. `specfact preflight conform <change-id>` requires explicit immutable base/head identities and returns `ImplementationConformanceResult`. Neither command changes the seal.
 
-### 2. Evidence adapters reuse existing outputs
+### 2. Three bounded checkpoint profiles
 
-The runtime imports exact repository diff manifests, interface/traceability records, and current-run test evidence from existing SpecFact contracts where available. It records producer/version/digest and does not reimplement those analyzers. Missing required evidence yields unknown or blocking conformance according to policy.
+- `slice` verifies the seal, compares the complete changed-path manifest with sealed roles, runs affected exact Requirements cases, and imports changed-scope code-review evidence.
+- `commit` requires the index snapshot, adds every affected component's bounded pytest targets, and is the pre-commit profile.
+- `deep` adds bounded bug-hunt analysis and all locally executable `prepush` obligations. `ci` obligations are reported as deferred with identity and reason, never silently passed.
 
-### 3. Closed mapping validators
+V1 invokes pytest through the active Python environment using repository-contained selectors. Other runners remain later adapters.
 
-Python validators map sealed scope, exclusions, interfaces, acceptance criteria, test intent, and tasks to normalized implementation evidence. They emit only the core drift classes and retain source/evidence paths for remediation.
+### 3. C14 provides scope and execution identity
 
-### 4. Human decides drift resolution
+Worktree and index extraction reuses C14 scope, sandbox, and toolchain primitives. Complete manifests retain additions, deletions, both rename endpoints, modes, symlinks, untracked paths where applicable, quoted paths, Unicode, and trailing characters. Index claims execute against the captured index capsule; a differing worktree cannot satisfy staged evidence.
 
-For unexpected or modified implementation, the workflow offers two explicit paths: correct the implementation to the sealed contract, or return to preflight to review/refine/reapprove the contract. It cannot mark intentional drift accepted by itself.
+### 4. Seal-bound semantic selection
 
-### 5. Delivery integration remains opt-in
+Changed source paths map through sealed component ownership to existing Requirements verification cases and bounded component pytest targets. Missing ownership, stale plan identity, invalid/uncollected selectors, ambiguous scope, or unavailable required evidence produces `UNKNOWN`. Work outside sealed roles produces `FAIL` and routes intentional expansion to preflight reapproval.
 
-The first release provides command and workflow evidence without making every PR gate depend on it. A later policy change may require conformance for selected projects only after dogfood demonstrates usable signal.
+### 5. Evidence aggregation and cache identity
 
-### 6. Signed identity changes require adapter compatibility evidence
+The runtime imports current-run JUnit and `specfact code review run` JSON and delegates status/finding semantics to released core interfaces. Cache reuse requires exact seal, snapshot, obligation-set, pytest-target, runner, policy, toolchain, and relevant configuration digests. Any identity change invalidates the cache.
 
-Adding the conformance command or workflow handoff changes the signed module/workflow identity that #433 adapters pin. This change may publish a tested compatible-upgrade descriptor, but it does not silently rewrite external adapter packages. If the existing adapters cannot accept the new exact identity, conformance adoption remains blocked on a separately accepted adapter release.
+### 6. Seal-aware pre-commit rollout
+
+The pre-commit wrapper auto-selects only when exactly one valid seal covers every staged production path. No staged production path or no applicable seal is `NOT_APPLICABLE` and exits zero. Multiple/stale matching seals, ambiguous Git state, missing ownership, or missing required evidence is `UNKNOWN` and exits one. Dogfood begins in shadow mode; blocking is enabled only after the accepted corpus shows no false PASS or destructive behavior.
+
+### 7. Compact bounded agent handoff
+
+Each finding packet contains a stable fingerprint, action class (`fix_implementation`, `fix_or_add_test`, `rerun`, `return_to_preflight`, or `human_decision`), contract/risk reference, implementation evidence, expected observable, recommended action, and validation selectors. The harness-neutral workflow may hand packets to the current coding agent for at most three fix/rerun cycles. It stops on a repeated consecutive fingerprint, scope expansion, `UNKNOWN`, contract/design judgment, or requested sealed-artifact change.
+
+### 8. Publication precedes adapters
+
+The implementation versions, signs, compatibility-tests, and publishes the combined workflow identity. Core #251/#253 and modules #433 consume that exact release; #434 does not need an existing adapter and packages none.
 
 ## Risks / Trade-offs
 
-- **Duplicate analyzer ownership:** Import existing normalized evidence rather than running parallel analyzers.
-- **Mapping noise:** Require exact contract paths and evidence identities; preserve unknowns.
-- **Approval confusion:** Keep separate command/result vocabulary and never reseal from conform.
-- **Premature blocking rollout:** Start opt-in and require a later policy decision for enforcement.
-- **Adapter identity drift:** Test the new signed identity against every claimed #433 descriptor and block adoption on a follow-up adapter release when compatibility is not proven.
+- **Incomplete risk matrix:** Preflight validators block missing dispositions and checkpoint preserves unknown evidence.
+- **Slow component selection:** Use slice/commit/deep profiles and digest-bound cache; never fall back silently to a full repository suite.
+- **Local/CI divergence:** Keep `ci` obligations deferred and retain protected PR/CI authority.
+- **Looping token cost:** Cap workflow cycles at three and stop repeated fingerprints.
+- **Duplicate ownership:** Import Requirements, C14, and code-review contracts instead of creating parallel schemas.
 
 ## Migration and Rollback
 
-The command is additive and optional. Removing the conformance module surface leaves the original preflight contract/seal unchanged. Persisted conformance results can be deleted without invalidating pre-implementation approval identity; delivery policy must then treat conformance as unavailable, not passed.
+Dogfood is shadow-only. Stable rollout blocks pre-commit only for repositories with an applicable valid seal. Rollback removes the hook/workflow checkpoint entry and published update; existing seals, Requirements evidence, code review, and final PR gates remain valid. Ephemeral checkpoint artifacts may be deleted without changing approval identity.
 
 ## Open Questions Deferred to Implementation
 
-- Which existing test/traceability evidence schemas are mandatory for the first supported profile.
-- Retention policy for multiple conformance runs against one seal.
+- Exact released core class/module names and canonical serialization library established by #682/#684 tests.
+- Retention limit for explicitly persisted checkpoint history; ephemeral output remains the default.

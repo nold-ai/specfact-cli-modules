@@ -1,125 +1,110 @@
 schema_version: "2"
+x-planning-rationale: &planning-rationale "The proposal must make this requirement reviewable before implementation begins."
+x-planning-touchpoints: &planning-touchpoints
+  - id: openspec-source-spec
+    kind: config_file
+    locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+x-planning-observable: &planning-observable >-
+  Strict OpenSpec validation retains the requirement and its scenarios
+  without claiming implementation, test execution, checkpoint, conformance, or publication evidence.
 requirements:
-  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:adapter-compatibility-across-conformance-release:
-    rationale: "The proposal must make this requirement reviewable before implementation begins."
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:separate-development-checkpoint-command:
+    rationale: *planning-rationale
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
-    touchpoints:
-      - id: openspec-source-spec
-        kind: config_file
-        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
-    verification_cases:
-      - case_id: PF05M-008
-        scenario_id: adapter-compatibility-across-conformance-release
-        method: inspection
-        intent: "Inspect the conformance release adapter compatibility contract before implementation."
-        observable: >-
-          Strict OpenSpec validation retains the exact signed-identity
-          compatibility proof or separately accepted adapter-release blocker
-          without claiming implementation or test execution.
-  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:atomic-optional-persistence:
-    rationale: "The proposal must make this requirement reviewable before implementation begins."
-    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
-    touchpoints:
-      - id: openspec-source-spec
-        kind: config_file
-        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    touchpoints: *planning-touchpoints
     verification_cases:
       - case_id: PF05M-001
-        scenario_id: atomic-optional-persistence
+        scenario_id: separate-development-checkpoint-command
         method: inspection
-        intent: "Inspect the atomic optional persistence planning contract before implementation."
-        observable: >-
-          Strict OpenSpec validation retains the requirement and its scenarios
-          without claiming implementation or test execution.
-  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:core-conformance-evaluation:
-    rationale: "The proposal must make this requirement reviewable before implementation begins."
+        intent: "Inspect checkpoint scopes, statuses, seal behavior, and pre-commit applicability before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:bounded-checkpoint-profiles:
+    rationale: *planning-rationale
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
-    touchpoints:
-      - id: openspec-source-spec
-        kind: config_file
-        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    touchpoints: *planning-touchpoints
     verification_cases:
       - case_id: PF05M-002
-        scenario_id: core-conformance-evaluation
+        scenario_id: bounded-checkpoint-profiles
         method: inspection
-        intent: "Inspect the core conformance evaluation planning contract before implementation."
-        observable: >-
-          Strict OpenSpec validation retains the requirement and its scenarios
-          without claiming implementation or test execution.
-  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:explicit-drift-resolution-paths:
-    rationale: "The proposal must make this requirement reviewable before implementation begins."
+        intent: "Inspect slice, commit, deep, and deferred CI profile semantics before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:complete-implementation-scope-evidence:
+    rationale: *planning-rationale
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
-    touchpoints:
-      - id: openspec-source-spec
-        kind: config_file
-        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    touchpoints: *planning-touchpoints
     verification_cases:
       - case_id: PF05M-003
-        scenario_id: explicit-drift-resolution-paths
+        scenario_id: complete-implementation-scope-evidence
         method: inspection
-        intent: "Inspect the explicit drift resolution paths planning contract before implementation."
-        observable: >-
-          Strict OpenSpec validation retains the requirement and its scenarios
-          without claiming implementation or test execution.
-  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:human-and-json-parity:
-    rationale: "The proposal must make this requirement reviewable before implementation begins."
+        intent: "Inspect complete C14-backed Git transition identity before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:seal-bound-semantic-evidence-selection:
+    rationale: *planning-rationale
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
-    touchpoints:
-      - id: openspec-source-spec
-        kind: config_file
-        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    touchpoints: *planning-touchpoints
     verification_cases:
       - case_id: PF05M-004
-        scenario_id: human-and-json-parity
+        scenario_id: seal-bound-semantic-evidence-selection
         method: inspection
-        intent: "Inspect the human and json parity planning contract before implementation."
-        observable: >-
-          Strict OpenSpec validation retains the requirement and its scenarios
-          without claiming implementation or test execution.
-  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:opt-in-delivery-policy:
-    rationale: "The proposal must make this requirement reviewable before implementation begins."
+        intent: "Inspect component, risk, Requirements-plan, selector, and scope-drift mappings before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:current-run-pytest-and-code-review-evidence:
+    rationale: *planning-rationale
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
-    touchpoints:
-      - id: openspec-source-spec
-        kind: config_file
-        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    touchpoints: *planning-touchpoints
     verification_cases:
       - case_id: PF05M-005
-        scenario_id: opt-in-delivery-policy
+        scenario_id: current-run-pytest-and-code-review-evidence
         method: inspection
-        intent: "Inspect the opt in delivery policy planning contract before implementation."
-        observable: >-
-          Strict OpenSpec validation retains the requirement and its scenarios
-          without claiming implementation or test execution.
-  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:provenance-rich-implementation-evidence:
-    rationale: "The proposal must make this requirement reviewable before implementation begins."
+        intent: "Inspect current-run evidence import, reconciliation, and cache invalidation before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:local-and-range-authority-separation:
+    rationale: *planning-rationale
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
-    touchpoints:
-      - id: openspec-source-spec
-        kind: config_file
-        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    touchpoints: *planning-touchpoints
     verification_cases:
       - case_id: PF05M-006
-        scenario_id: provenance-rich-implementation-evidence
+        scenario_id: local-and-range-authority-separation
         method: inspection
-        intent: "Inspect the provenance rich implementation evidence planning contract before implementation."
-        observable: >-
-          Strict OpenSpec validation retains the requirement and its scenarios
-          without claiming implementation or test execution.
-  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:separate-conformance-command:
-    rationale: "The proposal must make this requirement reviewable before implementation begins."
+        intent: "Inspect rejection of local-to-PR authority promotion before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:compact-bounded-remediation-workflow:
+    rationale: *planning-rationale
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
-    touchpoints:
-      - id: openspec-source-spec
-        kind: config_file
-        locator: "openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md"
+    touchpoints: *planning-touchpoints
     verification_cases:
       - case_id: PF05M-007
-        scenario_id: separate-conformance-command
+        scenario_id: compact-bounded-remediation-workflow
         method: inspection
-        intent: "Inspect the separate conformance command, explicit implementation identity, and sealed-base/head separation contract before implementation."
-        observable: >-
-          Strict OpenSpec validation retains rejection of missing or ambiguous
-          implementation identity and the distinction between the sealed base
-          snapshot and postapproval implementation head without claiming
-          implementation or test execution.
+        intent: "Inspect deterministic packets, three-cycle cap, and stop states before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:human-and-json-parity-with-optional-persistence:
+    rationale: *planning-rationale
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints: *planning-touchpoints
+    verification_cases:
+      - case_id: PF05M-008
+        scenario_id: human-and-json-parity-with-optional-persistence
+        method: inspection
+        intent: "Inspect renderer parity, atomic persistence, and sealed-artifact immutability before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:shadow-dogfood-before-seal-aware-blocking:
+    rationale: *planning-rationale
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints: *planning-touchpoints
+    verification_cases:
+      - case_id: PF05M-009
+        scenario_id: shadow-dogfood-before-seal-aware-blocking
+        method: inspection
+        intent: "Inspect C14 regression corpus, metrics, and blocking promotion gate before implementation."
+        observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:signed-publication-before-adapter-consumption:
+    rationale: *planning-rationale
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]
+    touchpoints: *planning-touchpoints
+    verification_cases:
+      - case_id: PF05M-010
+        scenario_id: signed-publication-before-adapter-consumption
+        method: inspection
+        intent: "Inspect signed publication and downstream #251/#253/#433 identity handoff before implementation."
+        observable: *planning-observable

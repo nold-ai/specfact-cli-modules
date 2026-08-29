@@ -6,7 +6,7 @@ All tasks below are future implementation and external integration work. This pl
 
 - [ ] 1.1 In a dedicated issue-linked session, create `feature/preflight-04-harness-adapters` from current `origin/dev` in a new modules worktree before any implementation edit.
 - [ ] 1.2 Refresh hierarchy metadata and verify this issue is `Todo`, correctly parented/labeled/assigned, blocked by core #253, and not concurrently `In Progress`.
-- [ ] 1.3 Verify the exact signed preflight module identity, completed #251/#253 contracts, and current Codex/ECC/hatch3r contribution and packaging rules. For hatch3r, require the selected release to contain and document a supported distribution/extension surface; an upstream contribution qualifies only after it is merged, included in that release, and documented there. Stop hatch3r work otherwise.
+- [ ] 1.3 Verify the exact signed #434 module and preflight/implementation-check workflow identities, completed #251/#253 contracts, and current Codex/ECC/hatch3r contribution and packaging rules. For hatch3r, require the selected release to contain and document a supported distribution/extension surface; an upstream contribution qualifies only after it is merged, included in that release, and documented there. Stop hatch3r work otherwise.
 
 ## 2. Adapter specs and failing-first tests
 

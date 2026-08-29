@@ -1,6 +1,6 @@
 ## Context
 
-The stable module owns one canonical workflow. This change maps that workflow into three first-party/companion installation shapes without turning any harness package into a second validation engine.
+The stable #434 module identity owns canonical preflight and implementation-check workflows. This change maps those workflows into three first-party/companion installation shapes without turning any harness package into a second validation engine.
 
 Current primary-source observations reviewed on 2026-08-25:
 
@@ -29,7 +29,7 @@ These are integration inputs, not permanent assumptions. Each adapter must decla
 
 ### 1. Shared adapter descriptor
 
-Every adapter consumes a descriptor containing the exact SpecFact module version, artifact digest, authorized signature/trust-root identity, registry identity, compatible core identity, canonical workflow identity/digest, supported harness and version range, native invocation form, asset mapping, instruction markers, install scope, and uninstall inventory. It consumes the official installer's verified result when that interface owns verification. Invalid, untrusted, unsupported, or mismatched identities fail closed before installation, upgrade, invocation, or packaging.
+Every adapter consumes a descriptor containing the exact SpecFact #434 module version, artifact digest, authorized signature/trust-root identity, registry identity, compatible core identity, canonical preflight/checkpoint workflow identities and digests, supported harness and version range, native invocation form, asset mapping, instruction markers, install scope, and uninstall inventory. It consumes the official installer's verified result when that interface owns verification. Invalid, untrusted, unsupported, or mismatched identities fail closed before installation, upgrade, invocation, or packaging.
 
 ### 2. Codex plugin is an installation shell
 

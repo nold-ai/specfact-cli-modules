@@ -57,7 +57,7 @@ The module SHALL run validators identified by stable ID and version and SHALL di
 
 ### Requirement: Required MVP validation domains
 
-The initial runtime SHALL validate artifact completeness, source freshness, scope traceability, dependency readiness, interface ownership, acceptance-testability, and conflicting active work.
+The initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work.
 
 #### Scenario: Scope has no acceptance or test trace
 
@@ -65,6 +65,27 @@ The initial runtime SHALL validate artifact completeness, source freshness, scop
 - **WHEN** scope traceability and testability validators run
 - **THEN** they emit a blocking finding against the owning artifact path
 - **AND** the result identifies the refinement target.
+
+#### Scenario: Source scope cannot select semantic evidence
+
+- **GIVEN** a governed source path has no component owner or bounded pytest targets
+- **WHEN** scope and testability validators run
+- **THEN** they emit a blocking finding against the source scope entry
+- **AND** later implementation checkpoints are not described as selectable.
+
+#### Scenario: Risk dimension lacks an explicit disposition
+
+- **GIVEN** an affected behavior omits a closed risk dimension, marks it covered without an existing Requirements case, or marks it not applicable without a rationale
+- **WHEN** semantic-risk validation runs
+- **THEN** readiness is blocked or unknown according to source availability
+- **AND** the missing case is not inferred from filenames or prose.
+
+#### Scenario: Covered risk declares its execution stage
+
+- **GIVEN** a covered risk references an existing Requirements verification case and exact pytest selector
+- **WHEN** verification intent is validated
+- **THEN** the contract retains the mapping and plan identities plus `slice`, `commit`, `prepush`, or `ci` as its earliest required stage
+- **AND** preflight does not execute the selector.
 
 #### Scenario: GitHub dependency metadata disagrees with proposal
 

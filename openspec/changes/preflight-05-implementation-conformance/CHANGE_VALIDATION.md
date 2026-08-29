@@ -12,15 +12,16 @@
 
 ## Scope and Ownership Review
 
-- Modules owns postimplementation evidence extraction, executable comparison, rendering, persistence, and workflow handoff.
-- Paired core owns implementation snapshot, obligation mapping, drift/result, and verifier interfaces.
-- The work is outside the preflight MVP and does not silently alter external harness packages or C15 semantics; a changed signed identity requires tested adapter compatibility evidence or a separately accepted adapter release.
+- Modules owns worktree/index checkpoint and immutable-range conformance execution, Git/pytest/review evidence import, caching, remediation packets, bounded agent workflow, pre-commit integration, rendering, persistence, signing, and publication.
+- Paired core owns snapshot kinds, obligation mapping, finding/result, authority, and pure verifier interfaces.
+- The work follows stable preflight publication and precedes #251/#253/#433. It packages no external harness adapter and does not alter C15 semantics.
 
 ## Dependency Review
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
-- Native blockers verified: stable modules [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432), modules adapters [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433), and paired core [#684](https://github.com/nold-ai/specfact-cli/issues/684).
-- Delivery ordering records the complete core #682 -> modules #431 -> core #680/#683 -> modules #432 -> core #251/#253 -> modules #433 sequence before this later workflow handoff; native relationships and exact released identities must be read back again before implementation.
+- Native blockers to verify: stable modules [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) and paired core [#684](https://github.com/nold-ai/specfact-cli/issues/684).
+- Native downstream to add: core [#251](https://github.com/nold-ai/specfact-cli/issues/251), followed by #253 and modules #433.
+- Delivery ordering records core #682 -> modules #431 -> core #680/#683 -> modules #432 -> core #684 -> modules #434 -> core #251/#253 -> modules #433; exact released identities must be read back again before implementation.
 - GitHub readback verified User Story type, parent #163, project `SpecFact CLI` / `Todo`, assignee `djm81`, and the required labels.
 
 ## Validation Record
@@ -33,4 +34,4 @@
 
 ## Decision
 
-The proposal is ready for review and a planning-only PR. Postimplementation conformance runtime work remains explicitly unstarted.
+The proposal is ready for review and a planning-only PR. Checkpoint, pre-commit, bounded workflow, publication, and final conformance runtime work remain explicitly unstarted.
