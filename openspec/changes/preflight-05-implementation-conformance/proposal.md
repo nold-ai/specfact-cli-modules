@@ -8,12 +8,12 @@ Preflight approval records what was reviewed, but defects and mismatches can sti
 
 - **NEW**: `specfact preflight checkpoint <change-id> --scope worktree|index --profile slice|commit|deep` using the released core snapshot and checkpoint-result contracts.
 - **NEW**: Complete Git path extraction by reusing C14 worktree/index/range scope and capsule primitives, including additions, deletions, rename endpoints, modes, symlinks, untracked paths, quoted paths, Unicode, and trailing characters.
-- **NEW**: Seal-bound selection of existing Requirements exact pytest cases plus bounded affected-component pytest targets; no second selector schema.
+- **NEW**: Seal-bound selection of Requirements cases through the existing planned-to-test-authored maturity lifecycle, exact pytest selectors when test-authored, and bounded affected-component pytest targets; no second selector schema.
 - **NEW**: Import of current-run JUnit and `specfact code review run` evidence with cache identity bound to the seal, snapshot, selected obligations/targets, runner, policy, and configuration.
-- **NEW**: `specfact preflight conform <change-id>` for explicit immutable base/head comparison and a separate final conformance result.
+- **NEW**: `specfact preflight conform <change-id>` for explicit cumulative implementation-lineage-origin/head comparison across successor seals and a separate final conformance result.
 - **NEW**: Human/JSON parity, compact remediation packets, a harness-neutral implementation-check workflow with at most three fix/rerun cycles, and optional atomic persistence.
 - **NEW**: Seal-aware staged pre-commit integration that evaluates sealed tests/configuration/evidence as well as source, is non-applicable only for paths unrelated to every seal, fails closed for ambiguous applicable evidence, and is shadow-dogfooded before blocking rollout.
-- **NEW**: After the implementation merges, use the canonical post-merge publication workflow to version, sign, compatibility-test, and publish one #434 module release identity that separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest before #251/#253/#433 consume them.
+- **NEW**: After the implementation merges, use the canonical post-merge publication workflow to version, sign, compatibility-test, and publish one #434 module release identity that separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest, then enforce the ordered handoff #434 -> #251 -> #253 -> #433.
 - **CLARIFY**: The deterministic CLI never invokes an LLM, edits implementation, mutates/reseals a contract, or promotes local evidence to protected PR authority.
 
 ## Capabilities

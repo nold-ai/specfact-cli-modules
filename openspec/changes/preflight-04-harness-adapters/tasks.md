@@ -11,7 +11,7 @@ All tasks below are future implementation and external integration work. This pl
 ## 2. Adapter specs and failing-first tests
 
 - [ ] 2.1 Finalize the shared descriptor and a tested harness/version matrix; remove assumptions contradicted by current upstream primary sources.
-- [ ] 2.2 Add failing contract tests for install, invocation mapping, semantic parity, exact-version rejection, registry/core identity mismatch, invalid/untrusted signature rejection, absent verified-installer result, signed workflow-digest binding, unsupported hatch3r distribution rejection, drift, upgrade, and safe uninstall before adapter production edits; exercise every fail-closed identity case across installation, upgrade, invocation, and packaging.
+- [ ] 2.2 Add failing contract tests for install, invocation mapping, semantic parity, exact-version rejection, registry/core identity mismatch, invalid/untrusted signature rejection, absent verified-installer result, role-specific signed workflow identity-to-digest binding including omission/mismatch/cross-pairing, unsupported hatch3r distribution rejection, drift, upgrade, and safe uninstall before adapter production edits; exercise every fail-closed identity case across installation, upgrade, invocation, and packaging.
 - [ ] 2.3 Capture failing-first results in a newly created `TDD_EVIDENCE.md`.
 
 ## 3. Minimal adapter implementation

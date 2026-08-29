@@ -47,7 +47,8 @@ Validators are Python implementations registered under stable IDs and versions. 
 - role-classified implementation paths and explicit exclusions;
 - component ownership with bounded pytest targets;
 - every closed core risk dimension (`boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`) marked `covered` or `not_applicable`, with rationale where not applicable;
-- covered risk rows mapped to existing Requirements requirement/scenario/case identities and exact pytest selectors;
+- covered risk rows mapped at `planned` maturity to existing Requirements requirement/scenario/case identities, method, intent, observable, and touchpoints without fabricating selectors;
+- test-authored refinement that reconciles the Requirements-owned exact pytest selector to the same planned case, requires explicit successor-seal approval before production implementation, and preserves the original implementation-lineage baseline;
 - earliest execution stage from `slice`, `commit`, `prepush`, or `ci`;
 - acceptance criteria, failing-first plan, rollback, and non-goals;
 - active-issue/worktree collision and planning-only boundary checks.
@@ -73,7 +74,7 @@ General AGENTS.md/OpenSpec/Spec Kit instructions should contain only the gate: s
 - **False-ready result from missing validators:** Required validator absence yields `UNKNOWN`, never success.
 - **Cross-repository race:** Capture repository refs and GitHub identities; stale identities invalidate approval.
 - **False semantic coverage:** Missing component ownership, unresolved risk disposition, or stale Requirements plan identity is blocking or `UNKNOWN`, never inferred ready.
-- **Duplicate selector ownership:** Validate references to existing Requirements plans and selectors rather than creating a preflight-specific selector grammar.
+- **Duplicate selector ownership:** Reuse the existing Requirements maturity lifecycle: seal complete planned cases without selectors, then validate Requirements-owned exact selectors at test-authored maturity rather than creating a preflight-specific selector grammar.
 
 ## Migration and Rollback
 

@@ -27,9 +27,13 @@ changes without creating runtime behavior.
   snapshot, obligation-map, finding/result, authority, and pure comparison
   interfaces. Paired modules owns checkpoint/conform commands, C14-backed Git
   extraction, Requirements pytest/JUnit and code-review evidence, caching,
-  pre-commit policy, remediation packets, bounded agent workflow, rendering,
-  persistence, signing, and publication of the module identity plus separately
-  bound preflight and implementation-check workflow identities/digests.
+  pre-commit policy, remediation packets, bounded agent workflow,
+  checkpoint/conformance-result rendering, optional atomic snapshot/result
+  persistence under its distinct result schema, signing, and publication of the
+  module identity plus separately bound preflight and implementation-check
+  workflow identities/digests. These surfaces are separate from
+  `preflight-02-assurance-runtime`, which exclusively owns preflight
+  readiness/validation/seal rendering and persistence.
 
 ## Shared Rules
 

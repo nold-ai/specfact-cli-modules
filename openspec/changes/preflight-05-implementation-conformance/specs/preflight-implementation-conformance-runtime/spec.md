@@ -6,10 +6,17 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 
 #### Scenario: No staged seal-relevant change or associated seal
 
-- **GIVEN** the pre-commit wrapper finds no staged path associated with any seal or seal-bound test, dependency, policy, toolchain, or relevant configuration input
+- **GIVEN** the repository has no preflight seals, or every staged path is deterministically classified outside the repository's configured preflight-governed path/input universe and unrelated to every seal
 - **WHEN** automatic checkpoint selection runs
 - **THEN** the result is `NOT_APPLICABLE` and exits zero
 - **AND** an unsealed repository does not acquire a universal blocking policy.
+
+#### Scenario: Governed staged paths have no covering seal
+
+- **GIVEN** the repository contains one or more preflight seals and at least one staged path/input is classified by repository policy as preflight-governed but is covered by no seal role or influence mapping
+- **WHEN** automatic checkpoint selection runs
+- **THEN** every wholly uncovered governed path/input is `unexpected`, the result is `FAIL`, and the hook exits non-zero
+- **AND** absent or ambiguous governed/unrelated classification returns `UNKNOWN`, never `NOT_APPLICABLE`.
 
 #### Scenario: A matching seal covers only part of the staged seal-relevant scope
 
@@ -68,7 +75,7 @@ The module SHALL define cumulative `slice`, `commit`, and `deep` profiles whose 
 
 ### Requirement: Complete implementation scope evidence
 
-The runtime SHALL reuse C14 worktree/index/range primitives and implement the released core snapshot matrix without guessing or lossy path parsing. Worktree snapshots SHALL bind repository identity, full base commit ID, and worktree-manifest digest and include staged, unstaged, and untracked state. Index snapshots SHALL bind repository identity, full base commit ID, and exact index tree ID and exclude untracked paths unless staged as additions. Range snapshots SHALL bind repository identity, full base/head commit IDs, and base/head tree IDs and SHALL NOT represent untracked paths. Every manifest SHALL preserve additions, deletions, both rename endpoints, before/after modes, symlink target identity, and byte-preserving path identity; rename interpretation SHALL be bound to producer, policy, and toolchain identity.
+The runtime SHALL reuse C14 worktree/index/range primitives and implement the released core snapshot matrix without guessing or lossy path parsing. Every snapshot base SHALL equal the seal-bound implementation-lineage origin repository/base commit/base tree. Worktree snapshots SHALL additionally bind a worktree-manifest digest and include staged, unstaged, and untracked state. Index snapshots SHALL additionally bind the exact index tree ID and exclude untracked paths unless staged as additions. Range snapshots SHALL bind full head commit/tree plus origin-to-head ancestry and SHALL NOT represent untracked paths. Every manifest SHALL preserve additions, deletions, both rename endpoints, before/after modes, symlink target identity, and byte-preserving path identity; rename interpretation SHALL be bound to producer, policy, and toolchain identity.
 
 #### Scenario: Repository contains difficult path transitions
 
@@ -100,7 +107,7 @@ The runtime SHALL classify every changed non-excluded seal-relevant path and inp
 - **GIVEN** a changed path or behavior lies outside sealed roles and exclusions
 - **WHEN** checkpoint comparison runs
 - **THEN** it returns an `unexpected` failure and a `return_to_preflight` remediation class
-- **AND** intentional expansion requires a new preflight review and seal.
+- **AND** intentional expansion requires a successor preflight review and seal that preserves the original implementation-lineage origin baseline.
 
 ### Requirement: Current-run pytest and code-review evidence
 
@@ -129,7 +136,7 @@ The runtime SHALL first supply the upstream design contract, validation result, 
 
 ### Requirement: Local and range authority separation
 
-The runtime SHALL preserve core checkpoint authority for worktree/index results and SHALL require repository identity, full immutable base/head commit IDs, and base/head tree identities for `specfact preflight conform <change-id>`. Tree attestations and the complete path manifest SHALL bind to that exact repository and range.
+The runtime SHALL preserve core checkpoint authority for worktree/index results and SHALL require repository identity, the seal-bound implementation-lineage origin commit/tree, full immutable head commit/tree, and origin-to-head ancestry for `specfact preflight conform <change-id>`. Tree attestations and the complete path manifest SHALL bind to that exact repository and cumulative lineage range across all successor seals.
 
 #### Scenario: Local pass is presented as PR proof
 
@@ -140,11 +147,11 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 
 ### Requirement: Immutable-range conformance evaluation
 
-`specfact preflight conform <change-id>` SHALL verify the supplied design contract, validation result, seal, policy, and current source identities; require the range base commit/tree to equal the seal-approved source baseline; use C14 to prove that the full head descends from that base and to extract the complete immutable sealed-base-to-head manifest and range-bound evidence; derive the deterministic exhaustive final-delivery obligation set; and invoke the released core implementation-assurance verifier. The exhaustive set SHALL include every changed governed path/interface and every applicable sealed component, acceptance criterion, risk row, Requirements verification case, component target, verification stage including `ci`, and exclusion in their transitive obligation closure. The set and its digest SHALL be bound to the result. For an obligation whose earliest stage is `ci`, the runtime SHALL accept satisfaction only from a seal/policy-authorized protected-CI producer whose authenticated provenance is bound to the exact immutable range. Missing, local, self-asserted, unauthenticated, or wrong-range CI evidence SHALL remain `UNKNOWN`/deferred and SHALL prevent `PASS`. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
+`specfact preflight conform <change-id>` SHALL verify the supplied design contract, validation result, seal, policy, current source identities, implementation-lineage identity, immutable origin repository/base commit/base tree, and predecessor-seal chain; require the range base to equal that lineage origin rather than a later successor-seal source snapshot; use C14 to prove that the full head descends from the origin and to extract the complete immutable lineage-origin-to-head manifest and range-bound evidence; derive the deterministic exhaustive final-delivery obligation set; and invoke the released core implementation-assurance verifier. The exhaustive set SHALL include every changed governed path/interface and every applicable sealed component, acceptance criterion, risk row, Requirements verification case, component target, verification stage including `ci`, and exclusion in their transitive obligation closure. The set and its digest SHALL be bound to the result. For an obligation whose earliest stage is `ci`, the runtime SHALL accept satisfaction only from a seal/policy-authorized protected-CI producer whose authenticated provenance is bound to the exact immutable range. Missing, local, self-asserted, unauthenticated, or wrong-range CI evidence SHALL remain `UNKNOWN`/deferred and SHALL prevent `PASS`. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
 
 #### Scenario: Final range is evaluated against the seal
 
-- **GIVEN** a valid seal and explicit repository, full base/head commit, and base/head tree identities
+- **GIVEN** a valid seal and explicit repository, implementation-lineage origin commit/tree, full head commit/tree, and origin-to-head ancestry identities
 - **WHEN** final conformance runs
 - **THEN** the runtime verifies upstream identities, extracts the exact immutable-range manifest and evidence, maps sealed final-delivery obligations, and invokes the core comparator
 - **AND** the result remains independent from prior local checkpoint authority and protected PR review.
@@ -158,10 +165,10 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 
 #### Scenario: Caller attempts a truncated final range
 
-- **GIVEN** implementation changes exist after the seal-approved source baseline
-- **WHEN** a caller supplies a later range base, a different base tree, or a head without valid ancestry from the sealed base
+- **GIVEN** implementation changes exist after the first seal's implementation-lineage origin baseline, including changes retained across successor seals
+- **WHEN** a caller supplies a later range base, a different base tree, or a head without valid ancestry from the lineage origin
 - **THEN** conform returns the released core `stale` or `unverifiable` finding and `UNKNOWN`
-- **AND** it does not extract or compare a caller-selected shorter range.
+- **AND** it does not extract or compare a current-seal or caller-selected shorter range.
 
 #### Scenario: CI-only final obligation has no protected evidence
 
@@ -219,11 +226,11 @@ The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL ena
 
 ### Requirement: Signed publication before adapter consumption
 
-After the implementation PR is merged to `dev`, the canonical post-merge publication workflow SHALL version, sign, compatibility-test, and publish one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. No feature-branch artifact SHALL be handed downstream; #251/#253/#433 MAY consume the identities only after the generated publication PR is merged and official registry/install readback passes.
+After the implementation PR is merged to `dev`, the canonical post-merge publication workflow SHALL version, sign, compatibility-test, and publish one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. No feature-branch artifact SHALL be handed downstream. After the generated publication PR is merged and official registry/install readback passes, #434 SHALL hand the identities to core #251. Core #253 SHALL follow completed #251, and modules #433 SHALL consume the identities only after both #251 and #253 complete.
 
 #### Scenario: Adapter requests the new workflow
 
-- **GIVEN** the #434 implementation and canonical publication PRs are merged and official registry/install readback passes
+- **GIVEN** the #434 implementation and canonical publication PRs are merged, official registry/install readback passes, and core #251 then #253 are complete
 - **AND** #433 prepares a harness adapter
 - **WHEN** it resolves the canonical module and workflow identities
 - **THEN** it consumes the exact signed #434 module identity, preflight workflow identity/digest, and implementation-check workflow identity/digest

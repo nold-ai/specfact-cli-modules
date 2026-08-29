@@ -35,7 +35,7 @@ The preflight command SHALL inspect and render without modifying change artifact
 - **WHEN** the user authorizes those edits
 - **THEN** the orchestration applies only the approved edits through the owning workflow
 - **AND** the owning workflow reuses the paired core safe-write contract, rejects concurrent source drift, and preserves unrelated user-owned content
-- **AND** captures a new source snapshot and reruns every required validator before approval.
+- **AND** captures a new source snapshot, binds the predecessor seal where implementation work already exists, preserves the immutable implementation-lineage origin baseline, and reruns every required validator before approval.
 
 ### Requirement: Versioned Python validator registry
 
@@ -75,17 +75,24 @@ The initial runtime SHALL validate artifact completeness, source freshness, role
 
 #### Scenario: Risk dimension lacks an explicit disposition
 
-- **GIVEN** an affected behavior omits a closed risk dimension, marks it covered without an existing Requirements case, or marks it not applicable without a rationale
+- **GIVEN** an affected behavior omits a closed risk dimension, marks it covered without a complete existing Requirements case at planned maturity or stronger, or marks it not applicable without a rationale
 - **WHEN** semantic-risk validation runs
 - **THEN** readiness is blocked or unknown according to source availability
 - **AND** the missing case is not inferred from filenames or prose.
 
-#### Scenario: Covered risk declares its execution stage
+#### Scenario: Planned covered risk declares its execution stage
 
-- **GIVEN** a covered risk references an existing Requirements verification case and exact pytest selector
+- **GIVEN** a covered risk references an existing complete Requirements verification case at `planned` maturity with stable case identity, method, intent, observable, and touchpoints but no authored test
 - **WHEN** verification intent is validated
-- **THEN** the contract retains the mapping and plan identities plus `slice`, `commit`, `prepush`, or `ci` as its earliest required stage
-- **AND** preflight does not execute the selector.
+- **THEN** the contract retains the planned mapping/plan and case identities plus `slice`, `commit`, `prepush`, or `ci` as its earliest required stage without fabricating a selector
+- **AND** the result records test-authored selector reconciliation as required before production implementation.
+
+#### Scenario: Failing-first test creates the exact selector
+
+- **GIVEN** an approved planned case has no selector and failing-first test authoring produces a Requirements-owned test-authored plan
+- **WHEN** preflight validates the refinement
+- **THEN** it requires the same requirement/scenario/case identity, method, intent, observable, touchpoints, and declared stage plus a valid exact pytest selector under the existing Requirements contract
+- **AND** production implementation waits for explicit approval of a successor seal that binds the predecessor and preserves the implementation-lineage origin baseline.
 
 #### Scenario: GitHub dependency metadata disagrees with proposal
 

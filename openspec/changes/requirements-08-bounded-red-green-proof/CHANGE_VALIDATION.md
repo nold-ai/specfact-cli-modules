@@ -28,4 +28,5 @@ requirements into the canonical specification.
   roadmap exclusion, not by filesystem relocation.
 - Un-parking requires fresh evidence, an explicit roadmap decision, and strict
   revalidation. Do not use `openspec archive` unless the behavior is first
-  implemented and verified.
+  implemented, verified, shipped, merged, and its canonical specification
+  promotion is explicitly approved.

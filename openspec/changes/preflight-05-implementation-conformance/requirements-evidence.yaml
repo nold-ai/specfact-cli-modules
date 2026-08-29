@@ -16,7 +16,7 @@ requirements:
       - case_id: PF05M-001
         scenario_id: separate-development-checkpoint-command
         method: inspection
-        intent: "Inspect checkpoint scopes, statuses, seal behavior, partial-coverage failure, and source/test/config/evidence pre-commit applicability before implementation."
+        intent: "Inspect checkpoint scopes, statuses, seal behavior, partial and wholly uncovered governed-path failure, and the complete source/test/docs/generated/evidence/excluded plus seal-bound test/dependency/policy/toolchain/relevant-configuration pre-commit applicability matrix before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:bounded-checkpoint-profiles:
     rationale: *planning-rationale
@@ -121,5 +121,5 @@ requirements:
       - case_id: PF05M-010
         scenario_id: signed-publication-before-adapter-consumption
         method: inspection
-        intent: "Inspect post-merge publication and the signed #434 module plus separate preflight and implementation-check workflow identity/digest handoff to #251/#253/#433 before implementation."
+        intent: "Inspect post-merge publication, role-specific signed #434 workflow identity/digest bindings, and the mandatory ordered handoff #434 to #251 to #253 to #433 before implementation."
         observable: *planning-observable

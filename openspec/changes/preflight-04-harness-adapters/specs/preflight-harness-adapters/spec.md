@@ -2,7 +2,7 @@
 
 ### Requirement: Shared adapter identity contract
 
-Every harness adapter SHALL declare and verify the exact signed #434 module version, artifact digest, authorized signature/trust-root identity, registry identity, compatible core identity, separately named preflight workflow identity/digest and implementation-check workflow identity/digest, supported harness versions, native invocation mapping, installed asset inventory, and upgrade/uninstall rules. When the released installer owns cryptographic verification, adapters SHALL consume its verified result and SHALL verify that the signed module manifest binds both installed workflow digests before installation, upgrade, invocation, or packaging.
+Every harness adapter SHALL declare and verify the exact signed #434 module version, artifact digest, authorized signature/trust-root identity, registry identity, compatible core identity, separately named preflight workflow identity/digest and implementation-check workflow identity/digest, supported harness versions, native invocation mapping, installed asset inventory, and upgrade/uninstall rules. When the released installer owns cryptographic verification, adapters SHALL consume its verified result and SHALL verify the role-specific manifest mappings `preflight workflow identity -> preflight workflow digest` and `implementation-check workflow identity -> implementation-check workflow digest` before installation, upgrade, invocation, or packaging. Presence of both identities and both digests without the correct pairings SHALL NOT satisfy verification.
 
 #### Scenario: Immutable release identity does not match
 
@@ -13,7 +13,7 @@ Every harness adapter SHALL declare and verify the exact signed #434 module vers
 
 #### Scenario: Signature or installed workflow is invalid or untrusted
 
-- **GIVEN** signature verification fails against the authorized trust root, the verified installer result is absent, either named workflow identity/digest is omitted, or either installed workflow digest differs from the signed module manifest
+- **GIVEN** signature verification fails against the authorized trust root, the verified installer result is absent, either role-specific workflow identity/digest pair is omitted or mismatched, the identities/digests are cross-paired, or either installed workflow digest differs from its corresponding signed manifest mapping
 - **WHEN** installation, upgrade, invocation, or packaging is requested
 - **THEN** the adapter fails closed before the operation
 - **AND** it does not treat descriptor text alone as verification.
