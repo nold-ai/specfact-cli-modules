@@ -7,7 +7,7 @@ Preflight approval records what was reviewed, but defects and mismatches can sti
 ## What Changes
 
 - **NEW**: `specfact preflight checkpoint <change-id> --scope worktree|index --profile slice|commit|deep` using the released core snapshot and checkpoint-result contracts.
-- **NEW**: Complete Git path extraction by reusing C14 worktree/index/range scope and capsule primitives, including additions, deletions, rename endpoints, modes, symlinks, untracked paths, quoted paths, Unicode, and trailing characters.
+- **NEW**: Complete Git path extraction by reusing C14 worktree/index/range scope and capsule primitives, plus policy-authorized snapshot-bound public-interface extraction using the released core records; missing or ambiguous interface discovery fails closed instead of accepting a caller-supplied empty set.
 - **NEW**: Seal-bound selection of Requirements cases through the existing planned-to-test-authored maturity lifecycle, exact pytest selectors when test-authored, and bounded affected-component pytest targets; no second selector schema.
 - **NEW**: Import of current-run JUnit and `specfact code review run` evidence with cache identity bound to the seal, snapshot, selected obligations/targets, runner, policy, and configuration.
 - **NEW**: `specfact preflight conform <change-id>` selects only the policy-authorized canonical latest seal and performs explicit cumulative implementation-lineage-origin-to-authoritative-current-delivery-head comparison across successor seals, with a separate final conformance result.
