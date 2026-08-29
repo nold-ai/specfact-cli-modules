@@ -1,0 +1,139 @@
+schema_version: "2"
+requirements:
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-release:atomic-stable-release-surface:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-release/spec.md"
+    verification_cases:
+      - case_id: PF03M-001
+        scenario_id: atomic-stable-release-surface
+        method: inspection
+        intent: "Inspect the atomic stable release surface planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-release:complete-regression-rerun:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-release/spec.md"
+    verification_cases:
+      - case_id: PF03M-002
+        scenario_id: complete-regression-rerun
+        method: inspection
+        intent: "Inspect the complete regression rerun planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-release:evidence-backed-hardening-scope:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-release/spec.md"
+    verification_cases:
+      - case_id: PF03M-003
+        scenario_id: evidence-backed-hardening-scope
+        method: inspection
+        intent: "Inspect the evidence backed hardening scope planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-release:bounded-compatibility-proof:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-release/spec.md"
+    verification_cases:
+      - case_id: PF03M-004
+        scenario_id: bounded-compatibility-proof
+        method: inspection
+        intent: "Inspect the bounded compatibility proof planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-release:release-rollback:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-release/spec.md"
+    verification_cases:
+      - case_id: PF03M-005
+        scenario_id: release-rollback
+        method: inspection
+        intent: "Inspect the release rollback planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-release:signed-publication-handoff:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-release/spec.md"
+    verification_cases:
+      - case_id: PF03M-006
+        scenario_id: signed-publication-handoff
+        method: inspection
+        intent: "Inspect the signed publication handoff planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-runtime:canonical-skill-and-slash-command-contract:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF03R-001
+        scenario_id: canonical-skill-and-slash-command-contract
+        method: inspection
+        intent: "Inspect the canonical skill and slash command contract planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-runtime:deterministic-pre-implementation-loop:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF03R-002
+        scenario_id: deterministic-pre-implementation-loop
+        method: inspection
+        intent: "Inspect the deterministic pre implementation loop planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-03-dogfood-hardening-and-release:preflight-assurance-workflow:workflow-phase-contract:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#432"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-03-dogfood-hardening-and-release/specs/preflight-assurance-workflow/spec.md"
+    verification_cases:
+      - case_id: PF03W-001
+        scenario_id: workflow-phase-contract
+        method: inspection
+        intent: "Inspect the workflow phase hardening contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the harness-neutral canonical
+          workflow, identical adapter phase, approval, evidence, and stop
+          semantics, and the accepted dogfood regression scenario without
+          claiming downstream adapter implementation or test execution.

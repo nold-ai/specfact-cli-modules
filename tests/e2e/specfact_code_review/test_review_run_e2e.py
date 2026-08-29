@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
+from packaging.specifiers import SpecifierSet
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
@@ -28,9 +30,13 @@ def _consumer_matrix() -> dict[str, Any]:
 
 @pytest.mark.e2e
 def test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix() -> None:
+    """Preserve the frozen C14 selector while accepting every compatible core."""
     from specfact_code_review.run import findings
 
-    assert importlib.metadata.version("specfact-cli") == "0.55.1"
+    manifest_path = Path(__file__).resolve().parents[3] / "packages" / "specfact-code-review" / "module-package.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    installed_core = importlib.metadata.version("specfact-cli")
+    assert SpecifierSet(manifest["core_compatibility"]).contains(installed_core)
     matrix = _consumer_matrix()
 
     result = findings.validate_consumer_matrix(matrix)

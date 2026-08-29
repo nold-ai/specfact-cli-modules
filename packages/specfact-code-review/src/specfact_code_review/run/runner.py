@@ -9,18 +9,20 @@ import hashlib
 import json
 import os
 import platform
+import posixpath
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import tomllib
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Iterable
-from contextlib import ExitStack, suppress
-from dataclasses import dataclass, field
+from contextlib import ExitStack, chdir, suppress
+from dataclasses import dataclass, field, replace
 from functools import lru_cache, partial
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Literal, cast
 from uuid import uuid4
 
@@ -97,8 +99,24 @@ _GIT_LOCAL_ENV_VARS = frozenset(
         "GIT_WORK_TREE",
     }
 )
+_ANALYZER_SCAN_EXCLUDED_DIRECTORIES = frozenset(
+    {
+        ".git",
+        ".mypy_cache",
+        ".nox",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".tox",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+        "venv",
+    }
+)
 ReviewFocus = Literal["simplify"]
 ReviewEnforcementMode = Literal["full", "changed", "shadow"]
+LocalAssuranceKind = Literal["worktree", "full", "explicit_files"]
+_LOCAL_ASSURANCE_KINDS = frozenset({"worktree", "full", "explicit_files"})
 
 
 @dataclass(frozen=True)
@@ -491,6 +509,7 @@ def _candidate_git_environment() -> dict[str, str]:
     return {
         **{key: value for key, value in os.environ.items() if key not in _GIT_LOCAL_ENV_VARS},
         "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_NO_REPLACE_OBJECTS": "1",
         "GIT_TERMINAL_PROMPT": "0",
     }
 
@@ -3956,6 +3975,8 @@ def _run_pytest_selection_with_coverage(
     policy_argv: tuple[str, ...] = (),
 ) -> tuple[subprocess.CompletedProcess[str], Path, Path, Path]:
     coverage_path, observer_path, junit_path = _temporary_pytest_evidence_paths()
+    coverage_data_path = _temporary_pytest_evidence_path(".coverage")
+    coverage_data_path.unlink(missing_ok=True)
     command = [
         _pytest_python_executable(),
         "-c",
@@ -3970,14 +3991,19 @@ def _run_pytest_selection_with_coverage(
         f"--junitxml={junit_path}",
         *selectors,
     ]
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=_TARGETED_TEST_TIMEOUT,
-        env=_pytest_env(),
-    )
+    pytest_env = _pytest_env()
+    pytest_env["COVERAGE_FILE"] = str(coverage_data_path)
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_TARGETED_TEST_TIMEOUT,
+            env=pytest_env,
+        )
+    finally:
+        coverage_data_path.unlink(missing_ok=True)
     return result, coverage_path, observer_path, junit_path
 
 
@@ -4010,75 +4036,1256 @@ def _is_test_file(file_path: str | Path) -> bool:
 
 
 def _normalize_report_path(raw_path: str | Path) -> str:
-    path = Path(raw_path)
-    if path.is_absolute():
-        try:
-            return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
-        except ValueError:
-            return path.as_posix()
-    return path.as_posix()
+    path = os.fspath(raw_path)
+    try:
+        relative = os.path.relpath(os.path.abspath(path), start=os.getcwd())
+    except (OSError, ValueError):
+        return Path(path).as_posix()
+    return Path(relative).as_posix()
 
 
-def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]]:
+_GIT_QUOTED_PATH_ESCAPES = {
+    "a": b"\a",
+    "b": b"\b",
+    "t": b"\t",
+    "n": b"\n",
+    "v": b"\v",
+    "f": b"\f",
+    "r": b"\r",
+    "\\": b"\\",
+    '"': b'"',
+}
+
+
+def _decode_git_path_escape(raw_path: str, index: int, content_end: int) -> tuple[bytes | None, int]:
+    """Decode one backslash escape and return its bytes plus the next index."""
+    if index >= content_end:
+        return None, index
+    escape = raw_path[index]
+    escaped_byte = _GIT_QUOTED_PATH_ESCAPES.get(escape)
+    if escaped_byte is not None:
+        return escaped_byte, index + 1
+    if escape not in "01234567":
+        return None, index
+    octal_end = index + 1
+    while octal_end < content_end and octal_end - index < 3 and raw_path[octal_end] in "01234567":
+        octal_end += 1
+    decoded_byte = int(raw_path[index:octal_end], 8)
+    return (bytes([decoded_byte]), octal_end) if decoded_byte <= 0xFF else (None, index)
+
+
+def _decode_git_diff_path(raw_path: str) -> str | None:
+    """Decode one Git C-quoted path into the exact filesystem path."""
+    raw_path = raw_path.removesuffix("\t")
+    if not raw_path.startswith('"'):
+        return raw_path
+    if len(raw_path) < 2 or not raw_path.endswith('"'):
+        return None
+    decoded = bytearray()
+    index = 1
+    content_end = len(raw_path) - 1
+    while index < content_end:
+        character = raw_path[index]
+        if character != "\\":
+            if character == '"':
+                return None
+            decoded.extend(os.fsencode(character))
+            index += 1
+            continue
+        escaped_byte, index = _decode_git_path_escape(raw_path, index + 1, content_end)
+        if escaped_byte is None:
+            return None
+        decoded.extend(escaped_byte)
+    return os.fsdecode(bytes(decoded))
+
+
+def _new_file_destination_from_diff_header(raw_header: str) -> str | None:
+    """Return the repeated destination path from one no-rename diff header."""
+    quoted_separator = raw_header.rfind('" "b/')
+    if raw_header.startswith('"a/') and quoted_separator >= 0:
+        source = _decode_git_diff_path(raw_header[: quoted_separator + 1])
+        destination = _decode_git_diff_path(raw_header[quoted_separator + 2 :])
+        if (
+            source is not None
+            and destination is not None
+            and source.removeprefix("a/") == destination.removeprefix("b/")
+        ):
+            return destination.removeprefix("b/")
+        return None
+    separator = raw_header.find(" b/")
+    while separator >= 0:
+        source = raw_header[:separator]
+        destination = raw_header[separator + 1 :]
+        if source.startswith("a/") and source[2:] == destination.removeprefix("b/"):
+            return destination.removeprefix("b/")
+        separator = raw_header.find(" b/", separator + 1)
+    return None
+
+
+def _record_added_hunk_lines(
+    line: str,
+    *,
+    current_file: str | None,
+    destination_header_seen: bool,
+    changed_lines: dict[str, set[int]],
+) -> bool:
+    """Record one added-line hunk or reject a hunk without its file header."""
+    if not line.startswith("@@ "):
+        return True
+    if not destination_header_seen:
+        return False
+    if current_file is None:
+        return True
+    match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+    if match is None:
+        return True
+    start = int(match.group(1))
+    count = int(match.group(2) or "1")
+    if count > 0:
+        changed_lines[current_file].update(range(start, start + count))
+    return True
+
+
+def _parse_added_lines_from_diff(diff_text: str) -> dict[str, set[int]] | None:
     """Return added new-file line numbers from a zero-context git diff."""
     changed_lines: dict[str, set[int]] = {}
     current_file: str | None = None
+    header_destination: str | None = None
+    awaiting_destination_header = False
+    destination_header_seen = False
     for line in diff_text.splitlines():
-        if line.startswith("+++ "):
-            destination = line[4:].strip()
+        if line.startswith("diff --git "):
+            current_file = None
+            header_destination = _new_file_destination_from_diff_header(line.removeprefix("diff --git "))
+            awaiting_destination_header = True
+            destination_header_seen = False
+            continue
+        if awaiting_destination_header and line.startswith("new file mode "):
+            if header_destination is None:
+                return None
+            changed_lines.setdefault(header_destination, {1})
+            continue
+        if awaiting_destination_header and line.startswith("+++ "):
+            destination = _decode_git_diff_path(line[4:])
+            if destination is None:
+                return None
             current_file = None if destination == "/dev/null" else destination.removeprefix("b/")
+            awaiting_destination_header = False
+            destination_header_seen = True
             if current_file is not None:
                 changed_lines.setdefault(current_file, set())
             continue
-        if current_file is None or not line.startswith("@@ "):
-            continue
-        match = re.search(r"\+(\d+)(?:,(\d+))?", line)
-        if match is None:
-            continue
-        start = int(match.group(1))
-        count = int(match.group(2) or "1")
-        if count > 0:
-            changed_lines[current_file].update(range(start, start + count))
+        if not _record_added_hunk_lines(
+            line,
+            current_file=current_file,
+            destination_header_seen=destination_header_seen,
+            changed_lines=changed_lines,
+        ):
+            return None
     return changed_lines
 
 
-def _changed_lines_from_git(files: list[Path]) -> dict[str, set[int]]:
-    """Collect changed line numbers for changed enforcement evidence."""
+def _run_changed_line_git_command(command: list[str]) -> subprocess.CompletedProcess[str] | None:
+    """Run one Git evidence command and represent unavailable output explicitly."""
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    return result if result.returncode == 0 else None
+
+
+def _cached_repository_paths(files: list[Path]) -> tuple[Path, dict[str, Path]] | None:
+    """Return exact repository-root identities for reviewed worktree paths."""
+    if not files:
+        return None
+    root_result = _run_changed_line_git_command(["git", "rev-parse", "--show-toplevel"])
+    if root_result is None or not root_result.stdout.endswith("\n"):
+        return None
+    repository = Path(root_result.stdout.removesuffix("\n"))
+    if not repository.is_absolute():
+        return None
+    repository = Path(os.path.abspath(repository))
+    selected: dict[str, Path] = {}
+    for file_path in files:
+        absolute = Path(os.path.abspath(file_path))
+        try:
+            relative = absolute.relative_to(repository).as_posix()
+        except ValueError:
+            return None
+        if not relative or relative in selected:
+            return None
+        selected[relative] = absolute
+    return repository, selected
+
+
+def _cached_index_blobs(repository: Path, paths: tuple[str, ...]) -> dict[str, tuple[str, str]] | None:
+    """Read unfiltered stage-zero index blob identities for exact reviewed paths."""
+    command = ["git", "--literal-pathspecs", "ls-files", "--stage", "-z", "--", *paths]
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    if result.returncode != 0:
+        return None
+    entries: dict[str, tuple[str, str]] = {}
+    selected = set(paths)
+    for record in result.stdout.split("\0"):
+        if not record:
+            continue
+        metadata, separator, path = record.partition("\t")
+        fields = metadata.split()
+        if separator != "\t" or len(fields) != 3 or path not in selected or fields[2] != "0" or path in entries:
+            return None
+        mode, oid, _stage = fields
+        if mode not in {"100644", "100755", "120000"} or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", oid):
+            return None
+        entries[path] = (mode, oid)
+    return entries
+
+
+def _raw_worktree_blob(path: Path, mode: str) -> bytes | Literal["missing"] | None:
+    """Read the exact bytes an analyzer would observe without Git filters."""
+    try:
+        path_stat = path.lstat()
+    except FileNotFoundError:
+        return "missing"
+    except OSError:
+        return None
+    try:
+        if mode == "120000":
+            return os.fsencode(os.readlink(path)) if stat.S_ISLNK(path_stat.st_mode) else None
+        return path.read_bytes() if stat.S_ISREG(path_stat.st_mode) else None
+    except OSError:
+        return None
+
+
+def _git_blob_oid(content: bytes, expected_oid: str) -> str | None:
+    """Hash raw bytes with the repository object format implied by the index OID."""
+    payload = b"blob " + str(len(content)).encode("ascii") + b"\0" + content
+    if len(expected_oid) == 40:
+        return hashlib.sha1(payload).hexdigest()
+    if len(expected_oid) == 64:
+        return hashlib.sha256(payload).hexdigest()
+    return None
+
+
+def _cached_worktree_matches_index(files: list[Path]) -> bool | None:
+    """Return whether analyzers would read the exact selected stage-zero blobs."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return None
+    repository, selected = repository_paths
+    index_blobs = _cached_index_blobs(repository, tuple(selected))
+    if index_blobs is None:
+        return None
+    for path, absolute in selected.items():
+        index_entry = index_blobs.get(path)
+        if index_entry is None:
+            try:
+                absolute.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError:
+                return None
+            return False
+        mode, expected_oid = index_entry
+        if mode == "120000":
+            return None
+        content = _raw_worktree_blob(absolute, mode)
+        if content is None:
+            return None
+        if content == "missing" or _git_blob_oid(content, expected_oid) != expected_oid:
+            return False
+    return True
+
+
+def _cached_review_requested(options: ReviewOptions) -> bool:
+    """Return whether changed enforcement targets the staged index snapshot."""
     diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
-    command = ["git", "diff", "--unified=0", "--no-ext-diff"]
-    if diff_mode == "cached":
-        command.append("--cached")
+    return options.review_mode == "changed" and diff_mode == "cached"
+
+
+def _git_tree_identity(repository: Path, revision: str) -> str | None:
+    """Resolve one immutable tree identity without replacement objects."""
+    try:
+        result = subprocess.run(
+            ["git", *(["write-tree"] if revision == "index" else ["rev-parse", "--verify", f"{revision}^{{tree}}"])],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    tree_oid = result.stdout.removesuffix("\n")
+    return (
+        tree_oid
+        if result.returncode == 0
+        and result.stdout.endswith("\n")
+        and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", tree_oid)
+        else None
+    )
+
+
+def _symbolic_head_is_unborn(repository: Path) -> bool:
+    """Return whether HEAD names a branch whose ref does not exist yet."""
+    try:
+        symbolic = subprocess.run(
+            ["git", "symbolic-ref", "-q", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+        ref = symbolic.stdout.removesuffix("\n")
+        if (
+            symbolic.returncode != 0
+            or not symbolic.stdout.endswith("\n")
+            or not ref.startswith("refs/heads/")
+            or ref == "refs/heads/"
+        ):
+            return False
+        present = subprocess.run(
+            ["git", "show-ref", "--verify", "--quiet", ref],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return False
+    return present.returncode == 1 and present.stdout == "" and present.stderr == ""
+
+
+def _cached_base_tree_identity(repository: Path) -> str | None:
+    """Resolve HEAD or the format-correct empty tree for a proven unborn branch."""
+    base_tree = _git_tree_identity(repository, "HEAD")
+    if base_tree is not None or not _symbolic_head_is_unborn(repository):
+        return base_tree
+    try:
+        result = subprocess.run(
+            ["git", "mktree"],
+            input="",
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    tree_oid = result.stdout.removesuffix("\n")
+    return (
+        tree_oid
+        if result.returncode == 0
+        and result.stdout.endswith("\n")
+        and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", tree_oid)
+        else None
+    )
+
+
+@dataclass(frozen=True)
+class CachedDiffIdentity:
+    """Immutable base/index identities and caller coordinates for cached diff."""
+
+    base_tree: str
+    index_tree: str
+    caller_prefix: str
+
+
+@dataclass(frozen=True)
+class MaterializedDirectoryIdentity:
+    """Filesystem identity for one directory in a cached analysis tree."""
+
+    path: str
+    device: int
+    inode: int
+
+
+@dataclass(frozen=True)
+class CachedAnalysisSnapshot:
+    """Materialized staged tree and identities used by analysis and enforcement."""
+
+    repository: Path
+    root: Path
+    files: list[Path]
+    entries: dict[str, tuple[str, str]]
+    directories: tuple[MaterializedDirectoryIdentity, ...]
+    diff: CachedDiffIdentity
+
+
+@dataclass(frozen=True)
+class WorktreePathIdentity:
+    """Raw selected-path state observed around ordinary worktree analysis."""
+
+    path: str
+    kind: Literal["directory", "missing", "regular", "symlink"]
+    mode: int
+    device: int
+    inode: int
+    size: int
+    modified_ns: int
+    changed_ns: int
+    content_sha256: str
+
+
+@dataclass(frozen=True)
+class WorktreeAnalysisIdentity:
+    """Immutable base and Git-visible worktree evidence bound around analysis."""
+
+    repository: Path
+    base_tree: str
+    paths: tuple[WorktreePathIdentity, ...]
+
+
+@dataclass(frozen=True)
+class StandaloneWorktreeAnalysisIdentity:
+    """Raw selected-path evidence for a proven non-repository review."""
+
+    paths: tuple[WorktreePathIdentity, ...]
+
+
+WorktreeReviewIdentity = WorktreeAnalysisIdentity | StandaloneWorktreeAnalysisIdentity
+
+
+def _worktree_path_identity(
+    path: str,
+    absolute: Path,
+    *,
+    allow_directory: bool = False,
+    allow_symlink: bool = False,
+) -> WorktreePathIdentity | None:
+    """Capture one raw path without accepting a raced type or filesystem identity."""
+    try:
+        before = absolute.lstat()
+    except FileNotFoundError:
+        return WorktreePathIdentity(path, "missing", 0, 0, 0, 0, 0, 0, hashlib.sha256(b"").hexdigest())
+    except OSError:
+        return None
+    if stat.S_ISREG(before.st_mode):
+        kind: Literal["directory", "regular", "symlink"] = "regular"
+        try:
+            content = absolute.read_bytes()
+        except OSError:
+            return None
+    elif stat.S_ISLNK(before.st_mode) and allow_symlink:
+        kind = "symlink"
+        try:
+            content = os.fsencode(os.readlink(absolute))
+        except OSError:
+            return None
+    elif stat.S_ISDIR(before.st_mode) and allow_directory:
+        kind = "directory"
+        content = b""
     else:
-        command.append("HEAD")
+        return None
+    try:
+        after = absolute.lstat()
+    except OSError:
+        return None
+    before_state = (
+        before.st_mode,
+        before.st_dev,
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+        before.st_ctime_ns,
+    )
+    after_state = (
+        after.st_mode,
+        after.st_dev,
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
+        after.st_ctime_ns,
+    )
+    if before_state != after_state:
+        return None
+    return WorktreePathIdentity(
+        path=path,
+        kind=kind,
+        mode=before.st_mode,
+        device=before.st_dev,
+        inode=before.st_ino,
+        size=before.st_size,
+        modified_ns=before.st_mtime_ns,
+        changed_ns=before.st_ctime_ns,
+        content_sha256=hashlib.sha256(content).hexdigest(),
+    )
+
+
+def _git_visible_worktree_paths(repository: Path) -> tuple[str, ...] | None:
+    """List tracked, untracked, and ignored analyzer-support worktree paths."""
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-c",
+                "core.fsmonitor=false",
+                "--literal-pathspecs",
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+            ],
+            capture_output=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    paths: set[str] = set()
+    for raw_path in result.stdout.split(b"\0"):
+        if not raw_path:
+            continue
+        path = os.fsdecode(raw_path)
+        logical = PurePosixPath(path)
+        if logical.is_absolute() or not logical.parts or ".." in logical.parts or path in paths:
+            return None
+        paths.add(path)
+    support_paths = _repository_analyzer_support_paths(repository)
+    if support_paths is None:
+        return None
+    paths.update(support_paths)
+    return _with_contained_symlink_targets(repository, paths)
+
+
+def _repository_analyzer_support_paths(repository: Path) -> tuple[str, ...] | None:
+    """Discover every repository-root path analyzers may consume."""
+    paths: set[str] = set()
+    try:
+        for directory, directory_names, file_names in os.walk(repository, followlinks=False):
+            directory_names[:] = sorted(
+                name for name in directory_names if name not in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES
+            )
+            relative_directory = Path(directory).relative_to(repository)
+            for name in sorted((*directory_names, *file_names)):
+                absolute = Path(directory, name)
+                if name in directory_names and not absolute.is_symlink():
+                    continue
+                relative = relative_directory / name
+                paths.add(relative.as_posix())
+    except OSError:
+        return None
+    return tuple(sorted(paths))
+
+
+def _with_contained_symlink_targets(repository: Path, paths: set[str]) -> tuple[str, ...] | None:
+    """Bind each listed symlink and every reachable contained target path."""
+    expanded = set(paths)
+    pending = list(paths)
+    processed: set[str] = set()
+    while pending:
+        path = pending.pop()
+        if path in processed:
+            continue
+        processed.add(path)
+        absolute = repository.joinpath(*PurePosixPath(path).parts)
+        target_paths: tuple[str, ...] = ()
+        try:
+            if not absolute.is_symlink():
+                continue
+            if not _symlink_resolution_is_contained(repository, absolute):
+                return None
+            resolved_target = absolute.resolve(strict=True)
+            relative_target = resolved_target.relative_to(repository.resolve(strict=True))
+            if resolved_target.is_dir():
+                if any(part in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES for part in relative_target.parts):
+                    return None
+                directory_paths = _directory_symlink_target_paths(repository, resolved_target)
+                if directory_paths is None:
+                    return None
+                target_paths = directory_paths
+        except (OSError, ValueError):
+            return None
+        additions = {relative_target.as_posix()}
+        additions.update(target_paths)
+        pending.extend(additions.difference(expanded))
+        expanded.update(additions)
+    return tuple(sorted(expanded))
+
+
+def _directory_symlink_target_paths(repository: Path, directory: Path) -> tuple[str, ...] | None:
+    """List a contained directory target subtree without pruning reachable inputs."""
+    paths: set[str] = set()
+    walk_errors: list[OSError] = []
+    try:
+        for current, directory_names, file_names in os.walk(
+            directory,
+            followlinks=False,
+            onerror=walk_errors.append,
+        ):
+            relative_directory = Path(current).relative_to(repository)
+            for name in (*directory_names, *file_names):
+                paths.add((relative_directory / name).as_posix())
+    except (OSError, ValueError):
+        return None
+    return None if walk_errors else tuple(sorted(paths))
+
+
+def _symlink_resolution_is_contained(root: Path, link: Path) -> bool:
+    """Require every symlink-resolution hop to remain beneath one real root."""
+    lexical_root = Path(os.path.abspath(root))
+    lexical_link = Path(os.path.abspath(link))
+    try:
+        pending = list(lexical_link.relative_to(lexical_root).parts)
+        resolved_root = lexical_root.resolve(strict=True)
+    except (OSError, ValueError):
+        return False
+    resolved_parts: list[str] = []
+    symlink_hops = 0
+    while pending:
+        part = pending.pop(0)
+        current = resolved_root.joinpath(*resolved_parts, part)
+        try:
+            path_stat = current.lstat()
+        except OSError:
+            return False
+        if not stat.S_ISLNK(path_stat.st_mode):
+            if pending and not stat.S_ISDIR(path_stat.st_mode):
+                return False
+            resolved_parts.append(part)
+            continue
+        symlink_hops += 1
+        if symlink_hops > 40:
+            return False
+        try:
+            raw_target = Path(os.readlink(current))
+        except OSError:
+            return False
+        lexical_target = raw_target if raw_target.is_absolute() else current.parent / raw_target
+        normalized_target = Path(os.path.normpath(lexical_target))
+        try:
+            target_parts = list(normalized_target.relative_to(resolved_root).parts)
+        except ValueError:
+            return False
+        pending = target_parts + pending
+        resolved_parts = []
+    return True
+
+
+def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> WorktreeAnalysisIdentity | None:
+    """Bind one stable base and complete Git-visible raw worktree input set."""
+    base_tree = _cached_base_tree_identity(repository)
+    visible_paths = _git_visible_worktree_paths(repository)
+    if base_tree is None or visible_paths is None:
+        return None
+    bound_paths = tuple(sorted(set(visible_paths).union(selected)))
+    paths: list[WorktreePathIdentity] = []
+    for path in bound_paths:
+        absolute = selected.get(path, repository.joinpath(*PurePosixPath(path).parts))
+        is_unselected = path not in selected
+        identity = _worktree_path_identity(
+            path,
+            absolute,
+            allow_directory=is_unselected,
+            allow_symlink=is_unselected,
+        )
+        if identity is None or (
+            identity.kind != "missing" and not _symlink_resolution_is_contained(repository, absolute)
+        ):
+            return None
+        paths.append(identity)
+    if _git_visible_worktree_paths(repository) != visible_paths or _cached_base_tree_identity(repository) != base_tree:
+        return None
+    return WorktreeAnalysisIdentity(repository=repository, base_tree=base_tree, paths=tuple(paths))
+
+
+def _git_metadata_ancestor_state(directory: Path) -> Literal["absent", "present"] | None:
+    """Prove whether a lexical directory ancestry contains Git metadata."""
+    for candidate in (directory, *directory.parents):
+        try:
+            (candidate / ".git").lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return None
+        return "present"
+    return "absent"
+
+
+def _standalone_worktree_analysis_identity(files: list[Path]) -> StandaloneWorktreeAnalysisIdentity | None:
+    """Bind exact raw paths only after proving Git metadata is absent."""
+    try:
+        working_directory = Path.cwd()
+    except OSError:
+        return None
+    selected: dict[str, Path] = {}
+    directories = {working_directory}
+    for file_path in files:
+        absolute = Path(os.path.abspath(file_path))
+        path = absolute.as_posix()
+        if path in selected:
+            return None
+        selected[path] = absolute
+        directories.add(absolute.parent)
+    if any(_git_metadata_ancestor_state(directory) != "absent" for directory in directories):
+        return None
+    paths: list[WorktreePathIdentity] = []
+    for path, absolute in sorted(selected.items()):
+        identity = _worktree_path_identity(path, absolute)
+        if identity is None:
+            return None
+        paths.append(identity)
+    return StandaloneWorktreeAnalysisIdentity(paths=tuple(paths))
+
+
+def _capture_worktree_analysis_identity(
+    files: list[Path],
+) -> WorktreeReviewIdentity | Literal["not_repository"] | None:
+    """Capture ordinary worktree evidence or identify a non-repository review."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is not None:
+        return _worktree_analysis_identity(*repository_paths)
+    if not files:
+        return "not_repository"
+    return _standalone_worktree_analysis_identity(files)
+
+
+def _parse_cached_tree_entry(record: str) -> tuple[str, str, str] | None:
+    """Parse one trusted tree record into path, mode, and blob identity."""
+    metadata, separator, path = record.partition("\t")
+    fields = metadata.split()
+    tree_path = PurePosixPath(path)
+    if separator != "\t" or len(fields) != 3 or not path:
+        return None
+    if tree_path.is_absolute() or ".." in tree_path.parts:
+        return None
+    mode, object_type, oid = fields
+    valid_object = (object_type == "commit" and mode == "160000") or (
+        object_type == "blob" and mode in {"100644", "100755", "120000"}
+    )
+    return (path, mode, oid) if valid_object and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", oid) else None
+
+
+def _cached_tree_entries(repository: Path, tree_oid: str) -> dict[str, tuple[str, str]] | None:
+    """List immutable blob identities without consulting worktree attributes."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-tree", "-r", "-z", tree_oid],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        return None
+    if result.returncode != 0:
+        return None
+    entries: dict[str, tuple[str, str]] = {}
+    for record in result.stdout.split("\0"):
+        if not record:
+            continue
+        parsed = _parse_cached_tree_entry(record)
+        if parsed is None:
+            return None
+        path, mode, oid = parsed
+        if path in entries:
+            return None
+        entries[path] = (mode, oid)
+    return entries
+
+
+def _parse_cached_batch_blob(output: bytes, cursor: int, expected_oid: str) -> tuple[bytes, int] | None:
+    """Parse one size-delimited blob from `git cat-file --batch` output."""
+    header_end = output.find(b"\n", cursor)
+    if header_end < 0:
+        return None
+    fields = output[cursor:header_end].split()
+    if len(fields) != 3 or fields[0] != expected_oid.encode("ascii") or fields[1] != b"blob":
+        return None
+    try:
+        size = int(fields[2])
+    except ValueError:
+        return None
+    content_start = header_end + 1
+    content_end = content_start + size
+    valid_content = size >= 0 and output[content_end : content_end + 1] == b"\n"
+    return (output[content_start:content_end], content_end + 1) if valid_content else None
+
+
+def _cached_blob_contents(repository: Path, oids: tuple[str, ...]) -> dict[str, bytes] | None:
+    """Read exact Git blobs in one non-filtered batch operation."""
+    unique_oids = tuple(dict.fromkeys(oids))
+    request = b"".join(oid.encode("ascii") + b"\n" for oid in unique_oids)
+    try:
+        result = subprocess.run(
+            ["git", "cat-file", "--batch"],
+            input=request,
+            capture_output=True,
+            check=False,
+            timeout=30,
+            env=_candidate_git_environment(),
+            cwd=repository,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    contents: dict[str, bytes] = {}
+    cursor = 0
+    for expected_oid in unique_oids:
+        parsed = _parse_cached_batch_blob(result.stdout, cursor, expected_oid)
+        if parsed is None:
+            return None
+        contents[expected_oid], cursor = parsed
+    return contents if cursor == len(result.stdout) else None
+
+
+def _materialized_parent_is_unique(
+    destination: Path,
+    parent: PurePosixPath,
+    identities: dict[tuple[int, int], PurePosixPath],
+) -> bool:
+    """Reject logical directories collapsed by case or Unicode normalization."""
+    current = destination
+    logical = PurePosixPath()
+    try:
+        for part in parent.parts:
+            logical /= part
+            current /= part
+            current.mkdir(exist_ok=True)
+            path_stat = current.lstat()
+            if not stat.S_ISDIR(path_stat.st_mode):
+                return False
+            identity = (path_stat.st_dev, path_stat.st_ino)
+            previous = identities.setdefault(identity, logical)
+            if previous != logical:
+                return False
+    except OSError:
+        return False
+    return True
+
+
+def _materialized_target_is_available(target: Path) -> bool:
+    """Return whether a tree entry has one fresh filesystem identity."""
+    try:
+        target.lstat()
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    return False
+
+
+def _materialized_directories_match(destination: Path, directories: tuple[MaterializedDirectoryIdentity, ...]) -> bool:
+    """Verify that no bound materialized directory identity was replaced."""
+    for identity in directories:
+        logical = PurePosixPath(identity.path)
+        if identity.path == ".":
+            target = destination
+        elif logical.is_absolute() or not logical.parts or ".." in logical.parts:
+            return False
+        else:
+            target = destination.joinpath(*logical.parts)
+        try:
+            path_stat = target.lstat()
+        except OSError:
+            return False
+        if not stat.S_ISDIR(path_stat.st_mode) or (path_stat.st_dev, path_stat.st_ino) != (
+            identity.device,
+            identity.inode,
+        ):
+            return False
+    return True
+
+
+def _materialized_tree_matches_entries(
+    destination: Path,
+    entries: dict[str, tuple[str, str]],
+    directories: tuple[MaterializedDirectoryIdentity, ...],
+) -> bool:
+    """Verify every materialized identity and byte against its immutable blob."""
+    if not _materialized_directories_match(destination, directories):
+        return False
+    for path, (mode, _expected_oid) in entries.items():
+        if mode == "120000" and not _symlink_resolution_is_contained(
+            destination, destination.joinpath(*PurePosixPath(path).parts)
+        ):
+            return False
+    for path, (mode, expected_oid) in entries.items():
+        if mode == "160000":
+            continue
+        target = destination.joinpath(*PurePosixPath(path).parts)
+        content = _raw_worktree_blob(target, mode)
+        if content is None or content == "missing" or _git_blob_oid(content, expected_oid) != expected_oid:
+            return False
+    return _materialized_directories_match(destination, directories)
+
+
+def _write_materialized_regular_file(target: Path, content: bytes, mode: str) -> bool:
+    """Create one regular file atomically without following a raced symlink."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(target, flags, 0o600)
+    except OSError:
+        return False
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fchmod(stream.fileno(), 0o755 if mode == "100755" else 0o644)
+    except OSError:
+        return False
+    return True
+
+
+def _materialize_cached_tree(
+    repository: Path, destination: Path, entries: dict[str, tuple[str, str]]
+) -> tuple[MaterializedDirectoryIdentity, ...] | None:
+    """Materialize exact index blobs without filters or filesystem identity loss."""
+    contents = _cached_blob_contents(repository, tuple(oid for mode, oid in entries.values() if mode != "160000"))
+    if contents is None:
+        return None
+    try:
+        root_stat = destination.lstat()
+        if not stat.S_ISDIR(root_stat.st_mode):
+            return None
+        directory_identities = {(root_stat.st_dev, root_stat.st_ino): PurePosixPath()}
+        for path, (mode, oid) in sorted(entries.items()):
+            if mode == "160000":
+                continue
+            tree_path = PurePosixPath(path)
+            target = destination.joinpath(*tree_path.parts)
+            if not _materialized_parent_is_unique(destination, tree_path.parent, directory_identities):
+                return None
+            if not _materialized_target_is_available(target):
+                return None
+            content = contents[oid]
+            if mode == "120000":
+                os.symlink(os.fsdecode(content), target)
+                continue
+            if not _write_materialized_regular_file(target, content, mode):
+                return None
+    except (KeyError, OSError):
+        return None
+    frozen_directories = tuple(
+        MaterializedDirectoryIdentity(path=logical.as_posix(), device=device, inode=inode)
+        for (device, inode), logical in sorted(directory_identities.items(), key=lambda item: item[1].as_posix())
+    )
+    return frozen_directories if _materialized_tree_matches_entries(destination, entries, frozen_directories) else None
+
+
+def _selected_paths_match_cached_tree_presence(selected: dict[str, Path], entries: dict[str, tuple[str, str]]) -> bool:
+    """Distinguish staged deletions from unbound untracked or gitlink inputs."""
+    for path, worktree_path in selected.items():
+        if path in entries:
+            continue
+        try:
+            worktree_path.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return False
+        return False
+    return True
+
+
+def _cached_caller_prefix(repository: Path) -> str | None:
+    """Freeze the caller's repository-relative coordinate before analysis."""
+    try:
+        relative = Path(os.path.abspath(Path.cwd())).relative_to(repository)
+    except ValueError:
+        return None
+    prefix = relative.as_posix()
+    return "" if prefix == "." else f"{prefix}/"
+
+
+def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAnalysisSnapshot | None:
+    """Bind selected paths and analyzer input to one immutable staged tree."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return None
+    repository, selected = repository_paths
+    caller_prefix = _cached_caller_prefix(repository)
+    base_tree = _cached_base_tree_identity(repository)
+    tree_oid = _git_tree_identity(repository, "index")
+    if caller_prefix is None or base_tree is None or tree_oid is None:
+        return None
+    if _cached_base_tree_identity(repository) != base_tree:
+        return None
+    entries = _cached_tree_entries(repository, tree_oid)
+    selected_unsupported = entries is not None and any(
+        entries.get(path, ("", ""))[0] in {"120000", "160000"} for path in selected
+    )
+    if entries is None or selected_unsupported or not _selected_paths_match_cached_tree_presence(selected, entries):
+        return None
+    directories = _materialize_cached_tree(repository, destination, entries)
+    if directories is None:
+        return None
+    snapshot_files = [destination.joinpath(*PurePosixPath(path).parts) for path in selected]
+    return CachedAnalysisSnapshot(
+        repository=repository,
+        root=destination,
+        files=snapshot_files,
+        entries=entries,
+        directories=directories,
+        diff=CachedDiffIdentity(base_tree=base_tree, index_tree=tree_oid, caller_prefix=caller_prefix),
+    )
+
+
+def _caller_git_prefix() -> str | None:
+    """Return the caller directory's exact repository-root-relative Git prefix."""
+    result = _run_changed_line_git_command(["git", "rev-parse", "--show-prefix"])
+    if result is None or not result.stdout.endswith("\n"):
+        return None
+    prefix = result.stdout.removesuffix("\n")
+    prefix_path = PurePosixPath(prefix)
+    valid_prefix = not prefix_path.is_absolute() and ".." not in prefix_path.parts
+    return prefix if valid_prefix and (not prefix or prefix.endswith("/")) else None
+
+
+def _changed_lines_relative_to_caller(
+    changed_lines: dict[str, set[int]], caller_prefix: str
+) -> dict[str, set[int]] | None:
+    """Translate repository-root Git paths to the caller's report identity."""
+    normalized: dict[str, set[int]] = {}
+    for raw_path, line_numbers in changed_lines.items():
+        git_path = PurePosixPath(raw_path)
+        if not raw_path or git_path.is_absolute() or ".." in git_path.parts:
+            return None
+        relative = posixpath.relpath(raw_path, start=caller_prefix or ".")
+        normalized.setdefault(relative, set()).update(line_numbers)
+    return normalized
+
+
+def _untracked_changed_lines(file_path: Path) -> set[int] | None:
+    """Return every line for an untracked file, no lines when tracked, or unavailable evidence."""
+    listed = _run_changed_line_git_command(["git", "--literal-pathspecs", "ls-files", "--others", "--", str(file_path)])
+    if listed is None:
+        return None
+    if listed.stdout == "":
+        return set()
+    try:
+        line_count = len(file_path.read_text(encoding="utf-8").splitlines())
+    except (OSError, UnicodeDecodeError):
+        return None
+    return set(range(1, line_count + 1)) if line_count else {1}
+
+
+def _changed_diff_command(files: list[Path], revision: tuple[str, ...]) -> list[str]:
+    """Build one literal, filter-free changed-line evidence command."""
+    command = [
+        "git",
+        "--literal-pathspecs",
+        "diff",
+        "--unified=0",
+        "--no-ext-diff",
+        "--no-color",
+        "--text",
+        "--no-textconv",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+    ]
+    command.extend(revision)
     if files:
         command.extend(["--", *(str(file_path) for file_path in files)])
-    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
-    if result.returncode != 0:
-        return {}
-    changed_lines = _parse_added_lines_from_diff(result.stdout)
+    return command
+
+
+def _changed_diff_revision(
+    files: list[Path], diff_mode: str, cached_diff: CachedDiffIdentity | None
+) -> tuple[str, ...] | None:
+    """Select the immutable baseline arguments for changed-line evidence."""
+    if cached_diff is not None:
+        return (cached_diff.base_tree, cached_diff.index_tree) if diff_mode == "cached" else None
+    if diff_mode == "cached":
+        return ("--cached",) if _cached_worktree_matches_index(files) is True else None
+    if diff_mode != "worktree":
+        return None
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return ("HEAD",)
+    base_tree = _cached_base_tree_identity(repository_paths[0])
+    return None if base_tree is None else (base_tree,)
+
+
+def _raw_no_index_added_lines(base_content: bytes, worktree_content: bytes) -> set[int] | None:
+    """Diff two raw blobs without repository attributes or index hints."""
+    with tempfile.TemporaryDirectory(prefix="specfact-raw-diff-") as temporary_directory:
+        root = Path(temporary_directory)
+        base_path = root / "base"
+        worktree_path = root / "worktree"
+        try:
+            base_path.write_bytes(base_content)
+            worktree_path.write_bytes(worktree_content)
+            result = subprocess.run(
+                [
+                    "git",
+                    "--literal-pathspecs",
+                    "diff",
+                    "--no-index",
+                    "--no-renames",
+                    "--unified=0",
+                    "--no-ext-diff",
+                    "--no-color",
+                    "--text",
+                    "--no-textconv",
+                    "--src-prefix=a/",
+                    "--dst-prefix=b/",
+                    "--",
+                    base_path.name,
+                    worktree_path.name,
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+                env=_candidate_git_environment(),
+                cwd=root,
+            )
+        except (OSError, subprocess.SubprocessError, UnicodeError):
+            return None
+    if result.returncode == 0:
+        return set() if result.stdout == "" else None
+    if result.returncode != 1:
+        return None
+    parsed = _parse_added_lines_from_diff(result.stdout)
+    if parsed is None or len(parsed) > 1:
+        return None
+    return next(iter(parsed.values()), set())
+
+
+def _selected_head_blob_evidence(
+    repository: Path,
+    selected: dict[str, Path],
+    entries: dict[str, tuple[str, str]],
+) -> tuple[dict[str, tuple[str, str]], dict[str, bytes]] | None:
+    """Load supported raw HEAD blobs for the exact selected identities."""
+    selected_entries = {path: entries[path] for path in selected if path in entries}
+    if any(mode not in {"100644", "100755"} for mode, _oid in selected_entries.values()):
+        return None
+    base_contents = _cached_blob_contents(repository, tuple(oid for _mode, oid in selected_entries.values()))
+    return None if base_contents is None else (selected_entries, base_contents)
+
+
+def _raw_selected_worktree_lines(
+    absolute: Path,
+    entry: tuple[str, str] | None,
+    base_contents: dict[str, bytes],
+) -> set[int] | None:
+    """Derive raw changed lines for one selected regular worktree path."""
+    mode = entry[0] if entry is not None else "100644"
+    worktree_content = _raw_worktree_blob(absolute, mode)
+    if worktree_content is None:
+        return None
+    if worktree_content == "missing":
+        return set()
+    if entry is None and worktree_content == b"":
+        return {1}
+    base_content = b"" if entry is None else base_contents[entry[1]]
+    if entry is not None and _git_blob_oid(worktree_content, entry[1]) == entry[1]:
+        return set()
+    return _raw_no_index_added_lines(base_content, worktree_content)
+
+
+def _raw_worktree_changed_lines(files: list[Path]) -> dict[str, set[int]] | None:
+    """Derive selected-file lines from raw base-tree and filesystem bytes."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return None
+    repository, selected = repository_paths
+    base_tree = _cached_base_tree_identity(repository)
+    entries = _cached_tree_entries(repository, base_tree) if base_tree is not None else None
+    if entries is None:
+        return None
+    blob_evidence = _selected_head_blob_evidence(repository, selected, entries)
+    if blob_evidence is None:
+        return None
+    selected_entries, base_contents = blob_evidence
+    changed_lines: dict[str, set[int]] = {}
+    for path, absolute in selected.items():
+        line_numbers = _raw_selected_worktree_lines(absolute, selected_entries.get(path), base_contents)
+        if line_numbers is None:
+            return None
+        changed_lines[_normalize_report_path(absolute)] = line_numbers
+    return changed_lines
+
+
+def _add_untracked_changed_lines(files: list[Path], changed_lines: dict[str, set[int]]) -> bool:
+    """Add explicit untracked inputs and report whether their evidence was available."""
     for file_path in files:
         if not file_path.exists():
             continue
         relative = _normalize_report_path(file_path)
         if relative in changed_lines:
             continue
-        try:
-            listed = subprocess.run(
-                ["git", "ls-files", "--others", "--exclude-standard", "--", str(file_path)],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=30,
-            )
-        except subprocess.SubprocessError:
-            continue
-        if listed.returncode == 0 and listed.stdout.strip():
-            try:
-                line_count = len(file_path.read_text(encoding="utf-8").splitlines())
-            except (OSError, UnicodeDecodeError):
-                continue
-            changed_lines[relative] = set(range(1, line_count + 1))
-    return changed_lines
+        line_numbers = _untracked_changed_lines(file_path)
+        if line_numbers is None:
+            return False
+        if line_numbers:
+            changed_lines[relative] = line_numbers
+    return True
+
+
+def _worktree_lines_match_raw_bytes(files: list[Path], changed_lines: dict[str, set[int]], diff_mode: str) -> bool:
+    """Corroborate parsed worktree evidence against raw HEAD/filesystem bytes."""
+    if diff_mode != "worktree":
+        return True
+    raw_changed_lines = _raw_worktree_changed_lines(files)
+    if raw_changed_lines is None:
+        return False
+    parsed_nonempty = {path: lines for path, lines in changed_lines.items() if lines}
+    raw_nonempty = {path: lines for path, lines in raw_changed_lines.items() if lines}
+    return parsed_nonempty == raw_nonempty
+
+
+def _changed_lines_from_git(
+    files: list[Path], *, cached_diff: CachedDiffIdentity | None = None
+) -> dict[str, set[int]] | None:
+    """Collect changed line numbers for changed enforcement evidence."""
+    diff_mode = os.environ.get("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "worktree").strip().lower()
+    revision = _changed_diff_revision(files, diff_mode, cached_diff)
+    if revision is None:
+        return None
+    result = _run_changed_line_git_command(_changed_diff_command(files, revision))
+    if result is None:
+        return None
+    changed_lines = _parse_added_lines_from_diff(result.stdout)
+    if changed_lines is None:
+        return None
+    caller_prefix = cached_diff.caller_prefix if cached_diff is not None else _caller_git_prefix()
+    if caller_prefix is None:
+        return None
+    changed_lines = _changed_lines_relative_to_caller(changed_lines, caller_prefix)
+    if changed_lines is None:
+        return None
+    if cached_diff is not None:
+        return changed_lines
+    if not _add_untracked_changed_lines(files, changed_lines):
+        return None
+    return changed_lines if _worktree_lines_match_raw_bytes(files, changed_lines, diff_mode) else None
 
 
 def _finding_targets_changed_line(finding: ReviewFinding, changed_lines: dict[str, set[int]]) -> bool:
@@ -4089,7 +5296,175 @@ def _finding_targets_changed_line(finding: ReviewFinding, changed_lines: dict[st
     return finding.line in line_numbers
 
 
-def _with_enforcement(report: ReviewReport, *, mode: ReviewEnforcementMode, files: list[Path]) -> ReviewReport:
+def _changed_enforcement_precondition(
+    report: ReviewReport, files: list[Path], *, cached_diff: CachedDiffIdentity | None = None
+) -> tuple[ReviewReport | None, dict[str, set[int]] | None]:
+    """Preserve required uncertainty and completed verdicts before line classification."""
+    if report.assurance_status == "UNKNOWN" or report.has_unknown_required_evidence:
+        return (
+            report.model_copy(
+                update={
+                    "enforcement_mode": "changed",
+                    "enforcement_summary": "Changed enforcement cannot pass while required evidence is UNKNOWN.",
+                }
+            ),
+            None,
+        )
+    changed_lines = (
+        _changed_lines_from_git(files)
+        if cached_diff is None
+        else _changed_lines_from_git(files, cached_diff=cached_diff)
+    )
+    if changed_lines is None:
+        if cached_diff is None:
+            return (
+                report.model_copy(
+                    update={
+                        "enforcement_mode": "changed",
+                        "enforcement_summary": (
+                            "Changed-line evidence is unavailable; the completed report retains its existing verdict."
+                        ),
+                    }
+                ),
+                None,
+            )
+        return (
+            report.model_copy(
+                update={
+                    "assurance_status": "UNKNOWN" if report.assurance_status is not None else None,
+                    "has_unknown_required_evidence": True,
+                    "overall_verdict": "FAIL",
+                    "ci_exit_code": 1,
+                    "enforcement_mode": "changed",
+                    "enforcement_summary": "Changed-line evidence is unavailable; changed enforcement fails closed.",
+                }
+            ),
+            None,
+        )
+    return None, changed_lines
+
+
+def _project_unchanged_member_failures(
+    report: ReviewReport,
+    findings_by_member: dict[str, list[ReviewFinding]],
+    changed_lines: dict[str, set[int]],
+) -> list[dict[str, object]] | None:
+    """Project fully explained unchanged member failures while retaining their raw outcome."""
+    if report.analyzer_evidence is None:
+        return None
+    projected: list[dict[str, object]] = []
+    failure_count = 0
+    for item in report.analyzer_evidence:
+        if item.get("evidence_outcome") != "FAIL":
+            projected.append(dict(item))
+            continue
+        failure_count += 1
+        blockers = [finding for finding in findings_by_member.get(str(item.get("id", "")), []) if finding.is_blocking()]
+        blockers_are_retained = all(finding in report.findings for finding in blockers)
+        if (
+            not blockers
+            or not blockers_are_retained
+            or any(_finding_targets_changed_line(finding, changed_lines) for finding in blockers)
+        ):
+            return None
+        projected.append(
+            {
+                **item,
+                "pre_enforcement_evidence_outcome": "FAIL",
+                "evidence_outcome": "PASS",
+                "enforcement_disposition": "unchanged_blockers_advisory",
+            }
+        )
+    if report.assurance_status == "FAIL" and failure_count == 0:
+        return None
+    return projected
+
+
+def _revalidated_report(report: ReviewReport, updates: dict[str, object]) -> ReviewReport:
+    """Apply governance updates through the public report validator."""
+    payload = report.model_dump()
+    payload.update(updates)
+    return ReviewReport.model_validate(payload)
+
+
+def _with_changed_enforcement(
+    report: ReviewReport,
+    files: list[Path],
+    *,
+    findings_by_member: dict[str, list[ReviewFinding]] | None = None,
+    cached_diff: CachedDiffIdentity | None = None,
+) -> ReviewReport:
+    """Apply changed-line policy without discarding findings or uncertainty."""
+    precondition, changed_lines = _changed_enforcement_precondition(report, files, cached_diff=cached_diff)
+    if precondition is not None:
+        return precondition
+    assert changed_lines is not None
+    blocking_changed = [
+        finding
+        for finding in report.findings
+        if finding.is_blocking() and _finding_targets_changed_line(finding, changed_lines)
+    ]
+    if blocking_changed:
+        summary = f"Changed enforcement blocks on {len(blocking_changed)} blocking finding(s) on changed lines."
+        return _revalidated_report(
+            report,
+            {
+                "assurance_status": "FAIL" if report.assurance_status is not None else None,
+                "overall_verdict": "FAIL",
+                "ci_exit_code": 1,
+                "enforcement_mode": "changed",
+                "enforcement_summary": summary,
+            },
+        )
+    projected_evidence = report.analyzer_evidence
+    if report.assurance_status is not None:
+        projected_evidence = _project_unchanged_member_failures(
+            report,
+            findings_by_member or {},
+            changed_lines,
+        )
+        if projected_evidence is None:
+            return _revalidated_report(
+                report,
+                {
+                    "enforcement_mode": "changed",
+                    "enforcement_summary": (
+                        "Changed enforcement cannot pass because failing analyzer evidence is not fully explained "
+                        "by proven unchanged blocking findings."
+                    ),
+                },
+            )
+    legacy_blocking = sum(finding.is_blocking() for finding in report.findings)
+    summary = (
+        "Changed enforcement found no blocking findings on changed lines."
+        if legacy_blocking == 0
+        else (
+            "Changed enforcement found no blocking findings on changed lines; "
+            f"{legacy_blocking} legacy blocking finding(s) remain as evidence."
+        )
+    )
+    verdict = "PASS" if not report.findings else "PASS_WITH_ADVISORY"
+    return _revalidated_report(
+        report,
+        {
+            "assurance_status": "PASS" if report.assurance_status is not None else None,
+            "overall_verdict": verdict,
+            "ci_exit_code": 0,
+            "analyzer_evidence": projected_evidence,
+            "enforcement_mode": "changed",
+            "enforcement_summary": summary,
+        },
+    )
+
+
+def _with_enforcement(
+    report: ReviewReport,
+    *,
+    mode: ReviewEnforcementMode,
+    files: list[Path],
+    findings_by_member: dict[str, list[ReviewFinding]] | None = None,
+    cached_diff: CachedDiffIdentity | None = None,
+) -> ReviewReport:
     """Apply enforcement mode to report exit code while preserving all findings as evidence."""
     if mode == "full":
         return report.model_copy(
@@ -4106,34 +5481,11 @@ def _with_enforcement(report: ReviewReport, *, mode: ReviewEnforcementMode, file
                 "enforcement_summary": "Shadow enforcement records findings as evidence and never blocks CI.",
             }
         )
-    changed_lines = _changed_lines_from_git(files)
-    blocking_changed = [
-        finding
-        for finding in report.findings
-        if finding.is_blocking() and _finding_targets_changed_line(finding, changed_lines)
-    ]
-    if blocking_changed:
-        summary = f"Changed enforcement blocks on {len(blocking_changed)} blocking finding(s) on changed lines."
-        return report.model_copy(
-            update={"ci_exit_code": 1, "enforcement_mode": "changed", "enforcement_summary": summary}
-        )
-    legacy_blocking = sum(finding.is_blocking() for finding in report.findings)
-    summary = (
-        "Changed enforcement found no blocking findings on changed lines."
-        if legacy_blocking == 0
-        else (
-            "Changed enforcement found no blocking findings on changed lines; "
-            f"{legacy_blocking} legacy blocking finding(s) remain as evidence."
-        )
-    )
-    verdict = "PASS" if not report.findings else "PASS_WITH_ADVISORY"
-    return report.model_copy(
-        update={
-            "overall_verdict": verdict,
-            "ci_exit_code": 0,
-            "enforcement_mode": "changed",
-            "enforcement_summary": summary,
-        }
+    return _with_changed_enforcement(
+        report,
+        files,
+        findings_by_member=findings_by_member,
+        cached_diff=cached_diff,
     )
 
 
@@ -5036,36 +6388,312 @@ def _allows_development_host_compatibility(reason: str) -> bool:
     )
 
 
+def _with_capsule_enforcement(
+    report: ReviewReport,
+    options: ReviewOptions,
+    files: list[Path],
+    *,
+    findings_by_member: dict[str, list[ReviewFinding]],
+    cached_diff: CachedDiffIdentity | None = None,
+) -> ReviewReport:
+    """Finalize one capsule report under the requested local enforcement policy."""
+    return _with_enforcement(
+        report,
+        mode=options.review_mode,
+        files=files,
+        findings_by_member=findings_by_member,
+        cached_diff=cached_diff,
+    )
+
+
+def _worktree_snapshot_unknown(
+    reason: str,
+    *,
+    files: list[Path],
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+) -> ReviewReport:
+    """Return required uncertainty when ordinary analysis loses input identity."""
+    return _with_capsule_enforcement(
+        _unknown_capsule_report(reason, options=options, scope_evidence=scope_evidence),
+        options,
+        files=files,
+        findings_by_member={},
+    )
+
+
+def _worktree_analysis_identity_changed(
+    identity: WorktreeReviewIdentity | Literal["not_repository"], files: list[Path]
+) -> bool:
+    """Return whether ordinary changed enforcement lost its analyzed identity."""
+    return identity != "not_repository" and _capture_worktree_analysis_identity(files) != identity
+
+
+def _run_worktree_development_host_review(
+    files: list[Path],
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+) -> ReviewReport:
+    """Run development-host analysis while rejecting ordinary worktree drift."""
+    identity = _capture_worktree_analysis_identity(files) if options.review_mode == "changed" else "not_repository"
+    if identity is None:
+        return _worktree_snapshot_unknown(
+            "worktree_snapshot_identity_unavailable",
+            files=files,
+            options=options,
+            scope_evidence=scope_evidence,
+        )
+    report = run_review(files, options)
+    if _worktree_analysis_identity_changed(identity, files):
+        return _worktree_snapshot_unknown(
+            "worktree_snapshot_changed_during_analysis",
+            files=files,
+            options=options,
+            scope_evidence=scope_evidence,
+        )
+    return report.model_copy(update={"scope_evidence": scope_evidence})
+
+
+def _rebase_host_snapshot_findings(
+    report: ReviewReport,
+    *,
+    snapshot_root: Path,
+    repository: Path,
+) -> ReviewReport | None:
+    """Translate development-host analyzer paths back to caller identities."""
+    findings: list[ReviewFinding] = []
+    for finding in report.findings:
+        raw_path = Path(finding.file)
+        snapshot_path = raw_path if raw_path.is_absolute() else snapshot_root / raw_path
+        try:
+            relative = Path(os.path.abspath(snapshot_path)).relative_to(snapshot_root)
+        except ValueError:
+            return None
+        findings.append(finding.model_copy(update={"file": _normalize_report_path(repository / relative)}))
+    return report.model_copy(update={"findings": findings})
+
+
+def _cached_snapshot_finding_relative_path(raw_path: str, snapshot_root: Path) -> PurePosixPath | None:
+    """Resolve one capsule finding to its repository-root snapshot identity."""
+    path = Path(raw_path)
+    if path.is_absolute():
+        for root in (snapshot_root, Path("/opt/specfact/snapshot")):
+            try:
+                relative = path.relative_to(root)
+            except ValueError:
+                continue
+            candidate = PurePosixPath(relative.as_posix())
+            return candidate if candidate.parts and ".." not in candidate.parts else None
+        return None
+    candidate = PurePosixPath(raw_path)
+    if not candidate.parts or candidate.is_absolute() or ".." in candidate.parts:
+        return None
+    return candidate
+
+
+def _rebase_cached_snapshot_findings(
+    findings_by_member: dict[str, list[ReviewFinding]],
+    *,
+    snapshot_root: Path,
+    repository: Path,
+) -> dict[str, list[ReviewFinding]] | None:
+    """Translate capsule snapshot paths to the frozen caller coordinate."""
+    rebased: dict[str, list[ReviewFinding]] = {}
+    for member, findings in findings_by_member.items():
+        member_findings: list[ReviewFinding] = []
+        for finding in findings:
+            relative = _cached_snapshot_finding_relative_path(finding.file, snapshot_root)
+            if relative is None:
+                return None
+            caller_path = _normalize_report_path(repository.joinpath(*relative.parts))
+            member_findings.append(finding.model_copy(update={"file": caller_path}))
+        rebased[member] = member_findings
+    return rebased
+
+
+def _run_cached_development_host_review(
+    files: list[Path],
+    options: ReviewOptions,
+    scope_evidence: dict[str, object],
+) -> ReviewReport:
+    """Run unsupported-platform development analysis on the frozen staged tree."""
+    repository_paths = _cached_repository_paths(files)
+    if repository_paths is None:
+        return _with_capsule_enforcement(
+            _unknown_capsule_report(
+                "cached_snapshot_materialization_unavailable",
+                options=options,
+                scope_evidence=scope_evidence,
+            ),
+            options,
+            files=files,
+            findings_by_member={},
+        )
+    repository, _selected = repository_paths
+    with tempfile.TemporaryDirectory(prefix="specfact-index-") as temporary_directory:
+        cached_snapshot = _cached_analysis_snapshot(files, Path(temporary_directory))
+        if cached_snapshot is None:
+            return _with_capsule_enforcement(
+                _unknown_capsule_report(
+                    "cached_snapshot_materialization_unavailable",
+                    options=options,
+                    scope_evidence=scope_evidence,
+                ),
+                options,
+                files=files,
+                findings_by_member={},
+            )
+        with chdir(cached_snapshot.root):
+            host_report = run_review(cached_snapshot.files, replace(options, review_mode="full"))
+        if not _materialized_tree_matches_entries(
+            cached_snapshot.root, cached_snapshot.entries, cached_snapshot.directories
+        ):
+            return _with_capsule_enforcement(
+                _unknown_capsule_report(
+                    "cached_host_snapshot_mutated",
+                    options=options,
+                    scope_evidence=scope_evidence,
+                ),
+                options,
+                files=files,
+                findings_by_member={},
+            )
+        rebased_report = _rebase_host_snapshot_findings(
+            host_report,
+            snapshot_root=cached_snapshot.root,
+            repository=repository,
+        )
+        if rebased_report is None:
+            return _with_capsule_enforcement(
+                _unknown_capsule_report(
+                    "cached_host_finding_path_unavailable",
+                    options=options,
+                    scope_evidence=scope_evidence,
+                ),
+                options,
+                files=files,
+                findings_by_member={},
+            )
+        return _with_capsule_enforcement(
+            rebased_report.model_copy(update={"scope_evidence": scope_evidence}),
+            options,
+            files=files,
+            findings_by_member={},
+            cached_diff=cached_snapshot.diff,
+        )
+
+
 def run_capsule_review(
     files: list[Path],
     options: ReviewOptions | None = None,
+    *,
+    assurance_kind: LocalAssuranceKind = "explicit_files",
     **overrides: object,
 ) -> ReviewReport:
     """Run legacy/local review scopes only through the signed analyzer capsule."""
 
+    if not isinstance(assurance_kind, str) or assurance_kind not in _LOCAL_ASSURANCE_KINDS:
+        raise ValueError(f"unsupported_local_assurance_kind:{assurance_kind!r}")
     review_options = _review_options_from_kwargs(options, overrides)
+    scope_evidence: dict[str, object] = {"assurance_kind": assurance_kind, "capsule_execution": "required"}
     runtime, reason = _prepare_capsule_runtime()
-    scope_evidence: dict[str, object] = {
-        "assurance_kind": "explicit_files",
-        "capsule_execution": "required",
-    }
     if runtime is None:
         if _allows_development_host_compatibility(reason):
-            return run_review(files, review_options)
-        return _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence)
-    try:
-        snapshot = _run_capsule_snapshot(
-            runtime,
-            snapshot_root=Path.cwd(),
+            if _cached_review_requested(review_options):
+                return _run_cached_development_host_review(files, review_options, scope_evidence)
+            return _run_worktree_development_host_review(files, review_options, scope_evidence)
+        return _with_capsule_enforcement(
+            _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence),
+            review_options,
             files=files,
-            options=review_options,
+            findings_by_member={},
         )
-        return _capsule_report(
-            snapshot.evidence,
-            snapshot.findings_by_member,
-            options=review_options,
-            scope_evidence=scope_evidence,
-        )
+    try:
+        with ExitStack() as stack:
+            snapshot_root = Path.cwd()
+            snapshot_files = files
+            cached_diff: CachedDiffIdentity | None = None
+            cached_snapshot: CachedAnalysisSnapshot | None = None
+            worktree_identity: WorktreeReviewIdentity | Literal["not_repository"] = "not_repository"
+            if _cached_review_requested(review_options):
+                temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
+                cached_snapshot = _cached_analysis_snapshot(files, temporary_root)
+                if cached_snapshot is None:
+                    return _with_capsule_enforcement(
+                        _unknown_capsule_report(
+                            "cached_snapshot_materialization_unavailable",
+                            options=review_options,
+                            scope_evidence=scope_evidence,
+                        ),
+                        review_options,
+                        files=files,
+                        findings_by_member={},
+                    )
+                snapshot_root, snapshot_files = cached_snapshot.root, cached_snapshot.files
+                cached_diff = cached_snapshot.diff
+            elif review_options.review_mode == "changed":
+                captured_identity = _capture_worktree_analysis_identity(files)
+                if captured_identity is None:
+                    return _worktree_snapshot_unknown(
+                        "worktree_snapshot_identity_unavailable",
+                        files=files,
+                        options=review_options,
+                        scope_evidence=scope_evidence,
+                    )
+                worktree_identity = captured_identity
+            snapshot = _run_capsule_snapshot(
+                runtime,
+                snapshot_root=snapshot_root,
+                files=snapshot_files,
+                options=review_options,
+            )
+            if _worktree_analysis_identity_changed(worktree_identity, files):
+                return _worktree_snapshot_unknown(
+                    "worktree_snapshot_changed_during_analysis",
+                    files=files,
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                )
+            findings_by_member = snapshot.findings_by_member
+            if cached_snapshot is not None:
+                rebased_findings = _rebase_cached_snapshot_findings(
+                    findings_by_member,
+                    snapshot_root=cached_snapshot.root,
+                    repository=cached_snapshot.repository,
+                )
+                if rebased_findings is None:
+                    return _with_capsule_enforcement(
+                        _unknown_capsule_report(
+                            "cached_capsule_finding_path_unavailable",
+                            options=review_options,
+                            scope_evidence=scope_evidence,
+                        ),
+                        review_options,
+                        files=files,
+                        findings_by_member={},
+                        cached_diff=cached_diff,
+                    )
+                findings_by_member = rebased_findings
+            enforced_report = _with_capsule_enforcement(
+                _capsule_report(
+                    snapshot.evidence,
+                    findings_by_member,
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                ),
+                review_options,
+                files=files,
+                findings_by_member=findings_by_member,
+                cached_diff=cached_diff,
+            )
+            if _worktree_analysis_identity_changed(worktree_identity, files):
+                return _worktree_snapshot_unknown(
+                    "worktree_snapshot_changed_during_analysis",
+                    files=files,
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                )
+            return enforced_report
     finally:
         _cleanup_capsule_runtime(runtime)
 

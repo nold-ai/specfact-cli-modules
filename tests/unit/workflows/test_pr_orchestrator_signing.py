@@ -3,6 +3,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import yaml
+from packaging.specifiers import SpecifierSet
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -56,29 +59,44 @@ def test_pr_orchestrator_installs_pinned_specfact_cli() -> None:
 
 
 def test_pr_orchestrator_pins_exact_core_schema_smoke() -> None:
+    """Preserve the frozen C14 selector; the pinned identity proves the minimum."""
+    minimum_job = _job_text(_workflow_text(), "minimum-core-schema-compatibility")
+
+    assert '["3.11", "3.12", "3.13"]' in minimum_job
+    assert "refs/tags/v0.55.1" in minimum_job
+    assert "b1e517e60e669eaba15a18ecfa83ef5a9df65276" in minimum_job
+    assert "47984be5434d7ae65ed6908bf525a32053290337" in minimum_job
+    assert ">=0.55.1,<1.0.0" in minimum_job
+    assert "test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix" in minimum_job
+    assert "pip install" in minimum_job
+    assert "--no-cache-dir" in minimum_job
+
+
+def test_pr_orchestrator_uses_range_without_hardcoded_local_core_alias() -> None:
+    """Keep immutable-minimum proof separate from range-based admission."""
     workflow = _workflow_text()
+    minimum_job = _job_text(workflow, "minimum-core-schema-compatibility")
 
-    assert "exact-core-schema-compatibility" in workflow
-    assert '["3.11", "3.12", "3.13"]' in workflow
-    assert "refs/tags/v0.55.1" in workflow
-    assert "b1e517e60e669eaba15a18ecfa83ef5a9df65276" in workflow
-    assert "47984be5434d7ae65ed6908bf525a32053290337" in workflow
-    assert "===0.55.1" in workflow
-    assert "test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix" in workflow
-    assert "pip install" in workflow
-    assert "--no-cache-dir" in workflow
+    assert "0.55.0" in minimum_job
+    assert "0.55.2" in minimum_job
+    assert "1.0.0" in minimum_job
+    assert "module-package.yaml" in minimum_job
+    assert "yaml.safe_load" in minimum_job
+    assert "verify-minimum-core-compatibility-range" in minimum_job
+    assert "===0.55.1" not in minimum_job
+    assert "0.55.1+vendor" not in minimum_job
+    assert "ref: dev" not in minimum_job
+    assert "ref: main" not in minimum_job
+    assert "FALLBACK_REF" not in minimum_job
 
 
-def test_pr_orchestrator_rejects_pep440_local_core_alias() -> None:
-    workflow = _workflow_text()
-    exact_job = _job_text(workflow, "exact-core-schema-compatibility")
+def test_code_review_manifest_range_admits_local_core_alias() -> None:
+    """Treat a compatible PEP 440 local version as range-based runtime admission."""
+    manifest = yaml.safe_load(
+        (REPO_ROOT / "packages" / "specfact-code-review" / "module-package.yaml").read_text(encoding="utf-8")
+    )
 
-    assert "0.55.1+vendor" in exact_job
-    assert re.search(r"(?<!=)==0\.55\.1", exact_job)
-    assert "reject-core-version-alias" in exact_job
-    assert "ref: dev" not in exact_job
-    assert "ref: main" not in exact_job
-    assert "FALLBACK_REF" not in exact_job
+    assert SpecifierSet(str(manifest["core_compatibility"])).contains("0.55.1+vendor")
 
 
 def _assert_pinned_credentialed_prefetch(exact_job: str, prefetch_step: str) -> None:
@@ -103,12 +121,12 @@ def _assert_candidate_python_is_credential_free(capsule_step: str) -> None:
 
 
 def test_exact_core_smoke_does_not_expose_registry_token_to_candidate_python() -> None:
-    exact_job = _job_text(_workflow_text(), "exact-core-schema-compatibility")
+    exact_job = _job_text(_workflow_text(), "minimum-core-schema-compatibility")
     prefetch_name = "Prefetch signed analyzer capsule into credential-free cache"
     capsule_name = "Run signed analyzer capsule from prefetched cache and empty Bubblewrap smoke"
     prefetch_offset = exact_job.index(prefetch_name)
     capsule_offset = exact_job.index(capsule_name)
-    candidate_execution_offset = exact_job.index("Install exact core and candidate module package")
+    candidate_execution_offset = exact_job.index("Install minimum core and candidate module package")
     prefetch_step = exact_job[prefetch_offset:candidate_execution_offset]
     capsule_step = exact_job[capsule_offset:]
 
@@ -121,7 +139,7 @@ def test_exact_core_smoke_does_not_expose_registry_token_to_candidate_python() -
 
 def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
     workflow = _workflow_text()
-    exact_job = _job_text(workflow, "exact-core-schema-compatibility")
+    exact_job = _job_text(workflow, "minimum-core-schema-compatibility")
     capsule_step_name = "Run signed analyzer capsule from prefetched cache and empty Bubblewrap smoke"
     capsule_step_offset = exact_job.index(capsule_step_name)
     capsule_step = exact_job[capsule_step_offset:]
@@ -172,7 +190,7 @@ def test_pr_orchestrator_runs_real_c14_capsule_smoke() -> None:
 
 
 def test_exact_core_smoke_quotes_tree_revision_and_redacts_acquisition_urls() -> None:
-    exact_job = _job_text(_workflow_text(), "exact-core-schema-compatibility")
+    exact_job = _job_text(_workflow_text(), "minimum-core-schema-compatibility")
 
     assert "rev-parse 'HEAD^{tree}'" in exact_job
     assert "urlsplit" in exact_job

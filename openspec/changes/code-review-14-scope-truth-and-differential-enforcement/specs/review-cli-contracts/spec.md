@@ -66,6 +66,9 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **THEN** authoritative schema 1.6 status and exit remain UNKNOWN/non-zero
 - **AND** changed-line blocker fallback is not applied to schema 1.6 or newer
 - **AND** only reports older than 1.6 retain the existing staged-line compatibility calculation
+- **AND** that legacy staged-line calculation accepts file headers only in Git file-metadata state, never from paired `---`/`+++` hunk content
+- **AND** unavailable cached-diff evidence preserves every legacy blocking finding instead of treating the staged change set as empty
+- **AND** cached-diff discovery ignores inherited repository/index redirect variables so evidence always comes from the governed repository and index
 - **AND** the helper remains `explicit_files` and does not claim `pr_range`.
 
 #### Scenario: Exact advertised core runtime loads schema 1.6
@@ -89,6 +92,36 @@ The governed review report schema `1.6` SHALL expose authoritative `assurance_st
 - **AND** changed mode is accepted only with the deprecated changed/worktree compatibility path
 - **AND** explicit range plus changed mode is rejected
 - **AND** strict range writes enforcement_mode full, shadow range writes shadow, and scope_evidence alone identifies range.
+
+#### Scenario: Local capsule reports preserve scope truth and changed-line policy
+
+- **GIVEN** a local capsule review resolves the default or deprecated changed scope, explicit full scope, or positional files
+- **WHEN** the capsule report is serialized
+- **THEN** `scope_evidence.assurance_kind` is respectively `worktree`, `full`, or `explicit_files`
+- **AND** the capsule runtime boundary rejects every other assurance kind before runtime preparation or report construction, so a type-checking annotation alone cannot admit unsupported provenance
+- **AND** the selected enforcement mode remains independent from that scope identity
+- **AND** changed enforcement blocks only blocking findings on changed lines while retaining unchanged-line blockers as advisory evidence
+- **AND** when every blocking finding reported by a failing analyzer member is proven outside changed lines, serialized member evidence retains `pre_enforcement_evidence_outcome=FAIL`, projects authoritative `evidence_outcome=PASS`, and records the unchanged-blocker advisory disposition without removing the findings
+- **AND** a failing analyzer member without corresponding proven-unchanged blocking evidence remains `FAIL`; changed enforcement never invents a passing member outcome from an unexplained failure
+- **AND** JSON model validation and first-party ledger ingestion preserve the same changed-mode `PASS` or `PASS_WITH_ADVISORY` projection and exit `0` instead of reinterpreting it as `UNKNOWN`
+- **AND** unavailable changed-line discovery, including Git diff failure or incomplete untracked-file evidence, cannot downgrade a completed `FAIL` or required `UNKNOWN` report, while a completed blocker-free report retains its existing pass state
+- **AND** Git-quoted path headers, including UTF-8 and control-character filenames in worktree or cached diffs, are decoded to the exact filesystem path or make changed-line evidence unavailable
+- **AND** unquoted Git path headers preserve trailing filename whitespace while removing only Git's header delimiter
+- **AND** changed-line Git commands force canonical `a/` and `b/` diff prefixes independently of ambient mnemonic, no-prefix, or custom-prefix configuration
+- **AND** `SPECFACT_CODE_REVIEW_CHANGED_DIFF` accepts only normalized `worktree` or `cached`; every unrecognized value makes changed-line evidence unavailable and preserves the completed fail-closed verdict instead of selecting an uncorroborated HEAD diff, and a frozen cached identity remains usable only while the normalized mode remains `cached`
+- **AND** tracked diff paths and analyzer findings are lexically normalized from repository-root or absolute identity to one caller-working-directory identity, including nested invocations, parent-repository files, and redundant relative segments, without following symlinks before changed-line matching
+- **AND** ordinary worktree analysis rejects selected symlinks and directories before analyzer execution, binds the pre-analysis raw selected regular-path states plus every tracked, non-ignored untracked, and ignored file outside deliberately scan-excluded trees that the repository-root analyzer snapshot exposes, contained symlink targets, and immutable `HEAD` tree identity or the format-correct empty tree when `HEAD` is proven unborn, and admits an unselected symlink or directory only when its raw identity plus every lexical and terminal path component remains beneath that same bound repository root; an unselected directory symlink is admitted only when its complete reachable target subtree is recursively bound without pruning, never when its target itself aliases a deliberately scan-excluded tree; it uses the same base tree for raw and Git changed-line evidence and verifies the complete identity after analysis and changed-line projection; the bound input set includes ignored analyzer configuration, imported source, test support, and arbitrary runtime fixtures exposed by the repository-root snapshot, so their byte, presence, path-type, target, or set drift returns required `UNKNOWN` / exit `1` rather than mixed-member or stale clean evidence, while a stable unselected gitlink directory remains bindable; when explicit selected files are proven outside any repository, the same checks bind their exact absolute raw path states without a tree component
+- **AND** ordinary worktree changed-line evidence is corroborated against raw filesystem bytes and raw committed or proven-empty base-tree blobs, so clean filters and `assume-unchanged` or `skip-worktree` index hints cannot hide analyzer-visible changes; disagreement makes changed-line evidence unavailable rather than treating the file as unchanged
+- **AND** targeted pytest coverage redirects its raw coverage data file to a private temporary path independently of repository coverage configuration, so analyzer-owned output cannot mutate the bound repository snapshot
+- **AND** cached changed-line enforcement disables Git replacement objects, freezes one immutable stage-zero index tree together with an unchanged base-tree identity and caller coordinate, uses the empty tree as the immutable base before the first commit, materializes analyzer input directly from its raw blobs without clean, smudge, text-conversion, or export-attribute filters, rebases capsule and development-host findings from that repository-root snapshot to the frozen caller coordinate, runs any development-host fallback from the materialized root, binds the root plus every logical directory type/device/inode identity during construction, requires every materialized symlink's immediate lexical target and complete terminal resolution to remain beneath that root, verifies those no-symlink directory identities, every-hop symlink containment, and every materialized blob before analysis and again after host analysis, derives changed-line evidence only from the frozen base/index tree pair, and emits required `UNKNOWN` / exit `1` when materialization, a selected symlink or gitlink, an escaping or leave-and-re-enter direct/chained support symlink, an extant selected path absent from the staged tree, filesystem case/Unicode identity, post-analysis identity, or line evidence is unavailable or ambiguous, so index flags, replacement refs, nested invocation, and worktree, analyzer, external-target, or live-`HEAD` mutation cannot change or reclassify the reviewed snapshot
+- **AND** machine-parsed Git diffs force raw text output and disable color and text-conversion drivers so repository attributes or ambient configuration cannot hide protocol headers
+- **AND** reviewed filenames are passed to diff and untracked-file discovery as literal pathspecs so legal pathspec syntax in a filename cannot change the evidence query
+- **AND** an explicitly reviewed untracked file remains fully changed even when repository ignore rules match it; ignore filtering cannot erase caller-selected line evidence
+- **AND** a newly added empty file is represented by a file-level line-1 changed anchor in ordinary staged, cached-tree, and explicit untracked evidence, while a tracked unchanged empty file remains unchanged
+- **AND** destination headers are accepted only in file-header state, never from added hunk content, so later hunks retain the exact reviewed file identity
+- **AND** changed-line Git commands ignore repository-local redirect variables such as `GIT_DIR`, `GIT_INDEX_FILE`, and `GIT_WORK_TREE`
+- **AND** untracked-file discovery treats only empty Git output as absence and never trims a non-empty path identity to absence
+- **AND** incomplete required capsule evidence remains `UNKNOWN` with a non-zero exit under changed enforcement and is never rewritten to PASS.
 
 #### Scenario: Versioned readers never infer new truth from old fields
 

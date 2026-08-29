@@ -1381,3 +1381,1374 @@ The OpenSpec scenario and task were added before the focused regression. Before 
 Local gates on 2026-08-26 passed strict C14 OpenSpec, format, full repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), seven-manifest/registry validation, bundle imports, checksum/version enforcement, publish precheck, `28` contract-first tests, `git diff --check`, and the complete staged pre-commit pipeline. The changed-scope Code Review gate returned `PASS_WITH_ADVISORY` with six inherited/tool-environment findings, zero errors, and no finding on a changed production line; none was admitted. Exact-core `0.55.1` complete and smart suites each collected `1644` tests and passed `1643`; their sole identical failure remains the documented unsupported local macOS/CPython 3.14 capsule-lock environment, covered by the protected Linux CPython 3.11-3.13 matrix. Candidate module version is `0.49.59`, unsigned filesystem checksum is `sha256:33ca4e285ff2740aa41a239d84057de0600ef2e3cc9519b79d8dcc5f58d79c55`, and exact core compatibility remains `===0.55.1`. Approval-time signing and protected checks remain required before the PR #420 conversation is resolved.
 
 The first signed-head CodeRabbit review found one off-by-one inside the newly added diagnostic bound: retaining 4,000 trailing stderr characters and prepending the truncation marker produced a 4,001-character snippet. Codex reported no major issue. Before the one-character production correction, the exact-bound regression failed because the actual retained representation contained one extra character. The adapter now reserves one character for the marker; the regression and complete Ruff surface pass (`10 passed`). The complete exact-core suite collected `1645` tests and passed `1644`; its sole failure remains the same unsupported local macOS/CPython 3.14 capsule-lock environment. Version remains `0.49.59` with corrected filesystem checksum `sha256:4d152fc9768e2b16e8c2143b0165b5ee05a48ae18d250fec5e250d940d638bec`. Approval-time signing commit `b9518764a118f893ad578236716f9c3494f3524f` signed that exact payload; local readback verified all seven manifests, and every registered protected check passed on the signed head. The final Codex review found no major issue, while CodeRabbit independently confirmed the checksum/signature and truncation regression before requesting this final evidence-state update. The generic docstring-coverage warning concerns pre-existing test functions and is not admitted into this bounded adapter-completion correction.
+
+### PR #446 local capsule scope and enforcement correction
+
+On 2026-08-28, two independent reviews confirmed that the current promotion head still carried two valid defects despite the conversations becoming outdated after an ancestry-only merge: local capsule reports did not apply changed-line enforcement, and every local capsule report claimed `explicit_files` regardless of default/worktree or full selection. The OpenSpec scenario and task boundary were amended before production edits. The first focused run collected five tests and produced `4 failed, 1 passed`: an unchanged-line capsule blocker did not receive the changed-line policy, while default, full, and positional command routes did not pass any assurance kind. The required-UNKNOWN control already passed and established the fail-closed baseline that the fix must preserve.
+
+The implementation now carries `worktree`, `full`, or `explicit_files` through every local rerun, writes that identity into capsule scope evidence, and applies changed-line enforcement after capsule aggregation. A completed report with no blocking finding on a changed line retains every finding as advisory evidence and projects authoritative PASS/readback exit 0; a blocking changed-line finding remains FAIL/exit 1; required UNKNOWN evidence remains UNKNOWN/exit 1. The expanded focused run covered default, explicit worktree, changed, full, positional, changed-line blocker, unchanged-line advisory, UNKNOWN, and serialized schema-1.6 readback behavior and passed. Full gates, patch-version/checksum refresh, approval-time signing, protected checks, and PR #446 thread resolution remain required.
+
+Local final-byte verification passed strict C14 OpenSpec; formatting; repository type checking (`0 errors, 0 warnings, 0 notes`); Ruff and Pylint (`10.00/10`); YAML/registry validation; bundle imports; the `28` contract-first tests; manifest checksum/version verification against the immutable core 0.55.1 public key; and the Code Review publish precheck. The complete affected command surface passed `78` tests, and the supported local runner surface passed `279` tests with only the signed capsule-lock selector deselected because the frozen runtime has no local CPython 3.14 environment. After clearing generated coverage state from an invalid parallel-suite attempt, the serial complete suite passed `1652` tests with that same one selector deselected and two third-party Lark deprecation warnings. The final changed-line Code Review emitted `PASS_WITH_ADVISORY`, exit `0`, truthful `worktree` scope evidence, `80` inherited/tool-environment findings, and no changed-line blocker; two patch-caused maintainability warnings found on the first review were removed by separating changed policy from capsule finalization. Candidate module version is `0.49.62` with unsigned filesystem checksum `sha256:db96a041e9d6564669dd6108be4f8c6937da9a3eee0d2d9176960e4580a8dabf` and unchanged compatibility `>=0.55.1,<1.0.0`. Approval-time signing, protected Linux checks, and PR #446 thread resolution remain required.
+
+### PR #448 changed-line evidence correction
+
+The first Codex review of signed PR #448 found one P2 inside the new local
+changed-enforcement boundary: `_changed_lines_from_git` returned an empty
+mapping when `git diff` failed, so the caller could not distinguish unavailable
+evidence from a successful clean diff and could rewrite a blocking capsule
+report to PASS. The same ambiguity existed when untracked-file discovery failed
+or an identified untracked file could not be read.
+
+After the OpenSpec scenario and tasks were extended, five focused cases were
+collected before production edits. Git diff failure, untracked discovery
+failure, unreadable untracked content, and capsule fail-closed projection all
+failed at the intended boundary (`4 failed`); the successful clean-diff control
+already passed. Changed-line collection now returns an explicit unavailable
+state for command, decoding, or file-read failures. Changed enforcement cannot
+downgrade a completed FAIL or required UNKNOWN report when that state is
+present, while a completed blocker-free report retains PASS. The six original
+cases and a separate subprocess-exception challenge pass (`7 passed`). The
+complete runner surface initially passed `282` of `283`; the sole failure was
+the previously documented local CPython 3.14 signed-capsule-lock environment
+gap.
+
+The first changed-line review of the correction passed but identified two
+patch-caused complexity warnings in the changed-line collection and enforcement
+functions. Extracting the Git command, untracked-file, and enforcement
+precondition helpers reduced the affected Radon scores to `10`, `4`, `4`, `3`,
+and `12`; collapsing one pass-through `None` branch removed the remaining
+patch-caused informational finding. The final changed-line review returned
+`PASS_WITH_ADVISORY`, exit `0`, with `75` inherited/tool-environment findings,
+two legacy blockers, no blocker on a changed line, and no finding on the five
+new or refactored helpers.
+
+Final local evidence passed the eight focused failure/PASS/UNKNOWN controls;
+the complete supported local suite (`1657 passed`, one documented CPython 3.14
+capsule-lock selector deselected, two third-party Lark deprecation warnings);
+strict OpenSpec; formatting; repository type checking (`0 errors, 0 warnings,
+0 notes`); Ruff; Pylint (`10.00/10`); manifest/registry validation; bundle
+imports; all `28` contract-first tests; filesystem checksum/version validation;
+and the publish precheck. Candidate module version is `0.49.63`, unsigned
+filesystem checksum is
+`sha256:66cb812b4d4c9372893bfb441a777d9a57b4ce9ec9adbdc87ba58a1d605647fe`,
+and compatibility remains `>=0.55.1,<1.0.0`. Replacement approval-time signing,
+protected checks, and review-thread resolution remain required.
+
+The independent final candidate review then found a second path-identity bypass
+inside the same boundary: Git's default C-quoted `+++` headers for UTF-8 or
+control-character filenames remained literal keys, so changed blockers on those
+paths could still be classified as legacy. Real temporary-repository worktree
+and cached regressions for `ümlaut.py` and a newline-containing filename, plus a
+malformed quoted-header case, all failed before the parser correction (`3
+failed`).
+
+The diff parser now decodes Git's closed C-quoted byte grammar, including named
+escapes and bounded octal bytes, through the filesystem codec. Invalid quoting
+returns unavailable evidence and therefore cannot trigger a downgrade. The
+three exact regressions pass; the expanded changed-enforcement matrix passes
+`12` tests; the complete supported runner surface passes `287` tests with the
+known capsule selector deselected; and the complete supported local suite passes
+`1660` tests with that same selector deselected and two third-party Lark
+deprecation warnings. Final strict OpenSpec, formatting, typing (`0 errors, 0
+warnings, 0 notes`), Ruff, Pylint (`10.00/10`), manifests, bundle imports,
+checksum/version verification, publish precheck, and changed-line Code Review
+pass. The final review retains `75` inherited/tool-environment findings and two
+legacy blockers, with no changed-line blocker or finding on the corrected
+helpers. Version remains unpublished `0.49.63`, checksum is
+`sha256:eb2ad8de757a700a4522c558f1f4d83a158b4d74545d9a064f3dfb62cc38b9b6`,
+and compatibility remains `>=0.55.1,<1.0.0`.
+
+The first commit-hook replay exposed a test-isolation defect in the new real-Git
+fixture: hook-exported `GIT_DIR`/`GIT_WORK_TREE` reached its temporary `git init`
+and changed the parent repository's local Git config. The exact test mutation
+(`core.bare=true` plus the fixture identity) was restored immediately. The
+fixture now uses the existing sanitized candidate-Git environment for every
+temporary command and removes inherited repository-local Git variables before
+exercising production discovery. Replaying both cases with explicit hook-style
+Git variables passed and left parent `core.bare=false`; this test-only
+correction does not change the signed module payload checksum.
+
+The final-head Codex review found one further path-identity bypass in the same
+parser: `.strip()` removed a tracked filename's trailing space together with
+Git's tab header delimiter. A real temporary-repository regression was added
+before production edits. The two existing UTF-8/newline controls passed, while
+the trailing-space case failed because changed-line collection returned
+`{'trailing.py': {1}}` instead of `{'trailing.py ': {1}}` (`1 failed, 2
+passed`). This is the failing-before evidence for task 6.52 and authorizes only
+delimiter-aware path extraction under task 6.53.
+
+The correction removes exactly one terminal tab delimiter before quoted-path
+decoding and never trims path content. Real Git worktree and cached cases now
+preserve one and two trailing spaces respectively; the expanded
+changed-enforcement matrix passes `17` cases. The exact-core `0.55.1` supported
+runner surface passes `289` cases with the documented local CPython 3.14 capsule
+selector deselected, and the complete supported repository suite passes `1662`
+cases with that same selector deselected and two third-party Lark deprecation
+warnings. Strict OpenSpec, formatting, typing (`0 errors, 0 warnings, 0 notes`),
+Ruff, Pylint (`10.00/10`), seven-manifest validation, bundle imports, `28`
+contract tests, filesystem checksum/version verification, and publish precheck
+pass. Exact-core changed-line Code Review returns `PASS_WITH_ADVISORY`, exit `0`,
+with `74` inherited/tool-environment findings, one legacy blocker, and no finding
+on either corrected parser line. Version and compatibility remain `0.49.63` and
+`>=0.55.1,<1.0.0`; the refreshed unsigned checksum is
+`sha256:a3d4148f4e70f3b3ad8fc0643ef838eb612920077683dce69d45600b0d4c3045`.
+Trusted signing and the replacement protected review cycle remain required.
+
+Approval-time signing commit `31c51b3e54d34de0385cadd72532cdb23e46808d`
+added only the signature
+`A5FcNR6MejjLoz1Gu+t6Wx2bkc6EaB+hTDtrvqUVl8n5BNr+xFOsLYaOMfOy3dcR8iY7nJT0E2WXbcwTPrg4CA==`
+to that exact checksum. Strict filesystem verification against the immutable
+core `0.55.1` public key passed all seven module manifests. The following
+documentation-only commit changes no signed module payload byte and exists to
+run the replacement protected matrix on top of the verified signing commit.
+
+The next final-head review identified ambient Git state that could still make
+changed-line evidence point at the wrong identity while Git returned success.
+The contract and task boundary were amended before production edits. Real
+temporary-repository regressions then produced seven failures and four passing
+controls: mnemonic prefixes yielded `w/src/app.py` or `i/src/app.py`, no-prefix
+configuration collapsed the legitimate path `b/app.py` to `app.py`, poisoned
+`GIT_DIR`/`GIT_INDEX_FILE`/`GIT_WORK_TREE` variables yielded an empty change map
+in both worktree and cached modes, and non-empty whitespace-only `ls-files`
+output was treated as absence. This is the failing-before evidence for task
+6.54. The generic request to preserve every incoming capsule `FAIL` was rejected
+because the signed scenario and existing changed/unchanged/unavailable
+regressions require proven-unchanged blockers to become advisory while changed
+blockers and unavailable evidence remain failing.
+
+The correction forces explicit `a/` and `b/` prefixes with the long-supported
+`--src-prefix`/`--dst-prefix` options instead of introducing the newer
+`--default-prefix` Git runtime floor, runs every changed-line Git command with
+the existing repository-local-variable scrubber, and treats only exactly empty
+untracked output as absence. All 11 new/adjacent path controls and the expanded
+24-case changed-enforcement selection pass. The supported runner surface passes
+`296` tests and the supported repository suite passes `1669` tests; both
+deselect only the documented local macOS/CPython 3.14 capsule-lock selector.
+The unfiltered smart-test replacement confirms the same `1669` passes and only
+that known environment-specific selector failure. Strict OpenSpec, formatting,
+typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), seven
+manifests, bundle imports, `28` contract tests, filesystem checksum/version
+verification, and publish precheck pass. Exact-core changed-line Code Review
+returns `PASS_WITH_ADVISORY`, exit `0`, with `75` inherited/tool-environment
+findings, two legacy blockers, and no blocking finding on a changed line.
+Version and compatibility remain unpublished `0.49.63` and
+`>=0.55.1,<1.0.0`; the refreshed unsigned checksum is
+`sha256:63cb5a7def001b824bae28b08832a7457cf95f4359b301230dd86a0e29a9de76`.
+Replacement approval-time signing and protected checks remain required.
+
+Approval-time signing commit `19b660cf593fdf78334527abfea8e6b1726fa10c`
+added only the signature
+`dpbKrnaaZQG5sxXCfn/2zeUi8DZMru1/YUIoymrzetK/YEnfcJ7Rze5T6G6+ougptsdO/L2SiyqjJPZ2Xvg5Cw==`
+to the exact `sha256:63cb5a7def001b824bae28b08832a7457cf95f4359b301230dd86a0e29a9de76`
+payload. Strict filesystem verification against the immutable core `0.55.1`
+public key and current `origin/dev` baseline passed all seven module manifests.
+This documentation-only evidence commit changes no signed module payload byte
+and triggers the replacement protected matrix on the verified signing head.
+
+The final-head review then exposed a schema round-trip inconsistency in local
+changed enforcement. A completed capsule member `FAIL` with only an unchanged-
+line blocker was projected in memory to aggregate `PASS_WITH_ADVISORY`, but its
+serialized member outcome remained `FAIL`; `ReviewReport.model_validate_json`
+therefore re-derived `UNKNOWN/FAIL/1`, and the first-party ledger persisted that
+different result. The contract and task boundary were amended before production
+edits. The exact three-case regression command failed `3 failed`: the generated
+report lacked `pre_enforcement_evidence_outcome`, an unexplained member `FAIL`
+without any corresponding finding became in-memory `PASS`, and ledger ingestion
+re-derived a changed advisory report as plain `PASS` rather than
+`PASS_WITH_ADVISORY`. This is the failing-before evidence for task 6.57 and
+authorizes only the member-evidence projection, validated report reconstruction,
+and advisory legacy projection described by task 6.58.
+An additional retained-evidence negative control then failed exactly as expected:
+a raw member blocker removed by the requested finding focus still authorized
+`PASS/0` despite the serialized report retaining no advisory finding. Task 6.58
+therefore requires every explaining blocker to remain in the final report.
+
+The implementation now projects a failing capsule member only when it has at
+least one blocking finding, every explaining blocker remains in the serialized
+report, and changed-line evidence proves every one outside the changed set. The
+member retains `pre_enforcement_evidence_outcome=FAIL` and records
+`enforcement_disposition=unchanged_blockers_advisory` while its authoritative
+post-enforcement `evidence_outcome` becomes `PASS`. Any missing mapping,
+unexplained failure, filtered blocker, changed-line blocker, required UNKNOWN,
+or unavailable Git evidence remains non-passing. The exact focused selection
+passes `7 passed`; the complete affected runner/findings/ledger surface passes
+`399 passed` with only the documented local macOS/CPython 3.14 capsule-lock
+selector deselected. JSON model and first-party ledger reload retain
+`PASS_WITH_ADVISORY/0`, the advisory finding, and raw outcome provenance.
+Independent read-only implementation and bypass reviews found no remaining
+functional or clean-code issue. Format, Ruff, BasedPyright (`0 errors, 0
+warnings, 0 notes`), Pylint (`10.00/10`), YAML/manifests, bundle imports, `28`
+contract tests, strict OpenSpec, and `git diff --check` pass. After restoring the
+declared minimum core `0.55.1` from Hatch's local `0.54.0` bootstrap, the
+complete supported repository suite passes `1672 passed` with that same one
+unsupported-host selector deselected and two third-party Lark deprecation
+warnings. The canonical changed-only signer preserved the already-unpublished
+PR release identity `0.49.63`, which remains two patch versions above
+`origin/dev`'s `0.49.61`, retained compatibility `>=0.55.1,<1.0.0`, removed the
+stale signature, and refreshed the unsigned checksum to
+`sha256:d016ee8df7b0f21a3ae9b0d02d1a8c1cd95520085d7cf6430edc5c3dbba8e108`.
+Publish precheck, signed commit, trusted approval-time signing, replacement
+protected checks, and final thread resolution remain required.
+
+Filesystem manifest verification against the public key bundled by immutable
+core `0.55.1` passes all seven module manifests, and the `specfact-code-review`
+publish precheck accepts the candidate while reminding that compatibility was
+reviewed. The minimum-core manual changed-line Code Review writes schema 1.4
+local evidence with `PASS_WITH_ADVISORY`, exit `0`, `87` retained findings,
+three legacy blockers, and no blocking finding on a changed line. The signed
+human commit, trusted approval-time module signature, protected matrix, and
+fresh final-head review remain required before task 6.59 is complete.
+
+Trusted signing commit `c31ec39f4dd6c13dd35f9d9594492088572e911b`
+added only signature
+`I+ZLGzON19lto5uH7+iLwXPeb644Fmvs/OnJqPvhu/I8xqlw6eJjzNIzzWbW8Xi2+LhtSUa5On445Oy/dsLqAg==`
+to exact checksum
+`sha256:d016ee8df7b0f21a3ae9b0d02d1a8c1cd95520085d7cf6430edc5c3dbba8e108`.
+Strict filesystem and cryptographic verification against immutable core
+`0.55.1`'s public key and the `origin/dev` release baseline passes all seven
+module manifests. This evidence-only commit changes no signed module payload
+byte and triggers the replacement protected matrix on top of the verified
+signing head.
+
+The replacement protected cycle required by task 6.59 completed successfully
+for checksum
+`sha256:d016ee8df7b0f21a3ae9b0d02d1a8c1cd95520085d7cf6430edc5c3dbba8e108`,
+trusted signing commit `c31ec39f4dd6c13dd35f9d9594492088572e911b`,
+and evidence head `8c7446a52c54069b552bdcd94dcbf90d59a24f8f`.
+The protected `pr-orchestrator` run `33175724836` passed quality and minimum-core
+`0.55.1` compatibility on Python 3.11, 3.12, and 3.13 together with signature
+verification and change detection. Module Signature Hardening run `33175724808`,
+Requirements evidence run `33175724806`, Docs Review run `33175724837`, and
+CodeQL run `33175722398` also passed; trusted signing-generation run
+`33175522586` produced the recorded signing commit from signed human commit
+`6e32b8a83f2e5b16132607aa9fdd34e12a924415`. Fresh review then identified new
+Git protocol bypasses, so task 6.60 and publication remain pending while tasks
+6.61-6.64 govern the replacement payload and final-head cycle.
+
+For task 6.61, six new worktree/cached cases failed while eight existing path
+controls passed: repository binary attributes and forced color hid the parsed
+diff headers, and a tracked filename beginning with Git pathspec magic was
+interpreted instead of matched literally. A seventh untracked-file regression
+failed for the same literal-pathspec boundary. This `6 failed, 8 passed` plus
+`1 failed` evidence authorizes only the Git evidence protocol hardening in task
+6.62. Independent validation then identified the same raw-output boundary for
+repository text-conversion drivers; its two worktree/cached regressions failed
+while 14 controls passed. The implementation now forces raw text, disables
+color and text conversion, and uses Git's long-supported global
+literal-pathspec mode for both diff and untracked discovery. The 16-case
+real-repository path matrix and seven adjacent
+unavailable/redirect/untracked controls then pass `23 passed`; binary
+attributes, text-conversion drivers, ambient color, and pathspec syntax can no
+longer convert a changed blocker to advisory evidence. The candidate remains version `0.49.63` with
+compatibility `>=0.55.1,<1.0.0`; checksum refresh, trusted signing, full quality,
+and the replacement protected cycle remain required by task 6.63.
+
+Final local verification for the task 6.62 payload passes format, Ruff,
+BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint (`10.00/10`), strict
+OpenSpec, seven-manifest/registry validation, bundle imports, three CLI-contract
+files, `28` contract-first tests, filesystem checksum/version enforcement,
+publish precheck, and `git diff --check`. The exact-core `0.55.1` complete suite
+passes `1681` of `1682` tests; its sole failure is the documented unsupported
+local macOS/CPython 3.14 capsule-lock environment, and the two warnings are the
+existing third-party Lark deprecations. Exact-core changed-line Code Review
+returns `PASS_WITH_ADVISORY`, exit `0`, with `78` retained findings, one
+pre-existing blocker outside the changed lines, and no changed-line blocker.
+The canonical changed-only signer preserves unpublished version `0.49.63` and
+compatibility `>=0.55.1,<1.0.0`, removes the stale signature, and sets unsigned
+filesystem checksum
+`sha256:58a31dfe44db4cf4de3727cb6c4d1427460c34e42675ef828993f4c1fd90fc83`.
+A signed human commit, trusted approval-time signature, fresh protected matrix,
+and final-head review/thread disposition remain required before task 6.63 or
+6.64 completes.
+
+Trusted signing run `33177626568` accepted signed human commit
+`73cea7fbe37039545d115e57de4f99f5d71140ab` and produced signing commit
+`3b8e33ad37d0d8bd7286a88d06229bbceb5588e6` for checksum
+`sha256:58a31dfe44db4cf4de3727cb6c4d1427460c34e42675ef828993f4c1fd90fc83`
+with signature
+`zoOzqm7CrMXr/VZ8S7Tuw7nTg9DGRtVxGPoeVwSJmkhgRk7YR5cHN77HF3ghrIP/fTdKEHyCu1UZf1bTdpmdCA==`.
+Fresh review then found that added hunk content beginning with `++ ` was emitted
+as `+++ ` and accepted as a new destination header, causing later hunks to be
+recorded under a forged path. Real Git worktree and cached regressions failed
+`2 failed` with line 10 assigned to `masquerade.py` instead of `app.py`. An
+independent pass confirmed the same state error in the legacy staged helper
+when paired deleted/added content forged `---` and `+++` headers; that exact
+regression and an unavailable cached-diff control both failed (`2 failed`), the
+latter proving a Git error became an empty staged change set and exit `0`.
+The final independent bypass pass then reproduced a successful wrong-repository
+query: inherited `GIT_DIR`, `GIT_INDEX_FILE`, and `GIT_WORK_TREE` redirected the
+cached diff to a clean repository and again produced exit `0`; its two-real-
+repository regression failed before environment sanitization.
+
+Both parsers now open one destination-header slot at each exact `diff --git`
+file boundary and never change file identity from hunk content. The staged Git
+query additionally forces canonical prefixes, raw text, no text conversion,
+and no color, and scrubs repository/index redirect variables; unavailable or
+quoted-path evidence returns the complete legacy blocking set instead of
+passing. The exact combined regression selection passes `6 passed`, staged-hook
+parity passes `11 passed`, and the supported affected
+runner/findings/ledger surface passes `835 passed` with only the documented
+local capsule-lock selector deselected. The complete exact-core `0.55.1` suite
+passes `1686` of `1687`; its sole failure is the same unsupported local
+macOS/CPython 3.14 capsule-lock environment, with only the two existing
+third-party Lark warnings. Format, Ruff, BasedPyright (`0 errors, 0 warnings, 0
+notes`), Pylint (`10.00/10`), strict OpenSpec, seven manifests plus registry,
+bundle imports, three CLI-contract files, `28` contract-first tests, filesystem
+checksum/version enforcement, publish precheck, and `git diff --check` pass.
+Exact-core changed-line Code Review returns `PASS_WITH_ADVISORY`, exit `0`, with
+`84` retained findings, one pre-existing blocker outside changed lines, and no
+changed-line blocker. Candidate version remains unpublished `0.49.63`,
+compatibility remains `>=0.55.1,<1.0.0`, and the refreshed unsigned checksum is
+`sha256:76ce1ecfdd6cd63e400966b6e596239bc72833f557b7290ec134632f8b3aa0d0`.
+Signed commit, trusted replacement signature, protected checks, and final-head
+review/thread disposition remain required by tasks 6.67-6.68.
+
+Trusted signing commit `b13f3525d0ae851026000b4e218e2432c368b905`
+added only signature
+`53a0eIQmoE/w9GupY/1ZRNuBc56knakjUpBMETfXVkR4m/4gFAcQHLw+J58p2jcI8KiSB08LSHgfuXBgQzYIBw==`
+to exact checksum
+`sha256:76ce1ecfdd6cd63e400966b6e596239bc72833f557b7290ec134632f8b3aa0d0`.
+Strict filesystem, cryptographic, and version-baseline verification against the
+public key in immutable core `0.55.1` passes all seven module manifests. This
+documentation-only evidence commit changes no signed payload byte and triggers
+the replacement protected matrix on the verified signing head.
+
+Protected run `33179305438` then passed minimum-core compatibility and full
+quality on Python 3.11, 3.12, and 3.13; current-head Docs Review, Requirements
+Evidence, CodeQL, Socket, CodeRabbit, and both module-signature checks also
+passed. Final review inventory nevertheless exposed two additional valid
+boundary findings. First, `LocalAssuranceKind` was only a static annotation, so
+a direct runtime call could serialize an unsupported value such as `pr_range`.
+The runtime-boundary regression failed by reaching capsule preparation instead
+of raising. Second, the exact literal-path untracked probe still used
+`--exclude-standard`; a real repository with an explicitly selected ignored
+`ignored.py` returned an empty changed-line map and downgraded its blocking
+line-1 finding to `PASS_WITH_ADVISORY` / exit `0`.
+
+`run_capsule_review` now rejects non-string and unsupported local assurance
+kinds before option parsing, runtime preparation, or report construction while
+preserving `worktree`, `full`, and `explicit_files`. Exact untracked probing no
+longer applies ignore filtering because it runs only for already-selected file
+paths; automatic discovery remains unchanged. The focused runtime matrix now
+passes seven invalid assurance values plus the supported full-scope control,
+and the ignored-file real-Git regression now records `ignored.py:1` and returns
+`FAIL` / exit `1`. The combined initial green selection passes `9 passed`; the
+expanded boundary selection passes `8 passed`. A refreshed checksum, trusted
+signature, complete quality gates, protected checks, and final thread
+disposition remain required by tasks 6.73-6.74.
+
+Final local gates for the two boundary corrections pass strict OpenSpec,
+format, Ruff, BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint
+(`10.00/10`), seven manifests plus registry, bundle imports, three CLI contract
+files, `28` contract-first tests, filesystem checksum/version verification with
+the immutable core `0.55.1` public key, publish precheck, and
+`git diff --check`. The complete exact-core `0.55.1` suite passes `1694` of
+`1695`; the sole failure is the same documented unsupported local
+macOS/CPython 3.14 capsule-lock selector, and the only warnings are the two
+existing third-party Lark deprecations. Exact-core changed-line Code Review
+returns `PASS_WITH_ADVISORY`, exit `0`, with `79` retained findings, two
+pre-existing blockers outside changed lines, and no changed-line blocker. The
+canonical changed-only signer preserves unpublished version `0.49.63` and
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and sets
+unsigned filesystem checksum
+`sha256:cbce5f8197758054b7cf54a371cce1fd072d7cb2af02e66a3b0bad637a0e662d`.
+A signed human commit, trusted replacement signature, protected matrix, and
+final review/thread disposition remain required.
+
+Trusted signing run `33183475105` accepted signed human commit
+`de5517ab29d9bf8908fb6c93f7479f60a296c983` and produced signature-only commit
+`5990bbbd4d45914bdd2de40c800374c9d9480d8e` for exact checksum
+`sha256:318ce26ebba75a4b8301153707f61c467da07ffe2c6da50e2d53460cb99bef6c`
+with signature
+`mwRhDv+2/9AVL71qpT4YB5LXilTyxdkZ1Jwc2buuRKMQbhvTg92Ba+E+8FzjW4H/Ges3wEI2UITprHkXp5m4Dg==`.
+Strict filesystem, cryptographic, and dev-baseline version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. This
+evidence-only commit changes no signed payload byte and triggers the protected
+matrix on the verified signing head.
+
+Protected run `33183601497` then passed signature verification, immutable-core
+schema/capsule compatibility, and full quality on Python 3.11, 3.12, and 3.13.
+Docs Review, Requirements Evidence, CodeQL, Socket, CodeRabbit, and module
+signature checks also passed on final head
+`9645648b965fb6e76b23d446426b9bb218c049dd`. A fresh exact-head Codex review
+nevertheless found one new valid cached-snapshot boundary: the documented
+direct pre-commit helper sets cached line evidence while the capsule analyzes
+worktree bytes. A partially staged insertion can shift a retained blocker away
+from the staged line, and unstaged removal of the staged violation can produce
+no worktree finding at all. Normal `git commit` stashing does not close the
+supported direct script and `pre-commit --all-files` / `--files` routes.
+
+The first real-repository regression was authored before production changes
+and failed because cached discovery returned `app.py:1` and projected the
+worktree line-2 blocker as unchanged. An independent clean-worktree refinement
+then proved that a late unavailable-evidence result is insufficient: with bad
+bytes staged but absent from the worktree, capsule analysis returned `PASS` /
+exit `0`. The second regression failed with that exact result before the early
+guard. Cached changed enforcement now compares the selected literal-path state
+between index and worktree before capsule preparation and returns required
+`UNKNOWN` / exit `1` with `cached_snapshot_mismatch` or comparison-unavailable
+diagnostics without launching an analyzer. The late check remains defense in
+depth for direct changed-line classification. Both mismatch regressions and a
+fully staged success control pass (`3 passed`); the expanded changed-line and
+cached-enforcement surface passes `49 passed`. Complete gates, refreshed
+signing, protected checks, and final PR #448 thread disposition remain required
+by tasks 6.81-6.82.
+
+Trusted signing run `33181374925` accepted signed human commit
+`7138692239f94ff9d97ea7747acdf627a5eaa45d` and produced signature-only commit
+`994f013cb8060517988ab98691e3ae9817b47599` for exact checksum
+`sha256:cbce5f8197758054b7cf54a371cce1fd072d7cb2af02e66a3b0bad637a0e662d`
+with signature
+`2zYqZACLeZ7szErUdYJY6LuiqTfoEM420vkIeDFDgrOSxsQID7+QVysHdRn0pvibL2h1h3kE5S5+Lg/Gc7gSAw==`.
+Strict filesystem, cryptographic, and dev-baseline version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. This
+evidence-only commit changes no signed payload byte and triggers the protected
+matrix on the verified signing head.
+
+Protected run `33181631366` then passed minimum-core compatibility and full
+quality on Python 3.11, 3.12, and 3.13. Docs Review, Requirements Evidence,
+CodeQL, Socket, CodeRabbit, and both module-signature checks also completed
+without a failure, pending job, or action-required state on evidence head
+`cff5a876fb76b44fc0afbac812978f5b3b6ee56e`. The authoritative final-head
+thread inventory nevertheless exposed one new valid P1: Git emits tracked diff
+paths relative to the repository root, while findings and absolute reviewed
+paths are normalized relative to the caller working directory. A review from
+`repo/sub` therefore recorded `sub/app.py` but looked up `app.py`, allowing a
+changed blocker to become advisory.
+
+The first real-repository regression was authored before production changes and
+failed in all four worktree/cached and relative/absolute combinations (`4
+failed`), each returning `sub/app.py` instead of `app.py`. Independent
+validation then exposed the remaining shared-coordinate defect for an absolute
+parent-repository file and a redundant relative spelling; the second four-case
+regression failed with `PASS_WITH_ADVISORY` / exit `0` in every combination.
+Changed-line discovery now obtains the sanitized Git `--show-prefix` identity
+and translates each parsed repository-root path to caller-relative POSIX
+identity before finding matching. Report paths use the same lexical
+absolute-plus-relative normalization without following symlinks. The
+implementation does not use `git diff --relative`, so explicitly reviewed paths
+outside a nested caller directory are not excluded. Malformed or unavailable
+prefix/path evidence remains fail closed. The combined new selector passes `8
+passed`; the expanded changed-line/enforcement surface passes `46 passed`.
+Complete gates, refreshed signing, protected checks, and final PR #448 thread
+disposition remain required by tasks 6.77-6.78.
+
+Local final-byte gates pass strict OpenSpec, format, Ruff, BasedPyright (`0
+errors, 0 warnings, 0 notes`), Pylint (`10.00/10`), seven manifests plus
+registry, bundle imports, three CLI contract files, all `28` contract-first
+tests, filesystem checksum/version verification with the immutable core
+`0.55.1` public key, publish precheck, and `git diff --check`. The complete
+exact-core `0.55.1` suite passes `1702` of `1703`; the sole failure remains the
+documented unsupported local macOS/CPython 3.14 capsule-lock selector, with only
+the two existing third-party Lark warnings. Exact-core changed-line Code Review
+returns `PASS_WITH_ADVISORY`, exit `0`, with `81` retained findings, two
+pre-existing blockers outside changed lines, and no changed-line blocker. The
+canonical changed-only signer preserves unpublished version `0.49.63` and
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and sets
+unsigned filesystem checksum
+`sha256:318ce26ebba75a4b8301153707f61c467da07ffe2c6da50e2d53460cb99bef6c`.
+A signed human commit, trusted replacement signature, protected matrix, and
+final review/thread disposition remain required.
+
+Final local gates for the cached-snapshot correction pass strict OpenSpec,
+format, Ruff, BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint
+(`10.00/10`), seven manifests plus registry, bundle imports, three CLI contract
+files, and all `28` contract-first tests. The complete exact-core `0.55.1`
+suite passes `1705` of `1706`; the sole failure is the same documented
+unsupported local macOS/CPython 3.14 capsule-lock selector, with only the two
+existing third-party Lark warnings. The complete runner surface passes `328`
+of `329` with that same environment-only exception. Exact-core changed-line
+Code Review returns `PASS_WITH_ADVISORY`, exit `0`, with `83` retained
+findings, two pre-existing blockers outside changed lines, and no changed-line
+blocker. The canonical changed-only signer preserves unpublished version
+`0.49.63` and compatibility `>=0.55.1,<1.0.0`, removes the superseded
+signature, and sets unsigned filesystem checksum
+`sha256:1ecc197485ea8c3a742c0d4b54d8e1ac0e5f3a56150307aa64d1b5462e5be5be`.
+A signed human commit, trusted replacement signature, protected matrix, and
+final PR #448 thread disposition remain required.
+
+Trusted Module Signature Hardening run `33185777058` accepted signed human
+commit `0c9a4e0196082ea65a3ab0fc730664825296b7c4` and produced signature-only bot
+commit `ac1847c0646175ce04647163265679be692fc13b` for exact checksum
+`sha256:1ecc197485ea8c3a742c0d4b54d8e1ac0e5f3a56150307aa64d1b5462e5be5be`
+with signature
+`7RaS1ForLPkkw4eFbclmqp+KUoAkbfOEUJXudkO60EFfeLcAJesPCjxAD0f75k5wiYgRJCevPXg6rLoJwD94DQ==`.
+Strict filesystem, cryptographic, and dev-baseline version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. This
+evidence-only checkpoint changes no signed payload byte and triggers the
+protected final-head matrix.
+
+Protected run `33189563881` then passed immutable-core compatibility on Python
+3.11, 3.12, and 3.13 but exposed a test-fixture portability defect in all three
+quality jobs. The two selected-path cases and two development-host cases
+created temporary commits without repository-local author identity; the local
+developer Git configuration masked that omission, while clean GitHub runners
+failed four tests before exercising the intended assertions. Each temporary
+repository now configures its own deterministic test name and email. Repeating
+the exact four cases with `GIT_CONFIG_GLOBAL=/dev/null` passes `4 passed`, and
+format, Ruff, BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint
+(`10.00/10`), and `git diff --check` remain green. This fixture-only correction
+does not alter the signed module payload or checksum. A replacement protected
+quality cycle and final review/thread disposition remain required.
+
+An independent exact-head audit superseded that matrix before any thread was
+resolved. Git clean filters and the `assume-unchanged` index flag can both make
+`git diff --quiet --no-textconv` report equality while analyzers read raw bytes
+that differ from the staged blob. Two real-repository regressions were authored
+before the replacement implementation and both failed with capsule `PASS` /
+exit `0`; each also proved the semantic Git diff returned `0`. Cached snapshot
+comparison now reads literal stage-zero index entries, hashes raw regular-file
+or symlink bytes with the repository object format, and fails closed for
+missing, unmerged, unsupported, unreadable, outside-repository, or ambiguous
+evidence. A fresh Codex review then exposed the remaining time-of-check/time-of-
+use gap: worktree bytes could change during runtime preparation or between
+sequential analyzer launches. Cached capsule review now freezes the index with
+one immutable Git tree object, batch-reads and materializes its raw regular-file
+and symlink blobs without checkout/export filters, runs every analyzer against
+that read-only snapshot, and derives changed-line evidence from the same tree
+identity rather than the live index. Unavailable changed-line evidence now
+forces `UNKNOWN` / exit `1` instead of preserving a completed clean verdict.
+Clean-filter, `assume-unchanged`, runtime-mutation, ordinary partial-staging,
+direct-host fail-closed, and fully staged controls initially passed together
+(`6 passed`). Independent edge validation then exposed selected-symlink finding
+identity drift and case/Unicode-normalizing filesystem collisions that could
+overwrite or redirect a later materialized path. Selected staged symlinks now
+fail closed; logical directories cannot collapse to one device/inode identity;
+regular files use exclusive no-follow creation; and every final regular/symlink
+entry is re-hashed against its immutable blob. The expanded focused matrix
+passes `9 passed`, including both macOS file and directory case-collision
+regressions. Complete gates, refreshed signing, protected checks, and final PR
+#448 thread disposition remain required by tasks 6.85-6.86.
+
+The expanded independent audit then closed four additional identity edges in
+the same cached-snapshot contract. An extant selected untracked path and a
+selected staged gitlink cannot be represented as analyzer input from the
+frozen tree and now fail closed instead of being confused with a staged
+deletion. Git replacement objects are disabled for all candidate Git commands,
+so `refs/replace` cannot substitute a different tree after `write-tree`.
+Finally, the bounded development-source fallback no longer analyzes live
+worktree files when the capsule runtime is unavailable: it analyzes the same
+materialized staged tree in full host mode, rebases finding paths to caller
+identities, applies changed-line enforcement against the frozen tree, and
+re-hashes every materialized entry after the host analyzers return. The exact
+host regression first observed staged `BLOCKED` bytes despite live `SAFE`
+bytes, and an independent adversarial analyzer reproduced the remaining gap by
+rewriting its snapshot to `SAFE` and returning `PASS` / exit `0`; post-analysis
+verification now converts that mutation to required `UNKNOWN` / exit `1` with
+`cached_host_snapshot_mutated`. The focused cached-snapshot and host-fallback
+selection passes `14 passed`. Complete final-byte gates, refreshed signing,
+protected checks, and final PR #448 thread disposition remain required by
+tasks 6.85-6.86.
+
+Independent fallback validation then advanced live `HEAD` from inside a host
+analyzer after returning a real staged-snapshot blocker. Although snapshot
+re-hashing passed, the former late `HEAD` versus frozen-index diff became empty
+and downgraded the blocker to `PASS_WITH_ADVISORY` / exit `0`. Cached capture
+now records the base tree before `write-tree`, verifies that `HEAD` still names
+the same tree immediately afterward, freezes the caller coordinate, and later
+diffs only that immutable base/index pair. Host fallback tools execute with the
+materialized root as their working directory, so tool configuration discovery
+is staged-snapshot-bound. The regression advances the repository `HEAD` during
+host analysis while confirming the host saw staged `BLOCKED` bytes from the
+snapshot root; the frozen diff still classifies its line-1 blocker and returns
+`FAIL` / exit `1`. The focused cached and host matrix remains `14 passed`.
+
+Final local-byte verification passes strict OpenSpec, format, Ruff,
+BasedPyright (`0 errors, 0 warnings, 0 notes`), Pylint (`10.00/10`), and all
+`28` contract-first tests, plus seven manifests and registry, bundle imports,
+three CLI contract files, filesystem checksum/version verification against the
+immutable core `0.55.1` public key, publish precheck, and `git diff --check`.
+The complete exact-core `0.55.1` suite passes `1716` of `1717`; the sole failure
+remains the documented unsupported local macOS/CPython 3.14 capsule-lock
+selector, with only the two existing third-party
+Lark deprecations. The complete runner surface passes `339` of `340` with that
+same environment-only exception. Exact-core changed-line Code Review returns
+`PASS_WITH_ADVISORY`, exit `0`, with `83` retained findings, two pre-existing
+blockers outside changed lines, and no changed-line blocker. Independent
+adversarial revalidation replayed live-`HEAD` advance and snapshot mutation:
+the former remains `FAIL` / exit `1` on the frozen diff, the latter is required
+`UNKNOWN` / exit `1`, and no further byte/diff binding fail-open was found.
+The canonical changed-only signer preserves unpublished version `0.49.63` and
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and sets
+unsigned filesystem checksum
+`sha256:80857465b9997fefbe94c4b89bd6bab9e772a34d1c05187feaf2edb6ec1f9c2c`.
+A signed human commit, trusted replacement signature, protected checks, and
+final PR #448 thread disposition remain required by tasks 6.85-6.86.
+
+Trusted Module Signature Hardening run `33189416076` accepted signed human
+commit `a1c37d495481e670fe5430f70bc1524daaf350f8` and produced signature-only bot
+commit `feda3c17ff6b6e3650b37d8fdd886deddc9b4d51` for exact checksum
+`sha256:80857465b9997fefbe94c4b89bd6bab9e772a34d1c05187feaf2edb6ec1f9c2c`
+with signature
+`8gfmJ66V7u0SMGIIxTW7qsD0uo8JJ/bVrKfpTS29OB17Bx1rIndrrVoOia8fxVtvZXnmPeAMo8K/cusfl1V+BQ==`.
+Strict filesystem, cryptographic, and dev-baseline version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. This
+evidence-only checkpoint changes no signed payload byte and triggers the
+protected final-head matrix.
+
+Protected replacement run `33190719624` passed the complete quality and
+minimum-core compatibility matrices on Linux CPython 3.11, 3.12, and 3.13;
+Docs Review, requirements evidence, CodeQL, Socket, CodeRabbit, and both module
+signature checks also passed on fixture-corrected commit
+`7c34f93e223c66f0832ecd9633c1117bc0550337`. A Codex review of the preceding
+evidence head then identified a contract regression in ordinary changed
+enforcement: unavailable Git line evidence rewrote even a completed
+blocker-free PASS to required `UNKNOWN` / exit `1`. Independent validation
+confirmed that the active local-capsule scenario requires ordinary
+worktree/explicit-file reviews to preserve completed PASS and FAIL verdicts,
+while the later cached immutable-tree clause separately requires unavailable
+cached line evidence to remain `UNKNOWN` / exit `1`.
+
+The blocker-free PASS expectation failed first (`1 failed`) against the prior
+implementation. Expanding the boundary to completed FAIL, completed PASS,
+required UNKNOWN, and cached PASS produced `2 failed, 2 passed`: ordinary FAIL
+was incorrectly downgraded to UNKNOWN, and the first narrow correction
+incorrectly let cached PASS survive unavailable frozen-tree evidence. The
+precondition now preserves an already-completed report only when no cached
+identity is present; required UNKNOWN is returned before discovery, and cached
+unavailable evidence retains its fail-closed UNKNOWN result. Those four
+controls pass, a real explicit-file review outside Git retains PASS / exit `0`,
+and the broader changed-line/cached enforcement selection passes `52 passed`.
+The production correction advances the unpublished module to `0.49.64`, keeps
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and sets
+unsigned filesystem checksum
+`sha256:13f208939b69fc54d8d4177dc2260b490be62443da3a428e3c643754fa62c942`.
+Pre-sign local verification passes format, Ruff, BasedPyright (`0 errors, 0
+warnings, 0 notes`), Pylint (`10.00/10`), strict OpenSpec, seven manifests plus
+registry, bundle imports, all `28` contract-first tests, the publish precheck,
+filesystem checksum/version verification, and `git diff --check`. The complete
+runner surface passes `341` of `342`; its sole failure is the already documented
+unsupported local macOS/CPython 3.14 capsule-lock environment. Trusted
+replacement signing, signed-head complete tests, protected final-head checks,
+and verified PR #448 thread disposition remain required by task 6.89.
+
+Trusted Module Signature Hardening run `33192244166` accepted signed human
+commit `8ce0d3b2b0fc128f3468a1d1e4b4a25792db690b` and produced signature-only bot
+commit `51b9d4ec16c2931edd4f5410b9bcbf619022e5b7` for exact checksum
+`sha256:13f208939b69fc54d8d4177dc2260b490be62443da3a428e3c643754fa62c942`
+with signature
+`J/fPBJhNWJP+BcSoBurimOT5PUmNC+VscQmjlSPegRwRZBoBUHtz4XqCa/0HBT0xOxpFW0rnvxqANHhzZGpUDA==`.
+Strict filesystem, cryptographic, and dev-baseline version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. The
+complete exact-core suite passes `1718` of `1719`; the sole failure remains the
+same local macOS/CPython 3.14 capsule-lock selector, with only two existing Lark
+deprecation warnings. The complete runner surface likewise passes `341` of
+`342` with that environment-only exception. This evidence-only checkpoint
+changes no signed payload byte and triggers the protected final-head matrix.
+
+The final Codex review of evidence head `84ac4c2bfe04618a3d0170146396289e471b460b`
+identified four further changed-enforcement identity gaps. Independent agents
+validated each against the active contract and current source: cached capsule
+findings were not rebased from a repository-root snapshot to a nested caller;
+an unborn repository had no immutable base tree; and ordinary worktree Git
+diffs could hide analyzer-visible raw bytes through a clean filter,
+`assume-unchanged`, or `skip-worktree`. Contract clauses and real-repository
+regressions were authored first. The initial focused run failed all five
+behavior cases (`5 failed`); the expanded boundary includes relative and
+capsule-absolute nested findings plus outside-snapshot rejection and now passes
+`7 passed`.
+
+Cached capture now accepts only a proven unborn symbolic branch as an empty
+base, creates its object-format-correct empty tree, and repeats the base
+identity check so a racing first commit fails closed. Cached capsule findings
+are translated from the frozen snapshot to the repository and caller
+coordinate before both report construction and member-evidence projection;
+outside-snapshot identities yield required `UNKNOWN`. Ordinary worktree line
+evidence remains Git-derived but is accepted only when a second raw
+`HEAD`-blob versus filesystem-byte diff produces the same non-empty line map,
+independently of repository attributes and index hints. The broader
+changed/cached selection passes `73 passed`.
+
+The clean-code gate first rejected the raw corroboration implementation for a
+new changed-line `CC18` complexity blocker. Splitting blob loading, one-path
+raw comparison, and final corroboration into single-purpose helpers reduced
+the touched functions below the blocking threshold without changing behavior;
+the repeated changed-line review returns `PASS_WITH_ADVISORY`, exit `0`, with
+`86` retained findings, two legacy blockers outside changed lines, and no
+changed-line blocker. Exact-core `0.55.1` format, Ruff, BasedPyright (`0 errors,
+0 warnings, 0 notes`), Pylint (`10.00/10`), YAML, bundle imports, strict
+OpenSpec, all `28` contract tests, filesystem checksum/version verification,
+publish precheck, and `git diff --check` pass. Both complete and smart suites
+pass `1725` of `1726`; the sole failure remains the documented local
+macOS/CPython 3.14 capsule-lock selector, with only the two existing Lark
+deprecations. The unpublished module advances to `0.49.65`, preserves
+compatibility `>=0.55.1,<1.0.0`, removes the superseded signature, and has
+unsigned filesystem checksum
+`sha256:6a13bb1eb0e590faf5cbe5df9b9ff232e53c7722569a4021d7952829a53b3694`.
+Signed human commit, trusted replacement signing, protected final-head checks,
+and verified PR #448 thread disposition remain required by task 6.91.
+
+Trusted Module Signature Hardening run `33195149922` accepted signed human
+commit `574902940db654d8f914df896c803c96ae7063c8` and produced signature-only bot
+commit `117798cf54243e5c591fbaa0d4e05f4e722dea92` for exact checksum
+`sha256:6a13bb1eb0e590faf5cbe5df9b9ff232e53c7722569a4021d7952829a53b3694`
+with signature
+`LzgnM6l2yt9dNKm/koREea2lfA29E5KTqUQw65RIcpDE56W3NcS6WOkFaYRPVCcv1dLvcSsreeFmGp57H3I3Aw==`.
+Strict filesystem, cryptographic, and dev-baseline version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. This
+evidence-only checkpoint changes no signed module payload byte and triggers the
+protected final-head matrix.
+
+The final Codex review of head `918ae73294bee69fdc4f3eb50aee8e71c45c5595`
+identified one additional ordinary-worktree race inside the same changed-line
+identity contract. Independent validation confirmed that capsule analysis used
+the live caller directory, then recomputed changed lines from potentially newer
+bytes. A blocker observed on line 1 could be moved to line 2 during analysis;
+the stale finding then missed the later line map and the analyzer `FAIL` became
+`PASS_WITH_ADVISORY` / exit `0`.
+
+The contract and task boundary were updated before implementation. Two
+real-repository regressions first failed (`2 failed`): selected bytes moved
+during the capsule stub returned `PASS_WITH_ADVISORY` / exit `0`, while a
+concurrent `HEAD` advancement retained ordinary `FAIL` instead of required
+uncertainty. Ordinary changed analysis now captures the immutable `HEAD` tree
+plus exact selected-path kind, mode, filesystem identity, timestamps, size, and
+raw-content digest before analyzer execution, repeats that capture before
+changed-line projection, and emits
+`worktree_snapshot_changed_during_analysis` as required `UNKNOWN` / exit `1` on
+any mismatch. The same guard covers the bounded development-host fallback.
+Both regressions and the three clean-filter/index-hint controls pass (`5
+passed`); the complete runner surface passes `350` of `351`.
+
+Exact-core `0.55.1` format, Ruff, BasedPyright (`0 errors, 0 warnings, 0
+notes`), Pylint (`10.00/10`), strict OpenSpec, seven manifests plus registry,
+bundle imports, all `28` contract-first tests, filesystem checksum/version
+verification with the immutable core public key, publish precheck, and `git
+diff --check` pass. Manual changed-line Code Review with bug-hunt enabled returns
+`PASS_WITH_ADVISORY`, exit `0`, with no changed-line blocker; its two errors are
+the already documented local capsule/test environment findings outside this
+patch. Complete and smart exact-core suites each pass `1727` of `1728`; their
+sole identical failure remains the known macOS/CPython 3.14 capsule-lock
+selector, with only two existing Lark deprecations. The unsigned candidate is
+`specfact-code-review` 0.49.66 with unchanged compatibility
+`>=0.55.1,<1.0.0` and checksum
+`sha256:30a90dd7d43cc84b46177c5fac7aa55ee4b51538c02040c68e3ccd612af8c09d`.
+Signed human commit, trusted replacement signing, protected final-head checks,
+and verified PR #448 thread disposition remain required by task 6.93.
+
+Trusted Module Signature Hardening run `33197304993` accepted signed human
+commit `212092ed5e1377f70e83492545402324d1aab11c` and produced signature-only bot
+commit `ff7ef96280a89bec4821d417be8efe921491d0a7` for exact checksum
+`sha256:30a90dd7d43cc84b46177c5fac7aa55ee4b51538c02040c68e3ccd612af8c09d`
+with signature
+`1srhq755XdZZUJ0VXSjnHATBujnUAOkdgIaAwWdO2dBkstTwaxfdtXW6jsAmAXowun9utJEsipkvP8Ie07EmCA==`.
+Strict filesystem, cryptographic, and `origin/dev` version verification against
+the immutable core `0.55.1` public key passes all seven module manifests. This
+evidence-only checkpoint changes no signed module payload byte and triggers the
+protected final-head matrix.
+
+The final Codex review of head `d1728f459fa1bfd9071e9e3a002c832dad0f3039`
+identified one remaining projection-time window inside the same ordinary
+worktree identity contract. Independent validation reproduced the issue: after
+the post-analysis identity check, moving the analyzed blocker from line 2 to
+line 3 on entry to changed-line enforcement made the live diff contain only
+line 3 while the capsule finding remained on line 2. The completed analyzer
+failure was therefore downgraded to `PASS_WITH_ADVISORY` / exit `0`.
+
+The OpenSpec scenario and tasks were updated before the regression and
+production edit. The exact real-repository regression first failed (`1 failed`)
+with that unintended PASS result. Capsule enforcement now stores its projected
+report and rechecks the original selected raw-path plus immutable `HEAD` tree
+identity after changed-line derivation, returning the existing required
+`worktree_snapshot_changed_during_analysis` UNKNOWN / exit `1` on drift. The
+analysis-time and projection-time controls pass together (`3 passed`). The
+development-host path already enclosed its internal projection within the
+existing post-run identity check and required no semantic change.
+
+Exact-core `0.55.1` smart and complete suites each pass `1728` of `1729`; their
+sole identical failure remains the documented local macOS/CPython 3.14 capsule
+lock selector, with two existing Lark deprecations. Strict OpenSpec, format,
+repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`),
+all `28` contract-first tests, seven manifests plus registry, bundle imports,
+filesystem checksum/version verification, publish precheck, and `git diff
+--check` pass. The first changed-line review exposed a remediation-caused
+cyclomatic-complexity result; centralizing the repeated identity predicate
+removed it without changing behavior. The repeated review is
+`PASS_WITH_ADVISORY`, exit `0`, with no changed-line blocker and only the
+pre-existing `_run_capsule_snapshot` parameter-count error. Candidate module
+version is `0.49.67`, compatibility remains `>=0.55.1,<1.0.0`, and the unsigned
+filesystem checksum is
+`sha256:28a8149c74471166e1c16bd83ec5f2f6072323e41316f495410e8a09e02723cf`.
+Replacement approval-time signing, final-head protected checks, and verified PR
+#448 thread disposition remain required by tasks 6.93 and 6.95.
+
+Trusted Module Signature Hardening run `33199071631` accepted signed human
+commit `0724494f6def11b5206cf859be639dd6f761e017` and produced signature-only bot
+commit `90a4579a97dbbfaa238f6f7b0768f68712e83501` for exact checksum
+`sha256:28a8149c74471166e1c16bd83ec5f2f6072323e41316f495410e8a09e02723cf`
+with signature
+`eCOtOGOI1p+Fm/WxLQvvkLQpHTVp+iMC8RXKrUZXMTzj83wQRAsaDYY3lJ4859IWRg3SolSY3xS6JDCX1/r0DQ==`.
+The bot diff is exactly one signature line. Strict filesystem, cryptographic,
+and `origin/dev` version verification against the immutable core `0.55.1`
+public key passes all seven module manifests. This evidence-only checkpoint
+changes no signed module payload byte and triggers the protected final-head
+matrix.
+
+The final Codex review of head `66ad60c26e530e0502b56f4d8af78f8c21d6ef32`
+identified two further local snapshot-identity gaps. Independent validation
+reproduced both on those exact bytes: changing only an unselected
+`pyproject.toml` changed Ruff from an F401 finding to a clean result while the
+selected-file identity remained equal, and pinned BasedPyright followed an
+unselected indexed symlink outside the cached root while the materialized-tree
+verifier remained true as the external target changed.
+
+The OpenSpec contract and tasks were updated before the focused regressions.
+The initial run produced exactly five failures and three passing controls: both
+unselected configuration/import mutations retained `PASS` / exit `0`, and
+direct absolute, relative-parent, and chained cached symlink escapes all
+materialized successfully; stable worktree inputs and the contained cached
+symlink passed. Ordinary repository identity now binds the complete tracked
+plus non-ignored untracked Git-visible path set, unioned with explicit selected
+paths, using raw no-follow type/filesystem/content identities and stable
+pre/post path-set plus base-tree checks. Cached materialization now verifies
+every symlink's terminal resolution remains beneath the already bound real
+root during both initial and post-host tree checks. The eight focused cases
+then passed, followed by all 26 neighboring ordinary-worktree and cached-host
+identity controls. Formatting, repository typing (`0 errors, 0 warnings, 0
+notes`), Ruff, and Pylint (`10.00/10`) pass. The complete runner surface passes
+`369` of `370`; its sole failure remains the documented local macOS/CPython
+3.14 capsule-lock selector. Candidate module version is `0.49.72`, compatibility
+remains `>=0.55.1,<1.0.0`, and the refreshed unsigned filesystem checksum is
+`sha256:12bb3e10b77dc00f85bbe3c8be30bb47a6c1fdc529c091ffadac747cd23f1acd`.
+
+Independent review of the candidate patch then found two edge cases before
+commit. A stable unselected in-root symlink made ordinary identity unavailable,
+while terminal-only cached containment admitted a link that lexically left the
+snapshot through mutable external state and re-entered it. The OpenSpec contract
+and tasks were extended before both focused regressions failed exactly (`2
+failed`): the safe worktree link prevented analyzer dispatch, and the
+leave-and-re-enter cached link materialized. Raw unselected symlink bytes are
+now bound only when selected-link rejection remains inactive and a bounded
+component walk proves every lexical and terminal hop stays beneath the real
+repository root. The same every-hop proof runs for cached links before and
+after host analysis. Both cases pass, and the full focused set passes `11`
+tests. Approval-time signing, remaining repository and protected checks, final
+review, and verified PR #448 thread disposition remain required by tasks 6.106
+and 6.108.
+
+Final local gates on 2026-08-28 passed strict C14 OpenSpec, canonical format,
+explicit repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint
+(`10.00/10`), seven manifests plus registry, bundle imports, filesystem
+checksum/version verification with the immutable core `0.55.1` public key,
+publish precheck, `28` contract-first tests, and `git diff --check`. The final
+runner surface passes `371` of `372`. Independent smart and complete suites
+each pass `1748` of `1749`; the sole identical failure remains the documented
+local macOS/CPython 3.14 capsule-lock selector, with two existing Lark
+deprecations. The mandatory changed-line Code Review is
+`PASS_WITH_ADVISORY`, exit `0`, with `91` inherited/tool-environment findings,
+the same two documented legacy blockers, and no blocker on a changed line.
+Candidate module version is `0.49.72`, compatibility remains
+`>=0.55.1,<1.0.0`, and unsigned filesystem checksum is
+`sha256:12bb3e10b77dc00f85bbe3c8be30bb47a6c1fdc529c091ffadac747cd23f1acd`.
+Signed human commit, approval-time module signature, protected Linux
+CPython 3.11-3.13 checks, final-head review, and verified PR #448 thread
+disposition remain required.
+
+A fresh security-bypass review of that candidate found three additional
+ordinary-worktree boundary cases before commit: ignored analyzer configuration
+or Python support was absent from the bound set, a tracked file reached through
+an ignored symlinked parent was validated only by its final regular-file type,
+and a stable unselected gitlink directory made identity unavailable. Five exact
+regressions were authored before the replacement implementation and failed
+together (`5 failed`, `372 deselected`): mutations of ignored
+`pyproject.toml`, ignored imported Python, and an ignored contained symlink
+target retained stale `PASS`; an escaping symlinked parent reached analyzer
+dispatch; and a stable gitlink prevented analyzer dispatch.
+
+Repository-root discovery now adds analyzer-relevant source, test-support, and
+policy paths regardless of Git ignore status, plus each contained final
+symlink target. Every non-missing bound path undergoes the bounded every-hop
+containment proof, and unselected stable directories receive an explicit raw
+filesystem identity while selected special paths remain rejected. All five
+security regressions pass, and the complete ordinary-worktree enforcement
+neighborhood passes `22` tests. The complete runner surface passes `376` of
+`377`; independent smart and complete suites each pass `1753` of `1754`. Their
+sole identical failure remains the documented local macOS/CPython 3.14
+capsule-lock selector, with two existing Lark deprecations.
+
+Replacement final-byte verification on 2026-08-28 passes strict C14 OpenSpec,
+canonical formatting, repository typing (`0 errors, 0 warnings, 0 notes`),
+Ruff, Pylint (`10.00/10`), seven manifests plus registry, bundle imports,
+filesystem checksum/version verification with the immutable core `0.55.1`
+public key, publish precheck, `28` contract-first tests, and `git diff --check`.
+Candidate module version remains `0.49.72`, compatibility remains
+`>=0.55.1,<1.0.0`, and the replacement unsigned filesystem checksum is
+`sha256:f077348644a3cf06f432876e74f268e6495622898cfbc108b77e98bdcaa554db`.
+The full staged pipeline passes, including generated command/docs checks and
+the changed-line Code Review (`PASS_WITH_ADVISORY`, exit `0`, `208` inherited
+or tool-environment findings). Its only two error-severity records are the
+pre-existing `_run_capsule_snapshot` parameter-count finding and the documented
+host test outcome; neither is on a changed line. Signed commit, approval-time
+module signing, protected Linux CPython 3.11-3.13 checks, final-head review, and
+verified PR #448 thread disposition remain required.
+
+Trusted Module Signature Hardening accepted signed human commit
+`5b366a0da625677f32b6af06c822aae863657d94` and produced signature-only bot
+commit `67552f9eab4614f7764e8fd4b4fc5c762f36f8af` for exact checksum
+`sha256:f077348644a3cf06f432876e74f268e6495622898cfbc108b77e98bdcaa554db`
+with signature
+`6R9UdcnR0UhLrhy2kfugDRrxYQcGFhH8SbbX8ZwvWsC52aXd2wiu/Z6u/2fz+BD1ZM5gHF4V+uvWaxpHMUCpAA==`.
+The bot diff is exactly one signature line. Strict filesystem,
+cryptographic, and `origin/dev` version verification against the immutable
+core `0.55.1` public key passes all seven module manifests. This evidence-only
+checkpoint changes no signed module payload byte and triggers the protected
+final-head matrix; final review and verified PR #448 thread disposition remain
+required.
+
+The requested final Codex review of signed human head
+`55a8df76a09dabf8da9a8007aeeccbccf88dd556` opened P2 thread
+`PRRT_kwDORVEFbs6dTMvm`. Independent exact-head validation confirmed that a
+contained tracked directory symlink into an intentionally excluded `.venv`
+tree bound only the target directory metadata, not an imported descendant:
+mutating that descendant changed real BasedPyright output while the complete
+ordinary worktree identity remained equal.
+
+The OpenSpec contract and tasks were updated before an exact failing regression
+and stable control. The stable bound-directory link passed, while
+`pkg -> .venv/support_pkg` reached analyzer dispatch and retained the incomplete
+identity (`1 failed`, `1 passed`, `377 deselected`). Ordinary identity discovery
+now rejects a directory symlink when any contained target component is one of
+the deliberately scan-excluded directories; contained file links, bound normal
+directory links, selected special-path rejection, and stable gitlink behavior
+remain unchanged. Both exact cases pass, and the complete worktree-enforcement
+neighborhood passes `24` tests.
+
+Replacement local verification for unpublished `specfact-code-review` 0.49.73
+passes strict C14 OpenSpec, canonical formatting, repository typing (`0 errors,
+0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), seven manifests plus registry,
+bundle imports, filesystem checksum/version verification with the immutable
+core `0.55.1` public key, publish precheck, `28` contract-first tests, and
+`git diff --check`. The runner surface passes `378` of `379`; independent smart
+and complete suites each pass `1755` of `1756`, with only the same documented
+local macOS/CPython 3.14 capsule-lock failure and two existing Lark
+deprecations. Compatibility remains `>=0.55.1,<1.0.0`; the unsigned filesystem
+checksum is
+`sha256:2b5824fff6749f2442a44f954b9904f664fcd02b5c09a097ac247b96163c3a79`.
+The full staged pipeline passes, including generated command/docs checks and
+changed-line Code Review (`PASS_WITH_ADVISORY`, exit `0`, `211` inherited or
+tool-environment findings); its two error records remain the same pre-existing
+parameter-count and host-test findings, with neither on a changed line. Signed
+commit, replacement approval-time signing, protected Linux CPython 3.11-3.13
+checks, another final-head review, and verified PR #448 thread disposition
+remain required.
+
+Trusted Module Signature Hardening accepted signed human commit
+`b3ee0b89cfb08ab2c21f2f798ff519a606c96d3d` and produced signature-only bot
+commit `ba46e854bff360e25d35634723c22364c1d43715` for exact checksum
+`sha256:2b5824fff6749f2442a44f954b9904f664fcd02b5c09a097ac247b96163c3a79`
+with signature
+`t28MCLFPDka/y6kGgBNwW692UpldDHQZpjXMivpqwQVz8bwxZTDt11SXoNxUGw7wI6Io9qjxd8cRU0eIpsHdDg==`.
+The bot diff is exactly one signature line, and strict filesystem,
+cryptographic, and `origin/dev` version verification against immutable core
+`0.55.1` passes all seven manifests. This signed evidence-only checkpoint
+changes no module payload byte and triggers the replacement protected matrix.
+
+The final Codex review of head `9e2cdb537c02a71bec22f79f49a4fb40e8d675f9`
+identified a selected-symlink mismatch inside the same ordinary worktree input
+identity. Independent validation against that immutable head reproduced both
+states: an in-repository symlink whose unselected target changed returned
+`PASS` / exit `0`, and an escaping symlink raised an uncaught `ValueError` when
+capsule path resolution left the snapshot root. In both cases identity capture
+bound only the symlink text while analyzer preparation dereferenced different,
+unbound target bytes.
+
+The OpenSpec scenario and tasks were updated before the parameterized
+real-repository regression and production edit. Both cases first reached the
+capsule stub and failed (`2 failed`). Ordinary changed worktree identity now
+rejects every selected symlink before analyzer execution; the existing
+`worktree_snapshot_identity_unavailable` path produces required UNKNOWN / exit
+`1`. Cached behavior already rejected selected symlinks and is unchanged. The
+two symlink cases plus the three analysis/projection drift controls pass (`5
+passed`).
+
+Exact-core `0.55.1` smart and complete suites each pass `1730` of `1731`; their
+sole identical failure remains the documented local macOS/CPython 3.14 capsule
+lock selector, with two existing Lark deprecations. Strict OpenSpec, format,
+repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`),
+all `28` contract-first tests, seven manifests plus registry, bundle imports,
+filesystem checksum/version verification, publish precheck, and `git diff
+--check` pass. Changed-line Code Review is `PASS_WITH_ADVISORY`, exit `0`, with
+no changed-line blocker and only the pre-existing `_run_capsule_snapshot`
+parameter-count error. Candidate module version is `0.49.68`, compatibility
+remains `>=0.55.1,<1.0.0`, and the unsigned filesystem checksum is
+`sha256:c1e03e2d7a10839aefd694479d1deb7a965eac546aed51d4274321e74d287b61`.
+Replacement approval-time signing, final-head protected checks, and verified PR
+#448 thread disposition remain required by tasks 6.93, 6.95, and 6.97.
+
+Trusted Module Signature Hardening run `33200199597` accepted signed human
+commit `54fc040d97369e8ddf50a17e6a7e7c69e310e076` and produced signature-only bot
+commit `21b78c32ca1ca50194791bd2fd447669f1bfe79b` for exact checksum
+`sha256:c1e03e2d7a10839aefd694479d1deb7a965eac546aed51d4274321e74d287b61`
+with signature
+`yDTFObzQ+nA8oALbPqljPGlNak82qwvkHErmY6Da4FreSEJHg6VFJIJWnHohrmbMgbbMYybywJeHj7DvaWtaDQ==`.
+The bot diff is exactly one signature line. Strict filesystem, cryptographic,
+and `origin/dev` version verification against the immutable core `0.55.1`
+public key passes all seven module manifests. This evidence-only checkpoint
+changes no signed module payload byte and triggers the protected final-head
+matrix.
+
+The final Codex review of head `492872c97598b31352a6839416305fc11e8576b2`
+identified one remaining initial-repository gap inside the same ordinary
+worktree identity contract. Independent validation against that immutable head
+reproduced the issue in a freshly initialized repository: the format-correct
+empty-tree identity was available, but ordinary identity capture and raw-line
+derivation returned unavailable, capsule analysis never ran, and the result was
+`worktree_snapshot_identity_unavailable` UNKNOWN / exit `1`.
+
+The OpenSpec scenario and tasks were updated before two real-repository
+regressions and production code. Both tests first failed (`2 failed`): the
+initial untracked file could not capture an identity, and creating the first
+commit during the capsule stub never reached analysis. Ordinary worktree
+identity now reuses the existing proven-unborn empty-tree resolver before and
+after analysis. Raw filesystem comparison and the ordinary Git diff use that
+same object-format-correct base, while malformed, detached, or otherwise
+unproven missing `HEAD` states remain unavailable. Initial untracked files are
+therefore analyzed with every raw line changed, and a racing first commit is
+still rejected as `worktree_snapshot_changed_during_analysis` UNKNOWN / exit
+`1`. The two new tests plus all five selected-byte, base-tree, projection, and
+symlink controls pass (`7 passed`).
+
+The complete runner surface passes `355` of `356`; exact-core `0.55.1` smart and
+complete suites each pass `1732` of `1733`. Their sole identical failure remains
+the documented local macOS/CPython 3.14 capsule-lock selector, with two existing
+Lark deprecations. Strict OpenSpec, canonical format, repository typing (`0
+errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), all `28`
+contract-first tests, seven manifests plus registry, bundle imports,
+filesystem checksum/version verification, publish precheck, and `git diff
+--check` pass. The first changed-line Code Review exposed one patch-caused
+`CC17`; extracting the immutable baseline-selection decision removed it without
+changing behavior. The repeated review is `PASS_WITH_ADVISORY`, exit `0`, with
+no changed-line blocker and only the pre-existing `_run_capsule_snapshot`
+parameter-count error plus the documented local test outcome. Candidate module
+version is `0.49.69`, compatibility remains `>=0.55.1,<1.0.0`, and the unsigned
+filesystem checksum is
+`sha256:bcde7845f91d5aeb2e44091428b37cabef2da0897eb9c7728a316000422f3e8a`.
+Replacement approval-time signing, final-head protected checks, and verified PR
+#448 thread disposition remain required by tasks 6.93, 6.95, 6.97, and 6.99.
+
+Trusted Module Signature Hardening run `33201891958` accepted signed human
+commit `c838ddee921809abc7464be068a871aec0beab0e` and produced signature-only bot
+commit `b57012a18304946e093378ffcb9bf4a25a4481d2` for exact checksum
+`sha256:bcde7845f91d5aeb2e44091428b37cabef2da0897eb9c7728a316000422f3e8a`
+with signature
+`eaEE9aCuzKe56e9x+ZgQY8CNmbQ7uqgF0L8vKyL1moq6wOVH6YNl01E2RIoxQBvfR86bBaEW88u8nIkxsUsRDg==`.
+The bot diff is exactly one signature line. Strict filesystem, cryptographic,
+and `origin/dev` version verification against the immutable core `0.55.1`
+public key passes all seven module manifests. This evidence-only checkpoint
+changes no signed module payload byte and triggers the protected final-head
+matrix.
+
+The final Codex review of head `64a5dea06d00aeff32dbd17611feb28db8ead41e`
+identified one remaining non-repository positional-file gap in the same
+ordinary worktree identity contract. Independent validation against that
+immutable head confirmed that `_capture_worktree_analysis_identity` returned
+the `not_repository` sentinel, both post-analysis checks skipped comparison,
+and unavailable Git line evidence preserved a stale clean capsule result as
+`PASS` / exit `0` after the selected file changed.
+
+The OpenSpec scenario and tasks were updated before a stable control and
+analysis-time mutation regression. The stable non-Git positional review passed,
+while the mutation case first failed exactly because it returned `PASS` /
+`PASS` / `0` (`1 failed, 1 passed`). Proven non-repository positional reviews
+now bind the exact absolute raw selected-path identities at both existing
+checkpoints. Standalone capture is admitted only when lexical filesystem
+ancestry proves Git metadata absent for both the caller and selected paths;
+repository detection failure, duplicate paths, symlinks, raced filesystem
+identity, or unprovable ancestry remains unavailable rather than discarding an
+available base-tree requirement. The new stable/mutation cases plus all seven
+selected-byte, base-tree, projection, symlink, and unborn controls pass (`9
+passed`).
+
+The complete runner surface passes `357` of `358`; exact-core `0.55.1` smart
+and complete suites each pass `1734` of `1735`. Their sole identical failure
+remains the documented local macOS/CPython 3.14 capsule-lock selector, with two
+existing Lark deprecations. Strict OpenSpec, canonical format, repository
+typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), all `28`
+contract-first tests, three CLI-contract fixtures, seven manifests plus
+registry, bundle imports, filesystem checksum/version verification with the
+immutable core public key, publish precheck, and `git diff --check` pass. The
+changed-line Code Review is `PASS_WITH_ADVISORY`, exit `0`, with no changed-line
+blocker and only the pre-existing `_run_capsule_snapshot` parameter-count error
+plus the documented local test outcome. Candidate module version is `0.49.70`,
+compatibility remains `>=0.55.1,<1.0.0`, and the unsigned filesystem checksum
+is `sha256:1e916ad06d0470548cde4011aff9eb0002ebb31c0c5c20c814cf9dc2497fcdff`.
+Replacement approval-time signing, final-head protected checks, final Codex
+review, and verified PR #448 thread disposition remain required by tasks 6.93,
+6.95, 6.97, 6.99, and 6.101.
+
+Trusted Module Signature Hardening run `33203618456` accepted signed human
+commit `5a204c19a8c713920d5abe115ff819f529f45512` and produced signature-only bot
+commit `5aa669a4974d7afb5452e0927400f26cc80ace68` for exact checksum
+`sha256:1e916ad06d0470548cde4011aff9eb0002ebb31c0c5c20c814cf9dc2497fcdff`
+with signature
+`vVmcbu0Pynn8Ck/Aw95UYGEt9sqxC6SPxLUzo+ke0bwALeJT7BpJ2jsh0N6KLu7U/yjoHPGNVmmeidnxuDADDA==`.
+The bot diff is exactly one signature line. Strict filesystem, cryptographic,
+and `origin/dev` version verification against the immutable core `0.55.1`
+public key passes all seven module manifests. This evidence-only checkpoint
+changes no signed module payload byte and triggers the protected final-head
+matrix.
+
+The final Codex review of head `41e6834959893ff731de7e289e3f141ed8fe5e78`
+identified one remaining cached development-host gap inside the existing
+materialized-directory identity contract. Independent validation dynamically
+reproduced the exact public fallback: a host analyzer renamed the materialized
+parent, replaced it with a symlink to an external directory containing the same
+expected selected-file bytes plus attacker-controlled configuration, and
+returned a clean report. The byte-only post-check returned true and the command
+returned `PASS` / exit `0` with no diagnostic.
+
+The OpenSpec scenario and tasks were updated before stable, same-byte real
+directory replacement, and same-byte symlink replacement regressions. The
+stable case passed while both replacements first failed exactly because they
+returned `PASS` / exit `0` (`2 failed, 1 passed`). Cached materialization now
+binds the root plus every created logical directory's real-directory type,
+device, and inode during construction. Verification requires every directory
+identity before and after immutable blob checks, so missing, symlinked, or
+replaced directories produce `cached_host_snapshot_mutated` UNKNOWN / exit `1`
+even when selected file bytes are unchanged. The three new cases plus existing
+cached host-byte mutation, staged-tree analysis, and case/Unicode collision
+controls pass (`7 passed`).
+
+The complete runner surface passes `360` of `361`; exact-core `0.55.1` smart
+and complete suites each pass `1737` of `1738`. Their sole identical failure
+remains the documented local macOS/CPython 3.14 capsule-lock selector, with two
+existing Lark deprecations. Strict OpenSpec, canonical format, repository
+typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), all `28`
+contract-first tests, three CLI-contract fixtures, seven manifests plus
+registry, bundle imports, filesystem checksum/version verification with the
+immutable core public key, publish precheck, and `git diff --check` pass. The
+changed-line Code Review is `PASS_WITH_ADVISORY`, exit `0`, with no changed-line
+blocker, no introduced finding, and only the two documented legacy/tool-host
+blockers. Candidate module version is `0.49.71`, compatibility remains
+`>=0.55.1,<1.0.0`, and the unsigned filesystem checksum is
+`sha256:f8d09ae0ce76efff33c3b33994c5571ed2c8111812f5abd6fee35ccdd00d40d8`.
+Replacement approval-time signing, final-head protected checks, final Codex
+review, and verified PR #448 thread disposition remain required by tasks 6.93,
+6.95, 6.97, 6.99, 6.101, and 6.103.
+
+Trusted Module Signature Hardening run `33205340770` accepted signed human
+commit `5f355eb7e485cfd104db79208a17e9d00ba007e3` and produced signature-only bot
+commit `80cd62f299cf782a4b979201c8ecdc2e64d608c9` for exact checksum
+`sha256:f8d09ae0ce76efff33c3b33994c5571ed2c8111812f5abd6fee35ccdd00d40d8`
+with signature
+`XJ3FK0V36t9J6w0yA4RCh110vDYQNM71fNpJK/lw4lDBybFbPB89wkZpOKU21kq7c36AGwPUfhPNWtkYOUzpBA==`.
+The bot diff is exactly one signature line. Strict filesystem, cryptographic,
+and `origin/dev` version verification against the immutable core `0.55.1`
+public key passes all seven module manifests. This evidence-only checkpoint
+changes no signed module payload byte and triggers the protected final-head
+matrix.
+
+The exact-head Codex review of `70f9a0bf31dd145877a9d579cd4ff1842dca0814`
+added one P2 finding: an ignored arbitrary fixture such as
+`tests/fixtures/case.txt` remained analyzer-visible through the repository-root
+mount but absent from the suffix-limited ordinary worktree identity. Independent
+validation reproduced both that gap and a second directory-link form left by
+the preceding fix: `pkg -> support_pkg` admitted a nested
+`support_pkg/venv/dep.py` descendant pruned by ordinary discovery, and changing
+that descendant changed real Basedpyright evidence while the identity remained
+equal.
+
+The OpenSpec scenario and tasks were updated before implementation. The ignored
+runtime-fixture lifecycle regression first returned stale `PASS` / `PASS` /
+exit `0` instead of required UNKNOWN (`1 failed`). The independent nested
+directory-link regression first reached analyzer execution instead of rejecting
+or binding the descendant (`1 failed`). Ordinary discovery now binds every
+tracked, non-ignored untracked, and ignored file outside deliberately excluded
+trees, while a contained directory link recursively adds its complete reachable
+target subtree without pruning. A target that itself aliases an excluded tree
+is still rejected. The ignored fixture, stable directory link, direct excluded
+target, nested excluded descendant, ignored policy/import, and contained target
+controls pass together (`7 passed` in the initial neighborhood; the final
+five-selector review neighborhood also passes).
+
+The strengthened identity then correctly exposed an existing analyzer-owned
+write: pytest-cov honored the repository `run:data_file` and rewrote
+`logs/tests/coverage/.coverage` during analysis, making the manual Code Review
+fail closed with `worktree_snapshot_changed_during_analysis`. A focused
+repository-config regression first proved the configured coverage file was
+created (`1 failed`). Targeted pytest now supplies a private temporary
+`COVERAGE_FILE`, removes it after execution, and preserves the existing private
+JSON, observer, and JUnit evidence paths; the same selector passes and the
+manual review no longer mutates the bound repository input.
+
+The final complete runner surface passes `381` of `382`; exact-core `0.55.1`
+smart and complete suites each pass `1758` of `1759`. Their sole identical
+failure remains the documented local macOS/CPython 3.14 capsule-lock selector,
+with two existing Lark deprecations. Strict OpenSpec, canonical format,
+repository typing (`0 errors, 0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`),
+all `28` contract-first tests, seven manifests plus registry, bundle imports,
+filesystem checksum/version verification, publish precheck, and `git diff
+--check` pass. The final changed-line Code Review is `PASS_WITH_ADVISORY`, exit
+`0`, with `93` findings and no changed-line blocker; only the inherited
+`_run_capsule_snapshot` parameter-count finding and documented host test remain
+blocking evidence outside changed lines. Candidate module version is `0.49.74`,
+compatibility remains `>=0.55.1,<1.0.0`, and the unsigned filesystem checksum
+is `sha256:f543ac74c1dce4cb94a792367665513980a01307ad935ed6fc1424b86cbc0e0f`.
+Replacement trusted signing, protected checks, exact signed-head review, and
+verified PR #448 thread disposition remain required by tasks 6.112, 6.114,
+6.116, and 6.118.
+
+Trusted Module Signature Hardening run `33213076088` accepted signed human
+commit `29650958e67a1ebb01923409df02da3863b3c3cf` and produced signature-only
+bot commit `dd223b36aaeaa38ddad924475476a352d20f1c31` for exact checksum
+`sha256:f543ac74c1dce4cb94a792367665513980a01307ad935ed6fc1424b86cbc0e0f`
+with signature
+`2Lv/P4GYDkq6u0W2IZAZUXuq1uZO0yusg1giW0PCo4yRt5eQde3HnJ6Ml4AjGby5qcfA16royOIZZkMavgKVAQ==`.
+The bot diff is exactly one signature line. Strict filesystem,
+cryptographic, and `origin/dev` version verification against the immutable
+core `0.55.1` bundled public key passes all seven module manifests. This
+evidence-only checkpoint changes no signed module payload byte and triggers the
+replacement protected and final-head review cycle.
+
+## PR #450 final review and matrix remediation
+
+CodeRabbit's review of signed head
+`ad2eb26641ca7c4d593db1bdabfee7afc7a92022` and the GitHub Actions matrix
+identified one failing frozen cached-tree regression on Python 3.11, 3.12, and
+3.13. Each matrix run reported `1 failed, 1776 passed, 2 skipped`: the test
+constructed a cached snapshot but left `SPECFACT_CODE_REVIEW_CHANGED_DIFF` at
+its default `worktree` mode, so the new fail-closed mode binding correctly
+returned unavailable changed-line evidence. The exact focused test reproduced
+the failure locally (`None` instead of `{"new.py": {1}}`). Declaring the
+fixture's intended `cached` mode made that same test pass without relaxing the
+runtime contract.
+
+Independent review also validated two planning-contract gaps. The canonical
+release-history proposal still allowed corrective edits to a published entry,
+contradicting the immutable publication identity required by preflight-03; the
+docs-14 design, normative requirement, scenario, and task now require a new
+patch-version record while retaining the prior record unchanged. The hatch3r
+proposal treated an accepted upstream contribution as sufficient for
+packaging; proposal, design, requirement, scenarios, and tasks now require the
+selected hatch3r release itself to contain and document the surface, including
+any merged upstream contribution.
+
+The remaining review claims were rejected against the exact signed head. The
+0.49.76 candidate remains outside published-history enumeration until its
+post-merge publication record exists; the strict canonical Ed25519 verifier
+accepts all seven manifests and the current `specfact-code-review` signature;
+and existing bounded compatibility tests already accept the exact minimum and
+current in-range core while rejecting below-minimum and at-cap identities.
+Strict validation passes for C14, docs-14, preflight-03, and preflight-04.
+The focused corrected regression passes, the complete compatibility/command
+surface passes all `90` tests, contract-first verification passes all `28`
+tests, and bundle import, YAML/registry validation, canonical formatting,
+Ruff, basedpyright (`0 errors, 0 warnings, 0 notes`), Pylint (`10.00/10`),
+strict seven-manifest signature/version verification, `git diff --check`, and
+all `82` strict OpenSpec validations pass. The complete smart-test run passes
+`1778` of `1779`; its sole failure is the previously documented unsupported
+local macOS/CPython 3.14 capsule-lock selector. The protected Linux Python
+3.11-3.13 matrix remains the authority for that environment-specific case.
+The staged evidence gate initially failed because docs-14 had no schema-v2
+planning sidecar. A complete inspection-only mapping for all five source
+requirements now passes without claiming implementation evidence. The complete
+staged Block 2 gate passes requirements evidence, changed-line code review
+(`PASS_WITH_ADVISORY`, zero errors), and all `28` contract-first tests.
+
+The final-head Codex and CodeRabbit reviews identified two remaining planning
+consistency gaps. An earlier C14 evidence summary still allowed an accepted but
+unreleased hatch3r contribution even though the authoritative preflight-04
+contract requires the selected release itself to contain and document the
+surface. The summary now preserves that selected-release predicate. Separately,
+immutable docs-14 correction records named no structured relationship to the
+record they correct, withdraw, or supersede. The normative contract and design
+now require the new patch record's `(module_id, affected_version)` tuple to
+reference the unchanged original and require a machine-readable `disposition`.
+All `82` strict OpenSpec validations, staged requirements evidence, YAML and
+registry validation, `git diff --check`, and strict verification of all seven
+signed manifests pass; the staged gate classifies this as a safe planning-only
+change and requires no runtime contract-test rerun.
+
+The continuing PR #446 review on published head
+`facfbf82d50e2985f5479609fa0be1403cb14042` added two more CodeRabbit
+threads. Independent validation rejected the request to erase post-0.49.61 C14
+evidence because #448/#449 truthfully delivered and published 0.49.75. It
+confirmed one new runtime defect: any
+`SPECFACT_CODE_REVIEW_CHANGED_DIFF` value other than `cached` or
+`worktree` selected `HEAD`, and the same unknown mode bypassed raw worktree
+corroboration.
+
+The contract was extended before tests. The focused revision selector then
+proved both valid controls and reproduced the invalid values: `cached` and
+`worktree` passed, while `worktee` and the empty string returned
+`("HEAD",)` instead of unavailable evidence (`2 failed, 2 passed`). The
+minimal implementation returns unavailable evidence for every unrecognized
+mode; the same selector now passes all four cases.
+
+The independent patch challenge then found a second validation-to-use gap: a
+previously frozen cached identity was returned before the mode was checked, so
+environment drift from `cached` to `worktree`, `worktee`, or empty could still
+consume cached changed-line evidence. The contract now binds a frozen cached
+identity to normalized `cached` mode. Its focused regression passed the cached
+control but failed all three drift cases (`3 failed, 1 passed`); moving that
+mode check ahead of cached identity consumption made the combined invalid-mode,
+mode-drift, and cached-control set pass (`10 passed`).
+
+The earlier PR #446 planning review was also revalidated against current
+`dev`: C14 provenance now retains original 0.49.46, intermediate 0.49.61,
+and current 0.49.75 delivery/publication identities; post-publication
+correction requires a new patch while preserving every prior signed record;
+future preflight compatibility uses a bounded range whose minimum is the first
+immutable released core containing #682 rather than historical core 0.55.1;
+and hatch3r packaging is blocked until the selected release contains and
+documents a supported extension surface, including any merged upstream
+contribution. Existing release rollback
+specs/tasks already own withdrawal, installer-rejection, and persisted-state
+gates, so no fictitious core registry owner was added. The workflow regression
+now proves no hard-coded local-alias path while separately confirming that the
+current C14 metadata range retains PEP 440 range semantics.
+
+The exact signed-head Codex review of
+`82e4674ec8d7e5c5e68d750eab9747de6ee22965` added one P2 finding: Git emits no
+destination header or text hunk for a newly added empty file, so staged and
+explicit untracked `new.py` inputs produced no changed-line entry and a
+file-level line-1 blocker could be projected as legacy. Independent validation
+reproduced both paths and confirmed the immutable cached-tree route required the
+same file-level representation.
+
+The staged worktree, live cached, and explicit untracked regressions first
+returned `{}` rather than `{"new.py": {1}}`; their reports therefore failed to
+retain the blocker (`3 failed`). The tracked unchanged-empty control remained
+non-blocking. The parser now retains a line-1 anchor from authenticated `new file
+mode` metadata using the repeated canonical `a/` and `b/` path identity, explicit
+untracked discovery maps a zero-line added file to the same anchor, and raw
+HEAD/worktree corroboration independently represents the absent-base empty blob
+as changed. A frozen cached-tree regression captures immutable base/index OIDs,
+restages different live index bytes, and still derives the empty-file anchor from
+the captured trees.
+
+The final focused surface passes all `11` cases, including ordinary worktree,
+live cached, frozen cached-tree, explicit untracked, unchanged tracked, space,
+UTF-8, and Git-quoted newline filenames. The complete runner surface passes
+`392` of `393`; exact-core `0.55.1` smart and complete suites each pass `1769`
+of `1770`. Their sole identical failure remains the documented unsupported
+local macOS/CPython 3.14 capsule-lock selector, with two existing Lark
+deprecations. Strict OpenSpec, canonical format, repository typing (`0 errors,
+0 warnings, 0 notes`), Ruff, Pylint (`10.00/10`), all `28` contract-first
+tests, seven manifests plus registry, bundle imports, filesystem
+checksum/version verification, publish precheck, and `git diff --check` pass.
+The first staged review found one patch-caused `CC17` blocker after the new
+metadata branch crossed the parser complexity threshold; extracting focused
+hunk decoding removed that blocker without changing the evidence protocol. The
+repeated complete staged pipeline passes with Code Review
+`PASS_WITH_ADVISORY`, exit `0`, `215` retained findings, and only the inherited
+`_run_capsule_snapshot` parameter-count and documented local capsule test
+errors outside changed lines; the `28` contract-first tests also pass.
+Candidate module version is `0.49.75`, compatibility remains
+`>=0.55.1,<1.0.0`, and the unsigned filesystem checksum is
+`sha256:b4f44be52b073d7e3e471ba5f406918d1efe08e7e63728908c6ea23a16614305`.
+Replacement trusted signing, protected checks, exact signed-head review, and
+verified PR #448 thread disposition remain required by tasks 6.112, 6.114,
+6.116, 6.118, and 6.120.
+
+Trusted Module Signature Hardening run `33215504376` accepted signed human
+commit `67b92cb5c27d76cde826171f2f519b18fc551e4e` and produced signature-only bot
+commit `83ac0579e113054572dec2e5f618f3c54316b938` for exact checksum
+`sha256:b4f44be52b073d7e3e471ba5f406918d1efe08e7e63728908c6ea23a16614305`
+with signature
+`PETA3hyYBGDoaIfuO2SoexlHi6EZFPyqTEgTlZKfcDMIwxpzcnTZamsRK7dReOUC2mP2xKFoMqTF5xHizrbPAg==`.
+The bot diff is exactly one signature line. Strict filesystem,
+cryptographic, and `origin/dev` version verification against the immutable
+core `0.55.1` bundled public key passes all seven module manifests. This
+evidence-only checkpoint changes no signed module payload byte and triggers the
+replacement protected and final-head review cycle.

@@ -1,0 +1,167 @@
+schema_version: "2"
+requirements:
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:canonical-skill-and-slash-command-contract:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF02-001
+        scenario_id: canonical-skill-and-slash-command-contract
+        method: inspection
+        intent: "Inspect the canonical skill and slash command contract planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:deterministic-pre-implementation-loop:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF02-002
+        scenario_id: deterministic-pre-implementation-loop
+        method: inspection
+        intent: "Inspect the deterministic pre implementation loop planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:human-and-json-rendering-parity:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF02-003
+        scenario_id: human-and-json-rendering-parity
+        method: inspection
+        intent: "Inspect the human and json rendering parity planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:implementation-gate-instructions:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF02-004
+        scenario_id: implementation-gate-instructions
+        method: inspection
+        intent: "Inspect the implementation gate instructions planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:persisted-approval-artifacts:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF02-005
+        scenario_id: persisted-approval-artifacts
+        method: inspection
+        intent: "Inspect the persisted approval artifacts planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:read-only-default:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF02-006
+        scenario_id: read-only-default
+        method: inspection
+        intent: "Inspect the read only default planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:required-mvp-validation-domains:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF02-007
+        scenario_id: required-mvp-validation-domains
+        method: inspection
+        intent: "Inspect the required mvp validation domains planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:versioned-python-validator-registry:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md"
+    verification_cases:
+      - case_id: PF02-008
+        scenario_id: versioned-python-validator-registry
+        method: inspection
+        intent: "Inspect the versioned python validator registry planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-workflow:no-implementation-handoff-without-current-verification:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-workflow/spec.md"
+    verification_cases:
+      - case_id: PF02W-001
+        scenario_id: no-implementation-handoff-without-current-verification
+        method: inspection
+        intent: "Inspect the no implementation handoff without current verification planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-workflow:workflow-phase-contract:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-workflow/spec.md"
+    verification_cases:
+      - case_id: PF02W-002
+        scenario_id: workflow-phase-contract
+        method: inspection
+        intent: "Inspect the workflow phase contract planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-workflow:workflow-remains-harness-neutral:
+    rationale: "The proposal must make this requirement reviewable before implementation begins."
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-workflow/spec.md"
+    verification_cases:
+      - case_id: PF02W-003
+        scenario_id: workflow-remains-harness-neutral
+        method: inspection
+        intent: "Inspect the workflow remains harness neutral planning contract before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.

@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import subprocess
+import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,6 +12,7 @@ from typing import Any, Literal
 
 import pytest
 import yaml
+from packaging.specifiers import SpecifierSet
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
@@ -126,7 +128,47 @@ def test_code_review_manifest_declares_requirements_runtime_dependency() -> None
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
 
     assert "nold-ai/specfact-requirements" in manifest["bundle_dependencies"]
-    assert manifest["core_compatibility"] == "===0.55.1"
+
+
+def test_code_review_manifest_declares_minimum_core_compatibility() -> None:
+    manifest_path = REPO_ROOT / "packages" / "specfact-code-review" / "module-package.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    compatibility = SpecifierSet(manifest["core_compatibility"])
+
+    assert manifest["core_compatibility"] == ">=0.55.1,<1.0.0"
+    assert not compatibility.contains("0.55.0")
+    assert compatibility.contains("0.55.1")
+
+
+def test_code_review_manifest_bounds_core_compatibility_to_dependency_graph() -> None:
+    manifest_path = REPO_ROOT / "packages" / "specfact-code-review" / "module-package.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    compatibility = SpecifierSet(manifest["core_compatibility"])
+
+    assert compatibility.contains("0.55.2")
+    assert not compatibility.contains("1.0.0")
+    pending_dependency_ids = list(manifest["bundle_dependencies"])
+    checked_dependency_ids: set[str] = set()
+    while pending_dependency_ids:
+        dependency_id = pending_dependency_ids.pop()
+        if dependency_id in checked_dependency_ids:
+            continue
+        checked_dependency_ids.add(dependency_id)
+        dependency_name = dependency_id.split("/", maxsplit=1)[1]
+        dependency_path = REPO_ROOT / "packages" / dependency_name / "module-package.yaml"
+        dependency_manifest = yaml.safe_load(dependency_path.read_text(encoding="utf-8"))
+        dependency_compatibility = SpecifierSet(dependency_manifest["core_compatibility"])
+        assert dependency_compatibility.contains("0.55.1")
+        assert dependency_compatibility.contains("0.55.2")
+        assert not dependency_compatibility.contains("1.0.0")
+        pending_dependency_ids.extend(dependency_manifest.get("bundle_dependencies", []))
+
+
+def test_packaging_is_a_direct_default_test_dependency() -> None:
+    project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    dependencies = project["tool"]["hatch"]["envs"]["default"]["dependencies"]
+
+    assert any(dependency.partition(">=")[0] == "packaging" for dependency in dependencies)
 
 
 def _safe_mechanical_finding(file_path: Path, *, line: int, rule: str) -> ReviewFinding:
@@ -665,8 +707,13 @@ def test_run_command_score_only_prints_reward_delta(monkeypatch: Any) -> None:
     assert result.output == "92\n"
 
 
-def test_run_command_uses_git_diff_when_files_are_omitted(monkeypatch: Any, tmp_path: Path) -> None:
-    recorded: dict[str, list[Path]] = {}
+@pytest.mark.parametrize("scope_args", [(), ("--scope", "worktree")], ids=["default", "worktree"])
+def test_run_command_uses_git_diff_when_files_are_omitted(
+    monkeypatch: Any,
+    tmp_path: Path,
+    scope_args: tuple[str, ...],
+) -> None:
+    recorded: dict[str, object] = {}
     out = tmp_path / "review-report.json"
 
     monkeypatch.setattr(
@@ -676,14 +723,18 @@ def test_run_command_uses_git_diff_when_files_are_omitted(monkeypatch: Any, tmp_
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
+        recorded["assurance_kind"] = _kwargs.get("assurance_kind")
         return _report()
 
     monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
 
-    result = runner.invoke(app, ["review", "run", "--json", "--out", str(out)])
+    result = runner.invoke(app, ["review", "run", *scope_args, "--json", "--out", str(out)])
 
     assert result.exit_code == 0
-    assert recorded["files"] == [Path("tests/fixtures/review/clean_module.py")]
+    assert recorded == {
+        "files": [Path("tests/fixtures/review/clean_module.py")],
+        "assurance_kind": "worktree",
+    }
     assert out.exists()
 
 
@@ -695,7 +746,7 @@ def test_run_command_supports_full_scope_and_path_filters(monkeypatch: Any, tmp_
     _write_repo_file(tmp_path, "packages/specfact-backlog/src/specfact_backlog/commands.py")
     monkeypatch.chdir(tmp_path)
 
-    recorded: dict[str, list[Path]] = {}
+    recorded: dict[str, object] = {}
     monkeypatch.setattr(
         "specfact_code_review.run.commands._all_python_files_from_git",
         lambda: [package_file, Path("packages/specfact-backlog/src/specfact_backlog/commands.py")],
@@ -704,6 +755,7 @@ def test_run_command_supports_full_scope_and_path_filters(monkeypatch: Any, tmp_
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
+        recorded["assurance_kind"] = _kwargs.get("assurance_kind")
         return _report()
 
     monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
@@ -724,7 +776,27 @@ def test_run_command_supports_full_scope_and_path_filters(monkeypatch: Any, tmp_
     )
 
     assert result.exit_code == 0
-    assert recorded["files"] == [package_file]
+    assert recorded == {"files": [package_file], "assurance_kind": "full"}
+
+
+def test_run_command_labels_positional_files_as_explicit_assurance(monkeypatch: Any, tmp_path: Path) -> None:
+    package_file = _write_repo_file(
+        tmp_path,
+        "packages/specfact-code-review/src/specfact_code_review/run/commands.py",
+    )
+    monkeypatch.chdir(tmp_path)
+    recorded: dict[str, object] = {}
+
+    def fake_run_review(files: list[Path], **kwargs: Any) -> ReviewReport:
+        recorded.update(files=files, assurance_kind=kwargs.get("assurance_kind"))
+        return _report()
+
+    monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
+
+    result = runner.invoke(app, ["review", "run", "--json", str(package_file)])
+
+    assert result.exit_code == 0
+    assert recorded == {"files": [package_file], "assurance_kind": "explicit_files"}
 
 
 def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeypatch: Any, tmp_path: Path) -> None:
@@ -740,7 +812,7 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
     _write_repo_file(tmp_path, "packages/specfact-backlog/src/specfact_backlog/commands.py")
     monkeypatch.chdir(tmp_path)
 
-    recorded: dict[str, list[Path]] = {}
+    recorded: dict[str, object] = {}
     monkeypatch.setattr(
         "specfact_code_review.run.commands._changed_files_from_git_diff",
         lambda *, include_tests: [
@@ -752,6 +824,7 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
+        recorded["assurance_kind"] = _kwargs.get("assurance_kind")
         return _report()
 
     monkeypatch.setattr("specfact_code_review.run.commands.run_review", fake_run_review)
@@ -774,7 +847,7 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
     )
 
     assert result.exit_code == 0
-    assert recorded["files"] == [package_file, test_file]
+    assert recorded == {"files": [package_file, test_file], "assurance_kind": "worktree"}
 
 
 def test_run_command_passes_simplify_focus_after_scope_resolution(monkeypatch: Any, tmp_path: Path) -> None:
