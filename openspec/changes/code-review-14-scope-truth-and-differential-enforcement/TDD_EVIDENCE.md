@@ -2645,6 +2645,20 @@ requirements now passes without claiming implementation evidence. The complete
 staged Block 2 gate passes requirements evidence, changed-line code review
 (`PASS_WITH_ADVISORY`, zero errors), and all `28` contract-first tests.
 
+The final-head Codex and CodeRabbit reviews identified two remaining planning
+consistency gaps. An earlier C14 evidence summary still allowed an accepted but
+unreleased hatch3r contribution even though the authoritative preflight-04
+contract requires the selected release itself to contain and document the
+surface. The summary now preserves that selected-release predicate. Separately,
+immutable docs-14 correction records named no structured relationship to the
+record they correct, withdraw, or supersede. The normative contract and design
+now require the new patch record's `(module_id, affected_version)` tuple to
+reference the unchanged original and require a machine-readable `disposition`.
+All `82` strict OpenSpec validations, staged requirements evidence, YAML and
+registry validation, `git diff --check`, and strict verification of all seven
+signed manifests pass; the staged gate classifies this as a safe planning-only
+change and requires no runtime contract-test rerun.
+
 The continuing PR #446 review on published head
 `facfbf82d50e2985f5479609fa0be1403cb14042` added two more CodeRabbit
 threads. Independent validation rejected the request to erase post-0.49.61 C14
@@ -2676,8 +2690,9 @@ and current 0.49.75 delivery/publication identities; post-publication
 correction requires a new patch while preserving every prior signed record;
 future preflight compatibility uses a bounded range whose minimum is the first
 immutable released core containing #682 rather than historical core 0.55.1;
-and hatch3r packaging is blocked until a documented supported extension
-surface or accepted upstream contribution exists. Existing release rollback
+and hatch3r packaging is blocked until the selected release contains and
+documents a supported extension surface, including any merged upstream
+contribution. Existing release rollback
 specs/tasks already own withdrawal, installer-rejection, and persisted-state
 gates, so no fictitious core registry owner was added. The workflow regression
 now proves no hard-coded local-alias path while separately confirming that the

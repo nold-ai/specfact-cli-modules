@@ -4,7 +4,7 @@
 
 ### Requirement: Official module publishes SHALL persist structured release-history entries
 
-The modules repository SHALL maintain a canonical structured release-history source for official modules, and each newly published module version SHALL add a corresponding release-history entry as part of the publish workflow. Each accepted published module/version entry SHALL be immutable. Corrections, withdrawals, or supersessions SHALL use a new patch-version entry while retaining the prior entry unchanged.
+The modules repository SHALL maintain a canonical structured release-history source for official modules, and each newly published module version SHALL add a corresponding release-history entry as part of the publish workflow. Each accepted published module/version entry SHALL be immutable. Corrections, withdrawals, or supersessions SHALL use a new patch-version entry while retaining the prior entry unchanged. That new entry SHALL identify the affected immutable record through its `module_id` and required `affected_version`, and SHALL record a machine-readable `disposition` of `correction`, `withdrawal`, or `supersession`.
 
 #### Scenario: Publish writes release-history entry
 
@@ -19,6 +19,9 @@ The modules repository SHALL maintain a canonical structured release-history sou
 - **WHEN** that release requires correction, withdrawal, or supersession
 - **THEN** the original entry remains unchanged and retained
 - **AND** the corrected identity is recorded under a new patch version
+- **AND** the new entry records the original entry's version as `affected_version`
+- **AND** its `module_id` plus `affected_version` identify the unchanged original record
+- **AND** its `disposition` records whether the action is a correction, withdrawal, or supersession
 
 ### Requirement: AI-assisted module release notes SHALL stay user-focused
 

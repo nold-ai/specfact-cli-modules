@@ -373,5 +373,7 @@ Explicitly forbidden:
 - [ ] 6.123 Advance `specfact-code-review` to 0.49.76, run focused plus required repository gates, obtain trusted approval-time signing and protected evidence, then reply to and resolve every verified PR #446 thread.
 - [x] 6.124 Reproduce PR #450's post-signing matrix failure, bind the frozen cached-tree regression to cached mode, and align the verified immutable release-history and hatch3r selected-release prerequisites without relaxing runtime fail-closed behavior.
 - [ ] 6.125 Run focused plus required repository gates, obtain a signed replacement commit and protected evidence, then reply to and resolve every verified PR #450 thread.
+- [x] 6.126 Preserve the hatch3r selected-release predicate in historical C14 evidence and require structured immutable correction provenance through `affected_version` plus `disposition` in docs-14.
+- [ ] 6.127 Re-run strict planning/evidence gates, obtain a signed replacement commit, and resolve the final PR #450 review threads with exact-head evidence.
 
 Explicitly deferred from this remediation: full-tree materialization bounds, edit-distance work bounds, latent unused Semgrep snapshot-probe behavior, assurance-helper input hardening, singleton source fallback, skill wording, diagnostic-upload behavior, and test-only coverage-quality findings. No detector, policy, dependency, core-consumer, or Requirements-verdict semantics may change.
