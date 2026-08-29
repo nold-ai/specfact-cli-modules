@@ -16,7 +16,7 @@ requirements:
       - case_id: PF05M-001
         scenario_id: separate-development-checkpoint-command
         method: inspection
-        intent: "Inspect checkpoint scopes, statuses, seal behavior, partial and wholly uncovered governed-path failure, and the complete source/test/docs/generated/evidence/excluded plus seal-bound test/dependency/policy/toolchain/relevant-configuration pre-commit applicability matrix before implementation."
+        intent: "Inspect checkpoint scopes, statuses, seal behavior, partial and wholly uncovered governed-path failure versus missing-influence UNKNOWN, and the complete source/test/docs/generated/evidence/excluded plus seal-bound test/dependency/policy/toolchain/relevant-configuration pre-commit applicability matrix before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:bounded-checkpoint-profiles:
     rationale: *planning-rationale
@@ -76,7 +76,7 @@ requirements:
       - case_id: PF05M-011
         scenario_id: immutable-range-conformance-evaluation
         method: inspection
-        intent: "Inspect exact range extraction, exhaustive sealed-obligation comparison, and fail-closed final conformance rendering before implementation."
+        intent: "Inspect canonical latest-seal tip/sequence/chain selection, exact origin-to-authoritative-current-delivery-head extraction and equality, exhaustive sealed-obligation comparison, and fail-closed final conformance rendering before implementation."
         observable: *planning-observable
       - case_id: PF05M-012
         scenario_id: immutable-range-conformance-evaluation

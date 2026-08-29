@@ -13,7 +13,7 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 
 #### Scenario: Governed staged paths have no covering seal
 
-- **GIVEN** the repository contains one or more preflight seals and at least one staged path/input is classified by repository policy as preflight-governed but is covered by no seal role or influence mapping
+- **GIVEN** the repository contains one or more preflight seals and at least one staged path/input is classified by repository policy as preflight-governed but is covered by no seal role
 - **WHEN** automatic checkpoint selection runs
 - **THEN** every wholly uncovered governed path/input is `unexpected`, the result is `FAIL`, and the hook exits non-zero
 - **AND** absent or ambiguous governed/unrelated classification returns `UNKNOWN`, never `NOT_APPLICABLE`.
@@ -29,7 +29,7 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 
 #### Scenario: Applicable checkpoint evidence is ambiguous
 
-- **GIVEN** one or more staged seal-relevant paths are covered by a seal but the seal, Git identity, component owner, selector, runner, or required evidence is stale, multiple, missing, or ambiguous
+- **GIVEN** one or more staged seal-relevant paths are covered by a seal but the canonical tip/chain, Git identity, component owner, influence mapping, selector, runner, or required evidence is stale, multiple, missing, or ambiguous
 - **WHEN** checkpoint status is aggregated
 - **THEN** the result is `UNKNOWN` and exits non-zero
 - **AND** no renderer or workflow converts it to pass.
@@ -54,7 +54,7 @@ The module SHALL define cumulative `slice`, `commit`, and `deep` profiles whose 
 
 #### Scenario: Commit profile evaluates the staged index
 
-- **GIVEN** exactly one valid seal covers all staged non-excluded seal-relevant paths and `--scope index --profile commit` is selected
+- **GIVEN** exactly one policy-authorized canonical lineage-tip seal covers all staged non-excluded seal-relevant paths and `--scope index --profile commit` is selected
 - **WHEN** the commit profile runs
 - **THEN** it adds every affected component's bounded pytest targets and current-run JUnit evidence
 - **AND** execution is bound to the captured index capsule rather than a differing worktree.
@@ -75,7 +75,7 @@ The module SHALL define cumulative `slice`, `commit`, and `deep` profiles whose 
 
 ### Requirement: Complete implementation scope evidence
 
-The runtime SHALL reuse C14 worktree/index/range primitives and implement the released core snapshot matrix without guessing or lossy path parsing. Every snapshot base SHALL equal the seal-bound implementation-lineage origin repository/base commit/base tree. Worktree snapshots SHALL additionally bind a worktree-manifest digest and include staged, unstaged, and untracked state. Index snapshots SHALL additionally bind the exact index tree ID and exclude untracked paths unless staged as additions. Range snapshots SHALL bind full head commit/tree plus origin-to-head ancestry and SHALL NOT represent untracked paths. Every manifest SHALL preserve additions, deletions, both rename endpoints, before/after modes, symlink target identity, and byte-preserving path identity; rename interpretation SHALL be bound to producer, policy, and toolchain identity.
+The runtime SHALL reuse C14 worktree/index/range primitives and implement the released core snapshot matrix without guessing or lossy path parsing. Every snapshot base SHALL equal the seal-bound implementation-lineage origin repository/base commit/base tree. Worktree snapshots SHALL additionally bind a worktree-manifest digest and include staged, unstaged, and untracked state. Index snapshots SHALL additionally bind the exact index tree ID and exclude untracked paths unless staged as additions. Range snapshots SHALL bind full head commit/tree, policy-authorized current delivery-target commit/tree, plus origin-to-head ancestry and SHALL NOT represent untracked paths. Every manifest SHALL preserve additions, deletions, both rename endpoints, before/after modes, symlink target identity, and byte-preserving path identity; rename interpretation SHALL be bound to producer, policy, and toolchain identity.
 
 #### Scenario: Repository contains difficult path transitions
 
@@ -136,7 +136,7 @@ The runtime SHALL first supply the upstream design contract, validation result, 
 
 ### Requirement: Local and range authority separation
 
-The runtime SHALL preserve core checkpoint authority for worktree/index results and SHALL require repository identity, the seal-bound implementation-lineage origin commit/tree, full immutable head commit/tree, and origin-to-head ancestry for `specfact preflight conform <change-id>`. Tree attestations and the complete path manifest SHALL bind to that exact repository and cumulative lineage range across all successor seals.
+The runtime SHALL preserve core checkpoint authority for worktree/index results and SHALL require repository identity, the seal-bound implementation-lineage origin commit/tree, full immutable head commit/tree, a policy-authorized current delivery-target commit/tree identity, and origin-to-head ancestry for `specfact preflight conform <change-id>`. Tree attestations and the complete path manifest SHALL bind to that exact repository and cumulative lineage-origin-to-current-delivery-head range across all successor seals.
 
 #### Scenario: Local pass is presented as PR proof
 
@@ -147,11 +147,25 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 
 ### Requirement: Immutable-range conformance evaluation
 
-`specfact preflight conform <change-id>` SHALL verify the supplied design contract, validation result, seal, policy, current source identities, implementation-lineage identity, immutable origin repository/base commit/base tree, and predecessor-seal chain; require the range base to equal that lineage origin rather than a later successor-seal source snapshot; use C14 to prove that the full head descends from the origin and to extract the complete immutable lineage-origin-to-head manifest and range-bound evidence; derive the deterministic exhaustive final-delivery obligation set; and invoke the released core implementation-assurance verifier. The exhaustive set SHALL include every changed governed path/interface and every applicable sealed component, acceptance criterion, risk row, Requirements verification case, component target, verification stage including `ci`, and exclusion in their transitive obligation closure. The set and its digest SHALL be bound to the result. For an obligation whose earliest stage is `ci`, the runtime SHALL accept satisfaction only from a seal/policy-authorized protected-CI producer whose authenticated provenance is bound to the exact immutable range. Missing, local, self-asserted, unauthenticated, or wrong-range CI evidence SHALL remain `UNKNOWN`/deferred and SHALL prevent `PASS`. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
+`specfact preflight conform <change-id>` SHALL discover the policy-authorized canonical lineage tip from the canonical approval source; verify the supplied design contract, validation result, selected seal, policy, current source identities, implementation-lineage identity, immutable origin repository/base commit/base tree, and complete predecessor-seal chain; require the selected seal digest/monotonic sequence and chain digest to equal the canonical tip; require the range base to equal the lineage origin rather than a later successor-seal source snapshot; use C14 to prove that the full head descends from the origin and to extract the complete immutable lineage-origin-to-head manifest and range-bound evidence; require the range head commit/tree to equal a policy-authorized current delivery-target identity resolved from the current local delivery ref/HEAD or supplied by an authenticated protected-PR/CI orchestrator; derive the deterministic exhaustive final-delivery obligation set; and invoke the released core implementation-assurance verifier. The exhaustive set SHALL include every changed governed path/interface and every applicable sealed component, acceptance criterion, risk row, Requirements verification case, component target, verification stage including `ci`, and exclusion in their transitive obligation closure. The set and its digest SHALL be bound to the result. For an obligation whose earliest stage is `ci`, the runtime SHALL accept satisfaction only from a seal/policy-authorized protected-CI producer whose authenticated provenance is bound to the exact immutable range. Missing, local, self-asserted, unauthenticated, or wrong-range CI evidence SHALL remain `UNKNOWN`/deferred and SHALL prevent `PASS`. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
+
+#### Scenario: Caller supplies an ancestor seal
+
+- **GIVEN** an older seal and its predecessor chain are internally valid but the canonical approval source identifies a later approved successor as the current lineage tip
+- **WHEN** checkpoint selection or final conformance runs
+- **THEN** the selected-seal/tip mismatch is `stale` and returns `UNKNOWN`
+- **AND** obligations introduced by the successor cannot be omitted by selecting the ancestor.
+
+#### Scenario: Canonical seal tip is unavailable or ambiguous
+
+- **GIVEN** the canonical approval source or its lineage-tip/chain/authority identity is missing, stale, rolled back, forked, or ambiguous
+- **WHEN** checkpoint selection or final conformance runs
+- **THEN** the result is `UNKNOWN` and exits non-zero
+- **AND** the runtime does not guess the latest seal from timestamps or caller ordering.
 
 #### Scenario: Final range is evaluated against the seal
 
-- **GIVEN** a valid seal and explicit repository, implementation-lineage origin commit/tree, full head commit/tree, and origin-to-head ancestry identities
+- **GIVEN** a canonical latest valid seal and explicit repository, implementation-lineage origin commit/tree, full head commit/tree equal to the policy-authorized current delivery target, and origin-to-head ancestry identities
 - **WHEN** final conformance runs
 - **THEN** the runtime verifies upstream identities, extracts the exact immutable-range manifest and evidence, maps sealed final-delivery obligations, and invokes the core comparator
 - **AND** the result remains independent from prior local checkpoint authority and protected PR review.
@@ -169,6 +183,13 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 - **WHEN** a caller supplies a later range base, a different base tree, or a head without valid ancestry from the lineage origin
 - **THEN** conform returns the released core `stale` or `unverifiable` finding and `UNKNOWN`
 - **AND** it does not extract or compare a current-seal or caller-selected shorter range.
+
+#### Scenario: Caller supplies an older descendant head
+
+- **GIVEN** the requested range head descends from the lineage origin but differs from the policy-authorized current delivery-target commit or tree identity
+- **WHEN** conform validates the immutable range
+- **THEN** the head mismatch is `stale`, conform returns `UNKNOWN`, and the command exits non-zero
+- **AND** later delivery commits cannot remain outside the evaluated manifest and obligation closure.
 
 #### Scenario: CI-only final obligation has no protected evidence
 

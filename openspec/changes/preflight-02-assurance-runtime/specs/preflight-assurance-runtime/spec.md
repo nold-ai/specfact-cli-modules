@@ -121,7 +121,7 @@ The CLI SHALL derive human and JSON output from the same normalized validation r
 
 ### Requirement: Persisted approval artifacts
 
-When explicitly requested, the runtime SHALL persist the normalized contract, validation result, and seal atomically under a project-local, change-specific path.
+When explicitly requested, the runtime SHALL persist the normalized contract, validation result, and seal atomically under a project-local, change-specific path. It SHALL also atomically maintain a policy-authorized canonical lineage-tip record that binds the change and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, and update authority. A successor approval SHALL advance that tip exactly once; an ancestor seal SHALL NOT remain representable as the current tip.
 
 #### Scenario: Persistence is interrupted
 
@@ -129,6 +129,13 @@ When explicitly requested, the runtime SHALL persist the normalized contract, va
 - **WHEN** persistence runs
 - **THEN** no partial set is treated as a valid approved contract
 - **AND** the runtime reports a non-ready persistence result.
+
+#### Scenario: Canonical lineage tip cannot be established
+
+- **GIVEN** persisted approval artifacts contain a missing, stale, rolled-back, forked, or ambiguously current lineage-tip record
+- **WHEN** the approval source is read for checkpoint or conformance handoff
+- **THEN** current-seal selection is `UNKNOWN` and non-passing
+- **AND** an older valid ancestor seal is not substituted for the canonical latest seal.
 
 ### Requirement: Canonical skill and slash-command contract
 

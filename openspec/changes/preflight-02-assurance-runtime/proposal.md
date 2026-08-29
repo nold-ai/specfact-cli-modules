@@ -7,7 +7,7 @@ Core contracts alone cannot stop an agent from implementing a stale or internall
 ## What Changes
 
 - **NEW**: A future official `specfact-preflight` module with Python validators for artifact completeness, source freshness, role-classified scope, component ownership, approved influence mappings or justified no-impact dispositions for every non-excluded sealed input, risk-dimension disposition, Requirements-plan references, dependency readiness, interface ownership, acceptance-testability, and conflicting active work.
-- **NEW**: A future `specfact preflight run <change-id>` CLI that renders human and JSON results, supports read-only review by default, and persists an approved contract and seal only after explicit user approval.
+- **NEW**: A future `specfact preflight run <change-id>` CLI that renders human and JSON results, supports read-only review by default, and persists an approved contract, seal, and atomically advanced canonical lineage-tip record only after explicit user approval.
 - **NEW**: A modules-owned bundled skill contract exposed as the harness-neutral `specfact-preflight` workflow and installable slash-command equivalent, such as `/specfact-preflight <change-id>` where the harness supports slash commands.
 - **NEW**: A deterministic loop: discover -> snapshot -> validate -> review -> user-approved refine/re-run -> approve -> seal -> verify-before-implementation.
 - **CLARIFY**: The skill orchestrates the CLI and presents evidence. It does not duplicate validator logic, silently edit ambiguous change artifacts, approve on behalf of a user, or implement production code.
