@@ -106,5 +106,5 @@ requirements:
       - case_id: PF05M-010
         scenario_id: signed-publication-before-adapter-consumption
         method: inspection
-        intent: "Inspect signed publication and downstream #251/#253/#433 identity handoff before implementation."
+        intent: "Inspect the signed #434 module plus separate preflight and implementation-check workflow identity/digest handoff to #251/#253/#433 before implementation."
         observable: *planning-observable

@@ -29,7 +29,7 @@ These are integration inputs, not permanent assumptions. Each adapter must decla
 
 ### 1. Shared adapter descriptor
 
-Every adapter consumes a descriptor containing the exact SpecFact #434 module version, artifact digest, authorized signature/trust-root identity, registry identity, compatible core identity, canonical preflight/checkpoint workflow identities and digests, supported harness and version range, native invocation form, asset mapping, instruction markers, install scope, and uninstall inventory. It consumes the official installer's verified result when that interface owns verification. Invalid, untrusted, unsupported, or mismatched identities fail closed before installation, upgrade, invocation, or packaging.
+Every adapter consumes a descriptor containing three separately named release inputs: the exact signed SpecFact #434 module version/artifact digest/signature/trust-root/registry identity, the preflight workflow identity/digest, and the implementation-check workflow identity/digest. The descriptor also binds compatible core identity, supported harness and version range, native invocation form, asset mapping, instruction markers, install scope, and uninstall inventory. It consumes the official installer's verified result when that interface owns verification and proves that the signed module manifest binds both workflow digests. Invalid, untrusted, unsupported, omitted, or mismatched identities fail closed before installation, upgrade, invocation, or packaging.
 
 ### 2. Codex plugin is an installation shell
 

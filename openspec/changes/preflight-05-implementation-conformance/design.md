@@ -53,7 +53,7 @@ Each finding packet contains a stable fingerprint, action class (`fix_implementa
 
 ### 8. Publication precedes adapters
 
-The implementation versions, signs, compatibility-tests, and publishes the combined workflow identity. Core #251/#253 and modules #433 consume that exact release; #434 does not need an existing adapter and packages none.
+The implementation versions, signs, compatibility-tests, and publishes one immutable #434 module release. Its signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest; the latter owns checkpoint, conform, and bounded remediation semantics. Core #251/#253 and modules #433 consume the exact module identity plus both named workflow identities and digests. #434 does not need an existing adapter and packages none.
 
 ## Risks / Trade-offs
 

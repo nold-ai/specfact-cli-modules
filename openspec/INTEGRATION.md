@@ -20,14 +20,16 @@ changes without creating runtime behavior.
   canonical `.agents/skills` export. Core `ai-integration-03-instruction-files`
   owns generated gate references. Neither owns the workflow body or validators.
 - Modules `preflight-04-harness-adapters` owns thin Codex, ECC, and hatch3r
-  packaging after the signed #434 handoff. Adapters map native invocation and
-  assets only.
+  packaging after the signed #434 handoff. That handoff is one exact signed
+  module identity plus separately named preflight and implementation-check
+  workflow identities/digests. Adapters map native invocation and assets only.
 - Core `preflight-05-implementation-conformance` owns worktree/index/range
   snapshot, obligation-map, finding/result, authority, and pure comparison
   interfaces. Paired modules owns checkpoint/conform commands, C14-backed Git
   extraction, Requirements pytest/JUnit and code-review evidence, caching,
   pre-commit policy, remediation packets, bounded agent workflow, rendering,
-  persistence, signing, and publication.
+  persistence, signing, and publication of the module identity plus separately
+  bound preflight and implementation-check workflow identities/digests.
 
 ## Shared Rules
 

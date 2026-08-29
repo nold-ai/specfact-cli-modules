@@ -2,7 +2,7 @@
 
 ### Requirement: Shared adapter identity contract
 
-Every harness adapter SHALL declare and verify the exact SpecFact module version, artifact digest, authorized signature/trust-root identity, registry identity, compatible core identity, canonical workflow identity/digest, supported harness versions, native invocation mapping, installed asset inventory, and upgrade/uninstall rules. When the released installer owns cryptographic verification, adapters SHALL consume its verified result and SHALL bind the installed workflow digest to the signed artifact before installation, upgrade, invocation, or packaging.
+Every harness adapter SHALL declare and verify the exact signed #434 module version, artifact digest, authorized signature/trust-root identity, registry identity, compatible core identity, separately named preflight workflow identity/digest and implementation-check workflow identity/digest, supported harness versions, native invocation mapping, installed asset inventory, and upgrade/uninstall rules. When the released installer owns cryptographic verification, adapters SHALL consume its verified result and SHALL verify that the signed module manifest binds both installed workflow digests before installation, upgrade, invocation, or packaging.
 
 #### Scenario: Immutable release identity does not match
 
@@ -13,7 +13,7 @@ Every harness adapter SHALL declare and verify the exact SpecFact module version
 
 #### Scenario: Signature or installed workflow is invalid or untrusted
 
-- **GIVEN** signature verification fails against the authorized trust root, the verified installer result is absent, or the installed workflow digest differs from the signed artifact and canonical workflow identity
+- **GIVEN** signature verification fails against the authorized trust root, the verified installer result is absent, either named workflow identity/digest is omitted, or either installed workflow digest differs from the signed module manifest
 - **WHEN** installation, upgrade, invocation, or packaging is requested
 - **THEN** the adapter fails closed before the operation
 - **AND** it does not treat descriptor text alone as verification.
@@ -102,5 +102,5 @@ Codex, ECC, and hatch3r adapters SHALL preserve the canonical workflow phases, C
 
 - **GIVEN** fixtures for all supported adapter/version pairs
 - **WHEN** the parity matrix evaluates generated assets and invocations
-- **THEN** every adapter maps to the same canonical workflow identity and semantics
+- **THEN** every adapter maps to the same signed #434 module identity plus the same preflight and implementation-check workflow identities/digests and semantics
 - **AND** platform-specific syntax differences are explicitly recorded rather than treated as workflow differences.

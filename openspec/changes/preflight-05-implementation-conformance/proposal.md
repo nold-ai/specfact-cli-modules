@@ -13,7 +13,7 @@ Preflight approval records what was reviewed, but defects and mismatches can sti
 - **NEW**: `specfact preflight conform <change-id>` for explicit immutable base/head comparison and a separate final conformance result.
 - **NEW**: Human/JSON parity, compact remediation packets, a harness-neutral implementation-check workflow with at most three fix/rerun cycles, and optional atomic persistence.
 - **NEW**: Seal-aware staged pre-commit integration that is non-applicable for unsealed repositories, fail-closed for ambiguous applicable evidence, and shadow-dogfooded before blocking rollout.
-- **NEW**: Version, sign, compatibility-test, and publish the combined checkpoint/conformance module and workflow identity before #251/#253/#433 consume it.
+- **NEW**: Version, sign, compatibility-test, and publish one #434 module release identity that separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest before #251/#253/#433 consume them.
 - **CLARIFY**: The deterministic CLI never invokes an LLM, edits implementation, mutates/reseals a contract, or promotes local evidence to protected PR authority.
 
 ## Capabilities
@@ -30,7 +30,7 @@ Preflight approval records what was reviewed, but defects and mismatches can sti
 
 - Planning artifacts only in this phase. No production code, tests, package, manifest, signature, version, workflow asset, hook, generated snapshot/result, adapter, or dependency is created.
 - Implementation begins only after the stable #432 preflight handoff and released core #684 contracts.
-- External Codex/ECC/hatch3r packaging remains in #433, which consumes the signed identity published here.
+- External Codex/ECC/hatch3r packaging remains in #433, which consumes the signed module identity and both separately named workflow identities/digests published here.
 
 ## Dependencies
 

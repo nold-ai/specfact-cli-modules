@@ -16,7 +16,7 @@ All tasks below are future implementation and external integration work. This pl
 
 ## 3. Minimal adapter implementation
 
-- [ ] 3.1 Implement the Codex plugin shell using the canonical workflow identity and installed CLI.
+- [ ] 3.1 Implement the Codex plugin shell using the exact signed #434 module identity, preflight workflow identity/digest, implementation-check workflow identity/digest, and installed CLI.
 - [ ] 3.2 Implement the ECC skills-first companion and only the command shims required by the supported matrix.
 - [ ] 3.3 Implement hatch3r packaging only through the released and documented supported surface verified in 1.3; an accepted or merged upstream prerequisite alone is insufficient until the selected release contains and documents it. Never write internal inventory data or depend on private package layout.
 - [ ] 3.4 Keep all validators, approval decisions, and readiness aggregation in the released SpecFact runtime.

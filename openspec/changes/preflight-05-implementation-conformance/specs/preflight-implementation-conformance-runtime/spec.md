@@ -152,11 +152,11 @@ The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL ena
 
 ### Requirement: Signed publication before adapter consumption
 
-The implementation SHALL version, sign, compatibility-test, and publish one immutable checkpoint/conformance module and workflow identity before #251/#253/#433 consume it.
+The implementation SHALL version, sign, compatibility-test, and publish one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest before #251/#253/#433 consume them.
 
 #### Scenario: Adapter requests the new workflow
 
 - **GIVEN** #433 prepares a harness adapter
-- **WHEN** it resolves the canonical workflow identity
-- **THEN** it consumes the exact published #434 identity
+- **WHEN** it resolves the canonical module and workflow identities
+- **THEN** it consumes the exact signed #434 module identity, preflight workflow identity/digest, and implementation-check workflow identity/digest
 - **AND** #434 contains no harness-specific adapter package.

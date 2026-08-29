@@ -32,7 +32,7 @@ All tasks below are future implementation work. This planning change completes n
 
 ## 5. Release and downstream handoff
 
-- [ ] 5.1 Version, sign, verify, compatibility-test, and publish one immutable module/workflow identity containing checkpoint and conform behavior.
-- [ ] 5.2 Hand that exact identity to core #251/#253 and modules #433; do not create external adapter packages in this change.
+- [ ] 5.1 Version, sign, verify, compatibility-test, and publish one immutable #434 module identity whose manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest containing checkpoint, conform, and bounded remediation behavior.
+- [ ] 5.2 Hand the exact signed module identity and both named workflow identities/digests to core #251/#253 and modules #433; do not create external adapter packages in this change.
 - [ ] 5.3 Open the implementation PR to `dev` as the final pre-merge task, linking core #684, dogfood, assurance limits, metrics, and rollback evidence.
 - [ ] 5.4 After merge, run `openspec archive preflight-05-implementation-conformance`, update ordering/source mirrors, and remove the dedicated worktree and merged branch.
