@@ -68,6 +68,16 @@ requirements:
         method: inspection
         intent: "Inspect rejection of local-to-PR authority promotion before implementation."
         observable: *planning-observable
+  openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:immutable-range-conformance-evaluation:
+    rationale: *planning-rationale
+    stakeholder_refs: ["nold-ai/specfact-cli-modules#434", "nold-ai/specfact-cli#684"]
+    touchpoints: *planning-touchpoints
+    verification_cases:
+      - case_id: PF05M-011
+        scenario_id: immutable-range-conformance-evaluation
+        method: inspection
+        intent: "Inspect exact range extraction, sealed obligation comparison, and fail-closed final conformance rendering before implementation."
+        observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:compact-bounded-remediation-workflow:
     rationale: *planning-rationale
     stakeholder_refs: ["nold-ai/specfact-cli-modules#434"]

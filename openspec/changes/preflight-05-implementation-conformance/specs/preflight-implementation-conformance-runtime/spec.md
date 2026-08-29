@@ -110,6 +110,24 @@ The runtime SHALL preserve core checkpoint authority for worktree/index results 
 - **THEN** the runtime rejects promotion
 - **AND** requires a new immutable-range conformance or protected consumer run.
 
+### Requirement: Immutable-range conformance evaluation
+
+`specfact preflight conform <change-id>` SHALL verify the supplied design contract, validation result, seal, policy, and current source identities; resolve repository identity plus full immutable base/head commit and tree identities; extract the complete range manifest and range-bound evidence through C14 primitives; map the sealed obligations selected for final delivery; and invoke the released core implementation-assurance verifier. Human and JSON output SHALL preserve the core result status, findings, authority, evidence identities, and assurance limits without converting a non-passing outcome.
+
+#### Scenario: Final range is evaluated against the seal
+
+- **GIVEN** a valid seal and explicit repository, full base/head commit, and base/head tree identities
+- **WHEN** final conformance runs
+- **THEN** the runtime verifies upstream identities, extracts the exact immutable-range manifest and evidence, maps sealed final-delivery obligations, and invokes the core comparator
+- **AND** the result remains independent from prior local checkpoint authority and protected PR review.
+
+#### Scenario: Final range comparison cannot be completed or does not conform
+
+- **GIVEN** a stale or mismatched seal, unresolved range identity, unavailable required range-bound evidence, or a blocking core comparison finding
+- **WHEN** final conformance is aggregated and rendered
+- **THEN** the exact core `UNKNOWN` or `FAIL` outcome and findings are preserved
+- **AND** the runtime cannot synthesize `PASS` from immutable references, prior local evidence, or overall test exit status alone.
+
 ### Requirement: Compact bounded remediation workflow
 
 The module SHALL emit deterministic compact remediation packets and bundle a harness-neutral workflow that permits at most three agent fix/rerun cycles.

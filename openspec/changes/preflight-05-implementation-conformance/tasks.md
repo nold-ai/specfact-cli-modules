@@ -11,7 +11,7 @@ All tasks below are future implementation work. This planning change completes n
 ## 2. Specification and failing-first evidence
 
 - [ ] 2.1 Finalize checkpoint/conform CLI, profile, evidence adapter, cache, pre-commit, remediation packet, bounded workflow, persistence, signing, and publication deltas without external adapter packaging.
-- [ ] 2.2 Add mapped tests for upstream verifier inputs, seal selection/reseal boundaries, the normative worktree/index/range matrix, complete Git transitions, scope/component/risk mapping, Requirements selectors/JUnit, all core finding classes and precedence, code-review import, cache invalidation, statuses/authority, profile behavior, renderer parity, persistence, and publication.
+- [ ] 2.2 Add mapped tests for upstream verifier inputs, seal selection/reseal boundaries, the normative worktree/index/range matrix, complete Git transitions, immutable-range conformance evaluation and fail-closed rendering, scope/component/risk mapping, Requirements selectors/JUnit, all core finding classes and precedence, code-review import, cache invalidation, statuses/authority, profile behavior, renderer parity, persistence, and publication.
 - [ ] 2.3 Add workflow tests for deterministic packets, three-cycle maximum, repeated fingerprints, scope expansion, unknown/design stops, and non-mutation of sealed artifacts.
 - [ ] 2.4 Run targeted tests before production edits and record failing-first results in a new `TDD_EVIDENCE.md`.
 
@@ -21,7 +21,7 @@ All tasks below are future implementation work. This planning change completes n
 - [ ] 3.2 Reuse C14 scope/capsule/toolchain extraction, Requirements plans/selectors/JUnit, and code-review JSON; add no duplicate selector or analyzer schema.
 - [ ] 3.3 Implement obligation selection, pytest execution, status aggregation, digest-bound caching, human/JSON rendering, compact remediation packets, and optional atomic persistence.
 - [ ] 3.4 Implement the seal-aware index pre-commit wrapper and harness-neutral implementation-check workflow; keep the deterministic CLI LLM/network/write free.
-- [ ] 3.5 Preserve `specfact preflight conform <change-id>` as explicit immutable-range evaluation with separate authority.
+- [ ] 3.5 Implement `specfact preflight conform <change-id>` as explicit immutable-range extraction, sealed-obligation mapping, core comparison, and non-passing result preservation with separate authority.
 
 ## 4. Dogfood and passing evidence
 

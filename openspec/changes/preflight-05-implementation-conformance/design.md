@@ -21,7 +21,7 @@ This paired modules change executes the released core implementation-assurance c
 
 ### 1. Separate checkpoint and conformance commands
 
-`specfact preflight checkpoint <change-id>` accepts only `--scope worktree|index` and `--profile slice|commit|deep`. It returns the released core `DevelopmentCheckpointResult` with local authority. `specfact preflight conform <change-id>` requires explicit immutable base/head identities and returns `ImplementationConformanceResult`. Neither command changes the seal.
+`specfact preflight checkpoint <change-id>` accepts only `--scope worktree|index` and `--profile slice|commit|deep`. It returns the released core `DevelopmentCheckpointResult` with local authority. `specfact preflight conform <change-id>` verifies the upstream contract/result/seal/policy/current-source bundle, resolves exact repository plus base/head commit and tree identities, extracts the immutable range manifest and range-bound evidence through C14, maps sealed final-delivery obligations, and invokes the core comparator. It preserves `FAIL` and `UNKNOWN` rather than synthesizing success from immutable references or prior local evidence. Neither command changes the seal.
 
 ### 2. Three bounded checkpoint profiles
 
