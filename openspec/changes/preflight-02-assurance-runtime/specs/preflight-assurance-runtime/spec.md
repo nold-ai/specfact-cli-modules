@@ -57,7 +57,7 @@ The module SHALL run validators identified by stable ID and version and SHALL di
 
 ### Requirement: Required MVP validation domains
 
-The initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, per-input influence or no-impact disposition, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work. Risk validation SHALL require every affected behavior or interface to contain the closed core dimensions `boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`.
+The initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, per-input influence or no-impact disposition, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work. A no-impact disposition SHALL bind the exact sealed input/path identity and role, its baseline observation identity/digest, a non-empty rationale, and a policy-authorized deterministic permitted-transition predicate identity/version/configuration digest with a closed change class and observable invariants. The predicate SHALL be supported and semantics-preserving for that role, SHALL NOT admit arbitrary content, behavior, configuration, dependency, or execution changes, and SHALL be evaluable by a later checkpoint against exact provenance-bound base/current observations. If those properties cannot be established, the input SHALL require explicit influence mappings instead. Risk validation SHALL require every affected behavior or interface to contain the closed core dimensions `boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`.
 
 #### Scenario: Scope has no acceptance or test trace
 
@@ -75,10 +75,17 @@ The initial runtime SHALL validate artifact completeness, source freshness, role
 
 #### Scenario: Sealed input lacks an influence disposition
 
-- **GIVEN** a non-excluded source, test, docs, generated, or evidence path or a seal-bound test, dependency, policy, toolchain, or relevant configuration input has neither approved influence mappings to every obligation it can affect nor an explicit no-impact disposition with a non-empty rationale
+- **GIVEN** a non-excluded source, test, docs, generated, or evidence path or a seal-bound test, dependency, policy, toolchain, or relevant configuration input has neither approved influence mappings to every obligation it can affect nor a complete policy-authorized no-impact transition disposition
 - **WHEN** scope and testability validators run
 - **THEN** readiness is blocked or unknown according to source availability
 - **AND** no approval seal is issued with an input that a downstream checkpoint would have to map by inference.
+
+#### Scenario: No-impact disposition cannot constrain the future delta
+
+- **GIVEN** a proposed no-impact disposition omits or ambiguously binds its exact sealed baseline observation, predicate identity/version/configuration, closed permitted change class, observable invariants, or role support, or its predicate admits arbitrary semantic or execution-relevant changes
+- **WHEN** scope and testability validators run
+- **THEN** readiness is blocked or unknown according to source availability
+- **AND** path/role identity plus rationale alone cannot authorize a downstream empty semantic-selector set.
 
 #### Scenario: Risk dimension lacks an explicit disposition
 

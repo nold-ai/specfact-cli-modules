@@ -36,6 +36,7 @@
 - Third review follow-up on 2026-08-30: publication preserves or derives the exclusive core-compatibility upper bound from the complete bundled-module dependency intersection, keeps the complete range identical across manifest and registry, and tests rejection at and above that bound as well as lower-bound behavior.
 - Fourth review follow-up on 2026-08-30: checkpoint applicability is derived from the selected snapshot so worktree-only unstaged/untracked changes cannot be skipped; staged-only selection remains pre-commit/index-specific. Scope-expansion recovery removes already-implemented production expansion before successor approval and failing-first evidence, then permits reimplementation only afterward without automatic code/history/seal mutation.
 - Fifth review follow-up on 2026-08-30: absence of Git approval artifacts cannot prove a repository was never sealed when policy permits an independent canonical authority; `NOT_APPLICABLE` requires authoritative confirmation of no applicable current/history state, while unavailable or ambiguous canonical history returns `UNKNOWN`.
+- Sixth review follow-up on 2026-08-30: no-impact can yield an empty semantic selector set only when its sealed, deterministic, role-supported permitted-transition predicate verifies the exact provenance-bound baseline/current delta; path/role/rationale or unchanged public interface alone is insufficient, and missing or mismatched transition evidence fails closed.
 
 ## Decision
 

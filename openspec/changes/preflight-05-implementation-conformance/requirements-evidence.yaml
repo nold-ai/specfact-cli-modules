@@ -46,7 +46,7 @@ requirements:
       - case_id: PF05M-004
         scenario_id: seal-bound-semantic-evidence-selection
         method: inspection
-        intent: "Inspect component, public-interface, risk, Requirements-plan, selector, verified exact-input no-impact disposition, implicit-empty-set rejection, scope-drift mappings, and removal of already-implemented out-of-scope production expansion before successor approval/failing-first evidence and later reimplementation before implementation."
+        intent: "Inspect component, public-interface, risk, Requirements-plan, selector, sealed-baseline and deterministic permitted-transition predicate bindings for no-impact, exact snapshot-transition verification before empty selection, missing/unsupported/mismatched predicate or semantic-delta handling, implicit-empty-set rejection, scope-drift mappings, and removal of already-implemented out-of-scope production expansion before successor approval/failing-first evidence and later reimplementation before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:current-run-pytest-and-code-review-evidence:
     rationale: *planning-rationale
@@ -76,7 +76,7 @@ requirements:
       - case_id: PF05M-011
         scenario_id: immutable-range-conformance-evaluation
         method: inspection
-        intent: "Inspect canonical latest-seal tip/sequence/chain selection, exact origin-to-authoritative-current-delivery-head and base/head public-interface extraction, exhaustive sealed-obligation/no-impact-disposition comparison, and fail-closed final conformance rendering before implementation."
+        intent: "Inspect canonical latest-seal tip/sequence/chain selection, exact origin-to-authoritative-current-delivery-head and base/head public-interface extraction, exhaustive sealed-obligation comparison including no-impact predicate and exact range-transition evidence, and fail-closed final conformance rendering before implementation."
         observable: *planning-observable
       - case_id: PF05M-012
         scenario_id: immutable-range-conformance-evaluation

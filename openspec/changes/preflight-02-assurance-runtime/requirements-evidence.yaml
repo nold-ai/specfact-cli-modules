@@ -127,9 +127,11 @@ requirements:
         method: inspection
         intent: >-
           Inspect the required MVP validation domains, including approved
-          influence mappings or justified no-impact dispositions for every
-          non-excluded sealed path and seal-bound test, dependency, policy,
-          toolchain, or relevant configuration input, before implementation.
+          influence mappings or no-impact dispositions bound to an exact sealed
+          baseline and policy-authorized deterministic permitted-transition
+          predicate/change-class/observable invariants for every non-excluded
+          sealed path and seal-bound test, dependency, policy, toolchain, or
+          relevant configuration input, before implementation.
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.

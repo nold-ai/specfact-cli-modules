@@ -33,6 +33,7 @@
 - Review follow-up on 2026-08-27: strict OpenSpec validation and staged schema-v2 Requirements planning evidence PASS after the write-safety clarification; the diff remains planning-only.
 - Review follow-up on 2026-08-30: `openspec validate preflight-02-assurance-runtime --strict` PASS after distinguishing ignored local working copies from the required tracked or independently attested shared canonical approval source and adding fresh-checkout `UNKNOWN` behavior; the diff remains planning-only.
 - Second review follow-up on 2026-08-30: canonical state now requires an explicitly authorized approval write, the complete artifact/source-binding set, and either protected-history anchoring outside candidate control or an independent append-only/monotonic authority; read-only runs cannot write state.
+- Third review follow-up on 2026-08-30: no-impact approval now requires an exact sealed-baseline observation plus a policy-authorized deterministic, role-supported, semantics-preserving permitted-transition predicate with closed change class and observable invariants; rationale and path/role alone cannot authorize an empty downstream semantic selection.
 
 ## Decision
 
