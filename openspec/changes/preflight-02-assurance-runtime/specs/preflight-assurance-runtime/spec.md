@@ -121,7 +121,7 @@ The CLI SHALL derive human and JSON output from the same normalized validation r
 
 ### Requirement: Persisted approval artifacts
 
-When explicitly requested, the runtime MAY persist working copies of the normalized contract, validation result, seal, and lineage-tip response atomically under an ignored project-local, change-specific path, but that path SHALL NOT be the canonical cross-checkout approval authority by itself. Seal-aware repository policy SHALL identify a canonical approval source that is either tracked with governed repository state or independently attested, authenticated, immutable, and shareable with a fresh clone or protected consumer. The runtime SHALL atomically persist the normalized contract, validation result, seal, and canonical lineage-tip record to that source. The tip SHALL bind the repository, change, and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, and update authority. A successor approval SHALL advance that tip exactly once; an ancestor seal SHALL NOT remain representable as the current tip.
+Only during an explicitly authorized approval write MAY the runtime atomically persist working copies of the normalized contract, validation result, seal, and lineage-tip response under an ignored project-local, change-specific path; that path SHALL NOT be the canonical cross-checkout approval authority by itself. Seal-aware repository policy SHALL identify a rollback-resistant canonical approval source that is either tracked with governed repository state and anchored to policy-authorized protected base/history outside candidate control, or independently attested by an authenticated append-only/monotonic authority. Either source SHALL be immutable and shareable with a fresh clone or protected consumer and SHALL permit rejection of an older internally valid seal/tip restoration. During that explicitly authorized approval write, the runtime SHALL atomically persist the normalized contract, validation result, seal, canonical lineage-tip record, and their source bindings to the canonical source. The tip SHALL bind the repository, change, and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, protected-history or independent-monotonic anchor, and update authority. A successor approval SHALL advance the complete canonical set exactly once; an ancestor seal SHALL NOT remain representable as the current tip. A read-only preflight run SHALL write no local, project, or shared state.
 
 #### Scenario: Persistence is interrupted
 
@@ -144,6 +144,14 @@ When explicitly requested, the runtime MAY persist working copies of the normali
 - **WHEN** the runtime selects a seal or lineage tip
 - **THEN** selection is `UNKNOWN` and non-passing rather than `NOT_APPLICABLE`
 - **AND** local absence cannot reclassify the governed repository as never sealed.
+
+#### Scenario: Tracked approval state lacks an independent rollback anchor
+
+- **GIVEN** a branch contains an internally valid older seal and matching tip
+- **AND** the tracked approval source cannot be verified against policy-authorized protected base/history outside candidate control or an independent append-only/monotonic authority
+- **WHEN** the runtime selects canonical approval state
+- **THEN** selection is `UNKNOWN` and non-passing
+- **AND** the self-contained branch state cannot establish itself as the latest canonical tip.
 
 ### Requirement: Canonical skill and slash-command contract
 

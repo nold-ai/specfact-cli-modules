@@ -89,6 +89,16 @@ requirements:
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.
+      - case_id: PF02-010
+        scenario_id: persisted-approval-artifacts
+        method: inspection
+        intent: >-
+          Inspect explicit approval-write authorization, complete canonical
+          artifact/source-binding persistence, and rollback-resistant protected
+          history or independent monotonic anchoring.
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
   openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:read-only-default:
     rationale: "The proposal must make this requirement reviewable before implementation begins."
     stakeholder_refs: ["nold-ai/specfact-cli-modules#431"]
