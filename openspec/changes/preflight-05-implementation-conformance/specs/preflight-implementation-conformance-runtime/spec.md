@@ -318,7 +318,7 @@ The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exe
 
 ### Requirement: Signed publication before adapter consumption
 
-After the implementation PR is merged to `dev`, the canonical post-merge publication workflow SHALL generate/version, sign, verify, compatibility-test, and propose one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. The proposal SHALL set `core_compatibility` in both the bundle manifest and registry entry to a lower-bound released core identity that contains the final #684 interfaces; those values SHALL match, a core below the bound SHALL be rejected, and the exact bound plus supported newer cores SHALL pass the compatibility matrix. Neither a feature-branch artifact nor a merely proposed post-merge artifact is published or eligible for downstream handoff. Only after the publication PR is reviewed and merged and official registry/install readback passes SHALL the #434 identity be considered published and handed to core #251. Core #253 SHALL follow completed #251, and modules #433 SHALL consume the identities only after both #251 and #253 complete.
+After the implementation PR is merged to `dev`, the canonical post-merge publication workflow SHALL generate/version, sign, verify, compatibility-test, and propose one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. The proposal SHALL set the complete `core_compatibility` range identically in the bundle manifest and registry entry. Its lower bound SHALL identify the first released core containing the final #684 interfaces. Its exclusive upper bound SHALL be preserved from, or deterministically derived from, the intersection of the complete bundled-module dependency graph and SHALL NOT be omitted or widened past any required dependency's supported range. A core below the lower bound, at the upper bound, or above the upper bound SHALL be rejected; the exact lower bound and supported newer cores strictly below the upper bound SHALL pass the compatibility matrix. Neither a feature-branch artifact nor a merely proposed post-merge artifact is published or eligible for downstream handoff. Only after the publication PR is reviewed and merged and official registry/install readback passes SHALL the #434 identity be considered published and handed to core #251. Core #253 SHALL follow completed #251, and modules #433 SHALL consume the identities only after both #251 and #253 complete.
 
 #### Scenario: Implementation branch prepares publication inputs
 
@@ -334,9 +334,16 @@ After the implementation PR is merged to `dev`, the canonical post-merge publica
 - **THEN** the combination is rejected before checkpoint or conform execution
 - **AND** manifest and registry metadata cannot advertise an unusable older core.
 
+#### Scenario: Installation reaches a dependency-backed upper bound
+
+- **GIVEN** one or more required bundled modules impose an exclusive upper core-compatibility bound
+- **WHEN** the #434 manifest and projected or generated registry entry are prepared or compatibility-tested
+- **THEN** both surfaces carry the same upper bound derived from the complete dependency intersection
+- **AND** the matrix accepts supported cores below it and rejects the bound itself plus a representative core above it.
+
 #### Scenario: Adapter requests the new workflow
 
-- **GIVEN** the #434 implementation and canonical publication PRs are merged, matching manifest/registry `core_compatibility` metadata and its lower-bound/newer-core matrix pass, official registry/install readback passes, and core #251 then #253 are complete
+- **GIVEN** the #434 implementation and canonical publication PRs are merged, matching complete manifest/registry `core_compatibility` ranges and their lower/upper-bound matrix pass, official registry/install readback passes, and core #251 then #253 are complete
 - **AND** #433 prepares a harness adapter
 - **WHEN** it resolves the canonical module and workflow identities
 - **THEN** it consumes the exact signed #434 module identity, preflight workflow identity/digest, and implementation-check workflow identity/digest
