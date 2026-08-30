@@ -38,6 +38,7 @@
 - Fifth review follow-up on 2026-08-30: absence of Git approval artifacts cannot prove a repository was never sealed when policy permits an independent canonical authority; `NOT_APPLICABLE` requires authoritative confirmation of no applicable current/history state, while unavailable or ambiguous canonical history returns `UNKNOWN`.
 - Sixth review follow-up on 2026-08-30: no-impact can yield an empty semantic selector set only when its sealed, deterministic, role-supported permitted-transition predicate verifies the exact provenance-bound baseline/current delta; path/role/rationale or unchanged public interface alone is insufficient, and missing or mismatched transition evidence fails closed.
 - Seventh review follow-up on 2026-08-30: the implementation PR uses the documented unsigned dev-target workflow to refresh the exact payload checksum and remove a stale signature before full filesystem/version verification; post-merge publication verifies that unchanged candidate and exclusively adds the cryptographic signature and generated registry/history artifacts, failing back to implementation review on drift.
+- Eighth review follow-up on 2026-08-30: checksum preparation now supplies an explicit changed-manifest selector and full PR-base identity, records the resolved manifests, and fails on empty/incomplete/ambiguous selection rather than invoking `sign-modules.py` without a target.
 
 ## Decision
 
