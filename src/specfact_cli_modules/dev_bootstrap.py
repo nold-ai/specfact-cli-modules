@@ -53,7 +53,8 @@ def apply_specfact_workspace_env(repo_root: Path) -> None:
     Pins ``SPECFACT_MODULES_REPO`` to the modules repo root and ``SPECFACT_REPO_ROOT`` to the resolved
     sibling/core specfact-cli checkout when known. Discovery then agrees with ``specfact module list
     --show-origin`` expectations; project ``.specfact/modules`` still wins over ``~/.specfact/modules``
-    when both exist—remove stale user copies with ``specfact module uninstall <name> --scope user``.
+    when both exist. The user copy remains installed and available outside this workspace, so normal
+    shadowing requires no uninstall or cleanup action.
     """
     resolved = repo_root.resolve()
     os.environ["SPECFACT_MODULES_REPO"] = str(resolved)
@@ -93,7 +94,7 @@ def ensure_core_dependency(repo_root: Path) -> int:
     if core_repo is None:
         if _installed_core_exists():
             return 0
-        print("Unable to resolve specfact-cli checkout. Set SPECFACT_CLI_REPO.", file=sys.stderr)
+        sys.stderr.write("Unable to resolve specfact-cli checkout. Set SPECFACT_CLI_REPO.\n")
         return 1
 
     installed_root = _installed_core_root()

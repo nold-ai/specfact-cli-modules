@@ -12,8 +12,8 @@
 
 ## Scope and Ownership Review
 
-- Modules owns CLI orchestration, Python validators, rendering, persistence, and canonical bundled workflow content.
-- Core `preflight-01-design-contract-core` owns the durable contract/result/seal/verifier interfaces.
+- Modules owns CLI orchestration, Python validators for scope/component/risk/Requirements-plan readiness, rendering, persistence, and canonical bundled workflow content.
+- Core `preflight-01-design-contract-core` owns the durable contract/result/seal/verifier interfaces and closed scope/risk/stage vocabulary.
 - Core #251 owns generic skill installation/export; core #253 owns generated instruction references; `preflight-04-harness-adapters` owns external packages.
 - Stable signing and publication remain downstream in modules `preflight-03-dogfood-hardening-and-release`.
 
@@ -31,6 +31,9 @@
 - Markdown lint limited to changed planning Markdown: PASS on 2026-08-25.
 - Staged schema-v2 Requirements planning evidence: PASS on 2026-08-25 with inspection-only cases and no test selectors or execution claims.
 - Review follow-up on 2026-08-27: strict OpenSpec validation and staged schema-v2 Requirements planning evidence PASS after the write-safety clarification; the diff remains planning-only.
+- Review follow-up on 2026-08-30: `openspec validate preflight-02-assurance-runtime --strict` PASS after distinguishing ignored local working copies from the required tracked or independently attested shared canonical approval source and adding fresh-checkout `UNKNOWN` behavior; the diff remains planning-only.
+- Second review follow-up on 2026-08-30: canonical state now requires an explicitly authorized approval write, the complete artifact/source-binding set, and either protected-history anchoring outside candidate control or an independent append-only/monotonic authority; read-only runs cannot write state.
+- Third review follow-up on 2026-08-30: no-impact approval now requires an exact sealed-baseline observation plus a policy-authorized deterministic, role-supported, semantics-preserving permitted-transition predicate with closed change class and observable invariants; rationale and path/role alone cannot authorize an empty downstream semantic selection.
 
 ## Decision
 

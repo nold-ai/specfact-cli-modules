@@ -1,6 +1,15 @@
 # Tasks: Historical Replay Capsule
 
-All later tasks are bounded to at most two hours and must follow tests-before-code.
+> **Archived historical plan only — do not execute.** Issue #414 and paired
+> core issue #675 are closed as Not Planned. This change is superseded by
+> #431/#434 plus core #682/#684. The folder was relocated without running
+> `openspec archive`, so its unimplemented deltas were not promoted into
+> canonical requirements.
+
+Every unchecked item below is retained historical planning text and is
+non-executable. Reopening requires a new issue, a new active change, fresh
+dependency/readiness evidence, strict revalidation, and an accepted replacement
+task list.
 
 ## 0. Planning
 
@@ -51,7 +60,7 @@ All later tasks are bounded to at most two hours and must follow tests-before-co
 - [ ] 3.5 Observe the canonical `.github/workflows/publish-modules.yml` run triggered by the `dev` push. It SHALL use the repository signing secret, generate the signed manifest plus `registry/index.json`, archive, checksum, and signature sidecar, and open its `auto/publish-dev-<run-id>` PR.
 - [ ] 3.6 Review the exact auto-publish PR and require its generated `.tar.sig` sidecar, signed manifest/archive identity, `verify-modules-signature --require-signature --payload-from-filesystem --enforce-version-bump`, and full final quality matrix to pass before merging that PR to `dev`.
 - [ ] 3.7 Record the immutable merged `dev` commit/tree, package/capsule-schema versions, manifest integrity, signer/signature, registry/archive/checksum, workflow run, auto-publish PR, core compatibility, and passing verification identities. Promote the new verifier epoch independently; only later changes may use that already-trusted epoch for B/R/H/D chronology.
-- [ ] 3.8 After the implementation and signed auto-publish PRs merge and rollout prerequisites hold, from the repository root run exactly `openspec archive requirements-08-bounded-red-green-proof`; never move the change directory manually.
+- [ ] 3.8 **SUPERSEDED — MUST NOT RUN:** the former R08 archive step is retained only as historical planning text; the change was never implemented.
 - [ ] 3.9 Remove the merged worktree/branch, run `git worktree prune`, and record the policy self-check.
 
 ## Prohibited shortcuts

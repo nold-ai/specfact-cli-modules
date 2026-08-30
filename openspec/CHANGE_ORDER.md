@@ -7,13 +7,27 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active** | 19 | [`openspec/changes/`](changes/) |
-| **Parked** | 16 | [`openspec/parking-lot/`](parking-lot/) |
-| **Archived** | 49 | [`openspec/changes/archive/`](changes/archive/) |
+| **Active-tree entries** | 19 | [`openspec/changes/`](changes/) |
+| **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
+| **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
+| **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects the active set only. Completed changes are archived
-with date-prefixed folders. Parked changes are preserved for later customer pull
-but are not implementation-ready.
+`openspec list` reflects all 19 direct active-tree entries. The closed R08
+proposal is retained under non-canonical abandoned history, outside
+`openspec/changes/` and its completed-change archive; no unimplemented delta
+entered canonical specifications. Completed changes still use native OpenSpec
+archival. Parking-lot changes are preserved for later customer pull but are not
+implementation-ready.
+
+## Abandoned Planning History Without Specification Promotion
+
+| Change | GitHub issue | Historical status |
+|---|---|---|
+| [`requirements-08-bounded-red-green-proof`](history/abandoned/2026-08-30-requirements-08-bounded-red-green-proof/) | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Closed Not Planned on 2026-08-27; never implemented; retained outside the completed-change archive; canonical specs unchanged |
+
+This non-canonical history is not an OpenSpec archive and is not implementation
+authority. Completed work must use `openspec archive` so implemented deltas are
+validated and promoted normally.
 
 ## Product Thesis
 
@@ -45,6 +59,7 @@ issues and are now archived:
 | `code-review-11-simplification-feedback-loop` | archived 2026-06-06 |
 | `code-review-12-guided-simplification-enforcement` | archived 2026-06-06 |
 | `code-review-13-cleanup-forecast-agent-handoff` | archived 2026-06-06 |
+| `module-scope-02-preserve-user-installs` | archived 2026-08-30 after #454 merged to `dev` |
 
 These archived specs are now the shipped basis for the flagship demo: run review,
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
@@ -110,8 +125,8 @@ and adapters reference it without duplicating Python checks.
 |---:|---|---|---|---|
 | 1 | `preflight-02-assurance-runtime` | [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) | Unpublished runtime, Python validators, CLI/rendering/persistence, and canonical bundled `specfact-preflight` workflow | core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682) |
 | 2 | `preflight-03-dogfood-hardening-and-release` | [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) | Evidence-backed hardening, bounded compatibility proof, signing, and stable publication | modules #431; core C14 dogfood/readiness [#683](https://github.com/nold-ai/specfact-cli/issues/683) |
-| 3 | `preflight-04-harness-adapters` | [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433) | Later thin Codex plugin, ECC companion, and hatch3r pack; no duplicate validators | stable modules release #432; core generated instructions [#253](https://github.com/nold-ai/specfact-cli/issues/253) |
-| 4 | `preflight-05-implementation-conformance` | [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434) | Later postimplementation extraction/comparison/rendering; explicitly outside preflight MVP | modules #432 and adapters #433; paired core conformance contract [#684](https://github.com/nold-ai/specfact-cli/issues/684) |
+| 3 | `preflight-05-implementation-conformance` | [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434) | Worktree/index checkpoints, final range conformance, C14/Requirements/review evidence reuse, seal-aware pre-commit, bounded agent handoff, and signed publication | modules #432; paired core implementation-assurance contract [#684](https://github.com/nold-ai/specfact-cli/issues/684) |
+| 4 | `preflight-04-harness-adapters` | [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433) | Later thin Codex plugin, ECC companion, and hatch3r pack; no duplicate validators | exact signed #434 module identity plus preflight and implementation-check workflow identities/digests; core generated instructions [#253](https://github.com/nold-ai/specfact-cli/issues/253) |
 
 ### Track B - Upstream Context Adapters
 
@@ -123,7 +138,6 @@ and adapters reference it without duplicating Python checks.
 | 4 | `requirements-05-dogfood-evidence-gate` | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352) | CI evidence adapter that reports green/red requirement-source validity and traceability evidence; not test-execution proof | requirements-04 shipped; existing Requirements runtime |
 | 5 | `requirements-06-evidence-enforcement` | [#361](https://github.com/nold-ai/specfact-cli-modules/issues/361) | Reusable Requirements evidence command plus staged pre-commit enforcement and CI parity | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352); paired core [#657](https://github.com/nold-ai/specfact-cli/issues/657) |
 | 6 | `requirements-07-scenario-runtime-proof` | [#368](https://github.com/nold-ai/specfact-cli-modules/issues/368) | Plan exact selectors and reconcile current-run JUnit independently from historical chronology | requirements-06; paired corrected core R07 |
-| 7 | `requirements-08-bounded-red-green-proof` | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Validate a core-emitted structural B < R < H <= D replay capsule as an independent chronology claim; pass requires distinct H/D (`H < D`) | corrected R07; paired core [#675](https://github.com/nold-ai/specfact-cli/issues/675) |
 | 8 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
 | 9 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
 | Parked | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path. Deprioritized 2026-07-13 behind openspec-01 | requirements-02, sync-01 |
@@ -172,7 +186,9 @@ ceremony rather than validation evidence:
 3. Core C14 adoption [#680](https://github.com/nold-ai/specfact-cli/issues/680).
 4. Core C14 dogfood/readiness [#683](https://github.com/nold-ai/specfact-cli/issues/683).
 5. Evidence-backed modules hardening and stable publication [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432).
-6. Shared skill installation #251 -> generated instructions #253 -> adapters #433; later conformance #684/#434; modules C15 #417 -> core C15 #679.
+6. Core implementation-assurance contracts [#684](https://github.com/nold-ai/specfact-cli/issues/684).
+7. Modules checkpoint/conformance runtime, dogfood, signing, and publication [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434).
+8. Shared skill installation #251 -> generated instructions #253 -> adapters #433. Modules C15 #417 -> core C15 #679 may proceed independently after stable #432.
 
 Modules C15 #417 keeps its existing policy and exception blockers (#158,
 core #248, and modules #167) plus the stable preflight release. Existing native
@@ -206,7 +222,7 @@ dedicated issue-linked worktree and session.
 - `requirements-05-dogfood-evidence-gate`
 - `requirements-06-evidence-enforcement` (after requirements-05 archival/release evidence)
 - `requirements-07-scenario-runtime-proof` (current-run reconciliation correction after requirements-06)
-- `requirements-08-bounded-red-green-proof` (paired with core bounded replay after corrected R07)
+- abandoned-history `requirements-08-bounded-red-green-proof` is superseded and non-canonical; no replay implementation or specification promotion occurred
 - `architecture-01-solution-layer`
 - `sync-01-unified-kernel`
 - `requirements-03-backlog-sync` (parked 2026-07-13)
@@ -216,8 +232,8 @@ dedicated issue-linked worktree and session.
 - `docs-16-core-accountability-sync`
 - `architecture-02-module-well-architected`
 - `docs-14-module-release-history`
-- `preflight-04-harness-adapters` after core #253 and stable publication
-- `preflight-05-implementation-conformance` after stable publication and core #684
+- `preflight-05-implementation-conformance` after stable #432 and core #684
+- `preflight-04-harness-adapters` after signed #434, core #251, and core #253
 
 ## Parent Issues And Epic Framing
 
@@ -236,4 +252,6 @@ implementation starts.
 After a change ships and merges, run `openspec archive <change-id>` from the repo
 root. Do not manually move completed changes into `openspec/changes/archive/`.
 Parking-lot moves are allowed for paused proposals that are explicitly not active
-scope.
+scope. Abandoned, never-implemented proposals may be retained only under
+`openspec/history/abandoned/`, whose records are non-canonical and never imply
+specification promotion or implementation authority.

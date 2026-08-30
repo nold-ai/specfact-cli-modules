@@ -1,23 +1,26 @@
-# Change: Implementation-to-Sealed-Contract Conformance Runtime
+# Change: Seal-Bound Development Checkpoint and Conformance Runtime
 
 ## Why
 
-After code is written, teams need a separate deterministic comparison between the implementation evidence and the previously approved preflight contract. That comparison must reuse the sealed contract without pretending the pre-implementation gate proved delivery, and it must remain outside the initial preflight MVP.
+Preflight approval records what was reviewed, but defects and mismatches can still accumulate while code is being written. SpecFact needs a cheap local checkpoint that maps the current implementation back to the sealed scope, risk, and test intent, returns compact remediation evidence to the coding agent before a PR, and preserves a distinct immutable-range conformance authority for delivery.
 
 ## What Changes
 
-- **NEW**: A later `specfact preflight conform <change-id>` runtime that loads a base-bound valid preflight seal, captures implementation evidence through the released paired-core snapshot interface, imports exact test/evidence identities, and evaluates the core conformance contract without defining a second snapshot or obligation-mapping contract.
-- **NEW**: Python extractors and validators for changed-path, interface, acceptance-criterion, test-intent, task, and exclusion mappings.
-- **NEW**: Human and JSON conformance rendering plus optional atomic persistence alongside the original preflight artifacts.
-- **NEW**: A workflow handoff for agents to run conformance after implementation evidence is available and before delivery/archive decisions.
-- **NEW**: A tested adapter-compatibility handoff for any new signed module/workflow identity, or a blocking follow-up adapter release when the exact #433 descriptor no longer matches.
-- **CLARIFY**: Material implementation drift requires explicit contract reapproval or implementation correction; the runtime does not rewrite the sealed contract automatically.
+- **NEW**: `specfact preflight checkpoint <change-id> --scope worktree|index --profile slice|commit|deep` using the released core snapshot and checkpoint-result contracts.
+- **NEW**: Complete Git path extraction by reusing C14 worktree/index/range scope and capsule primitives, plus policy-authorized snapshot-bound public-interface extraction using the released core records and provenance-bound absent-side tombstones for additions, deletions, and rename endpoints; missing or ambiguous interface discovery fails closed instead of accepting a caller-supplied empty set.
+- **NEW**: Seal-bound selection of Requirements cases through the existing planned-to-test-authored maturity lifecycle, exact pytest selectors when test-authored, bounded affected-component pytest targets, and no-impact empty selection only after the seal-bound deterministic permitted-transition predicate verifies the exact base/current snapshot delta; no second selector schema or implicit empty-set fallback.
+- **NEW**: Import of current-run JUnit and `specfact code review run` evidence with cache identity bound to the seal, snapshot, selected obligations/targets, runner, policy, and configuration.
+- **NEW**: `specfact preflight conform <change-id>` selects only the policy-authorized canonical latest seal and performs explicit cumulative implementation-lineage-origin-to-authoritative-current-delivery-head comparison across successor seals, with a separate final conformance result.
+- **NEW**: Human/JSON parity, compact remediation packets, a harness-neutral implementation-check workflow with at most three fix/rerun cycles, and optional atomic persistence.
+- **NEW**: Seal-aware staged pre-commit integration that validates canonical approval/Git identity before coverage, evaluates sealed approval state, tests, configuration, and evidence as well as source; distinguishes a never-sealed repository from staged removal of its last seal/tip by combining authoritative base/index state with the policy-authorized canonical approval history, including an independently attested source; is non-applicable only after that source confirms no current/historical applicable approval or relationship; fails closed when canonical history or other applicable evidence is unavailable or ambiguous; and requires both defect and known-green shadow controls plus pairwise and aggregate bounded live false-block rates bound and, after release preparation or fixes, recollected for the exact unchanged promotion candidate before blocking rollout.
+- **NEW**: The implementation PR prepares the versioned manifest and refreshes a checksum-only, non-publishable candidate with the documented unsigned dev-target workflow so full filesystem checksum/version verification is reachable without a stale signature. After implementation merges, the canonical post-merge publication workflow verifies that exact merged version/payload/checksum, cryptographically signs it, generates the registry/history artifacts, compatibility-tests, and proposes one #434 release identity that separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. Because signing and generated publication artifacts change promotion-relevant identities, the publication PR must recollect rollout evidence and reevaluate every promotion gate against its exact signed head before merge. Matching bundle-manifest and registry `core_compatibility` ranges raise the lower bound to the first released core containing #684 while preserving or deriving the exclusive upper bound required by the complete bundled-module dependency graph. The identity becomes published only after the unchanged signed publication PR merges, lower/upper boundary tests pass, and official registry/install readback passes; only then enforce #434 -> #251 -> #253 -> #433.
+- **CLARIFY**: The deterministic CLI never invokes an LLM, edits implementation, mutates/reseals a contract, or promotes local evidence to protected PR authority.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `preflight-implementation-conformance-runtime`: Executable postimplementation evidence extraction, comparison, rendering, persistence, and workflow handoff.
+- `preflight-implementation-conformance-runtime`: Worktree/index checkpoints, immutable range conformance, evidence selection/execution/import, rendering, persistence, pre-commit integration, and bounded agent handoff.
 
 ### Modified Capabilities
 
@@ -25,21 +28,22 @@ After code is written, teams need a separate deterministic comparison between th
 
 ## Impact
 
-- Planning artifacts only in this phase. No production or test code, module package, manifest, signature, version, workflow asset, generated snapshot/result, adapter, or dependency is created.
-- Explicitly excluded from the preflight MVP; work begins only after stable preflight publication and the paired core conformance contract.
-- No external harness-specific packaging is included; compatible harnesses consume the canonical workflow only after a tested compatible-upgrade descriptor or separately accepted adapter release covers the new signed identity.
+- Planning artifacts only in this phase. No production code, tests, package, manifest, signature, version, workflow asset, hook, generated snapshot/result, adapter, or dependency is created.
+- Implementation begins only after the stable #432 preflight handoff and released core #684 contracts.
+- External Codex/ECC/hatch3r packaging remains in #433, which consumes the signed module identity and both separately named workflow identities/digests published here.
 
 ## Dependencies
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
-- Blocked by the complete preflight delivery chain: core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682) -> modules runtime [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) -> core C14 adoption/readiness [#680](https://github.com/nold-ai/specfact-cli/issues/680) and [#683](https://github.com/nold-ai/specfact-cli/issues/683) -> stable modules release [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) -> core installation/instructions [#251](https://github.com/nold-ai/specfact-cli/issues/251) and [#253](https://github.com/nold-ai/specfact-cli/issues/253) -> modules harness adapters [#433](https://github.com/nold-ai/specfact-cli-modules/issues/433), plus paired core conformance contract [#684](https://github.com/nold-ai/specfact-cli/issues/684). Modules C14 #416 remains open and `In Progress` unless separately authorized; this change neither closes nor supersedes it.
-- Runs independently of the C15 chain; neither change may silently redefine the other's evidence semantics.
+- Blocked by the stable modules release [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) and paired core implementation-assurance contracts [#684](https://github.com/nold-ai/specfact-cli/issues/684).
+- Blocks core skill installation [#251](https://github.com/nold-ai/specfact-cli/issues/251), then #253 and modules adapters #433.
+- Runs independently of C15; neither change may silently redefine the other's policy or evidence semantics.
 
 ## Explicit Non-Goals
 
 - No pre-implementation readiness, approval, or sealing behavior.
-- No automatic contract mutation, implementation edits, or test generation.
-- No universal semantic correctness, security, or completeness claim.
+- No direct LLM/network invocation, automatic contract mutation, implementation edits, or test generation in the deterministic CLI.
+- No universal semantic correctness, platform correctness, security, or completeness claim.
 - No Codex/ECC/hatch3r adapter packaging.
 
 ## Source Tracking

@@ -14,7 +14,7 @@ This conflation pushed core toward static inference of every pytest-determining 
 - Stop deriving `passing-after-red` from current-run pass or generic maturity.
 - Remove new use of the R07 legacy-ledger migration path; keep finalized-report v2 reading only for explicitly labelled compatibility and reject malformed v3 instead of treating it as legacy.
 - Accept finalized current-run Requirements evidence as Code Review provenance without requiring a historical proof basis.
-- Move trusted historical chronology to `requirements-08-bounded-red-green-proof`.
+- Keep trusted historical chronology outside R07; no active change owns that capability after the R08 proposal was abandoned.
 
 ## Capabilities
 
@@ -42,6 +42,5 @@ This conflation pushed core toward static inference of every pytest-determining 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: [#368](https://github.com/nold-ai/specfact-cli-modules/issues/368)
 - **Paired Core Issue**: [nold-ai/specfact-cli#662](https://github.com/nold-ai/specfact-cli/issues/662)
-- **Follow-up**: `requirements-08-bounded-red-green-proof`
+- **Follow-up**: none; the abandoned R08 replay proposal is historical only, and any replacement requires a separately approved change
 - **Planning correction date**: 2026-08-13
-

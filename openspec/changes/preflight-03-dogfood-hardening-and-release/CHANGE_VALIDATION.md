@@ -21,7 +21,7 @@
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
 - Native direct blockers verified: modules [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) and paired core [#683](https://github.com/nold-ai/specfact-cli/issues/683).
 - Required transitive sequence verified: core [#682](https://github.com/nold-ai/specfact-cli/issues/682) -> modules #431 -> core C14 [#680](https://github.com/nold-ai/specfact-cli/issues/680) -> core #683 -> this change.
-- Native downstream edges verified: core #251, modules adapters #433, both preflight-05 stories, and modules C15 #417.
+- Native downstream sequence verified: this #432 release blocks core #684 and modules C15 #417; modules #434 then consumes #432 plus core #684 and blocks core #251 -> #253 -> modules #433.
 - GitHub readback verified User Story type, parent #163, project `SpecFact CLI` / `Todo`, assignee `djm81`, and the required labels.
 - Modules C14 #416 is referenced as delivered-by-publication context but remains untouched while GitHub shows it `In Progress`.
 

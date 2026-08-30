@@ -71,7 +71,31 @@ requirements:
       - case_id: PF02-005
         scenario_id: persisted-approval-artifacts
         method: inspection
-        intent: "Inspect the persisted approval artifacts planning contract before implementation."
+        intent: >-
+          Inspect separate normalized validation-result persistence, atomic
+          shared approval artifacts, canonical lineage-tip advance,
+          missing/stale/rollback/fork/ambiguity handling, and rejection of
+          older-ancestor fallback before implementation.
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+      - case_id: PF02-009
+        scenario_id: persisted-approval-artifacts
+        method: inspection
+        intent: >-
+          Inspect tracked or independently attested shared approval authority
+          and fresh-checkout UNKNOWN behavior when required canonical state is
+          unavailable.
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+      - case_id: PF02-010
+        scenario_id: persisted-approval-artifacts
+        method: inspection
+        intent: >-
+          Inspect explicit approval-write authorization, complete canonical
+          artifact/source-binding persistence, and rollback-resistant protected
+          history or independent monotonic anchoring.
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.
@@ -101,7 +125,13 @@ requirements:
       - case_id: PF02-007
         scenario_id: required-mvp-validation-domains
         method: inspection
-        intent: "Inspect the required mvp validation domains planning contract before implementation."
+        intent: >-
+          Inspect the required MVP validation domains, including approved
+          influence mappings or no-impact dispositions bound to an exact sealed
+          baseline and policy-authorized deterministic permitted-transition
+          predicate/change-class/observable invariants for every non-excluded
+          sealed path and seal-bound test, dependency, policy, toolchain, or
+          relevant configuration input, before implementation.
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.

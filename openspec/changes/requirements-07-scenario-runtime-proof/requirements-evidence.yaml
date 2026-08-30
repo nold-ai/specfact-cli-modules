@@ -62,7 +62,7 @@ requirements:
         intent: Reject every incomplete, non-pass, or non-canonical current selector result.
         observable: Missing, duplicate, ambiguous, skipped, failed, errored, missing/mismatched specfact.selector, display/class-only, non-canonical, or mismatched mapping/plan/source/selector identities cannot produce current_execution pass.
   openspec:requirements-07-scenario-runtime-proof:requirements-scenario-runtime-proof:historical-chronology-is-a-separate-claim:
-    rationale: Historical TDD chronology is optional evidence owned by R08, not a prerequisite for current execution.
+    rationale: Historical TDD chronology has no active owning change and is not a prerequisite for current execution.
     stakeholder_refs:
       - https://github.com/nold-ai/specfact-cli-modules/issues/368
       - https://github.com/nold-ai/specfact-cli/issues/662
@@ -74,7 +74,7 @@ requirements:
       - case_id: lifecycle-chronology-independent
         scenario_id: historical-chronology-is-a-separate-claim
         method: test
-        intent: Emit finalized report schema v3 with a valid current-run observation and mandatory chronology placeholder when no R08 replay capsule is supplied.
+        intent: Emit finalized report schema v3 with a valid current-run observation and mandatory chronology placeholder; no active replay-capsule contract exists.
         observable: current_execution is final while red_green_chronology is the canonical R07 not_evaluated/capsule_not_supplied placeholder; R07 exposes no chronology request/capsule input or other chronology status.
   openspec:requirements-07-scenario-runtime-proof:requirements-proof-review-context:finalized-requirements-evidence-review-context:
     rationale: Code Review must consume finalized Requirements evidence as provenance without fusing delivery verdicts.
