@@ -7,17 +7,26 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 21 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 20 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
-| **Archived** | 49 | [`openspec/changes/archive/`](changes/archive/) |
+| **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 
-`openspec list` reflects all 21 direct active-tree entries: 19 are
-implementation-active, while `requirements-03-backlog-sync` and the closed R08
-proposal are parked in place. R08 remains there because repository governance
-prohibits manually moving a change and native archive would merge its
-unimplemented delta. Completed changes are archived with date-prefixed folders.
-Parking-lot changes are preserved for later customer pull but are not
-implementation-ready.
+`openspec list` reflects all 20 direct active-tree entries. The closed R08
+proposal is no longer presented as active work. Under an explicit owner decision
+on 2026-08-30, its complete historical folder was relocated to the dated archive
+without running `openspec archive`; no unimplemented delta entered canonical
+specifications. Completed changes still use native OpenSpec archival. Parking-lot
+changes are preserved for later customer pull but are not implementation-ready.
+
+## Abandoned Changes Archived Without Specification Promotion
+
+| Change | GitHub issue | Archive status |
+|---|---|---|
+| [`requirements-08-bounded-red-green-proof`](changes/archive/2026-08-30-requirements-08-bounded-red-green-proof/) | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Closed Not Planned; never implemented; manually relocated on 2026-08-30 without `openspec archive`; canonical specs unchanged |
+
+This is a bounded exception for an abandoned, never-implemented proposal. It is
+not precedent for completed work, which must still use `openspec archive` so
+implemented deltas are validated and promoted normally.
 
 ## Product Thesis
 
@@ -128,7 +137,6 @@ and adapters reference it without duplicating Python checks.
 | 4 | `requirements-05-dogfood-evidence-gate` | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352) | CI evidence adapter that reports green/red requirement-source validity and traceability evidence; not test-execution proof | requirements-04 shipped; existing Requirements runtime |
 | 5 | `requirements-06-evidence-enforcement` | [#361](https://github.com/nold-ai/specfact-cli-modules/issues/361) | Reusable Requirements evidence command plus staged pre-commit enforcement and CI parity | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352); paired core [#657](https://github.com/nold-ai/specfact-cli/issues/657) |
 | 6 | `requirements-07-scenario-runtime-proof` | [#368](https://github.com/nold-ai/specfact-cli-modules/issues/368) | Plan exact selectors and reconcile current-run JUnit independently from historical chronology | requirements-06; paired corrected core R07 |
-| Parked in place | `requirements-08-bounded-red-green-proof` | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Superseded by seal-bound risk/test intent plus implementation checkpoints; no B/R/H/D replay or capsule implementation planned | closed Not Planned; retained at its governed `openspec/changes/` path without archive/spec merge |
 | 8 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
 | 9 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
 | Parked | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path. Deprioritized 2026-07-13 behind openspec-01 | requirements-02, sync-01 |
@@ -213,7 +221,7 @@ dedicated issue-linked worktree and session.
 - `requirements-05-dogfood-evidence-gate`
 - `requirements-06-evidence-enforcement` (after requirements-05 archival/release evidence)
 - `requirements-07-scenario-runtime-proof` (current-run reconciliation correction after requirements-06)
-- `requirements-08-bounded-red-green-proof` is parked and superseded; no replay implementation is planned
+- archived `requirements-08-bounded-red-green-proof` is superseded and historical only; no replay implementation or canonical spec promotion occurred
 - `architecture-01-solution-layer`
 - `sync-01-unified-kernel`
 - `requirements-03-backlog-sync` (parked 2026-07-13)

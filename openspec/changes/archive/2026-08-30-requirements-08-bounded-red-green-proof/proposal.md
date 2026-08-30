@@ -47,7 +47,7 @@ The Requirements module should validate a typed capsule produced by trusted core
 - **GitHub Issue**: #414
 - **Issue URL**: https://github.com/nold-ai/specfact-cli-modules/issues/414
 - **Repository**: nold-ai/specfact-cli-modules
-- **Last Synced Status**: closed-not-planned / parked and superseded
+- **Last Synced Status**: closed-not-planned / archived without spec promotion / superseded
 - **Parent Feature**: #161
 - **Paired Core Issue**: nold-ai/specfact-cli#675
 - **Paired Core PR**: nold-ai/specfact-cli#674

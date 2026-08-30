@@ -1,12 +1,15 @@
 # Tasks: Historical Replay Capsule
 
-> **Historical plan only — do not execute.** Issue #414 and paired core issue
-> #675 are closed as Not Planned. This change is parked and superseded by
-> #431/#434 plus core #682/#684. In particular, do not run the archive task:
-> no R08 behavior was implemented, so archiving would merge an unimplemented
-> delta into canonical requirements.
+> **Archived historical plan only — do not execute.** Issue #414 and paired
+> core issue #675 are closed as Not Planned. This change is superseded by
+> #431/#434 plus core #682/#684. The folder was relocated without running
+> `openspec archive`, so its unimplemented deltas were not promoted into
+> canonical requirements.
 
-All later tasks are bounded to at most two hours and must follow tests-before-code.
+Every unchecked item below is retained historical planning text and is
+non-executable. Reopening requires a new issue, a new active change, fresh
+dependency/readiness evidence, strict revalidation, and an accepted replacement
+task list.
 
 ## 0. Planning
 
