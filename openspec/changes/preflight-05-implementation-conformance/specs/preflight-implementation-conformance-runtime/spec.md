@@ -2,14 +2,28 @@
 
 ### Requirement: Separate development checkpoint command
 
-The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal. Allowed pairs are `slice/worktree`, `slice/index`, `commit/index`, `deep/worktree`, and `deep/index`; every other pair SHALL be rejected as invalid usage before snapshot extraction, without silently overriding either argument. Automatic selection SHALL validate the canonical tip, complete predecessor chain, approval authority, and required Git identities before evaluating path coverage. Applicability and coverage SHALL be computed from the selected snapshot: `worktree` includes staged, unstaged tracked, and untracked changes, while `index` includes staged changes only. The pre-commit wrapper SHALL use `index`; it SHALL NOT make staged-only selection govern an explicit `worktree` checkpoint. Missing, stale, multiple, rolled-back, forked, or ambiguous canonical/Git state SHALL return `UNKNOWN`; uncovered governed-path `FAIL` applies only after one valid canonical seal and snapshot identity are established.
+The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal. Allowed pairs are `slice/worktree`, `slice/index`, `commit/index`, `deep/worktree`, and `deep/index`; every other pair SHALL be rejected as invalid usage before snapshot extraction, without silently overriding either argument. Automatic selection SHALL validate the canonical tip, complete predecessor chain, approval authority, and required Git identities before evaluating path coverage. Applicability and coverage SHALL be computed from the selected snapshot: `worktree` includes staged, unstaged tracked, and untracked changes, while `index` includes staged changes only. The pre-commit wrapper SHALL use `index`; it SHALL NOT make staged-only selection govern an explicit `worktree` checkpoint. Absence of Git approval artifacts SHALL NOT establish absence of approval history: before returning `NOT_APPLICABLE` for a never-sealed repository or paths unrelated to every seal, the runtime SHALL require the policy-authorized canonical approval source to confirm that no current or historical applicable approval exists. Missing, stale, multiple, rolled-back, forked, unavailable, or ambiguous canonical/Git state SHALL return `UNKNOWN`; uncovered governed-path `FAIL` applies only after one valid canonical seal and snapshot identity are established.
 
 #### Scenario: No selected-scope seal-relevant change or associated seal
 
-- **GIVEN** neither the authoritative base nor the selected worktree/index snapshot contains preflight approval state and no selected-scope approval-artifact path is changed, or every path changed in the selected scope is deterministically classified outside the repository's configured preflight-governed path/input universe and unrelated to every current or prior seal
+- **GIVEN** the policy-authorized canonical approval source authoritatively confirms that no current or historical applicable approval exists, neither the authoritative base nor the selected worktree/index snapshot contains working approval state, and no selected-scope approval-artifact path is changed; or it confirms that every path changed in the selected scope is deterministically outside the repository's configured preflight-governed path/input universe and unrelated to every current or prior seal
 - **WHEN** automatic checkpoint selection runs
 - **THEN** the result is `NOT_APPLICABLE` and exits zero
 - **AND** an unsealed repository does not acquire a universal blocking policy.
+
+#### Scenario: Canonical approval is independent of Git artifacts
+
+- **GIVEN** neither the authoritative base nor the selected snapshot contains approval artifacts but the policy-authorized independent canonical source contains a current applicable seal or historical applicable approval
+- **WHEN** automatic checkpoint selection runs
+- **THEN** the runtime evaluates that canonical approval and the selected-scope changes instead of returning `NOT_APPLICABLE`
+- **AND** a current seal proceeds to coverage while historical state prevents the repository from being treated as never sealed.
+
+#### Scenario: Canonical approval history cannot be established
+
+- **GIVEN** Git approval artifacts are absent and the policy-authorized canonical source is unavailable, unauthenticated, stale, rolled back, forked, or ambiguous
+- **WHEN** automatic checkpoint selection evaluates applicability
+- **THEN** the result is `UNKNOWN` and exits non-zero
+- **AND** missing canonical history is never converted to `NOT_APPLICABLE`.
 
 #### Scenario: Worktree checkpoint has only unstaged or untracked changes
 
