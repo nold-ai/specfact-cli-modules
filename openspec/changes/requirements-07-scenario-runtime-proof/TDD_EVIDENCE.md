@@ -134,7 +134,7 @@
 
 ## 2026-08-13 scope-correction record
 
-This planning commit preserves the historical entries above but supersedes their coupling of current execution to prior-red or legacy-ledger evidence. Those results describe the previous contract; they do not prove the corrected R07 behavior or the new R08 capsule contract.
+This planning commit preserves the historical entries above but supersedes their coupling of current execution to prior-red or legacy-ledger evidence. Those results describe the previous contract; they do not prove the corrected R07 behavior. The later R08 capsule proposal was abandoned and has no active replacement.
 
 - Corrected behavior status: not started.
 - Package, registry, schema, runtime, and test changes in this commit: none.

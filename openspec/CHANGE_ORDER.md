@@ -7,26 +7,27 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 20 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 19 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
+| **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 20 direct active-tree entries. The closed R08
-proposal is no longer presented as active work. Under an explicit owner decision
-on 2026-08-30, its complete historical folder was relocated to the dated archive
-without running `openspec archive`; no unimplemented delta entered canonical
-specifications. Completed changes still use native OpenSpec archival. Parking-lot
-changes are preserved for later customer pull but are not implementation-ready.
+`openspec list` reflects all 19 direct active-tree entries. The closed R08
+proposal is retained under non-canonical abandoned history, outside
+`openspec/changes/` and its completed-change archive; no unimplemented delta
+entered canonical specifications. Completed changes still use native OpenSpec
+archival. Parking-lot changes are preserved for later customer pull but are not
+implementation-ready.
 
-## Abandoned Changes Archived Without Specification Promotion
+## Abandoned Planning History Without Specification Promotion
 
-| Change | GitHub issue | Archive status |
+| Change | GitHub issue | Historical status |
 |---|---|---|
-| [`requirements-08-bounded-red-green-proof`](changes/archive/2026-08-30-requirements-08-bounded-red-green-proof/) | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Closed Not Planned; never implemented; manually relocated on 2026-08-30 without `openspec archive`; canonical specs unchanged |
+| [`requirements-08-bounded-red-green-proof`](history/abandoned/2026-08-30-requirements-08-bounded-red-green-proof/) | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Closed Not Planned on 2026-08-27; never implemented; retained outside the completed-change archive; canonical specs unchanged |
 
-This is a bounded exception for an abandoned, never-implemented proposal. It is
-not precedent for completed work, which must still use `openspec archive` so
-implemented deltas are validated and promoted normally.
+This non-canonical history is not an OpenSpec archive and is not implementation
+authority. Completed work must use `openspec archive` so implemented deltas are
+validated and promoted normally.
 
 ## Product Thesis
 
@@ -58,6 +59,7 @@ issues and are now archived:
 | `code-review-11-simplification-feedback-loop` | archived 2026-06-06 |
 | `code-review-12-guided-simplification-enforcement` | archived 2026-06-06 |
 | `code-review-13-cleanup-forecast-agent-handoff` | archived 2026-06-06 |
+| `module-scope-02-preserve-user-installs` | archived 2026-08-30 after #454 merged to `dev` |
 
 These archived specs are now the shipped basis for the flagship demo: run review,
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
@@ -69,7 +71,6 @@ This track is first because no changed-scope assurance claim is trustworthy unti
 
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
-| 0 | `module-scope-02-preserve-user-installs` | [#452](https://github.com/nold-ai/specfact-cli-modules/issues/452) | Preserve user-scoped modules when project-local sources shadow them; remove destructive review/bootstrap guidance | none; paired core [#699](https://github.com/nold-ai/specfact-cli/issues/699) is coordinated but independently mergeable |
 | 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) | Resolve worktree/index/range/full scope explicitly; compare pinned merge-base/head analyses; authenticate one target-tip project-runtime layer for both snapshots; fail closed on unknown scope, runtime provenance, or analyzer coverage | accepted planning PR [#413](https://github.com/nold-ai/specfact-cli-modules/pull/413); paired core adoption is downstream after the signed release |
 
 The immutable C14 compatibility smoke establishes core 0.55.1 as the minimum: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Runtime metadata therefore uses `>=0.55.1,<1.0.0`: the ceiling is required because recursive installation includes Codebase and Requirements modules whose current manifests reject core 1.x. Current paired-core validation exercises compatible versions above the minimum; a routine compatible core update within the dependency graph does not require a module metadata release. Remove the ceiling only after widening and validating the required dependency graph. This correction supersedes C14's exact-only admission wording without changing its frozen provenance identities or historical evidence.
@@ -221,7 +222,7 @@ dedicated issue-linked worktree and session.
 - `requirements-05-dogfood-evidence-gate`
 - `requirements-06-evidence-enforcement` (after requirements-05 archival/release evidence)
 - `requirements-07-scenario-runtime-proof` (current-run reconciliation correction after requirements-06)
-- archived `requirements-08-bounded-red-green-proof` is superseded and historical only; no replay implementation or canonical spec promotion occurred
+- abandoned-history `requirements-08-bounded-red-green-proof` is superseded and non-canonical; no replay implementation or specification promotion occurred
 - `architecture-01-solution-layer`
 - `sync-01-unified-kernel`
 - `requirements-03-backlog-sync` (parked 2026-07-13)
@@ -251,4 +252,6 @@ implementation starts.
 After a change ships and merges, run `openspec archive <change-id>` from the repo
 root. Do not manually move completed changes into `openspec/changes/archive/`.
 Parking-lot moves are allowed for paused proposals that are explicitly not active
-scope.
+scope. Abandoned, never-implemented proposals may be retained only under
+`openspec/history/abandoned/`, whose records are non-canonical and never imply
+specification promotion or implementation authority.

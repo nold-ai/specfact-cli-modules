@@ -108,7 +108,7 @@ The Requirements module SHALL reconcile a previously emitted deterministic plan 
 
 ### Requirement: Historical Chronology Is a Separate Claim
 
-New historical red-to-green claims SHALL be accepted only through the later R08 bounded replay contract. R07 SHALL NOT infer chronology from current maturity, current JUnit, static Python/pytest analysis, or a newly generated legacy ledger.
+New historical red-to-green claims SHALL be accepted only through a future separately approved chronology contract; no active change currently owns that capability. R07 SHALL NOT infer chronology from current maturity, current JUnit, static Python/pytest analysis, or a newly generated legacy ledger.
 
 #### Scenario: R07 finalizes without chronology input
 
@@ -123,4 +123,4 @@ New historical red-to-green claims SHALL be accepted only through the later R08 
 - **GIVEN** a finalized report v2 contains an explicitly labelled legacy-ledger basis
 - **WHEN** compatibility reading occurs
 - **THEN** the historical label remains migration-only with `source_schema_version: 2`
-- **AND** it is not converted into a v3 claim, new R08 attestation, or chronology pass.
+- **AND** it is not converted into a v3 claim, new chronology attestation, or chronology pass.

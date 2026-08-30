@@ -1,5 +1,22 @@
 schema_version: "2"
 requirements:
+  openspec:preflight-04-harness-adapters:preflight-harness-adapters:core-installer-verification-result-is-explicit:
+    rationale: "The proposal must block adapter implementation until core #251 exposes a result bound to the exact verified installation."
+    stakeholder_refs:
+      - "nold-ai/specfact-cli-modules#433"
+      - "nold-ai/specfact-cli#251"
+    touchpoints:
+      - id: openspec-source-spec
+        kind: config_file
+        locator: "openspec/changes/preflight-04-harness-adapters/specs/preflight-harness-adapters/spec.md"
+    verification_cases:
+      - case_id: PF04-008
+        scenario_id: core-installer-verification-result-is-explicit
+        method: inspection
+        intent: "Inspect the explicit verified-install-result-v1 prerequisite and fail-closed behavior before implementation."
+        observable: >-
+          Strict OpenSpec validation retains the complete result binding and
+          prohibits descriptor-only or adapter-generated verification fallback.
   openspec:preflight-04-harness-adapters:preflight-harness-adapters:codex-plugin-adapter:
     rationale: "The proposal must make this requirement reviewable before implementation begins."
     stakeholder_refs: ["nold-ai/specfact-cli-modules#433"]

@@ -16,5 +16,5 @@ Contributor and agent bootstrap guidance SHALL treat project-over-user module sh
 
 - **GIVEN** a test process imported a bundled module from the user-scoped source path
 - **WHEN** the local bundle source bootstrap realigns the test process to repository sources
-- **THEN** it may remove the loaded module from in-memory import state
+- **THEN** it removes the loaded module from in-memory import state or enforces an equivalent before-import guarantee that prevents reuse of the cached user-scoped module
 - **AND** it does not delete or uninstall the user-scoped module files
