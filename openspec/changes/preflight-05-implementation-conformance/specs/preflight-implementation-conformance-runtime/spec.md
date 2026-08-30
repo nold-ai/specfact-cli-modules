@@ -2,14 +2,21 @@
 
 ### Requirement: Separate development checkpoint command
 
-The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal. Allowed pairs are `slice/worktree`, `slice/index`, `commit/index`, `deep/worktree`, and `deep/index`; every other pair SHALL be rejected as invalid usage before snapshot extraction, without silently overriding either argument. Automatic selection SHALL validate the canonical tip, complete predecessor chain, approval authority, and required Git identities before evaluating path coverage. Missing, stale, multiple, rolled-back, forked, or ambiguous canonical/Git state SHALL return `UNKNOWN`; uncovered governed-path `FAIL` applies only after one valid canonical seal and snapshot identity are established.
+The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktree` or `index` scope and `slice`, `commit`, or `deep` profile, and SHALL return the released core local checkpoint result without modifying the approved seal. Allowed pairs are `slice/worktree`, `slice/index`, `commit/index`, `deep/worktree`, and `deep/index`; every other pair SHALL be rejected as invalid usage before snapshot extraction, without silently overriding either argument. Automatic selection SHALL validate the canonical tip, complete predecessor chain, approval authority, and required Git identities before evaluating path coverage. Applicability and coverage SHALL be computed from the selected snapshot: `worktree` includes staged, unstaged tracked, and untracked changes, while `index` includes staged changes only. The pre-commit wrapper SHALL use `index`; it SHALL NOT make staged-only selection govern an explicit `worktree` checkpoint. Missing, stale, multiple, rolled-back, forked, or ambiguous canonical/Git state SHALL return `UNKNOWN`; uncovered governed-path `FAIL` applies only after one valid canonical seal and snapshot identity are established.
 
-#### Scenario: No staged seal-relevant change or associated seal
+#### Scenario: No selected-scope seal-relevant change or associated seal
 
-- **GIVEN** neither the authoritative base nor the staged index contains preflight approval state and no approval-artifact path is changed, or every staged path is deterministically classified outside the repository's configured preflight-governed path/input universe and unrelated to every current or prior seal
+- **GIVEN** neither the authoritative base nor the selected worktree/index snapshot contains preflight approval state and no selected-scope approval-artifact path is changed, or every path changed in the selected scope is deterministically classified outside the repository's configured preflight-governed path/input universe and unrelated to every current or prior seal
 - **WHEN** automatic checkpoint selection runs
 - **THEN** the result is `NOT_APPLICABLE` and exits zero
 - **AND** an unsealed repository does not acquire a universal blocking policy.
+
+#### Scenario: Worktree checkpoint has only unstaged or untracked changes
+
+- **GIVEN** a valid applicable seal exists and governed changes appear only as unstaged tracked or untracked worktree paths
+- **WHEN** `slice/worktree` or `deep/worktree` selection runs with an empty staged index
+- **THEN** applicability, coverage, and obligations are evaluated from the complete worktree snapshot and the result is not `NOT_APPLICABLE` merely because the index is empty
+- **AND** the staged-only rule remains limited to the separate index-based pre-commit wrapper.
 
 #### Scenario: Staged change removes the last approval state
 
@@ -18,17 +25,17 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 - **THEN** the base-to-index approval-state transition is classified as governed and the result is `UNKNOWN` with exit one
 - **AND** the repository is not treated as never sealed, whether or not other governed paths are staged.
 
-#### Scenario: Governed staged paths have no covering seal
+#### Scenario: Governed selected-scope paths have no covering seal
 
-- **GIVEN** the repository contains one or more preflight seals and at least one staged path/input is classified by repository policy as preflight-governed but is covered by no seal role
+- **GIVEN** the repository contains one or more preflight seals and at least one path/input changed in the selected worktree/index scope is classified by repository policy as preflight-governed but is covered by no seal role
 - **WHEN** automatic checkpoint selection runs
 - **THEN** every wholly uncovered governed path/input is `unexpected`, the result is `FAIL`, and the hook exits non-zero
 - **AND** absent or ambiguous governed/unrelated classification returns `UNKNOWN`, never `NOT_APPLICABLE`.
 
-#### Scenario: A matching seal covers only part of the staged seal-relevant scope
+#### Scenario: A matching seal covers only part of the selected seal-relevant scope
 
-- **GIVEN** at least one staged source, test, docs, generated, evidence, or seal-bound configuration path associates with a valid seal
-- **AND** another staged non-excluded seal-relevant path is outside that seal
+- **GIVEN** at least one source, test, docs, generated, evidence, or seal-bound configuration path changed in the selected worktree/index scope associates with a valid seal
+- **AND** another selected-scope non-excluded seal-relevant path is outside that seal
 - **WHEN** automatic checkpoint selection runs
 - **THEN** every uncovered path is reported as `unexpected`
 - **AND** the result is `FAIL` and exits non-zero
@@ -36,7 +43,7 @@ The module SHALL expose `specfact preflight checkpoint <change-id>` with `worktr
 
 #### Scenario: Applicable checkpoint evidence is ambiguous
 
-- **GIVEN** one or more staged seal-relevant paths are covered by a seal but the canonical tip/chain, Git identity, component owner, influence mapping, selector, runner, or required evidence is stale, multiple, missing, or ambiguous
+- **GIVEN** one or more paths changed in the selected worktree/index scope are covered by a seal but the canonical tip/chain, Git identity, component owner, influence mapping, selector, runner, or required evidence is stale, multiple, missing, or ambiguous
 - **WHEN** checkpoint status is aggregated
 - **THEN** the result is `UNKNOWN` and exits non-zero
 - **AND** no renderer or workflow converts it to pass.
@@ -121,7 +128,7 @@ The runtime SHALL reuse C14 worktree/index/range primitives and implement the re
 
 ### Requirement: Seal-bound semantic evidence selection
 
-The runtime SHALL classify every changed non-excluded seal-relevant path, public-interface record, and input across `source`, `test`, `docs`, `generated`, and `evidence` roles plus seal-bound approval, test, dependency, policy, toolchain, and relevant configuration inputs. Approval-state discovery SHALL compare the authoritative base with the selected worktree/index snapshot so deletion, relocation, or replacement of the last seal or canonical lineage-tip artifact cannot be reclassified as a never-sealed repository. The runtime SHALL map each applicable path, changed-interface identity, and input through the sealed ownership and influence relationships to the corresponding risk rows, Requirements plan identities, exact pytest cases, bounded component targets, review/evidence obligations, and execution stages. A checkpoint MAY select only the affected subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal. A non-excluded changed path or input MAY produce a determinate empty semantic-selector set only when the current valid canonical seal binds an explicit no-impact disposition for that exact input identity and role with a non-empty rationale. The result SHALL retain the disposition identity/digest and validation evidence; no-impact SHALL NOT suppress seal, scope, interface-discovery, or approval-state checks. If a seal-relevant changed path/interface/input or the obligations it can affect cannot be derived deterministically, or a claimed no-impact disposition is missing, stale, ambiguous, or mismatched, selection SHALL return `UNKNOWN` rather than an unproven empty set.
+The runtime SHALL classify every changed non-excluded seal-relevant path, public-interface record, and input in the selected worktree/index scope across `source`, `test`, `docs`, `generated`, and `evidence` roles plus seal-bound approval, test, dependency, policy, toolchain, and relevant configuration inputs. Approval-state discovery SHALL compare the authoritative base with the selected worktree/index snapshot so deletion, relocation, or replacement of the last seal or canonical lineage-tip artifact cannot be reclassified as a never-sealed repository. The runtime SHALL map each applicable path, changed-interface identity, and input through the sealed ownership and influence relationships to the corresponding risk rows, Requirements plan identities, exact pytest cases, bounded component targets, review/evidence obligations, and execution stages. A checkpoint MAY select only the affected subset of requirement, scenario, verification-case, and exact pytest-selector identities already bound by the seal; any addition, removal, replacement, or change of a bound identity SHALL require preflight validation, approval, and a new seal. Before intentional expansion can receive successor approval or failing-first evidence, any already-implemented out-of-scope production delta SHALL be removed from the selected implementation snapshot. The successor contract and tests SHALL then be authored and approved, failing-first evidence SHALL be captured against that expanded contract with the production behavior absent, and only then MAY the production expansion be reimplemented. The runtime and bundled workflow SHALL report and stop; they SHALL NOT automatically remove code, rewrite history, approve, or reseal. A non-excluded changed path or input MAY produce a determinate empty semantic-selector set only when the current valid canonical seal binds an explicit no-impact disposition for that exact input identity and role with a non-empty rationale. The result SHALL retain the disposition identity/digest and validation evidence; no-impact SHALL NOT suppress seal, scope, interface-discovery, or approval-state checks. If a seal-relevant changed path/interface/input or the obligations it can affect cannot be derived deterministically, or a claimed no-impact disposition is missing, stale, ambiguous, or mismatched, selection SHALL return `UNKNOWN` rather than an unproven empty set.
 
 #### Scenario: Production path lacks semantic ownership
 
@@ -156,7 +163,8 @@ The runtime SHALL classify every changed non-excluded seal-relevant path, public
 - **GIVEN** a changed path or behavior lies outside sealed roles and exclusions
 - **WHEN** checkpoint comparison runs
 - **THEN** it returns an `unexpected` failure and a `return_to_preflight` remediation class
-- **AND** intentional expansion requires a successor preflight review and seal that preserves the original implementation-lineage origin baseline.
+- **AND** the already-implemented out-of-scope production delta is removed from the selected implementation snapshot before successor-contract approval and failing-first evidence
+- **AND** intentional expansion is reimplemented only after the successor preflight review/seal and failing-first evidence, while preserving the original implementation-lineage origin baseline.
 
 ### Requirement: Current-run pytest and code-review evidence
 

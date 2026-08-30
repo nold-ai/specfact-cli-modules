@@ -34,6 +34,7 @@
 - Review follow-up on 2026-08-30: shadow evidence is bound to the exact promotion candidate and invalidated by relevant changes; implementation-branch release proof uses a projected registry row while official registry mutation remains post-merge publication work.
 - Second review follow-up on 2026-08-30: release preparation and release-matrix fixes force rollout-evidence recollection for the final unchanged candidate; interface additions, deletions, and rename endpoints use provenance-bound absent-side tombstones rather than missing evidence.
 - Third review follow-up on 2026-08-30: publication preserves or derives the exclusive core-compatibility upper bound from the complete bundled-module dependency intersection, keeps the complete range identical across manifest and registry, and tests rejection at and above that bound as well as lower-bound behavior.
+- Fourth review follow-up on 2026-08-30: checkpoint applicability is derived from the selected snapshot so worktree-only unstaged/untracked changes cannot be skipped; staged-only selection remains pre-commit/index-specific. Scope-expansion recovery removes already-implemented production expansion before successor approval and failing-first evidence, then permits reimplementation only afterward without automatic code/history/seal mutation.
 
 ## Decision
 

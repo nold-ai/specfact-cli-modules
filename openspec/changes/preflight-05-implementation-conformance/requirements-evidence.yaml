@@ -16,7 +16,7 @@ requirements:
       - case_id: PF05M-001
         scenario_id: separate-development-checkpoint-command
         method: inspection
-        intent: "Inspect canonical-tip/chain/Git UNKNOWN precedence before uncovered-scope FAIL, checkpoint scopes/statuses, seal behavior, never-sealed versus staged last-seal/tip removal, partial and wholly uncovered governed-path failure versus missing-influence UNKNOWN, and the complete source/test/docs/generated/evidence/excluded plus seal-bound approval/test/dependency/policy/toolchain/relevant-configuration pre-commit applicability matrix before implementation."
+        intent: "Inspect canonical-tip/chain/Git UNKNOWN precedence before uncovered-scope FAIL; checkpoint scopes/statuses; selected-snapshot applicability including unstaged/untracked-only worktree changes versus staged-only index/pre-commit behavior; seal behavior; never-sealed versus staged last-seal/tip removal; partial and wholly uncovered governed-path failure versus missing-influence UNKNOWN; and the complete source/test/docs/generated/evidence/excluded plus seal-bound approval/test/dependency/policy/toolchain/relevant-configuration applicability matrix before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:bounded-checkpoint-profiles:
     rationale: *planning-rationale
@@ -46,7 +46,7 @@ requirements:
       - case_id: PF05M-004
         scenario_id: seal-bound-semantic-evidence-selection
         method: inspection
-        intent: "Inspect component, public-interface, risk, Requirements-plan, selector, verified exact-input no-impact disposition, implicit-empty-set rejection, and scope-drift mappings before implementation."
+        intent: "Inspect component, public-interface, risk, Requirements-plan, selector, verified exact-input no-impact disposition, implicit-empty-set rejection, scope-drift mappings, and removal of already-implemented out-of-scope production expansion before successor approval/failing-first evidence and later reimplementation before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:current-run-pytest-and-code-review-evidence:
     rationale: *planning-rationale
