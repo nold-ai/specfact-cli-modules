@@ -31,17 +31,17 @@ The mapping sidecar remains `schema_version: "2"`; this change does not alter ma
 
 `current_execution` records status, mapping/plan/source identities, exact selectors, result digest, collection counts, outcome counts, runner identity, and environment provenance supplied by core.
 
-`red_green_chronology` is a mandatory placeholder claim object in the corrected R07 report. R07 has no chronology-request or capsule input and always emits `status: not_evaluated` with `reason: capsule_not_supplied`; it cannot emit chronology pass, fail, or unknown. R08 later MODIFIES this claim with the explicit request input, capsule validation, and non-not-evaluated statuses. The placeholder cannot erase or inflate current execution.
+`red_green_chronology` is a mandatory placeholder claim object in the corrected R07 report. R07 has no chronology-request or capsule input and always emits `status: not_evaluated` with `reason: capsule_not_supplied`; it cannot emit chronology pass, fail, or unknown. No active change currently extends this claim. Any future chronology input, validation, or non-not-evaluated status requires a separately approved contract. The placeholder cannot erase or inflate current execution.
 
 ### Current reconciliation needs only current evidence
 
 Final current-run reconciliation validates the original deterministic plan and trusted JUnit. Every exact selector must match one canonical result. Passing, failing, skipped, errored, missing, or ambiguous outcomes remain distinct.
 
-A current execution pass must not be called `verified-red-green`, `passing-after-red`, or `change-proven` without an independently validated R08 capsule.
+A current execution pass must not be called `verified-red-green`, `passing-after-red`, or `change-proven` without independently validated chronology evidence from a separately approved contract.
 
 ### Legacy history remains labelled compatibility
 
-Existing `legacy-tdd-ledger` payloads may remain readable for old artifacts. The command cannot generate them for new changes, and they cannot silently satisfy the new R08 chronology claim.
+Existing `legacy-tdd-ledger` payloads may remain readable for old artifacts. The command cannot generate them for new changes, and they cannot silently satisfy a new chronology claim.
 
 ### Review context is provenance-only
 
@@ -67,4 +67,3 @@ Do not add Git orchestration, pytest execution, or static import/plugin/configur
 4. Remove generation of new legacy-ledger evidence after core migrates.
 5. Roll back by disabling the new writer while preserving every already-written `current_execution` and `red_green_chronology` object byte-for-byte. The old reader must treat unknown corrected fields as opaque provenance and must never reinterpret them as legacy chronology.
 6. After the implementation and signed handoff merge, finalize the shipped change from the repository root with `openspec archive requirements-07-scenario-runtime-proof`; never move the change directory manually.
-

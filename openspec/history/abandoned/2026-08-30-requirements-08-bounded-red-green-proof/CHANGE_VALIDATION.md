@@ -2,14 +2,14 @@
 
 ## Status
 
-`ARCHIVED / SUPERSEDED / NOT IMPLEMENTED — NO SPEC PROMOTION`
+`ABANDONED HISTORY / SUPERSEDED / NOT IMPLEMENTED — NO SPEC PROMOTION`
 
 Issues #414 and nold-ai/specfact-cli#675 are closed as `not planned`. The
 seal-bound development assurance work in #431/#434 and core #682/#684 replaces
 the expensive historical replay proposal. No package behavior or signed release
-implements this change. The dated folder relocation was explicitly authorized
-on 2026-08-30 and did not run `openspec archive`, so the unimplemented deltas
-were not merged into the canonical specification.
+implements this change. Retention under non-canonical abandoned history was
+explicitly authorized on 2026-08-30 and did not run `openspec archive`, so the
+unimplemented deltas were not merged into the canonical specification.
 
 ## Planning evidence
 
@@ -25,10 +25,11 @@ were not merged into the canonical specification.
 - Core issue #675: closed `not planned` on 2026-08-27.
 - Replacement planning: modules #431/#434 and core #682/#684.
 - The complete folder is preserved at
-  `openspec/changes/archive/2026-08-30-requirements-08-bounded-red-green-proof/`.
+  `openspec/history/abandoned/2026-08-30-requirements-08-bounded-red-green-proof/`.
 - `openspec archive` was deliberately not invoked because it would have promoted
   never-implemented delta specifications into canonical requirements.
 - The relocation preserved the historical artifacts only. It changed no file
   under `openspec/specs/`, package, registry, version, signature, or runtime path.
 - Reopening requires a new issue and a new active OpenSpec change revalidated
-  against current architecture; this archived proposal is not implementation authority.
+  against current architecture; this abandoned historical proposal is not
+  implementation authority.

@@ -14,13 +14,17 @@
 
 - This change owns thin Codex, ECC, and hatch3r installation/invocation adapters.
 - The signed modules runtime remains the only validator/readiness implementation.
-- Core #251 owns generic installation/export and core #253 owns generated instruction references.
+- Core #251 owns generic installation/export and must expose the explicit `verified-install-result-v1` contract defined by this planning change; core #253 owns generated instruction references.
 
 ## Dependency Review
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
 - Required delivery order: signed modules checkpoint/conformance identity #434,
   then core #251 and #253, then this adapter change #433.
+- Adapter implementation remains blocked until the completed #251 contract binds
+  verifier, module, artifact, signed manifest, registry, signer/trust root, core,
+  installed inventory, and both role-specific workflow mappings to the exact
+  installed bytes and requested descriptor.
 - Native dependency relationships must be refreshed and read back before
   implementation so #433 consumes the exact #434 identity and does not become
   a prerequisite of #434.
