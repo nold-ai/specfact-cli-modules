@@ -121,7 +121,7 @@ The CLI SHALL derive human and JSON output from the same normalized validation r
 
 ### Requirement: Persisted approval artifacts
 
-When explicitly requested, the runtime SHALL persist the normalized contract, validation result, and seal atomically under a project-local, change-specific path. It SHALL also atomically maintain a policy-authorized canonical lineage-tip record that binds the change and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, and update authority. A successor approval SHALL advance that tip exactly once; an ancestor seal SHALL NOT remain representable as the current tip.
+When explicitly requested, the runtime MAY persist working copies of the normalized contract, validation result, seal, and lineage-tip response atomically under an ignored project-local, change-specific path, but that path SHALL NOT be the canonical cross-checkout approval authority by itself. Seal-aware repository policy SHALL identify a canonical approval source that is either tracked with governed repository state or independently attested, authenticated, immutable, and shareable with a fresh clone or protected consumer. The runtime SHALL atomically persist the normalized contract, validation result, seal, and canonical lineage-tip record to that source. The tip SHALL bind the repository, change, and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, and update authority. A successor approval SHALL advance that tip exactly once; an ancestor seal SHALL NOT remain representable as the current tip.
 
 #### Scenario: Persistence is interrupted
 
@@ -136,6 +136,14 @@ When explicitly requested, the runtime SHALL persist the normalized contract, va
 - **WHEN** the approval source is read for checkpoint or conformance handoff
 - **THEN** current-seal selection is `UNKNOWN` and non-passing
 - **AND** an older valid ancestor seal is not substituted for the canonical latest seal.
+
+#### Scenario: Fresh checkout cannot access required approval authority
+
+- **GIVEN** repository policy or authoritative base provenance requires seal-aware approval state
+- **AND** a fresh clone or protected consumer can access only an ignored local cache or cannot authenticate the policy-authorized shared approval source
+- **WHEN** the runtime selects a seal or lineage tip
+- **THEN** selection is `UNKNOWN` and non-passing rather than `NOT_APPLICABLE`
+- **AND** local absence cannot reclassify the governed repository as never sealed.
 
 ### Requirement: Canonical skill and slash-command contract
 

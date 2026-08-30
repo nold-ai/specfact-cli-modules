@@ -11,14 +11,14 @@ All tasks below are future implementation work. This planning change completes n
 ## 2. Specification and failing-first evidence
 
 - [ ] 2.1 Finalize CLI, validator registry, scope-role, component, per-input influence/no-impact, risk-disposition, Requirements-plan reference, verification-stage, persistence, renderer, and canonical workflow deltas without adding checkpoint execution, publication, or external adapters.
-- [ ] 2.2 Add tests mapped to every runtime and workflow scenario, including invalid path roles, missing component targets, missing/ambiguous influence dispositions, unjustified no-impact dispositions, uncovered/not-applicable risk rows, planned cases without selectors, planned-to-test-authored selector reconciliation, successor-seal lineage preservation, separate normalized validation-result persistence, canonical-tip advance plus missing/stale/rollback/fork/ambiguity handling and older-ancestor fallback rejection, stale Requirements plans, read-only defaults, unknown fail-closed behavior, approval invalidation, and renderer parity.
+- [ ] 2.2 Add tests mapped to every runtime and workflow scenario, including invalid path roles, missing component targets, missing/ambiguous influence dispositions, unjustified no-impact dispositions, uncovered/not-applicable risk rows, planned cases without selectors, planned-to-test-authored selector reconciliation, successor-seal lineage preservation, separate normalized validation-result persistence, tracked or independently attested shared approval-source authentication and fresh-checkout transport, canonical-tip advance plus missing/stale/rollback/fork/ambiguity handling and older-ancestor fallback rejection, required shared-source unavailability as `UNKNOWN` rather than `NOT_APPLICABLE`, stale Requirements plans, read-only defaults, unknown fail-closed behavior, approval invalidation, and renderer parity.
 - [ ] 2.3 Run targeted tests before production edits, capture failing-first results, and create `TDD_EVIDENCE.md` with the red evidence.
 
 ## 3. Minimal unpublished runtime implementation
 
 - [ ] 3.1 Implement the official module boundary and `specfact preflight run <change-id>` orchestration against the released core interfaces.
 - [ ] 3.2 Implement the required versioned Python validators and deterministic readiness aggregation, reusing Requirements maturity/selector/plan contracts by identity and preserving the implementation-lineage origin across successor seals.
-- [ ] 3.3 Implement human/JSON rendering and explicit, atomic persistence of approved artifacts.
+- [ ] 3.3 Implement human/JSON rendering, optional ignored local working copies, and explicit atomic persistence through the policy-authorized tracked or independently attested shared approval source.
 - [ ] 3.4 Implement the canonical bundled workflow content and slash-command metadata without adding ECC, hatch3r, Codex-plugin, or other external adapter packages.
 
 ## 4. Passing evidence and quality gates

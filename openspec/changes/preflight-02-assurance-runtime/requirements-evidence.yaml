@@ -71,7 +71,21 @@ requirements:
       - case_id: PF02-005
         scenario_id: persisted-approval-artifacts
         method: inspection
-        intent: "Inspect separate normalized validation-result persistence, atomic approval artifacts, canonical lineage-tip advance, missing/stale/rollback/fork/ambiguity handling, and rejection of older-ancestor fallback before implementation."
+        intent: >-
+          Inspect separate normalized validation-result persistence, atomic
+          shared approval artifacts, canonical lineage-tip advance,
+          missing/stale/rollback/fork/ambiguity handling, and rejection of
+          older-ancestor fallback before implementation.
+        observable: >-
+          Strict OpenSpec validation retains the requirement and its scenarios
+          without claiming implementation or test execution.
+      - case_id: PF02-009
+        scenario_id: persisted-approval-artifacts
+        method: inspection
+        intent: >-
+          Inspect tracked or independently attested shared approval authority
+          and fresh-checkout UNKNOWN behavior when required canonical state is
+          unavailable.
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.

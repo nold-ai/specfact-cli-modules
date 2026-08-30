@@ -33,7 +33,7 @@ The runtime state machine is `DISCOVER -> SNAPSHOT -> VALIDATE -> REVIEW`. A use
 
 ### 2. Read-only default and explicit persistence
 
-`specfact preflight run <change-id>` is read-only by default. `--write` may persist normalized artifacts only after the user confirms exact target paths. The planned project-local layout is `.specfact/preflight/<change-id>/` with a contract, validation result, approval seal, and policy-authorized canonical lineage-tip record. The tip binds the latest seal digest/monotonic sequence, complete predecessor-chain digest, registry/source identity, and update authority; successor approval updates it atomically with the seal. Missing, stale, rolled-back, forked, or ambiguous tip state is non-passing and cannot fall back to an older valid ancestor. Final filenames and schemas are derived from the core contract tests before implementation. Any authorized refinement of a user-owned artifact routes through its owning workflow and the paired core safe-write contract, checks the expected source identity before commit, and preserves unrelated content rather than replacing the file wholesale.
+`specfact preflight run <change-id>` is read-only by default. `--write` may persist normalized artifacts only after the user confirms exact target paths. The planned ignored project-local layout `.specfact/preflight/<change-id>/` may hold working copies of the contract, validation result, approval seal, and lineage-tip response, but it is never the canonical cross-checkout approval authority by itself. Repository policy that enables seal-aware enforcement SHALL identify a canonical approval source that is either tracked with the governed repository state or independently attested, authenticated, immutable, and shareable with a fresh clone or protected consumer. That source binds the latest seal digest/monotonic sequence, complete predecessor-chain digest, registry/source identity, update authority, and repository/change/lineage identity; successor approval updates it atomically with the seal. If policy or authoritative base provenance requires approval state but the shared source is unavailable, missing, stale, rolled back, forked, or ambiguous, selection is `UNKNOWN` and cannot fall back to a local cache or older valid ancestor. Final filenames, source adapters, and schemas are derived from the core contract tests before implementation. Any authorized refinement of a user-owned artifact routes through its owning workflow and the paired core safe-write contract, checks the expected source identity before commit, and preserves unrelated content rather than replacing the file wholesale.
 
 ### 3. Python validator registry
 
@@ -79,7 +79,7 @@ General AGENTS.md/OpenSpec/Spec Kit instructions should contain only the gate: s
 
 ## Migration and Rollback
 
-The first implementation remains unpublished and dogfood-only. Repositories without the module continue their existing OpenSpec process. Before stable publication, rollback is removal of the opt-in module and its project-local `.specfact/preflight/` artifacts.
+The first implementation remains unpublished and dogfood-only. Repositories without the module continue their existing OpenSpec process. Before stable publication, rollback is removal of the opt-in module and its project-local `.specfact/preflight/` working artifacts; canonical shared approval records follow their source-owned retention/revocation policy and are not silently deleted by local rollback.
 
 ## Open Questions Deferred to Implementation
 
