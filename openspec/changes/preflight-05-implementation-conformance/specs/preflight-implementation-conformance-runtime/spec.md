@@ -278,7 +278,7 @@ Human and JSON renderers SHALL derive from one normalized result, and explicit p
 
 ### Requirement: Shadow dogfood before seal-aware blocking
 
-The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exercise both accepted defect fixtures and representative known-green controls. Blocking SHALL remain disabled until every corpus case produces its predeclared status, authority, finding set, and exit behavior; the corpus has zero false PASS, zero false block, and no destructive/ambiguous behavior; and live shadow observations meet a rollout-policy threshold declared before collection. The default threshold SHALL require at least 20 applicable known-good observations for each enabled scope/profile pair and at least 100 in aggregate, with both each pair's false-block rate and the aggregate rate no greater than 1%. Repository policy MAY require a larger per-pair or aggregate sample or lower rate but SHALL NOT weaken those defaults.
+The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exercise both accepted defect fixtures and representative known-green controls. Every corpus result and live observation SHALL bind the exact candidate implementation commit/tree and runtime/module identity, policy, relevant configuration, corpus, runner, and toolchain digests. Any promotion-relevant identity change SHALL invalidate the affected evidence and require recollection; evidence from an older candidate SHALL NOT authorize blocking for changed behavior. Blocking SHALL remain disabled until every corpus case produces its predeclared status, authority, finding set, and exit behavior; the exact current candidate's corpus has zero false PASS, zero false block, and no destructive/ambiguous behavior; and its live shadow observations meet a rollout-policy threshold declared before collection. The default threshold SHALL require at least 20 applicable known-good observations for each enabled scope/profile pair and at least 100 in aggregate, with both each pair's false-block rate and the aggregate rate no greater than 1%. Repository policy MAY require a larger per-pair or aggregate sample or lower rate but SHALL NOT weaken those defaults.
 
 #### Scenario: C14 regression fixture is exercised
 
@@ -301,9 +301,24 @@ The first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exe
 - **THEN** seal-aware blocking remains disabled and shadow measurement continues
 - **AND** one high-volume passing pair cannot hide an under-sampled or false-blocking pair.
 
+#### Scenario: Candidate changes after shadow evidence is collected
+
+- **GIVEN** corpus or live observations were collected for one candidate identity
+- **AND** implementation, policy, relevant configuration, corpus, runner, or toolchain identity changes before promotion
+- **WHEN** rollout promotion is evaluated
+- **THEN** the affected evidence is invalid for the changed candidate and cannot contribute to its thresholds
+- **AND** shadow observations are recollected and all promotion gates are reevaluated against the exact current identity.
+
 ### Requirement: Signed publication before adapter consumption
 
 After the implementation PR is merged to `dev`, the canonical post-merge publication workflow SHALL generate/version, sign, verify, compatibility-test, and propose one immutable #434 module release identity whose signed manifest separately binds the existing preflight workflow identity/digest and the new implementation-check workflow identity/digest. The proposal SHALL set `core_compatibility` in both the bundle manifest and registry entry to a lower-bound released core identity that contains the final #684 interfaces; those values SHALL match, a core below the bound SHALL be rejected, and the exact bound plus supported newer cores SHALL pass the compatibility matrix. Neither a feature-branch artifact nor a merely proposed post-merge artifact is published or eligible for downstream handoff. Only after the publication PR is reviewed and merged and official registry/install readback passes SHALL the #434 identity be considered published and handed to core #251. Core #253 SHALL follow completed #251, and modules #433 SHALL consume the identities only after both #251 and #253 complete.
+
+#### Scenario: Implementation branch prepares publication inputs
+
+- **GIVEN** the #434 implementation PR has not merged to `dev`
+- **WHEN** its release-surface matrix validates proposed manifest and compatibility metadata
+- **THEN** it compares the proposed manifest with a projected registry row without mutating the official registry
+- **AND** actual registry generation and manifest/registry equality verification remain exclusive to the canonical post-merge publication PR.
 
 #### Scenario: Installation uses a core older than implementation assurance
 

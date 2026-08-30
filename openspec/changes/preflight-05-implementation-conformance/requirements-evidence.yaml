@@ -111,7 +111,7 @@ requirements:
       - case_id: PF05M-009
         scenario_id: shadow-dogfood-before-seal-aware-blocking
         method: inspection
-        intent: "Inspect negative C14 regression fixtures, representative known-green controls, exact expected-result parity, per-scope/profile and aggregate minimum live samples, pairwise and aggregate bounded false-block rates, metrics, and the blocking promotion gate before implementation."
+        intent: "Inspect negative C14 regression fixtures, representative known-green controls, exact expected-result parity, candidate runtime/policy/configuration/corpus identity binding and invalidation, per-scope/profile and aggregate minimum live samples, pairwise and aggregate bounded false-block rates, metrics, and the blocking promotion gate before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:signed-publication-before-adapter-consumption:
     rationale: *planning-rationale
@@ -121,5 +121,5 @@ requirements:
       - case_id: PF05M-010
         scenario_id: signed-publication-before-adapter-consumption
         method: inspection
-        intent: "Inspect post-merge publication, matching bundle-manifest/registry core_compatibility lower bounds at the first released #684 core, below-bound rejection and bound/newer compatibility, role-specific signed #434 workflow identity/digest bindings, and the mandatory ordered handoff #434 to #251 to #253 to #433 before implementation."
+        intent: "Inspect feature-branch manifest versus projected-registry validation without official registry mutation, post-merge publication with matching signed bundle-manifest/generated-registry core_compatibility lower bounds at the first released #684 core, below-bound rejection and bound/newer compatibility, role-specific signed #434 workflow identity/digest bindings, and the mandatory ordered handoff #434 to #251 to #253 to #433 before implementation."
         observable: *planning-observable
