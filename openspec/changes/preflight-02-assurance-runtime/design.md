@@ -22,7 +22,7 @@ The integration research reviewed on 2026-08-25 supports a canonical-skill plus 
 
 - Publish or sign the module in this change.
 - Generate harness-specific files or edit project AGENTS.md.
-- Implement postimplementation conformance.
+- Implement worktree/index checkpoints or final range conformance.
 - Let prompts decide structural readiness independently of Python validators.
 
 ## Decisions
@@ -33,7 +33,7 @@ The runtime state machine is `DISCOVER -> SNAPSHOT -> VALIDATE -> REVIEW`. A use
 
 ### 2. Read-only default and explicit persistence
 
-`specfact preflight run <change-id>` is read-only by default. `--write` may persist normalized artifacts only after the user confirms exact target paths. The planned project-local layout is `.specfact/preflight/<change-id>/` with a contract, validation result, and approval seal. Final filenames and schemas are derived from the core contract tests before implementation. Any authorized refinement of a user-owned artifact routes through its owning workflow and the paired core safe-write contract, checks the expected source identity before commit, and preserves unrelated content rather than replacing the file wholesale.
+`specfact preflight run <change-id>` is read-only by default and writes no local, project, or shared state. Only an explicitly authorized approval write may persist artifacts after the user confirms exact targets. The planned ignored project-local layout `.specfact/preflight/<change-id>/` may hold working copies of the contract, validation result, approval seal, and lineage-tip response, but it is never the canonical cross-checkout approval authority by itself. Repository policy that enables seal-aware enforcement SHALL identify a rollback-resistant canonical approval source that is either tracked with governed repository state and anchored to policy-authorized protected base/history outside candidate control, or independently attested by an authenticated append-only/monotonic authority. Either source must be immutable and shareable with a fresh clone or protected consumer and must let the verifier reject restoration of an older internally valid seal/tip. Canonical approval state consists of the contract, normalized validation result, seal, canonical lineage-tip record, and their source bindings. It binds the latest seal digest/monotonic sequence, complete predecessor-chain digest, registry/source identity, update authority, and repository/change/lineage identity; an authorized successor approval updates the complete set atomically. If the protected history/monotonic anchor or required shared state is unavailable, missing, stale, rolled back, forked, or ambiguous, selection is `UNKNOWN` and cannot fall back to a self-contained branch tip, local cache, or older valid ancestor. Final filenames, source adapters, and schemas are derived from the core contract tests before implementation. Any authorized refinement of a user-owned artifact routes through its owning workflow and the paired core safe-write contract, checks the expected source identity before commit, and preserves unrelated content rather than replacing the file wholesale.
 
 ### 3. Python validator registry
 
@@ -44,7 +44,15 @@ Validators are Python implementations registered under stable IDs and versions. 
 - request-to-scope and task-to-requirement traceability;
 - dependency graph completeness, native GitHub metadata, cycles, and readiness;
 - interface ownership and cross-repository counterpart consistency;
-- acceptance criteria, test selectors, failing-first plan, rollback, and non-goals;
+- role-classified implementation paths and explicit exclusions;
+- component ownership with bounded pytest targets;
+- approved influence mappings for every non-excluded sealed path and seal-bound test, dependency, policy, toolchain, or relevant configuration input, or an explicit no-impact disposition that binds the exact sealed input/path identity, role, baseline observation identity/digest, a non-empty rationale, and a policy-authorized deterministic permitted-transition predicate identity/version/configuration digest plus closed change-class and observable invariants;
+- no-impact transition predicates must be supported and semantics-preserving for the input role, must not admit arbitrary content/behavior/configuration/dependency/execution changes, and must be evaluable later against exact provenance-bound base/current observations; otherwise influence mappings are mandatory;
+- every closed core risk dimension (`boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`) marked `covered` or `not_applicable`, with rationale where not applicable;
+- covered risk rows mapped at `planned` maturity to existing Requirements requirement/scenario/case identities, method, intent, observable, and touchpoints without fabricating selectors;
+- test-authored refinement that reconciles the Requirements-owned exact pytest selector to the same planned case, requires explicit successor-seal approval before production implementation, and preserves the original implementation-lineage baseline;
+- earliest execution stage from `slice`, `commit`, `prepush`, or `ci`;
+- acceptance criteria, failing-first plan, rollback, and non-goals;
 - active-issue/worktree collision and planning-only boundary checks.
 
 Validators return structured findings only. Rendering, policy aggregation, and persistence consume those results.
@@ -67,10 +75,12 @@ General AGENTS.md/OpenSpec/Spec Kit instructions should contain only the gate: s
 - **Accidental artifact edits during review:** Default to read-only and require explicit target confirmation, source-owner routing, conflict detection, and preservation of unrelated user content.
 - **False-ready result from missing validators:** Required validator absence yields `UNKNOWN`, never success.
 - **Cross-repository race:** Capture repository refs and GitHub identities; stale identities invalidate approval.
+- **False semantic coverage:** Missing component ownership, unresolved risk disposition, or stale Requirements plan identity is blocking or `UNKNOWN`, never inferred ready.
+- **Duplicate selector ownership:** Reuse the existing Requirements maturity lifecycle: seal complete planned cases without selectors, then validate Requirements-owned exact selectors at test-authored maturity rather than creating a preflight-specific selector grammar.
 
 ## Migration and Rollback
 
-The first implementation remains unpublished and dogfood-only. Repositories without the module continue their existing OpenSpec process. Before stable publication, rollback is removal of the opt-in module and its project-local `.specfact/preflight/` artifacts.
+The first implementation remains unpublished and dogfood-only. Repositories without the module continue their existing OpenSpec process. Before stable publication, rollback is removal of the opt-in module and its project-local `.specfact/preflight/` working artifacts; canonical shared approval records follow their source-owned retention/revocation policy and are not silently deleted by local rollback.
 
 ## Open Questions Deferred to Implementation
 

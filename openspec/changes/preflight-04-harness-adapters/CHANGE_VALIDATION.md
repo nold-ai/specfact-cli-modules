@@ -19,7 +19,11 @@
 ## Dependency Review
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
-- Native blocker verified: core [#253](https://github.com/nold-ai/specfact-cli/issues/253), transitively after #251 and the stable modules preflight release.
+- Required delivery order: signed modules checkpoint/conformance identity #434,
+  then core #251 and #253, then this adapter change #433.
+- Native dependency relationships must be refreshed and read back before
+  implementation so #433 consumes the exact #434 identity and does not become
+  a prerequisite of #434.
 - GitHub readback verified User Story type, parent #163, project `SpecFact CLI` / `Todo`, assignee `djm81`, and the required labels.
 - External upstream issues/PRs are future separately authorized work and do not exist yet.
 

@@ -86,7 +86,7 @@ requirements:
       - case_id: PF04-006
         scenario_id: shared-adapter-identity-contract
         method: inspection
-        intent: "Inspect the shared adapter identity contract planning contract before implementation."
+        intent: "Inspect the signed #434 module plus separate preflight and implementation-check workflow identity/digest contract before implementation."
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.
