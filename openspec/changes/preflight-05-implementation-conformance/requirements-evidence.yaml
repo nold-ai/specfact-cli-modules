@@ -36,7 +36,7 @@ requirements:
       - case_id: PF05M-003
         scenario_id: complete-implementation-scope-evidence
         method: inspection
-        intent: "Inspect complete C14-backed Git transition identity plus role-independent policy-authorized, snapshot-bound public-interface extraction and fail-closed changed-interface discovery before implementation."
+        intent: "Inspect complete C14-backed Git transition identity plus role-independent policy-authorized, snapshot-bound public-interface extraction, provenance-bound absent tombstones for additions/deletions/rename endpoints, and fail-closed changed-interface discovery before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:seal-bound-semantic-evidence-selection:
     rationale: *planning-rationale
@@ -111,7 +111,7 @@ requirements:
       - case_id: PF05M-009
         scenario_id: shadow-dogfood-before-seal-aware-blocking
         method: inspection
-        intent: "Inspect negative C14 regression fixtures, representative known-green controls, exact expected-result parity, candidate runtime/policy/configuration/corpus identity binding and invalidation, per-scope/profile and aggregate minimum live samples, pairwise and aggregate bounded false-block rates, metrics, and the blocking promotion gate before implementation."
+        intent: "Inspect negative C14 regression fixtures, representative known-green controls, exact expected-result parity, candidate runtime/release-surface/policy/configuration/corpus identity binding and invalidation/recollection, per-scope/profile and aggregate minimum live samples, pairwise and aggregate bounded false-block rates, metrics, and the blocking promotion gate before implementation."
         observable: *planning-observable
   openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:signed-publication-before-adapter-consumption:
     rationale: *planning-rationale

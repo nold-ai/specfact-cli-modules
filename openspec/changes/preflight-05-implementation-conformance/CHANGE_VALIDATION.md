@@ -32,6 +32,7 @@
 - Staged schema-v2 Requirements planning evidence: PASS on 2026-08-25 with inspection-only cases and no test selectors or execution claims.
 - Review follow-up on 2026-08-27: strict OpenSpec validation and schema-v2 Requirements planning evidence PASS after base/head seal semantics, explicit implementation identity, the complete delivery chain, C14-status preservation, and signed-release adapter compatibility were aligned; the diff remains planning-only.
 - Review follow-up on 2026-08-30: shadow evidence is bound to the exact promotion candidate and invalidated by relevant changes; implementation-branch release proof uses a projected registry row while official registry mutation remains post-merge publication work.
+- Second review follow-up on 2026-08-30: release preparation and release-matrix fixes force rollout-evidence recollection for the final unchanged candidate; interface additions, deletions, and rename endpoints use provenance-bound absent-side tombstones rather than missing evidence.
 
 ## Decision
 
