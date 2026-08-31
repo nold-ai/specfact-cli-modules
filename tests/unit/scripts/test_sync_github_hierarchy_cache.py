@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from functools import lru_cache
@@ -301,6 +302,8 @@ def test_sync_cache_skips_write_when_fingerprint_is_unchanged(monkeypatch: pytes
     assert result.changed is False
     assert result.issue_count == 1
     assert output_path.read_text(encoding="utf-8") == "unchanged cache\n"
+    refreshed_state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert refreshed_state["generated_at"]
 
 
 def test_sync_cache_repo_mismatch_rewrites_despite_matching_fingerprint(

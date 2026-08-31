@@ -7,12 +7,12 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 19 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 20 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 19 direct active-tree entries. The closed R08
+`openspec list` reflects all 20 direct active-tree entries. The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec
@@ -85,10 +85,10 @@ review remediation and its immutable publication then produced 0.49.75 through
 [#448](https://github.com/nold-ai/specfact-cli-modules/pull/448) and
 [#449](https://github.com/nold-ai/specfact-cli-modules/pull/449). These release
 identities remain distinct historical evidence; later patches do not rewrite
-the earlier artifacts or records. Issue
-[#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) remains open
-and `In Progress`; this planning series records the merged delivery evidence but
-does not close, reparent, relabel, reassign, or otherwise change that issue.
+the earlier artifacts or records. Issue [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416)
+is closed as completed as of 2026-08-31. Its still-active local proposal contains
+unfinished bookkeeping and must be reconciled before it is treated as an
+implementation authority; it does not authorize additional C14 scope.
 
 Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
 
@@ -103,6 +103,12 @@ Security records under the repository security policy.
 | 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
 ## Active Tracks
+
+### Track A0 - Governance Maintenance
+
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `governance-05-hierarchy-cache-freshness` | [#457](https://github.com/nold-ai/specfact-cli-modules/issues/457) | Renew successful cache-sync freshness metadata without rewriting unchanged hierarchy content | none |
 
 ### Track A - Validation Runtime Spine
 

@@ -1,0 +1,20 @@
+schema_version: "2"
+requirements:
+  openspec:governance-05-hierarchy-cache-freshness:github-hierarchy-cache:cache-refresh-records-hierarchy-metadata:
+    rationale: A successful cache read must renew freshness even when the hierarchy content is unchanged.
+    stakeholder_refs:
+      - docs/agent-rules/60-github-change-governance.md
+    touchpoints:
+      - id: hierarchy-cache-sync
+        kind: script
+        locator: scripts/sync_github_hierarchy_cache.py
+    verification_cases:
+      - case_id: GOV-05-001
+        scenario_id: cache-refresh-records-hierarchy-metadata
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/scripts/test_sync_github_hierarchy_cache.py::test_sync_cache_skips_write_when_fingerprint_is_unchanged
+        intent: Verify that a successful unchanged sync retains cache content and renews state freshness.
+        observable: The markdown cache is byte-stable and the state contains a generated_at timestamp.
+        implementation_task: "2.3"

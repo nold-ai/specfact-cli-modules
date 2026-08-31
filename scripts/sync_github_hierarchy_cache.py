@@ -606,6 +606,7 @@ def sync_cache(
     )
     fingerprint = compute_hierarchy_fingerprint(detailed_issues)
     repo_full_name = f"{repo_owner}/{repo_name}"
+    generated_at = datetime.now(tz=UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     if (
         not force
@@ -613,6 +614,13 @@ def sync_cache(
         and state.get("fingerprint") == fingerprint
         and output_path.exists()
     ):
+        _write_state(
+            state_path=state_path,
+            repo_full_name=repo_full_name,
+            fingerprint=fingerprint,
+            issue_count=len(detailed_issues),
+            generated_at=generated_at,
+        )
         return SyncResult(
             changed=False,
             issue_count=len(detailed_issues),
@@ -620,7 +628,6 @@ def sync_cache(
             output_path=output_path,
         )
 
-    generated_at = datetime.now(tz=UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         render_cache_markdown(
