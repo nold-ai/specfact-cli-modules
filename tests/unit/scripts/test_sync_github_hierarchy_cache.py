@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import stat
 import subprocess
 import sys
 from functools import lru_cache
@@ -554,6 +556,48 @@ def test_sync_cache_preserves_non_empty_directory_cache_path(monkeypatch: pytest
     preserved_directories = list(tmp_path.glob("GITHUB_HIERARCHY_CACHE.md.invalid-*"))
     assert len(preserved_directories) == 1
     assert (preserved_directories[0] / "manual-note.txt").read_text(encoding="utf-8") == "preserve this directory\n"
+
+
+def test_sync_cache_preserves_fifo_cache_path_before_writing(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A FIFO cache path is preserved before the sync can open it for writing."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    os.mkfifo(output_path)
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    original_write_text = Path.write_text
+
+    def _write_text(path: Path, data: str, **kwargs: Any) -> int:
+        if path == output_path:
+            try:
+                mode = path.lstat().st_mode
+            except FileNotFoundError:
+                mode = 0
+            if stat.S_ISFIFO(mode):
+                raise AssertionError("sync attempted to write to the FIFO")
+        return original_write_text(path, data, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", _write_text)
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert output_path.is_file()
+    preserved_paths = list(tmp_path.glob("GITHUB_HIERARCHY_CACHE.md.invalid-*"))
+    assert len(preserved_paths) == 1
+    assert stat.S_ISFIFO(preserved_paths[0].lstat().st_mode)
 
 
 def test_sync_cache_rewrites_non_utf8_markdown_despite_matching_state(

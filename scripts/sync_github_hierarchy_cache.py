@@ -620,6 +620,19 @@ def _cache_payload_matches_state(
 
 
 @beartype
+def _preserve_non_regular_cache_path(output_path: Path) -> None:
+    """Move a non-regular cache path aside before writing markdown."""
+    try:
+        mode = output_path.lstat().st_mode
+    except FileNotFoundError:
+        return
+    if stat.S_ISREG(mode):
+        return
+    preserved_path = output_path.with_name(f"{output_path.name}.invalid-{uuid.uuid4().hex}")
+    output_path.replace(preserved_path)
+
+
+@beartype
 @require(lambda repo_owner: _require_non_blank_argument(repo_owner), "repo_owner must not be blank")
 @require(lambda repo_name: _require_non_blank_argument(repo_name), "repo_name must not be blank")
 def sync_cache(
@@ -667,11 +680,7 @@ def sync_cache(
         )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    if output_path.is_symlink():
-        output_path.unlink()
-    elif output_path.is_dir():
-        preserved_path = output_path.with_name(f"{output_path.name}.invalid-{uuid.uuid4().hex}")
-        output_path.replace(preserved_path)
+    _preserve_non_regular_cache_path(output_path)
     output_path.write_text(
         render_cache_markdown(
             repo_full_name=repo_full_name,
