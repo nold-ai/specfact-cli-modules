@@ -525,6 +525,37 @@ def test_sync_cache_rewrites_empty_directory_cache_path(monkeypatch: pytest.Monk
     assert "# GitHub Hierarchy Cache" in output_path.read_text(encoding="utf-8")
 
 
+def test_sync_cache_preserves_non_empty_directory_cache_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A non-empty directory cache path is preserved before markdown regeneration."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    output_path.mkdir()
+    preserved_file = output_path / "manual-note.txt"
+    preserved_file.write_text("preserve this directory\n", encoding="utf-8")
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert output_path.is_file()
+    preserved_directories = list(tmp_path.glob("GITHUB_HIERARCHY_CACHE.md.invalid-*"))
+    assert len(preserved_directories) == 1
+    assert (preserved_directories[0] / "manual-note.txt").read_text(encoding="utf-8") == "preserve this directory\n"
+
+
 def test_sync_cache_rewrites_non_utf8_markdown_despite_matching_state(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

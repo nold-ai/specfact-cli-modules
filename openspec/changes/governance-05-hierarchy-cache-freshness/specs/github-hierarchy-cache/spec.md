@@ -15,6 +15,7 @@ The system SHALL persist a local cache that records the repository identity, sup
 
 - **WHEN** the state file matches the repository and fingerprint but the markdown cache is missing, not a regular file, unreadable, or does not match the expected rendered hierarchy payload
 - **THEN** the system SHALL regenerate the markdown cache
+- **AND** when the cache path is a non-empty directory, SHALL preserve that directory at a unique sibling path before regenerating the cache
 - **AND** SHALL report the cache as updated.
 
 #### Scenario: Failed refresh preserves prior freshness

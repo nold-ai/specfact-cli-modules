@@ -9,6 +9,7 @@ import json
 import stat
 import subprocess
 import sys
+import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -669,7 +670,8 @@ def sync_cache(
     if output_path.is_symlink():
         output_path.unlink()
     elif output_path.is_dir():
-        output_path.rmdir()
+        preserved_path = output_path.with_name(f"{output_path.name}.invalid-{uuid.uuid4().hex}")
+        output_path.replace(preserved_path)
     output_path.write_text(
         render_cache_markdown(
             repo_full_name=repo_full_name,
