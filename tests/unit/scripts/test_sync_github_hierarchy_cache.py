@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
+import stat
 import subprocess
 import sys
 from functools import lru_cache
@@ -260,7 +263,6 @@ def test_sync_cache_skips_write_when_fingerprint_is_unchanged(monkeypatch: pytes
 
     output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
     state_path = tmp_path / ".github_hierarchy_cache_state.json"
-    output_path.write_text("unchanged cache\n", encoding="utf-8")
     state_path.write_text(
         '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
         encoding="utf-8",
@@ -278,6 +280,15 @@ def test_sync_cache_skips_write_when_fingerprint_is_unchanged(monkeypatch: pytes
             },
         )
     ]
+    output_path.write_text(
+        module.render_cache_markdown(
+            repo_full_name="nold-ai/specfact-cli-modules",
+            issues=issues,
+            generated_at="2026-08-31T20:00:00Z",
+            fingerprint="same",
+        ),
+        encoding="utf-8",
+    )
 
     def _fake_fetch(*, repo_owner: str, repo_name: str, fingerprint_only: bool) -> list[Any]:
         assert repo_owner == "nold-ai"
@@ -300,7 +311,9 @@ def test_sync_cache_skips_write_when_fingerprint_is_unchanged(monkeypatch: pytes
 
     assert result.changed is False
     assert result.issue_count == 1
-    assert output_path.read_text(encoding="utf-8") == "unchanged cache\n"
+    assert "- Fingerprint: `same`" in output_path.read_text(encoding="utf-8")
+    refreshed_state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert refreshed_state["generated_at"]
 
 
 def test_sync_cache_repo_mismatch_rewrites_despite_matching_fingerprint(
@@ -337,6 +350,282 @@ def test_sync_cache_repo_mismatch_rewrites_despite_matching_fingerprint(
     body = output_path.read_text(encoding="utf-8")
     assert "nold-ai/specfact-cli-modules" in body
     assert "other/other" not in body
+
+
+def test_sync_cache_rewrites_invalid_markdown_despite_matching_state(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A matching state file must not refresh a malformed markdown cache."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    output_path.write_text("truncated cache\n", encoding="utf-8")
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert "# GitHub Hierarchy Cache" in output_path.read_text(encoding="utf-8")
+
+
+def test_sync_cache_rewrites_symlinked_markdown_despite_matching_state(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A symlinked cache path must be replaced, not trusted or followed."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    target_path = tmp_path / "outside-cache.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    target_payload = (
+        "# GitHub Hierarchy Cache\n\n"
+        "- Repository: `nold-ai/specfact-cli-modules`\n"
+        "- Generated At: `2026-08-31T20:00:00Z`\n"
+        "- Fingerprint: `same`\n"
+        "- Included Issue Types: `Epic, Feature`\n\n"
+        "Use this file as the first lookup source for parent Epic or Feature relationships "
+        "during OpenSpec and GitHub issue setup.\n\n"
+        "## Epics\n\n_None_\n\n## Features\n\n_None_\n"
+    )
+    target_path.write_text(target_payload, encoding="utf-8")
+    output_path.symlink_to(target_path)
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert output_path.is_symlink() is False
+    assert "# GitHub Hierarchy Cache" in output_path.read_text(encoding="utf-8")
+    assert target_path.read_text(encoding="utf-8") == target_payload
+
+
+def test_sync_cache_rewrites_incomplete_markdown_despite_matching_state(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Matching metadata alone must not preserve a truncated hierarchy cache."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    output_path.write_text(
+        "# GitHub Hierarchy Cache\n\n- Repository: `nold-ai/specfact-cli-modules`\n- Fingerprint: `same`\n",
+        encoding="utf-8",
+    )
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    payload = output_path.read_text(encoding="utf-8")
+    assert "## Epics" in payload
+    assert "## Features" in payload
+
+
+def test_sync_cache_rewrites_cache_without_fetched_issue_blocks(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Matching metadata and section headers cannot hide missing hierarchy issues."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    issues = [
+        _make_issue(
+            module,
+            number=485,
+            title="[Epic] Governance",
+            issue_type="Epic",
+            options={"labels": ["Epic"], "summary": "Governance epic."},
+        )
+    ]
+    output_path.write_text(
+        module.render_cache_markdown(
+            repo_full_name="nold-ai/specfact-cli-modules",
+            issues=[],
+            generated_at="2026-08-31T20:00:00Z",
+            fingerprint="same",
+        ),
+        encoding="utf-8",
+    )
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: issues)
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert "### #485 [Epic] Governance" in output_path.read_text(encoding="utf-8")
+
+
+def test_sync_cache_rewrites_empty_directory_cache_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """An empty directory at the cache path is replaced with rendered markdown."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    output_path.mkdir()
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert output_path.is_file()
+    assert "# GitHub Hierarchy Cache" in output_path.read_text(encoding="utf-8")
+
+
+def test_sync_cache_preserves_non_empty_directory_cache_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A non-empty directory cache path is preserved before markdown regeneration."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    output_path.mkdir()
+    preserved_file = output_path / "manual-note.txt"
+    preserved_file.write_text("preserve this directory\n", encoding="utf-8")
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert output_path.is_file()
+    preserved_directories = list(tmp_path.glob("GITHUB_HIERARCHY_CACHE.md.invalid-*"))
+    assert len(preserved_directories) == 1
+    assert (preserved_directories[0] / "manual-note.txt").read_text(encoding="utf-8") == "preserve this directory\n"
+
+
+def test_sync_cache_preserves_fifo_cache_path_before_writing(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A FIFO cache path is preserved before the sync can open it for writing."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    os.mkfifo(output_path)
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    original_write_text = Path.write_text
+
+    def _write_text(path: Path, data: str, **kwargs: Any) -> int:
+        if path == output_path:
+            try:
+                mode = path.lstat().st_mode
+            except FileNotFoundError:
+                mode = 0
+            if stat.S_ISFIFO(mode):
+                raise AssertionError("sync attempted to write to the FIFO")
+        return original_write_text(path, data, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", _write_text)
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert output_path.is_file()
+    preserved_paths = list(tmp_path.glob("GITHUB_HIERARCHY_CACHE.md.invalid-*"))
+    assert len(preserved_paths) == 1
+    assert stat.S_ISFIFO(preserved_paths[0].lstat().st_mode)
+
+
+def test_sync_cache_rewrites_non_utf8_markdown_despite_matching_state(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A matching state file must not trust undecodable cache bytes."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    output_path.write_bytes(b"\xff\xfe")
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert "# GitHub Hierarchy Cache" in output_path.read_text(encoding="utf-8")
 
 
 def test_sync_cache_missing_repo_in_state_rewrites(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

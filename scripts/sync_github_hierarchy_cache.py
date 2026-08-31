@@ -6,8 +6,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import stat
 import subprocess
 import sys
+import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -587,6 +589,50 @@ def _write_state(
 
 
 @beartype
+def _cache_payload_matches_state(
+    *, output_path: Path, repo_full_name: str, issues: list[HierarchyIssue], fingerprint: str
+) -> bool:
+    """Return whether a regular markdown cache matches the fetched hierarchy."""
+    try:
+        mode = output_path.lstat().st_mode
+    except OSError:
+        return False
+    if not stat.S_ISREG(mode):
+        return False
+    try:
+        payload = output_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return False
+    generated_at_prefix = "- Generated At: `"
+    payload_lines = payload.splitlines(keepends=True)
+    generated_at_lines = [line for line in payload_lines if line.startswith(generated_at_prefix)]
+    if len(generated_at_lines) != 1 or not generated_at_lines[0].rstrip().endswith("`"):
+        return False
+    expected_payload = render_cache_markdown(
+        repo_full_name=repo_full_name,
+        issues=issues,
+        generated_at="cache-validation",
+        fingerprint=fingerprint,
+    )
+    expected_without_timestamp = expected_payload.replace(f"{generated_at_prefix}cache-validation`\n", "", 1)
+    payload_without_timestamp = "".join(line for line in payload_lines if not line.startswith(generated_at_prefix))
+    return payload_without_timestamp == expected_without_timestamp
+
+
+@beartype
+def _preserve_non_regular_cache_path(output_path: Path) -> None:
+    """Move a non-regular cache path aside before writing markdown."""
+    try:
+        mode = output_path.lstat().st_mode
+    except FileNotFoundError:
+        return
+    if stat.S_ISREG(mode):
+        return
+    preserved_path = output_path.with_name(f"{output_path.name}.invalid-{uuid.uuid4().hex}")
+    output_path.replace(preserved_path)
+
+
+@beartype
 @require(lambda repo_owner: _require_non_blank_argument(repo_owner), "repo_owner must not be blank")
 @require(lambda repo_name: _require_non_blank_argument(repo_name), "repo_name must not be blank")
 def sync_cache(
@@ -606,13 +652,26 @@ def sync_cache(
     )
     fingerprint = compute_hierarchy_fingerprint(detailed_issues)
     repo_full_name = f"{repo_owner}/{repo_name}"
+    generated_at = datetime.now(tz=UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     if (
         not force
         and state.get("repo") == repo_full_name
         and state.get("fingerprint") == fingerprint
-        and output_path.exists()
+        and _cache_payload_matches_state(
+            output_path=output_path,
+            repo_full_name=repo_full_name,
+            issues=detailed_issues,
+            fingerprint=fingerprint,
+        )
     ):
+        _write_state(
+            state_path=state_path,
+            repo_full_name=repo_full_name,
+            fingerprint=fingerprint,
+            issue_count=len(detailed_issues),
+            generated_at=generated_at,
+        )
         return SyncResult(
             changed=False,
             issue_count=len(detailed_issues),
@@ -620,8 +679,8 @@ def sync_cache(
             output_path=output_path,
         )
 
-    generated_at = datetime.now(tz=UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    _preserve_non_regular_cache_path(output_path)
     output_path.write_text(
         render_cache_markdown(
             repo_full_name=repo_full_name,

@@ -7,12 +7,12 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 19 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 20 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 19 direct active-tree entries. The closed R08
+`openspec list` reflects all 20 direct active-tree entries. The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec
@@ -65,13 +65,14 @@ These archived specs are now the shipped basis for the flagship demo: run review
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
 AI IDE, rerun, and compare improved evidence.
 
-## Immediate Corrective Track
+## Completed-Issue Reconciliation
 
-This track is first because no changed-scope assurance claim is trustworthy until its Git boundary and unknown states are explicit.
+The following local artifacts remain in the active tree solely for reconciliation
+and finalization. Their closed GitHub issues are not implementation authority.
 
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
-| 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) | Resolve worktree/index/range/full scope explicitly; compare pinned merge-base/head analyses; authenticate one target-tip project-runtime layer for both snapshots; fail closed on unknown scope, runtime provenance, or analyzer coverage | accepted planning PR [#413](https://github.com/nold-ai/specfact-cli-modules/pull/413); paired core adoption is downstream after the signed release |
+| 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) | Closed completed; reconcile outstanding local bookkeeping before native archival. No further C14 implementation scope is authorized. | none |
 
 The immutable C14 compatibility smoke establishes core 0.55.1 as the minimum: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Runtime metadata therefore uses `>=0.55.1,<1.0.0`: the ceiling is required because recursive installation includes Codebase and Requirements modules whose current manifests reject core 1.x. Current paired-core validation exercises compatible versions above the minimum; a routine compatible core update within the dependency graph does not require a module metadata release. Remove the ceiling only after widening and validating the required dependency graph. This correction supersedes C14's exact-only admission wording without changing its frozen provenance identities or historical evidence.
 
@@ -85,10 +86,10 @@ review remediation and its immutable publication then produced 0.49.75 through
 [#448](https://github.com/nold-ai/specfact-cli-modules/pull/448) and
 [#449](https://github.com/nold-ai/specfact-cli-modules/pull/449). These release
 identities remain distinct historical evidence; later patches do not rewrite
-the earlier artifacts or records. Issue
-[#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) remains open
-and `In Progress`; this planning series records the merged delivery evidence but
-does not close, reparent, relabel, reassign, or otherwise change that issue.
+the earlier artifacts or records. Issue [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416)
+is closed as completed as of 2026-08-31. Its still-active local proposal contains
+unfinished bookkeeping and must be reconciled before it is treated as an
+implementation authority; it does not authorize additional C14 scope.
 
 Implementation must stay independent from Requirements replay work. The two changes may share evidence vocabulary only through the future governance schema; neither may silently define the other's verdict.
 
@@ -103,6 +104,12 @@ Security records under the repository security policy.
 | 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
 ## Active Tracks
+
+### Track A0 - Governance Maintenance
+
+| Order | Change folder | GitHub # | Positioning | Blocked by |
+|---:|---|---|---|---|
+| 1 | `governance-05-hierarchy-cache-freshness` | [#457](https://github.com/nold-ai/specfact-cli-modules/issues/457) | Renew successful cache-sync freshness metadata without rewriting unchanged hierarchy content | none |
 
 ### Track A - Validation Runtime Spine
 
