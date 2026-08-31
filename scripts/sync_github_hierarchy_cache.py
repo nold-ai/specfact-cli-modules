@@ -588,8 +588,10 @@ def _write_state(
 
 
 @beartype
-def _cache_payload_matches_state(*, output_path: Path, repo_full_name: str, fingerprint: str) -> bool:
-    """Return whether a regular markdown cache records the expected identity."""
+def _cache_payload_matches_state(
+    *, output_path: Path, repo_full_name: str, issues: list[HierarchyIssue], fingerprint: str
+) -> bool:
+    """Return whether a regular markdown cache matches the fetched hierarchy."""
     try:
         mode = output_path.lstat().st_mode
     except OSError:
@@ -600,17 +602,20 @@ def _cache_payload_matches_state(*, output_path: Path, repo_full_name: str, fing
         payload = output_path.read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         return False
-    required_markers = (
-        "# GitHub Hierarchy Cache",
-        f"- Repository: `{repo_full_name}`",
-        "- Generated At: `",
-        f"- Fingerprint: `{fingerprint}`",
-        "- Included Issue Types: `Epic, Feature`",
-        "Use this file as the first lookup source for parent Epic or Feature relationships ",
-        "## Epics",
-        "## Features",
+    generated_at_prefix = "- Generated At: `"
+    payload_lines = payload.splitlines(keepends=True)
+    generated_at_lines = [line for line in payload_lines if line.startswith(generated_at_prefix)]
+    if len(generated_at_lines) != 1 or not generated_at_lines[0].rstrip().endswith("`"):
+        return False
+    expected_payload = render_cache_markdown(
+        repo_full_name=repo_full_name,
+        issues=issues,
+        generated_at="cache-validation",
+        fingerprint=fingerprint,
     )
-    return all(marker in payload for marker in required_markers)
+    expected_without_timestamp = expected_payload.replace(f"{generated_at_prefix}cache-validation`\n", "", 1)
+    payload_without_timestamp = "".join(line for line in payload_lines if not line.startswith(generated_at_prefix))
+    return payload_without_timestamp == expected_without_timestamp
 
 
 @beartype
@@ -642,6 +647,7 @@ def sync_cache(
         and _cache_payload_matches_state(
             output_path=output_path,
             repo_full_name=repo_full_name,
+            issues=detailed_issues,
             fingerprint=fingerprint,
         )
     ):
@@ -662,6 +668,8 @@ def sync_cache(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_path.is_symlink():
         output_path.unlink()
+    elif output_path.is_dir():
+        output_path.rmdir()
     output_path.write_text(
         render_cache_markdown(
             repo_full_name=repo_full_name,
