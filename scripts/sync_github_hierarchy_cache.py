@@ -587,6 +587,18 @@ def _write_state(
 
 
 @beartype
+def _cache_payload_matches_state(*, output_path: Path, repo_full_name: str, fingerprint: str) -> bool:
+    """Return whether a regular markdown cache records the expected identity."""
+    if not output_path.is_file():
+        return False
+    try:
+        payload = output_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return f"- Repository: `{repo_full_name}`" in payload and f"- Fingerprint: `{fingerprint}`" in payload
+
+
+@beartype
 @require(lambda repo_owner: _require_non_blank_argument(repo_owner), "repo_owner must not be blank")
 @require(lambda repo_name: _require_non_blank_argument(repo_name), "repo_name must not be blank")
 def sync_cache(
@@ -612,7 +624,11 @@ def sync_cache(
         not force
         and state.get("repo") == repo_full_name
         and state.get("fingerprint") == fingerprint
-        and output_path.exists()
+        and _cache_payload_matches_state(
+            output_path=output_path,
+            repo_full_name=repo_full_name,
+            fingerprint=fingerprint,
+        )
     ):
         _write_state(
             state_path=state_path,
