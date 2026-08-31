@@ -593,7 +593,7 @@ def _cache_payload_matches_state(*, output_path: Path, repo_full_name: str, fing
         return False
     try:
         payload = output_path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
         return False
     return f"- Repository: `{repo_full_name}`" in payload and f"- Fingerprint: `{fingerprint}`" in payload
 

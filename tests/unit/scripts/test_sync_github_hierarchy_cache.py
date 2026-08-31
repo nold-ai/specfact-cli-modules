@@ -373,6 +373,34 @@ def test_sync_cache_rewrites_invalid_markdown_despite_matching_state(
     assert "# GitHub Hierarchy Cache" in output_path.read_text(encoding="utf-8")
 
 
+def test_sync_cache_rewrites_non_utf8_markdown_despite_matching_state(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A matching state file must not trust undecodable cache bytes."""
+    module = _load_script_module()
+
+    output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
+    state_path = tmp_path / ".github_hierarchy_cache_state.json"
+    output_path.write_bytes(b"\xff\xfe")
+    state_path.write_text(
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    monkeypatch.setattr(module, "compute_hierarchy_fingerprint", lambda _: "same")
+
+    result = module.sync_cache(
+        repo_owner="nold-ai",
+        repo_name="specfact-cli-modules",
+        output_path=output_path,
+        state_path=state_path,
+    )
+
+    assert result.changed is True
+    assert "# GitHub Hierarchy Cache" in output_path.read_text(encoding="utf-8")
+
+
 def test_sync_cache_missing_repo_in_state_rewrites(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """State files without repo (pre-fix) must not short-circuit the skip path."""
     module = _load_script_module()
