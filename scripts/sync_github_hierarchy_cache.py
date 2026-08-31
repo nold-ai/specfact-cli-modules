@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import stat
 import subprocess
 import sys
 from collections.abc import Mapping
@@ -589,13 +590,27 @@ def _write_state(
 @beartype
 def _cache_payload_matches_state(*, output_path: Path, repo_full_name: str, fingerprint: str) -> bool:
     """Return whether a regular markdown cache records the expected identity."""
-    if not output_path.is_file():
+    try:
+        mode = output_path.lstat().st_mode
+    except OSError:
+        return False
+    if not stat.S_ISREG(mode):
         return False
     try:
         payload = output_path.read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         return False
-    return f"- Repository: `{repo_full_name}`" in payload and f"- Fingerprint: `{fingerprint}`" in payload
+    required_markers = (
+        "# GitHub Hierarchy Cache",
+        f"- Repository: `{repo_full_name}`",
+        "- Generated At: `",
+        f"- Fingerprint: `{fingerprint}`",
+        "- Included Issue Types: `Epic, Feature`",
+        "Use this file as the first lookup source for parent Epic or Feature relationships ",
+        "## Epics",
+        "## Features",
+    )
+    return all(marker in payload for marker in required_markers)
 
 
 @beartype
@@ -645,6 +660,8 @@ def sync_cache(
         )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.is_symlink():
+        output_path.unlink()
     output_path.write_text(
         render_cache_markdown(
             repo_full_name=repo_full_name,

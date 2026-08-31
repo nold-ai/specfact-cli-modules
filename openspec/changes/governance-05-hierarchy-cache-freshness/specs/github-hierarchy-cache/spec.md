@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Cache refresh records hierarchy metadata
 
@@ -7,7 +7,7 @@ The system SHALL persist a local cache that records the repository identity, sup
 #### Scenario: Unchanged hierarchy refresh renews freshness
 
 - **WHEN** a GitHub hierarchy read succeeds and its fingerprint matches the existing cache for the same repository
-- **THEN** the system SHALL retain the existing markdown hierarchy payload only when it is a regular file that records the matching repository and fingerprint
+- **THEN** the system SHALL retain the existing markdown hierarchy payload only when it is a non-symlink regular file with the expected cache header, metadata, and Epic and Feature sections
 - **AND** SHALL update the state-file timestamp to the successful synchronization time
 - **AND** SHALL report the cache as unchanged.
 
