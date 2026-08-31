@@ -65,13 +65,14 @@ These archived specs are now the shipped basis for the flagship demo: run review
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
 AI IDE, rerun, and compare improved evidence.
 
-## Immediate Corrective Track
+## Completed-Issue Reconciliation
 
-This track is first because no changed-scope assurance claim is trustworthy until its Git boundary and unknown states are explicit.
+The following local artifacts remain in the active tree solely for reconciliation
+and finalization. Their closed GitHub issues are not implementation authority.
 
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
-| 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) | Resolve worktree/index/range/full scope explicitly; compare pinned merge-base/head analyses; authenticate one target-tip project-runtime layer for both snapshots; fail closed on unknown scope, runtime provenance, or analyzer coverage | accepted planning PR [#413](https://github.com/nold-ai/specfact-cli-modules/pull/413); paired core adoption is downstream after the signed release |
+| 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) | Closed completed; reconcile outstanding local bookkeeping before native archival. No further C14 implementation scope is authorized. | none |
 
 The immutable C14 compatibility smoke establishes core 0.55.1 as the minimum: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Runtime metadata therefore uses `>=0.55.1,<1.0.0`: the ceiling is required because recursive installation includes Codebase and Requirements modules whose current manifests reject core 1.x. Current paired-core validation exercises compatible versions above the minimum; a routine compatible core update within the dependency graph does not require a module metadata release. Remove the ceiling only after widening and validating the required dependency graph. This correction supersedes C14's exact-only admission wording without changing its frozen provenance identities or historical evidence.
 
