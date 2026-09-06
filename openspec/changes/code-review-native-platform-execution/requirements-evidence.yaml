@@ -1,0 +1,107 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-native-platform-execution:review-native-platform-execution:native-local-execution:
+    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-1-1
+      scenario_id: native-local-execution
+      method: inspection
+      intent: 'Inspect the planned scenario: Agent invokes the native CLI.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+    - case_id: 460-1-2
+      scenario_id: native-local-execution
+      method: inspection
+      intent: 'Inspect the planned scenario: Architecture is not silently substituted.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:native-isolation-capability-evidence:
+    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-2-1
+      scenario_id: native-isolation-capability-evidence
+      method: inspection
+      intent: 'Inspect the planned scenario: Isolation and cleanup are proven.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+    - case_id: 460-2-2
+      scenario_id: native-isolation-capability-evidence
+      method: inspection
+      intent: 'Inspect the planned scenario: Required capability is unavailable.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:portable-review-semantics:
+    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-3-1
+      scenario_id: portable-review-semantics
+      method: inspection
+      intent: 'Inspect the planned scenario: Portable fixture classification.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+    - case_id: 460-3-2
+      scenario_id: portable-review-semantics
+      method: inspection
+      intent: 'Inspect the planned scenario: OS dependent project tests.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:verified-provisioning-and-offline-reuse:
+    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-4-1
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Cached native runtime.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+    - case_id: 460-4-2
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Invalid native artifact.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:released-baseline-implementation-gate:
+    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-5-1
+      scenario_id: released-baseline-implementation-gate
+      method: inspection
+      intent: 'Inspect the planned scenario: Prerequisite remains incomplete.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+    - case_id: 460-5-2
+      scenario_id: released-baseline-implementation-gate
+      method: inspection
+      intent: 'Inspect the planned scenario: Baseline drives the full lifecycle.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.

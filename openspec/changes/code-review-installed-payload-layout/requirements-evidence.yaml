@@ -1,0 +1,59 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-installed-payload-layout:review-installed-payload-layout:verified-installed-package-layout:
+    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#459
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-installed-payload-layout/specs/review-installed-payload-layout/spec.md
+    verification_cases:
+    - case_id: 459-1-1
+      scenario_id: verified-installed-package-layout
+      method: inspection
+      intent: 'Inspect the planned scenario: Signed src installation survives archive removal.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+    - case_id: 459-1-2
+      scenario_id: verified-installed-package-layout
+      method: inspection
+      intent: 'Inspect the planned scenario: Flat staging remains compatible.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+  openspec:code-review-installed-payload-layout:review-installed-payload-layout:unsafe-or-changed-payload-rejection:
+    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#459
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-installed-payload-layout/specs/review-installed-payload-layout/spec.md
+    verification_cases:
+    - case_id: 459-2-1
+      scenario_id: unsafe-or-changed-payload-rejection
+      method: inspection
+      intent: 'Inspect the planned scenario: Missing ambiguous or symlinked roots.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+    - case_id: 459-2-2
+      scenario_id: unsafe-or-changed-payload-rejection
+      method: inspection
+      intent: 'Inspect the planned scenario: Payload changes before copying.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.
+  openspec:code-review-installed-payload-layout:review-installed-payload-layout:installed-release-regression-evidence:
+    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#459
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-installed-payload-layout/specs/review-installed-payload-layout/spec.md
+    verification_cases:
+    - case_id: 459-3-1
+      scenario_id: installed-release-regression-evidence
+      method: inspection
+      intent: 'Inspect the planned scenario: Compatibility and independent blockers.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime test execution or implementation is claimed.

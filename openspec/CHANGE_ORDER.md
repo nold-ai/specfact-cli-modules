@@ -7,12 +7,12 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 20 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 22 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 20 direct active-tree entries. The closed R08
+`openspec list` reflects all 22 direct active-tree entries. The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec
@@ -102,6 +102,31 @@ Security records under the repository security policy.
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
 | 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
+
+## Planned C14 Correction and Native Local Execution
+
+These two changes are planning-only proposals. Their planning PR may merge to
+`dev` while implementation remains pending; neither issue is closed or archived
+by that PR. GitHub metadata was verified on 2026-09-06.
+
+| Change | Issue | Implementation dependencies |
+|---|---|---|
+| `code-review-installed-payload-layout` | [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459) | No open prerequisite; corrects completed C14 #416 and blocks core #680 |
+| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Layout #459, released checkpoint/conformance #434, and released core C15 #679 |
+
+Native execution means the ordinary local CLI runs directly on macOS, Linux,
+and Windows with explicit x64/ARM64 coverage. Docker, WSL, VMs, and emulation
+are not prerequisites. OS-native sandboxing is permitted. Final platform design
+and implementation must be reassessed against the exact released prerequisite
+and C15 baseline using preflight, checkpoints, and final conformance evidence.
+
+The prerequisite chain remains core #682 -> modules #431 -> core #680 ->
+core #683 -> modules #432; modules #432 plus core #684 -> modules #434; modules #432
+plus existing policy/profile/exception prerequisites -> modules #417 ->
+core #679. Native issue #460 records only its three direct blockers; it does not
+add redundant transitive edges. Harness adapters #433 are not a prerequisite.
+The layout bug cannot depend on C15 without creating a cycle through core #680.
+Existing pending changes retain their scope and ordering.
 
 ## Active Tracks
 
