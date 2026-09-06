@@ -13,7 +13,7 @@ Future behavior work follows worktree -> current approved spec -> tests -> recor
 ## 2. Specify test implement and verify
 
 - [ ] Revalidate current source and #459/#680 concurrency/dependencies before implementation.
-- [ ] Add installer/signature integration and flat-layout regression tests mapped to every scenario; capture failing-before evidence.
+- [ ] Add installer/signature integration and flat-layout regression tests, including copy-time entry-type and ancestor substitutions, mapped to every scenario; capture failing-before evidence.
 - [ ] Implement bounded root resolution, manifest/copy consistency, and handoff diagnostics.
 - [ ] Run regression tests and real installed-payload startup on supported Linux; repeat the recorded range review and classify independent blockers.
 - [ ] Record red/green commands and exact versions in TDD_EVIDENCE.md.

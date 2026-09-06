@@ -42,8 +42,30 @@ No existing edges were removed. The added edges do not create a cycle.
 This validates proposal structure, planned evidence, metadata, and artifact
 integrity only. Runtime tests, native isolation prototypes, code changes, module
 versioning/publication, and implementation PRs remain future unchecked tasks.
-No source test schema manifest signature or registry file changed.
+No runtime source, tests, runtime schemas, payload manifests, signatures, or
+module registry files changed. The OpenSpec change order adds these two planning
+proposals and updates the active-tree count from 20 to 22.
 
 The planning PR uses Refs, leaves both issues open, and does not archive either
 change. Native implementation awaits the released prerequisite/C15 baseline;
 the layout correction remains upstream of core C14 adoption.
+
+## PR review follow-up
+
+Reviewed PR #461 at 9d99bb91ac9486c3905583a5e0b77285d5911c06;
+follow-up checked 2026-09-06T22:34:17+02:00 (Europe/Berlin).
+
+- Review 3945174715: clarified that runtime/module artifacts are unchanged while
+  the OpenSpec change order is intentionally updated from 20 to 22 entries.
+- Review 3945174727: restricted this capability to the installed-payload fix;
+  native execution remains a separate dependency-linked proposal.
+- Review 3945174726: preserved the existing no-follow/regular-file behavior and
+  made root-bound copy-time checks explicit in the design and spec. Added two
+  planned scenarios for entry-type and ancestor substitutions, with inspection
+  cases and future test tasks. This does not claim a reproduced runtime exploit
+  or an implemented copy-path fix.
+
+Strict OpenSpec validation, structural Markdown checks, staged planned-maturity
+Requirements evidence (two sources passed), and diff whitespace checks passed
+for the revised contracts. Runtime tests remain unexecuted and all future
+implementation tasks remain unchecked. No issue dependencies changed.

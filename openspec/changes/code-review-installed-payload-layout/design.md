@@ -12,13 +12,13 @@ The primary implementation surface is packages/specfact-code-review/src/specfact
 
 Resolve exactly one real package root from the two supported relative prefixes: src/specfact_code_review and specfact_code_review. Reject ambiguity, missing roots, symlinks in relevant directory components, and non-regular payload entries. Retain the authenticated installed root; do not rewrite the installation or import ambient host code.
 
-Manifest paths remain relative to the actual installed root, including src when present. Copying accepts only the validated prefix and strips that prefix into the unchanged /opt/specfact/builtin/specfact_code_review destination. Recheck bytes and modes at copy time. Existing flat candidate staging remains byte/digest compatible.
+Manifest paths remain relative to the actual installed root, including src when present. Copying accepts only the validated prefix and strips that prefix into the unchanged /opt/specfact/builtin/specfact_code_review destination. Preserve the existing no-follow source reads and stable regular-file checks. At copy time, anchor source traversal to the validated installed root and reject symlinks or changed directory components using descriptor-bound traversal or an equivalent atomic no-follow mechanism. Verify regular-file type, confinement to that root, bytes, and modes on the same opened source before and after reading; a separate path-resolution check followed by an ordinary open is insufficient. A file-to-symlink, other file-type, or ancestor-directory substitution returns UNKNOWN, discards incomplete copying, and prevents analyzer execution. Existing flat candidate staging remains byte/digest compatible.
 
 The existing handoff schema and report shape need no change. Preserve signature, registry, core-install marker, metadata, checksum, provenance, and digest verification. Detailed diagnostics identify layout/handoff failure without treating the signed installation as untrusted merely because its package has a src prefix.
 
 ## Verification and risks
 
-Test the real core installer with a signed fixture and actual signature verification, not a mocked True result or a manually flattened fixture. Delete the download archive before deriving the installed handoff and invoking copied built-ins. Cover minimum core 0.55.1 and reproduced core 0.55.4, flat candidate parity, resources, modes, drift, ambiguous roots, and symlinks.
+Test the real core installer with a signed fixture and actual signature verification, not a mocked True result or a manually flattened fixture. Delete the download archive before deriving the installed handoff and invoking copied built-ins. Cover minimum core 0.55.1 and reproduced core 0.55.4, flat candidate parity, resources, modes, drift, ambiguous roots, symlinks, and entry/ancestor substitutions between manifest verification and copying.
 
 A remaining runtime, project-dependency, or candidate-policy UNKNOWN after repair is independent evidence, not proof the correction failed or validation passed. Record each result separately. Avoid changing historical C14 lock/checkpoint identities.
 

@@ -20,7 +20,7 @@ The Code Review runtime SHALL derive and verify installed payloads from exactly 
 
 ### Requirement: Unsafe or changed payload rejection
 
-The Code Review runtime SHALL fail closed when the installed package root or verified payload cannot be determined safely.
+The Code Review runtime SHALL fail closed when the installed package root or verified payload cannot be determined safely. Copying SHALL preserve no-follow source handling and atomically bind regular-file type, confinement to the validated installed root, bytes, and modes to the same opened source; separate path checking followed by an ordinary open is insufficient.
 
 #### Scenario: Missing ambiguous or symlinked roots
 
@@ -33,6 +33,18 @@ The Code Review runtime SHALL fail closed when the installed package root or ver
 - **GIVEN** a verified manifest whose source bytes or file mode subsequently differ
 - **WHEN** C14 copies that entry
 - **THEN** copying fails closed instead of accepting the changed payload
+
+#### Scenario: Entry type changes before copying
+
+- **GIVEN** a verified regular payload file is replaced by a symlink or another file type before copying
+- **WHEN** C14 opens and verifies the copy source
+- **THEN** it returns UNKNOWN, discards incomplete copying, and executes no analyzer
+
+#### Scenario: Ancestor changes before copying
+
+- **GIVEN** a directory component beneath the verified installed root is substituted between manifest verification and copying
+- **WHEN** C14 traverses the source path for copying
+- **THEN** the root-bound no-follow operation rejects the substitution with UNKNOWN and no analyzer execution
 
 ### Requirement: Installed release regression evidence
 

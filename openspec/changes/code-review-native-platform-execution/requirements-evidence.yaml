@@ -84,6 +84,38 @@ requirements:
       intent: 'Inspect the planned scenario: Invalid native artifact.'
       observable: The source requirement and Given/When/Then scenario are present and validate at planned
         maturity; no runtime test execution or implementation is claimed.
+    - case_id: 460-4-3
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Module-shipped native artifact changes.'
+      observable: 'The planned contract requires: verification fails and no analyzer executes; verification
+        is not narrowed to only the Python package. Planned maturity only; no runtime test execution or
+        implementation is claimed.'
+    - case_id: 460-4-4
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: External cache has no approved binding.'
+      observable: 'The planned contract requires: it fails closed before analyzer execution even when
+        module verification succeeds. Planned maturity only; no runtime test execution or implementation
+        is claimed.'
+    - case_id: 460-4-5
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Stale external cache identity.'
+      observable: 'The planned contract requires: the stale cache is rejected before analyzer execution.
+        Planned maturity only; no runtime test execution or implementation is claimed.'
+    - case_id: 460-4-6
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Partial external runtime cache.'
+      observable: 'The planned contract requires: the incomplete cache is rejected before analyzer execution.
+        Planned maturity only; no runtime test execution or implementation is claimed.'
+    - case_id: 460-4-7
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Mixed external runtime cache.'
+      observable: 'The planned contract requires: the mixed cache is rejected before analyzer execution.
+        Planned maturity only; no runtime test execution or implementation is claimed.'
   openspec:code-review-native-platform-execution:review-native-platform-execution:released-baseline-implementation-gate:
     rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
     stakeholder_refs:

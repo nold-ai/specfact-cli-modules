@@ -14,7 +14,7 @@ A normal signed Code Review installation places Python code under src/specfact_c
 
 ### New Capabilities
 
-- `review-installed-payload-layout`: Requirements and verification obligations for the planned correction or native execution.
+- `review-installed-payload-layout`: Requirements and verification obligations for the installed-payload correction only.
 
 ### Modified Capabilities
 

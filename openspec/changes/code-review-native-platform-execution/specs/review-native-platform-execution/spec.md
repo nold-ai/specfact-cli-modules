@@ -52,19 +52,49 @@ Native execution SHALL preserve the released scope differential and C15 authorit
 
 ### Requirement: Verified provisioning and offline reuse
 
-Native runtimes SHALL use verified platform-specific artifacts and support offline reuse after provisioning.
+Native runtimes SHALL preserve full-module-directory checksum/signature verification for module-shipped files. External runtimes SHALL use a separately approved signed lock/manifest binding artifact digests, applicable layer digests, installed payload/root manifests, OS/architecture/Python ABI, dependency closure, and cache identity. Provisioning SHALL verify artifact and extracted payload integrity; every launch, including offline reuse, SHALL revalidate the selected payload/root against the approved bindings. Unbound, stale, partial, mixed, or mismatched caches SHALL fail closed before analyzer execution.
 
 #### Scenario: Cached native runtime
 
 - **GIVEN** a complete verified native runtime cache for the active OS architecture and Python ABI
 - **WHEN** review runs without network access
-- **THEN** it uses that runtime and records its identity without unreported host dependency fallback
+- **THEN** it revalidates the selected runtime payload/root against the approved signed bindings, uses that runtime, and records its identity without unreported host dependency fallback
 
 #### Scenario: Invalid native artifact
 
 - **GIVEN** a runtime or dependency has mismatched integrity incompatible ABI or unavailable native code
 - **WHEN** provisioning or execution is requested
 - **THEN** the runtime fails closed with an actionable diagnostic and does not use emulation
+
+#### Scenario: Module-shipped native artifact changes
+
+- **GIVEN** a native file covered by the full-module checksum/signature has changed
+- **WHEN** module payload verification is performed before launch
+- **THEN** verification fails and no analyzer executes; verification is not narrowed to only the Python package
+
+#### Scenario: External cache has no approved binding
+
+- **GIVEN** a cached native artifact is outside the module directory and has no approved signed lock/manifest binding
+- **WHEN** provisioning or offline reuse is requested
+- **THEN** it fails closed before analyzer execution even when module verification succeeds
+
+#### Scenario: Stale external cache identity
+
+- **GIVEN** a cached runtime matches an earlier approved lock but not the currently selected runtime identity
+- **WHEN** review prepares to launch from that cache
+- **THEN** the stale cache is rejected before analyzer execution
+
+#### Scenario: Partial external runtime cache
+
+- **GIVEN** a selected cache lacks a file or dependency required by its signed installed payload/root manifest
+- **WHEN** provisioning or offline reuse verifies the selected runtime
+- **THEN** the incomplete cache is rejected before analyzer execution
+
+#### Scenario: Mixed external runtime cache
+
+- **GIVEN** cached files come from different versions platforms or Python ABIs despite individual artifact digests being valid
+- **WHEN** the complete runtime is checked against the approved signed lock and dependency closure
+- **THEN** the mixed cache is rejected before analyzer execution
 
 ### Requirement: Released baseline implementation gate
 

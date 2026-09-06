@@ -42,6 +42,19 @@ requirements:
       intent: 'Inspect the planned scenario: Payload changes before copying.'
       observable: The source requirement and Given/When/Then scenario are present and validate at planned
         maturity; no runtime test execution or implementation is claimed.
+    - case_id: 459-2-3
+      scenario_id: unsafe-or-changed-payload-rejection
+      method: inspection
+      intent: 'Inspect the planned scenario: Entry type changes before copying.'
+      observable: 'The planned contract requires: it returns UNKNOWN, discards incomplete copying, and
+        executes no analyzer. Planned maturity only; no runtime test execution or implementation is claimed.'
+    - case_id: 459-2-4
+      scenario_id: unsafe-or-changed-payload-rejection
+      method: inspection
+      intent: 'Inspect the planned scenario: Ancestor changes before copying.'
+      observable: 'The planned contract requires: the root-bound no-follow operation rejects the substitution
+        with UNKNOWN and no analyzer execution. Planned maturity only; no runtime test execution or implementation
+        is claimed.'
   openspec:code-review-installed-payload-layout:review-installed-payload-layout:installed-release-regression-evidence:
     rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
     stakeholder_refs:

@@ -14,7 +14,7 @@ SpecFact's primary use is a local-first CLI invoked by developers and agentic AI
 
 ### New Capabilities
 
-- `review-native-platform-execution`: Requirements and verification obligations for the planned correction or native execution.
+- `review-native-platform-execution`: Requirements and verification obligations for native local platform execution; the installed-payload correction remains a separate prerequisite.
 
 ### Modified Capabilities
 
