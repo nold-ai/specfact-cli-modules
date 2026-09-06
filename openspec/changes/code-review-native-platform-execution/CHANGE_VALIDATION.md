@@ -63,7 +63,8 @@ follow-up checked 2026-09-06T22:34:17+02:00 (Europe/Berlin).
   native macOS ARM64 and Windows x64 wheels exist. Clarified the exact package
   name and cited its artifacts. The suggestion to replace this wheel evidence
   with upstream Node.js archives was not adopted because it changes the source
-  of the verified evidence.
+  of the verified evidence. This availability conclusion does not approve the
+  source: review 3945203837 below supersedes any admission implication.
 - Removed the shared generic capability wording so this proposal covers native
   execution and keeps the installed-payload correction as a prerequisite.
 
@@ -71,3 +72,28 @@ Strict OpenSpec validation, structural Markdown checks, staged planned-maturity
 Requirements evidence (two sources passed), and diff whitespace checks passed
 for the revised contracts. Runtime tests remain unexecuted and all future
 implementation tasks remain unchecked. No issue dependencies changed.
+
+## Dependency-policy review correction
+
+Reviewed [finding 3945203837](https://github.com/nold-ai/specfact-cli-modules/pull/461#discussion_r3945203837)
+against PR head bf3063c7ba7c9b88e0621d3f03e1a279f95f2feb on 2026-09-06
+(Europe/Berlin). Confirmed core policy at released commit
+d579970565530c3fd7b98bad4de90cf874c2a99d prohibits nodejs-wheel-binaries in
+its trust register and frozen locks. Its inclusion in the separate shipped C14
+analyzer lock does not establish policy admission for native execution.
+
+The native proposal, design, spec, tasks, and planned inspection evidence now
+exclude that source under the current prohibition. The PyPI link is retained
+as rejected feasibility evidence. Native implementation-design approval must
+wait for a compliant source and closure or a separately accepted policy change;
+no exception-register entry or valid signature bypasses a prohibition. Added
+three planned scenarios for signed-but-prohibited dependencies, inherited lock
+conflicts, and an admissible replacement. Historical C14 artifacts remain
+unchanged; their discrepancy is a required baseline-reassessment gate, not a
+claimed runtime fix in this planning PR.
+
+Correction checks passed: strict OpenSpec validation for both changes, structural
+Markdown validation, staged planned-maturity Requirements evidence (one source
+passed; zero failed/skipped), and diff whitespace checks. The future task order
+now places dependency/platform audits before final implementation-design approval.
+All production tasks remain unchecked and no runtime tests were executed.

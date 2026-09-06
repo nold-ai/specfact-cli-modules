@@ -111,3 +111,25 @@ Native production implementation SHALL wait for the layout correction released c
 - **GIVEN** the prerequisite releases are verified and pinned
 - **WHEN** native implementation is prepared performed and finalized
 - **THEN** approved design and failing-first tests precede code checkpoints verify progress and final conformance verifies the resulting exact candidate
+
+### Requirement: Dependency source admission
+
+The native dependency closure SHALL comply with the approved core/module dependency policy independently of signed artifact integrity. Under the current core prohibition, `nodejs-wheel-binaries` SHALL be excluded; its historical presence in the C14 analyzer lock SHALL NOT authorize native admission. Unresolved policy conflicts SHALL block implementation-design approval. Provisioning and every launch, including offline reuse, SHALL verify source admission against the selected approved policy identity and reject prohibited dependencies before analyzer execution. Replacement sources SHALL require provenance review, versioned contracts, fresh artifact/closure/cache identities, and conformance evidence; no replacement is approved by this planning delivery.
+
+#### Scenario: Signed dependency is prohibited
+
+- **GIVEN** a native runtime contains a dependency prohibited by the selected approved policy even though its signed artifact and payload checks pass
+- **WHEN** provisioning or launch including offline reuse evaluates the runtime
+- **THEN** admission fails closed with a policy diagnostic before analyzer execution and an ordinary exception record cannot override the prohibition
+
+#### Scenario: Inherited C14 lock conflicts with policy
+
+- **GIVEN** the released C14 analyzer lock includes nodejs-wheel-binaries and the approved core policy still prohibits it
+- **WHEN** the native implementation design and dependency closure are assessed
+- **THEN** that source remains rejected and design approval is blocked until a policy-admissible replacement is specified or a separate explicit policy change is accepted; historical signatures provide no exemption
+
+#### Scenario: Policy-admissible replacement is verified
+
+- **GIVEN** a replacement source and complete native closure have approved provenance and policy admission with versioned contracts and fresh signed artifact closure and cache identities
+- **WHEN** provisioning and launch validate admission and all integrity isolation and platform requirements
+- **THEN** the native runtime may execute with its policy and artifact identities recorded and the superseded cache cannot satisfy the new identity

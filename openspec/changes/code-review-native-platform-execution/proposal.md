@@ -9,6 +9,7 @@ SpecFact's primary use is a local-first CLI invoked by developers and agentic AI
 - Specify native macOS, Linux, and Windows execution with explicit x64/ARM64 coverage and no Docker, WSL, VM, or emulation dependency.
 - Preserve portable review and C15 verdict semantics while separating runtime provisioning and OS-native isolation/observation.
 - Require released prerequisite/C15 baseline reassessment and native platform evidence before final implementation design or support claims.
+- Gate native dependency admission on the released core/module policy independently of signatures; exclude prohibited sources and resolve inherited C14 lock conflicts before implementation approval.
 
 ## Capabilities
 
@@ -39,6 +40,7 @@ Planning artifacts only. No runtime source, tests, schemas, versions, signatures
 - GitHub type, assignee, parent, project Todo status, labels, and native dependency relationships match this proposal.
 - Strict OpenSpec validation, Markdown checks, staged planned-maturity Requirements validation, and applicable planning review pass.
 - The planning PR targets dev, references the issue without closing it, and leaves implementation tasks unchecked.
+- Future implementation design cannot be approved until the complete native dependency closure is policy-admissible; `nodejs-wheel-binaries` is excluded under the current core prohibition and no replacement is preapproved.
 - Future behavior acceptance is defined in specs/review-native-platform-execution/spec.md; planning acceptance does not establish runtime correctness.
 
 ## Non-Goals

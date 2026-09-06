@@ -137,3 +137,31 @@ requirements:
       intent: 'Inspect the planned scenario: Baseline drives the full lifecycle.'
       observable: The source requirement and Given/When/Then scenario are present and validate at planned
         maturity; no runtime test execution or implementation is claimed.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:dependency-source-admission:
+    rationale: Separate native dependency-policy admission from artifact integrity and prevent historical
+      C14 lock entries from bypassing current prohibitions.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-6-1
+      scenario_id: dependency-source-admission
+      method: inspection
+      intent: 'Inspect the planned scenario: Signed dependency is prohibited.'
+      observable: The source requirement and Given/When/Then scenario define the policy-admission gate
+        and validate at planned maturity; no runtime test execution or implementation is claimed.
+    - case_id: 460-6-2
+      scenario_id: dependency-source-admission
+      method: inspection
+      intent: 'Inspect the planned scenario: Inherited C14 lock conflicts with policy.'
+      observable: The source requirement and Given/When/Then scenario define the policy-admission gate
+        and validate at planned maturity; no runtime test execution or implementation is claimed.
+    - case_id: 460-6-3
+      scenario_id: dependency-source-admission
+      method: inspection
+      intent: 'Inspect the planned scenario: Policy-admissible replacement is verified.'
+      observable: The source requirement and Given/When/Then scenario define the policy-admission gate
+        and validate at planned maturity; no runtime test execution or implementation is claimed.

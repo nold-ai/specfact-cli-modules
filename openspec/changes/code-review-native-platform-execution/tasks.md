@@ -13,10 +13,11 @@ Future behavior work follows worktree -> current approved spec -> tests -> recor
 ## 2. Specify test implement and verify
 
 - [ ] Verify #459, published #434, and released core #679; retain transitive prerequisites and exact release/install evidence.
-- [ ] Reassess this change with the released preflight/C15 baseline; review/refine and approve the implementation design before coding.
+- [ ] Reassess this change with the released preflight/C15 baseline and refine the candidate design; complete the following dependency and platform audits before approval.
+- [ ] Audit the complete dependency closure against released core/module policy; exclude nodejs-wheel-binaries under the current prohibition, select and review a compliant native Node source, and resolve the inherited C14 lock conflict through versioned contracts before design approval. Require a separately accepted policy change for any proposed prohibition change; keep this gate blocked while unresolved.
 - [ ] Audit the complete OS/x64/ARM64/Python/analyzer matrix; resolve native build gaps and prove OS-native isolation prototypes.
-- [ ] Specify versioned backend/runtime/evidence interfaces and paired core scope from that evidence; do not infer Linux-equivalent capabilities.
-- [ ] Add scenario-mapped failing native tests, including full-module integrity and unbound/stale/partial/mixed external cache cases before launch or offline reuse, and capture red evidence before production changes.
+- [ ] Specify versioned backend/runtime/evidence interfaces and paired core scope from that evidence; do not infer Linux-equivalent capabilities. Review and approve the resulting implementation design only after the dependency and platform gates pass.
+- [ ] Add scenario-mapped failing native tests, including prohibited-but-signed dependencies, inherited policy conflicts, admissible replacements, full-module integrity, and unbound/stale/partial/mixed external cache cases before launch or offline reuse, and capture red evidence before production changes.
 - [ ] Implement portable orchestration, native provisioning/backends, and required consumer changes within approved scope; use baseline checkpoint verification during work.
 - [ ] Verify native execution, offline reuse, differential/C15 invariants, and adverse path/permission/process cases across the approved matrix without Docker/WSL/VM/emulation.
 - [ ] Record red/green and final conformance evidence, run repository quality/review gates, and prepare native release/signature/registry compatibility proof.
