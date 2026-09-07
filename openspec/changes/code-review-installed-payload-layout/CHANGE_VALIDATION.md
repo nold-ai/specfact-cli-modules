@@ -1,4 +1,24 @@
-# Planning Validation
+# Change Validation
+
+## Current lifecycle (2026-09-07, Europe/Berlin)
+
+Implementation PR [#462](https://github.com/nold-ai/specfact-cli-modules/pull/462)
+merged to `dev` at `2cf1899e3ac502bb7a5ddc9eae57899152c9d08d` on
+2026-09-07 at 15:23:57 CEST. Registry publication PR
+[#463](https://github.com/nold-ai/specfact-cli-modules/pull/463) merged at
+`cd7fa371c79da69782bcd14accbd64e15c40a93d` at 16:36:39 CEST.
+Code Review 0.49.77 is published with archive SHA-256
+`e1da8dc6774e965e0a05c96febcf96ff62bf872b14b579dc3be894c9f4723718`.
+The archive and matching `.tar.gz.sha256` sidecar are under `registry/modules/`;
+the detached signature is `registry/signatures/specfact-code-review-0.49.77.tar.sig`.
+
+Runtime tests and release evidence are in [TDD_EVIDENCE.md](TDD_EVIDENCE.md).
+Issue #459 remains open for final acceptance; main promotion is PR #464.
+Canonical archival awaits that acceptance and uses `openspec archive`.
+Historical planned-maturity Requirements reports below are not retrospectively
+promoted to verified lifecycle evidence.
+
+## Historical planning validation (PR #461)
 
 - Checked: 2026-09-06T22:17:24+02:00 (Europe/Berlin).
 - Planning base: modules origin/dev commit 5772621922d0913cc8685e8bfddb7fa0c6364bcc.

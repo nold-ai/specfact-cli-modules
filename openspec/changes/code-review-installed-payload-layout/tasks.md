@@ -17,10 +17,10 @@ Future behavior work follows worktree -> current approved spec -> tests -> recor
 - [x] Implement bounded root resolution, manifest/copy consistency, and handoff diagnostics.
 - [x] Run regression tests and real installed-payload startup on supported Linux; repeat the recorded range review and classify independent blockers (payload suites/startup pass; recorded range remains UNKNOWN due to Docker namespace refusal).
 - [x] Record red/green commands and exact versions in TDD_EVIDENCE.md.
-- [x] Complete mandatory quality/review gates and prepare patch-version/checksum/signature/registry consistency through canonical release tooling (dev-PR checksum/version checks pass; release signing and publication remain with CI).
-- [x] Open implementation draft PR [#462](https://github.com/nold-ai/specfact-cli-modules/pull/462) to dev; #459 remains open pending acceptance and release.
+- [x] Complete mandatory quality/review gates and prepare patch-version/checksum/signature/registry consistency through canonical release tooling (dev-PR checksum/version checks pass; canonical CI signing and registry publication completed in #463).
+- [x] Merge implementation PR [#462](https://github.com/nold-ai/specfact-cli-modules/pull/462) to dev; registry publication completed in #463; #459 remains open pending final acceptance.
 
 ## Post-merge lifecycle
 
-- [ ] After actual implementation merge and acceptance, use openspec archive code-review-installed-payload-layout; never archive this planning-only delivery.
+- [ ] After actual implementation merge and acceptance, use openspec archive code-review-installed-payload-layout; preserve historical planning evidence.
 - [ ] Remove the future implementation worktree only after its merge and retain required verification/release evidence.

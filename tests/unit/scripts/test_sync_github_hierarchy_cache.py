@@ -264,7 +264,7 @@ def test_sync_cache_skips_write_when_fingerprint_is_unchanged(monkeypatch: pytes
     output_path = tmp_path / "GITHUB_HIERARCHY_CACHE.md"
     state_path = tmp_path / ".github_hierarchy_cache_state.json"
     state_path.write_text(
-        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules"}',
+        '{"fingerprint":"same","repo":"nold-ai/specfact-cli-modules","generated_at":"2000-01-01T00:00:00Z"}',
         encoding="utf-8",
     )
 
@@ -290,6 +290,8 @@ def test_sync_cache_skips_write_when_fingerprint_is_unchanged(monkeypatch: pytes
         encoding="utf-8",
     )
 
+    original_markdown = output_path.read_bytes()
+
     def _fake_fetch(*, repo_owner: str, repo_name: str, fingerprint_only: bool) -> list[Any]:
         assert repo_owner == "nold-ai"
         assert repo_name == "specfact-cli-modules"
@@ -313,7 +315,8 @@ def test_sync_cache_skips_write_when_fingerprint_is_unchanged(monkeypatch: pytes
     assert result.issue_count == 1
     assert "- Fingerprint: `same`" in output_path.read_text(encoding="utf-8")
     refreshed_state = json.loads(state_path.read_text(encoding="utf-8"))
-    assert refreshed_state["generated_at"]
+    assert refreshed_state["generated_at"] > "2000-01-01T00:00:00Z"
+    assert output_path.read_bytes() == original_markdown
 
 
 def test_sync_cache_repo_mismatch_rewrites_despite_matching_fingerprint(
@@ -817,3 +820,62 @@ def test_main_reports_runtime_error_to_stderr_and_returns_one(
     assert "GitHub hierarchy cache sync failed" in captured.err
     assert "GitHub GraphQL query failed" in captured.err
     assert captured.out == ""
+
+
+@pytest.mark.parametrize("destination", ["markdown", "state"])
+def test_sync_cache_never_opens_final_destination_for_writing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, destination: str
+) -> None:
+    """Publication must replace completed temporary files, not truncate final paths."""
+    module = _load_script_module()
+    output, state = tmp_path / "cache.md", tmp_path / "state.json"
+    selected = output if destination == "markdown" else state
+    original_write = Path.write_text
+
+    def guarded_write(path: Path, data: str, **kwargs: Any) -> int:
+        assert path != selected, "final destination opened for writing"
+        return original_write(path, data, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", guarded_write)
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    result = module.sync_cache(
+        repo_owner="nold-ai", repo_name="specfact-cli-modules", output_path=output, state_path=state
+    )
+    assert result.changed
+    assert output.read_text().startswith("# GitHub Hierarchy Cache")
+    assert json.loads(state.read_text())["repo"] == "nold-ai/specfact-cli-modules"
+
+
+def test_sync_cache_failed_publication_preserves_prior_freshness(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An injected publication error leaves the prior files and no temporary output."""
+    module = _load_script_module()
+    output, state = tmp_path / "cache.md", tmp_path / "state.json"
+    output.write_text("old markdown")
+    state.write_text('{"generated_at":"2000-01-01T00:00:00Z"}')
+
+    def refuse_replace(*_args: Any, **_kwargs: Any) -> None:
+        raise OSError("injected publication failure")
+
+    monkeypatch.setattr(os, "replace", refuse_replace)
+    monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
+    with pytest.raises(OSError, match="injected publication failure"):
+        module.sync_cache(repo_owner="nold-ai", repo_name="specfact-cli-modules", output_path=output, state_path=state)
+    assert output.read_text() == "old markdown"
+    assert json.loads(state.read_text())["generated_at"] == "2000-01-01T00:00:00Z"
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["cache.md", "state.json"]
+
+
+def test_cache_publication_preserves_preexisting_temporary_name(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Exclusive creation failure must not clean up a file owned by another writer."""
+    module = _load_script_module()
+    selected_uuid = module.uuid.uuid4()
+    monkeypatch.setattr(module.uuid, "uuid4", lambda: selected_uuid)
+    temporary = tmp_path / f".cache.md.{selected_uuid.hex}.tmp"
+    temporary.write_text("existing writer")
+    with pytest.raises(FileExistsError):
+        module._publish_cache_text(tmp_path / "cache.md", "new cache")
+    assert temporary.read_text() == "existing writer"

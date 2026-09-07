@@ -16,5 +16,29 @@ requirements:
           runner: pytest
           node_id: tests/unit/scripts/test_sync_github_hierarchy_cache.py::test_sync_cache_skips_write_when_fingerprint_is_unchanged
         intent: Verify that a successful unchanged sync retains cache content and renews state freshness.
-        observable: The markdown cache is byte-stable and the state contains a generated_at timestamp.
+        observable: The markdown cache, including its Generated At line, is byte-stable and state generated_at advances beyond the seeded timestamp.
         implementation_task: "2.3"
+      - case_id: GOV-05-002
+        scenario_id: cache-refresh-records-hierarchy-metadata
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/scripts/test_sync_github_hierarchy_cache.py::test_sync_cache_never_opens_final_destination_for_writing[markdown]
+        intent: Verify markdown publication replaces a complete temporary file without truncating the final path.
+        observable: The final-path write guard is not reached and the complete rendered cache is published.
+      - case_id: GOV-05-003
+        scenario_id: cache-refresh-records-hierarchy-metadata
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/scripts/test_sync_github_hierarchy_cache.py::test_sync_cache_never_opens_final_destination_for_writing[state]
+        intent: Verify state publication uses the same no-truncation boundary.
+        observable: The final-path write guard is not reached and valid state JSON is published.
+      - case_id: GOV-05-004
+        scenario_id: cache-refresh-records-hierarchy-metadata
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/scripts/test_sync_github_hierarchy_cache.py::test_sync_cache_failed_publication_preserves_prior_freshness
+        intent: Verify injected publication failure preserves existing markdown and freshness.
+        observable: The write fails, prior bytes remain, and no temporary output remains.

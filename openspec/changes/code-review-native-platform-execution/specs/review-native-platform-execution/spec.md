@@ -31,8 +31,8 @@ Each native backend SHALL enforce and report its approved isolation capabilities
 #### Scenario: Required capability is unavailable
 
 - **GIVEN** an isolation capability or required analyzer is missing incompatible or unverifiable
-- **WHEN** review evaluates assurance
-- **THEN** it reports explicit incomplete evidence according to the approved status/exit contract rather than silently weakening isolation or dropping an analyzer
+- **WHEN** provisioning or analyzer execution is requested
+- **THEN** it rejects execution before analyzer launch and reports explicit incomplete evidence according to the approved status/exit contract; provisioning cannot authorize weakened isolation or omitted required analyzers
 
 ### Requirement: Portable review semantics
 
@@ -52,7 +52,7 @@ Native execution SHALL preserve the released scope differential and C15 authorit
 
 ### Requirement: Verified provisioning and offline reuse
 
-Native runtimes SHALL preserve full-module-directory checksum/signature verification for module-shipped files. External runtimes SHALL use a separately approved signed lock/manifest binding artifact digests, applicable layer digests, installed payload/root manifests, OS/architecture/Python ABI, dependency closure, and cache identity. Provisioning SHALL verify artifact and extracted payload integrity; every launch, including offline reuse, SHALL revalidate the selected payload/root against the approved bindings. Unbound, stale, partial, mixed, or mismatched caches SHALL fail closed before analyzer execution.
+Native runtimes SHALL preserve full-module-directory checksum/signature verification for module-shipped files. External runtimes SHALL use a separately approved signed lock/manifest binding artifact digests, applicable layer digests, installed payload/root manifests, OS/architecture/Python ABI, dependency closure, an immutable released core/module policy digest or commit covered by the runtime signature, and cache identity including that policy identity. Provisioning SHALL verify artifact and extracted payload integrity; every launch, including offline reuse, SHALL revalidate the selected payload/root and selected approved policy identity against the signed bindings before dependency admission or analyzer execution. Unbound, stale, partial, mixed, or mismatched caches SHALL fail closed before analyzer execution.
 
 #### Scenario: Cached native runtime
 
@@ -80,7 +80,7 @@ Native runtimes SHALL preserve full-module-directory checksum/signature verifica
 
 #### Scenario: Stale external cache identity
 
-- **GIVEN** a cached runtime matches an earlier approved lock but not the currently selected runtime identity
+- **GIVEN** a cached runtime matches an earlier approved lock but not the currently selected runtime or approved policy identity
 - **WHEN** review prepares to launch from that cache
 - **THEN** the stale cache is rejected before analyzer execution
 

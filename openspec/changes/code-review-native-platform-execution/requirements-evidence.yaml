@@ -102,7 +102,7 @@ requirements:
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
       intent: 'Inspect the planned scenario: Stale external cache identity.'
-      observable: 'The planned contract requires: the stale cache is rejected before analyzer execution.
+      observable: 'The planned contract requires: a stale runtime or approved policy identity is rejected before analyzer execution.
         Planned maturity only; no runtime test execution or implementation is claimed.'
     - case_id: 460-4-6
       scenario_id: verified-provisioning-and-offline-reuse

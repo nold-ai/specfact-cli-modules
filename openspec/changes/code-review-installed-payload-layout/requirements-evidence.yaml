@@ -71,6 +71,14 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_copy_rejects_changed_directory_identity[resources]
+    - case_id: 459-2-5
+      scenario_id: unsafe-or-changed-payload-rejection
+      method: test
+      intent: Verify the selected package root with no regular files is rejected.
+      observable: Verification returns UNKNOWN with payload_root_empty.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_installed_payload_reports_empty_root
   openspec:code-review-installed-payload-layout:review-installed-payload-layout:installed-release-regression-evidence:
     rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
     stakeholder_refs:

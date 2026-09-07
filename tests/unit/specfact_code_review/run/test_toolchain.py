@@ -1562,3 +1562,49 @@ def test_builtin_copy_rejects_no_follow_open_failure(
     assert result.status == "UNKNOWN"
     assert not (tmp_path / "capsule/opt/specfact/builtin/specfact_code_review").exists()
     assert not (tmp_path / "capsule/opt/specfact/builtin/.specfact_code_review.copying").exists()
+
+
+@pytest.mark.parametrize("failure", [None, "read", "open"])
+def test_payload_source_closes_all_descriptors(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str | None
+) -> None:
+    """ExitStack closes root, ancestor and source descriptors on every outcome."""
+    relative = Path("specfact_code_review/resources/fixture.py")
+    source = tmp_path / relative
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"fixture")
+    opened: list[int] = []
+    original_open = os.open
+
+    def tracked_open(path: Any, flags: int, **kwargs: Any) -> int:
+        if failure == "open" and str(path) == "fixture.py":
+            raise OSError("injected source refusal")
+        descriptor = original_open(path, flags, **kwargs)
+        opened.append(descriptor)
+        return descriptor
+
+    def refused_read(*_args: Any) -> bytes:
+        raise OSError("injected source refusal")
+
+    monkeypatch.setattr(toolchain_api.os, "open", tracked_open)
+    if failure == "read":
+        monkeypatch.setattr(toolchain_api.os, "read", refused_read)
+    if failure:
+        with pytest.raises(OSError, match="injected source refusal"):
+            toolchain_api._payload_source_bytes(tmp_path, relative)
+    else:
+        assert toolchain_api._payload_source_bytes(tmp_path, relative)[0] == b"fixture"
+    assert len(opened) >= 3
+    for descriptor in opened:
+        with pytest.raises(OSError):
+            os.fstat(descriptor)
+
+
+def test_installed_payload_reports_empty_root(toolchain_api: Any, tmp_path: Path) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    for path in Path(metadata["installed_root"]).rglob("*"):
+        if path.is_file():
+            path.unlink()
+    result = toolchain_api.verify_installed_module_payload(metadata)
+    assert result.status == "UNKNOWN"
+    assert result.reason == "payload_root_empty"
