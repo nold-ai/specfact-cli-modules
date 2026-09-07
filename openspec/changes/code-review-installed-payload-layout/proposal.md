@@ -20,9 +20,13 @@ A normal signed Code Review installation places Python code under src/specfact_c
 
 None in this planning delivery. Future implementation must reconcile these obligations with the then-current review contracts before modifying a public interface.
 
-## Impact
+## Current delivery
 
-Planning artifacts only. No runtime source, tests, schemas, versions, signatures, registry entries, or supported-platform claims change. Future signed bundle changes require semver/core compatibility and canonical publication. No current CLI/API additions are approved.
+Implementation PR #462 merged to dev; Code Review 0.49.77 was published by registry PR #463. See TDD_EVIDENCE.md for verified artifact details. Final issue acceptance and canonical archive remain pending.
+
+## Historical planning impact (PR #461)
+
+At the planning checkpoint, planning artifacts only. No runtime source, tests, schemas, versions, signatures, registry entries, or supported-platform claims change. Future signed bundle changes require semver/core compatibility and canonical publication. No current CLI/API additions are approved.
 
 ## Dependencies
 
@@ -32,7 +36,7 @@ Planning artifacts only. No runtime source, tests, schemas, versions, signatures
 - Blocks native execution [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460).
 - Do not depend on C15 or the preflight release chain: core #680 is upstream of that chain.
 
-## Acceptance Criteria
+## Historical planning acceptance criteria
 
 - This change has proposal, design, scenario-based spec deltas, ordered future tasks, and planned Requirements evidence.
 - GitHub type, assignee, parent, project Todo status, labels, and native dependency relationships match this proposal.
@@ -40,7 +44,7 @@ Planning artifacts only. No runtime source, tests, schemas, versions, signatures
 - The planning PR targets dev, references the issue without closing it, and leaves implementation tasks unchecked.
 - Future behavior acceptance is defined in specs/review-installed-payload-layout/spec.md; planning acceptance does not establish runtime correctness.
 
-## Non-Goals
+## Historical planning non-goals (PR #461)
 
 No production implementation, runtime tests, release actions, implementation completion, or archive operation in this PR. Existing unrelated changes remain untouched.
 
@@ -49,5 +53,5 @@ No production implementation, runtime tests, release actions, implementation com
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: #459
 - **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/459>
-- **Last Synced Status**: proposed; Todo; implementation not started
+- **Last Synced Status**: implementation merged to dev; 0.49.77 published; issue open pending final acceptance
 - **Sanitized**: true

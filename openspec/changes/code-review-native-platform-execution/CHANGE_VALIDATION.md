@@ -97,3 +97,13 @@ Markdown validation, staged planned-maturity Requirements evidence (one source
 passed; zero failed/skipped), and diff whitespace checks. The future task order
 now places dependency/platform audits before final implementation-design approval.
 All production tasks remain unchecked and no runtime tests were executed.
+
+## PR #464 planning clarification (2026-09-07)
+
+Required isolation/analyzer failures now explicitly reject execution before
+launch. The signed external-runtime manifest binds an immutable released
+core/module policy digest or commit; cache identity includes that policy, and
+offline reuse rejects mismatch before dependency admission or analyzer launch.
+The design and existing stale-cache scenario agree. These are planning-contract
+clarifications only: prerequisite release/design approval gates remain in place,
+no backend, policy replacement, or native platform support is implemented.

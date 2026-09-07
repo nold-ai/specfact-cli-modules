@@ -77,6 +77,10 @@ def _signed_fixture(root: Path, layout: str, *, real_bundle: bool = False) -> tu
 def _install_fixture(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, layout: str, *, real_bundle: bool = False
 ) -> tuple[DiscoveredModule, Path, Path]:
+    for symbol in ("_module_artifact_payload_signed", "_download_archive_with_cache"):
+        assert callable(getattr(module_installer, symbol, None)), (
+            f"Core signed-install fixture requires callable {symbol}"
+        )
     archive, public_key, public_pem = _signed_fixture(tmp_path, layout, real_bundle=real_bundle)
     monkeypatch.delenv("SPECFACT_ALLOW_UNSIGNED", raising=False)
     monkeypatch.setenv("SPECFACT_MODULE_PUBLIC_KEY_PEM", public_pem)

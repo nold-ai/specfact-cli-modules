@@ -24,7 +24,7 @@ The Code Review runtime SHALL fail closed when the installed package root or ver
 
 #### Scenario: Missing ambiguous or symlinked roots
 
-- **GIVEN** an absent package root, both supported roots, or a symlink in the selected package path
+- **GIVEN** an absent package root, both supported roots, a symlink in the selected package path, or a selected root containing no regular files
 - **WHEN** C14 verifies the installed payload
 - **THEN** it returns UNKNOWN with an actionable handoff/layout reason and executes no built-in analyzer
 

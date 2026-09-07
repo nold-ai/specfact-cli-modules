@@ -6,9 +6,27 @@
 - Base: `5b521095bf0f294577d27ab08c59a87a9c1cf11c` (current remote dev at intake).
 - Initial checkpoint scope: worktree setup, current-spec validation, and regression evidence.
 - At the initial checkpoint, production source and release assets were unchanged.
-- Implementation and final verification are recorded below; registry publication remains pending.
+- Implementation and registry publication are complete; see the current lifecycle below.
 
-## Intake and specification
+## Current lifecycle (2026-09-07, Europe/Berlin)
+
+Implementation PR [#462](https://github.com/nold-ai/specfact-cli-modules/pull/462)
+merged to `dev` at `2cf1899e3ac502bb7a5ddc9eae57899152c9d08d` on
+2026-09-07 at 15:23:57 CEST. Registry publication PR
+[#463](https://github.com/nold-ai/specfact-cli-modules/pull/463) merged at
+`cd7fa371c79da69782bcd14accbd64e15c40a93d` at 16:36:39 CEST.
+Code Review 0.49.77 is published with archive SHA-256
+`e1da8dc6774e965e0a05c96febcf96ff62bf872b14b579dc3be894c9f4723718`.
+The archive and matching `.tar.gz.sha256` sidecar are under `registry/modules/`;
+the detached signature is `registry/signatures/specfact-code-review-0.49.77.tar.sig`.
+
+Runtime tests and release evidence are in [TDD_EVIDENCE.md](TDD_EVIDENCE.md).
+Issue #459 remains open for final acceptance; main promotion is PR #464.
+Canonical archival awaits that acceptance and uses `openspec archive`.
+Historical planned-maturity Requirements reports below are not retrospectively
+promoted to verified lifecycle evidence.
+
+## Historical intake and specification
 
 `openspec validate code-review-installed-payload-layout --strict` passed before
 adding tests. Existing requirements cover the observed defect; no behavior
@@ -86,7 +104,7 @@ copy-path handling and diagnostics, obtain passing evidence on both core
 versions, run real analyzer startup and the recorded Linux range verification,
 and classify independent UNKNOWN outcomes separately. Full quality/review,
 module version/signature/registry checks, implementation PR, canonical release,
-and post-merge archival remain pending. No synthetic review JSON is supplied.
+and post-merge archival were then pending; subsequent implementation and publication are recorded below. No synthetic review JSON is supplied.
 
 The main dev checkout remains unchanged. Reversal of this checkpoint consists
 of discarding its uncommitted test/evidence edits in the dedicated worktree;
@@ -171,7 +189,7 @@ were retained. The corrected controller's official installed-payload lookup
 returned PASS with 39 entries and version 0.49.76. Capsule copying also returned
 PASS at the canonical destination. Installed official payload bytes were not
 modified. This proves the layout correction handles an actual publisher-signed
-archive; it does not claim the new 0.49.77 build is already published or signed.
+archive. At that test checkpoint 0.49.77 was not yet published; the current lifecycle above records its subsequent signing and publication.
 
 The recorded range uses unchanged core commits
 `b897976ed994a708a7ad1984839090b2f858e00c` through
@@ -235,9 +253,7 @@ Canonical changed-only signing tooling bumped Code Review from 0.49.76 to
 0.49.77 and refreshed its filesystem payload checksum in dev-PR unsigned mode.
 All seven manifests pass signature/version verification for a dev target, and
 the bundle publish pre-check passes. Core compatibility remains
-`>=0.55.1,<1.0.0`. Cryptographic release signing and registry publication belong
-to the canonical release pipeline; registry entries remain unchanged until that
-pipeline publishes the new artifact. No publisher credential was used locally.
+`>=0.55.1,<1.0.0`. The canonical release pipeline subsequently signed and published 0.49.77 in PR #463; the registry now records the artifact identity in the current lifecycle above. No publisher credential was used locally.
 
 Rollback before merge is dropping this worktree branch. After merge, revert the
 patch and use canonical release tooling for a replacement release; do not edit
@@ -250,7 +266,7 @@ OpenSpec Markdown checks retain MD025. Long-line/table-style exceptions follow
 the existing documentation format. No runtime source changed after the final
 102-test targeted run and 1806-test smart run.
 
-## Implementation review handoff
+## Historical implementation review handoff (before merge)
 
 Signed implementation commit: `64f3be38f636056dddd6326adda18c870b95c11d`.
 All pre-commit hooks passed, including signature/version verification, format,
@@ -281,3 +297,28 @@ verified on released core 0.55.1 and 0.55.4. Adding a public core signing API is
 outside #459. The scanner's two command-injection hits do not apply: subprocess
 arguments/probe are fixed test code, no shell is used, and no incoming request
 supplies command content. Neither note identifies a current priority defect.
+
+## PR #464 review dispositions (2026-09-07, Europe/Berlin)
+
+- Lifecycle/publication findings: current status now records the actual #462
+  merge and #463 registry publication, preserving earlier records as historical.
+  Archive acceptance remains pending; no verified lifecycle provenance is invented.
+- Empty-root specification: the existing scenario now includes a root with no
+  regular files. `test_installed_payload_reports_empty_root` confirms UNKNOWN
+  with `payload_root_empty`.
+- Three file-close warnings: no production defect found. `_open_payload_directory`
+  registers each directory with `ExitStack`, and `_payload_source_bytes` registers
+  the source descriptor. New success/read-error/open-error tests verify all opened
+  descriptors are closed after the call. No manual-close rewrite is needed.
+- Optional private-core-helper note: fixture setup now explicitly checks both
+  required callables with a clear compatibility message. No core API is added.
+- Proposed 16 MiB cap: deferred as a new acceptance-policy/hardening change outside
+  this release correction. The original `_stable_payload_bytes` at base
+  `5b521095bf0f294577d27ab08c59a87a9c1cf11c` already accumulated chunks until EOF;
+  #459 did not introduce this resource behavior. No approved per-file limit exists
+  in this change contract, and a fixed new cap would reject previously supported
+  signed payloads. This disposition does not claim reads are memory-bounded.
+
+The combined regression suite passed **136 tests** on core 0.55.4 / Python
+3.12.13, including descriptor cleanup and actual copied built-in startup.
+Published 0.49.77 assets remain unchanged by this review follow-up.

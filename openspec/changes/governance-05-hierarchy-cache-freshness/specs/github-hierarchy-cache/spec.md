@@ -23,3 +23,12 @@ The system SHALL persist a local cache that records the repository identity, sup
 - **WHEN** the GitHub hierarchy read fails
 - **THEN** the system SHALL return a failure
 - **AND** SHALL NOT update the cache state timestamp.
+
+#### Scenario: Cache publication never truncates a destination through a link
+
+- **WHEN** markdown or state is published after a successful hierarchy read
+- **THEN** the system SHALL write a complete regular temporary file in the destination directory and atomically replace the final directory entry without opening that entry for writing
+- **AND** on platforms supporting directory descriptors, publication operations SHALL stay anchored to the opened parent directory
+- **AND** existing non-regular markdown entries SHALL retain their unique-sibling preservation behavior
+- **AND** a failed markdown replacement SHALL leave prior state freshness unchanged and SHALL NOT unlink the temporary pathname, whose ownership cannot be established atomically; failed writes MAY retain private temporary files for recovery
+- **AND** successful publication SHALL end temporary-name ownership without attempting to unlink that name afterward.
