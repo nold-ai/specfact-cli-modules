@@ -46,3 +46,12 @@ Final inspection added a static temporary-name collision control: it failed once
 because cleanup removed an entry not created by this writer. Cleanup now requires
 successful exclusive creation before unlinking. The strengthened timestamp and
 collision controls preserve legitimate cached content without executing a race.
+
+PR #465 follow-up on 2026-09-07 (Europe/Berlin): review identified that successful
+replacement still attempted to unlink the old temporary name. After specifying
+that publication ends ownership, the benign control
+`hatch run pytest -q tests/unit/scripts/test_sync_github_hierarchy_cache.py -k does_not_unlink_after_success`
+failed (**1 failed, 31 deselected**) because the unlink guard was reached.
+Clearing the ownership flag immediately after replacement removes that cleanup
+attempt; the full cache suite then passed **32 tests**. Strict validation of this
+change passed. This control records calls only and does not execute a race.

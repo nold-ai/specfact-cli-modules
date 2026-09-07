@@ -42,3 +42,11 @@ requirements:
           node_id: tests/unit/scripts/test_sync_github_hierarchy_cache.py::test_sync_cache_failed_publication_preserves_prior_freshness
         intent: Verify injected publication failure preserves existing markdown and freshness.
         observable: The write fails, prior bytes remain, and no temporary output remains.
+      - case_id: GOV-05-005
+        scenario_id: cache-refresh-records-hierarchy-metadata
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/scripts/test_sync_github_hierarchy_cache.py::test_cache_publication_does_not_unlink_after_success
+        intent: Verify successful publication ends temporary-name ownership.
+        observable: The complete cache is published without a subsequent unlink attempt on the temporary name.

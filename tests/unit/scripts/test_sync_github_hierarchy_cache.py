@@ -888,3 +888,17 @@ def test_cache_publication_preserves_preexisting_temporary_name(
     with pytest.raises(FileExistsError):
         module._publish_cache_text(tmp_path / "cache.md", "new cache")
     assert temporary.read_text() == "existing writer"
+
+
+def test_cache_publication_does_not_unlink_after_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Successful replacement ends ownership of the temporary directory entry."""
+    module = _load_script_module()
+
+    def refuse_unlink(*_args: Any, **_kwargs: Any) -> None:
+        raise AssertionError("successful publication attempted temporary-name cleanup")
+
+    monkeypatch.setattr(os, "unlink", refuse_unlink)
+    destination = tmp_path / "cache.md"
+    module._publish_cache_text(destination, "complete cache")
+    assert destination.read_text() == "complete cache"
+    assert list(tmp_path.iterdir()) == [destination]

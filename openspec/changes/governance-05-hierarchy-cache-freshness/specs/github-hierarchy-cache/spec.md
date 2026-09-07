@@ -30,4 +30,5 @@ The system SHALL persist a local cache that records the repository identity, sup
 - **THEN** the system SHALL write a complete regular temporary file in the destination directory and atomically replace the final directory entry without opening that entry for writing
 - **AND** on platforms supporting directory descriptors, publication operations SHALL stay anchored to the opened parent directory
 - **AND** existing non-regular markdown entries SHALL retain their unique-sibling preservation behavior
-- **AND** a failed markdown replacement SHALL leave prior state freshness unchanged and clean up the temporary file.
+- **AND** a failed markdown replacement SHALL leave prior state freshness unchanged and clean up only the temporary file still owned by this writer
+- **AND** successful publication SHALL end temporary-name ownership without attempting to unlink that name afterward.

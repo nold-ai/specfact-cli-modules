@@ -650,6 +650,7 @@ def _publish_cache_text(destination: Path, contents: str) -> None:
             stream.write(contents)
         _preserve_non_regular_cache_path(target, directory_fd=directory_fd)
         os.replace(temporary, target, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+        created = False
     finally:
         try:
             if created:
