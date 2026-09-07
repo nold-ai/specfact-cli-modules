@@ -20,6 +20,19 @@ The command prints **progress** to the terminal (spinner/status while the pipeli
 
 The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet selects Python files whose path contains a **`docs/`** directory segment (for example tooling beside the Jekyll site), not Markdown documentation pages. For published-site link, front matter, and command-example checks on the modules docs tree, run **`python scripts/check-docs-commands.py`** in this repository (see CI and contributing docs).
 
+## Installed package layout
+
+Code Review accepts signed installations with either `src/specfact_code_review`
+or a flat `specfact_code_review` package directory. It verifies the installed
+files and copies them into the same built-in capsule location; the downloaded
+archive is no longer needed after installation.
+
+A missing, empty, ambiguous, or non-directory package root produces an explicit
+`payload_root_*` diagnostic and `UNKNOWN`. Source files and directories must
+remain unchanged through verified copying. Correcting a layout problem does not
+resolve independent runtime, platform, or policy failures; those remain `UNKNOWN`
+until their own requirements are met.
+
 ## Command
 
 - `specfact code review run [FILES...]`

@@ -1,7 +1,8 @@
 schema_version: '2'
 requirements:
   openspec:code-review-installed-payload-layout:review-installed-payload-layout:verified-installed-package-layout:
-    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    rationale: A verified installed package must preserve its actual layout through handoff and canonical
+      capsule copying.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#459
     touchpoints:
@@ -11,16 +12,24 @@ requirements:
     verification_cases:
     - case_id: 459-1-1
       scenario_id: verified-installed-package-layout
-      method: inspection
-      intent: 'Inspect the planned scenario: Signed src installation survives archive removal.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      method: test
+      intent: Verify real signed src installation survives archive removal, handoff, and copying.
+      observable: Core verifies the ephemeral fixture signature; handoff and copying pass with actual
+        manifest paths, unchanged resource bytes/modes, and inert fixture startup. This is not real analyzer
+        or Linux isolation evidence.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_code_review_installed_payload_layout.py::test_signed_install_handoff_and_copy_after_archive_removal[src]
     - case_id: 459-1-2
       scenario_id: verified-installed-package-layout
-      method: inspection
-      intent: 'Inspect the planned scenario: Flat staging remains compatible.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      method: test
+      intent: Verify real signed flat installation survives archive removal, handoff, and copying.
+      observable: Core verifies the ephemeral fixture signature; handoff and copying pass with actual
+        manifest paths, unchanged resource bytes/modes, and inert fixture startup. This is not real analyzer
+        or Linux isolation evidence.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_code_review_installed_payload_layout.py::test_signed_install_handoff_and_copy_after_archive_removal[flat]
   openspec:code-review-installed-payload-layout:review-installed-payload-layout:unsafe-or-changed-payload-rejection:
     rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
     stakeholder_refs:
@@ -32,29 +41,36 @@ requirements:
     verification_cases:
     - case_id: 459-2-1
       scenario_id: unsafe-or-changed-payload-rejection
-      method: inspection
-      intent: 'Inspect the planned scenario: Missing ambiguous or symlinked roots.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      method: test
+      intent: 'Verify the runtime contract: Missing ambiguous or symlinked roots.'
+      observable: A symlinked package root yields UNKNOWN and payload_root_unsafe.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_installed_payload_rejects_symlinked_package_root[src]
     - case_id: 459-2-2
       scenario_id: unsafe-or-changed-payload-rejection
-      method: inspection
-      intent: 'Inspect the planned scenario: Payload changes before copying.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      method: test
+      intent: 'Verify the runtime contract: Payload changes before copying.'
+      observable: Changed source bytes fail copying and leave no published capsule package.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_copy_rejects_payload_drift_after_verification[content]
     - case_id: 459-2-3
       scenario_id: unsafe-or-changed-payload-rejection
-      method: inspection
-      intent: 'Inspect the planned scenario: Entry type changes before copying.'
-      observable: 'The planned contract requires: it returns UNKNOWN, discards incomplete copying, and
-        executes no analyzer. Planned maturity only; no runtime test execution or implementation is claimed.'
+      method: test
+      intent: 'Verify the runtime contract: Entry type changes before copying.'
+      observable: A no-follow source refusal returns UNKNOWN and removes incomplete copying.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_copy_rejects_no_follow_open_failure
     - case_id: 459-2-4
       scenario_id: unsafe-or-changed-payload-rejection
-      method: inspection
-      intent: 'Inspect the planned scenario: Ancestor changes before copying.'
-      observable: 'The planned contract requires: the root-bound no-follow operation rejects the substitution
-        with UNKNOWN and no analyzer execution. Planned maturity only; no runtime test execution or implementation
-        is claimed.'
+      method: test
+      intent: 'Verify the runtime contract: Ancestor changes before copying.'
+      observable: Injected directory identity drift returns UNKNOWN and removes incomplete copying.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_builtin_copy_rejects_changed_directory_identity[resources]
   openspec:code-review-installed-payload-layout:review-installed-payload-layout:installed-release-regression-evidence:
     rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
     stakeholder_refs:
@@ -66,7 +82,11 @@ requirements:
     verification_cases:
     - case_id: 459-3-1
       scenario_id: installed-release-regression-evidence
-      method: inspection
-      intent: 'Inspect the planned scenario: Compatibility and independent blockers.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      method: test
+      intent: 'Verify the runtime contract: Compatibility and independent blockers.'
+      observable: The actual AST built-in executes from the copied signed fixture and emits a known finding;
+        core-version execution evidence is recorded in TDD_EVIDENCE.md. Linux range acceptance remains
+        separate.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_code_review_installed_payload_layout.py::test_signed_installed_bundle_runs_copied_builtin[src]
