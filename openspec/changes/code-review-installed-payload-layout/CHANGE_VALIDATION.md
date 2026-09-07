@@ -57,7 +57,7 @@ alongside its existing modules #431 prerequisite; #460 is blocked by
 modules #459, modules #434, and core #679. Issue #459 has no open prerequisites.
 No existing edges were removed. The added edges do not create a cycle.
 
-## Acceptance boundary
+## Historical planning acceptance boundary (PR `#461`)
 
 This validates proposal structure, planned evidence, metadata, and artifact
 integrity only. Runtime tests, native isolation prototypes, code changes, module

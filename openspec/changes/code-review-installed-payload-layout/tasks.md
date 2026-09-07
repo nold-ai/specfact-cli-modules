@@ -22,5 +22,5 @@ Future behavior work follows worktree -> current approved spec -> tests -> recor
 
 ## Post-merge lifecycle
 
-- [ ] After actual implementation merge and acceptance, use openspec archive code-review-installed-payload-layout; preserve historical planning evidence.
+- [ ] After actual implementation merge, acceptance, and shipment, use openspec archive code-review-installed-payload-layout; preserve historical planning evidence.
 - [ ] Remove the future implementation worktree only after its merge and retain required verification/release evidence.

@@ -831,12 +831,21 @@ def test_sync_cache_never_opens_final_destination_for_writing(
     output, state = tmp_path / "cache.md", tmp_path / "state.json"
     selected = output if destination == "markdown" else state
     original_write = Path.write_text
+    original_open = os.open
 
     def guarded_write(path: Path, data: str, **kwargs: Any) -> int:
         assert path != selected, "final destination opened for writing"
         return original_write(path, data, **kwargs)
 
+    def guarded_open(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+        candidate = Path(os.fsdecode(path))
+        targets_final = candidate == selected or (kwargs.get("dir_fd") is not None and candidate == Path(selected.name))
+        writable = flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND)
+        assert not (targets_final and writable), "final destination opened for writing"
+        return original_open(path, flags, *args, **kwargs)
+
     monkeypatch.setattr(Path, "write_text", guarded_write)
+    monkeypatch.setattr(os, "open", guarded_open)
     monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
     result = module.sync_cache(
         repo_owner="nold-ai", repo_name="specfact-cli-modules", output_path=output, state_path=state
