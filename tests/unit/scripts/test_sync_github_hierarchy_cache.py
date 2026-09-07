@@ -858,7 +858,7 @@ def test_sync_cache_never_opens_final_destination_for_writing(
 def test_sync_cache_failed_publication_preserves_prior_freshness(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """An injected publication error leaves the prior files and no temporary output."""
+    """Failed publication preserves freshness without unlinking an unverified name."""
     module = _load_script_module()
     output, state = tmp_path / "cache.md", tmp_path / "state.json"
     output.write_text("old markdown")
@@ -867,13 +867,21 @@ def test_sync_cache_failed_publication_preserves_prior_freshness(
     def refuse_replace(*_args: Any, **_kwargs: Any) -> None:
         raise OSError("injected publication failure")
 
+    def refuse_unlink(*_args: Any, **_kwargs: Any) -> None:
+        raise AssertionError("failed publication attempted temporary-name cleanup")
+
     monkeypatch.setattr(os, "replace", refuse_replace)
+    monkeypatch.setattr(os, "unlink", refuse_unlink)
     monkeypatch.setattr(module, "fetch_hierarchy_issues", lambda **_kwargs: [])
     with pytest.raises(OSError, match="injected publication failure"):
         module.sync_cache(repo_owner="nold-ai", repo_name="specfact-cli-modules", output_path=output, state_path=state)
     assert output.read_text() == "old markdown"
     assert json.loads(state.read_text())["generated_at"] == "2000-01-01T00:00:00Z"
-    assert sorted(path.name for path in tmp_path.iterdir()) == ["cache.md", "state.json"]
+    retained = list(tmp_path.glob(".cache.md.*.tmp"))
+    assert len(retained) == 1
+    assert retained[0].read_text().startswith("# GitHub Hierarchy Cache")
+    if os.name == "posix":
+        assert retained[0].stat().st_mode & 0o777 == 0o600
 
 
 def test_cache_publication_preserves_preexisting_temporary_name(

@@ -42,8 +42,9 @@ beyond publication are not claimed by this patch.
 
 Full repository regression: `hatch run test -q` passed **1813 tests** in 86.26 seconds, with two external Lark deprecation warnings.
 
-Final inspection added a static temporary-name collision control: it failed once
-because cleanup removed an entry not created by this writer. Cleanup now requires
+Historical cleanup checkpoint (superseded by the failure-path correction below):
+inspection added a static temporary-name collision control: it failed once
+because cleanup removed an entry not created by this writer. That intermediate fix required
 successful exclusive creation before unlinking. The strengthened timestamp and
 collision controls preserve legitimate cached content without executing a race.
 
@@ -52,6 +53,21 @@ replacement still attempted to unlink the old temporary name. After specifying
 that publication ends ownership, the benign control
 `hatch run pytest -q tests/unit/scripts/test_sync_github_hierarchy_cache.py -k does_not_unlink_after_success`
 failed (**1 failed, 31 deselected**) because the unlink guard was reached.
-Clearing the ownership flag immediately after replacement removes that cleanup
-attempt; the full cache suite then passed **32 tests**. Strict validation of this
+The intermediate fix cleared the ownership flag after replacement to remove that
+cleanup attempt; the full cache suite then passed **32 tests**. Strict validation of this
 change passed. This control records calls only and does not execute a race.
+
+Final failure-path correction on 2026-09-07 (Europe/Berlin): pathname ownership
+also cannot be established atomically after a failed publication. The revised
+specification retains private failed output for recovery and prohibits unlinking
+that name. An injected publication error plus an unlink call guard failed before
+implementation (**1 failed, 31 deselected**); removing pathname cleanup passed
+all **32 cache tests**, including the existing successful-publication and static
+name-collision controls. The failure test also checks unchanged markdown/state
+and POSIX 0600 permissions on the retained file. Strict OpenSpec validation
+passed. No filesystem race was executed.
+
+Operational limit: unsuccessful writes may leave `.cache-name.<uuid>.tmp`
+files in the cache directory. Investigate repeated refresh failures before
+manually removing stale files from a trusted, quiescent directory. Successful
+writes move the temporary file into place and leave no temporary output.

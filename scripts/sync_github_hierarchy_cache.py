@@ -642,24 +642,17 @@ def _publish_cache_text(destination: Path, contents: str) -> None:
     base = Path(".") if directory_fd is not None else parent
     temporary = base / f".{destination.name}.{uuid.uuid4().hex}.tmp"
     target = base / destination.name
-    created = False
     try:
         descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=directory_fd)
-        created = True
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
             stream.write(contents)
         _preserve_non_regular_cache_path(target, directory_fd=directory_fd)
         os.replace(temporary, target, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
-        created = False
     finally:
-        try:
-            if created:
-                os.unlink(temporary, dir_fd=directory_fd)
-        except FileNotFoundError:
-            pass
-        finally:
-            if directory_fd is not None:
-                os.close(directory_fd)
+        # Failed publication may retain private output: pathname ownership cannot
+        # be established atomically for safe cleanup in a shared directory.
+        if directory_fd is not None:
+            os.close(directory_fd)
 
 
 @beartype
