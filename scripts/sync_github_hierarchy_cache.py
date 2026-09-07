@@ -6,8 +6,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import stat
 import subprocess
 import sys
+import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -583,7 +586,73 @@ def _write_state(
         "issue_count": issue_count,
         "generated_at": generated_at,
     }
-    state_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _publish_cache_text(state_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+@beartype
+def _cache_payload_matches_state(
+    *, output_path: Path, repo_full_name: str, issues: list[HierarchyIssue], fingerprint: str
+) -> bool:
+    """Return whether a regular markdown cache matches the fetched hierarchy."""
+    try:
+        mode = output_path.lstat().st_mode
+    except OSError:
+        return False
+    if not stat.S_ISREG(mode):
+        return False
+    try:
+        payload = output_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return False
+    generated_at_prefix = "- Generated At: `"
+    payload_lines = payload.splitlines(keepends=True)
+    generated_at_lines = [line for line in payload_lines if line.startswith(generated_at_prefix)]
+    if len(generated_at_lines) != 1 or not generated_at_lines[0].rstrip().endswith("`"):
+        return False
+    expected_payload = render_cache_markdown(
+        repo_full_name=repo_full_name,
+        issues=issues,
+        generated_at="cache-validation",
+        fingerprint=fingerprint,
+    )
+    expected_without_timestamp = expected_payload.replace(f"{generated_at_prefix}cache-validation`\n", "", 1)
+    payload_without_timestamp = "".join(line for line in payload_lines if not line.startswith(generated_at_prefix))
+    return payload_without_timestamp == expected_without_timestamp
+
+
+@beartype
+def _preserve_non_regular_cache_path(output_path: Path, *, directory_fd: int | None = None) -> None:
+    """Move a non-regular cache entry aside without following its target."""
+    try:
+        mode = os.stat(output_path, dir_fd=directory_fd, follow_symlinks=False).st_mode
+    except FileNotFoundError:
+        return
+    if stat.S_ISREG(mode):
+        return
+    preserved_path = output_path.with_name(f"{output_path.name}.invalid-{uuid.uuid4().hex}")
+    os.replace(output_path, preserved_path, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+
+
+@beartype
+def _publish_cache_text(destination: Path, contents: str) -> None:
+    """Atomically publish a private cache file without opening the final entry."""
+    parent = destination.parent.absolute()
+    parent.mkdir(parents=True, exist_ok=True)
+    directory_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY) if os.name == "posix" else None
+    base = Path(".") if directory_fd is not None else parent
+    temporary = base / f".{destination.name}.{uuid.uuid4().hex}.tmp"
+    target = base / destination.name
+    try:
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=directory_fd)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(contents)
+        _preserve_non_regular_cache_path(target, directory_fd=directory_fd)
+        os.replace(temporary, target, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+    finally:
+        # Failed publication may retain private output: pathname ownership cannot
+        # be established atomically for safe cleanup in a shared directory.
+        if directory_fd is not None:
+            os.close(directory_fd)
 
 
 @beartype
@@ -606,13 +675,26 @@ def sync_cache(
     )
     fingerprint = compute_hierarchy_fingerprint(detailed_issues)
     repo_full_name = f"{repo_owner}/{repo_name}"
+    generated_at = datetime.now(tz=UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     if (
         not force
         and state.get("repo") == repo_full_name
         and state.get("fingerprint") == fingerprint
-        and output_path.exists()
+        and _cache_payload_matches_state(
+            output_path=output_path,
+            repo_full_name=repo_full_name,
+            issues=detailed_issues,
+            fingerprint=fingerprint,
+        )
     ):
+        _write_state(
+            state_path=state_path,
+            repo_full_name=repo_full_name,
+            fingerprint=fingerprint,
+            issue_count=len(detailed_issues),
+            generated_at=generated_at,
+        )
         return SyncResult(
             changed=False,
             issue_count=len(detailed_issues),
@@ -620,16 +702,15 @@ def sync_cache(
             output_path=output_path,
         )
 
-    generated_at = datetime.now(tz=UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
+    _publish_cache_text(
+        output_path,
         render_cache_markdown(
             repo_full_name=repo_full_name,
             issues=detailed_issues,
             generated_at=generated_at,
             fingerprint=fingerprint,
         ),
-        encoding="utf-8",
     )
     _write_state(
         state_path=state_path,

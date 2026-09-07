@@ -16,7 +16,8 @@ import stat
 import subprocess
 import tarfile
 import tempfile
-from dataclasses import dataclass
+from contextlib import ExitStack
+from dataclasses import dataclass, field as dataclass_field
 from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import urlencode, urljoin, urlparse
@@ -102,6 +103,12 @@ class PayloadEntry:
     path: str
     digest: str
     mode: int
+    # Local copy-time state only: never part of a canonical payload projection.
+    source_directories: tuple[tuple[int, int, int], ...] = dataclass_field(default=(), repr=False, compare=False)
+
+
+class _PayloadLayoutError(ValueError):
+    """An installed package has no unique supported real directory root."""
 
 
 @dataclass(frozen=True)
@@ -1402,9 +1409,14 @@ def derive_core_0_55_1_install_handoff(
         )
     except (AttributeError, ImportError):
         return CoreInstalledModuleHandoff("UNKNOWN", "core_api_incompatible")
-    except (OSError, TypeError, UnicodeDecodeError, ValueError):
-        return CoreInstalledModuleHandoff("UNKNOWN", "invalid_core_0_55_1_install_handoff")
+    except (OSError, TypeError, UnicodeDecodeError, ValueError) as error:
+        return _core_install_handoff_failure(error)
     return CoreInstalledModuleHandoff("PASS", identity=identity)
+
+
+def _core_install_handoff_failure(error: Exception) -> CoreInstalledModuleHandoff:
+    reason = str(error) if isinstance(error, _PayloadLayoutError) else "invalid_core_0_55_1_install_handoff"
+    return CoreInstalledModuleHandoff("UNKNOWN", reason)
 
 
 def verify_candidate_module_payload(metadata: dict[str, object]) -> CandidateModulePayload:
@@ -1508,47 +1520,103 @@ def _trusted_payload_identity(identity: InstalledModuleIdentity) -> bool:
     )
 
 
-def _stable_payload_bytes(path: Path) -> tuple[bytes, int]:
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0))
-    try:
-        before = os.fstat(descriptor)
-        chunks: list[bytes] = []
-        while chunk := os.read(descriptor, 1_048_576):
-            chunks.append(chunk)
-        after = os.fstat(descriptor)
-    finally:
-        os.close(descriptor)
-    stable = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_mode) == (
+def _installed_payload_prefix(installed_root: Path) -> Path:
+    roots: list[Path] = []
+    for prefix in (Path("specfact_code_review"), Path("src/specfact_code_review")):
+        current = installed_root
+        for part in ("", *prefix.parts):
+            current /= part
+            try:
+                mode = current.lstat().st_mode
+            except FileNotFoundError:
+                break
+            if not stat.S_ISDIR(mode):
+                raise _PayloadLayoutError("payload_root_unsafe")
+        else:
+            roots.append(prefix)
+    if len(roots) != 1:
+        raise _PayloadLayoutError("payload_root_ambiguous" if roots else "payload_root_missing")
+    return roots[0]
+
+
+def _directory_identity(metadata: os.stat_result) -> tuple[int, int, int]:
+    return metadata.st_dev, metadata.st_ino, metadata.st_mode
+
+
+def _open_payload_directory(path: Path | str, stack: ExitStack, *, dir_fd: int | None = None) -> int:
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY"):
+        raise ValueError("no-follow directory traversal is unavailable")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    descriptor = os.open(path, flags, dir_fd=dir_fd)
+    stack.callback(os.close, descriptor)
+    return descriptor
+
+
+def _read_payload_descriptor(descriptor: int) -> tuple[bytes, int]:
+    before = os.fstat(descriptor)
+    if not stat.S_ISREG(before.st_mode):
+        raise ValueError("payload source is not a regular file")
+    chunks: list[bytes] = []
+    while chunk := os.read(descriptor, 1_048_576):
+        chunks.append(chunk)
+    after = os.fstat(descriptor)
+    if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns, before.st_mode) != (
         after.st_dev,
         after.st_ino,
         after.st_size,
         after.st_mtime_ns,
+        after.st_ctime_ns,
         after.st_mode,
-    )
-    if not stat.S_ISREG(before.st_mode) or not stable:
+    ):
         raise ValueError("payload changed during verification")
     return b"".join(chunks), before.st_mode
 
 
+def _payload_source_bytes(
+    installed_root: Path,
+    relative: Path,
+    expected_directories: tuple[tuple[int, int, int], ...] | None = None,
+) -> tuple[bytes, int, tuple[tuple[int, int, int], ...]]:
+    """Read a regular source through an anchored no-follow directory chain."""
+    if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+        raise ValueError("payload source path is unsafe")
+    with ExitStack() as stack:
+        descriptors = [_open_payload_directory(installed_root, stack)]
+        for part in relative.parts[:-1]:
+            descriptors.append(_open_payload_directory(part, stack, dir_fd=descriptors[-1]))
+        identities = tuple(_directory_identity(os.fstat(descriptor)) for descriptor in descriptors)
+        if expected_directories is not None and identities != expected_directories:
+            raise ValueError("payload source directory changed before copy")
+        flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+        source = os.open(relative.name, flags, dir_fd=descriptors[-1])
+        stack.callback(os.close, source)
+        data, mode = _read_payload_descriptor(source)
+        if _directory_identity(installed_root.lstat()) != identities[0]:
+            raise ValueError("payload install root changed during read")
+        for index, part in enumerate(relative.parts[:-1]):
+            observed = os.stat(part, dir_fd=descriptors[index], follow_symlinks=False)
+            if _directory_identity(observed) != identities[index + 1]:
+                raise ValueError("payload source directory changed during read")
+        return data, mode, identities
+
+
 def _installed_payload_manifest(identity: InstalledModuleIdentity) -> tuple[PayloadEntry, ...]:
     installed_root = Path(identity.installed_root)
-    root = installed_root / "specfact_code_review"
-    if root.is_symlink() or not stat.S_ISDIR(root.lstat().st_mode):
-        raise ValueError("payload root is not a real directory")
+    root = installed_root / _installed_payload_prefix(installed_root)
     paths = sorted(root.rglob("*"), key=lambda item: item.relative_to(installed_root).as_posix())
-    if not paths:
-        raise ValueError("payload is empty")
     manifest: list[PayloadEntry] = []
     for path in paths:
         mode = path.lstat().st_mode
-        if stat.S_ISDIR(mode) and not path.is_symlink():
+        if stat.S_ISDIR(mode):
             continue
-        if not stat.S_ISREG(mode) or path.is_symlink():
+        if not stat.S_ISREG(mode):
             raise ValueError("payload contains a non-regular entry")
-        file_bytes, stable_mode = _stable_payload_bytes(path)
-        relative = path.relative_to(installed_root).as_posix()
+        relative = path.relative_to(installed_root)
+        file_bytes, stable_mode, directories = _payload_source_bytes(installed_root, relative)
         digest = "sha256:" + hashlib.sha256(file_bytes).hexdigest()
-        manifest.append(PayloadEntry(relative, digest, stat.S_IMODE(stable_mode)))
+        manifest.append(PayloadEntry(relative.as_posix(), digest, stat.S_IMODE(stable_mode), directories))
+    if not manifest:
+        raise _PayloadLayoutError("payload_root_empty")
     return tuple(manifest)
 
 
@@ -1569,6 +1637,8 @@ def _legacy_payload_checksum(manifest: tuple[PayloadEntry, ...]) -> str:
 
 
 def verify_installed_module_payload(metadata: dict[str, object] | CoreInstalledModuleHandoff) -> InstalledPayload:
+    if isinstance(metadata, CoreInstalledModuleHandoff) and metadata.status != "PASS":
+        return InstalledPayload("UNKNOWN", metadata.reason or "invalid_core_install_handoff")
     identity = _payload_identity(metadata)
     if not _trusted_payload_identity(identity):
         return InstalledPayload("UNKNOWN", "untrusted_installed_module", identity)
@@ -1579,6 +1649,8 @@ def verify_installed_module_payload(metadata: dict[str, object] | CoreInstalledM
             raise ValueError("installed payload manifest differs from the verified handoff")
         if not identity.derivation_schema and _legacy_payload_checksum(manifest) != identity.checksum:
             raise ValueError("payload checksum mismatch")
+    except _PayloadLayoutError as error:
+        return InstalledPayload("UNKNOWN", str(error), identity)
     except (OSError, ValueError):
         return InstalledPayload("UNKNOWN", "installed_payload_drift", identity)
     return InstalledPayload("PASS", identity=identity, manifest=manifest)
@@ -1588,14 +1660,19 @@ def _copy_builtin_entry(
     identity: InstalledModuleIdentity,
     entry: PayloadEntry,
     temporary: Path,
+    prefix: Path,
 ) -> None:
     relative = Path(entry.path)
-    if relative.parts[:1] != ("specfact_code_review",) or ".." in relative.parts:
+    if relative.as_posix() != entry.path or not relative.is_relative_to(prefix) or ".." in relative.parts:
         raise ValueError("built-in payload manifest path is unsafe")
-    file_bytes, source_mode = _stable_payload_bytes(Path(identity.installed_root) / relative)
+    file_bytes, source_mode, _ = _payload_source_bytes(
+        Path(identity.installed_root),
+        relative,
+        entry.source_directories,
+    )
     if "sha256:" + hashlib.sha256(file_bytes).hexdigest() != entry.digest or stat.S_IMODE(source_mode) != entry.mode:
         raise ValueError("built-in payload changed before copy")
-    copied = temporary.joinpath(*relative.parts[1:])
+    copied = temporary / relative.relative_to(prefix)
     copied.parent.mkdir(parents=True, exist_ok=True)
     copied.write_bytes(file_bytes)
     copied.chmod(entry.mode)
@@ -1614,9 +1691,12 @@ def install_builtin_payload(payload: InstalledPayload, *, capsule_root: Path) ->
     try:
         if destination.exists() or destination.is_symlink() or temporary.exists() or temporary.is_symlink():
             raise ValueError("built-in payload destination collides")
+        prefix = _installed_payload_prefix(Path(payload.identity.installed_root))
+        if not payload.manifest:
+            raise ValueError("built-in payload manifest is empty")
         temporary.mkdir(parents=True)
         for entry in payload.manifest:
-            _copy_builtin_entry(payload.identity, entry, temporary)
+            _copy_builtin_entry(payload.identity, entry, temporary, prefix)
         os.replace(temporary, destination)
     except (OSError, ValueError):
         shutil.rmtree(temporary, ignore_errors=True)

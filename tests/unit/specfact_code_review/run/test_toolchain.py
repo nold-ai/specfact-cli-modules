@@ -7,6 +7,7 @@ import hashlib
 import io
 import os
 import shutil
+import stat
 import subprocess
 import tarfile
 from pathlib import Path
@@ -29,8 +30,8 @@ ANALYZER_COMPONENTS = {
 }
 
 
-@pytest.fixture
-def toolchain_api() -> Any:
+@pytest.fixture(name="toolchain_api")
+def toolchain_module() -> Any:
     from specfact_code_review.run import toolchain
 
     return toolchain
@@ -1402,3 +1403,208 @@ def test_module_package_does_not_install_analyzer_lock_into_host(toolchain_api: 
     host_names = {toolchain_api.normalized_requirement_name(item) for item in manifest.get("pip_dependencies", [])}
 
     assert host_names.isdisjoint(set(ANALYZER_COMPONENTS))
+
+
+def test_installed_payload_requires_exactly_one_package_root(toolchain_api: Any, tmp_path: Path) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    other = Path(metadata["installed_root"]) / "src/specfact_code_review"
+    other.mkdir(parents=True)
+    (other / "__init__.py").write_text("", encoding="utf-8")
+
+    result = toolchain_api.verify_installed_module_payload(metadata)
+
+    assert result.status == "UNKNOWN"
+    assert "ambiguous" in result.reason
+
+
+def test_installed_payload_reports_missing_root(toolchain_api: Any, tmp_path: Path) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    shutil.rmtree(Path(metadata["installed_root"]) / "specfact_code_review")
+
+    result = toolchain_api.verify_installed_module_payload(metadata)
+
+    assert result.status == "UNKNOWN"
+    assert "missing" in result.reason
+
+
+def test_installed_payload_retains_handoff_failure_reason(toolchain_api: Any) -> None:
+    handoff = toolchain_api.CoreInstalledModuleHandoff("UNKNOWN", "payload_root_missing")
+
+    result = toolchain_api.verify_installed_module_payload(handoff)
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "payload_root_missing"
+
+
+def test_builtin_copy_requires_descriptor_relative_source_reads(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    payload = toolchain_api.verify_installed_module_payload(metadata)
+    original_open = os.open
+    source_reads: list[tuple[Any, dict[str, Any], int]] = []
+
+    def recorded_open(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+        if str(path).endswith("builtin.py"):
+            source_reads.append((path, kwargs, flags))
+        return original_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(toolchain_api.os, "open", recorded_open)
+    result = toolchain_api.install_builtin_payload(payload, capsule_root=tmp_path / "capsule")
+
+    assert result.status == "PASS"
+    assert source_reads
+    assert all(call[1].get("dir_fd") is not None for call in source_reads)
+    assert all(call[2] & os.O_NOFOLLOW for call in source_reads)
+
+
+@pytest.mark.parametrize(
+    "directory",
+    ["", "specfact_code_review", "specfact_code_review/resources"],
+    ids=["install-root", "package", "resources"],
+)
+def test_builtin_copy_rejects_changed_directory_identity(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, directory: str
+) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    payload = toolchain_api.verify_installed_module_payload(metadata)
+    original_fstat = os.fstat
+    source_root = (Path(metadata["installed_root"]) / directory).stat()
+
+    def changed_directory_stat(descriptor: int) -> os.stat_result:
+        observed = original_fstat(descriptor)
+        if (observed.st_dev, observed.st_ino) == (source_root.st_dev, source_root.st_ino):
+            fields = list(observed)
+            fields[1] += 1
+            return os.stat_result(fields)
+        return observed
+
+    monkeypatch.setattr(toolchain_api.os, "fstat", changed_directory_stat)
+    result = toolchain_api.install_builtin_payload(payload, capsule_root=tmp_path / "capsule")
+
+    assert result.status == "UNKNOWN"
+    assert not (tmp_path / "capsule/opt/specfact/builtin/specfact_code_review").exists()
+    assert not (tmp_path / "capsule/opt/specfact/builtin/.specfact_code_review.copying").exists()
+
+
+def test_builtin_copy_checks_regular_file_before_reading(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    payload = toolchain_api.verify_installed_module_payload(metadata)
+    original_fstat = os.fstat
+
+    def nonregular_file_stat(descriptor: int) -> os.stat_result:
+        observed = original_fstat(descriptor)
+        if stat.S_ISREG(observed.st_mode):
+            fields = list(observed)
+            fields[0] = stat.S_IFIFO | 0o600
+            return os.stat_result(fields)
+        return observed
+
+    monkeypatch.setattr(toolchain_api.os, "fstat", nonregular_file_stat)
+    monkeypatch.setattr(toolchain_api.os, "read", lambda *_a: pytest.fail("read before file-type validation"))
+    result = toolchain_api.install_builtin_payload(payload, capsule_root=tmp_path / "capsule")
+
+    assert result.status == "UNKNOWN"
+
+
+@pytest.mark.parametrize("mutation", ["content", "mode"])
+def test_builtin_copy_rejects_payload_drift_after_verification(
+    toolchain_api: Any, tmp_path: Path, mutation: str
+) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    payload = toolchain_api.verify_installed_module_payload(metadata)
+    target = Path(metadata["installed_root"]) / "specfact_code_review/builtin.py"
+    if mutation == "content":
+        target.write_text("changed = True\n", encoding="utf-8")
+    else:
+        target.chmod(0o700)
+
+    result = toolchain_api.install_builtin_payload(payload, capsule_root=tmp_path / "capsule")
+
+    assert result.status == "UNKNOWN"
+    assert not (tmp_path / "capsule/opt/specfact/builtin/specfact_code_review").exists()
+
+
+@pytest.mark.parametrize("layout", ["src", ""])
+def test_installed_payload_rejects_symlinked_package_root(toolchain_api: Any, tmp_path: Path, layout: str) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    installed = Path(metadata["installed_root"])
+    original = installed / "specfact_code_review"
+    real_package = tmp_path / "real-package"
+    original.rename(real_package)
+    package = installed / layout / "specfact_code_review"
+    package.parent.mkdir(parents=True, exist_ok=True)
+    package.symlink_to(real_package, target_is_directory=True)
+
+    result = toolchain_api.verify_installed_module_payload(metadata)
+
+    assert result.status == "UNKNOWN"
+    assert result.reason == "payload_root_unsafe"
+
+
+def test_builtin_copy_rejects_no_follow_open_failure(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    payload = toolchain_api.verify_installed_module_payload(metadata)
+    original_open = os.open
+
+    def rejected_source(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+        if str(path).endswith("builtin.py"):
+            raise OSError(errno.ELOOP, "no-follow source refusal")
+        return original_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(toolchain_api.os, "open", rejected_source)
+    result = toolchain_api.install_builtin_payload(payload, capsule_root=tmp_path / "capsule")
+
+    assert result.status == "UNKNOWN"
+    assert not (tmp_path / "capsule/opt/specfact/builtin/specfact_code_review").exists()
+    assert not (tmp_path / "capsule/opt/specfact/builtin/.specfact_code_review.copying").exists()
+
+
+@pytest.mark.parametrize("failure", [None, "read", "open"])
+def test_payload_source_closes_all_descriptors(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str | None
+) -> None:
+    """ExitStack closes root, ancestor and source descriptors on every outcome."""
+    relative = Path("specfact_code_review/resources/fixture.py")
+    source = tmp_path / relative
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"fixture")
+    opened: list[int] = []
+    original_open = os.open
+
+    def tracked_open(path: Any, flags: int, **kwargs: Any) -> int:
+        if failure == "open" and str(path) == "fixture.py":
+            raise OSError("injected source refusal")
+        descriptor = original_open(path, flags, **kwargs)
+        opened.append(descriptor)
+        return descriptor
+
+    def refused_read(*_args: Any) -> bytes:
+        raise OSError("injected source refusal")
+
+    monkeypatch.setattr(toolchain_api.os, "open", tracked_open)
+    if failure == "read":
+        monkeypatch.setattr(toolchain_api.os, "read", refused_read)
+    if failure:
+        with pytest.raises(OSError, match="injected source refusal"):
+            toolchain_api._payload_source_bytes(tmp_path, relative)
+    else:
+        assert toolchain_api._payload_source_bytes(tmp_path, relative)[0] == b"fixture"
+    assert len(opened) >= 3
+    for descriptor in opened:
+        with pytest.raises(OSError):
+            os.fstat(descriptor)
+
+
+def test_installed_payload_reports_empty_root(toolchain_api: Any, tmp_path: Path) -> None:
+    metadata = _installed_payload(tmp_path / "installed")
+    for path in Path(metadata["installed_root"]).rglob("*"):
+        if path.is_file():
+            path.unlink()
+    result = toolchain_api.verify_installed_module_payload(metadata)
+    assert result.status == "UNKNOWN"
+    assert result.reason == "payload_root_empty"
