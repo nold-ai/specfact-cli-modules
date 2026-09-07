@@ -264,3 +264,20 @@ protected range assurance are not claimed by the local evidence. The temporary
 Linux container was stopped and removed after retaining its report; the
 implementation worktree remains available for review. No merge, issue closure,
 or archive action was performed.
+
+## PR review follow-up (2026-09-07, Europe/Berlin)
+
+Review comment `3948154659` correctly identified that case `459-2-1` described
+missing, ambiguous, and symlinked roots while selecting only the src symlink
+regression. Its intent now says symlinked package roots, matching both the
+selector and observable. Existing missing/ambiguous-root regression tests remain
+part of the recorded suite; this row does not claim to execute them.
+
+This is an evidence-description correction, with no runtime, test, signature,
+version, or core API change. No new behavioral red/green cycle is required.
+The optional private-helper note concerns potential future core API drift; the
+fixture deliberately exercises the real signing/install contract, already
+verified on released core 0.55.1 and 0.55.4. Adding a public core signing API is
+outside #459. The scanner's two command-injection hits do not apply: subprocess
+arguments/probe are fixed test code, no shell is used, and no incoming request
+supplies command content. Neither note identifies a current priority defect.

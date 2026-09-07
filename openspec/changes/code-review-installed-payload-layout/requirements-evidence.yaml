@@ -42,7 +42,7 @@ requirements:
     - case_id: 459-2-1
       scenario_id: unsafe-or-changed-payload-rejection
       method: test
-      intent: 'Verify the runtime contract: Missing ambiguous or symlinked roots.'
+      intent: 'Verify the runtime contract: Symlinked package roots.'
       observable: A symlinked package root yields UNKNOWN and payload_root_unsafe.
       selector:
         runner: pytest
