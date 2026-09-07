@@ -18,7 +18,7 @@ Future behavior work follows worktree -> current approved spec -> tests -> recor
 - [x] Run regression tests and real installed-payload startup on supported Linux; repeat the recorded range review and classify independent blockers (payload suites/startup pass; recorded range remains UNKNOWN due to Docker namespace refusal).
 - [x] Record red/green commands and exact versions in TDD_EVIDENCE.md.
 - [x] Complete mandatory quality/review gates and prepare patch-version/checksum/signature/registry consistency through canonical release tooling (dev-PR checksum/version checks pass; release signing and publication remain with CI).
-- [ ] Open the future implementation PR to dev; close #459 only after its actual acceptance criteria are fulfilled.
+- [x] Open implementation draft PR [#462](https://github.com/nold-ai/specfact-cli-modules/pull/462) to dev; #459 remains open pending acceptance and release.
 
 ## Post-merge lifecycle
 

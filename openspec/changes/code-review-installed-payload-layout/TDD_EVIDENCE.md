@@ -249,3 +249,18 @@ document because its required frontmatter title and H1 trigger that rule.
 OpenSpec Markdown checks retain MD025. Long-line/table-style exceptions follow
 the existing documentation format. No runtime source changed after the final
 102-test targeted run and 1806-test smart run.
+
+## Implementation review handoff
+
+Signed implementation commit: `64f3be38f636056dddd6326adda18c870b95c11d`.
+All pre-commit hooks passed, including signature/version verification, format,
+YAML, imports, lint, generated command contracts, core documentation
+accountability, docs validation, planned Requirements evidence, review
+(PASS_WITH_ADVISORY, 73 inherited findings), and 28 contract tests.
+
+Draft implementation PR: [#462](https://github.com/nold-ai/specfact-cli-modules/pull/462),
+targeting `dev`. Hosted checks, canonical release signing/publication, and
+protected range assurance are not claimed by the local evidence. The temporary
+Linux container was stopped and removed after retaining its report; the
+implementation worktree remains available for review. No merge, issue closure,
+or archive action was performed.
