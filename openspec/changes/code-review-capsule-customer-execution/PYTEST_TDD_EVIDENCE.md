@@ -108,3 +108,41 @@ SPECFACT_CLI_REPO=/private/tmp/specfact-core-customer-466 hatch run python -m py
 ```
 
 Log: `/private/tmp/capsule-cli-contract-isolation-466.log`.
+
+## PR review: scoped pytest selection and independent static evidence
+
+Review comment `3998036209` identified that the first customer repair expanded
+explicit-file and changed-file review into a complete repository test inventory.
+The OpenSpec delta now explicitly requires narrow test selection and retention
+of independent static evidence when pytest cannot run.
+
+Before this correction, seven regressions failed: four narrow source/test
+selections were rejected by an unrelated sibling suite's conftest, one missing
+corresponding test incorrectly used an unrelated test, and two invalid inventory
+cases suppressed every static analyzer. Log:
+`/private/tmp/capsule-scoped-pytest-red.log`.
+
+Only `assurance_kind=full` now requests the complete repository inventory.
+Enforcement mode does not select scope. Explicit and worktree reviews plan
+reviewed test files or unambiguous corresponding tests, preserving the existing
+module mapping and supporting conventional flat and nested customer layouts.
+Ambiguous or missing correspondence fails closed. File-root inventory planning
+checks ancestor conftests without traversing unrelated sibling suites.
+
+When pytest planning fails, the controller runs the independent static members
+with an internal pytest-disable dispatch and then records only pytest as UNKNOWN.
+It never runs unplanned legacy pytest and relabels its result. Static findings
+and execution evidence remain in the report, and required uncertainty still fails
+the review exit.
+
+A further failing regression demonstrated that cached snapshots lost the module
+mapping when the controller working directory differed and multiple tests shared
+the basename `test_runner.py`. The mapping now uses the source path relative to
+the snapshot. Log: `/private/tmp/capsule-cached-pytest-mapping-red.log`.
+
+Passing validation: **416 tests passed in 12.39 seconds** across the dedicated
+customer pytest and runner suites. Ruff and formatting passed; BasedPyright
+reported zero errors and warnings for `runner.py`. Changed helper complexity is
+at most 9. Logs: `/private/tmp/capsule-scoped-pytest-green.log` and
+`/private/tmp/capsule-scoped-pytest-types.log`. The hosted gate separately exercises
+a narrow calculator selection alongside its complete customer fixtures.

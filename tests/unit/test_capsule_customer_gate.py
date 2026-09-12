@@ -592,3 +592,54 @@ def test_candidate_installation_uses_separate_published_registry_snapshot():
     assert 'INSTALLATION_REPOSITORY="$GITHUB_WORKSPACE/.customer-published-registry"' in installation
     assert installation.count('--repository "$INSTALLATION_REPOSITORY"') == 2
     assert '--repository "$GITHUB_WORKSPACE"' in steps["Exercise cold and warm fixtures and modules repository"]["run"]
+
+
+def test_targeted_fixture_preserves_clean_inputs_and_has_real_unrelated_failure(tmp_path, monkeypatch):
+    import runpy
+
+    gate = _gate()
+    clean = tmp_path / "clean"
+    targeted = tmp_path / "targeted"
+    gate._fixture(clean, defective=False)
+    gate._fixture(targeted, defective=False, unrelated_failure=True)
+    for name in ("calculator.py", "test_calculator.py"):
+        assert (targeted / name).read_bytes() == (clean / name).read_bytes()
+    unrelated = runpy.run_path(str(targeted / "test_unrelated.py"))
+    with pytest.raises(AssertionError):
+        unrelated["test_unrelated"]()
+
+
+def test_targeted_review_selects_only_calculator_and_reuses_offline_cache(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+
+    gate = _gate()
+    report = _namespace_report(gate)
+    report.update(assurance_status="PASS", has_unknown_required_evidence=False)
+    for row in report["analyzer_evidence"]:
+        row.update(execution_state="ran", evidence_outcome="PASS")
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append((command, kwargs))
+        (tmp_path / "targeted.json").write_text(json.dumps(report))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(gate.subprocess, "run", run)
+    gate._review(tmp_path, tmp_path, "targeted", "clean", cache=tmp_path / "cache")
+    command, options = calls[0]
+    assert command[4] == "calculator.py"
+    assert "--scope" not in command
+    assert "test_unrelated.py" not in command
+    assert options["env"]["SPECFACT_CODE_REVIEW_CAPSULE_OFFLINE"] == "1"
+
+
+def test_customer_gate_always_adds_separate_targeted_regression(tmp_path, monkeypatch):
+    gate = _gate()
+    calls = []
+    monkeypatch.setattr(gate, "_fixture", lambda *args, **kwargs: None)
+    monkeypatch.setattr(gate, "_repository_slice", lambda repository, evidence: repository)
+    monkeypatch.setattr(gate, "_run_reviews", lambda *args, **kwargs: ["existing failure"])
+    monkeypatch.setattr(gate, "_run_targeted_review", lambda *args, **kwargs: calls.append(args) or [])
+    assert gate._run_customer_reviews(tmp_path, tmp_path / "cache", tmp_path / "repository") == ["existing failure"]
+    assert calls == [(tmp_path, tmp_path / "cache")]

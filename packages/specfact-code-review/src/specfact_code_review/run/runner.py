@@ -3120,6 +3120,11 @@ def _repository_pytest_hook_validation(
     return validate_pytest_plugins(tuple(plugins))
 
 
+def _pytest_paths_below(root: Path) -> tuple[Path, ...]:
+    """Allow a controller-selected test file without expanding to its siblings."""
+    return (root,) if root.is_file() else tuple(sorted(root.rglob("*.py")))
+
+
 def _collect_pytest_selectors(
     snapshot_root: Path,
     roots: tuple[str, ...],
@@ -3129,7 +3134,7 @@ def _collect_pytest_selectors(
     return tuple(
         selector
         for root in roots
-        for path in sorted((snapshot_root / root).rglob("*.py"))
+        for path in _pytest_paths_below(snapshot_root / root)
         if _matches_python_file(path, file_patterns)
         for selector in _test_selectors(
             path,
@@ -3161,7 +3166,7 @@ def _pytest_candidates(
     return {
         path.relative_to(snapshot_root).as_posix()
         for root in roots
-        for path in (snapshot_root / root).rglob("*.py")
+        for path in _pytest_paths_below(snapshot_root / root)
         if _matches_python_file(path, file_patterns)
     }
 
@@ -6606,12 +6611,69 @@ def _run_cached_development_host_review(
         )
 
 
+def _corresponding_local_tests(source: Path, candidates: set[str], *, snapshot_root: Path) -> set[str]:
+    expected = _expected_test_path(source.relative_to(snapshot_root))
+    if expected is not None and expected.as_posix() in candidates:
+        return {expected.as_posix()}
+    names = {f"test_{source.stem}.py", f"{source.stem}_test.py"}
+    matching = {path for path in candidates if Path(path).name in names}
+    adjacent = {path for path in matching if (snapshot_root / path).parent == source.parent}
+    selected = adjacent or matching
+    if len(selected) > 1:
+        raise ValueError(f"local_pytest_correspondence_ambiguous:{source.name}")
+    return selected
+
+
+def _scoped_local_pytest_policy(
+    policy: dict[str, object], *, snapshot_root: Path, files: list[Path]
+) -> dict[str, object]:
+    projection = project_pytest_policy(policy, snapshot_root=snapshot_root, output_root=snapshot_root)
+    if projection.status != "PASS":
+        raise ValueError(projection.reason)
+    patterns = tuple(str(value) for value in cast(list[object], policy["python_files"]))
+    roots = tuple(str(value) for value in cast(list[object], policy["testpaths"]))
+    candidates = _pytest_candidates(snapshot_root, roots, patterns)
+    reviewed_python = [path.resolve() for path in files if path.suffix == ".py"]
+    selected: set[str] = set()
+    for path in reviewed_python:
+        if _matches_python_file(path, patterns):
+            selected.add(path.relative_to(snapshot_root).as_posix())
+        else:
+            selected.update(_corresponding_local_tests(path, candidates, snapshot_root=snapshot_root))
+    if not selected:
+        raise ValueError("local_pytest_inventory_empty")
+    return {**policy, "testpaths": sorted(selected)}
+
+
+def _local_pytest_failure_snapshot(
+    runtime: CapsuleRuntime,
+    *,
+    snapshot_root: Path,
+    files: list[Path],
+    options: ReviewOptions,
+    reason: str,
+) -> CapsuleSnapshotResult:
+    snapshot = _run_capsule_snapshot(
+        runtime, snapshot_root=snapshot_root, files=files, options=replace(options, no_tests=True)
+    )
+    snapshot.evidence["targeted-pytest-coverage"] = {
+        "execution_state": "error",
+        "evidence_outcome": "UNKNOWN",
+        "version": _C14_ANALYZER_VERSIONS["targeted-pytest-coverage"],
+        "diagnostic": f"local_pytest_inventory_failed:{reason}",
+        "capsule_identity": runtime.identity,
+        "environment_id": getattr(runtime, "environment_id", ""),
+    }
+    return snapshot
+
+
 def _run_local_capsule_snapshot(
     runtime: CapsuleRuntime,
     *,
     snapshot_root: Path,
     files: list[Path],
     options: ReviewOptions,
+    assurance_kind: LocalAssuranceKind,
 ) -> CapsuleSnapshotResult:
     """Project local pytest policy and execute a reconciled customer inventory."""
     if options.no_tests:
@@ -6619,7 +6681,12 @@ def _run_local_capsule_snapshot(
     builder = _PolicyBindingBuilder()
     try:
         policy = _pytest_policy_values(snapshot_root)
-        plan = plan_complete_pytest_suite(snapshot_root, policy, changed_paths=())
+        selected_policy = (
+            policy
+            if assurance_kind == "full"
+            else _scoped_local_pytest_policy(policy, snapshot_root=snapshot_root, files=files)
+        )
+        plan = plan_complete_pytest_suite(snapshot_root, selected_policy, changed_paths=())
         if plan.status != "PASS" or not plan.selectors:
             raise ValueError(plan.reason or "local_pytest_inventory_empty")
         _bind_pytest_coverage_policy(builder, snapshot_root)
@@ -6635,19 +6702,8 @@ def _run_local_capsule_snapshot(
             member_argv=bindings.member_argv,
         )
     except (OSError, TypeError, ValueError, configparser.Error) as exc:
-        return CapsuleSnapshotResult(
-            {
-                member: {
-                    "execution_state": "error",
-                    "evidence_outcome": "UNKNOWN",
-                    "version": _C14_ANALYZER_VERSIONS[member],
-                    "diagnostic": f"local_pytest_inventory_failed:{exc}",
-                    "capsule_identity": runtime.identity,
-                    "environment_id": getattr(runtime, "environment_id", ""),
-                }
-                for member in default_pr_range_profile().all_ids
-            },
-            {},
+        return _local_pytest_failure_snapshot(
+            runtime, snapshot_root=snapshot_root, files=files, options=options, reason=str(exc)
         )
     finally:
         for root in builder.cleanup_roots:
@@ -6717,6 +6773,7 @@ def run_capsule_review(
                 snapshot_root=snapshot_root,
                 files=snapshot_files,
                 options=review_options,
+                assurance_kind=assurance_kind,
             )
             if _worktree_analysis_identity_changed(worktree_identity, files):
                 return _worktree_snapshot_unknown(

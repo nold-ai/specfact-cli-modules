@@ -29,6 +29,14 @@ For the supported Linux x86-64 capsule path, the installed review command SHALL 
 - **AND** candidate CI pins its preliminary public installation to a separately recorded published-main registry snapshot, so an unpublished registry update in the candidate cannot select an unavailable baseline
 - **AND** public release acceptance remains pinned to its own registry checkout and release-tag identity
 
+#### Scenario: Narrow local review preserves its pytest selection
+
+- **GIVEN** explicit files or changed-file scope selects a subset of a customer repository
+- **WHEN** the capsule plans pytest execution
+- **THEN** it executes the reviewed test files or unambiguously corresponding tests for selected sources, without collecting unrelated test suites
+- **AND** only an actual full scope requests the complete repository inventory, independently of enforcement mode
+- **AND** missing or unsupported test selection leaves pytest UNKNOWN with a failing exit while independent static analyzers still execute and retain their findings
+
 ### Requirement: Sealed capsule mount destinations and private writes
 
 The controller SHALL establish all required mount destinations before sealing the relevant runtime composition and SHALL authenticate added structure in its appropriate identity. Runtime payloads and source/configuration inputs SHALL remain read-only; analyzer home, cache, temporary state and output writes SHALL stay within declared process-private writable roots.

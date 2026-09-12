@@ -213,7 +213,7 @@ def test_add() -> None:
 '''
 
 
-def _fixture(root: Path, *, defective: bool) -> None:
+def _fixture(root: Path, *, defective: bool, unrelated_failure: bool = False) -> None:
     root.mkdir()
     source = '"""Small arithmetic fixture."""\n\n\ndef add(left: int, right: int) -> int:\n    """Return the sum of two integers."""\n    return left + right\n'
     if defective:
@@ -225,6 +225,11 @@ def _fixture(root: Path, *, defective: bool) -> None:
         else _FIXTURE_TEST_SOURCE
     )
     (root / "test_calculator.py").write_text(test_source, encoding="utf-8")
+    if unrelated_failure:
+        (root / "test_unrelated.py").write_text(
+            '"""Unrelated scope regression fixture."""\n\n\ndef test_unrelated() -> None:\n    """Fail if an unrelated test is collected."""\n    assert 1 == 2\n',
+            encoding="utf-8",
+        )
     subprocess.run(["git", "init", "--quiet", str(root)], check=True)
     subprocess.run(["git", "-C", str(root), "add", "."], check=True)
     subprocess.run(
@@ -285,6 +290,12 @@ def _review_environment(*, cache: Path | None, offline: bool, mode: str) -> dict
     return environment
 
 
+def _review_selection(name: str, expected: str) -> tuple[str, ...]:
+    if name == "targeted":
+        return ("calculator.py",)
+    return _REPOSITORY_PATHS if expected == "repository" else ("--scope", "full")
+
+
 def _review(
     root: Path, evidence: Path, name: str, expected: str, *, cache: Path | None = None, mode: str = "public"
 ) -> dict[str, Any]:
@@ -294,7 +305,7 @@ def _review(
         "code",
         "review",
         "run",
-        *(_REPOSITORY_PATHS if expected == "repository" else ("--scope", "full")),
+        *_review_selection(name, expected),
         "--enforcement",
         "full",
         "--bug-hunt",
@@ -302,7 +313,7 @@ def _review(
         "--out",
         str(report_path),
     ]
-    environment = _review_environment(cache=cache, offline=name == "warm", mode=mode)
+    environment = _review_environment(cache=cache, offline=name in {"warm", "targeted"}, mode=mode)
     umask = 0o077 if name in {"warm", "alternate"} else 0o022
     print(f"capsule review {name}: started; expected={expected}", flush=True)
     with (evidence / f"{name}.log").open("w", encoding="utf-8") as log:
@@ -323,7 +334,7 @@ def _review(
                 "exit_code": result.returncode,
                 "umask": oct(umask),
                 "cache": environment.get("SPECFACT_CODE_REVIEW_CAPSULE_CACHE"),
-                "offline": name == "warm",
+                "offline": name in {"warm", "targeted"},
             }
         ),
         encoding="utf-8",
@@ -430,13 +441,42 @@ def _run_namespace_denial(evidence: Path, *, mode: str = "public") -> list[str]:
     return []
 
 
+def _run_targeted_review(evidence: Path, cache: Path, *, mode: str = "public") -> list[str]:
+    root = evidence.parent / "targeted"
+    _fixture(root, defective=False, unrelated_failure=True)
+    try:
+        cached = _cache_identities(cache)
+        report = _review(root, evidence, "targeted", "clean", cache=cache, mode=mode)
+        if not cached or _cache_identities(cache) != cached:
+            raise ValueError("targeted review did not preserve verified offline cache identities")
+        witness = json.loads((evidence / "defective.json").read_text(encoding="utf-8"))
+        _validate_detected_defect(witness, 1)
+        _write_filesystem_evidence(report, root, evidence, "targeted")
+        receipt = {
+            "selected_source": "calculator.py",
+            "mapped_test": "test_calculator.py",
+            "excluded_test": "test_unrelated.py",
+            "scope": "explicit_files",
+            "files_sha256": {
+                path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(root.glob("*.py"))
+            },
+            "cache_identities": cached,
+        }
+        (evidence / "targeted-selection.json").write_text(json.dumps(receipt, indent=2), encoding="utf-8")
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        return [f"targeted: {exc}"]
+    return []
+
+
 def _run_customer_reviews(evidence: Path, cache: Path, repository: Path, *, mode: str = "public") -> list[str]:
     clean = evidence.parent / "clean"
     defective = evidence.parent / "defective"
     _fixture(clean, defective=False)
     _fixture(defective, defective=True)
     selected_repository = _repository_slice(repository, evidence)
-    return _run_reviews(evidence, cache, selected_repository, clean, defective, mode=mode)
+    failures = _run_reviews(evidence, cache, selected_repository, clean, defective, mode=mode)
+    failures.extend(_run_targeted_review(evidence, cache, mode=mode))
+    return failures
 
 
 def _registry_entry(repository: Path) -> dict[str, Any]:

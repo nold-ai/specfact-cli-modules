@@ -250,6 +250,23 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_customer_pytest_execution.py::test_local_capsule_cannot_claim_tests_pass_without_a_supported_inventory
+    - case_id: 466-narrow-pytest
+      scenario_id: non-root-customer-capsule-execution
+      method: test
+      intent: Preserve scoped customer review semantics.
+      observable: Narrow reviews execute only selected or corresponding tests, ignoring unrelated failing modules
+        and conftests.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_customer_pytest_execution.py::test_narrow_review_executes_only_its_customer_tests
+    - case_id: 466-missing-narrow-pytest
+      scenario_id: non-root-customer-capsule-execution
+      method: test
+      intent: Preserve scoped customer review semantics.
+      observable: Unavailable required pytest remains UNKNOWN without suppressing static analyzers.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_customer_pytest_execution.py::test_narrow_review_does_not_use_unrelated_tests_when_correspondence_is_missing
   openspec:code-review-capsule-customer-execution:review-run-command:sealed-capsule-mount-destinations-and-private-writes:
     rationale: Repair customer capsule behavior with mapped regressions; complete hosted signed-release acceptance
       remains pending.

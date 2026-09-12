@@ -252,3 +252,30 @@ After implementation **57 gate tests passed**, Ruff and both workflow actionlint
 checks passed, and strict OpenSpec validation passed. Transcripts:
 `/private/tmp/capsule-gate-published-baseline-failing-466.log` and
 `/private/tmp/capsule-gate-published-baseline-passing-466.log`.
+
+## Hosted narrow-scope regression
+
+The existing `Narrow local review preserves its pytest selection` scenario now has
+an additional hosted customer probe. A separate independent Git fixture preserves
+the exact clean `calculator.py` and `test_calculator.py` bytes and adds a tracked
+`test_unrelated.py` whose assertion deliberately fails. The installed CLI reviews
+only positional `calculator.py`, with all ten analyzer rows required to execute
+and the result required to PASS. Its mapped calculator test also runs the existing
+filesystem assertions. Collecting the unrelated test makes this regression fail.
+The gate records selected/mapped/excluded files and their SHA values separately
+from the original repository selection evidence.
+
+This case runs after the existing cold/warm/alternate/defective/repository cases,
+uses the original verified cache in offline mode, and requires unchanged OCI cache
+identities. It adds one materialization/review per ABI without another runtime
+download or another repository review. Original cold/warm/alternate fixture bytes
+and their identity comparisons remain unchanged.
+
+Two focused tests failed first for the missing independent fixture option and the
+incorrect full-scope command; a third orchestration test failed for the absent
+hosted invocation. After implementation **60 gate tests passed**, with Ruff and
+BasedPyright clean. Transcripts:
+`/private/tmp/capsule-gate-targeted-failing-466.log` and
+`/private/tmp/capsule-gate-targeted-passing-466.log`.
+The unit check executes the unrelated test directly and confirms it fails; actual
+capsule selection acceptance remains pending the hosted matrix.
