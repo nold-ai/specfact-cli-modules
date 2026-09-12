@@ -69,6 +69,12 @@ A capsule repair release SHALL pass the GitHub-hosted Ubuntu 24.04 x86-64 Python
 - **THEN** the descriptor's name, version, exact specifier, size, tags and metadata digests agree with the wheel filename and archive metadata before any lock is written
 - **AND** a correct wheel digest does not permit a stale or substituted descriptor identity
 
+#### Scenario: Public installation uses the canonical marketplace
+
+- **GIVEN** inherited process state contains registry, development-module or credential overrides
+- **WHEN** the customer gate installs its pinned public module
+- **THEN** installation uses the fresh venv executable with an explicit main marketplace branch and an allowlisted environment before strict artifact and signature verification
+
 #### Scenario: Published repair is accepted
 
 - **GIVEN** candidate regressions and quality gates passed and a corrected signed release was published

@@ -11,9 +11,9 @@ Implementation authorized on 2026-09-12 Europe/Berlin in the existing dedicated 
 ## 2. Reproduce and capture failing evidence
 
 - [x] 2.1 Add hosted Ubuntu 24.04 x86-64 customer jobs for Python 3.11/3.12/3.13 with fresh user-owned installation/cache paths and explicit non-root assertions.
-- [ ] 2.2 Install public released core and signed modules through documented commands; exclude publisher credentials, development links, source PYTHONPATH, signature bypasses and prefetch from the customer path.
+- [x] 2.2 Install public released core and signed modules through documented commands; exclude publisher credentials, development links, source PYTHONPATH, signature bypasses and prefetch from the customer path.
 - [ ] 2.3 Run independent clean/defective Git fixtures and the modules repository through the installed CLI; capture nonempty scope, actual required analyzer coverage, JSON and exit outcomes, including conditional/runtime mount fixtures with valid existing prerequisites.
-- [ ] 2.4 Capture namespace-denied baseline evidence separately, probe the actual verified descriptor/tracing launcher, and identify/document a narrowly scoped supported host prerequisite before positive non-root reruns.
+- [x] 2.4 Capture namespace-denied baseline evidence separately, probe the actual verified descriptor/tracing launcher, and identify/document a narrowly scoped supported host prerequisite before positive non-root reruns.
 - [ ] 2.5 Identify the exact cp312 failing digest stage using clean/warm caches, umasks 022/077 and content/mode entry comparisons; preserve expected/actual identities without edits to trusted hashes.
 - [ ] 2.6 Trace the reported directory error to exact argv/path/errno/syscall, distinguish host staging from sandbox destination/state writes, and exercise every mount variant.
 - [x] 2.7 Record real commands, versions and failing outputs in TDD_EVIDENCE.md before each related production repair; unresolved hypotheses remain explicit.
@@ -21,16 +21,16 @@ Implementation authorized on 2026-09-12 Europe/Berlin in the existing dedicated 
 ## 3. Implement only reproduced causes
 
 - [x] 3.1 Repair proven anonymous acquisition/cache or deterministic materialization defects and add actionable stage/ABI/integrity diagnostics.
-- [ ] 3.2 Repair verified-launcher capability reporting and supported setup documentation without privilege fallback or broad host policy changes.
+- [x] 3.2 Repair verified-launcher capability reporting and supported setup documentation without privilege fallback or broad host policy changes.
 - [x] 3.3 Establish mount destinations before sealing composition, authenticate new structure in the appropriate identity, and route analyzer state into declared private mounts; retain fail-closed path/collision checks.
-- [ ] 3.4 Preserve core handoff, signed-module validation, existing CLI/schema/assurance semantics, and protected-consumer separation; do not widen into native-platform or unrelated analyzer redesign.
+- [x] 3.4 Preserve core handoff, signed-module validation, existing CLI/schema/assurance semantics, and protected-consumer separation; do not widen into native-platform or unrelated analyzer redesign.
 
 ## 4. Verify candidate behavior
 
 - [ ] 4.1 Run mapped acquisition/cache-corruption, three-ABI/two-cache-root determinism, namespace permit/deny, destination-variant, private-write/denied-write, cleanup, and diagnostics regressions with passing-after evidence.
-- [ ] 4.2 Complete the actual-analyzer three-ABI matrix, distinguishing expected fixture FAIL from infrastructure UNKNOWN and retaining real repository findings.
-- [ ] 4.3 Run required formatting, typing, lint, YAML/import, contract/smart/full-test gates and strict OpenSpec validation for the touched scope.
-- [ ] 4.4 Generate fresh SpecFact review JSON with --bug-hunt and appropriate scope/enforcement; remediate every finding or document a rare approved exception, and record exact commands/timestamps.
+- [x] 4.2 Complete the actual-analyzer three-ABI matrix, distinguishing expected fixture FAIL from infrastructure UNKNOWN and retaining real repository findings.
+- [x] 4.3 Run required formatting, typing, lint, YAML/import, contract/smart/full-test gates and strict OpenSpec validation for the touched scope.
+- [x] 4.4 Generate fresh SpecFact review JSON with --bug-hunt and appropriate scope/enforcement; remediate every finding or document a rare approved exception, and record exact commands/timestamps.
 
 ## 5. Publish and accept later
 
@@ -39,3 +39,5 @@ Implementation authorized on 2026-09-12 Europe/Berlin in the existing dedicated 
 - [ ] 5.3 Verify filesystem payload signatures/version bumps and complete implementation PR/review/merge gates with recorded release identities.
 - [ ] 5.4 Repeat the full customer matrix against the actual public signed release with cold and verified warm caches; close #466 only after all required coverage and expected outcomes pass.
 - [ ] 5.5 After implementation, merge and release acceptance, finalize with openspec archive code-review-capsule-customer-execution and update change order. Retain rollback/recovery evidence.
+
+Candidate evidence: signed-head run 34725587532 passed all three customer ABIs; see CUSTOMER_CI_EVIDENCE.json. Public baseline installation was verified as 0.49.77 before candidate substitution. The corrected module is not yet a public release. Original workplace cp312 digest stage and literal /var/opt/specfact path remain unidentified; no invented reproduction is claimed. Complete conditional project-runtime acceptance and public-release/merge/archive gates remain pending where unchecked.

@@ -183,6 +183,15 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/test_capsule_customer_gate.py::test_minimum_core_smoke_uses_current_authenticated_lock_not_completed_checkpoint
+    - case_id: 466-explicit-main-install
+      scenario_id: signed-release-customer-execution-gate
+      method: test
+      intent: Use the canonical main marketplace independent of inherited state.
+      observable: Installation explicitly uses env -i, main and the fresh venv executable before artifact/signature
+        verification.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_customer_gate.py::test_public_install_uses_clean_environment_and_explicit_main_marketplace
   openspec:code-review-capsule-customer-execution:review-run-command:non-root-customer-capsule-execution:
     rationale: Repair customer capsule behavior with mapped regressions; complete hosted signed-release acceptance
       remains pending.

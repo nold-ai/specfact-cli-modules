@@ -559,3 +559,10 @@ def test_namespace_denial_rejects_unverified_early_failures(monkeypatch, mutatio
         row["diagnostic"] = "capsule_materialization_failed:offline-install:some analyzer failure"
     with pytest.raises(ValueError, match="namespace"):
         gate.validate_report(report, returncode=1, expected="namespace-denial")
+
+
+def test_public_install_uses_clean_environment_and_explicit_main_marketplace():
+    workflow = (Path(__file__).parents[2] / ".github/workflows/capsule-customer-execution.yml").read_text()
+    assert "env -i" in workflow
+    assert "SPECFACT_MODULES_BRANCH=main" in workflow
+    assert '"$CUSTOMER_ROOT/venv/bin/specfact" module install' in workflow

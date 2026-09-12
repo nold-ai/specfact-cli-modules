@@ -60,7 +60,9 @@ jobs:
             --repository "$GITHUB_WORKSPACE" --evidence "$CUSTOMER_ROOT/installation-evidence" \
             --mode "$MODE" --installation-version)"
           cd "$CUSTOMER_ROOT"
-          specfact module install nold-ai/specfact-code-review --scope user \
+          env -i HOME="$HOME" TMPDIR="$TMPDIR" \
+            PATH="$CUSTOMER_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+            "$CUSTOMER_ROOT/venv/bin/specfact" module install nold-ai/specfact-code-review --scope user \
             --version "$EXPECTED_MODULE_VERSION" --source marketplace
           python "$GITHUB_WORKSPACE/scripts/capsule_customer_gate.py" \
             --repository "$GITHUB_WORKSPACE" --evidence "$CUSTOMER_ROOT/installation-evidence" \
