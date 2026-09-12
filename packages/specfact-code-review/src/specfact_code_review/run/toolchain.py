@@ -1231,7 +1231,7 @@ def acquire_oci_distribution(
     context = _acquisition_context(
         oci,
         cache_root=cache_root,
-        simulate_cache_hit=simulate_cache_hit,
+        simulate_cache_hit=simulate_cache_hit or os.environ.get("SPECFACT_CODE_REVIEW_CAPSULE_OFFLINE") == "1",
         credential=credential,
     )
     if isinstance(context, AcquisitionResult):

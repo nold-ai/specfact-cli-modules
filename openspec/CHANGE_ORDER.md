@@ -69,7 +69,7 @@ AI IDE, rerun, and compare improved evidence.
 
 | Change | GitHub issue | Positioning | Dependencies |
 |---|---|---|---|
-| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Planning only: reproduce and repair signed capsule execution as a non-root customer on hosted Ubuntu 24.04 for Python 3.11/3.12/3.13; validate the public release later | No open prerequisites; blocks core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
+| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Implementation authorized 2026-09-12; candidate repair and dogfooding gate in progress: validate signed capsule execution as a non-root customer on hosted Ubuntu 24.04 for Python 3.11/3.12/3.13; validate the public release later | No open prerequisites; blocks core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
 
 This bounded bugfix is independent of completed C14 bookkeeping and native-platform
 issue #460. Reproduction, implementation and release remain pending. Its planning PR

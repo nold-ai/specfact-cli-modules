@@ -28,9 +28,9 @@ The signed capsule path SHALL acquire public runtime artifacts through the produ
 
 The controller SHALL materialize capsules in user-owned staging without root privileges and verify their expected signed content and filesystem manifest. Equivalent supported installations SHALL produce the declared identity independently of cache location and supported ambient umask, without weakening integrity checks.
 
-#### Scenario: Python 3.12 root identity is reproducible
+#### Scenario: Every supported ABI root identity is reproducible
 
-- **GIVEN** the same locked cp312 artifacts, fresh caches, and ordinary host users under explicit umasks 022 and 077
+- **GIVEN** the same locked artifacts for each of cp311, cp312 and cp313, two distinct fresh cache roots, and ordinary host users under explicit umasks 022 and 077
 - **WHEN** acquisition, offline installation and final-root verification run
 - **THEN** materialization satisfies the signed content/mode manifest in both cases and records exact entry evidence for any failure
 - **AND** observed mismatches are not used to overwrite trusted digests merely to pass verification
@@ -53,12 +53,12 @@ The capability probe SHALL exercise the verified static launcher with the produc
 
 ### Requirement: Signed release customer execution gate
 
-A capsule repair release SHALL pass the Python 3.11/3.12/3.13 customer matrix against its actual public signed installation. Changed immutable artifacts SHALL receive new identities and consistent module patch version, lock/resource bindings, signatures and registry entries through canonical publication.
+A capsule repair release SHALL pass the GitHub-hosted Ubuntu 24.04 x86-64 Python 3.11/3.12/3.13 customer matrix against its actual public signed installation. Changed immutable artifacts SHALL receive new identities and consistent module patch version, lock/resource bindings, signatures and registry entries through canonical publication.
 
 #### Scenario: Published repair is accepted
 
 - **GIVEN** candidate regressions and quality gates passed and a corrected signed release was published
-- **WHEN** fresh non-root hosted jobs install that release and exercise clean/defective fixtures and the modules repository
+- **WHEN** fresh non-root GitHub-hosted Ubuntu 24.04 x86-64 jobs for Python 3.11, 3.12 and 3.13 install that release and exercise clean/defective fixtures and the modules repository
 - **THEN** all required analyzer coverage and expected outcomes are verified before the bug is closed
 - **AND** candidate-only smoke, prepared caches, privileged execution, skipped required analyzers, or UNKNOWN cannot replace that evidence
 

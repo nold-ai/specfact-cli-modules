@@ -535,3 +535,10 @@ def test_customer_threaded_controller_uses_fresh_trace_helper(
     result = sandbox_api._execute_trace_helper(["/proc/self/fd/3", "--unshare-all"], descriptor=3, timeout=1)
     assert result.status == "PASS"
     assert observed
+
+
+def test_customer_long_launcher_stderr_retains_namespace_stage(sandbox_api: Any) -> None:
+    stderr = "bwrap: Creating new namespace failed: Operation not permitted\n" + "x" * 4000
+    result = sandbox_api._launch_failure_reason(stderr)
+    assert result.startswith("namespace_unavailable:")
+    assert len(result) < 2100

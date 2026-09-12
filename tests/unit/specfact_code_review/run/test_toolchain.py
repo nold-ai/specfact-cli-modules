@@ -1697,4 +1697,22 @@ def test_customer_capsule_locks_the_analyzer_entrypoint_runtime_imports() -> Non
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
     for environment in lock["environments"]:
         imports = {name for component in environment["components"] for name in component["top_level_imports"]}
-        assert {"beartype", "icontract", "pydantic", "requests", "packaging"} <= imports, environment["environment_id"]
+        assert {"beartype", "icontract", "pydantic", "requests", "packaging", "yaml"} <= imports, environment[
+            "environment_id"
+        ]
+
+
+def test_customer_offline_acquisition_never_downloads(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CAPSULE_OFFLINE", "1")
+    observed = []
+    monkeypatch.setattr(
+        toolchain_api,
+        "_download_missing_oci_records",
+        lambda context: observed.append(context.simulate_cache_hit) or ("verified_cache", (), ""),
+    )
+    oci = _valid_lock()["environments"][0]["oci"]
+    oci["locator"] = "https://ghcr.io/v2/nold-ai/specfact-review-runtime/manifests/" + _digest("1")
+    toolchain_api.acquire_oci_distribution(oci, cache_root=tmp_path)
+    assert observed == [True]

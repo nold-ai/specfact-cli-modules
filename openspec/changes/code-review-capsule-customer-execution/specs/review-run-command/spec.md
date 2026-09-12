@@ -9,6 +9,7 @@ For the supported Linux x86-64 capsule path, the installed review command SHALL 
 #### Scenario: Public installation reviews independent fixtures
 
 - **GIVEN** a fresh public installation on hosted Ubuntu 24.04 x86-64 for each of Python 3.11, 3.12, and 3.13, with signed official modules and supported namespace policy
+- **AND** the installed module is verified with the approved public key, required integrity and signature checks, and its exact module name, publisher, version and payload digest are recorded independently of the capsule identity
 - **WHEN** a non-root user reviews independent clean and deliberately defective Git fixtures through the real CLI
 - **THEN** required analyzers actually execute and the reports and exit codes match fixture expectations, without publisher credentials, development source links, or signature overrides
 - **AND** empty selection, missing required analyzer coverage, or UNKNOWN does not satisfy successful fixture execution

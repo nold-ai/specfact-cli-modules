@@ -44,3 +44,19 @@ def test_customer_gate_requires_detected_defect_and_failure_exit():
     }
     with pytest.raises(ValueError, match="defect"):
         gate.validate_report(report, returncode=0, expected="defective")
+
+
+@pytest.mark.parametrize(
+    "status,exit_code", [(None, 0), ("PASS", 1), ("FAIL", 0), ("UNKNOWN", 1), ("NOT_APPLICABLE", 0)]
+)
+def test_customer_gate_rejects_inconsistent_repository_result(status, exit_code):
+    gate = _gate()
+    report = {
+        "analyzer_evidence": [
+            {"id": member, "execution_state": "ran", "evidence_outcome": "PASS"} for member in gate.ANALYZERS
+        ],
+        "assurance_status": status,
+        "has_unknown_required_evidence": False,
+    }
+    with pytest.raises(ValueError, match="repository"):
+        gate.validate_report(report, returncode=exit_code, expected="repository")

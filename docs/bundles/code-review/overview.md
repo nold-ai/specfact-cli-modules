@@ -86,3 +86,5 @@ specfact code review rules show --help
 - [Code review rules](../rules/)
 - [Code review module](/modules/code-review/)
 - [Codebase bundle overview](/bundles/codebase/overview/) — import, drift, validation, repro
+
+For a verified warm-cache check, set `SPECFACT_CODE_REVIEW_CAPSULE_OFFLINE=1`. Capsule acquisition then revalidates cached descriptors and refuses missing entries without downloading replacements. Use a complete cache from a prior successful cold run; this does not disable the analyzer sandbox or weaken signature checks.

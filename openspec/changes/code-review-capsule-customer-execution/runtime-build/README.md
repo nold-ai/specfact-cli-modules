@@ -23,3 +23,11 @@ Do not derive Linux identity from `docker cp` output on macOS: extraction change
 Python 3.11 and 3.12 development tags were published and anonymously verified. Python 3.13 publication was blocked by automatic approval review and awaits explicit authorization; its recorded leaf identity comes from a local OCI export. Until publication and the complete hosted matrix pass, these assets are not accepted for release.
 
 Rollback uses the previous immutable locks and normal signed revert/publication procedures. Do not delete or rewrite historical artifacts.
+
+## Revised runtime: complete runner imports
+
+The first hosted run after the beartype correction reached the real runner and reported missing `yaml`. PyYAML 6.0.3 was retrieved from [PyPI metadata](https://pypi.org/pypi/PyYAML/6.0.3/json), accessed 2026-09-13, and each ABI wheel's exact size and SHA-256 were verified. `pyyaml-reference-receipts.json` records these public wheel descriptors and new v2 artifacts. This is the second correction applied to the first reference builds; reconstruct the local v1 image from its recorded original-image Dockerfile first, then build the recorded v2 Dockerfile. No v1 publication is required to reproduce locally.
+
+Run the same two-container measurement process, additionally asserting `yaml.__version__ == "6.0.3"`. `refresh_lock.py --addition pyyaml` accepts only the reviewed beartype-corrected lock and the three approved PyYAML wheel identities. The real runner import was also exercised in a disposable Python 3.12 reference image as UID 1000 with network disabled; it passed. The image used only for this import smoke was not published.
+
+The owner explicitly approved all three v2 development runtime publications. All three are now published under `customer-466-cp311-v2`, `customer-466-cp312-v2`, and `customer-466-cp313-v2`; anonymous reads of manifest and config bytes matched the locally exported identities. The earlier pending cp313-v1 request was superseded. Public signed-module release and the three-ABI analyzer matrix remain separate acceptance gates.

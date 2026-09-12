@@ -17,6 +17,14 @@ _WHEEL_SHA256 = "sha256:d16c9bbc61ea14637596c5f6fbff2ee99cbe3573e46a716401734ef5
 _BASELINE_SHA256 = "sha256:65e686167a866116aeff86c522d9952d170ee1a1cb947941e2cad55a548afa9d"
 
 
+_YAML_BASELINE_SHA256 = "sha256:1974743107ec766dc4e62a48f654018d44a01db5619f424397defc95e2aa4fb3"
+_YAML_WHEEL_SHA256 = {
+    "cp311": "sha256:b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d",
+    "cp312": "sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
+    "cp313": "sha256:0f29edc409a6392443abf94b9cf89ce99889a1dd5376d94316ae5145dfedd5d6",
+}
+
+
 def _digest(payload: bytes) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
@@ -33,11 +41,14 @@ def _write(path: Path, value: object) -> None:
     path.write_bytes(_canonical(value) + b"\n")
 
 
-def _component(build_root: Path) -> dict[str, Any]:
-    descriptor = _load(build_root / "beartype-wheel-descriptor.json")
-    wheel = build_root / descriptor["filename"]
-    if _digest(wheel.read_bytes()) != _WHEEL_SHA256:
-        raise ValueError("beartype wheel differs from reviewed PyPI identity")
+def _component(build_root: Path, *, abi: str = "", addition: str = "beartype") -> dict[str, Any]:
+    descriptor_path = f"{abi}-wheel-descriptor.json" if addition == "pyyaml" else "beartype-wheel-descriptor.json"
+    descriptor = _load(build_root / descriptor_path)
+    wheel_root = build_root / abi if addition == "pyyaml" else build_root
+    wheel = wheel_root / descriptor["filename"]
+    expected = _YAML_WHEEL_SHA256[abi] if addition == "pyyaml" else _WHEEL_SHA256
+    if _digest(wheel.read_bytes()) != expected or descriptor["sha256"] != expected:
+        raise ValueError("wheel differs from reviewed PyPI identity")
     with zipfile.ZipFile(wheel) as archive:
         payload = [
             {"path": name, "size": len(archive.read(name)), "sha256": _digest(archive.read(name))}
@@ -45,17 +56,21 @@ def _component(build_root: Path) -> dict[str, Any]:
             if not name.endswith("/")
         ]
     return {
-        "id": "beartype",
-        "normalized_name": "beartype",
+        "id": descriptor["normalized_name"],
+        "normalized_name": descriptor["normalized_name"],
         "kind": "python_distribution",
         "role": "direct",
-        "version": "0.22.9",
-        "specifier": "==0.22.9",
+        "version": descriptor["version"],
+        "specifier": descriptor["direct_specifier"],
         "wheel": descriptor["filename"],
-        "wheel_sha256": _WHEEL_SHA256,
+        "wheel_sha256": expected,
         "wheel_size": descriptor["size"],
-        "wheel_tags": {"python": "py3", "abi": "none", "platform": "any"},
-        "top_level_imports": ["beartype"],
+        "wheel_tags": {
+            "python": descriptor["python_tag"],
+            "abi": descriptor["abi_tag"],
+            "platform": descriptor["platform_tag"],
+        },
+        "top_level_imports": ["_yaml", "yaml"] if addition == "pyyaml" else ["beartype"],
         "interpreter": "/opt/specfact/python/bin/python",
         "entry_points": [],
         "entry_points_sha256": descriptor["entry_points_sha256"],
@@ -107,11 +122,15 @@ def _update_environment(environment: dict[str, Any], component: dict[str, Any], 
     environment["wheelhouse"] = _load(build_root / abi / "manifest.json")
     environment["components"].append(copy.deepcopy(component))
     environment["components"].sort(key=lambda item: item["id"])
-    environment["activated_extras"]["beartype"] = []
-    environment["reserved_import_prefixes"] = sorted(set(environment["reserved_import_prefixes"]) | {"beartype"})
+    environment["activated_extras"][component["normalized_name"]] = []
+    environment["reserved_import_prefixes"] = sorted(
+        set(environment["reserved_import_prefixes"]) | set(component["top_level_imports"])
+    )
     old_root.update(reference)
     old_root["wheelhouse_manifest_digest"] = environment["wheelhouse"]["digest"]
-    old_root["installed_distributions"].append({"normalized_name": "beartype", "version": "0.22.9"})
+    old_root["installed_distributions"].append(
+        {"normalized_name": component["normalized_name"], "version": component["version"]}
+    )
     old_root["installed_distributions"].sort(key=lambda item: item["normalized_name"])
     environment["two_storage_root_materialization"] = {
         "first": "independent-reference-container-a",
@@ -149,17 +168,20 @@ def _logical_component(component: dict[str, Any], environments: list[dict[str, A
         "wheel_tags",
     )
     return {
-        "id": "beartype",
-        "normalized_name": "beartype",
-        "version": "0.22.9",
-        "exact_specifier": "==0.22.9",
+        "id": component["id"],
+        "normalized_name": component["normalized_name"],
+        "version": component["version"],
+        "exact_specifier": component["specifier"],
         "kind": "python_distribution",
         "role": "direct",
         "generated_launcher_identity_excluded": True,
-        "module_or_entry_point": {"entry_points": [], "top_level_imports": ["beartype"]},
+        "module_or_entry_point": {"entry_points": [], "top_level_imports": component["top_level_imports"]},
         "environment_payloads": [
             {
-                **{key: component[key] for key in payload_keys},
+                **{
+                    key: next(entry for entry in item["components"] if entry["id"] == component["id"])[key]
+                    for key in payload_keys
+                },
                 "environment_id": item["environment_id"],
                 "sealed_interpreter_identity": "/opt/specfact/python/bin/python",
             }
@@ -172,15 +194,18 @@ def _main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--build-root", type=Path, required=True)
+    parser.add_argument("--addition", choices=("beartype", "pyyaml"), default="beartype")
     args = parser.parse_args()
     package = args.repo / "packages/specfact-code-review"
     resources = package / "src/specfact_code_review/resources/contracts"
     lock_path = resources / "pr-range-v1-toolchain-lock.json"
-    if _digest(lock_path.read_bytes()) != _BASELINE_SHA256:
+    baseline = _YAML_BASELINE_SHA256 if args.addition == "pyyaml" else _BASELINE_SHA256
+    if _digest(lock_path.read_bytes()) != baseline:
         raise ValueError("refusing to refresh anything except the reviewed immutable baseline")
     lock = _load(lock_path)
-    component = _component(args.build_root)
+    component = {}
     for environment in lock["environments"]:
+        component = _component(args.build_root, abi=environment["python_abi"], addition=args.addition)
         _update_environment(environment, component, args.build_root)
     lock["logical_components"].append(_logical_component(component, lock["environments"]))
     lock["logical_components"].sort(key=lambda item: item["id"])
@@ -190,9 +215,9 @@ def _main() -> None:
     schema_path = resources / "project-runtime-layer-v1.schema.json"
     schema = _load(schema_path)
     catalog = schema["reserved_component_catalog"]
-    catalog["prefixes"] = sorted(set(catalog["prefixes"]) | {"beartype"})
+    catalog["prefixes"] = sorted(set(catalog["prefixes"]) | set(component["top_level_imports"]))
     for environment in catalog["prefixes_by_environment"]:
-        environment["prefixes"] = sorted(set(environment["prefixes"]) | {"beartype"})
+        environment["prefixes"] = sorted(set(environment["prefixes"]) | set(component["top_level_imports"]))
     _write(lock_path, lock)
     _write(schema_path, schema)
     manifest_path = package / "module-package.yaml"

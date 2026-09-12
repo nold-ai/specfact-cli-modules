@@ -48,7 +48,7 @@ def _validate_expected_outcome(report: dict[str, Any], returncode: int, expected
         detected = any(row.get("evidence_outcome") == "FAIL" for row in report["analyzer_evidence"])
         if (returncode, status) != (1, "FAIL") or not detected or not report.get("findings"):
             raise ValueError("controlled defect was not detected with a failing exit")
-    if expected == "repository" and returncode not in {0, 1}:
+    if expected == "repository" and (returncode, status) not in {(0, "PASS"), (1, "FAIL")}:
         raise ValueError("repository review did not complete")
 
 
@@ -129,6 +129,7 @@ def _review(root: Path, evidence: Path, name: str, expected: str) -> None:
             timeout=1800,
             check=False,
             umask=0o077 if name == "warm" else 0o022,
+            env={**os.environ, "SPECFACT_CODE_REVIEW_CAPSULE_OFFLINE": "1" if name == "warm" else "0"},
         )
     (evidence / f"{name}-command.json").write_text(
         json.dumps({"argv": command, "exit_code": result.returncode}), encoding="utf-8"

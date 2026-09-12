@@ -1,4 +1,8 @@
-# Planning Validation
+# Change Validation
+
+Implementation was authorized on 2026-09-12 after the historical planning checkpoint below. Current status: In Progress; production fixes and candidate CI are under validation. Public signed-release acceptance remains pending. See TDD_EVIDENCE.md for executed regressions and hosted failures.
+
+## Historical planning checkpoint
 
 - Checked: 2026-09-12T23:23:44+02:00 (Europe/Berlin).
 - Delivery maturity: planned; implementation evidence: not-yet-available.
@@ -28,4 +32,12 @@ Core #680's native blocked-by set contains the new modules #466 plus existing mo
 
 ## Acceptance boundary
 
-This delivery contains proposal/design, investigation, spec deltas, future tasks, planned Requirements evidence and change order only. It does not claim Linux reproduction, analyzer PASS, runtime fixes, release publication or completion. All 23 future tasks remain unchecked. The planning PR uses Refs #466, targets dev, and must not close the bug. Future production changes require their own recorded failing/passing evidence, quality review and signed release acceptance.
+The original planning checkpoint contained proposal/design, investigation, spec deltas, future tasks, planned Requirements evidence and change order only. That checkpoint did not claim Linux reproduction, analyzer PASS, runtime fixes, release publication or completion. All 23 future tasks remain unchecked. The planning PR uses Refs #466, targets dev, and must not close the bug. Future production changes require their own recorded failing/passing evidence, quality review and signed release acceptance.
+
+## Implementation review checkpoint — 2026-09-13 Europe/Berlin
+
+- Normal signed-commit hooks passed payload/version policy, formatting, YAML, import boundaries, typing/lint, changed-line SpecFact code review and 28 contract tests for d14ce7e2. The canonical signing bot then signed the updated manifest.
+- Earlier full and smart suites passed 1,829 and 1,830 tests respectively. New runtime-specific selectors passed 141 tests. Fresh broad verification is required after subsequent edits.
+- Hosted candidate run 34723324162 is exercising the real CLI. Its Python 3.13 report fails closed at the unpublished new OCI manifest (HTTP 404); publication awaits explicit approval. No three-ABI PASS or release acceptance is claimed.
+- Review assertions that full scope bypasses capsules and installed payloads permit unsigned execution were checked against production code: commands imports run_capsule_review, and installed_module_identity_from_core requires signature=True, integrity=True and the approved public key. Actual full-scope hosted reports contain all ten capsule rows. Those assertions do not describe the current path.
+- Planning-only review comments are superseded by the user's explicit implementation authorization; CHANGE_ORDER now reflects it. Materialization and release scenarios now explicitly cover all three ABIs, two cache roots, and the selected Ubuntu image.

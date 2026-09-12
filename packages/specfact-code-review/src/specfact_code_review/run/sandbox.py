@@ -292,8 +292,9 @@ def _stop_traced_process(process: subprocess.Popen[str]) -> None:
 def _launch_failure_reason(stderr: str) -> str:
     """Preserve bounded launcher diagnostics in the existing UNKNOWN report surface."""
 
-    detail = " ".join(stderr.split())[-2000:]
-    lowered = detail.lower()
+    normalized = " ".join(stderr.split())
+    lowered = normalized.lower()
+    detail = normalized[-2000:]
     if "bwrap:" in lowered and "namespace" in lowered:
         stage = "namespace_unavailable"
     elif "bwrap:" in lowered and any(marker in lowered for marker in ("mkdir", "read-only file system", "mount")):
