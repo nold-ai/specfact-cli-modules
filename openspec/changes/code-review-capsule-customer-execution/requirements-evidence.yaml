@@ -1,0 +1,156 @@
+schema_version: '2'
+requirements:
+  ? openspec:code-review-capsule-customer-execution:code-review-tool-dependencies:anonymous-verified-capsule-acquisition-and-reuse
+  : rationale: Make the customer capsule behavior and its future acceptance evidence reviewable before
+      implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#466
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-capsule-customer-execution/specs/code-review-tool-dependencies/spec.md
+    verification_cases:
+    - case_id: 466-code-review-tool-dependencies-1-1
+      scenario_id: anonymous-verified-capsule-acquisition-and-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Empty customer cache retrieves public runtime.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+    - case_id: 466-code-review-tool-dependencies-1-2
+      scenario_id: anonymous-verified-capsule-acquisition-and-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Warm cache preserves verified identity.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+    - case_id: 466-code-review-tool-dependencies-1-3
+      scenario_id: anonymous-verified-capsule-acquisition-and-reuse
+      method: inspection
+      intent: 'Inspect the planned scenario: Corrupt or incomplete cache is not accepted.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+  ? openspec:code-review-capsule-customer-execution:code-review-tool-dependencies:non-root-deterministic-capsule-materialization
+  : rationale: Make the customer capsule behavior and its future acceptance evidence reviewable before
+      implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#466
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-capsule-customer-execution/specs/code-review-tool-dependencies/spec.md
+    verification_cases:
+    - case_id: 466-code-review-tool-dependencies-2-1
+      scenario_id: non-root-deterministic-capsule-materialization
+      method: inspection
+      intent: 'Inspect the planned scenario: Python 3.12 root identity is reproducible.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+  openspec:code-review-capsule-customer-execution:code-review-tool-dependencies:verified-launcher-namespace-prerequisite:
+    rationale: Make the customer capsule behavior and its future acceptance evidence reviewable before
+      implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#466
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-capsule-customer-execution/specs/code-review-tool-dependencies/spec.md
+    verification_cases:
+    - case_id: 466-code-review-tool-dependencies-3-1
+      scenario_id: verified-launcher-namespace-prerequisite
+      method: inspection
+      intent: 'Inspect the planned scenario: Namespace policy permits the production launcher.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+    - case_id: 466-code-review-tool-dependencies-3-2
+      scenario_id: verified-launcher-namespace-prerequisite
+      method: inspection
+      intent: 'Inspect the planned scenario: Namespace policy denies the production launcher.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+  openspec:code-review-capsule-customer-execution:code-review-tool-dependencies:signed-release-customer-execution-gate:
+    rationale: Make the customer capsule behavior and its future acceptance evidence reviewable before
+      implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#466
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-capsule-customer-execution/specs/code-review-tool-dependencies/spec.md
+    verification_cases:
+    - case_id: 466-code-review-tool-dependencies-4-1
+      scenario_id: signed-release-customer-execution-gate
+      method: inspection
+      intent: 'Inspect the planned scenario: Published repair is accepted.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+    - case_id: 466-code-review-tool-dependencies-4-2
+      scenario_id: signed-release-customer-execution-gate
+      method: inspection
+      intent: 'Inspect the planned scenario: Release rollback preserves immutable history.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+  openspec:code-review-capsule-customer-execution:review-run-command:non-root-customer-capsule-execution:
+    rationale: Make the customer capsule behavior and its future acceptance evidence reviewable before
+      implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#466
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-capsule-customer-execution/specs/review-run-command/spec.md
+    verification_cases:
+    - case_id: 466-review-run-command-1-1
+      scenario_id: non-root-customer-capsule-execution
+      method: inspection
+      intent: 'Inspect the planned scenario: Public installation reviews independent fixtures.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+    - case_id: 466-review-run-command-1-2
+      scenario_id: non-root-customer-capsule-execution
+      method: inspection
+      intent: 'Inspect the planned scenario: Installed CLI reviews the modules repository.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+  openspec:code-review-capsule-customer-execution:review-run-command:sealed-capsule-mount-destinations-and-private-writes:
+    rationale: Make the customer capsule behavior and its future acceptance evidence reviewable before
+      implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#466
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-capsule-customer-execution/specs/review-run-command/spec.md
+    verification_cases:
+    - case_id: 466-review-run-command-2-1
+      scenario_id: sealed-capsule-mount-destinations-and-private-writes
+      method: inspection
+      intent: 'Inspect the planned scenario: Every launch mount variant starts.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+    - case_id: 466-review-run-command-2-2
+      scenario_id: sealed-capsule-mount-destinations-and-private-writes
+      method: inspection
+      intent: 'Inspect the planned scenario: Private state succeeds while sealed writes fail.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+  openspec:code-review-capsule-customer-execution:review-run-command:actionable-capsule-failure-evidence:
+    rationale: Make the customer capsule behavior and its future acceptance evidence reviewable before
+      implementation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#466
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-capsule-customer-execution/specs/review-run-command/spec.md
+    verification_cases:
+    - case_id: 466-review-run-command-3-1
+      scenario_id: actionable-capsule-failure-evidence
+      method: inspection
+      intent: 'Inspect the planned scenario: Namespace or directory setup fails.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.
+    - case_id: 466-review-run-command-3-2
+      scenario_id: actionable-capsule-failure-evidence
+      method: inspection
+      intent: 'Inspect the planned scenario: Runtime digest differs.'
+      observable: The source requirement and Given/When/Then scenario are present and validate at planned
+        maturity; no runtime execution, repair, or release evidence is claimed.

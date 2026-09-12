@@ -7,12 +7,12 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 22 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 23 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 22 direct active-tree entries. The closed R08
+`openspec list` reflects all 23 direct active-tree entries. The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec
@@ -64,6 +64,16 @@ issues and are now archived:
 These archived specs are now the shipped basis for the flagship demo: run review,
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
 AI IDE, rerun, and compare improved evidence.
+
+## Customer Capsule Corrective Track
+
+| Change | GitHub issue | Positioning | Dependencies |
+|---|---|---|---|
+| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Planning only: reproduce and repair signed capsule execution as a non-root customer on hosted Ubuntu 24.04 for Python 3.11/3.12/3.13; validate the public release later | No open prerequisites; blocks core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
+
+This bounded bugfix is independent of completed C14 bookkeeping and native-platform
+issue #460. Reproduction, implementation and release remain pending. Its planning PR
+leaves #466 open/Todo and does not alter existing release identities.
 
 ## Completed-Issue Reconciliation
 
