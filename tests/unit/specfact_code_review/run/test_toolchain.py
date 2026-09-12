@@ -5,6 +5,7 @@ from __future__ import annotations
 import errno
 import hashlib
 import io
+import json
 import os
 import shutil
 import stat
@@ -1686,3 +1687,14 @@ def test_customer_composition_is_independent_of_controller_umask(toolchain_api: 
         assert result.status == "PASS"
         identities.append(result.final_composite_root_manifest_digest)
     assert identities[0] == identities[1]
+
+
+def test_customer_capsule_locks_the_analyzer_entrypoint_runtime_imports() -> None:
+    lock_path = (
+        Path(__file__).parents[4]
+        / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json"
+    )
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    for environment in lock["environments"]:
+        imports = {name for component in environment["components"] for name in component["top_level_imports"]}
+        assert {"beartype", "icontract", "pydantic", "requests", "packaging"} <= imports, environment["environment_id"]

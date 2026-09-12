@@ -45,3 +45,17 @@ The first commit attempt was stopped by the normal review hook: the new driver h
 [Actions run 34721199840](https://github.com/nold-ai/specfact-cli-modules/actions/runs/34721199840), candidate commit `187524de5011e0c9f19f1963aa95fc6f0ed809a7`, failed all three Python jobs after anonymous installation, runtime acquisition and non-root final-root verification. Each cold/warm/defective/repository report was UNKNOWN at `candidate_payload_unavailable`: the development module symlink caused candidate Git-root discovery to point at the temporary customer directory. No analyzer execution is claimed. This also means the signed cp312 root digest passed in the actual non-root hosted path after the installation-mode correction.
 
 Before fixing that path, `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_runner.py -k reconstructed_from_verified_git --tb=short` passed the direct path and failed the symlink path with the same Git exit 128. Resolving the loader path before determining its Git root preserves commit/tree/context verification.
+
+## Multithreaded CLI launch checkpoint — 2026-09-13 Europe/Berlin
+
+Reports uploaded by hosted run 34721580237 before replacement by the signing-bot run reached `pre_namespace_observation_requires_single_thread` for all three ABIs. Real CLI background threads prevent the guarded pre-exec tracer from starting; the guard must remain. The mapped `test_customer_threaded_controller_uses_fresh_trace_helper` failed before implementation because the helper was absent. A fresh isolated controller process will inherit only the verified launcher descriptor and run the unchanged guarded tracer.
+
+## Analyzer import closure checkpoint — 2026-09-13 Europe/Berlin
+
+The immutable cp312 interpreter returned no import spec for `beartype`; none of the three signed analyzer component sets contains it, although the real runner imports it at module load. After correcting a missing test import, `test_customer_capsule_locks_the_analyzer_entrypoint_runtime_imports` failed specifically for missing `beartype` on cp311. The proposed dependency is beartype 0.22.9, verified against [PyPI metadata](https://pypi.org/pypi/beartype/0.22.9/json): wheel `beartype-0.22.9-py3-none-any.whl`, 1,333,658 bytes, SHA-256 `d16c9bbc61ea14637596c5f6fbff2ee99cbe3573e46a716401734ef50c3060c2`. New immutable runtime layers and updated signed bindings are required; old OCI assets remain intact.
+
+## Runtime correction verification — 2026-09-13 Europe/Berlin
+
+Two independent offline Linux reference installations per ABI produced identical filesystem manifests. The existing `bin`, `bootstrap`, `lib` and `python` subroots were unchanged. New wheel/analyzer identities and OCI provenance are retained in `runtime-build/reference-receipts.json`; Python 3.13 publication remains pending explicit approval. This is build evidence, not public release acceptance.
+
+`hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_toolchain.py tests/unit/specfact_code_review/run/test_sandbox.py --tb=short`: **141 passed**, including the fresh-process tracer and missing import closure regressions. `SPECFACT_CLI_REPO=/private/tmp/specfact-core-customer-466 hatch run type-check`: **0 errors, 0 warnings**. The isolated core checkout is released 0.55.4; the user's sibling core checkout was not changed.

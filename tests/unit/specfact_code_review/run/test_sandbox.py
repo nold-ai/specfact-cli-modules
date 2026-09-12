@@ -175,9 +175,11 @@ def test_runtime_capsule_boots_in_empty_bwrap_root_without_host_mounts(sandbox_a
     assert not plan.host_runtime_mounts
 
 
+@pytest.mark.parametrize("threads", [1, 2])
 def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor(
-    sandbox_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    sandbox_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, threads: int
 ) -> None:
+    monkeypatch.setattr(sandbox_api.threading, "active_count", lambda: threads)
     context = _context(tmp_path, sandbox_api)
     bubblewrap = context.capsule_root / "opt/specfact/bin/bwrap-static"
     bubblewrap.parent.mkdir(parents=True)
@@ -190,7 +192,8 @@ def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor
         calls.append((command, descriptor, timeout))
         return sandbox_api.SandboxExecution("PASS", 0, "{}", "")
 
-    monkeypatch.setattr(sandbox_api, "_execute_traced_launch", run, raising=False)
+    operation = "_execute_traced_launch" if threads == 1 else "_execute_trace_helper"
+    monkeypatch.setattr(sandbox_api, operation, run)
     identity = sandbox_api.BubblewrapIdentity(
         path="/opt/specfact/bin/bwrap-static",
         format="ELF",
@@ -221,6 +224,7 @@ def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor
 def test_sandbox_executor_rejects_failed_pre_namespace_validation(
     sandbox_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(sandbox_api.threading, "active_count", lambda: 1)
     context = _context(tmp_path, sandbox_api)
     bubblewrap = context.capsule_root / "opt/specfact/bin/bwrap-static"
     bubblewrap.parent.mkdir(parents=True)
@@ -506,3 +510,28 @@ def test_customer_launch_failure_preserves_stage(sandbox_api: Any, stderr: str, 
     assert diagnostic.startswith(expected + ":")
     assert stderr in diagnostic
     assert len(sandbox_api._launch_failure_reason("x" * 5000)) < 2100
+
+
+def test_customer_threaded_controller_uses_fresh_trace_helper(
+    sandbox_api: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+    import subprocess
+
+    observed = []
+
+    def run(command, **kwargs):
+        observed.append(command)
+        assert command[1] == "-I"
+        assert kwargs["pass_fds"] == (3,)
+        assert "preexec_fn" not in kwargs
+        assert kwargs["env"] == {}
+        assert json.loads(kwargs["input"]) == ["/proc/self/fd/3", "--unshare-all"]
+        return subprocess.CompletedProcess(
+            command, 0, json.dumps({"status": "PASS", "returncode": 0, "stdout": "{}", "stderr": "", "reason": ""}), ""
+        )
+
+    monkeypatch.setattr(sandbox_api.subprocess, "run", run)
+    result = sandbox_api._execute_trace_helper(["/proc/self/fd/3", "--unshare-all"], descriptor=3, timeout=1)
+    assert result.status == "PASS"
+    assert observed

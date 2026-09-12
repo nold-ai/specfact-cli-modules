@@ -13,7 +13,7 @@ import subprocess
 import sys
 import threading
 from contextlib import suppress
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Literal
 
@@ -303,6 +303,35 @@ def _launch_failure_reason(stderr: str) -> str:
     return f"{stage}:{detail}" if detail else stage
 
 
+def _decode_trace_helper(stdout: str) -> SandboxExecution:
+    payload = json.loads(stdout)
+    expected = {"status", "returncode", "stdout", "stderr", "reason"}
+    if not isinstance(payload, dict) or set(payload) != expected or payload["status"] not in {"PASS", "UNKNOWN"}:
+        raise ValueError("invalid trace helper response")
+    if not all(isinstance(payload[key], str) for key in ("stdout", "stderr", "reason")):
+        raise ValueError("invalid trace helper diagnostics")
+    if payload["returncode"] is not None and type(payload["returncode"]) is not int:
+        raise ValueError("invalid trace helper exit")
+    return SandboxExecution(**payload)
+
+
+def _execute_trace_helper(command: list[str], *, descriptor: int, timeout: int) -> SandboxExecution:
+    """Move guarded pre-exec tracing out of the multithreaded CLI process."""
+    result = subprocess.run(
+        [sys.executable, "-I", str(Path(__file__).resolve()), "--trace-helper", str(descriptor), str(timeout)],
+        input=json.dumps(command),
+        text=True,
+        capture_output=True,
+        check=False,
+        env={},
+        pass_fds=(descriptor,),
+        timeout=timeout + 30,
+    )
+    if result.returncode != 0:
+        return SandboxExecution("UNKNOWN", reason="trace_helper_failed")
+    return _decode_trace_helper(result.stdout)
+
+
 def _execute_traced_launch(command: list[str], *, descriptor: int, timeout: int) -> SandboxExecution:
     """Trace exec, validate its pre-namespace closure, then permit Bubblewrap to run."""
 
@@ -552,6 +581,8 @@ def execute_launch_plan(
     try:
         descriptor = _verified_bubblewrap_descriptor(plan.startup_sys_path[0], identity)
         command = _bubblewrap_command(descriptor, plan, extra_argv=extra_argv)
+        if threading.active_count() != 1:
+            return _execute_trace_helper(command, descriptor=descriptor, timeout=timeout)
         return _execute_traced_launch(command, descriptor=descriptor, timeout=timeout)
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         return SandboxExecution("UNKNOWN", reason=f"sandbox_launch_failed:{exc}")
@@ -601,3 +632,20 @@ def preflight_reserved_imports(context: SnapshotInvocationContext) -> PreflightR
     if collisions:
         return PreflightResult("UNKNOWN", "reserved_import_collision", collisions)
     return PreflightResult("PASS")
+
+
+def _trace_helper_main() -> None:
+    if len(sys.argv) != 4 or sys.argv[1] != "--trace-helper":
+        raise SystemExit("invalid trace helper invocation")
+    descriptor, timeout = int(sys.argv[2]), int(sys.argv[3])
+    command = json.loads(sys.stdin.read())
+    if descriptor < 3 or timeout <= 0 or not isinstance(command, list) or not command:
+        raise ValueError("invalid trace helper request")
+    if not all(isinstance(value, str) for value in command) or command[0] != f"/proc/self/fd/{descriptor}":
+        raise ValueError("trace helper descriptor mismatch")
+    result = _execute_traced_launch(command, descriptor=descriptor, timeout=timeout)
+    sys.stdout.write(json.dumps(asdict(result)))
+
+
+if __name__ == "__main__":
+    _trace_helper_main()
