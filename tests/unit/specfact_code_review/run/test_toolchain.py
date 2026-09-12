@@ -287,8 +287,9 @@ def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(
     assert offline_identities == [(1001, 1002)]
 
 
+@pytest.mark.parametrize("controller_umask", [0o022, 0o077])
 def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
-    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, controller_umask: int
 ) -> None:
     payload = b"signed static bubblewrap"
     bubblewrap = tmp_path / "opt/specfact/bin/bwrap-static"
@@ -315,6 +316,8 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
     observed_descriptors: list[int] = []
 
     def observe_launch(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        assert kwargs.get("umask") == 0o022
+        assert (tmp_path / "opt/specfact/analyzers").stat().st_mode & 0o777 == 0o755
         descriptor = kwargs["pass_fds"][0]
         observed_descriptors.append(descriptor)
         assert command[0] == f"/proc/self/fd/{descriptor}"
@@ -325,7 +328,11 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
 
     monkeypatch.setattr(toolchain_api.subprocess, "run", observe_launch)
 
-    toolchain_api._offline_install(tmp_path, environment, ())
+    previous = os.umask(controller_umask)
+    try:
+        toolchain_api._offline_install(tmp_path, environment, ())
+    finally:
+        os.umask(previous)
     assert observed_descriptors
     with pytest.raises(OSError):
         os.fstat(observed_descriptors[0])
@@ -1608,3 +1615,51 @@ def test_installed_payload_reports_empty_root(toolchain_api: Any, tmp_path: Path
     result = toolchain_api.verify_installed_module_payload(metadata)
     assert result.status == "UNKNOWN"
     assert result.reason == "payload_root_empty"
+
+
+def test_customer_default_materialization_acquires_missing_cache_entries(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lock = _valid_lock()
+    lock["environments"][1]["oci"]["locator"] = (
+        "https://ghcr.io/v2/nold-ai/specfact-review-runtime/manifests/sha256:" + "1" * 64
+    )
+    monkeypatch.setattr(toolchain_api.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(toolchain_api.platform, "machine", lambda: "x86_64")
+    observed = []
+
+    def acquire(_oci: Any, **kwargs: Any) -> Any:
+        observed.append(kwargs["simulate_cache_hit"])
+        return toolchain_api.AcquisitionResult("UNKNOWN", reason="stop_after_acquisition")
+
+    monkeypatch.setattr(toolchain_api, "acquire_oci_distribution", acquire)
+    toolchain_api.materialize_capsule(lock, environment_id="linux-x86_64-cp312", storage_root=tmp_path)
+    assert observed == [False]
+
+
+def test_customer_composition_authenticates_empty_mount_anchors(toolchain_api: Any, tmp_path: Path) -> None:
+    payload = toolchain_api.verify_installed_module_payload(_installed_payload(tmp_path / "installed"))
+    root = tmp_path / "capsule"
+    result = toolchain_api.compose_post_base_capsule(
+        payload,
+        capsule_root=root,
+        immutable_base_root_digest=_digest("5"),
+        analyzer_installed_set_digest=_digest("6"),
+        native_launcher_digest=_digest("7"),
+        project_runtime_identity="not-applicable",
+    )
+    assert result.status == "PASS"
+    for name in ("snapshot", "config", "output", "tmp", "control", "project-runtime"):
+        anchor = root / "opt/specfact" / name
+        assert anchor.is_dir(), name
+        assert not tuple(anchor.iterdir())
+        assert stat.S_IMODE(anchor.stat().st_mode) == 0o755
+    entries, _ = toolchain_api._manifest_entries(root, include_root=False)
+    assert toolchain_api.canonical_json_digest(entries) == result.final_composite_root_manifest_digest
+
+
+def test_customer_root_mismatch_reports_expected_and_actual_identity(toolchain_api: Any, tmp_path: Path) -> None:
+    expected = {"entry_count": 1, "regular_file_bytes": 1, "manifest_digest": "sha256:" + "a" * 64}
+    with pytest.raises(ValueError, match="expected_digest=sha256:" + "a" * 64) as caught:
+        toolchain_api._verify_final_root_manifest(tmp_path, {"final_root_manifest": expected})
+    assert "actual_digest=sha256:" in str(caught.value)

@@ -643,7 +643,12 @@ def _protected_candidate_payload() -> SelectedModulePayload:
 
 
 def _selected_module_payload() -> SelectedModulePayload:
-    if os.environ.get("GITHUB_ACTIONS") == "true":
+    source = Path(__file__).resolve()
+    candidate_root = source.parents[5]
+    candidate_checkout = (
+        source == candidate_root / _PACKAGE_ROOT / "run/runner.py" and (candidate_root / ".git").exists()
+    )
+    if os.environ.get("GITHUB_ACTIONS") == "true" and candidate_checkout:
         return _protected_candidate_payload()
     payload, reason = _official_installed_payload()
     return SelectedModulePayload(payload, reason)
@@ -1094,7 +1099,7 @@ def _prepare_capsule_process_roots(process_root: Path) -> tuple[Path, Path, Path
     )
     for root in roots:
         root.mkdir()
-    for projected_root in ("coverage", "pytest"):
+    for projected_root in ("coverage", "pytest", "home", "cache", "config", "data", "state"):
         (roots[2] / projected_root).mkdir()
     return roots
 

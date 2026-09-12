@@ -473,3 +473,36 @@ def test_runtime_observation_declares_non_adversarial_candidate_assumption(sandb
     assert statement.adversarial_candidate_resistance is False
     assert "candidate Python" in statement.limitation
     assert statement.status_on_policy_uncertainty == "UNKNOWN"
+
+
+def test_customer_configuration_mounts_are_sealed_before_execution(sandbox_api: Any, tmp_path: Path) -> None:
+    context = _context(tmp_path, sandbox_api)
+    second = tmp_path / "second-config"
+    second.mkdir()
+    plan = sandbox_api.build_launch_plan(context.with_config_roots((*context.config_roots, second)))
+    command = sandbox_api._bubblewrap_command(9, plan, extra_argv=())
+    private_config = next(
+        i for i in range(len(command) - 1) if command[i : i + 2] == ["--tmpfs", "/opt/specfact/config"]
+    )
+    sealed_config = next(
+        i for i in range(len(command) - 1) if command[i : i + 2] == ["--remount-ro", "/opt/specfact/config"]
+    )
+    assert private_config < command.index("/opt/specfact/config/0") < sealed_config
+    assert command.index("/opt/specfact/config/1") < sealed_config < command.index("--chdir")
+    assert command[command.index("HOME") + 1].startswith("/opt/specfact/tmp")
+    assert command[command.index("TMPDIR") + 1].startswith("/opt/specfact/tmp")
+
+
+@pytest.mark.parametrize(
+    ("stderr", "expected"),
+    [
+        ("bwrap: Creating new namespace failed: Operation not permitted", "namespace_unavailable"),
+        ("bwrap: Can't mkdir /opt/specfact/config: Read-only file system", "sandbox_filesystem_error"),
+        ("analyzer failed", "analyzer_process_error"),
+    ],
+)
+def test_customer_launch_failure_preserves_stage(sandbox_api: Any, stderr: str, expected: str) -> None:
+    diagnostic = sandbox_api._launch_failure_reason(stderr)
+    assert diagnostic.startswith(expected + ":")
+    assert stderr in diagnostic
+    assert len(sandbox_api._launch_failure_reason("x" * 5000)) < 2100

@@ -1,6 +1,6 @@
 # Tasks: Customer Capsule Execution
 
-Planning-only delivery. All reproduction, behavior, and release tasks below remain pending. Future behavior work follows spec → mapped tests → actual failing evidence → production repair → passing evidence. Planning checks are recorded separately in CHANGE_VALIDATION.md.
+Implementation authorized on 2026-09-12 Europe/Berlin in the existing dedicated worktree and PR #467. Release acceptance remains pending. Behavior work follows spec → mapped tests → actual failing evidence → production repair → passing evidence. Planning checks are recorded separately in CHANGE_VALIDATION.md.
 
 ## 1. Revalidate implementation readiness
 

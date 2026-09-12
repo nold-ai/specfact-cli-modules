@@ -289,6 +289,20 @@ def _stop_traced_process(process: subprocess.Popen[str]) -> None:
     process.communicate()
 
 
+def _launch_failure_reason(stderr: str) -> str:
+    """Preserve bounded launcher diagnostics in the existing UNKNOWN report surface."""
+
+    detail = " ".join(stderr.split())[-2000:]
+    lowered = detail.lower()
+    if "bwrap:" in lowered and "namespace" in lowered:
+        stage = "namespace_unavailable"
+    elif "bwrap:" in lowered and any(marker in lowered for marker in ("mkdir", "read-only file system", "mount")):
+        stage = "sandbox_filesystem_error"
+    else:
+        stage = "analyzer_process_error"
+    return f"{stage}:{detail}" if detail else stage
+
+
 def _execute_traced_launch(command: list[str], *, descriptor: int, timeout: int) -> SandboxExecution:
     """Trace exec, validate its pre-namespace closure, then permit Bubblewrap to run."""
 
@@ -332,7 +346,7 @@ def _execute_traced_launch(command: list[str], *, descriptor: int, timeout: int)
             _stop_traced_process(process)
             return SandboxExecution("UNKNOWN", reason="sandbox_launch_failed:timeout")
         if process.returncode != 0:
-            return SandboxExecution("UNKNOWN", process.returncode, stdout, stderr, "analyzer_process_error")
+            return SandboxExecution("UNKNOWN", process.returncode, stdout, stderr, _launch_failure_reason(stderr))
         return SandboxExecution("PASS", process.returncode, stdout, stderr)
 
 
@@ -475,12 +489,16 @@ def _bubblewrap_command(
         "/dev",
         "--tmpfs",
         "/tmp",
+        "--tmpfs",
+        "/opt/specfact/config",
     ]
     for mount in plan.mounts:
         command.extend(("--dir", mount.destination))
         command.extend(("--ro-bind" if mount.read_only else "--bind", str(mount.source), mount.destination))
     command.extend(
         (
+            "--remount-ro",
+            "/opt/specfact/config",
             "--clearenv",
             "--setenv",
             "PATH",
@@ -493,7 +511,22 @@ def _bubblewrap_command(
             "1",
             "--setenv",
             "HOME",
+            "/opt/specfact/tmp/home",
+            "--setenv",
+            "TMPDIR",
             "/opt/specfact/tmp",
+            "--setenv",
+            "XDG_CACHE_HOME",
+            "/opt/specfact/tmp/cache",
+            "--setenv",
+            "XDG_CONFIG_HOME",
+            "/opt/specfact/tmp/config",
+            "--setenv",
+            "XDG_DATA_HOME",
+            "/opt/specfact/tmp/data",
+            "--setenv",
+            "XDG_STATE_HOME",
+            "/opt/specfact/tmp/state",
             "--chdir",
             plan.cwd,
             *plan.argv,

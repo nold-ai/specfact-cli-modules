@@ -3313,6 +3313,7 @@ def test_capsule_runtime_loads_the_packaged_signed_lock_before_materialization(
     runner_api = _c14_runner()
     from specfact_code_review.run import toolchain
 
+    monkeypatch.setattr(runner_api, "_capsule_environment_id", lambda: "linux-x86_64-cp312")
     captured: dict[str, object] = {}
     monkeypatch.setattr(runner_api.platform, "system", lambda: "Linux")
     monkeypatch.setattr(runner_api.platform, "machine", lambda: "x86_64")
@@ -7668,3 +7669,21 @@ def test_adversarial_runtime_policy_is_unknown() -> None:
     result = runner_api.evaluate_runtime_policy(candidate_python_executes=True, hostile_candidate_claim=True)
     assert result.status == "UNKNOWN"
     assert result.assumption == "non_adversarial_candidate_runtime"
+
+
+@pytest.mark.parametrize("repository", ["customer/project", "nold-ai/specfact-cli-modules"])
+def test_customer_github_actions_uses_verified_installed_payload(
+    monkeypatch: MonkeyPatch, tmp_path: Path, repository: str
+) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", repository)
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
+    monkeypatch.setattr(runner_api, "__file__", str(tmp_path / "installed/src/specfact_code_review/run/runner.py"))
+    installed = SimpleNamespace(status="PASS")
+    monkeypatch.setattr(runner_api, "_official_installed_payload", lambda: (installed, ""))
+    monkeypatch.setattr(
+        runner_api, "_protected_candidate_payload", lambda: pytest.fail("customer install is not a candidate checkout")
+    )
+    result = runner_api._selected_module_payload()
+    assert result.payload is installed

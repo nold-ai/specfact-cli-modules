@@ -642,7 +642,9 @@ def _verify_final_root_manifest(root: Path, environment: dict[str, object]) -> N
         raise ValueError(
             "final capsule root manifest mismatch:"
             f"entries={len(entries)},regular_bytes={regular_file_bytes},"
-            f"digest={canonical_json_digest(entries)}"
+            f"expected_digest={expected['manifest_digest']},"
+            f"actual_digest={canonical_json_digest(entries)},"
+            f"expected_entries={expected['entry_count']},expected_regular_bytes={expected['regular_file_bytes']}"
         )
     expected_subroots = cast(dict[str, dict[str, object]], expected["subroots"])
     if set(expected_subroots) != {path.name for path in root.iterdir()}:
@@ -728,6 +730,7 @@ def _offline_install(
     analyzer_path = str(paths["analyzers"])
     analyzer_root = root / analyzer_path.lstrip("/")
     analyzer_root.mkdir(parents=True, exist_ok=True)
+    analyzer_root.chmod(0o755)
     identity_args: list[str] = []
     if bubblewrap_child_identity is not None:
         child_uid, child_gid = bubblewrap_child_identity
@@ -803,6 +806,7 @@ def _offline_install(
             text=True,
             check=False,
             timeout=600,
+            umask=0o022,
             env={},
             pass_fds=(executable,),
         )
@@ -917,7 +921,7 @@ def materialize_capsule(
     *,
     environment_id: str,
     storage_root: Path,
-    empty_cache: bool = False,
+    empty_cache: bool = True,
     credential: str | None = None,
     bubblewrap_child_identity: tuple[int, int] | None = None,
 ) -> CapsuleMaterialization:
@@ -1735,6 +1739,19 @@ if __name__ == "__main__":
     return source.encode("utf-8")
 
 
+def _create_capsule_mount_anchors(root: Path) -> None:
+    """Bind empty fixed destinations into the post-base composition before launch."""
+    parent = root / "opt/specfact"
+    if parent.is_symlink() or not parent.is_dir():
+        raise ValueError("capsule mount parent is unsafe")
+    for name in ("snapshot", "config", "output", "tmp", "control", "project-runtime"):
+        destination = parent / name
+        if destination.exists() or destination.is_symlink():
+            raise ValueError(f"capsule mount anchor collides: {name}")
+        destination.mkdir(mode=0o755)
+        destination.chmod(0o755)
+
+
 def compose_post_base_capsule(
     payload: InstalledPayload,
     *,
@@ -1770,6 +1787,7 @@ def compose_post_base_capsule(
             raise ValueError("sealed bootstrap changed during generation")
         os.replace(temporary, bootstrap)
         bootstrap_digest = "sha256:" + hashlib.sha256(_read_stable_regular(bootstrap)).hexdigest()
+        _create_capsule_mount_anchors(capsule_root)
         root_entries, _regular_file_bytes = _manifest_entries(capsule_root, include_root=False)
         final_root_digest = canonical_json_digest(root_entries)
         composite_projection = {

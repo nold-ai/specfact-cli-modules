@@ -110,6 +110,13 @@ requirements:
       intent: 'Inspect the planned scenario: Installed CLI reviews the modules repository.'
       observable: The source requirement and Given/When/Then scenario are present and validate at planned
         maturity; no runtime execution, repair, or release evidence is claimed.
+    - case_id: 466-review-run-command-customer-actions
+      scenario_id: non-root-customer-capsule-execution
+      method: test
+      intent: Customer GitHub Actions uses the installed signed payload.
+      observable: tests/unit/specfact_code_review/run/test_runner.py::test_customer_github_actions_uses_verified_installed_payload
+        passes for customer and own-repository push environments; public release matrix acceptance remains
+        pending.
   openspec:code-review-capsule-customer-execution:review-run-command:sealed-capsule-mount-destinations-and-private-writes:
     rationale: Make the customer capsule behavior and its future acceptance evidence reviewable before
       implementation.

@@ -41,3 +41,10 @@ Future changes are limited to proven capsule causes and the customer validation 
 - A smoke test can pass without real review: assert nonempty scope, exact required analyzer coverage, known clean/defective outcomes, and signed released installation.
 
 Compressed runtime layer totals are 263599655, 258372661, and 255962422 bytes for cp311/cp312/cp313: 777934738 bytes total, approximately 0.78 GB decimal per full cold matrix, excluding installation dependencies. Disk use is larger after extraction; duration is unmeasured. Rollback uses reviewed revert plus canonical signed publication and registry correction, never edits to published immutable payloads. If the old release remains affected, record that limitation instead of claiming rollback restores working customer execution.
+
+
+## Implementation checkpoint — 2026-09-12
+
+The owner authorized implementation and integration into modules dogfooding CI. The existing dedicated worktree and PR now carry the implementation; earlier planning validation remains historical evidence. Static inspection also found that default materialization requests cache-only acquisition and that all GitHub Actions environments select candidate payload provenance, even for installed customer modules. Add regressions before correcting these paths.
+
+Authenticated post-base composition will contain fixed mount anchors. Numbered configuration destinations are constructed inside a private tmpfs mounted at the authenticated config anchor, bound to the existing invocation context's exact mount list, and remounted read-only before analyzer execution. This prevents creation beneath a read-only parent without modifying sealed base bytes or exposing writable configuration at execution.

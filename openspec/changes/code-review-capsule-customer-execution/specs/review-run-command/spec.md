@@ -19,6 +19,13 @@ For the supported Linux x86-64 capsule path, the installed review command SHALL 
 - **WHEN** its installed CLI executes review
 - **THEN** artifacts record actual analyzer coverage and findings, with no source-checkout import override or requirement to suppress existing findings to obtain a green result
 
+#### Scenario: Customer GitHub Actions uses the installed signed payload
+
+- **GIVEN** the official signed module is installed in a customer GitHub Actions repository
+- **WHEN** that repository invokes review
+- **THEN** the payload comes from verified installation provenance rather than requiring the modules repository's protected candidate checkout
+- **AND** an actual candidate source checkout retains its strict candidate-context checks without fallback to a stale release
+
 ### Requirement: Sealed capsule mount destinations and private writes
 
 The controller SHALL establish all required mount destinations before sealing the relevant runtime composition and SHALL authenticate added structure in its appropriate identity. Runtime payloads and source/configuration inputs SHALL remain read-only; analyzer home, cache, temporary state and output writes SHALL stay within declared process-private writable roots.
