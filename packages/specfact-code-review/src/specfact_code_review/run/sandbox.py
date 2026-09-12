@@ -295,7 +295,7 @@ def _launch_failure_reason(stderr: str) -> str:
     normalized = " ".join(stderr.split())
     lowered = normalized.lower()
     detail = normalized[-2000:]
-    if "bwrap:" in lowered and "namespace" in lowered:
+    if "bwrap:" in lowered and ("namespace" in lowered or "loopback: failed rtm_newaddr" in lowered):
         stage = "namespace_unavailable"
     elif "bwrap:" in lowered and any(marker in lowered for marker in ("mkdir", "read-only file system", "mount")):
         stage = "sandbox_filesystem_error"
@@ -539,6 +539,9 @@ def _bubblewrap_command(
             "--setenv",
             "PYTHONNOUSERSITE",
             "1",
+            "--setenv",
+            "SSL_CERT_FILE",
+            "/opt/specfact/analyzers/certifi/cacert.pem",
             "--setenv",
             "HOME",
             "/opt/specfact/tmp/home",

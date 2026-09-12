@@ -987,7 +987,12 @@ def _selected_policy_payload(
     destination: Path,
 ) -> PolicyPayloadIdentity:
     target_path = target_root / relative
-    fallback_path = signed_module_root / relative
+    candidates = (
+        signed_module_root / relative,
+        signed_module_root / "src/specfact_code_review" / relative,
+        signed_module_root / "specfact_code_review" / relative,
+    )
+    fallback_path = next((path for path in candidates if path.exists()), candidates[0])
     source = target_path if target_path.exists() else fallback_path
     identity_kind: Literal["git_blob", "signed_module_payload"] = (
         "git_blob" if source == target_path else "signed_module_payload"

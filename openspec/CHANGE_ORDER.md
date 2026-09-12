@@ -72,8 +72,10 @@ AI IDE, rerun, and compare improved evidence.
 | `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Implementation authorized 2026-09-12; candidate repair and dogfooding gate in progress: validate signed capsule execution as a non-root customer on hosted Ubuntu 24.04 for Python 3.11/3.12/3.13; validate the public release later | No open prerequisites; blocks core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
 
 This bounded bugfix is independent of completed C14 bookkeeping and native-platform
-issue #460. Reproduction, implementation and release remain pending. Its planning PR
-leaves #466 open/Todo and does not alter existing release identities.
+issue #460. Reproduction, candidate repair and dogfooding are in progress through
+PR #467, with #466 open/In Progress. Public signed module publication, release
+acceptance and final release validation remain pending; old immutable artifacts
+are preserved.
 
 ## Completed-Issue Reconciliation
 

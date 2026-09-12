@@ -38,6 +38,19 @@ The controller SHALL establish all required mount destinations before sealing th
 - **THEN** required destinations already exist before the enclosing composition is sealed and launch does not need to create directories beneath a read-only parent
 - **AND** destination collisions, symlink escapes, or unbound structure changes are rejected before analyzer execution
 
+#### Scenario: Composition rejects a substituted destination parent
+
+- **GIVEN** a verified module payload and a capsule composition in progress
+- **WHEN** another process replaces a destination parent with a symlink during payload copying, bootstrap generation, or mount-anchor creation
+- **THEN** writes and permission changes remain anchored to opened no-follow directory descriptors, the changed directory identity fails composition, and no write follows the substituted path outside the capsule
+
+#### Scenario: Analyzer child processes retain sealed startup
+
+- **GIVEN** an analyzer launches a Python tool subprocess inside the sealed capsule
+- **WHEN** Radon, Pylint, basedpyright, CrossHair or Semgrep executes its command
+- **THEN** the child uses the sealed interpreter with isolated, no-site startup and the authenticated bootstrap import roots, without ambient PYTHONPATH or snapshot startup injection
+- **AND** Ruff's cache is explicitly routed into the declared private temporary mount
+
 #### Scenario: Private state succeeds while sealed writes fail
 
 - **GIVEN** a launched analyzer with declared private home/cache/temp/output roots

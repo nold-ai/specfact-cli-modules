@@ -51,9 +51,23 @@ The capability probe SHALL exercise the verified static launcher with the produc
 - **WHEN** capsule execution is requested
 - **THEN** the run fails closed with actionable supported-prerequisite guidance, without running review as root, changing host policy automatically, or falling back outside the sandbox
 
+#### Scenario: Namespace denial occurs during offline materialization
+
+- **GIVEN** a hash-verified launcher is denied namespace setup before a final capsule exists
+- **WHEN** the non-root offline installation subprocess fails
+- **THEN** UNKNOWN evidence identifies the offline-install stage, verified launcher digest and selected ABI without claiming a completed capsule identity
+- **AND** ordinary package installation failures are not classified as namespace denial
+
 ### Requirement: Signed release customer execution gate
 
 A capsule repair release SHALL pass the GitHub-hosted Ubuntu 24.04 x86-64 Python 3.11/3.12/3.13 customer matrix against its actual public signed installation. Changed immutable artifacts SHALL receive new identities and consistent module patch version, lock/resource bindings, signatures and registry entries through canonical publication.
+
+#### Scenario: Runtime wheel descriptor agrees with authenticated bytes
+
+- **GIVEN** a new runtime wheel whose bytes match the independently reviewed digest
+- **WHEN** publication tooling derives a lock component from a wheel descriptor
+- **THEN** the descriptor's name, version, exact specifier, size, tags and metadata digests agree with the wheel filename and archive metadata before any lock is written
+- **AND** a correct wheel digest does not permit a stale or substituted descriptor identity
 
 #### Scenario: Published repair is accepted
 

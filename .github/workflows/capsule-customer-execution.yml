@@ -2,12 +2,7 @@
 name: capsule-customer-execution
 
 on:
-  pull_request:
-    branches: [dev, main]
-    paths:
-      - packages/specfact-code-review/**
-      - scripts/capsule_customer_gate.py
-      - .github/workflows/capsule-customer-execution.yml
+  workflow_call:
   push:
     branches: [main]
     paths:
@@ -34,6 +29,7 @@ jobs:
         python: ["3.11", "3.12", "3.13"]
     env:
       MATRIX_PYTHON: ${{ matrix.python }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
       MODE: ${{ github.event_name == 'pull_request' && 'candidate' || 'public' }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -60,8 +56,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          EXPECTED_MODULE_VERSION="$(python scripts/capsule_customer_gate.py \
+            --repository "$GITHUB_WORKSPACE" --evidence "$CUSTOMER_ROOT/installation-evidence" \
+            --mode "$MODE" --installation-version)"
           cd "$CUSTOMER_ROOT"
-          specfact module install nold-ai/specfact-code-review --scope user
+          specfact module install nold-ai/specfact-code-review --scope user \
+            --version "$EXPECTED_MODULE_VERSION" --source marketplace
+          python "$GITHUB_WORKSPACE/scripts/capsule_customer_gate.py" \
+            --repository "$GITHUB_WORKSPACE" --evidence "$CUSTOMER_ROOT/installation-evidence" \
+            --mode "$MODE" --verify-installation
           specfact --version > "$CUSTOMER_ROOT/installed-core.txt"
           specfact module list > "$CUSTOMER_ROOT/installed-modules.txt"
           python -m pip freeze > "$CUSTOMER_ROOT/installed-python.txt"
@@ -73,6 +76,16 @@ jobs:
           python scripts/link_dev_module.py specfact-code-review --shadow-root "$CUSTOMER_ROOT/candidate-modules"
           echo "SPECFACT_MODULES_ROOTS=$CUSTOMER_ROOT/candidate-modules" >> "$GITHUB_ENV"
           echo "SPECFACT_ALLOW_UNSIGNED=1" >> "$GITHUB_ENV"
+      - name: Verify denied namespaces fail closed before administrator setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset GITHUB_TOKEN GH_TOKEN PYTHONPATH
+          SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/denied-cache" \
+            python scripts/capsule_customer_gate.py \
+              --repository "$GITHUB_WORKSPACE" \
+              --evidence "$CUSTOMER_ROOT/denied-evidence" --mode "$MODE" \
+              --expect-namespace-denial
       - name: Allow user namespaces for this job's capsule launcher only
         shell: bash
         run: |
@@ -84,6 +97,9 @@ jobs:
           abi <abi/4.0>,
           include <tunables/global>
           profile specfact-customer-capsule "$CUSTOMER_ROOT/cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
+            userns,
+          }
+          profile specfact-customer-capsule-umask "$CUSTOMER_ROOT/cache-077/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
             userns,
           }
           EOF
@@ -103,6 +119,8 @@ jobs:
           name: capsule-${{ env.MODE }}-cp${{ matrix.python }}-${{ github.run_attempt }}
           path: |
             ${{ env.CUSTOMER_ROOT }}/evidence/
+            ${{ env.CUSTOMER_ROOT }}/denied-evidence/
+            ${{ env.CUSTOMER_ROOT }}/installation-evidence/
             ${{ env.CUSTOMER_ROOT }}/installed-*.txt
             ${{ env.CUSTOMER_ROOT }}/capsule-userns.apparmor
           if-no-files-found: error

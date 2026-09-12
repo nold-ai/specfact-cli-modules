@@ -2062,6 +2062,8 @@ def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
     source = tmp_path / "src/app.py"
     source.parent.mkdir()
     source.write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "test_app.py").write_text("def test_value():\n    assert 1 == 1\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
     launches: list[tuple[str, str]] = []
 
@@ -2256,9 +2258,14 @@ def test_capsule_review_changed_enforcement_preserves_unknown(monkeypatch: Monke
 
 def test_capsule_review_changed_enforcement_preserves_fail_without_changed_line_evidence(
     monkeypatch: MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     runner_api = _c14_runner()
     finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
+    monkeypatch.chdir(tmp_path)
+    selected = tmp_path / finding.file
+    selected.parent.mkdir(parents=True, exist_ok=True)
+    selected.write_text("VALUE = 1\n", encoding="utf-8")
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
     evidence = _synthetic_complete_profile_evidence(runner_api)
     evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}

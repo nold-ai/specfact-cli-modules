@@ -7,10 +7,13 @@ import copy
 import hashlib
 import json
 import zipfile
+from email.parser import BytesParser
 from pathlib import Path
 from typing import Any
 
 import yaml
+from packaging.tags import parse_tag
+from packaging.utils import canonicalize_name, parse_wheel_filename
 
 
 _WHEEL_SHA256 = "sha256:d16c9bbc61ea14637596c5f6fbff2ee99cbe3573e46a716401734ef50c3060c2"
@@ -41,15 +44,54 @@ def _write(path: Path, value: object) -> None:
     path.write_bytes(_canonical(value) + b"\n")
 
 
+def _validate_wheel_descriptor(archive: zipfile.ZipFile, wheel: Path, descriptor: dict[str, Any]) -> None:
+    """Validate copied identity fields against the authenticated wheel itself."""
+    name, version, _build, filename_tags = parse_wheel_filename(wheel.name)
+    metadata_paths = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
+    if len(metadata_paths) != 1:
+        raise ValueError("wheel descriptor requires one metadata identity")
+    metadata_path = metadata_paths[0]
+    metadata_bytes = archive.read(metadata_path)
+    metadata = BytesParser().parsebytes(metadata_bytes)
+    if canonicalize_name(str(metadata["Name"])) != name or str(metadata["Version"]) != str(version):
+        raise ValueError("wheel descriptor filename and metadata disagree")
+    dist_info = metadata_path.rsplit("/", 1)[0]
+    wheel_metadata = BytesParser().parsebytes(archive.read(f"{dist_info}/WHEEL"))
+    wheel_tags = {tag for value in wheel_metadata.get_all("Tag", []) for tag in parse_tag(value)}
+    if wheel_tags != filename_tags:
+        raise ValueError("wheel descriptor filename and archive tags disagree")
+    entrypoint_path = f"{dist_info}/entry_points.txt"
+    entrypoints = archive.read(entrypoint_path) if entrypoint_path in archive.namelist() else b""
+    python_tag, abi_tag, platform_tag = wheel.stem.rsplit("-", 3)[1:]
+    expected = {
+        "name": str(metadata["Name"]),
+        "normalized_name": name,
+        "version": str(version),
+        "direct_specifier": f"=={version}",
+        "size": wheel.stat().st_size,
+        "python_tag": python_tag,
+        "abi_tag": abi_tag,
+        "platform_tag": platform_tag,
+        "metadata_sha256": _digest(metadata_bytes),
+        "entry_points_sha256": _digest(entrypoints),
+    }
+    mismatches = [key for key, value in expected.items() if descriptor.get(key) != value]
+    if mismatches:
+        raise ValueError(f"wheel descriptor differs from authenticated bytes: {', '.join(mismatches)}")
+
+
 def _component(build_root: Path, *, abi: str = "", addition: str = "beartype") -> dict[str, Any]:
     descriptor_path = f"{abi}-wheel-descriptor.json" if addition == "pyyaml" else "beartype-wheel-descriptor.json"
     descriptor = _load(build_root / descriptor_path)
     wheel_root = build_root / abi if addition == "pyyaml" else build_root
+    if Path(descriptor["filename"]).name != descriptor["filename"]:
+        raise ValueError("wheel descriptor filename is unsafe")
     wheel = wheel_root / descriptor["filename"]
     expected = _YAML_WHEEL_SHA256[abi] if addition == "pyyaml" else _WHEEL_SHA256
     if _digest(wheel.read_bytes()) != expected or descriptor["sha256"] != expected:
         raise ValueError("wheel differs from reviewed PyPI identity")
     with zipfile.ZipFile(wheel) as archive:
+        _validate_wheel_descriptor(archive, wheel, descriptor)
         payload = [
             {"path": name, "size": len(archive.read(name)), "sha256": _digest(archive.read(name))}
             for name in sorted(archive.namelist())

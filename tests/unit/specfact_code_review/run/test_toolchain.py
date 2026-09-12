@@ -1716,3 +1716,54 @@ def test_customer_offline_acquisition_never_downloads(
     oci["locator"] = "https://ghcr.io/v2/nold-ai/specfact-review-runtime/manifests/" + _digest("1")
     toolchain_api.acquire_oci_distribution(oci, cache_root=tmp_path)
     assert observed == [True]
+
+
+@pytest.mark.parametrize(
+    "stderr",
+    [
+        "bwrap: Creating new namespace failed: Operation not permitted",
+        "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+    ],
+)
+def test_customer_materialization_namespace_denial_identifies_verified_launcher(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stderr: str
+) -> None:
+    payload = b"verified test launcher"
+    launcher = tmp_path / "opt/specfact/bin/bwrap-static"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_bytes(payload)
+    launcher.chmod(0o755)
+    digest = "sha256:" + hashlib.sha256(payload).hexdigest()
+    environment = {
+        "paths": {
+            key: "/opt/specfact/" + value
+            for key, value in {
+                "analyzers": "analyzers",
+                "interpreter": "python/bin/python",
+                "loader": "lib/ld-linux-x86-64.so.2",
+                "libraries": "lib",
+                "wheelhouse": "wheelhouse",
+            }.items()
+        },
+        "native_tools": [
+            {
+                "id": "bubblewrap-static",
+                "path": "/opt/specfact/bin/bwrap-static",
+                "launch_mode": "same-open-descriptor",
+                "executable_sha256": digest,
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        toolchain_api.subprocess, "run", lambda command, **_kwargs: subprocess.CompletedProcess(command, 1, "", stderr)
+    )
+    with pytest.raises(ValueError) as failure:
+        toolchain_api._offline_install(tmp_path, environment, ())
+    assert str(failure.value).startswith(f"namespace_unavailable:stage=offline-install:launcher={digest}:")
+
+
+def test_customer_offline_package_failure_is_not_namespace_denial(toolchain_api: Any) -> None:
+    message = "ERROR: no matching distribution found"
+    assert toolchain_api._offline_install_failure(message, "sha256:" + "a" * 64) == (
+        "offline analyzer installation failed: " + message
+    )

@@ -16,7 +16,8 @@ import stat
 import subprocess
 import tarfile
 import tempfile
-from contextlib import ExitStack
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager, suppress
 from dataclasses import dataclass, field as dataclass_field
 from pathlib import Path
 from typing import Literal, cast
@@ -813,7 +814,17 @@ def _offline_install(
     finally:
         os.close(executable)
     if result.returncode != 0:
-        raise ValueError(f"offline analyzer installation failed: {result.stderr[-1000:]}")
+        raise ValueError(_offline_install_failure(result.stderr, str(bubblewrap["executable_sha256"])))
+
+
+def _offline_install_failure(stderr: str, launcher_digest: str) -> str:
+    """Identify namespace setup only after executing the verified native descriptor."""
+    normalized = " ".join(stderr.split())
+    lowered = normalized.lower()
+    namespace_marker = "namespace" in lowered or "loopback: failed rtm_newaddr" in lowered
+    if "bwrap:" in lowered and namespace_marker:
+        return f"namespace_unavailable:stage=offline-install:launcher={launcher_digest}:{normalized[-1000:]}"
+    return f"offline analyzer installation failed: {normalized[-1000:]}"
 
 
 def _installed_distribution_set(root: Path, environment: dict[str, object]) -> tuple[str, ...]:
@@ -1211,7 +1222,11 @@ def _oci_blob_url(oci: dict[str, object], digest: str) -> str:
 def _validate_oci_payload(payload: bytes, *, digest: str, expected_size: int | None) -> None:
     actual_digest = "sha256:" + hashlib.sha256(payload).hexdigest()
     if (expected_size is not None and len(payload) != expected_size) or actual_digest != digest:
-        raise ValueError("OCI descriptor size or digest mismatch")
+        raise ValueError(
+            "OCI descriptor size or digest mismatch:"
+            f"expected_digest={digest}:actual_digest={actual_digest}:"
+            f"expected_size={expected_size}:actual_size={len(payload)}"
+        )
 
 
 def acquire_oci_distribution(
@@ -1660,25 +1675,77 @@ def verify_installed_module_payload(metadata: dict[str, object] | CoreInstalledM
     return InstalledPayload("PASS", identity=identity, manifest=manifest)
 
 
-def _mkdir_composition_directory(path: Path) -> None:
-    """Create deterministic directories without changing existing base permissions."""
-    if path.is_symlink():
-        raise ValueError("composition directory is a symlink")
-    if path.exists():
-        if not path.is_dir():
-            raise ValueError("composition directory is not a directory")
+def _open_composition_child(parent: int, name: str, stack: ExitStack) -> int:
+    """Create missing directories through their parent without changing base modes."""
+    created = False
+    try:
+        descriptor = _open_payload_directory(name, stack, dir_fd=parent)
+    except FileNotFoundError:
+        os.mkdir(name, 0o755, dir_fd=parent)
+        descriptor = _open_payload_directory(name, stack, dir_fd=parent)
+        created = True
+    if created:
+        os.fchmod(descriptor, 0o755)
+    return descriptor
+
+
+def _require_composition_identity(parent: int, name: str, descriptor: int) -> None:
+    """Refuse a renamed or substituted directory before accepting composition."""
+    current = os.stat(name, dir_fd=parent, follow_symlinks=False)
+    if _directory_identity(current) != _directory_identity(os.fstat(descriptor)):
+        raise ValueError("composition directory changed during write")
+
+
+@contextmanager
+def _composition_directory(path: Path, *, parent: int | None = None) -> Iterator[int]:
+    """Keep every no-follow directory in a destination chain open through writes."""
+    if ".." in path.parts or (parent is not None and path.is_absolute()):
+        raise ValueError("composition directory path is unsafe")
+    with ExitStack() as stack:
+        parts = path.parts
+        if parent is None:
+            absolute = path.absolute()
+            parent = _open_payload_directory(absolute.anchor, stack)
+            parts = absolute.parts[1:]
+        links: list[tuple[int, str, int]] = []
+        for name in parts:
+            child = _open_composition_child(parent, name, stack)
+            links.append((parent, name, child))
+            parent = child
+        yield parent
+        for directory, name, child in links:
+            _require_composition_identity(directory, name, child)
+
+
+def _write_composition_file(parent: int, name: str, data: bytes, mode: int) -> None:
+    """Create and verify a new regular file without resolving its parent again."""
+    flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    descriptor = os.open(name, flags, 0o600, dir_fd=parent)
+    with os.fdopen(descriptor, "w+b") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fchmod(stream.fileno(), mode)
+        stream.seek(0)
+        if stream.read() != data or stat.S_IMODE(os.fstat(stream.fileno()).st_mode) != mode:
+            raise ValueError("composition file changed during write")
+
+
+def _require_composition_absent(parent: int, name: str) -> None:
+    """Reject files, directories and dangling symlinks at a reserved destination."""
+    try:
+        os.stat(name, dir_fd=parent, follow_symlinks=False)
+    except FileNotFoundError:
         return
-    _mkdir_composition_directory(path.parent)
-    path.mkdir()
-    path.chmod(0o755)
+    raise ValueError("composition destination collides")
 
 
 def _copy_builtin_entry(
     identity: InstalledModuleIdentity,
     entry: PayloadEntry,
-    temporary: Path,
+    temporary: int,
     prefix: Path,
 ) -> None:
+    """Copy one verified source into an anchored private destination directory."""
     relative = Path(entry.path)
     if relative.as_posix() != entry.path or not relative.is_relative_to(prefix) or ".." in relative.parts:
         raise ValueError("built-in payload manifest path is unsafe")
@@ -1689,34 +1756,36 @@ def _copy_builtin_entry(
     )
     if "sha256:" + hashlib.sha256(file_bytes).hexdigest() != entry.digest or stat.S_IMODE(source_mode) != entry.mode:
         raise ValueError("built-in payload changed before copy")
-    copied = temporary / relative.relative_to(prefix)
-    _mkdir_composition_directory(copied.parent)
-    copied.write_bytes(file_bytes)
-    copied.chmod(entry.mode)
-    if (
-        "sha256:" + hashlib.sha256(copied.read_bytes()).hexdigest() != entry.digest
-        or stat.S_IMODE(copied.stat().st_mode) != entry.mode
-    ):
-        raise ValueError("built-in payload changed during copy")
+    copied = relative.relative_to(prefix)
+    with _composition_directory(copied.parent, parent=temporary) as directory:
+        _write_composition_file(directory, copied.name, file_bytes, entry.mode)
 
 
 def install_builtin_payload(payload: InstalledPayload, *, capsule_root: Path) -> BuiltinPayload:
+    """Atomically publish a verified built-in tree without following destination links."""
     if payload.status != "PASS" or payload.identity is None:
         return BuiltinPayload("UNKNOWN", "", (), reason="unverified_payload")
-    destination = capsule_root / "opt/specfact/builtin/specfact_code_review"
-    temporary = capsule_root / "opt/specfact/builtin/.specfact_code_review.copying"
+    destination = "specfact_code_review"
+    temporary = ".specfact_code_review.copying"
     try:
-        if destination.exists() or destination.is_symlink() or temporary.exists() or temporary.is_symlink():
-            raise ValueError("built-in payload destination collides")
         prefix = _installed_payload_prefix(Path(payload.identity.installed_root))
         if not payload.manifest:
             raise ValueError("built-in payload manifest is empty")
-        _mkdir_composition_directory(temporary)
-        for entry in payload.manifest:
-            _copy_builtin_entry(payload.identity, entry, temporary, prefix)
-        os.replace(temporary, destination)
+        with _composition_directory(capsule_root / "opt/specfact/builtin") as parent, ExitStack() as stack:
+            _require_composition_absent(parent, destination)
+            os.mkdir(temporary, 0o755, dir_fd=parent)
+            directory = _open_payload_directory(temporary, stack, dir_fd=parent)
+            os.fchmod(directory, 0o755)
+            try:
+                for entry in payload.manifest:
+                    _copy_builtin_entry(payload.identity, entry, directory, prefix)
+                _require_composition_identity(parent, temporary, directory)
+                os.replace(temporary, destination, src_dir_fd=parent, dst_dir_fd=parent)
+                _require_composition_identity(parent, destination, directory)
+            except (OSError, ValueError):
+                shutil.rmtree(temporary, dir_fd=parent, ignore_errors=True)
+                raise
     except (OSError, ValueError):
-        shutil.rmtree(temporary, ignore_errors=True)
         return BuiltinPayload("UNKNOWN", "", (), reason="builtin_payload_copy_failed")
     return BuiltinPayload(
         "PASS",
@@ -1754,15 +1823,35 @@ if __name__ == "__main__":
 
 def _create_capsule_mount_anchors(root: Path) -> None:
     """Bind empty fixed destinations into the post-base composition before launch."""
-    parent = root / "opt/specfact"
-    if parent.is_symlink() or not parent.is_dir():
-        raise ValueError("capsule mount parent is unsafe")
-    for name in ("snapshot", "config", "output", "tmp", "control", "project-runtime"):
-        destination = parent / name
-        if destination.exists() or destination.is_symlink():
-            raise ValueError(f"capsule mount anchor collides: {name}")
-        destination.mkdir(mode=0o755)
-        destination.chmod(0o755)
+    with _composition_directory(root / "opt/specfact") as parent, ExitStack() as stack:
+        for name in ("snapshot", "config", "output", "tmp", "control", "project-runtime"):
+            os.mkdir(name, 0o755, dir_fd=parent)
+            directory = _open_payload_directory(name, stack, dir_fd=parent)
+            os.fchmod(directory, 0o755)
+            _require_composition_identity(parent, name, directory)
+
+
+def _install_sealed_bootstrap(root: Path, data: bytes) -> str:
+    """Publish bootstrap bytes using only the verified parent descriptor."""
+    destination = "sealed_bootstrap.py"
+    temporary = ".sealed_bootstrap.py.copying"
+    with _composition_directory(root / "opt/specfact/bootstrap") as parent:
+        _require_composition_absent(parent, destination)
+        try:
+            _write_composition_file(parent, temporary, data, 0o444)
+            os.replace(temporary, destination, src_dir_fd=parent, dst_dir_fd=parent)
+            with ExitStack() as stack:
+                flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+                descriptor = os.open(destination, flags, dir_fd=parent)
+                stack.callback(os.close, descriptor)
+                observed, mode = _read_payload_descriptor(descriptor)
+                if observed != data or stat.S_IMODE(mode) != 0o444:
+                    raise ValueError("sealed bootstrap changed during publication")
+        except (OSError, ValueError):
+            with suppress(FileNotFoundError):
+                os.unlink(temporary, dir_fd=parent)
+            raise
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def compose_post_base_capsule(
@@ -1788,18 +1877,8 @@ def compose_post_base_capsule(
     payload_projection = _payload_manifest_projection(payload.manifest)
     module_payload_manifest_digest = canonical_json_digest(payload_projection)
     bootstrap_bytes = _sealed_bootstrap_source(module_payload_manifest_digest)
-    bootstrap = capsule_root / "opt/specfact/bootstrap/sealed_bootstrap.py"
-    temporary = bootstrap.with_name(".sealed_bootstrap.py.copying")
     try:
-        _mkdir_composition_directory(bootstrap.parent)
-        if bootstrap.exists() or bootstrap.is_symlink() or temporary.exists() or temporary.is_symlink():
-            raise ValueError("sealed bootstrap destination collides")
-        temporary.write_bytes(bootstrap_bytes)
-        temporary.chmod(0o444)
-        if _read_stable_regular(temporary) != bootstrap_bytes:
-            raise ValueError("sealed bootstrap changed during generation")
-        os.replace(temporary, bootstrap)
-        bootstrap_digest = "sha256:" + hashlib.sha256(_read_stable_regular(bootstrap)).hexdigest()
+        bootstrap_digest = _install_sealed_bootstrap(capsule_root, bootstrap_bytes)
         _create_capsule_mount_anchors(capsule_root)
         root_entries, _regular_file_bytes = _manifest_entries(capsule_root, include_root=False)
         final_root_digest = canonical_json_digest(root_entries)
@@ -1817,7 +1896,6 @@ def compose_post_base_capsule(
         }
         composite_digest = canonical_json_digest(composite_projection)
     except (OSError, ValueError):
-        temporary.unlink(missing_ok=True)
         return CapsuleComposition("UNKNOWN", "capsule_composition_failed")
     return CapsuleComposition(
         "PASS",

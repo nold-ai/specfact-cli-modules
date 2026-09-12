@@ -542,3 +542,15 @@ def test_customer_long_launcher_stderr_retains_namespace_stage(sandbox_api: Any)
     result = sandbox_api._launch_failure_reason(stderr)
     assert result.startswith("namespace_unavailable:")
     assert len(result) < 2100
+
+
+def test_customer_sandbox_uses_locked_certificate_store(sandbox_api: Any, tmp_path: Path) -> None:
+    """Native tools load locked certificates without probing missing host utilities."""
+    plan = sandbox_api.build_launch_plan(_context(tmp_path, sandbox_api))
+    command = sandbox_api._bubblewrap_command(9, plan, extra_argv=())
+    assert command[command.index("SSL_CERT_FILE") + 1] == "/opt/specfact/analyzers/certifi/cacert.pem"
+
+
+def test_customer_network_namespace_denial_is_specific(sandbox_api: Any) -> None:
+    message = "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted"
+    assert sandbox_api._launch_failure_reason(message) == "namespace_unavailable:" + message

@@ -13,7 +13,7 @@ from typing import Any
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import python_source_paths_for_tools
+from specfact_code_review._review_utils import analyzer_command, python_source_paths_for_tools
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
@@ -305,7 +305,7 @@ def _kiss_parameter_findings(
 def _load_radon_payload(command: list[str]) -> dict[str, Any] | None:
     try:
         result = subprocess.run(
-            command,
+            analyzer_command(command),
             capture_output=True,
             text=True,
             check=False,

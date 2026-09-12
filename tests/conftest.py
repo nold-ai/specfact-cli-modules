@@ -7,6 +7,7 @@ import os
 import sys
 from contextlib import suppress
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -83,3 +84,25 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 def pytest_runtest_setup(item: pytest.Item) -> None:
     _ = item
     _enforce_local_bundle_sources()
+
+
+@pytest.fixture
+def host_analyzer_cli_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise CLI/report contracts with host tools, independently of Linux capsules.
+
+    Only tests explicitly requesting this fixture use the compatibility runner.
+    The subprocess customer gate and capsule integration tests remain unchanged.
+    """
+    commands = importlib.import_module("specfact_code_review.run.commands")
+    runner = importlib.import_module("specfact_code_review.run.runner")
+    toolchain = importlib.import_module("specfact_code_review.run.toolchain")
+
+    def run_host_review(files: list[Path], **options: Any) -> Any:
+        options.pop("assurance_kind", None)
+        return runner.run_review(files, **options)
+
+    def reject_capsule_acquisition(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("CLI format contract unexpectedly attempted real capsule acquisition")
+
+    monkeypatch.setattr(commands, "run_review", run_host_review)
+    monkeypatch.setattr(toolchain, "materialize_capsule", reject_capsule_acquisition)
