@@ -42,7 +42,6 @@ Future changes are limited to proven capsule causes and the customer validation 
 
 Compressed runtime layer totals are 263599655, 258372661, and 255962422 bytes for cp311/cp312/cp313: 777934738 bytes total, approximately 0.78 GB decimal per full cold matrix, excluding installation dependencies. Disk use is larger after extraction; duration is unmeasured. Rollback uses reviewed revert plus canonical signed publication and registry correction, never edits to published immutable payloads. If the old release remains affected, record that limitation instead of claiming rollback restores working customer execution.
 
-
 ## Implementation checkpoint — 2026-09-12
 
 The owner authorized implementation and integration into modules dogfooding CI. The existing dedicated worktree and PR now carry the implementation; earlier planning validation remains historical evidence. Static inspection also found that default materialization requests cache-only acquisition and that all GitHub Actions environments select candidate payload provenance, even for installed customer modules. Add regressions before correcting these paths.

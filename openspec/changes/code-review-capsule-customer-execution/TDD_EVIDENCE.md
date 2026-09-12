@@ -35,3 +35,13 @@ An offline, default-security Docker run of the existing public cp312 image, UID 
 Before repair, `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_toolchain.py -k 'offline_install_executes or customer_root_mismatch' --tb=short` failed 3 cases: subprocess umask was unset in both ambient modes, and mismatch diagnostics omitted the expected digest. The correction fixes the installation policy, not the trusted digest.
 
 The first commit attempt was stopped by the normal review hook: the new driver had complexity findings. Those are being refactored before the next review. Existing broad-file review findings are not Linux customer acceptance evidence.
+
+## Composition determinism checkpoint — 2026-09-12 Europe/Berlin
+
+`hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_toolchain.py -k customer_composition_is --tb=short` failed: identical verified payload and base under umasks 022/077 yielded different final composition digests (`672650ad…` versus `246d1738…`). New generated directories inherited the controller mode. The repair assigns 0755 only to newly generated composition directories, preserves existing base directories and rejects symlink parents.
+
+## Hosted customer-path checkpoint — 2026-09-12 Europe/Berlin
+
+[Actions run 34721199840](https://github.com/nold-ai/specfact-cli-modules/actions/runs/34721199840), candidate commit `187524de5011e0c9f19f1963aa95fc6f0ed809a7`, failed all three Python jobs after anonymous installation, runtime acquisition and non-root final-root verification. Each cold/warm/defective/repository report was UNKNOWN at `candidate_payload_unavailable`: the development module symlink caused candidate Git-root discovery to point at the temporary customer directory. No analyzer execution is claimed. This also means the signed cp312 root digest passed in the actual non-root hosted path after the installation-mode correction.
+
+Before fixing that path, `hatch run python -m pytest -q tests/unit/specfact_code_review/run/test_runner.py -k reconstructed_from_verified_git --tb=short` passed the direct path and failed the symlink path with the same Git exit 128. Resolving the loader path before determining its Git root preserves commit/tree/context verification.

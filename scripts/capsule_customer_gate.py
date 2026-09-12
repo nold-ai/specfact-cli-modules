@@ -121,7 +121,15 @@ def _review(root: Path, evidence: Path, name: str, expected: str) -> None:
         str(report_path),
     ]
     with (evidence / f"{name}.log").open("w", encoding="utf-8") as log:
-        result = subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, timeout=1800, check=False)
+        result = subprocess.run(
+            command,
+            cwd=root,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            timeout=1800,
+            check=False,
+            umask=0o077 if name == "warm" else 0o022,
+        )
     (evidence / f"{name}-command.json").write_text(
         json.dumps({"argv": command, "exit_code": result.returncode}), encoding="utf-8"
     )

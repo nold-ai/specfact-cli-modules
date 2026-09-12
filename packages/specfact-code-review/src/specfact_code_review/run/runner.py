@@ -583,7 +583,7 @@ def _protected_candidate_payload() -> SelectedModulePayload:
     ):
         return SelectedModulePayload(None, "untrusted_candidate_workflow_context")
     try:
-        repo_root = Path(__file__).parents[5]
+        repo_root = Path(__file__).resolve().parents[5]
         if (
             Path(_git_bytes(repo_root, "rev-parse", "--show-toplevel").decode().strip()).resolve()
             != repo_root.resolve()

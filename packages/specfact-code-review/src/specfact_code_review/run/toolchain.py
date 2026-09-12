@@ -1660,6 +1660,19 @@ def verify_installed_module_payload(metadata: dict[str, object] | CoreInstalledM
     return InstalledPayload("PASS", identity=identity, manifest=manifest)
 
 
+def _mkdir_composition_directory(path: Path) -> None:
+    """Create deterministic directories without changing existing base permissions."""
+    if path.is_symlink():
+        raise ValueError("composition directory is a symlink")
+    if path.exists():
+        if not path.is_dir():
+            raise ValueError("composition directory is not a directory")
+        return
+    _mkdir_composition_directory(path.parent)
+    path.mkdir()
+    path.chmod(0o755)
+
+
 def _copy_builtin_entry(
     identity: InstalledModuleIdentity,
     entry: PayloadEntry,
@@ -1677,7 +1690,7 @@ def _copy_builtin_entry(
     if "sha256:" + hashlib.sha256(file_bytes).hexdigest() != entry.digest or stat.S_IMODE(source_mode) != entry.mode:
         raise ValueError("built-in payload changed before copy")
     copied = temporary / relative.relative_to(prefix)
-    copied.parent.mkdir(parents=True, exist_ok=True)
+    _mkdir_composition_directory(copied.parent)
     copied.write_bytes(file_bytes)
     copied.chmod(entry.mode)
     if (
@@ -1698,7 +1711,7 @@ def install_builtin_payload(payload: InstalledPayload, *, capsule_root: Path) ->
         prefix = _installed_payload_prefix(Path(payload.identity.installed_root))
         if not payload.manifest:
             raise ValueError("built-in payload manifest is empty")
-        temporary.mkdir(parents=True)
+        _mkdir_composition_directory(temporary)
         for entry in payload.manifest:
             _copy_builtin_entry(payload.identity, entry, temporary, prefix)
         os.replace(temporary, destination)
@@ -1778,7 +1791,7 @@ def compose_post_base_capsule(
     bootstrap = capsule_root / "opt/specfact/bootstrap/sealed_bootstrap.py"
     temporary = bootstrap.with_name(".sealed_bootstrap.py.copying")
     try:
-        bootstrap.parent.mkdir(parents=True, exist_ok=True)
+        _mkdir_composition_directory(bootstrap.parent)
         if bootstrap.exists() or bootstrap.is_symlink() or temporary.exists() or temporary.is_symlink():
             raise ValueError("sealed bootstrap destination collides")
         temporary.write_bytes(bootstrap_bytes)

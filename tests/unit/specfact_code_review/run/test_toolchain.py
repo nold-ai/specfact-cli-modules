@@ -1663,3 +1663,26 @@ def test_customer_root_mismatch_reports_expected_and_actual_identity(toolchain_a
     with pytest.raises(ValueError, match="expected_digest=sha256:" + "a" * 64) as caught:
         toolchain_api._verify_final_root_manifest(tmp_path, {"final_root_manifest": expected})
     assert "actual_digest=sha256:" in str(caught.value)
+
+
+def test_customer_composition_is_independent_of_controller_umask(toolchain_api: Any, tmp_path: Path) -> None:
+    payload = toolchain_api.verify_installed_module_payload(_installed_payload(tmp_path / "installed"))
+    identities = []
+    for mask in (0o022, 0o077):
+        root = tmp_path / str(mask)
+        (root / "opt/specfact").mkdir(parents=True)
+        previous = os.umask(mask)
+        try:
+            result = toolchain_api.compose_post_base_capsule(
+                payload,
+                capsule_root=root,
+                immutable_base_root_digest=_digest("5"),
+                analyzer_installed_set_digest=_digest("6"),
+                native_launcher_digest=_digest("7"),
+                project_runtime_identity="not-applicable",
+            )
+        finally:
+            os.umask(previous)
+        assert result.status == "PASS"
+        identities.append(result.final_composite_root_manifest_digest)
+    assert identities[0] == identities[1]

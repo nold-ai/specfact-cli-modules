@@ -3335,8 +3335,9 @@ def test_capsule_runtime_loads_the_packaged_signed_lock_before_materialization(
     assert captured["environment_id"] == runner_api._capsule_environment_id()
 
 
+@pytest.mark.parametrize("via_symlink", [False, True])
 def test_protected_pr_candidate_payload_is_reconstructed_from_verified_git_bytes(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: MonkeyPatch, tmp_path: Path, via_symlink: bool
 ) -> None:
     runner_api = _c14_runner()
     repo_root = tmp_path / "repo"
@@ -3366,6 +3367,10 @@ def test_protected_pr_candidate_payload_is_reconstructed_from_verified_git_bytes
         text=True,
         env=git_env,
     ).stdout.strip()
+    if via_symlink:
+        shadow = tmp_path / "shadow"
+        shadow.symlink_to(package_root, target_is_directory=True)
+        runner_file = shadow / "src/specfact_code_review/run/runner.py"
     monkeypatch.setattr(runner_api, "__file__", str(runner_file))
     candidate_env = {
         "GITHUB_ACTIONS": "true",

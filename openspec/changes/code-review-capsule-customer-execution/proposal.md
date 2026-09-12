@@ -9,7 +9,7 @@ Ordinary non-root Code Review on an external repository encountered private runt
 - Specify public cold-cache installation and actual non-root review on GitHub-hosted Ubuntu 24.04 x86-64 for Python 3.11, 3.12, and 3.13.
 - Require actionable acquisition, namespace, integrity, and filesystem diagnostics while preserving sealed runtime verification and fail-closed assurance.
 - Require mount destinations to exist before sealing composition, private writable state, and immutable identity updates for any changed runtime structure.
-- Schedule reproduction, failing-first regressions, bounded repairs, signed patch publication, and release-installed validation as future unchecked work.
+- Implement reproduced acquisition, mount-composition, umask and diagnostic repairs with failing-first regression evidence; keep signed publication and release-installed acceptance pending.
 
 ## Capabilities
 
@@ -26,13 +26,13 @@ The delta requirements apply to the current signed capsule path. They do not rea
 
 ## Impact
 
-This delivery changes OpenSpec planning artifacts and change ordering only. Future bounded repairs may touch capsule acquisition/materialization, sandbox composition/launch, related analyzer state paths, customer CI, and documentation. No CLI syntax or report schema change is approved; diagnostics use existing evidence surfaces and preserve authoritative status/exit semantics.
+Implementation was explicitly authorized on 2026-09-12 Europe/Berlin. This delivery changes capsule acquisition/materialization, sandbox composition/launch, analyzer state paths, customer CI and documentation. No CLI syntax or report schema change is approved; diagnostics use existing evidence surfaces and preserve authoritative status/exit semantics.
 
 If signed payloads change later, bump `packages/specfact-code-review/module-package.yaml` by a patch version and update authenticated resource identities, module signatures, and `registry/index.json` through canonical tooling. Publish any changed OCI assets under new immutable identities. Reconcile resource/checkpoint bindings without overwriting historical evidence. Customer docs must explain supported prerequisites and troubleshooting while preserving existing published permalinks.
 
 ## Dependencies
 
-- Issue [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466), type Bug, assignee djm81, project SpecFact CLI, status Todo, no milestone.
+- Issue [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466), type Bug, assignee djm81, project SpecFact CLI, status In Progress (claimed by this implementation session), no milestone.
 - Native parent Feature [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163), under Epic #162.
 - No open prerequisites; completed #416 and #459 are related baseline evidence.
 - Blocks [core #680](https://github.com/nold-ai/specfact-cli/issues/680); preserve its existing #431 and completed #459 dependencies.
