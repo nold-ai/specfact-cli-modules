@@ -232,3 +232,23 @@ failing closed. After implementation the complete gate file passed **55 tests**;
 Ruff, BasedPyright, and actionlint passed. Transcripts:
 `/private/tmp/capsule-gate-early-denial-failing-466.log` and
 `/private/tmp/capsule-gate-early-denial-passing-466.log`.
+
+## Candidate public baseline is independent of unpublished registry changes
+
+Review 3998008726 identified that a publication PR may update its registry entry
+before that version is available publicly. Candidate jobs now check out a separate
+published `main` registry snapshot using the pinned checkout action, registry-only
+sparse selection, and no persisted credentials. Only installation version lookup
+and installed-artifact verification use that snapshot; its exact commit is already
+recorded in the installation identity receipt. Actual review and candidate source
+selection continue using the candidate checkout.
+
+Public main/release/manual jobs keep their own checkout registry as the expected
+artifact and retain release-tag identity checks. The existing scope scenario was
+extended before tests to make both lane semantics explicit.
+
+The regression test failed because no separate published registry checkout existed.
+After implementation **57 gate tests passed**, Ruff and both workflow actionlint
+checks passed, and strict OpenSpec validation passed. Transcripts:
+`/private/tmp/capsule-gate-published-baseline-failing-466.log` and
+`/private/tmp/capsule-gate-published-baseline-passing-466.log`.

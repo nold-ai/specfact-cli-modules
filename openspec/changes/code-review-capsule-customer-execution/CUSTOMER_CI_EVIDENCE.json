@@ -94,6 +94,7 @@
           "sealed_write_errno": "EROFS"
         }
       },
+      "hosted_job_duration_seconds": 303,
       "installation": {
         "commit": "ac66ac07d53d9f12ea96e222b9a55e6a9240953f",
         "integrity": {
@@ -1586,6 +1587,7 @@
           "sealed_write_errno": "EROFS"
         }
       },
+      "hosted_job_duration_seconds": 359,
       "installation": {
         "commit": "ac66ac07d53d9f12ea96e222b9a55e6a9240953f",
         "integrity": {
@@ -3078,6 +3080,7 @@
           "sealed_write_errno": "EROFS"
         }
       },
+      "hosted_job_duration_seconds": 276,
       "installation": {
         "commit": "ac66ac07d53d9f12ea96e222b9a55e6a9240953f",
         "integrity": {
@@ -4478,6 +4481,7 @@
     }
   },
   "checked_date": "2026-09-13 Europe/Berlin",
+  "customer_matrix_runner_seconds": 938,
   "head_sha": "b69900b5e4ffa262988659b6f8595218799ae647",
   "mode": "candidate",
   "public_release_accepted": false,

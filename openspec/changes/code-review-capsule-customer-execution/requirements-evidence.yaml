@@ -192,6 +192,15 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/test_capsule_customer_gate.py::test_public_install_uses_clean_environment_and_explicit_main_marketplace
+    - case_id: 466-publication-pr-baseline
+      scenario_id: signed-release-customer-execution-gate
+      method: test
+      intent: Install an available public baseline even when the PR registry contains an unpublished version.
+      observable: Candidate installation uses a separate recorded main registry snapshot; public release lanes use
+        their own checkout registry.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_customer_gate.py::test_candidate_installation_uses_separate_published_registry_snapshot
   openspec:code-review-capsule-customer-execution:review-run-command:non-root-customer-capsule-execution:
     rationale: Repair customer capsule behavior with mapped regressions; complete hosted signed-release acceptance
       remains pending.

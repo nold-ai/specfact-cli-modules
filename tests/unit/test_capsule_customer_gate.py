@@ -566,3 +566,29 @@ def test_public_install_uses_clean_environment_and_explicit_main_marketplace():
     assert "env -i" in workflow
     assert "SPECFACT_MODULES_BRANCH=main" in workflow
     assert '"$CUSTOMER_ROOT/venv/bin/specfact" module install' in workflow
+
+
+def test_candidate_installation_uses_separate_published_registry_snapshot():
+    import yaml
+
+    workflow = yaml.load(
+        (Path(__file__).parents[2] / ".github/workflows/capsule-customer-execution.yml").read_text(),
+        Loader=yaml.BaseLoader,
+    )
+    steps = {step["name"]: step for step in workflow["jobs"]["customer"]["steps"] if "name" in step}
+    baseline = steps["Checkout published registry baseline for candidate installation"]
+    assert baseline["if"] == "github.event_name == 'pull_request'"
+    assert baseline["uses"] == "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5"
+    assert baseline["with"] == {
+        "repository": "nold-ai/specfact-cli-modules",
+        "ref": "main",
+        "path": ".customer-published-registry",
+        "sparse-checkout": "registry",
+        "persist-credentials": "false",
+    }
+    installation = steps["Install official signed module anonymously"]["run"]
+    assert 'INSTALLATION_REPOSITORY="$GITHUB_WORKSPACE"' in installation
+    assert 'if [ "$MODE" = "candidate" ]; then' in installation
+    assert 'INSTALLATION_REPOSITORY="$GITHUB_WORKSPACE/.customer-published-registry"' in installation
+    assert installation.count('--repository "$INSTALLATION_REPOSITORY"') == 2
+    assert '--repository "$GITHUB_WORKSPACE"' in steps["Exercise cold and warm fixtures and modules repository"]["run"]

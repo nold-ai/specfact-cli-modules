@@ -26,6 +26,8 @@ For the supported Linux x86-64 capsule path, the installed review command SHALL 
 - **WHEN** that repository invokes review
 - **THEN** the payload comes from verified installation provenance rather than requiring the modules repository's protected candidate checkout
 - **AND** an actual candidate source checkout retains its strict candidate-context checks without fallback to a stale release
+- **AND** candidate CI pins its preliminary public installation to a separately recorded published-main registry snapshot, so an unpublished registry update in the candidate cannot select an unavailable baseline
+- **AND** public release acceptance remains pinned to its own registry checkout and release-tag identity
 
 ### Requirement: Sealed capsule mount destinations and private writes
 
