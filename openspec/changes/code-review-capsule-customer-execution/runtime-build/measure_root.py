@@ -48,7 +48,8 @@ def _main():
     sys.path.insert(0, "/opt/specfact/analyzers")
     beartype = importlib.import_module("beartype")
 
-    assert beartype.__version__ == "0.22.9"
+    if beartype.__version__ != "0.22.9":
+        raise ValueError(f"unexpected beartype version: {beartype.__version__}")
     print(json.dumps(report, sort_keys=True, indent=2))
 
 

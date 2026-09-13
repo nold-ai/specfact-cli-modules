@@ -2,7 +2,7 @@
 
 ## Why
 
-Ordinary non-root Code Review on an external repository encountered private runtime access, namespace denial, a Python 3.12 integrity failure, and directory creation failure. Current CI authenticates prefetch and runs a Python-only capsule smoke under sudo, so its green matrix does not prove the customer path. See [investigation](INVESTIGATION.md) for verified evidence and remaining unknowns.
+Ordinary non-root Code Review on an external repository encountered private runtime access, namespace denial, a Python 3.12 integrity failure, and directory creation failure. At the investigation baseline, CI authenticated prefetch and ran a Python-only capsule smoke under sudo, so that matrix did not prove the customer path. The corrective implementation now adds a real customer execution gate. See [investigation](INVESTIGATION.md) for verified evidence and remaining unknowns.
 
 ## What Changes
 
@@ -40,19 +40,19 @@ If signed payloads change later, bump `packages/specfact-code-review/module-pack
 
 ## Acceptance Criteria
 
-- Planning artifacts, scenario-based deltas, planned Requirements evidence, and ordered future tasks validate strictly.
+- Corrective implementation, scenario-based deltas, planned Requirements evidence, and recorded red/green tests validate strictly.
 - GitHub type, labels, assignee, parent, project/status, and native dependency relationships match this proposal and are read back.
-- The planning PR targets dev, uses Refs #466, and leaves the bug open/Todo and future work unchecked.
-- Future runtime acceptance is defined by the two delta specifications; planning acceptance does not establish runtime correctness.
+- Implementation PR #467 and canonical registry publication #468 are merged to dev; release PR #469 promotes the repair to main after review follow-up fixes and exact-head gates.
+- The signed candidate customer matrix has passed all three Python versions. Public signed-release acceptance remains pending under the two delta specifications; candidate evidence does not substitute for it.
 
 ## Non-Goals
 
-No production code, runtime tests, workflow edits, release artifacts, version bumps, platform expansion, issue closure, or archive operation in this planning delivery. No unsandboxed fallback, signature bypass, host-wide namespace-policy changes, or automatic elevation is authorized.
+Platform expansion, unrelated Requirements/C15 behavior, premature issue closure, and archive before public acceptance remain outside this corrective delivery. No unsandboxed fallback, signature bypass, host-wide namespace-policy changes, or automatic elevation is authorized.
 
 ## Source Tracking
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: #466
 - **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/466>
-- **Last Synced Status**: proposed; Todo; implementation not started
+- **Last Synced Status**: In Progress; implementation and registry publication merged to dev; release review follow-up and public acceptance pending (2026-09-13)
 - **Sanitized**: true

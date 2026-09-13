@@ -644,10 +644,10 @@ def _protected_candidate_payload() -> SelectedModulePayload:
 
 def _selected_module_payload() -> SelectedModulePayload:
     source = Path(__file__).resolve()
-    candidate_root = source.parents[5]
-    candidate_checkout = (
-        source == candidate_root / _PACKAGE_ROOT / "run/runner.py" and (candidate_root / ".git").exists()
+    candidate_root = next(
+        (parent for parent in source.parents if source == parent / _PACKAGE_ROOT / "run/runner.py"), None
     )
+    candidate_checkout = candidate_root is not None and (candidate_root / ".git").exists()
     if os.environ.get("GITHUB_ACTIONS") == "true" and candidate_checkout:
         return _protected_candidate_payload()
     payload, reason = _official_installed_payload()
@@ -3950,7 +3950,9 @@ def _pytest_observer_script() -> str:
             "sys.path[:0] = ['/opt/specfact/analyzers', '/opt/specfact/builtin', "
             "'/opt/specfact/project-runtime/site-packages']\n"
         )
-        snapshot_imports = f"sys.path.append({repo_root!r})\n"
+        snapshot_imports = (
+            f"sys.path.insert(sys.path.index('/opt/specfact/project-runtime/site-packages'), {repo_root!r})\n"
+        )
     return startup + (
         "import json, pathlib, sys, pytest, pytest_cov.plugin as pytest_cov_plugin\n"
         "class Observer:\n"

@@ -2,7 +2,7 @@
 
 ## Delivery boundary and baseline
 
-This is planning only, based on modules `a6bac86ec529715b9122a7a670ee4886a749d9f6` and Code Review 0.49.77. Preserve the installed-payload layout correction and existing core compatibility. Revalidate the released baseline before implementation; freeze exact module/core versions and artifact identities in reproduction evidence. Read the paired core #680 proposal before changing handoff assumptions. No core source changes are included here.
+The historical planning baseline used modules `a6bac86ec529715b9122a7a670ee4886a749d9f6` and Code Review 0.49.77. Preserve the installed-payload layout correction and existing core compatibility. Implementation was authorized and merged through #467, with canonical registry publication #468; release review fixes and public acceptance remain pending. Reproduction evidence freezes exact module/core versions and artifact identities. Read the paired core #680 proposal before changing handoff assumptions. No core source changes are included here.
 
 ## Customer reproduction
 
@@ -40,7 +40,7 @@ Future changes are limited to proven capsule causes and the customer validation 
 - Root manifests may depend on install modes or ambient state: compare exact entry manifests under controlled umasks and separate content from metadata drift.
 - A smoke test can pass without real review: assert nonempty scope, exact required analyzer coverage, known clean/defective outcomes, and signed released installation.
 
-Compressed runtime layer totals are 263599655, 258372661, and 255962422 bytes for cp311/cp312/cp313: 777934738 bytes total, approximately 0.78 GB decimal per full cold matrix, excluding installation dependencies. Disk use is larger after extraction; duration is unmeasured. Rollback uses reviewed revert plus canonical signed publication and registry correction, never edits to published immutable payloads. If the old release remains affected, record that limitation instead of claiming rollback restores working customer execution.
+Compressed runtime layer totals are 263599655, 258372661, and 255962422 bytes for cp311/cp312/cp313: 777934738 bytes total, approximately 0.78 GB decimal per full cold matrix, excluding installation dependencies. Disk use is larger after extraction; the signed candidate matrix recorded 251–434 seconds per customer job, excluding queue and quality checks. Rollback uses reviewed revert plus canonical signed publication and registry correction, never edits to published immutable payloads. If the old release remains affected, record that limitation instead of claiming rollback restores working customer execution.
 
 ## Implementation checkpoint — 2026-09-12
 
@@ -48,4 +48,4 @@ The owner authorized implementation and integration into modules dogfooding CI. 
 
 Authenticated post-base composition will contain fixed mount anchors. Numbered configuration destinations are constructed inside a private tmpfs mounted at the authenticated config anchor, bound to the existing invocation context's exact mount list, and remounted read-only before analyzer execution. This prevents creation beneath a read-only parent without modifying sealed base bytes or exposing writable configuration at execution.
 
-The expanded candidate gate executes three cold passes (denied namespaces, normal umask 022, alternate cache umask 077), approximately 2.4 GB of compressed runtime transfers across the three ABIs with revised dependency layers, excluding installation dependencies. Warm reuse is offline. Each job has a 90-minute timeout; complete successful-matrix duration remains unmeasured.
+The expanded candidate gate executes three cold passes (denied namespaces, normal umask 022, alternate cache umask 077), approximately 2.4 GB of compressed runtime transfers across the three ABIs with revised dependency layers, excluding installation dependencies. Warm reuse is offline. Each job has a 90-minute timeout; the final #467 signed candidate run took 1,010 runner-seconds across its three customer jobs; public release timing remains unmeasured.
