@@ -66,3 +66,34 @@ def tool_error(
         message=message,
         fixable=False,
     )
+
+
+_CAPSULE_TOOL_MODULES = {
+    "radon": "radon",
+    "pylint": "pylint",
+    "basedpyright": "basedpyright",
+    "crosshair": "crosshair",
+    "semgrep": "semgrep.console_scripts.pysemgrep",
+}
+
+
+@beartype
+@require(lambda command: bool(command) and all(isinstance(item, str) for item in command))
+@ensure(lambda result: isinstance(result, list) and bool(result))
+def analyzer_command(command: list[str]) -> list[str]:
+    """Preserve isolated Python child imports and private Ruff cache in a capsule."""
+    if Path(__file__).parent != Path("/opt/specfact/builtin/specfact_code_review"):
+        return command
+    if command[0] == "ruff":
+        return [*command, "--cache-dir", "/opt/specfact/tmp/cache/ruff"]
+    module = _CAPSULE_TOOL_MODULES.get(command[0])
+    if module is None:
+        return command
+    return [
+        "/opt/specfact/python/bin/python",
+        "-I",
+        "-S",
+        "/opt/specfact/bootstrap/sealed_bootstrap.py",
+        module,
+        *command[1:],
+    ]

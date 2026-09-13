@@ -1,0 +1,128 @@
+{
+  "cp311": {
+    "publication": "anonymous retrieval verified",
+    "manifest_digest": "sha256:752f2460b61cf0de063de0c39c9553613ffceb5073596c86eb1c1d5de40f35e3",
+    "root_manifest": {
+      "entry_count": 21860,
+      "manifest_digest": "sha256:61df3c281953cefeed86194cab8fd39b9766981dee34a86d1deeee8db7a64d30",
+      "regular_file_bytes": 902867406,
+      "subroots": {
+        "analyzers": {
+          "entry_count": 17653,
+          "manifest_digest": "sha256:a9a10acb31ae650acebe1a0072d416eb3613f24b94440e67ec229f17ad5e0e7f",
+          "regular_file_bytes": 620500646
+        },
+        "bin": {
+          "entry_count": 3,
+          "manifest_digest": "sha256:66e32681a90ca2b8fbb768758cdfa3a8f71abd29e1d533aa5d95985958dcc7fb",
+          "regular_file_bytes": 660887
+        },
+        "bootstrap": {
+          "entry_count": 2,
+          "manifest_digest": "sha256:b17c96dcd5e39dae54f6cc150e8a1c14978865f243b8cf1c42b43b262c5e5750",
+          "regular_file_bytes": 308
+        },
+        "lib": {
+          "entry_count": 1186,
+          "manifest_digest": "sha256:c12334a274f8558bc0735b0e38a32e879dd2e88040d69b54b11e1abcad89a75a",
+          "regular_file_bytes": 48498809
+        },
+        "python": {
+          "entry_count": 2925,
+          "manifest_digest": "sha256:7571cd13950989bbf8fff6891e3f284e5085a5af2435b5887cb62822ad57dbd8",
+          "regular_file_bytes": 49457581
+        },
+        "wheelhouse": {
+          "entry_count": 91,
+          "manifest_digest": "sha256:d155c90293bf974cc7e0c1c145d8910a89873d369eb62dbca2c2f3797a34e051",
+          "regular_file_bytes": 183749175
+        }
+      }
+    },
+    "dockerfile": "FROM ghcr.io/nold-ai/specfact-code-review-analyzer-runtime@sha256:4f9e424f3720ea0807cc0f9f22c0ba28e3c604632ddd719f605c22e878437a72\nCOPY --chmod=0644 beartype-0.22.9-py3-none-any.whl /opt/specfact/wheelhouse/\nCOPY --chmod=0644 manifest.json /opt/specfact/wheelhouse/manifest.json\n"
+  },
+  "cp312": {
+    "publication": "anonymous retrieval verified",
+    "manifest_digest": "sha256:c4c695e75137e73559a19240293757dd55e77ae55174f01d33f819b87a04005f",
+    "root_manifest": {
+      "entry_count": 21124,
+      "manifest_digest": "sha256:aa7ac27ebca406939e26e83fc5b88c7c8c8f92145103d9bd3671b637904b8d77",
+      "regular_file_bytes": 895105265,
+      "subroots": {
+        "analyzers": {
+          "entry_count": 17653,
+          "manifest_digest": "sha256:caea7c7c74e89820f21519f04ff526185c77d119fbabd3f78d6816938a7f7560",
+          "regular_file_bytes": 620605238
+        },
+        "bin": {
+          "entry_count": 3,
+          "manifest_digest": "sha256:66e32681a90ca2b8fbb768758cdfa3a8f71abd29e1d533aa5d95985958dcc7fb",
+          "regular_file_bytes": 660887
+        },
+        "bootstrap": {
+          "entry_count": 2,
+          "manifest_digest": "sha256:b17c96dcd5e39dae54f6cc150e8a1c14978865f243b8cf1c42b43b262c5e5750",
+          "regular_file_bytes": 308
+        },
+        "lib": {
+          "entry_count": 1186,
+          "manifest_digest": "sha256:32fcafaa8f9b48a7a2fc7f9d2d8ca381f20e4aa06e110e68027f4bdfefea105b",
+          "regular_file_bytes": 48502745
+        },
+        "python": {
+          "entry_count": 2189,
+          "manifest_digest": "sha256:e441211c5815b20b6490248be9a35b406f85d04b345a34e2a60b5321b199bf21",
+          "regular_file_bytes": 41568862
+        },
+        "wheelhouse": {
+          "entry_count": 91,
+          "manifest_digest": "sha256:5023cfda4fe8bf9bf46924b35a78351afd939180942564b702c1bfd8f3901f09",
+          "regular_file_bytes": 183767225
+        }
+      }
+    },
+    "dockerfile": "FROM ghcr.io/nold-ai/specfact-code-review-analyzer-runtime@sha256:f00ac813f428b7c2ef3d1ce3400496f67ca2d508064e6efc55af1ba6c4697461\nCOPY --chmod=0644 beartype-0.22.9-py3-none-any.whl /opt/specfact/wheelhouse/\nCOPY --chmod=0644 manifest.json /opt/specfact/wheelhouse/manifest.json\n"
+  },
+  "cp313": {
+    "publication": "pending explicit approval",
+    "manifest_digest": "sha256:aea3cbaa27ec043906aaf44a5f24da7cda8f1060f49a92dc0f993406a2b179c6",
+    "root_manifest": {
+      "entry_count": 21155,
+      "manifest_digest": "sha256:a719de6e304174c207c20fa9d1be4847af914476e355ac6b209d460b20bdae0a",
+      "regular_file_bytes": 891474955,
+      "subroots": {
+        "analyzers": {
+          "entry_count": 17653,
+          "manifest_digest": "sha256:6acf66b1d588953a1737ca1e4a5c04066d75ea4d8ca91a0771efaf5b507d66f5",
+          "regular_file_bytes": 620590929
+        },
+        "bin": {
+          "entry_count": 3,
+          "manifest_digest": "sha256:66e32681a90ca2b8fbb768758cdfa3a8f71abd29e1d533aa5d95985958dcc7fb",
+          "regular_file_bytes": 660887
+        },
+        "bootstrap": {
+          "entry_count": 2,
+          "manifest_digest": "sha256:b17c96dcd5e39dae54f6cc150e8a1c14978865f243b8cf1c42b43b262c5e5750",
+          "regular_file_bytes": 308
+        },
+        "lib": {
+          "entry_count": 1167,
+          "manifest_digest": "sha256:aeea63e9d2ab51f5f552354de0e546678f8ef1607abd7159678c4038a1f5cb9a",
+          "regular_file_bytes": 46636153
+        },
+        "python": {
+          "entry_count": 2239,
+          "manifest_digest": "sha256:c67bb10cb49a1711bc0ba4fa1b507df4d75c482b68bdd2eb70e133922b4b478d",
+          "regular_file_bytes": 39821347
+        },
+        "wheelhouse": {
+          "entry_count": 91,
+          "manifest_digest": "sha256:ad3114628dc121ddc47f2e6d411ec66485be471dd4573998d19953f5d4ce7f85",
+          "regular_file_bytes": 183765331
+        }
+      }
+    },
+    "dockerfile": "FROM ghcr.io/nold-ai/specfact-code-review-analyzer-runtime@sha256:1516be5a113d9176c70fcc4cfac3fe46eaf32d5b66c381b17fbb26a5bcc9fb27\nCOPY --chmod=0644 beartype-0.22.9-py3-none-any.whl /opt/specfact/wheelhouse/\nCOPY --chmod=0644 manifest.json /opt/specfact/wheelhouse/manifest.json\n"
+  }
+}

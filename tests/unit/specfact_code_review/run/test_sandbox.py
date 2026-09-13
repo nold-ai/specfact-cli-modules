@@ -175,9 +175,11 @@ def test_runtime_capsule_boots_in_empty_bwrap_root_without_host_mounts(sandbox_a
     assert not plan.host_runtime_mounts
 
 
+@pytest.mark.parametrize("threads", [1, 2])
 def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor(
-    sandbox_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    sandbox_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, threads: int
 ) -> None:
+    monkeypatch.setattr(sandbox_api.threading, "active_count", lambda: threads)
     context = _context(tmp_path, sandbox_api)
     bubblewrap = context.capsule_root / "opt/specfact/bin/bwrap-static"
     bubblewrap.parent.mkdir(parents=True)
@@ -190,7 +192,8 @@ def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor
         calls.append((command, descriptor, timeout))
         return sandbox_api.SandboxExecution("PASS", 0, "{}", "")
 
-    monkeypatch.setattr(sandbox_api, "_execute_traced_launch", run, raising=False)
+    operation = "_execute_traced_launch" if threads == 1 else "_execute_trace_helper"
+    monkeypatch.setattr(sandbox_api, operation, run)
     identity = sandbox_api.BubblewrapIdentity(
         path="/opt/specfact/bin/bwrap-static",
         format="ELF",
@@ -221,6 +224,7 @@ def test_sandbox_executor_launches_verified_bubblewrap_from_same_open_descriptor
 def test_sandbox_executor_rejects_failed_pre_namespace_validation(
     sandbox_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(sandbox_api.threading, "active_count", lambda: 1)
     context = _context(tmp_path, sandbox_api)
     bubblewrap = context.capsule_root / "opt/specfact/bin/bwrap-static"
     bubblewrap.parent.mkdir(parents=True)
@@ -473,3 +477,80 @@ def test_runtime_observation_declares_non_adversarial_candidate_assumption(sandb
     assert statement.adversarial_candidate_resistance is False
     assert "candidate Python" in statement.limitation
     assert statement.status_on_policy_uncertainty == "UNKNOWN"
+
+
+def test_customer_configuration_mounts_are_sealed_before_execution(sandbox_api: Any, tmp_path: Path) -> None:
+    context = _context(tmp_path, sandbox_api)
+    second = tmp_path / "second-config"
+    second.mkdir()
+    plan = sandbox_api.build_launch_plan(context.with_config_roots((*context.config_roots, second)))
+    command = sandbox_api._bubblewrap_command(9, plan, extra_argv=())
+    private_config = next(
+        i for i in range(len(command) - 1) if command[i : i + 2] == ["--tmpfs", "/opt/specfact/config"]
+    )
+    sealed_config = next(
+        i for i in range(len(command) - 1) if command[i : i + 2] == ["--remount-ro", "/opt/specfact/config"]
+    )
+    assert private_config < command.index("/opt/specfact/config/0") < sealed_config
+    assert command.index("/opt/specfact/config/1") < sealed_config < command.index("--chdir")
+    assert command[command.index("HOME") + 1].startswith("/opt/specfact/tmp")
+    assert command[command.index("TMPDIR") + 1].startswith("/opt/specfact/tmp")
+
+
+@pytest.mark.parametrize(
+    ("stderr", "expected"),
+    [
+        ("bwrap: Creating new namespace failed: Operation not permitted", "namespace_unavailable"),
+        ("bwrap: Can't mkdir /opt/specfact/config: Read-only file system", "sandbox_filesystem_error"),
+        ("analyzer failed", "analyzer_process_error"),
+    ],
+)
+def test_customer_launch_failure_preserves_stage(sandbox_api: Any, stderr: str, expected: str) -> None:
+    diagnostic = sandbox_api._launch_failure_reason(stderr)
+    assert diagnostic.startswith(expected + ":")
+    assert stderr in diagnostic
+    assert len(sandbox_api._launch_failure_reason("x" * 5000)) < 2100
+
+
+def test_customer_threaded_controller_uses_fresh_trace_helper(
+    sandbox_api: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+    import subprocess
+
+    observed = []
+
+    def run(command, **kwargs):
+        observed.append(command)
+        assert command[1] == "-I"
+        assert kwargs["pass_fds"] == (3,)
+        assert "preexec_fn" not in kwargs
+        assert kwargs["env"] == {}
+        assert json.loads(kwargs["input"]) == ["/proc/self/fd/3", "--unshare-all"]
+        return subprocess.CompletedProcess(
+            command, 0, json.dumps({"status": "PASS", "returncode": 0, "stdout": "{}", "stderr": "", "reason": ""}), ""
+        )
+
+    monkeypatch.setattr(sandbox_api.subprocess, "run", run)
+    result = sandbox_api._execute_trace_helper(["/proc/self/fd/3", "--unshare-all"], descriptor=3, timeout=1)
+    assert result.status == "PASS"
+    assert observed
+
+
+def test_customer_long_launcher_stderr_retains_namespace_stage(sandbox_api: Any) -> None:
+    stderr = "bwrap: Creating new namespace failed: Operation not permitted\n" + "x" * 4000
+    result = sandbox_api._launch_failure_reason(stderr)
+    assert result.startswith("namespace_unavailable:")
+    assert len(result) < 2100
+
+
+def test_customer_sandbox_uses_locked_certificate_store(sandbox_api: Any, tmp_path: Path) -> None:
+    """Native tools load locked certificates without probing missing host utilities."""
+    plan = sandbox_api.build_launch_plan(_context(tmp_path, sandbox_api))
+    command = sandbox_api._bubblewrap_command(9, plan, extra_argv=())
+    assert command[command.index("SSL_CERT_FILE") + 1] == "/opt/specfact/analyzers/certifi/cacert.pem"
+
+
+def test_customer_network_namespace_denial_is_specific(sandbox_api: Any) -> None:
+    message = "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted"
+    assert sandbox_api._launch_failure_reason(message) == "namespace_unavailable:" + message

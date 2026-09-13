@@ -2062,6 +2062,8 @@ def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
     source = tmp_path / "src/app.py"
     source.parent.mkdir()
     source.write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "test_app.py").write_text("def test_value():\n    assert 1 == 1\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
     launches: list[tuple[str, str]] = []
 
@@ -2256,9 +2258,14 @@ def test_capsule_review_changed_enforcement_preserves_unknown(monkeypatch: Monke
 
 def test_capsule_review_changed_enforcement_preserves_fail_without_changed_line_evidence(
     monkeypatch: MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     runner_api = _c14_runner()
     finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
+    monkeypatch.chdir(tmp_path)
+    selected = tmp_path / finding.file
+    selected.parent.mkdir(parents=True, exist_ok=True)
+    selected.write_text("VALUE = 1\n", encoding="utf-8")
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
     evidence = _synthetic_complete_profile_evidence(runner_api)
     evidence["ruff"] = {**evidence["ruff"], "evidence_outcome": "FAIL"}
@@ -3313,6 +3320,7 @@ def test_capsule_runtime_loads_the_packaged_signed_lock_before_materialization(
     runner_api = _c14_runner()
     from specfact_code_review.run import toolchain
 
+    monkeypatch.setattr(runner_api, "_capsule_environment_id", lambda: "linux-x86_64-cp312")
     captured: dict[str, object] = {}
     monkeypatch.setattr(runner_api.platform, "system", lambda: "Linux")
     monkeypatch.setattr(runner_api.platform, "machine", lambda: "x86_64")
@@ -3334,8 +3342,9 @@ def test_capsule_runtime_loads_the_packaged_signed_lock_before_materialization(
     assert captured["environment_id"] == runner_api._capsule_environment_id()
 
 
+@pytest.mark.parametrize("via_symlink", [False, True])
 def test_protected_pr_candidate_payload_is_reconstructed_from_verified_git_bytes(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: MonkeyPatch, tmp_path: Path, via_symlink: bool
 ) -> None:
     runner_api = _c14_runner()
     repo_root = tmp_path / "repo"
@@ -3365,6 +3374,10 @@ def test_protected_pr_candidate_payload_is_reconstructed_from_verified_git_bytes
         text=True,
         env=git_env,
     ).stdout.strip()
+    if via_symlink:
+        shadow = tmp_path / "shadow"
+        shadow.symlink_to(package_root, target_is_directory=True)
+        runner_file = shadow / "src/specfact_code_review/run/runner.py"
     monkeypatch.setattr(runner_api, "__file__", str(runner_file))
     candidate_env = {
         "GITHUB_ACTIONS": "true",
@@ -7668,3 +7681,21 @@ def test_adversarial_runtime_policy_is_unknown() -> None:
     result = runner_api.evaluate_runtime_policy(candidate_python_executes=True, hostile_candidate_claim=True)
     assert result.status == "UNKNOWN"
     assert result.assumption == "non_adversarial_candidate_runtime"
+
+
+@pytest.mark.parametrize("repository", ["customer/project", "nold-ai/specfact-cli-modules"])
+def test_customer_github_actions_uses_verified_installed_payload(
+    monkeypatch: MonkeyPatch, tmp_path: Path, repository: str
+) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", repository)
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
+    monkeypatch.setattr(runner_api, "__file__", str(tmp_path / "installed/src/specfact_code_review/run/runner.py"))
+    installed = SimpleNamespace(status="PASS")
+    monkeypatch.setattr(runner_api, "_official_installed_payload", lambda: (installed, ""))
+    monkeypatch.setattr(
+        runner_api, "_protected_candidate_payload", lambda: pytest.fail("customer install is not a candidate checkout")
+    )
+    result = runner_api._selected_module_payload()
+    assert result.payload is installed

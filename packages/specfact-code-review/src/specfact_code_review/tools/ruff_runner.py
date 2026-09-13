@@ -10,7 +10,12 @@ from typing import Literal
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import normalize_path_variants, python_source_paths_for_tools, tool_error
+from specfact_code_review._review_utils import (
+    analyzer_command,
+    normalize_path_variants,
+    python_source_paths_for_tools,
+    tool_error,
+)
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
@@ -122,7 +127,9 @@ def run_ruff(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> list[Rev
 
     try:
         result = subprocess.run(
-            ["ruff", "check", "--output-format", "json", *extra_args, *[str(file_path) for file_path in files]],
+            analyzer_command(
+                ["ruff", "check", "--output-format", "json", *extra_args, *[str(file_path) for file_path in files]]
+            ),
             capture_output=True,
             text=True,
             check=False,

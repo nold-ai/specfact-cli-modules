@@ -583,7 +583,7 @@ def _protected_candidate_payload() -> SelectedModulePayload:
     ):
         return SelectedModulePayload(None, "untrusted_candidate_workflow_context")
     try:
-        repo_root = Path(__file__).parents[5]
+        repo_root = Path(__file__).resolve().parents[5]
         if (
             Path(_git_bytes(repo_root, "rev-parse", "--show-toplevel").decode().strip()).resolve()
             != repo_root.resolve()
@@ -643,7 +643,12 @@ def _protected_candidate_payload() -> SelectedModulePayload:
 
 
 def _selected_module_payload() -> SelectedModulePayload:
-    if os.environ.get("GITHUB_ACTIONS") == "true":
+    source = Path(__file__).resolve()
+    candidate_root = source.parents[5]
+    candidate_checkout = (
+        source == candidate_root / _PACKAGE_ROOT / "run/runner.py" and (candidate_root / ".git").exists()
+    )
+    if os.environ.get("GITHUB_ACTIONS") == "true" and candidate_checkout:
         return _protected_candidate_payload()
     payload, reason = _official_installed_payload()
     return SelectedModulePayload(payload, reason)
@@ -1094,7 +1099,7 @@ def _prepare_capsule_process_roots(process_root: Path) -> tuple[Path, Path, Path
     )
     for root in roots:
         root.mkdir()
-    for projected_root in ("coverage", "pytest"):
+    for projected_root in ("coverage", "pytest", "home", "cache", "config", "data", "state"):
         (roots[2] / projected_root).mkdir()
     return roots
 
@@ -1260,6 +1265,7 @@ def _run_capsule_snapshot(
             "diagnostic": str(raw.get("diagnostic", "")),
             "sandbox_invocation": "fresh",
             "capsule_identity": runtime.identity,
+            "environment_id": getattr(runtime, "environment_id", ""),
         }
     return CapsuleSnapshotResult(evidence, findings_by_member)
 
@@ -3114,6 +3120,11 @@ def _repository_pytest_hook_validation(
     return validate_pytest_plugins(tuple(plugins))
 
 
+def _pytest_paths_below(root: Path) -> tuple[Path, ...]:
+    """Allow a controller-selected test file without expanding to its siblings."""
+    return (root,) if root.is_file() else tuple(sorted(root.rglob("*.py")))
+
+
 def _collect_pytest_selectors(
     snapshot_root: Path,
     roots: tuple[str, ...],
@@ -3123,7 +3134,7 @@ def _collect_pytest_selectors(
     return tuple(
         selector
         for root in roots
-        for path in sorted((snapshot_root / root).rglob("*.py"))
+        for path in _pytest_paths_below(snapshot_root / root)
         if _matches_python_file(path, file_patterns)
         for selector in _test_selectors(
             path,
@@ -3155,7 +3166,7 @@ def _pytest_candidates(
     return {
         path.relative_to(snapshot_root).as_posix()
         for root in roots
-        for path in (snapshot_root / root).rglob("*.py")
+        for path in _pytest_paths_below(snapshot_root / root)
         if _matches_python_file(path, file_patterns)
     }
 
@@ -3872,8 +3883,16 @@ def _coverage_for_source(source_file: Path, payload: dict[str, object]) -> float
     return None
 
 
+def _pytest_in_capsule() -> bool:
+    return Path(__file__) == Path("/opt/specfact/builtin/specfact_code_review/run/runner.py")
+
+
 def _pytest_env() -> dict[str, str]:
     env = os.environ.copy()
+    if _pytest_in_capsule():
+        env.pop("PYTHONPATH", None)
+        env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        return env
     pythonpath_entries: list[str] = [str(_SOURCE_ROOT.resolve()), str(Path.cwd().resolve())]
     _extend_unique_entries(pythonpath_entries, env.get("PYTHONPATH", ""), split_by=os.pathsep)
     _extend_unique_entries(
@@ -3923,7 +3942,16 @@ def _pytest_python_executable() -> str:
 def _pytest_observer_script() -> str:
     source_root = str(_SOURCE_ROOT.resolve())
     repo_root = str(Path.cwd().resolve())
-    return (
+    startup = ""
+    snapshot_imports = f"sys.path[:0] = [{source_root!r}, {repo_root!r}]\n"
+    if _pytest_in_capsule():
+        startup = (
+            "import sys\n"
+            "sys.path[:0] = ['/opt/specfact/analyzers', '/opt/specfact/builtin', "
+            "'/opt/specfact/project-runtime/site-packages']\n"
+        )
+        snapshot_imports = f"sys.path.append({repo_root!r})\n"
+    return startup + (
         "import json, pathlib, sys, pytest, pytest_cov.plugin as pytest_cov_plugin\n"
         "class Observer:\n"
         "    def __init__(self, path):\n"
@@ -3947,9 +3975,7 @@ def _pytest_observer_script() -> str:
         "        })\n"
         "    def pytest_sessionfinish(self, session, exitstatus):\n"
         "        self.path.write_text(json.dumps(self.records), encoding='utf-8')\n"
-        "observer_path = sys.argv.pop(1)\n"
-        f"sys.path[:0] = [{source_root!r}, {repo_root!r}]\n"
-        "import specfact_code_review\n"
+        "observer_path = sys.argv.pop(1)\n" + snapshot_imports + "import specfact_code_review\n"
         "raise SystemExit(pytest.main(sys.argv[1:], plugins=[pytest_cov_plugin, Observer(observer_path)]))\n"
     )
 
@@ -3979,6 +4005,7 @@ def _run_pytest_selection_with_coverage(
     coverage_data_path.unlink(missing_ok=True)
     command = [
         _pytest_python_executable(),
+        *(["-I", "-S"] if _pytest_in_capsule() else []),
         "-c",
         _pytest_observer_script(),
         str(observer_path),
@@ -6361,6 +6388,7 @@ def _unknown_capsule_report(reason: str, *, options: ReviewOptions, scope_eviden
             "evidence_outcome": "UNKNOWN",
             "version": _C14_ANALYZER_VERSIONS[member],
             "diagnostic": reason,
+            "environment_id": _capsule_environment_id(),
         }
         for member in default_pr_range_profile().all_ids
     }
@@ -6583,6 +6611,105 @@ def _run_cached_development_host_review(
         )
 
 
+def _corresponding_local_tests(source: Path, candidates: set[str], *, snapshot_root: Path) -> set[str]:
+    expected = _expected_test_path(source.relative_to(snapshot_root))
+    if expected is not None and expected.as_posix() in candidates:
+        return {expected.as_posix()}
+    names = {f"test_{source.stem}.py", f"{source.stem}_test.py"}
+    matching = {path for path in candidates if Path(path).name in names}
+    adjacent = {path for path in matching if (snapshot_root / path).parent == source.parent}
+    selected = adjacent or matching
+    if len(selected) > 1:
+        raise ValueError(f"local_pytest_correspondence_ambiguous:{source.name}")
+    return selected
+
+
+def _scoped_local_pytest_policy(
+    policy: dict[str, object], *, snapshot_root: Path, files: list[Path]
+) -> dict[str, object]:
+    projection = project_pytest_policy(policy, snapshot_root=snapshot_root, output_root=snapshot_root)
+    if projection.status != "PASS":
+        raise ValueError(projection.reason)
+    patterns = tuple(str(value) for value in cast(list[object], policy["python_files"]))
+    roots = tuple(str(value) for value in cast(list[object], policy["testpaths"]))
+    candidates = _pytest_candidates(snapshot_root, roots, patterns)
+    reviewed_python = [path.resolve() for path in files if path.suffix == ".py"]
+    selected: set[str] = set()
+    for path in reviewed_python:
+        if _matches_python_file(path, patterns):
+            selected.add(path.relative_to(snapshot_root).as_posix())
+        else:
+            selected.update(_corresponding_local_tests(path, candidates, snapshot_root=snapshot_root))
+    if not selected:
+        raise ValueError("local_pytest_inventory_empty")
+    return {**policy, "testpaths": sorted(selected)}
+
+
+def _local_pytest_failure_snapshot(
+    runtime: CapsuleRuntime,
+    *,
+    snapshot_root: Path,
+    files: list[Path],
+    options: ReviewOptions,
+    reason: str,
+) -> CapsuleSnapshotResult:
+    snapshot = _run_capsule_snapshot(
+        runtime, snapshot_root=snapshot_root, files=files, options=replace(options, no_tests=True)
+    )
+    snapshot.evidence["targeted-pytest-coverage"] = {
+        "execution_state": "error",
+        "evidence_outcome": "UNKNOWN",
+        "version": _C14_ANALYZER_VERSIONS["targeted-pytest-coverage"],
+        "diagnostic": f"local_pytest_inventory_failed:{reason}",
+        "capsule_identity": runtime.identity,
+        "environment_id": getattr(runtime, "environment_id", ""),
+    }
+    return snapshot
+
+
+def _run_local_capsule_snapshot(
+    runtime: CapsuleRuntime,
+    *,
+    snapshot_root: Path,
+    files: list[Path],
+    options: ReviewOptions,
+    assurance_kind: LocalAssuranceKind,
+) -> CapsuleSnapshotResult:
+    """Project local pytest policy and execute a reconciled customer inventory."""
+    if options.no_tests:
+        return _run_capsule_snapshot(runtime, snapshot_root=snapshot_root, files=files, options=options)
+    builder = _PolicyBindingBuilder()
+    try:
+        policy = _pytest_policy_values(snapshot_root)
+        selected_policy = (
+            policy
+            if assurance_kind == "full"
+            else _scoped_local_pytest_policy(policy, snapshot_root=snapshot_root, files=files)
+        )
+        plan = plan_complete_pytest_suite(snapshot_root, selected_policy, changed_paths=())
+        if plan.status != "PASS" or not plan.selectors:
+            raise ValueError(plan.reason or "local_pytest_inventory_empty")
+        _bind_pytest_coverage_policy(builder, snapshot_root)
+        # Keep local contract analysis independent of pytest discovery roots.
+        builder.member_argv.pop("contracts", None)
+        bindings = _with_pytest_inventory(builder.result(), plan.selectors)
+        return _run_capsule_snapshot(
+            runtime,
+            snapshot_root=snapshot_root,
+            files=files,
+            options=options,
+            config_roots=bindings.config_roots,
+            member_argv=bindings.member_argv,
+        )
+    except (OSError, TypeError, ValueError, configparser.Error) as exc:
+        return _local_pytest_failure_snapshot(
+            runtime, snapshot_root=snapshot_root, files=files, options=options, reason=str(exc)
+        )
+    finally:
+        for root in builder.cleanup_roots:
+            shutil.rmtree(root, ignore_errors=True)
+
+
 def run_capsule_review(
     files: list[Path],
     options: ReviewOptions | None = None,
@@ -6641,11 +6768,12 @@ def run_capsule_review(
                         scope_evidence=scope_evidence,
                     )
                 worktree_identity = captured_identity
-            snapshot = _run_capsule_snapshot(
+            snapshot = _run_local_capsule_snapshot(
                 runtime,
                 snapshot_root=snapshot_root,
                 files=snapshot_files,
                 options=review_options,
+                assurance_kind=assurance_kind,
             )
             if _worktree_analysis_identity_changed(worktree_identity, files):
                 return _worktree_snapshot_unknown(
@@ -7117,7 +7245,7 @@ def _pytest_policy_values(policy_bundle: object | None) -> dict[str, object]:
     }
     if policy_bundle is None:
         return defaults
-    root = cast(Path, cast(Any, policy_bundle).root)
+    root = policy_bundle if isinstance(policy_bundle, Path) else cast(Path, cast(Any, policy_bundle).root)
     located = scope.resolve_pytest_policy(root, expected_version="9.0.3")
     if located.status != "PASS":
         raise ValueError(located.reason)
@@ -7154,7 +7282,7 @@ def _flatten_coverage_sections(document: dict[str, object]) -> dict[str, object]
 def _coverage_policy_values(policy_bundle: object | None) -> dict[str, object]:
     if policy_bundle is None:
         return {}
-    root = cast(Path, cast(Any, policy_bundle).root)
+    root = policy_bundle if isinstance(policy_bundle, Path) else cast(Path, cast(Any, policy_bundle).root)
     located = scope.resolve_coverage_policy(root, expected_version="7.15.4")
     if located.status != "PASS":
         raise ValueError(located.reason)
