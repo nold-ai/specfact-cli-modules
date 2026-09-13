@@ -23,6 +23,13 @@ _BUNDLE_OVERVIEWS = sorted(_REPO_ROOT.glob("docs/bundles/*/overview.md"))
 
 # Runnable examples (not plain `--help`); map exact line → tokens after `specfact`.
 _OVERVIEW_LINE_TO_TOKENS_AFTER_SPECFACT: dict[str, list[str]] = {
+    "specfact module install nold-ai/specfact-code-review --scope user": ["module", "install", "--help"],
+    "specfact code review run --scope full --enforcement full --bug-hunt --json --out review.json": [
+        "code",
+        "review",
+        "run",
+        "--help",
+    ],
     "specfact code validate sidecar init my-bundle /path/to/repo": [
         "code",
         "validate",
@@ -140,6 +147,7 @@ def _route_backlog(t: list[str]) -> tuple[Any, list[str]] | None:
 
 
 _TOP_LEVEL_MODULE_BY_PREFIX: dict[str, str] = {
+    "module": "specfact_cli.modules.module_registry.src.commands",
     "govern": "specfact_govern.govern.commands",
     "project": "specfact_project.project.commands",
     "plan": "specfact_project.plan.commands",

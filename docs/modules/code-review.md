@@ -331,7 +331,7 @@ Additional behavior:
 `specfact_code_review.tools.semgrep_runner.run_semgrep(files)` executes:
 
 ```bash
-semgrep --config packages/specfact-code-review/.semgrep/clean_code.yaml --json <files...>
+semgrep --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml --json <files...>
 ```
 
 Custom rule mapping:
@@ -366,7 +366,7 @@ Additional behavior:
 
 After the clean-code Semgrep pass, the orchestrator runs
 `specfact_code_review.tools.semgrep_runner.run_semgrep_bugs(files)`, which uses
-`packages/specfact-code-review/.semgrep/bugs.yaml` when present. Findings are
+`packages/specfact-code-review/src/specfact_code_review/.semgrep/bugs.yaml` when present. Findings are
 mapped to `security` or `correctness`. If the config file is missing, the pass
 is skipped with no error.
 
@@ -471,7 +471,7 @@ The default charter encodes the clean-code principles directly:
 - Simplification loop: use `--focus simplify` for advisory cleanup queues and
   require explicit user approval before edits.
 
-### Command flow
+### Rules command flow
 
 ```bash
 specfact code review rules init

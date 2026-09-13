@@ -15,6 +15,7 @@ import yaml
 from beartype import beartype
 from icontract import ensure, require
 
+from specfact_code_review._review_utils import analyzer_command
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
@@ -358,15 +359,17 @@ def _run_semgrep_command(
         env["SEMGREP_SETTINGS_FILE"] = str(semgrep_log_dir / "settings.yml")
         env.setdefault("SEMGREP_SEND_METRICS", "off")
         return subprocess.run(
-            [
-                "semgrep",
-                "--disable-version-check",
-                "--quiet",
-                "--disable-nosem",
-                *config_args,
-                "--json",
-                *(str(file_path) for file_path in files),
-            ],
+            analyzer_command(
+                [
+                    "semgrep",
+                    "--disable-version-check",
+                    "--quiet",
+                    "--disable-nosem",
+                    *config_args,
+                    "--json",
+                    *(str(file_path) for file_path in files),
+                ]
+            ),
             capture_output=True,
             text=True,
             check=False,

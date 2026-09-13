@@ -17,7 +17,29 @@ Use it together with the [Codebase](/bundles/codebase/overview/) bundle (`import
 ## Prerequisites
 
 - `specfact module install nold-ai/specfact-code-review` — the manifest `bundle_dependencies` list includes **`nold-ai/specfact-codebase`**, so SpecFact CLI **will automatically install** the Codebase bundle alongside this one for the full shared **`specfact code`** command surface (import, analyze, drift, and related commands live there).
-- Optional tool installs (Ruff, Radon, Semgrep, Pyright, etc.) as described in command help
+- Signed capsule execution requires Linux x86-64 with Python 3.11, 3.12 or 3.13 and permission to create unprivileged user namespaces. Analyzer dependencies come from the verified capsule.
+
+## Capsule setup and troubleshooting
+
+Install the released core and official module into user-owned locations, then run the review from your repository:
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install specfact-cli
+specfact module install nold-ai/specfact-code-review --scope user
+specfact code review run --scope full --enforcement full --bug-hunt --json --out review.json
+```
+
+The runtime is downloaded anonymously on the first run. `SPECFACT_CODE_REVIEW_CAPSULE_CACHE` selects a user-owned cache location; the default is `~/.cache/specfact/code-review/capsules`. A complete three-Python cold pass downloads approximately 0.78 GB of compressed runtime layers, excluding installation dependencies. Warm runs verify cached identities before reuse.
+
+Ubuntu 24.04 can restrict unprivileged user namespaces through AppArmor. A namespace diagnostic requires administrator review of the host policy. The repository's `capsule-customer-execution` workflow installs a narrowly scoped profile for its temporary cache's `**/opt/specfact/bin/bwrap-static` launcher path, granting `userns` permission while keeping the global restriction enabled. An administrator can adapt that attachment to the customer's actual cache path under the organization's policy. See [Ubuntu's AppArmor guidance](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) (checked 2026-09-12). Installation and analyzer execution must still run as the ordinary user; do not solve this by running SpecFact with sudo, disabling host protections, or running analyzers outside the capsule.
+
+Capsule setup and integrity failures remain `UNKNOWN` with a failing exit. Preserve the JSON report, module/core versions, Python ABI, cache identity and the launch diagnostic. Namespace failures identify the denied capability; filesystem launch failures retain the path context; final-root integrity failures show expected and actual digests and entry counts. Do not edit sealed files or replace expected hashes with observed values. To diagnose corruption, retain the failing evidence and retry in a new empty user-owned cache; keep the original cache available for comparison.
+
+Full scope inventories the complete pytest suite. Explicit-file and worktree reviews select reviewed tests or unambiguous corresponding tests for the selected source files; unrelated test suites are not run. If the required test selection cannot be established, pytest evidence is `UNKNOWN` and the review fails, while independent static analyzer results remain available. The existing explicit `--no-tests` control is unchanged.
+
+The persistent CI matrix separates candidate-source checks on pull requests from public signed-installation checks after release/registry publication or manual dispatch. It requires all ten analyzer members to execute on controlled clean and defective fixtures and on an exact-commit source/test slice of this repository. Skips, empty evidence and `UNKNOWN` fail the gate. A passing candidate run does not constitute signed-release acceptance; repeat the public matrix after canonical signing and publication before closing the bug.
 
 ## `specfact code review` — nested commands
 
@@ -66,3 +88,5 @@ specfact code review rules show --help
 - [Code review rules](../rules/)
 - [Code review module](/modules/code-review/)
 - [Codebase bundle overview](/bundles/codebase/overview/) — import, drift, validation, repro
+
+For a verified warm-cache check, set `SPECFACT_CODE_REVIEW_CAPSULE_OFFLINE=1`. Capsule acquisition then revalidates cached descriptors and refuses missing entries without downloading replacements. Use a complete cache from a prior successful cold run; this does not disable the analyzer sandbox or weaken signature checks.

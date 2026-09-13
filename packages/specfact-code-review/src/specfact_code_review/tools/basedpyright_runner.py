@@ -10,7 +10,12 @@ from typing import Literal
 from beartype import beartype
 from icontract import require
 
-from specfact_code_review._review_utils import normalize_path_variants, python_source_paths_for_tools, tool_error
+from specfact_code_review._review_utils import (
+    analyzer_command,
+    normalize_path_variants,
+    python_source_paths_for_tools,
+    tool_error,
+)
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
@@ -116,12 +121,14 @@ def run_basedpyright(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> 
         uses_project_projection = len(extra_args) == 2 and extra_args[0] == "--project"
         projected_source_args = () if uses_project_projection else tuple(str(file_path) for file_path in files)
         result = subprocess.run(
-            [
-                "basedpyright",
-                "--outputjson",
-                *(extra_args or ("--project", ".")),
-                *projected_source_args,
-            ],
+            analyzer_command(
+                [
+                    "basedpyright",
+                    "--outputjson",
+                    *(extra_args or ("--project", ".")),
+                    *projected_source_args,
+                ]
+            ),
             capture_output=True,
             text=True,
             check=False,

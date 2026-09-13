@@ -674,3 +674,52 @@ def test_each_ai_bloat_good_fixture_triggers_no_ai_bloat_findings(fixture_name: 
     findings = run_semgrep([FIXTURE_ROOT / fixture_name])
 
     assert not any(finding.category == "ai_bloat" for finding in findings)
+
+
+def test_customer_capsule_payload_contains_all_signed_semgrep_rules(tmp_path: Path) -> None:
+    """Rules survive the authenticated Python-package-only capsule copy."""
+    import shutil
+
+    from specfact_code_review.tools import semgrep_runner
+
+    package = Path(semgrep_runner.__file__).resolve().parents[1]
+    copied = tmp_path / "specfact_code_review"
+    shutil.copytree(package, copied, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    module = copied / "tools/semgrep_runner.py"
+    for finder in (find_semgrep_config, find_semgrep_bugs_config, find_semgrep_ai_bloat_config):
+        config = finder(module_file=module)
+        assert config is not None and config.is_file() and config.is_relative_to(copied)
+
+
+def test_customer_semgrep_policy_resolves_packaged_module_layout(tmp_path: Path) -> None:
+    """Controller policy resolution accepts rules inside the signed Python payload."""
+    from specfact_code_review.run import scope
+    from specfact_code_review.tools import semgrep_runner
+
+    module_root = Path(semgrep_runner.__file__).resolve().parents[3]
+    bundle = scope.resolve_semgrep_bundle(tmp_path, signed_module_root=module_root)
+    try:
+        assert bundle.status == "PASS", bundle.reason
+        assert bundle.clean.identity_kind == "signed_module_payload"
+    finally:
+        import shutil
+
+        shutil.rmtree(bundle.root)
+
+
+def test_customer_semgrep_child_uses_sealed_python_startup(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    """Semgrep's Python entrypoint retains only the capsule import closure."""
+    from specfact_code_review import _review_utils
+
+    monkeypatch.setattr(_review_utils, "__file__", "/opt/specfact/builtin/specfact_code_review/_review_utils.py")
+    run = Mock(return_value=completed_process("semgrep", stdout='{"results": []}'))
+    monkeypatch.setattr(subprocess, "run", run)
+    _run_semgrep_command([tmp_path / "target.py"], bundle_root=None, config_file=tmp_path / "rules.yaml")
+    command = run.call_args.args[0]
+    assert command[:5] == [
+        "/opt/specfact/python/bin/python",
+        "-I",
+        "-S",
+        "/opt/specfact/bootstrap/sealed_bootstrap.py",
+        "semgrep.console_scripts.pysemgrep",
+    ]
