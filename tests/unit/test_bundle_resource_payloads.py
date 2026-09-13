@@ -226,7 +226,7 @@ def test_code_review_bundle_packages_clean_code_policy_pack_manifest() -> None:
 def test_code_review_bundle_packages_ai_bloat_policy_pack_manifest() -> None:
     module_root = REPO_ROOT / "packages" / "specfact-code-review"
     manifest_path = module_root / "resources" / "policy-packs" / "specfact" / "ai-bloat-patterns.yaml"
-    semgrep_path = module_root / "resources" / "semgrep-rules" / "ai-bloat.yaml"
+    semgrep_path = module_root / "src" / "specfact_code_review" / "resources" / "semgrep-rules" / "ai-bloat.yaml"
     data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     expected_rules = {
         "ai-bloat.manual-loop-comprehension",
@@ -268,7 +268,9 @@ def test_code_review_artifact_contains_policy_pack_payload(tmp_path: Path) -> No
 
     assert "specfact-code-review/resources/policy-packs/specfact/clean-code-principles.yaml" in names
     assert "specfact-code-review/resources/policy-packs/specfact/ai-bloat-patterns.yaml" in names
-    assert "specfact-code-review/resources/semgrep-rules/ai-bloat.yaml" in names
+    assert "specfact-code-review/src/specfact_code_review/resources/semgrep-rules/ai-bloat.yaml" in names
+    assert "specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml" in names
+    assert "specfact-code-review/src/specfact_code_review/.semgrep/bugs.yaml" in names
     assert "specfact-code-review/src/specfact_code_review/resources/skills/specfact-code-review/SKILL.md" in names
 
 

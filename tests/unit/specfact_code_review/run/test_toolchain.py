@@ -5,6 +5,7 @@ from __future__ import annotations
 import errno
 import hashlib
 import io
+import json
 import os
 import shutil
 import stat
@@ -287,8 +288,9 @@ def test_runtime_capsule_fresh_cache_miss_installs_only_pinned_wheelhouse(
     assert offline_identities == [(1001, 1002)]
 
 
+@pytest.mark.parametrize("controller_umask", [0o022, 0o077])
 def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
-    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, controller_umask: int
 ) -> None:
     payload = b"signed static bubblewrap"
     bubblewrap = tmp_path / "opt/specfact/bin/bwrap-static"
@@ -315,6 +317,8 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
     observed_descriptors: list[int] = []
 
     def observe_launch(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        assert kwargs.get("umask") == 0o022
+        assert (tmp_path / "opt/specfact/analyzers").stat().st_mode & 0o777 == 0o755
         descriptor = kwargs["pass_fds"][0]
         observed_descriptors.append(descriptor)
         assert command[0] == f"/proc/self/fd/{descriptor}"
@@ -325,7 +329,11 @@ def test_offline_install_executes_verified_bubblewrap_from_same_open_descriptor(
 
     monkeypatch.setattr(toolchain_api.subprocess, "run", observe_launch)
 
-    toolchain_api._offline_install(tmp_path, environment, ())
+    previous = os.umask(controller_umask)
+    try:
+        toolchain_api._offline_install(tmp_path, environment, ())
+    finally:
+        os.umask(previous)
     assert observed_descriptors
     with pytest.raises(OSError):
         os.fstat(observed_descriptors[0])
@@ -1608,3 +1616,154 @@ def test_installed_payload_reports_empty_root(toolchain_api: Any, tmp_path: Path
     result = toolchain_api.verify_installed_module_payload(metadata)
     assert result.status == "UNKNOWN"
     assert result.reason == "payload_root_empty"
+
+
+def test_customer_default_materialization_acquires_missing_cache_entries(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lock = _valid_lock()
+    lock["environments"][1]["oci"]["locator"] = (
+        "https://ghcr.io/v2/nold-ai/specfact-review-runtime/manifests/sha256:" + "1" * 64
+    )
+    monkeypatch.setattr(toolchain_api.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(toolchain_api.platform, "machine", lambda: "x86_64")
+    observed = []
+
+    def acquire(_oci: Any, **kwargs: Any) -> Any:
+        observed.append(kwargs["simulate_cache_hit"])
+        return toolchain_api.AcquisitionResult("UNKNOWN", reason="stop_after_acquisition")
+
+    monkeypatch.setattr(toolchain_api, "acquire_oci_distribution", acquire)
+    toolchain_api.materialize_capsule(lock, environment_id="linux-x86_64-cp312", storage_root=tmp_path)
+    assert observed == [False]
+
+
+def test_customer_composition_authenticates_empty_mount_anchors(toolchain_api: Any, tmp_path: Path) -> None:
+    payload = toolchain_api.verify_installed_module_payload(_installed_payload(tmp_path / "installed"))
+    root = tmp_path / "capsule"
+    result = toolchain_api.compose_post_base_capsule(
+        payload,
+        capsule_root=root,
+        immutable_base_root_digest=_digest("5"),
+        analyzer_installed_set_digest=_digest("6"),
+        native_launcher_digest=_digest("7"),
+        project_runtime_identity="not-applicable",
+    )
+    assert result.status == "PASS"
+    for name in ("snapshot", "config", "output", "tmp", "control", "project-runtime"):
+        anchor = root / "opt/specfact" / name
+        assert anchor.is_dir(), name
+        assert not tuple(anchor.iterdir())
+        assert stat.S_IMODE(anchor.stat().st_mode) == 0o755
+    entries, _ = toolchain_api._manifest_entries(root, include_root=False)
+    assert toolchain_api.canonical_json_digest(entries) == result.final_composite_root_manifest_digest
+
+
+def test_customer_root_mismatch_reports_expected_and_actual_identity(toolchain_api: Any, tmp_path: Path) -> None:
+    expected = {"entry_count": 1, "regular_file_bytes": 1, "manifest_digest": "sha256:" + "a" * 64}
+    with pytest.raises(ValueError, match="expected_digest=sha256:" + "a" * 64) as caught:
+        toolchain_api._verify_final_root_manifest(tmp_path, {"final_root_manifest": expected})
+    assert "actual_digest=sha256:" in str(caught.value)
+
+
+def test_customer_composition_is_independent_of_controller_umask(toolchain_api: Any, tmp_path: Path) -> None:
+    payload = toolchain_api.verify_installed_module_payload(_installed_payload(tmp_path / "installed"))
+    identities = []
+    for mask in (0o022, 0o077):
+        root = tmp_path / str(mask)
+        (root / "opt/specfact").mkdir(parents=True)
+        previous = os.umask(mask)
+        try:
+            result = toolchain_api.compose_post_base_capsule(
+                payload,
+                capsule_root=root,
+                immutable_base_root_digest=_digest("5"),
+                analyzer_installed_set_digest=_digest("6"),
+                native_launcher_digest=_digest("7"),
+                project_runtime_identity="not-applicable",
+            )
+        finally:
+            os.umask(previous)
+        assert result.status == "PASS"
+        identities.append(result.final_composite_root_manifest_digest)
+    assert identities[0] == identities[1]
+
+
+def test_customer_capsule_locks_the_analyzer_entrypoint_runtime_imports() -> None:
+    lock_path = (
+        Path(__file__).parents[4]
+        / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json"
+    )
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    for environment in lock["environments"]:
+        imports = {name for component in environment["components"] for name in component["top_level_imports"]}
+        assert {"beartype", "icontract", "pydantic", "requests", "packaging", "yaml"} <= imports, environment[
+            "environment_id"
+        ]
+
+
+def test_customer_offline_acquisition_never_downloads(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CAPSULE_OFFLINE", "1")
+    observed = []
+    monkeypatch.setattr(
+        toolchain_api,
+        "_download_missing_oci_records",
+        lambda context: observed.append(context.simulate_cache_hit) or ("verified_cache", (), ""),
+    )
+    oci = _valid_lock()["environments"][0]["oci"]
+    oci["locator"] = "https://ghcr.io/v2/nold-ai/specfact-review-runtime/manifests/" + _digest("1")
+    toolchain_api.acquire_oci_distribution(oci, cache_root=tmp_path)
+    assert observed == [True]
+
+
+@pytest.mark.parametrize(
+    "stderr",
+    [
+        "bwrap: Creating new namespace failed: Operation not permitted",
+        "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+    ],
+)
+def test_customer_materialization_namespace_denial_identifies_verified_launcher(
+    toolchain_api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stderr: str
+) -> None:
+    payload = b"verified test launcher"
+    launcher = tmp_path / "opt/specfact/bin/bwrap-static"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_bytes(payload)
+    launcher.chmod(0o755)
+    digest = "sha256:" + hashlib.sha256(payload).hexdigest()
+    environment = {
+        "paths": {
+            key: "/opt/specfact/" + value
+            for key, value in {
+                "analyzers": "analyzers",
+                "interpreter": "python/bin/python",
+                "loader": "lib/ld-linux-x86-64.so.2",
+                "libraries": "lib",
+                "wheelhouse": "wheelhouse",
+            }.items()
+        },
+        "native_tools": [
+            {
+                "id": "bubblewrap-static",
+                "path": "/opt/specfact/bin/bwrap-static",
+                "launch_mode": "same-open-descriptor",
+                "executable_sha256": digest,
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        toolchain_api.subprocess, "run", lambda command, **_kwargs: subprocess.CompletedProcess(command, 1, "", stderr)
+    )
+    with pytest.raises(ValueError) as failure:
+        toolchain_api._offline_install(tmp_path, environment, ())
+    assert str(failure.value).startswith(f"namespace_unavailable:stage=offline-install:launcher={digest}:")
+
+
+def test_customer_offline_package_failure_is_not_namespace_denial(toolchain_api: Any) -> None:
+    message = "ERROR: no matching distribution found"
+    assert toolchain_api._offline_install_failure(message, "sha256:" + "a" * 64) == (
+        "offline analyzer installation failed: " + message
+    )

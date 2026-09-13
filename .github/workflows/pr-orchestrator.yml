@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code_changed: ${{ steps.out.outputs.code_changed }}
+      capsule_changed: ${{ steps.filter.outputs.capsule }}
       skip_tests_dev_to_main: ${{ steps.out.outputs.skip_tests_dev_to_main }}
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +39,16 @@ jobs:
               - "**"
               - "!**/*.md"
               - "!docs/**"
+            capsule:
+              - "packages/specfact-code-review/**"
+              - "registry/**"
+              - "scripts/capsule_customer_gate.py"
+              - "scripts/link_dev_module.py"
+              - "publish_bundle_selection.py"
+              - "tests/unit/test_publish_bundle_selection.py"
+              - "tests/unit/test_capsule_customer_gate.py"
+              - ".github/workflows/capsule-customer-execution.yml"
+              - ".github/workflows/pr-orchestrator.yml"
       - id: out
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -103,16 +114,40 @@ jobs:
 
           "${VERIFY_CMD[@]}"
 
+  customer-capsules:
+    name: customer-capsules
+    needs: [changes]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.capsule_changed == 'true'
+    uses: ./.github/workflows/capsule-customer-execution.yml
+    permissions:
+      contents: read
+
   quality:
     name: quality (${{ matrix.python-version }})
-    needs: [changes, verify-module-signatures]
-    if: needs.changes.outputs.code_changed == 'true'
+    needs: [changes, verify-module-signatures, customer-capsules]
+    if: always() && needs.changes.outputs.code_changed == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
+      - name: Require signature and customer capsule prerequisites
+        shell: bash
+        env:
+          SIGNATURE_RESULT: ${{ needs.verify-module-signatures.result }}
+          CAPSULE_REQUIRED: ${{ github.event_name == 'pull_request' && needs.changes.outputs.capsule_changed == 'true' }}
+          CAPSULE_RESULT: ${{ needs.customer-capsules.result }}
+        run: |
+          set -euo pipefail
+          if [ "$SIGNATURE_RESULT" != "success" ]; then
+            echo "Module signature prerequisite did not pass: $SIGNATURE_RESULT" >&2
+            exit 1
+          fi
+          if [ "$CAPSULE_REQUIRED" = "true" ] && [ "$CAPSULE_RESULT" != "success" ]; then
+            echo "Required customer capsule matrix did not pass: $CAPSULE_RESULT" >&2
+            exit 1
+          fi
       - name: Skip full run (dev->main PR)
         if: needs.changes.outputs.skip_tests_dev_to_main == 'true'
         run: echo "Dev->main PR detected; skipping quality jobs."
@@ -206,7 +241,7 @@ jobs:
 
   minimum-core-schema-compatibility:
     name: minimum-core-schema-compatibility (${{ matrix.python-version }})
-    needs: [changes]
+    needs: [changes, verify-module-signatures]
     if: needs.changes.outputs.code_changed == 'true' && needs.changes.outputs.skip_tests_dev_to_main != 'true'
     permissions:
       contents: read
@@ -253,12 +288,17 @@ jobs:
         run: |
           set -euo pipefail
           abi="cp${MATRIX_PYTHON//./}"
-          case "$abi" in
-            cp311) manifest="sha256:4f9e424f3720ea0807cc0f9f22c0ba28e3c604632ddd719f605c22e878437a72" ;;
-            cp312) manifest="sha256:f00ac813f428b7c2ef3d1ce3400496f67ca2d508064e6efc55af1ba6c4697461" ;;
-            cp313) manifest="sha256:1516be5a113d9176c70fcc4cfac3fe46eaf32d5b66c381b17fbb26a5bcc9fb27" ;;
-            *) echo "unsupported C14 ABI: $abi" >&2; exit 1 ;;
-          esac
+          manifest="$(python - <<'PYTHON'
+          import json
+          import os
+          from pathlib import Path
+
+          lock = json.loads(Path("packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json").read_text(encoding="utf-8"))
+          abi = "cp" + os.environ["MATRIX_PYTHON"].replace(".", "")
+          environment = next(item for item in lock["environments"] if item["python_abi"] == abi)
+          print(environment["oci"]["manifest"])
+          PYTHON
+          )"
           layout="${RUNNER_TEMP}/c14-oci-layout-${abi}"
           cache="${RUNNER_TEMP}/c14-prefetched-${abi}/oci-cache"
           registry_config="${RUNNER_TEMP}/c14-oras-auth-${abi}.json"
@@ -341,17 +381,17 @@ jobs:
           from unittest import mock
           from urllib.parse import urlsplit, urlunsplit
 
+          import yaml
           from specfact_code_review.run import toolchain
 
           repository = Path.cwd()
           resource_path = repository / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json"
-          checkpoint_path = repository / "openspec/changes/code-review-14-scope-truth-and-differential-enforcement/IMPLEMENTATION_CHECKPOINT.json"
+          module_manifest = yaml.safe_load((repository / "packages/specfact-code-review/module-package.yaml").read_text(encoding="utf-8"))
+          resource_key = "resources/contracts/pr-range-v1-toolchain-lock.json"
           resource_bytes = resource_path.read_bytes()
-          checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
           resource_digest = "sha256:" + hashlib.sha256(resource_bytes).hexdigest()
-          assert resource_digest == checkpoint["toolchain_lock_projection_digest"]
+          assert resource_digest == module_manifest["authenticated_resources"][resource_key]["digest"]
           lock = json.loads(resource_bytes)
-          assert lock == checkpoint["toolchain_lock_projection"]
 
           abi = "cp" + os.environ["MATRIX_PYTHON"].replace(".", "")
           environment = next(item for item in lock["environments"] if item["python_abi"] == abi)
