@@ -66,8 +66,8 @@ requirements:
       scenario_id: non-root-deterministic-capsule-materialization
       method: test
       intent: Verify the implemented regression boundary.
-      observable: Equivalent composition inputs preserve identity across ambient umasks. This local regression does
-        not replace hosted release acceptance.
+      observable: Equivalent composition inputs preserve identity across ambient umasks. This local regression
+        does not replace hosted release acceptance.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_customer_composition_is_independent_of_controller_umask
@@ -97,8 +97,8 @@ requirements:
       scenario_id: verified-launcher-namespace-prerequisite
       method: test
       intent: Verify the implemented regression boundary.
-      observable: A fresh isolated helper inherits only the verified descriptor and preserves guarded tracing. This
-        local regression does not replace hosted release acceptance.
+      observable: A fresh isolated helper inherits only the verified descriptor and preserves guarded tracing.
+        This local regression does not replace hosted release acceptance.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_sandbox.py::test_customer_threaded_controller_uses_fresh_trace_helper
@@ -146,8 +146,8 @@ requirements:
       scenario_id: signed-release-customer-execution-gate
       method: test
       intent: Verify the implemented customer regression.
-      observable: The public gate pins the registry artifact and verifies strict signed installation identity. Hosted
-        release acceptance remains separately required.
+      observable: The public gate pins the registry artifact and verifies strict signed installation identity.
+        Hosted release acceptance remains separately required.
       selector:
         runner: pytest
         node_id: tests/unit/test_capsule_customer_gate.py::test_public_install_pins_registry_version_and_verifies_identity
@@ -171,7 +171,8 @@ requirements:
       scenario_id: signed-release-customer-execution-gate
       method: test
       intent: Verify the customer CI boundary.
-      observable: Existing required quality jobs fail explicitly when the required customer matrix does not pass.
+      observable: Existing required quality jobs fail explicitly when the required customer matrix does not
+        pass.
       selector:
         runner: pytest
         node_id: tests/unit/test_capsule_customer_gate.py::test_quality_prerequisite_step_cannot_turn_capsule_failure_into_success
@@ -196,11 +197,19 @@ requirements:
       scenario_id: signed-release-customer-execution-gate
       method: test
       intent: Install an available public baseline even when the PR registry contains an unpublished version.
-      observable: Candidate installation uses a separate recorded main registry snapshot; public release lanes use
-        their own checkout registry.
+      observable: Candidate installation uses a separate recorded main registry snapshot; public release lanes
+        use their own checkout registry.
       selector:
         runner: pytest
         node_id: tests/unit/test_capsule_customer_gate.py::test_candidate_installation_uses_separate_published_registry_snapshot
+    - case_id: 466-release-optimized-measurement
+      scenario_id: signed-release-customer-execution-gate
+      method: test
+      intent: Verify release review regression.
+      observable: Optimized measurement rejects an unexpected beartype version.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_refresh_lock.py::test_optimized_measurement_enforces_reference_version
   openspec:code-review-capsule-customer-execution:review-run-command:non-root-customer-capsule-execution:
     rationale: Repair customer capsule behavior with mapped regressions; complete hosted signed-release acceptance
       remains pending.
@@ -228,7 +237,8 @@ requirements:
       method: test
       intent: Customer GitHub Actions uses the installed signed payload.
       observable: tests/unit/specfact_code_review/run/test_runner.py::test_customer_github_actions_uses_verified_installed_payload
-        passes for customer and own-repository push environments; public release matrix acceptance remains pending.
+        passes for customer and own-repository push environments; public release matrix acceptance remains
+        pending.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_runner.py::test_customer_github_actions_uses_verified_installed_payload
@@ -236,8 +246,8 @@ requirements:
       scenario_id: non-root-customer-capsule-execution
       method: test
       intent: Verify the implemented customer regression.
-      observable: Full/local customer scopes bind a complete inventory and actually request pytest execution. Hosted
-        release acceptance remains separately required.
+      observable: Full/local customer scopes bind a complete inventory and actually request pytest execution.
+        Hosted release acceptance remains separately required.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_customer_pytest_execution.py::test_local_capsule_executes_complete_customer_pytest_inventory
@@ -245,8 +255,8 @@ requirements:
       scenario_id: non-root-customer-capsule-execution
       method: test
       intent: Verify the implemented customer regression.
-      observable: Missing or unsupported customer test inventories do not become an empty PASS. Hosted release acceptance
-        remains separately required.
+      observable: Missing or unsupported customer test inventories do not become an empty PASS. Hosted release
+        acceptance remains separately required.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_customer_pytest_execution.py::test_local_capsule_cannot_claim_tests_pass_without_a_supported_inventory
@@ -267,6 +277,32 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_customer_pytest_execution.py::test_narrow_review_does_not_use_unrelated_tests_when_correspondence_is_missing
+    - case_id: 466-release-shallow-install
+      scenario_id: non-root-customer-capsule-execution
+      method: test
+      intent: Verify release review regression.
+      observable: Shallow installed layouts reach verified installed payload selection.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_release_review_regressions.py::test_shallow_install_reaches_official_payload
+    - case_id: 466-release-snapshot-import-order
+      scenario_id: non-root-customer-capsule-execution
+      method: test
+      intent: Verify release review regression.
+      observable: Generated isolated child imports snapshot before project dependencies and preserves trusted
+        roots.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_release_review_regressions.py::test_sealed_pytest_imports_snapshot_before_project_dependency
+    - case_id: 466-release-configured-pythonpath
+      scenario_id: non-root-customer-capsule-execution
+      method: test
+      intent: Preserve trusted imports after supported pytest path configuration.
+      observable: Real pytest initial conftest and tests use sealed dependencies while ordinary src modules
+        remain available.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_code_review/run/test_release_review_regressions.py::test_pytest_configured_pythonpath_keeps_trusted_roots_before_conftest
   openspec:code-review-capsule-customer-execution:review-run-command:sealed-capsule-mount-destinations-and-private-writes:
     rationale: Repair customer capsule behavior with mapped regressions; complete hosted signed-release acceptance
       remains pending.
@@ -293,8 +329,8 @@ requirements:
       scenario_id: sealed-capsule-mount-destinations-and-private-writes
       method: test
       intent: Verify the implemented regression boundary.
-      observable: All fixed mount destinations exist in the authenticated composition. This local regression does
-        not replace hosted release acceptance.
+      observable: All fixed mount destinations exist in the authenticated composition. This local regression
+        does not replace hosted release acceptance.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_toolchain.py::test_customer_composition_authenticates_empty_mount_anchors
@@ -302,8 +338,8 @@ requirements:
       scenario_id: sealed-capsule-mount-destinations-and-private-writes
       method: test
       intent: Verify the implemented regression boundary.
-      observable: Configuration mounts use private staging then become read-only before execution. This local regression
-        does not replace hosted release acceptance.
+      observable: Configuration mounts use private staging then become read-only before execution. This local
+        regression does not replace hosted release acceptance.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_sandbox.py::test_customer_configuration_mounts_are_sealed_before_execution
@@ -311,8 +347,8 @@ requirements:
       scenario_id: sealed-capsule-mount-destinations-and-private-writes
       method: test
       intent: Verify the implemented customer regression.
-      observable: Injected destination substitution fails closed in payload, bootstrap and mount creation. Hosted
-        release acceptance remains separately required.
+      observable: Injected destination substitution fails closed in payload, bootstrap and mount creation.
+        Hosted release acceptance remains separately required.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_composition_writes.py::test_composition_parent_swap_cannot_write_outside_capsule
@@ -320,8 +356,8 @@ requirements:
       scenario_id: sealed-capsule-mount-destinations-and-private-writes
       method: test
       intent: Verify the implemented customer regression.
-      observable: Python child tools use the isolated sealed interpreter and authenticated bootstrap. Hosted release
-        acceptance remains separately required.
+      observable: Python child tools use the isolated sealed interpreter and authenticated bootstrap. Hosted
+        release acceptance remains separately required.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/test_capsule_tool_commands.py::test_capsule_python_child_reenters_sealed_bootstrap
@@ -369,8 +405,8 @@ requirements:
       scenario_id: actionable-capsule-failure-evidence
       method: test
       intent: Verify the implemented regression boundary.
-      observable: Long diagnostics retain namespace classification while report text remains bounded. This local
-        regression does not replace hosted release acceptance.
+      observable: Long diagnostics retain namespace classification while report text remains bounded. This
+        local regression does not replace hosted release acceptance.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_sandbox.py::test_customer_long_launcher_stderr_retains_namespace_stage
@@ -387,8 +423,8 @@ requirements:
       scenario_id: actionable-capsule-failure-evidence
       method: test
       intent: Verify the implemented customer regression.
-      observable: Early acquisition failures retain both the original reason and selected ABI. Hosted release acceptance
-        remains separately required.
+      observable: Early acquisition failures retain both the original reason and selected ABI. Hosted release
+        acceptance remains separately required.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_code_review/run/test_customer_pytest_execution.py::test_capsule_acquisition_failure_retains_abi_without_changing_diagnostic

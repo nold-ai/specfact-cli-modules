@@ -644,10 +644,10 @@ def _protected_candidate_payload() -> SelectedModulePayload:
 
 def _selected_module_payload() -> SelectedModulePayload:
     source = Path(__file__).resolve()
-    candidate_root = source.parents[5]
-    candidate_checkout = (
-        source == candidate_root / _PACKAGE_ROOT / "run/runner.py" and (candidate_root / ".git").exists()
+    candidate_root = next(
+        (parent for parent in source.parents if source == parent / _PACKAGE_ROOT / "run/runner.py"), None
     )
+    candidate_checkout = candidate_root is not None and (candidate_root / ".git").exists()
     if os.environ.get("GITHUB_ACTIONS") == "true" and candidate_checkout:
         return _protected_candidate_payload()
     payload, reason = _official_installed_payload()
@@ -3943,6 +3943,7 @@ def _pytest_observer_script() -> str:
     source_root = str(_SOURCE_ROOT.resolve())
     repo_root = str(Path.cwd().resolve())
     startup = ""
+    trusted_import_hook = ""
     snapshot_imports = f"sys.path[:0] = [{source_root!r}, {repo_root!r}]\n"
     if _pytest_in_capsule():
         startup = (
@@ -3950,11 +3951,18 @@ def _pytest_observer_script() -> str:
             "sys.path[:0] = ['/opt/specfact/analyzers', '/opt/specfact/builtin', "
             "'/opt/specfact/project-runtime/site-packages']\n"
         )
-        snapshot_imports = f"sys.path.append({repo_root!r})\n"
+        snapshot_imports = (
+            f"sys.path.insert(sys.path.index('/opt/specfact/project-runtime/site-packages'), {repo_root!r})\n"
+        )
+        trusted_import_hook = (
+            "    @pytest.hookimpl(tryfirst=True)\n"
+            "    def pytest_load_initial_conftests(self, early_config, parser, args):\n"
+            "        trusted = ['/opt/specfact/analyzers', '/opt/specfact/builtin']\n"
+            "        sys.path[:] = trusted + [root for root in sys.path if root not in trusted]\n"
+        )
     return startup + (
         "import json, pathlib, sys, pytest, pytest_cov.plugin as pytest_cov_plugin\n"
-        "class Observer:\n"
-        "    def __init__(self, path):\n"
+        "class Observer:\n" + trusted_import_hook + "    def __init__(self, path):\n"
         "        self.path = pathlib.Path(path)\n"
         "        self.records = []\n"
         "    def pytest_itemcollected(self, item):\n"

@@ -87,3 +87,9 @@ A capsule repair release SHALL pass the GitHub-hosted Ubuntu 24.04 x86-64 Python
 - **GIVEN** a published repair needs rollback
 - **WHEN** maintainers revert through canonical signed publication and registry procedures
 - **THEN** previously published payload bytes and historical integrity evidence remain immutable and any known defect in the restored baseline is documented
+
+#### Scenario: Optimized reference measurement rejects version drift
+
+- **GIVEN** the runtime reference measurement script runs with Python optimization enabled
+- **WHEN** the installed beartype version differs from the pinned reference version
+- **THEN** measurement fails explicitly before printing an acceptance receipt

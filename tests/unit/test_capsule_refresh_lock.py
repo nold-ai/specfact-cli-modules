@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import base64
+import csv
+import hashlib
 import importlib.util
+import io
 import json
 import zipfile
 from pathlib import Path
@@ -32,6 +36,15 @@ def _wheel_fixture(root: Path, api: Any, monkeypatch: pytest.MonkeyPatch) -> dic
         archive.writestr("beartype-0.22.9.dist-info/METADATA", metadata)
         archive.writestr("beartype-0.22.9.dist-info/WHEEL", "Wheel-Version: 1.0\nTag: py3-none-any\n")
         archive.writestr("beartype/__init__.py", "")
+        record = io.StringIO()
+        writer = csv.writer(record, lineterminator="\n")
+        for name in archive.namelist():
+            data = archive.read(name)
+            digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
+            writer.writerow((name, f"sha256={digest}", len(data)))
+        record_name = "beartype-0.22.9.dist-info/RECORD"
+        writer.writerow((record_name, "", ""))
+        archive.writestr(record_name, record.getvalue())
     digest = api._digest(wheel.read_bytes())
     monkeypatch.setattr(api, "_WHEEL_SHA256", digest)
     return {
@@ -89,3 +102,28 @@ def test_refresh_accepts_descriptor_derived_from_verified_wheel(
         "0.22.9",
         descriptor["size"],
     )
+
+
+@pytest.mark.parametrize("version,expected", [("0.22.9", 0), ("0.0.0", 1)])
+def test_optimized_measurement_enforces_reference_version(version: str, expected: int) -> None:
+    import subprocess
+    import sys
+
+    path = (
+        Path(__file__).parents[2]
+        / "openspec/changes/code-review-capsule-customer-execution/runtime-build/measure_root.py"
+    )
+    script = (
+        "import runpy, types\n"
+        f"scope = runpy.run_path({str(path)!r})\n"
+        "main = scope['_main']\n"
+        "main.__globals__['_entries'] = lambda *args: {}\n"
+        "main.__globals__['Path'] = lambda *args: types.SimpleNamespace(iterdir=lambda: [])\n"
+        f"main.__globals__['importlib'] = types.SimpleNamespace(import_module=lambda name: types.SimpleNamespace(__version__={version!r}))\n"
+        "main()\n"
+    )
+    result = subprocess.run([sys.executable, "-O", "-c", script], capture_output=True, text=True, check=False)
+    assert result.returncode == expected, result.stdout + result.stderr
+    if expected:
+        assert "unexpected beartype version" in result.stderr
+        assert not result.stdout

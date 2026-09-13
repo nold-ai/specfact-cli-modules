@@ -29,6 +29,21 @@ For the supported Linux x86-64 capsule path, the installed review command SHALL 
 - **AND** candidate CI pins its preliminary public installation to a separately recorded published-main registry snapshot, so an unpublished registry update in the candidate cannot select an unavailable baseline
 - **AND** public release acceptance remains pinned to its own registry checkout and release-tag identity
 
+#### Scenario: Shallow installed paths retain verified provenance
+
+- **GIVEN** an official module installed at a shallow absolute path outside the modules source checkout
+- **WHEN** the controller selects module provenance, including in GitHub Actions
+- **THEN** it reaches official installed-payload verification without fixed-depth path errors
+- **AND** actual source checkouts retain strict candidate-context verification
+
+#### Scenario: Pytest imports reviewed sources before project dependencies
+
+- **GIVEN** the reviewed snapshot and a project-runtime dependency both supply a non-reserved top-level module
+- **WHEN** a sealed pytest child imports that module
+- **THEN** it executes the snapshot module before the project-runtime copy
+- **AND** analyzer and builtin imports retain their sealed precedence during pytest startup and test execution
+- **AND** supported configured pythonpath roots preserve trusted-root precedence before initial conftest loading as well as test collection, while ordinary src-layout imports continue to resolve
+
 #### Scenario: Narrow local review preserves its pytest selection
 
 - **GIVEN** explicit files or changed-file scope selects a subset of a customer repository
