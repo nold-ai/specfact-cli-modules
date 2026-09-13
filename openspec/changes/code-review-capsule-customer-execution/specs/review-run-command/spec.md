@@ -42,6 +42,7 @@ For the supported Linux x86-64 capsule path, the installed review command SHALL 
 - **WHEN** a sealed pytest child imports that module
 - **THEN** it executes the snapshot module before the project-runtime copy
 - **AND** analyzer and builtin imports retain their sealed precedence during pytest startup and test execution
+- **AND** supported configured pythonpath roots preserve trusted-root precedence before initial conftest loading as well as test collection, while ordinary src-layout imports continue to resolve
 
 #### Scenario: Narrow local review preserves its pytest selection
 

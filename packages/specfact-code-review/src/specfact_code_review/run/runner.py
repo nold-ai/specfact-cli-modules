@@ -3943,6 +3943,7 @@ def _pytest_observer_script() -> str:
     source_root = str(_SOURCE_ROOT.resolve())
     repo_root = str(Path.cwd().resolve())
     startup = ""
+    trusted_import_hook = ""
     snapshot_imports = f"sys.path[:0] = [{source_root!r}, {repo_root!r}]\n"
     if _pytest_in_capsule():
         startup = (
@@ -3953,10 +3954,15 @@ def _pytest_observer_script() -> str:
         snapshot_imports = (
             f"sys.path.insert(sys.path.index('/opt/specfact/project-runtime/site-packages'), {repo_root!r})\n"
         )
+        trusted_import_hook = (
+            "    @pytest.hookimpl(tryfirst=True)\n"
+            "    def pytest_load_initial_conftests(self, early_config, parser, args):\n"
+            "        trusted = ['/opt/specfact/analyzers', '/opt/specfact/builtin']\n"
+            "        sys.path[:] = trusted + [root for root in sys.path if root not in trusted]\n"
+        )
     return startup + (
         "import json, pathlib, sys, pytest, pytest_cov.plugin as pytest_cov_plugin\n"
-        "class Observer:\n"
-        "    def __init__(self, path):\n"
+        "class Observer:\n" + trusted_import_hook + "    def __init__(self, path):\n"
         "        self.path = pathlib.Path(path)\n"
         "        self.records = []\n"
         "    def pytest_itemcollected(self, item):\n"
