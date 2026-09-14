@@ -1,0 +1,337 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- <temporary>/worktree/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: <repository>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 237 items / 221 deselected / 16 selected
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[parent-"-testpaths] FAILED [  6%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[parent-"-pythonpath] FAILED [ 12%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[parent-'-testpaths] FAILED [ 18%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[parent-'-pythonpath] FAILED [ 25%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[absolute-"-testpaths] FAILED [ 31%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[absolute-"-pythonpath] FAILED [ 37%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[absolute-'-testpaths] FAILED [ 43%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[absolute-'-pythonpath] FAILED [ 50%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[symlink-"-testpaths] FAILED [ 56%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[symlink-"-pythonpath] FAILED [ 62%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[symlink-'-testpaths] FAILED [ 68%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[symlink-'-pythonpath] FAILED [ 75%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_contained_pytest_paths_with_spaces_retain_native_values[ini-testpaths] PASSED [ 81%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_contained_pytest_paths_with_spaces_retain_native_values[ini-pythonpath] PASSED [ 87%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_contained_pytest_paths_with_spaces_retain_native_values[toml-list-testpaths] PASSED [ 93%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_contained_pytest_paths_with_spaces_retain_native_values[toml-list-pythonpath] PASSED [100%]
+
+=================================== FAILURES ===================================
+____ test_quoted_pytest_paths_are_checked_after_parsing[parent-"-testpaths] ____
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c0')
+option = 'testpaths', quote = '"', path_kind = 'parent'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: Failed
+___ test_quoted_pytest_paths_are_checked_after_parsing[parent-"-pythonpath] ____
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c1')
+option = 'pythonpath', quote = '"', path_kind = 'parent'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: Failed
+____ test_quoted_pytest_paths_are_checked_after_parsing[parent-'-testpaths] ____
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c2')
+option = 'testpaths', quote = "'", path_kind = 'parent'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: Failed
+___ test_quoted_pytest_paths_are_checked_after_parsing[parent-'-pythonpath] ____
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c3')
+option = 'pythonpath', quote = "'", path_kind = 'parent'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: Failed
+___ test_quoted_pytest_paths_are_checked_after_parsing[absolute-"-testpaths] ___
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c4')
+option = 'testpaths', quote = '"', path_kind = 'absolute'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: Failed
+__ test_quoted_pytest_paths_are_checked_after_parsing[absolute-"-pythonpath] ___
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c5')
+option = 'pythonpath', quote = '"', path_kind = 'absolute'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: Failed
+___ test_quoted_pytest_paths_are_checked_after_parsing[absolute-'-testpaths] ___
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c6')
+option = 'testpaths', quote = "'", path_kind = 'absolute'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: Failed
+__ test_quoted_pytest_paths_are_checked_after_parsing[absolute-'-pythonpath] ___
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c7')
+option = 'pythonpath', quote = "'", path_kind = 'absolute'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: Failed
+___ test_quoted_pytest_paths_are_checked_after_parsing[symlink-"-testpaths] ____
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c8')
+option = 'testpaths', quote = '"', path_kind = 'symlink'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_input_(escape|symlink)'
+E         Actual message: 'project_source_symlink_invalid:external tree'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: AssertionError
+___ test_quoted_pytest_paths_are_checked_after_parsing[symlink-"-pythonpath] ___
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c9')
+option = 'pythonpath', quote = '"', path_kind = 'symlink'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_input_(escape|symlink)'
+E         Actual message: 'project_source_symlink_invalid:external tree'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: AssertionError
+___ test_quoted_pytest_paths_are_checked_after_parsing[symlink-'-testpaths] ____
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c10')
+option = 'testpaths', quote = "'", path_kind = 'symlink'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_input_(escape|symlink)'
+E         Actual message: 'project_source_symlink_invalid:external tree'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: AssertionError
+___ test_quoted_pytest_paths_are_checked_after_parsing[symlink-'-pythonpath] ___
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_are_c11')
+option = 'pythonpath', quote = "'", path_kind = 'symlink'
+
+    @pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    @pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+    def test_quoted_pytest_paths_are_checked_after_parsing(
+        tmp_path: Path, option: str, quote: str, path_kind: str
+    ) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text('source_roots=["."]\n')
+        if path_kind == "symlink":
+            relative = "external tree"
+            (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+        else:
+            relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_input_(escape|symlink)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_input_(escape|symlink)'
+E         Actual message: 'project_source_symlink_invalid:external tree'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:144: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[parent-"-testpaths]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[parent-"-pythonpath]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[parent-'-testpaths]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[parent-'-pythonpath]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[absolute-"-testpaths]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[absolute-"-pythonpath]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[absolute-'-testpaths]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[absolute-'-pythonpath]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[symlink-"-testpaths]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[symlink-"-pythonpath]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[symlink-'-testpaths]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_quoted_pytest_paths_are_checked_after_parsing[symlink-'-pythonpath]
+================= 12 failed, 4 passed, 221 deselected in 0.25s =================

@@ -381,9 +381,10 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
     for name in sorted(_requirements_inputs(root, requirements + constraints)):
         inputs[name] = content_digest((root / name).read_bytes())
     pytest = _pytest_config(root, project)
-    testpaths = pytest.get("testpaths", [])
-    for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
-        _safe_input(root, testpath)
+    for option in ("testpaths", "pythonpath"):
+        paths = pytest.get(option, [])
+        for path in shlex.split(paths) if isinstance(paths, str) else paths:
+            _safe_input(root, path)
     environment, groups = _selection(project, hatch, selection, manager)
     return ProjectPlan(
         root=root,

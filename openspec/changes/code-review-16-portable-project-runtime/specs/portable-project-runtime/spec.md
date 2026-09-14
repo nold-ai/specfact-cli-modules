@@ -451,3 +451,19 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **AND** a project-owned package sharing a stale name MUST remain importable in the project domain while actual analyzer imports retain strict origin enforcement
 - **AND** unavailable distribution file inventory MUST produce an explicit analyzer inventory diagnostic instead of trusting unverified declarations
 - **AND** changes to import-ownership logic MUST invalidate cached runtime preparation through the existing builder source identity
+
+#### Scenario: Portable range selection preserves absent Python paths
+- **GIVEN** a portable range or index review selects Python paths added or deleted between its immutable snapshots
+- **WHEN** one side has no surviving selected Python file
+- **THEN** that side SHALL retain an empty Python analysis selection rather than expand to unrelated source files
+- **AND** findings from unrelated unchanged files SHALL NOT become introduced or fixed because only one side analyzed them
+- **AND** a nonempty metadata-only selection SHALL retain symmetric whole-source analysis, while an empty overall selection SHALL remain empty.
+
+#### Scenario: Containment applies to parsed pytest search paths
+
+- **GIVEN** repository pytest configuration supplies quoted `testpaths` or `pythonpath` values containing spaces
+- **WHEN** portable runtime discovery validates repository paths
+- **THEN** it MUST apply containment and symlink checks to the same shell-parsed values that pytest and portable test selection consume
+- **AND** quoted parent traversal, absolute paths, and escaping symlink paths MUST fail before preparation or selection
+- **AND** explicit review `source_roots` MUST NOT suppress validation of pytest's own `pythonpath`
+- **AND** valid repository-relative paths containing spaces and native list values MUST remain unchanged in recorded configuration

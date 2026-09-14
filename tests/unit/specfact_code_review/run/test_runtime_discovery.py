@@ -127,6 +127,41 @@ def test_pytest_paths_cannot_escape_snapshot(tmp_path: Path) -> None:
         discover_project(tmp_path)
 
 
+@pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+@pytest.mark.parametrize("quote", ['"', "'"])
+@pytest.mark.parametrize("path_kind", ["parent", "absolute", "symlink"])
+def test_quoted_pytest_paths_are_checked_after_parsing(tmp_path: Path, option: str, quote: str, path_kind: str) -> None:
+    config = tmp_path / "review.toml"
+    config.write_text('source_roots=["."]\n')
+    if path_kind == "symlink":
+        relative = "external tree"
+        (tmp_path / relative).symlink_to(tmp_path.parent / "outside tree", target_is_directory=True)
+    else:
+        relative = "../outside tree" if path_kind == "parent" else str(tmp_path.parent / "outside tree")
+    (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={quote}{relative}{quote}\n")
+    with pytest.raises(ProjectRuntimeError, match=r"project_input_(escape|symlink)"):
+        discover_project(tmp_path, config_path=config)
+
+
+@pytest.mark.parametrize("option", ["testpaths", "pythonpath"])
+@pytest.mark.parametrize("config_format", ["ini", "toml-list"])
+def test_contained_pytest_paths_with_spaces_retain_native_values(
+    tmp_path: Path, option: str, config_format: str
+) -> None:
+    relative = "source tree"
+    (tmp_path / relative).mkdir()
+    if config_format == "ini":
+        recorded = f'"{relative}"'
+        (tmp_path / "pytest.ini").write_text(f"[pytest]\n{option}={recorded}\n")
+    else:
+        recorded = [relative]
+        (tmp_path / "pytest.toml").write_text(f'[pytest]\n{option}=["{relative}"]\n')
+    plan = discover_project(tmp_path)
+    assert plan.pytest_config[option] == recorded
+    if option == "pythonpath":
+        assert plan.source_roots == (relative,)
+
+
 def test_single_declared_test_group_is_prepared_automatically(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text('[dependency-groups]\ntest=["pytest"]\ndocs=["sphinx"]\n')
     assert discover_project(tmp_path).groups == ("test",)

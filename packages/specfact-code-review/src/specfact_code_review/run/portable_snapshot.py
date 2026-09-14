@@ -232,12 +232,15 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
     from specfact_code_review.run.runner import _capsule_report, _classify_range_findings, _snapshot_python_files
 
     snapshots = (resolution.base_snapshot, resolution.head_snapshot)
+    metadata_only = bool(resolution.selected_paths) and not any(
+        Path(path).suffix in {".py", ".pyi"} for path in resolution.selected_paths
+    )
     results = []
     bindings = {}
     for side, snapshot in zip(("base", "head"), snapshots, strict=True):
         side_options = replace(options, project_runtime=None) if side == "base" else options
         files = _snapshot_python_files(snapshot, resolution)
-        if not files:
+        if metadata_only:
             files = [snapshot.root / path for path in sorted(snapshot.contents) if Path(path).suffix in {".py", ".pyi"}]
         result, binding = run_project_snapshot(
             runtime,

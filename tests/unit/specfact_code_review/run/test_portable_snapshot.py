@@ -69,6 +69,7 @@ def test_immutable_pair_prepares_each_side_and_downgrades_authority(tmp_path: Pa
     resolution = SimpleNamespace(
         base_snapshot=SimpleNamespace(root=base_root, contents={"app.py": b""}),
         head_snapshot=SimpleNamespace(root=head_root, contents={"app.py": b""}),
+        selected_paths=("pyproject.toml",),
     )
     descriptor = tmp_path / "project-runtime.json"
     observed = portable_snapshot.run_project_scope_pair(
@@ -80,6 +81,108 @@ def test_immutable_pair_prepares_each_side_and_downgrades_authority(tmp_path: Pa
     assert calls == [(base_root, None), (head_root, descriptor)]
     assert observed["assurance_kind"] == "range_preview"
     assert observed["project_runtime"]["base"]["identity"] != observed["project_runtime"]["head"]["identity"]
+
+
+def _portable_range_resolution(tmp_path: Path, change: str, source: bytes) -> SimpleNamespace:
+    base_contents = {"unrelated.py": source, "pyproject.toml": b"[project]\nname='fixture'\n"}
+    head_contents = dict(base_contents)
+    selected: tuple[str, ...] = () if change == "empty" else ("pyproject.toml",)
+    if change in {"deleted", "added"}:
+        selected = (f"{change}.py",)
+        (base_contents if change == "deleted" else head_contents)[selected[0]] = source
+        (head_contents if change == "deleted" else base_contents).pop("pyproject.toml")
+    snapshots = []
+    for side, contents in (("base", base_contents), ("head", head_contents)):
+        root = tmp_path / side
+        root.mkdir()
+        for name, content in contents.items():
+            (root / name).write_bytes(content)
+        snapshots.append(SimpleNamespace(root=root, contents=contents))
+    return SimpleNamespace(
+        base_snapshot=snapshots[0],
+        head_snapshot=snapshots[1],
+        selected_paths=selected,
+        path_statuses={f"{change}.py": "D" if change == "deleted" else "A"} if change in {"deleted", "added"} else {},
+    )
+
+
+@pytest.mark.parametrize("change", ["deleted", "added", "metadata", "empty"])
+@pytest.mark.parametrize("preparation_fails", [False, True])
+def test_portable_range_keeps_absent_selection_out_of_unrelated_findings(
+    tmp_path: Path, monkeypatch, change: str, preparation_fails: bool
+) -> None:
+    source = b"def check():\n    return missing_name\n"
+    resolution = _portable_range_resolution(tmp_path, change, source)
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    prepared = PreparedRuntime(artifact, artifact / "project-runtime.json", "sha256:" + "b" * 64, {"inventory": {}})
+
+    def prepare(plan, **_context):
+        if preparation_fails and not (plan.root / "pyproject.toml").exists():
+            raise ProjectRuntimeError("project_fixture_preparation_unavailable")
+        return prepared
+
+    executed = []
+
+    def analyze(request):
+        findings = []
+        if request.member == "ruff":
+            for path in request.files:
+                assert path.read_bytes() == source
+                relative = path.relative_to(request.snapshot_root).as_posix()
+                executed.append(relative)
+                findings.append(
+                    {
+                        "category": "style",
+                        "severity": "warning",
+                        "tool": "ruff",
+                        "rule": "F821",
+                        "file": relative,
+                        "line": 2,
+                        "message": "Undefined name missing_name",
+                        "fixable": False,
+                    }
+                )
+        return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": findings}
+
+    monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare)
+    monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_context: prepared)
+    monkeypatch.setattr(runner, "_execute_capsule_member", analyze)
+    runtime = runner.CapsuleRuntime(
+        tmp_path,
+        "sha256:" + "a" * 64,
+        "linux-x86_64-cp312",
+        "python",
+        "bootstrap",
+        runner.BubblewrapIdentity(
+            path="bwrap",
+            format="ELF",
+            architecture="x86_64",
+            linkage="static",
+            interpreter=(),
+            needed=(),
+            sha256="a" * 64,
+            descriptor_digest="b" * 64,
+        ),
+    )
+    report = portable_snapshot.run_project_scope_pair(
+        resolution,
+        runtime=runtime,
+        options=runner.ReviewOptions(no_tests=True),
+        scope_evidence={"assurance_kind": "range_preview"},
+    )
+    expected = {
+        "deleted": (["deleted.py"], [("deleted.py", "fixed")]),
+        "added": (["added.py"], [("added.py", "introduced")]),
+        "metadata": (["unrelated.py", "unrelated.py"], [("unrelated.py", "unchanged")]),
+        "empty": ([], []),
+    }
+    expected_files, expected_findings = expected[change]
+    assert [(finding.file, finding.differential_state) for finding in report.findings] == expected_findings
+    assert executed == expected_files
+    if preparation_fails and change in {"deleted", "added"}:
+        absent_side = "head" if change == "deleted" else "base"
+        assert report.scope_evidence["project_runtime"][absent_side]["status"] == "UNKNOWN"
 
 
 def test_source_change_during_full_analysis_invalidates_runtime_binding(tmp_path: Path, monkeypatch) -> None:
