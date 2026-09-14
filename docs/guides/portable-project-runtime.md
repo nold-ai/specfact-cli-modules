@@ -16,7 +16,7 @@ exempt_reason: ""
 
 # Review external Python projects
 
-Portable project runtimes let the code review capsule use a repository's own dependencies and test configuration. Runtime acquisition runs in a disposable builder; analysis runs offline in separate target workers. The signed supervisor keeps its own dependencies. Analyzer-owned imports follow the recorded member graph and resolve from the verified analyzer installation before project paths or startup imports are considered; project-owned dependencies keep their selected versions.
+Portable project runtimes let the code review capsule use a repository's own dependencies and test configuration. Runtime acquisition runs in a disposable builder; analysis runs offline in separate target workers. The signed supervisor keeps its own dependencies. Analyzer-owned imports follow the recorded member graph and resolve from the verified analyzer installation before project paths or startup imports are considered; project-owned dependencies keep their selected versions. Member startup preserves ordinary editable hooks, restores analyzer lookup precedence afterward, and reports hooks that remove protected import machinery or add paths outside the copied runtime. These startup checks do not sandbox arbitrary Python code within one interpreter.
 
 Execution requires Linux x86-64 with the capsule's supported Python 3.11, 3.12, or 3.13 ABI and working unprivileged user namespaces. A local descriptor does not grant protected pull-request authority.
 
@@ -56,7 +56,7 @@ groups = ["tests"]
 
 For a Hatch test matrix, `environment = "hatch-test"` selects its unique native environment matching the selected Python version. Multiple matching matrix entries require a concrete name such as `hatch-test.py3.12-feature`. Selection uses Hatch's exported configuration.
 
-The `python` setting overrides `.python-version`; both are checked against `requires-python` and the exact signed interpreter version. A compatible controller ABI is reused; an incompatible controller does not force that ABI onto the project. Base and head reviews select their workers independently.
+The `python` setting overrides `.python-version`; both are checked against `requires-python` and the exact signed interpreter version. A root `.python-version` also activates automatic preparation for source-only projects without packaging metadata. A compatible controller ABI is reused; an incompatible controller does not force that ABI onto the project. Base and head reviews select their workers independently.
 
 Poetry Python constraints are intersected with project `requires-python` before choosing a worker. PEP 440 ranges are supported; Poetry caret, tilde, union and table syntax currently produce an explicit unsupported-constraint diagnostic. Express the declaration as an equivalent PEP 440 range to proceed.
 
@@ -84,7 +84,7 @@ Attachment verifies the payload, project inputs, ABI, and analyzer worker identi
 
 Runtime failure preserves independent static findings. Affected analyzers reference the preparation diagnostic and remain incomplete. A real missing import after successful preparation remains a finding. A report can contain real failures while still showing incomplete required evidence.
 
-Pytest configuration and selection controls remain active. Deselected tests are recorded separately from the selected execution inventory; distributed deselection visibility is labelled as controller-observed. Malformed pytest tables and invalid `pythonpath` or `testpaths` value shapes identify the section or option and configuration file. The report records collection, execution, setup and internal errors, configured options, versions, and coverage. Distribution-owned commands are available inside target workers. Localhost coordination for plugins stays inside the offline namespace. Collection-only runs, early stopping that leaves collected tests unexecuted, and absent required coverage do not become successful test evidence.
+Pytest configuration and selection controls remain active. Deselected tests are recorded separately from the selected execution inventory; distributed deselection visibility is labelled as controller-observed. Quoted pytest paths and file patterns preserve spaces using native argument rules. Malformed tables, invalid path/pattern value shapes, and unclosed quotes identify the section or option and configuration file. The report records collection, execution, setup and internal errors, configured options, versions, and coverage. Distribution-owned commands are available inside target workers. Localhost coordination for plugins stays inside the offline namespace. Collection-only runs, early stopping that leaves collected tests unexecuted, and absent required coverage do not become successful test evidence.
 
 ## Compatibility evidence
 

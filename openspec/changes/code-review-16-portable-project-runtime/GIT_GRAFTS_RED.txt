@@ -11,7 +11,7 @@ tests/unit/specfact_code_review/run/test_runtime_vcs.py F                [100%]
 =================================== FAILURES ===================================
 _____________ test_unbound_grafts_cannot_remove_selected_ancestry ______________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-269/test_unbound_grafts_cannot_rem0')
+tmp_path = PosixPath('<temporary>/test_unbound_grafts_cannot_rem0')
 
     def test_unbound_grafts_cannot_remove_selected_ancestry(tmp_path: Path) -> None:
         root = tmp_path / "source"
@@ -36,7 +36,7 @@ tests/unit/specfact_code_review/run/test_runtime_vcs.py:19: in _git
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 input = None, capture_output = False, timeout = None, check = True
-popenargs = (['git', '-C', '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-269/test_unbound_grafts_cannot_rem0/copy', 'rev-list', '--count', 'HEAD'],)
+popenargs = (['git', '-C', '<temporary>/test_unbound_grafts_cannot_rem0/copy', 'rev-list', '--count', 'HEAD'],)
 kwargs = {'stdout': -1, 'text': True, 'env': {'RUST_LOG': 'warn', 'CODEX_SANDBOX_NETWORK_DISABLED': '1', 'TERM': 'dumb', 'SHELL': '/bin/zsh', ...}}
 
     def run(*popenargs,
@@ -106,7 +106,7 @@ kwargs = {'stdout': -1, 'text': True, 'env': {'RUST_LOG': 'warn', 'CODEX_SANDBOX
             if check and retcode:
 >               raise CalledProcessError(retcode, process.args,
                                          output=stdout, stderr=stderr)
-E               subprocess.CalledProcessError: Command '['git', '-C', '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-269/test_unbound_grafts_cannot_rem0/copy', 'rev-list', '--count', 'HEAD']' returned non-zero exit status 128.
+E               subprocess.CalledProcessError: Command '['git', '-C', '<temporary>/test_unbound_grafts_cannot_rem0/copy', 'rev-list', '--count', 'HEAD']' returned non-zero exit status 128.
 
 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:578: CalledProcessError
 ----------------------------- Captured stderr call -----------------------------

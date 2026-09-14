@@ -27,7 +27,7 @@ DEFAULT_NORECURSEDIRS = ("*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_
 
 def _strings(value: object) -> tuple[str, ...]:
     if isinstance(value, str):
-        return tuple(value.split())
+        return tuple(shlex.split(value))
     if isinstance(value, list | tuple):
         return tuple(str(item) for item in value)
     return ()

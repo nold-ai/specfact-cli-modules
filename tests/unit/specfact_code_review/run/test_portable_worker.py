@@ -191,3 +191,37 @@ def test_recursion_exclusions_support_absolute_and_quoted_directory_names(tmp_pa
     patterns = [str(tmp_path / "generated cache")] if absolute else '"generated cache"'
     plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"norecursedirs": patterns})
     assert select_test_paths(plan, [source], full=False) == ("tests/test_app.py",)
+
+
+@pytest.mark.parametrize("quote", ['"', "'"])
+def test_quoted_pytest_paths_match_native_configuration(tmp_path: Path, monkeypatch, quote: str) -> None:
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    (tmp_path / "source tree").mkdir()
+    (tmp_path / "integration tests").mkdir()
+    source = tmp_path / "source tree/app name.py"
+    source.touch()
+    selected = tmp_path / "integration tests/test_app name.py"
+    selected.write_text("def test_example(): assert True\n")
+    configuration = tmp_path / "pytest.ini"
+    configuration.write_text(
+        "[pytest]\n"
+        f"testpaths = {quote}integration tests{quote}\n"
+        f"pythonpath = {quote}source tree{quote}\n"
+        f"python_files = {quote}test_* name.py{quote}\n"
+    )
+    native = pytest.Config.fromdictargs({}, ["-c", str(configuration)])
+    try:
+        plan = discover_project(tmp_path)
+        assert plan.source_roots == tuple(path.relative_to(tmp_path).as_posix() for path in native.getini("pythonpath"))
+        assert select_test_paths(plan, [source], full=True) == tuple(native.getini("testpaths"))
+        assert select_test_paths(plan, [source], full=False) == (selected.relative_to(tmp_path).as_posix(),)
+        assert select_test_paths(plan, [selected], full=False) == (selected.relative_to(tmp_path).as_posix(),)
+    finally:
+        native._ensure_unconfigure()
+
+
+@pytest.mark.parametrize("option", ["pythonpath", "testpaths", "python_files", "norecursedirs"])
+def test_invalid_pytest_quoting_names_configuration_option(tmp_path: Path, option: str) -> None:
+    (tmp_path / "pytest.ini").write_text(f'[pytest]\n{option} = "unterminated\n')
+    with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:pytest.ini:{option}"):
+        discover_project(tmp_path)

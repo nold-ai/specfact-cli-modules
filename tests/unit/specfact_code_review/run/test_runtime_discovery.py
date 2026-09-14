@@ -1,5 +1,6 @@
 """Portable runtime discovery scenarios: never execute project code."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -357,7 +358,7 @@ def test_malformed_pytest_table_has_project_diagnostic(
 ) -> None:
     (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
     with pytest.raises(
-        ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"
+        ProjectRuntimeError, match=re.escape(f"project_pytest_config_invalid:{filename}:{section}; expected a table")
     ):
         discover_project(tmp_path)
 
@@ -369,6 +370,7 @@ def test_malformed_pytest_table_has_project_diagnostic(
         ("pyproject.toml", "project"),
         ("pyproject.toml", "dependency-groups"),
         ("pyproject.toml", "project.optional-dependencies"),
+        ("pyproject.toml", "tool.uv"),
         ("pyproject.toml", "tool.hatch"),
         ("pyproject.toml", "tool.hatch.envs"),
         ("pyproject.toml", "tool.poetry"),
@@ -388,5 +390,7 @@ def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
     (tmp_path / filename).write_text(declaration)
     config = tmp_path / "review-runtime.toml"
     config.write_text('manager="pip"\n')
-    with pytest.raises(ProjectRuntimeError, match=f"project_config_invalid:{filename}:{section}; expected a table"):
+    with pytest.raises(
+        ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")
+    ):
         discover_project(tmp_path, config_path=config if explicit else None)

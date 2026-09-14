@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
@@ -125,6 +126,53 @@ def test_pip_tools_source_input_triggers_automatic_runtime(tmp_path: Path) -> No
 
     (tmp_path / "requirements.in").write_text("requests\n")
     assert project_runtime_requested(tmp_path, SimpleNamespace(project_config=None, project_runtime=None))
+
+
+@pytest.mark.parametrize("python_pin", [None, "3.12", "3.99"])
+def test_python_version_only_project_routes_preparation_and_preserves_static_fallback(
+    tmp_path: Path, monkeypatch, python_pin: str | None
+) -> None:
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n")
+    if python_pin is not None:
+        (tmp_path / ".python-version").write_text(python_pin + "\n")
+    monkeypatch.chdir(tmp_path)
+    prepared_pins = []
+    members = []
+    local_snapshot = runner.CapsuleSnapshotResult({}, {})
+
+    def prepare_project(plan, **_kwargs):
+        prepared_pins.append(plan.python)
+        raise ProjectRuntimeError("project_native_library_missing:libfixture.so")
+
+    def dispatch(request, **_kwargs):
+        members.append(request.member)
+        return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+
+    monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare_project)
+    monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+    monkeypatch.setattr(runner, "_run_local_capsule_snapshot", lambda *_args, **_kwargs: local_snapshot)
+    monkeypatch.setattr(runner, "_finalize_local_capsule_snapshot", lambda snapshot, _context: snapshot)
+    runtime = cast(
+        runner.CapsuleRuntime, SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+    )
+    evidence: dict[str, Any] = {"assurance_kind": "explicit_files"}
+    snapshot = runner._run_local_capsule_context(runtime, [source], runner.ReviewOptions(), evidence, "explicit_files")
+    if python_pin is None:
+        assert snapshot is local_snapshot
+        assert not prepared_pins and not members
+        assert "project_runtime" not in evidence
+    else:
+        assert prepared_pins == (["3.12"] if python_pin == "3.12" else [])
+        assert "ruff" in members and not set(members) & DEPENDENT_MEMBERS
+        assert snapshot.evidence["basedpyright"]["evidence_outcome"] == "UNKNOWN"
+        expected = (
+            "project_native_library_missing:libfixture.so"
+            if python_pin == "3.12"
+            else "project_python_incompatible:pin=3.99"
+        )
+        assert evidence["project_runtime"]["diagnostic"].startswith(expected)
+        assert evidence["project_runtime"]["status"] == "UNKNOWN"
 
 
 @pytest.mark.parametrize("relative", [False, True])

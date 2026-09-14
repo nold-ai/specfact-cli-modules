@@ -6140,11 +6140,12 @@ def _pytest_junit_identities(observer: tuple[dict[str, object], ...]) -> dict[tu
     observed_nodes = tuple(dict.fromkeys(str(record.get("nodeid", "")) for record in observer))
     junit_identities: dict[tuple[str, str], list[str]] = {}
     for nodeid in observed_nodes:
-        path, *qualifiers = nodeid.split("::")
+        address, parameter_open, parameters = nodeid.partition("[")
+        path, *qualifiers = address.split("::")
         if not qualifiers or not path.endswith(".py"):
             continue
         classname_parts = [path[:-3].replace("/", "."), *qualifiers[:-1]]
-        identity = (".".join(classname_parts), qualifiers[-1])
+        identity = (".".join(classname_parts), qualifiers[-1] + parameter_open + parameters)
         junit_identities.setdefault(identity, []).append(nodeid)
     return junit_identities
 

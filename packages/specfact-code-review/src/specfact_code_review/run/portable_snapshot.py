@@ -34,6 +34,7 @@ def project_runtime_requested(root: Path, options: Any) -> bool:
                 "hatch.toml",
                 "requirements.txt",
                 "requirements.in",
+                ".python-version",
                 "pylock.toml",
                 "setup.py",
                 "setup.cfg",

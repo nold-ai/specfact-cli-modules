@@ -7295,6 +7295,47 @@ def test_pytest_outcome_reconciliation_accepts_complete_parametrized_expansion()
     assert result.status == "PASS"
 
 
+def test_pytest_parameter_delimiters_preserve_real_junit_identities(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    test_file = tests_root / "test_param.py"
+    test_file.write_text(
+        "import pytest\n"
+        "parameters = pytest.mark.parametrize('value', ['plain', 'left::right', '[left::right]'])\n"
+        "@parameters\n"
+        "def test_value(value):\n"
+        "    assert value\n"
+        "class TestValues:\n"
+        "    @parameters\n"
+        "    def test_value(self, value):\n"
+        "        assert value\n",
+        encoding="utf-8",
+    )
+
+    process, coverage_path, observer_path, junit_path = runner_api._run_pytest_selection_with_coverage(
+        (str(test_file),),
+        coverage_source=tmp_path,
+        policy_argv=("--rootdir", str(tmp_path)),
+    )
+    try:
+        observer, junit = runner_api._load_pytest_outcome_evidence(observer_path, junit_path)
+        result = runner_api.reconcile_pytest_outcomes(
+            observer=observer,
+            junit=junit,
+            process_exit=process.returncode,
+            planned=("tests/test_param.py::test_value", "tests/test_param.py::TestValues::test_value"),
+        )
+    finally:
+        coverage_path.unlink(missing_ok=True)
+        observer_path.unlink(missing_ok=True)
+        junit_path.unlink(missing_ok=True)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert len(junit) == 6
+    assert result.status == "PASS"
+
+
 def test_partial_parametrized_deselection_is_unknown_from_real_pytest(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"

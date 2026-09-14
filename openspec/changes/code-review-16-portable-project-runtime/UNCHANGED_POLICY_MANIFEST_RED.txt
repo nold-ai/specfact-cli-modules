@@ -11,7 +11,7 @@ tests/unit/specfact_code_review/run/test_scope.py FFFFFFFFFF             [100%]
 =================================== FAILURES ===================================
 _ test_index_unchanged_policy_manifest_preserves_selection[ruff-clean-index-existing] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_unchanged_policy_ma0/repo')
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma0/repo')
 portable = False, changed = False, primary_path = 'ruff.toml'
 primary_content = "extend='config/base.toml'\n"
 reference_path = 'config/base.toml', reference_content = "extend='leaf.toml'\n"
@@ -70,7 +70,7 @@ E               KeyError: 'config/base.toml'
 tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
 _ test_index_unchanged_policy_manifest_preserves_selection[ruff-clean-index-portable] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_unchanged_policy_ma1/repo')
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma1/repo')
 portable = True, changed = False, primary_path = 'ruff.toml'
 primary_content = "extend='config/base.toml'\n"
 reference_path = 'config/base.toml', reference_content = "extend='leaf.toml'\n"
@@ -129,7 +129,7 @@ E               KeyError: 'config/base.toml'
 tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
 _ test_index_unchanged_policy_manifest_preserves_selection[ruff-changed-source-existing] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_unchanged_policy_ma2/repo')
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma2/repo')
 portable = False, changed = True, primary_path = 'ruff.toml'
 primary_content = "extend='config/base.toml'\n"
 reference_path = 'config/base.toml', reference_content = "extend='leaf.toml'\n"
@@ -188,7 +188,7 @@ E               KeyError: 'config/base.toml'
 tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
 _ test_index_unchanged_policy_manifest_preserves_selection[ruff-changed-source-portable] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_unchanged_policy_ma3/repo')
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma3/repo')
 portable = True, changed = True, primary_path = 'ruff.toml'
 primary_content = "extend='config/base.toml'\n"
 reference_path = 'config/base.toml', reference_content = "extend='leaf.toml'\n"
@@ -247,7 +247,7 @@ E               KeyError: 'config/base.toml'
 tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
 _ test_index_unchanged_policy_manifest_preserves_selection[basedpyright-clean-index-existing] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_unchanged_policy_ma4/repo')
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma4/repo')
 portable = False, changed = False, primary_path = 'pyrightconfig.json'
 primary_content = '{"extends":"config/base.json"}\n'
 reference_path = 'config/base.json'
@@ -307,7 +307,7 @@ E               KeyError: 'config/base.json'
 tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
 _ test_index_unchanged_policy_manifest_preserves_selection[basedpyright-clean-index-portable] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_unchanged_policy_ma5/repo')
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma5/repo')
 portable = True, changed = False, primary_path = 'pyrightconfig.json'
 primary_content = '{"extends":"config/base.json"}\n'
 reference_path = 'config/base.json'
@@ -367,7 +367,7 @@ E               KeyError: 'config/base.json'
 tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
 _ test_index_unchanged_policy_manifest_preserves_selection[basedpyright-changed-source-existing] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_unchanged_policy_ma6/repo')
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma6/repo')
 portable = False, changed = True, primary_path = 'pyrightconfig.json'
 primary_content = '{"extends":"config/base.json"}\n'
 reference_path = 'config/base.json'
@@ -427,7 +427,7 @@ E               KeyError: 'config/base.json'
 tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
 _ test_index_unchanged_policy_manifest_preserves_selection[basedpyright-changed-source-portable] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_unchanged_policy_ma7/repo')
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma7/repo')
 portable = True, changed = True, primary_path = 'pyrightconfig.json'
 primary_content = '{"extends":"config/base.json"}\n'
 reference_path = 'config/base.json'
@@ -487,7 +487,7 @@ E               KeyError: 'config/base.json'
 tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
 __ test_index_policy_manifest_retains_base_and_head_reference_closures[ruff] ___
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_policy_manifest_ret0/repo')
+git_repo = PosixPath('<temporary>/test_index_policy_manifest_ret0/repo')
 primary_path = 'ruff.toml', before = "extend='config/old.toml'\n"
 after = "extend='config/new.toml'\n", old_path = 'config/old.toml'
 new_path = 'config/new.toml', content = 'line-length=80\n'
@@ -529,7 +529,7 @@ E               KeyError: 'config/old.toml'
 tests/unit/specfact_code_review/run/test_scope.py:864: KeyError
 _ test_index_policy_manifest_retains_base_and_head_reference_closures[basedpyright] _
 
-git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-278/test_index_policy_manifest_ret1/repo')
+git_repo = PosixPath('<temporary>/test_index_policy_manifest_ret1/repo')
 primary_path = 'pyrightconfig.json', before = '{"extends":"config/old.json"}\n'
 after = '{"extends":"config/new.json"}\n', old_path = 'config/old.json'
 new_path = 'config/new.json', content = '{"typeCheckingMode":"basic"}\n'

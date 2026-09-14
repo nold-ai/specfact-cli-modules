@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import importlib.machinery
 import importlib.metadata
 import json
@@ -88,10 +89,59 @@ def _stdlib_paths() -> list[str]:
     return [path for path in sys.path if path and Path(path) in allowed]
 
 
+def _protected_import_state(finder: AnalyzerFinder) -> tuple:
+    """Snapshot the lookup machinery and graph that startup hooks must preserve."""
+    return (
+        builtins.__import__,
+        importlib.machinery.PathFinder.find_spec,
+        _verified_analyzer_spec,
+        finder.find_spec,
+        finder.validate_loaded,
+        getattr(finder, "find_distributions", None),
+        frozenset(finder.names),
+        frozenset(getattr(finder, "distributions", ())),
+        id(sys.modules),
+        PROJECT.resolve(),
+        SNAPSHOT.resolve(),
+        ANALYZERS.resolve(),
+    )
+
+
+def _validate_target_paths(allowed: tuple[Path, ...]) -> None:
+    """Retain rebased editable roots without admitting unrelated startup paths."""
+    for path in sys.path:
+        if not isinstance(path, str) or not any(Path(path).resolve().is_relative_to(root) for root in allowed):
+            raise RuntimeError(
+                "project_worker_startup_path_escape; inspect target .pth files and "
+                "rebuild editable installs against the copied project"
+            )
+
+
+def _configure_member_site(finder: AnalyzerFinder, stdlib_paths: list[str]) -> None:
+    """Preserve additive editable hooks and reestablish member lookup precedence."""
+    state = _protected_import_state
+    expected = state(finder)
+    protected = {id(entry) for entry in sys.meta_path}
+    allowed = tuple(Path(path).resolve() for path in [*stdlib_paths, PROJECT, SNAPSHOT, ANALYZERS])
+    site.addsitedir(str(PROJECT / "site-packages"))
+    try:
+        unchanged = state(finder) == expected and protected <= {id(entry) for entry in sys.meta_path}
+    except (AttributeError, TypeError):
+        unchanged = False
+    if not unchanged:
+        raise RuntimeError(
+            "project_worker_startup_import_state_changed; target .pth hooks must preserve protected import machinery"
+        )
+    sys.meta_path[:] = [finder, *(entry for entry in sys.meta_path if entry is not finder)]
+    _validate_target_paths(allowed)
+    finder.validate_loaded()
+
+
 def _configure_runtime(module: str) -> None:
     """Initialize only the target worker; project Python gets no analyzer fallbacks."""
     descriptor = json.loads((PROJECT / "project-runtime.json").read_text(encoding="utf-8"))
-    sys.path[:] = _stdlib_paths()
+    stdlib_paths = _stdlib_paths()
+    sys.path[:] = stdlib_paths
     finder = AnalyzerFinder(set(_TOOL_IMPORTS.get(module, set())))
     if module != "project-python":
         finder = DomainFinder(descriptor["inventory"]["member_graphs"][module])
@@ -100,9 +150,10 @@ def _configure_runtime(module: str) -> None:
     finder.validate_loaded()
     roots = descriptor["project"]["source_roots"]
     sys.path.extend(str(SNAPSHOT / root) for root in roots)
-    site.addsitedir(str(PROJECT / "site-packages"))
-    finder.validate_loaded()
-    if module != "project-python":
+    if module == "project-python":
+        site.addsitedir(str(PROJECT / "site-packages"))
+    else:
+        _configure_member_site(finder, stdlib_paths)
         sys.path.append(str(ANALYZERS))
     sys.executable = str(PROJECT / "bin/python")
 

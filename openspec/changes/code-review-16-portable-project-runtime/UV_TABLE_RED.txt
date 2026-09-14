@@ -1,0 +1,321 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 221 items / 213 deselected / 8 selected
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py FFFFFFFF   [100%]
+
+=================================== FAILURES ===================================
+_ test_consumed_metadata_tables_have_actionable_shape_diagnostics[False-1-pyproject.toml-tool.uv] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-316/test_consumed_metadata_tables_0')
+filename = 'pyproject.toml', section = 'tool.uv', value = '1', explicit = False
+
+    @pytest.mark.parametrize(
+        "filename,section",
+        [
+            ("pyproject.toml", "tool"),
+            ("pyproject.toml", "project"),
+            ("pyproject.toml", "dependency-groups"),
+            ("pyproject.toml", "project.optional-dependencies"),
+            ("pyproject.toml", "tool.uv"),
+            ("pyproject.toml", "tool.hatch"),
+            ("pyproject.toml", "tool.hatch.envs"),
+            ("pyproject.toml", "tool.poetry"),
+            ("pyproject.toml", "tool.poetry.dependencies"),
+            ("pyproject.toml", "tool.poetry.group"),
+            ("pyproject.toml", "tool.poetry.extras"),
+            ("hatch.toml", "envs"),
+        ],
+    )
+    @pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+    @pytest.mark.parametrize("explicit", [False, True])
+    def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+        tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+    ) -> None:
+        parent, _, option = section.rpartition(".")
+        declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+        (tmp_path / filename).write_text(declaration)
+        config = tmp_path / "review-runtime.toml"
+        config.write_text('manager="pip"\n')
+>       with pytest.raises(ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:393: Failed
+_ test_consumed_metadata_tables_have_actionable_shape_diagnostics[False-false-pyproject.toml-tool.uv] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-316/test_consumed_metadata_tables_1')
+filename = 'pyproject.toml', section = 'tool.uv', value = 'false'
+explicit = False
+
+    @pytest.mark.parametrize(
+        "filename,section",
+        [
+            ("pyproject.toml", "tool"),
+            ("pyproject.toml", "project"),
+            ("pyproject.toml", "dependency-groups"),
+            ("pyproject.toml", "project.optional-dependencies"),
+            ("pyproject.toml", "tool.uv"),
+            ("pyproject.toml", "tool.hatch"),
+            ("pyproject.toml", "tool.hatch.envs"),
+            ("pyproject.toml", "tool.poetry"),
+            ("pyproject.toml", "tool.poetry.dependencies"),
+            ("pyproject.toml", "tool.poetry.group"),
+            ("pyproject.toml", "tool.poetry.extras"),
+            ("hatch.toml", "envs"),
+        ],
+    )
+    @pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+    @pytest.mark.parametrize("explicit", [False, True])
+    def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+        tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+    ) -> None:
+        parent, _, option = section.rpartition(".")
+        declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+        (tmp_path / filename).write_text(declaration)
+        config = tmp_path / "review-runtime.toml"
+        config.write_text('manager="pip"\n')
+>       with pytest.raises(ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:393: Failed
+_ test_consumed_metadata_tables_have_actionable_shape_diagnostics[False-[]-pyproject.toml-tool.uv] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-316/test_consumed_metadata_tables_2')
+filename = 'pyproject.toml', section = 'tool.uv', value = '[]', explicit = False
+
+    @pytest.mark.parametrize(
+        "filename,section",
+        [
+            ("pyproject.toml", "tool"),
+            ("pyproject.toml", "project"),
+            ("pyproject.toml", "dependency-groups"),
+            ("pyproject.toml", "project.optional-dependencies"),
+            ("pyproject.toml", "tool.uv"),
+            ("pyproject.toml", "tool.hatch"),
+            ("pyproject.toml", "tool.hatch.envs"),
+            ("pyproject.toml", "tool.poetry"),
+            ("pyproject.toml", "tool.poetry.dependencies"),
+            ("pyproject.toml", "tool.poetry.group"),
+            ("pyproject.toml", "tool.poetry.extras"),
+            ("hatch.toml", "envs"),
+        ],
+    )
+    @pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+    @pytest.mark.parametrize("explicit", [False, True])
+    def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+        tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+    ) -> None:
+        parent, _, option = section.rpartition(".")
+        declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+        (tmp_path / filename).write_text(declaration)
+        config = tmp_path / "review-runtime.toml"
+        config.write_text('manager="pip"\n')
+>       with pytest.raises(ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:393: Failed
+_ test_consumed_metadata_tables_have_actionable_shape_diagnostics[False-"invalid"-pyproject.toml-tool.uv] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-316/test_consumed_metadata_tables_3')
+filename = 'pyproject.toml', section = 'tool.uv', value = '"invalid"'
+explicit = False
+
+    @pytest.mark.parametrize(
+        "filename,section",
+        [
+            ("pyproject.toml", "tool"),
+            ("pyproject.toml", "project"),
+            ("pyproject.toml", "dependency-groups"),
+            ("pyproject.toml", "project.optional-dependencies"),
+            ("pyproject.toml", "tool.uv"),
+            ("pyproject.toml", "tool.hatch"),
+            ("pyproject.toml", "tool.hatch.envs"),
+            ("pyproject.toml", "tool.poetry"),
+            ("pyproject.toml", "tool.poetry.dependencies"),
+            ("pyproject.toml", "tool.poetry.group"),
+            ("pyproject.toml", "tool.poetry.extras"),
+            ("hatch.toml", "envs"),
+        ],
+    )
+    @pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+    @pytest.mark.parametrize("explicit", [False, True])
+    def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+        tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+    ) -> None:
+        parent, _, option = section.rpartition(".")
+        declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+        (tmp_path / filename).write_text(declaration)
+        config = tmp_path / "review-runtime.toml"
+        config.write_text('manager="pip"\n')
+>       with pytest.raises(ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:393: Failed
+_ test_consumed_metadata_tables_have_actionable_shape_diagnostics[True-1-pyproject.toml-tool.uv] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-316/test_consumed_metadata_tables_4')
+filename = 'pyproject.toml', section = 'tool.uv', value = '1', explicit = True
+
+    @pytest.mark.parametrize(
+        "filename,section",
+        [
+            ("pyproject.toml", "tool"),
+            ("pyproject.toml", "project"),
+            ("pyproject.toml", "dependency-groups"),
+            ("pyproject.toml", "project.optional-dependencies"),
+            ("pyproject.toml", "tool.uv"),
+            ("pyproject.toml", "tool.hatch"),
+            ("pyproject.toml", "tool.hatch.envs"),
+            ("pyproject.toml", "tool.poetry"),
+            ("pyproject.toml", "tool.poetry.dependencies"),
+            ("pyproject.toml", "tool.poetry.group"),
+            ("pyproject.toml", "tool.poetry.extras"),
+            ("hatch.toml", "envs"),
+        ],
+    )
+    @pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+    @pytest.mark.parametrize("explicit", [False, True])
+    def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+        tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+    ) -> None:
+        parent, _, option = section.rpartition(".")
+        declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+        (tmp_path / filename).write_text(declaration)
+        config = tmp_path / "review-runtime.toml"
+        config.write_text('manager="pip"\n')
+>       with pytest.raises(ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:393: Failed
+_ test_consumed_metadata_tables_have_actionable_shape_diagnostics[True-false-pyproject.toml-tool.uv] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-316/test_consumed_metadata_tables_5')
+filename = 'pyproject.toml', section = 'tool.uv', value = 'false'
+explicit = True
+
+    @pytest.mark.parametrize(
+        "filename,section",
+        [
+            ("pyproject.toml", "tool"),
+            ("pyproject.toml", "project"),
+            ("pyproject.toml", "dependency-groups"),
+            ("pyproject.toml", "project.optional-dependencies"),
+            ("pyproject.toml", "tool.uv"),
+            ("pyproject.toml", "tool.hatch"),
+            ("pyproject.toml", "tool.hatch.envs"),
+            ("pyproject.toml", "tool.poetry"),
+            ("pyproject.toml", "tool.poetry.dependencies"),
+            ("pyproject.toml", "tool.poetry.group"),
+            ("pyproject.toml", "tool.poetry.extras"),
+            ("hatch.toml", "envs"),
+        ],
+    )
+    @pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+    @pytest.mark.parametrize("explicit", [False, True])
+    def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+        tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+    ) -> None:
+        parent, _, option = section.rpartition(".")
+        declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+        (tmp_path / filename).write_text(declaration)
+        config = tmp_path / "review-runtime.toml"
+        config.write_text('manager="pip"\n')
+>       with pytest.raises(ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:393: Failed
+_ test_consumed_metadata_tables_have_actionable_shape_diagnostics[True-[]-pyproject.toml-tool.uv] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-316/test_consumed_metadata_tables_6')
+filename = 'pyproject.toml', section = 'tool.uv', value = '[]', explicit = True
+
+    @pytest.mark.parametrize(
+        "filename,section",
+        [
+            ("pyproject.toml", "tool"),
+            ("pyproject.toml", "project"),
+            ("pyproject.toml", "dependency-groups"),
+            ("pyproject.toml", "project.optional-dependencies"),
+            ("pyproject.toml", "tool.uv"),
+            ("pyproject.toml", "tool.hatch"),
+            ("pyproject.toml", "tool.hatch.envs"),
+            ("pyproject.toml", "tool.poetry"),
+            ("pyproject.toml", "tool.poetry.dependencies"),
+            ("pyproject.toml", "tool.poetry.group"),
+            ("pyproject.toml", "tool.poetry.extras"),
+            ("hatch.toml", "envs"),
+        ],
+    )
+    @pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+    @pytest.mark.parametrize("explicit", [False, True])
+    def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+        tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+    ) -> None:
+        parent, _, option = section.rpartition(".")
+        declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+        (tmp_path / filename).write_text(declaration)
+        config = tmp_path / "review-runtime.toml"
+        config.write_text('manager="pip"\n')
+>       with pytest.raises(ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:393: Failed
+_ test_consumed_metadata_tables_have_actionable_shape_diagnostics[True-"invalid"-pyproject.toml-tool.uv] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-316/test_consumed_metadata_tables_7')
+filename = 'pyproject.toml', section = 'tool.uv', value = '"invalid"'
+explicit = True
+
+    @pytest.mark.parametrize(
+        "filename,section",
+        [
+            ("pyproject.toml", "tool"),
+            ("pyproject.toml", "project"),
+            ("pyproject.toml", "dependency-groups"),
+            ("pyproject.toml", "project.optional-dependencies"),
+            ("pyproject.toml", "tool.uv"),
+            ("pyproject.toml", "tool.hatch"),
+            ("pyproject.toml", "tool.hatch.envs"),
+            ("pyproject.toml", "tool.poetry"),
+            ("pyproject.toml", "tool.poetry.dependencies"),
+            ("pyproject.toml", "tool.poetry.group"),
+            ("pyproject.toml", "tool.poetry.extras"),
+            ("hatch.toml", "envs"),
+        ],
+    )
+    @pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+    @pytest.mark.parametrize("explicit", [False, True])
+    def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+        tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+    ) -> None:
+        parent, _, option = section.rpartition(".")
+        declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+        (tmp_path / filename).write_text(declaration)
+        config = tmp_path / "review-runtime.toml"
+        config.write_text('manager="pip"\n')
+>       with pytest.raises(ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:393: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_consumed_metadata_tables_have_actionable_shape_diagnostics[False-1-pyproject.toml-tool.uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_consumed_metadata_tables_have_actionable_shape_diagnostics[False-false-pyproject.toml-tool.uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_consumed_metadata_tables_have_actionable_shape_diagnostics[False-[]-pyproject.toml-tool.uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_consumed_metadata_tables_have_actionable_shape_diagnostics[False-"invalid"-pyproject.toml-tool.uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_consumed_metadata_tables_have_actionable_shape_diagnostics[True-1-pyproject.toml-tool.uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_consumed_metadata_tables_have_actionable_shape_diagnostics[True-false-pyproject.toml-tool.uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_consumed_metadata_tables_have_actionable_shape_diagnostics[True-[]-pyproject.toml-tool.uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_consumed_metadata_tables_have_actionable_shape_diagnostics[True-"invalid"-pyproject.toml-tool.uv]
+====================== 8 failed, 213 deselected in 1.10s =======================

@@ -60,6 +60,7 @@ _PROJECT_TABLES = (
     "project",
     "dependency-groups",
     "project.optional-dependencies",
+    "tool.uv",
     "tool.hatch",
     "tool.hatch.envs",
     "tool.poetry",
@@ -226,9 +227,17 @@ def _ini(path: Path) -> configparser.ConfigParser:
 
 
 def _validated_pytest_paths(configuration: dict[str, Any], source: str) -> dict[str, Any]:
-    for option in ("pythonpath", "testpaths"):
+    for option in ("pythonpath", "testpaths", "python_files", "norecursedirs"):
         value = configuration.get(option, "")
-        if isinstance(value, str) or (isinstance(value, list) and all(isinstance(item, str) for item in value)):
+        if isinstance(value, str):
+            try:
+                shlex.split(value)
+            except ValueError as exc:
+                raise ProjectRuntimeError(
+                    f"project_pytest_config_invalid:{source}:{option}; invalid argument quoting"
+                ) from exc
+            continue
+        if isinstance(value, list) and all(isinstance(item, str) for item in value):
             continue
         raise ProjectRuntimeError(
             f"project_pytest_config_invalid:{source}:{option}; expected a string or list of strings"
@@ -266,7 +275,7 @@ def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
 def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
     roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
     if isinstance(roots, str):
-        roots = roots.split()
+        roots = shlex.split(roots)
     result = tuple(dict.fromkeys(roots))
     for relative in result:
         _safe_input(root, relative)

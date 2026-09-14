@@ -99,7 +99,9 @@ preloaded = 'packaging' in sys.modules
 import packaging, project_owned
 print(json.dumps([packaging.OWNER, packaging.__file__, project_owned.OWNER, preloaded]))
 """
-    return subprocess.run([sys.executable, "-I", "-S", "-c", script], capture_output=True, text=True, check=False)
+    return subprocess.run(
+        [sys.executable, "-I", "-S", "-c", script], cwd=paths["SNAPSHOT"], capture_output=True, text=True, check=False
+    )
 
 
 @pytest.mark.parametrize(
@@ -128,6 +130,111 @@ def test_analyzer_rejects_dependency_loaded_before_bootstrap(collision_runtime: 
     completed = _probe_dependency_origins(collision_runtime, "pylint", "before")
     assert completed.returncode != 0
     assert "project_worker_analyzer_origin_mismatch:packaging" in completed.stderr
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        "sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]",
+        "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()",
+        "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None",
+        "importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None",
+        "builtins.__import__ = lambda *args, **kwargs: None",
+    ],
+)
+def test_executable_pth_cannot_change_protected_import_state(
+    collision_runtime: dict[str, Path], operation: str
+) -> None:
+    pth = collision_runtime["PROJECT"] / "site-packages/changed-imports.pth"
+    pth.write_text(f"import sys, importlib.machinery, builtins; {operation}\n")
+    completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+    assert completed.returncode != 0
+    assert "project_worker_startup_import_state_changed" in completed.stderr
+
+
+def _workspace_dependency(paths: dict[str, Path]) -> Path:
+    (paths["PROJECT"] / "site-packages/project_owned.py").unlink()
+    (paths["ANALYZERS"] / "project_owned.py").unlink()
+    workspace = paths["SNAPSHOT"] / "workspace/member"
+    workspace.mkdir(parents=True)
+    (workspace / "project_owned.py").write_text('OWNER = "project"\n')
+    return workspace
+
+
+@pytest.mark.parametrize("placement", ["append", "prepend"])
+def test_executable_editable_finder_remains_available_behind_sealed_imports(
+    collision_runtime: dict[str, Path], placement: str
+) -> None:
+    workspace = _workspace_dependency(collision_runtime)
+    installed = collision_runtime["PROJECT"] / "site-packages"
+    hook = f"""
+import importlib.machinery, sys
+class EditableFinder:
+    def find_spec(self, fullname, path=None, target=None):
+        roots = {{'project_owned': {str(workspace)!r}, 'packaging': {str(collision_runtime["SNAPSHOT"])!r}}}
+        if fullname in roots:
+            return importlib.machinery.PathFinder.find_spec(fullname, [roots[fullname]])
+def install():
+    if {placement!r} == 'prepend':
+        sys.meta_path.insert(0, EditableFinder())
+    else:
+        sys.meta_path.append(EditableFinder())
+"""
+    (installed / "editable_fixture.py").write_text(hook)
+    (installed / "editable.pth").write_text("import editable_fixture; editable_fixture.install()\n")
+    completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+    assert completed.returncode == 0, completed.stderr
+    owner, origin, project_owner, _ = json.loads(completed.stdout)
+    assert owner == "analyzer"
+    assert origin == str(collision_runtime["ANALYZERS"] / "packaging.py")
+    assert project_owner == "project"
+
+
+def test_path_only_pth_retains_rebased_workspace_import(collision_runtime: dict[str, Path]) -> None:
+    workspace = _workspace_dependency(collision_runtime)
+    pth = collision_runtime["PROJECT"] / "site-packages/workspace.pth"
+    pth.write_text(str(workspace) + "\n")
+    completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout)[2] == "project"
+
+
+def test_executable_editable_namespace_path_hook_is_retained(collision_runtime: dict[str, Path]) -> None:
+    workspace = _workspace_dependency(collision_runtime)
+    installed = collision_runtime["PROJECT"] / "site-packages"
+    hook = f"""
+import importlib.machinery, sys
+PLACEHOLDER = '__editable__.fixture.__path_hook__'
+class EditablePathFinder:
+    def find_spec(self, fullname, target=None):
+        if fullname == 'project_owned':
+            return importlib.machinery.PathFinder.find_spec(fullname, [{str(workspace)!r}])
+def path_hook(path):
+    if path == PLACEHOLDER:
+        return EditablePathFinder()
+    raise ImportError
+def install():
+    sys.path_hooks.append(path_hook)
+    sys.path.append(PLACEHOLDER)
+"""
+    (installed / "editable_namespace.py").write_text(hook)
+    (installed / "namespace.pth").write_text("import editable_namespace; editable_namespace.install()\n")
+    completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout)[2] == "project"
+
+
+def test_pth_paths_outside_runtime_roots_have_actionable_diagnostic(
+    collision_runtime: dict[str, Path], tmp_path: Path
+) -> None:
+    outside = tmp_path / "outside-runtime"
+    outside.mkdir()
+    pth = collision_runtime["PROJECT"] / "site-packages/external.pth"
+    pth.write_text(str(outside) + "\n")
+    completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+    assert completed.returncode != 0
+    assert "project_worker_startup_path_escape" in completed.stderr
+    assert "rebuild editable installs against the copied project" in completed.stderr
 
 
 @pytest.mark.parametrize("form", ["module", "namespace", "symlink", "missing"])

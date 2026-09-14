@@ -408,3 +408,36 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **WHEN** the bound repository loses its Git metadata after input verification
 - **THEN** preparation SHALL fail before dependency acquisition instead of silently omitting that provenance
 - **AND** intentionally metadata-free immutable source copies SHALL use their separately bound repository for Git export.
+
+#### Scenario: Targeted pytest evidence preserves parameter identities
+- **GIVEN** selected pytest functions or class methods have parameter identifiers containing `::` or brackets
+- **WHEN** targeted review reconciles collection, execution, JUnit, and process evidence
+- **THEN** parameter text SHALL remain part of the test name rather than become a module or class qualifier
+- **AND** complete passing selections SHALL reconcile as PASS while missing execution and conflicting outcomes remain incomplete evidence.
+
+#### Scenario: Python-version-only projects attach their declared runtime automatically
+
+- **GIVEN** a source repository declares its Python interpreter only through a root `.python-version` file, without packaging or dependency metadata
+- **WHEN** an ordinary capsule review selects source files without explicit project-runtime options
+- **THEN** review MUST discover and prepare the portable project runtime using the declared interpreter before dependency-sensitive analysis
+- **AND** an unsupported declared interpreter MUST retain independent static analysis while marking runtime-dependent evidence incomplete with an actionable runtime diagnostic
+- **AND** an otherwise equivalent source-only repository without `.python-version` or other project metadata MUST retain the existing standard-library review path
+
+#### Scenario: Quoted pytest paths retain native argument boundaries
+- **GIVEN** repository INI-style pytest options contain quoted test paths, source paths, or file patterns with spaces
+- **WHEN** portable runtime discovery and test selection import those options
+- **THEN** string values follow pytest argument quoting rules and array values retain their declared boundaries
+- **AND** full and source-only review select the same real tests as native pytest
+- **AND** malformed quoting identifies the configuration option through an actionable runtime diagnostic
+
+#### Scenario: Executable project startup preserves the member import boundary
+- **GIVEN** target site initialization processes executable `.pth` files, including ordinary editable-install and setuptools startup hooks
+- **WHEN** an analyzer member finishes site initialization
+- **THEN** its validated member finder SHALL regain first lookup precedence while legitimate additive project finders and rebased workspace paths remain available
+- **AND** removal or mutation of protected finders or import machinery, or added paths outside the target and verified runtime roots, SHALL produce an explicit startup diagnostic before member execution
+- **AND** project-Python startup SHALL retain native `.pth` behavior; these integrity checks SHALL NOT be described as a sandbox for arbitrary malicious code in the same interpreter.
+
+#### Scenario: uv manager signals require a valid table
+- **GIVEN** pyproject metadata contains a scalar or array `tool.uv` value
+- **WHEN** discovery validates manager signals, including with explicit manager selection
+- **THEN** it SHALL reject the value before selection with the precise `project_config_invalid:pyproject.toml:tool.uv` table diagnostic
