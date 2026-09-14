@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -14,7 +14,7 @@ tests/unit/test_external_capsule_corpus.py .....FF                       [100%]
 =================================== FAILURES ===================================
 _____________ test_hatch_prepare_uses_selected_native_environment ______________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-83/test_hatch_prepare_uses_select0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-83/test_hatch_prepare_uses_select0')
 
     def test_hatch_prepare_uses_selected_native_environment(tmp_path: Path) -> None:
         (tmp_path / "hatch.toml").write_text("[envs.review]\ndetached=true\n")
@@ -32,7 +32,7 @@ ___________ test_hatch_export_selects_one_native_matrix_environment ____________
 
     def test_hatch_export_selects_one_native_matrix_environment() -> None:
 >       from specfact_code_review.run.runtime_build_driver import select_hatch_environment
-E       ImportError: cannot import name 'select_hatch_environment' from 'specfact_code_review.run.runtime_build_driver' (/private/tmp/specfact-473-implementation/packages/specfact-code-review/src/specfact_code_review/run/runtime_build_driver.py)
+E       ImportError: cannot import name 'select_hatch_environment' from 'specfact_code_review.run.runtime_build_driver' (<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/runtime_build_driver.py)
 
 tests/unit/specfact_code_review/run/test_runtime_build_driver.py:31: ImportError
 __________________ test_hatch_export_rejects_ambiguous_matrix __________________
@@ -40,7 +40,7 @@ __________________ test_hatch_export_rejects_ambiguous_matrix __________________
     def test_hatch_export_rejects_ambiguous_matrix() -> None:
         import pytest
 >       from specfact_code_review.run.runtime_build_driver import select_hatch_environment
-E       ImportError: cannot import name 'select_hatch_environment' from 'specfact_code_review.run.runtime_build_driver' (/private/tmp/specfact-473-implementation/packages/specfact-code-review/src/specfact_code_review/run/runtime_build_driver.py)
+E       ImportError: cannot import name 'select_hatch_environment' from 'specfact_code_review.run.runtime_build_driver' (<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/runtime_build_driver.py)
 
 tests/unit/specfact_code_review/run/test_runtime_build_driver.py:38: ImportError
 _________________ test_observer_retains_setup_failure_details __________________
@@ -53,7 +53,7 @@ E       AttributeError: module 'specfact_code_review.run.target_pytest' has no a
 tests/unit/specfact_code_review/run/test_target_pytest.py:20: AttributeError
 ______ test_host_baseline_rejects_startup_failure_without_test_execution _______
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-83/test_host_baseline_rejects_sta0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-83/test_host_baseline_rejects_sta0')
 
     def test_host_baseline_rejects_startup_failure_without_test_execution(tmp_path: Path) -> None:
         with pytest.raises(ValueError, match="host.*execution"):
@@ -64,7 +64,7 @@ E           AttributeError: module 'external_capsule_corpus' has no attribute 'a
 tests/unit/test_external_capsule_corpus.py:88: AttributeError
 _________________ test_host_baseline_rejects_only_setup_errors _________________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-83/test_host_baseline_rejects_onl0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-83/test_host_baseline_rejects_onl0')
 
     def test_host_baseline_rejects_only_setup_errors(tmp_path: Path) -> None:
         result = tmp_path / "tests.xml"

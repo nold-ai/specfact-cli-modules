@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+rootdir: <USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -11,7 +11,7 @@ tests/unit/specfact_code_review/run/test_runtime_cli.py FFF              [100%]
 =================================== FAILURES ===================================
 ______________________ test_runtime_inspect_is_read_only _______________________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-3/test_runtime_inspect_is_read_o0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-3/test_runtime_inspect_is_read_o0')
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108efeb10>
 
     def test_runtime_inspect_is_read_only(tmp_path: Path, monkeypatch) -> None:
@@ -28,7 +28,7 @@ E
 E       assert 2 == 0
 E        +  where 2 = <Result SystemExit(2)>.exit_code
 
-/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/tests/unit/specfact_code_review/run/test_runtime_cli.py:17: AssertionError
+<USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/tests/unit/specfact_code_review/run/test_runtime_cli.py:17: AssertionError
 ___________________ test_review_help_exposes_project_handoff ___________________
 
     def test_review_help_exposes_project_handoff() -> None:
@@ -41,7 +41,7 @@ E        +  where '                                                             
 tests/unit/specfact_code_review/run/test_runtime_cli.py:25: AssertionError
 _________________ test_review_request_carries_runtime_options __________________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-3/test_review_request_carries_ru0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-3/test_review_request_carries_ru0')
 
     def test_review_request_carries_runtime_options(tmp_path: Path) -> None:
         config, descriptor = tmp_path / 'review.toml', tmp_path / 'project-runtime.json'
@@ -52,7 +52,7 @@ tests/unit/specfact_code_review/run/test_runtime_cli.py:31:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 files = []
-kwargs = {'project_config': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-3/test_rev...ders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-3/test_review_request_carries_ru0/project-runtime.json')}
+kwargs = {'project_config': PosixPath('<TMPDIR>/pytest-of-dom/pytest-3/test_rev...ders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-3/test_review_request_carries_ru0/project-runtime.json')}
 
     def _build_review_run_request(
         files: list[Path],

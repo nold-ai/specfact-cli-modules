@@ -75,6 +75,44 @@ def seal_runtime(
     return PreparedRuntime(root, target, descriptor["identity"], descriptor)
 
 
+def _validate_inventory(inventory: object) -> None:
+    if not isinstance(inventory, dict):
+        raise ProjectRuntimeError("project_runtime_inventory_invalid: expected an object")
+    conflicts = inventory.get("analyzer_conflicts", {})
+    if not isinstance(conflicts, dict) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in conflicts.items()
+    ):
+        raise ProjectRuntimeError("project_runtime_inventory_invalid: analyzer_conflicts must map strings")
+    graphs = inventory.get("member_graphs", {})
+    if not isinstance(graphs, dict):
+        raise ProjectRuntimeError("project_runtime_inventory_invalid: member_graphs must be an object")
+    for graph in graphs.values():
+        _validate_member_graph(graph)
+
+
+def _validate_member_distribution(row: object) -> None:
+    if (
+        not isinstance(row, dict)
+        or not isinstance(row.get("name"), str)
+        or not isinstance(row.get("origin"), str)
+        or row["origin"] not in {"project", "analyzer"}
+    ):
+        raise ProjectRuntimeError("project_runtime_inventory_invalid: malformed member distribution")
+
+
+def _validate_member_graph(graph: object) -> None:
+    if (
+        not isinstance(graph, dict)
+        or not isinstance(graph.get("sealed_imports"), list)
+        or not isinstance(graph.get("installed"), list)
+    ):
+        raise ProjectRuntimeError("project_runtime_inventory_invalid: malformed member graph")
+    if not all(isinstance(name, str) and name.isidentifier() for name in graph["sealed_imports"]):
+        raise ProjectRuntimeError("project_runtime_inventory_invalid: malformed member imports")
+    for row in graph["installed"]:
+        _validate_member_distribution(row)
+
+
 def _read_descriptor(path: Path) -> dict[str, Any]:
     if path.is_symlink() or not path.is_file() or path.name != _DESCRIPTOR:
         raise ProjectRuntimeError("project_runtime_descriptor_invalid: expected project-runtime.json")
@@ -87,6 +125,7 @@ def _read_descriptor(path: Path) -> dict[str, Any]:
     unsigned = {key: value for key, value in descriptor.items() if key != "identity"}
     if descriptor.get("identity") != document_digest(unsigned):
         raise ProjectRuntimeError("project_runtime_descriptor_identity_mismatch")
+    _validate_inventory(descriptor.get("inventory"))
     return descriptor
 
 

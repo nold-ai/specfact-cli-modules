@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -16,7 +16,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108d57490>
 
     def test_python_cli_keeps_code_separate_from_bootstrap(monkeypatch) -> None:
 >       from specfact_code_review.run.target_bootstrap import _project_python_command
-E       ImportError: cannot import name '_project_python_command' from 'specfact_code_review.run.target_bootstrap' (/private/tmp/specfact-473-implementation/packages/specfact-code-review/src/specfact_code_review/run/target_bootstrap.py)
+E       ImportError: cannot import name '_project_python_command' from 'specfact_code_review.run.target_bootstrap' (<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/target_bootstrap.py)
 
 tests/unit/specfact_code_review/run/test_target_bootstrap.py:23: ImportError
 __ test_project_python_fails_closed_before_executing_code_without_descriptor ___
@@ -26,7 +26,7 @@ __ test_project_python_fails_closed_before_executing_code_without_descriptor ___
         result = subprocess.run([sys.executable, '-s', '-c', 'print("MUST_NOT_EXECUTE")'], env=env, capture_output=True, text=True, check=False)
 >       assert result.returncode == 78
 E       assert 0 == 78
-E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-s', '-c', 'print("MUST_NOT_EXECUTE")'], returncode=0, stdout='MUST_NOT_EXECUTE\n', stderr='').returncode
+E        +  where 0 = CompletedProcess(args=['<WORKTREE>/.venv/bin/python', '-s', '-c', 'print("MUST_NOT_EXECUTE")'], returncode=0, stdout='MUST_NOT_EXECUTE\n', stderr='').returncode
 
 tests/unit/specfact_code_review/run/test_sitecustomize.py:12: AssertionError
 =========================== short test summary info ============================

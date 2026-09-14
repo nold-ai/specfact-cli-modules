@@ -95,3 +95,12 @@ def test_host_baseline_rejects_only_setup_errors(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match=r"host.*execution"):
         _load().assert_host_execution(result)
+
+
+def test_source_identity_detects_new_untracked_and_ignored_files(tmp_path: Path) -> None:
+    module = _load()
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "source.py").write_text("VALUE = 1\n")
+    before = module.tracked_identity(tmp_path)
+    (tmp_path / "generated.py").write_text("VALUE = 2\n")
+    assert module.tracked_identity(tmp_path) != before

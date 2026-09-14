@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+rootdir: <USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -11,7 +11,7 @@ tests/unit/specfact_code_review/run/test_runtime_native.py FF            [100%]
 =================================== FAILURES ===================================
 _________ test_declared_missing_native_library_names_exact_requirement _________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-19/test_declared_missing_native_l0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-19/test_declared_missing_native_l0')
 
     def test_declared_missing_native_library_names_exact_requirement(tmp_path: Path) -> None:
 >       from specfact_code_review.run.runtime_native import inventory_native
@@ -20,7 +20,7 @@ E       ModuleNotFoundError: No module named 'specfact_code_review.run.runtime_n
 tests/unit/specfact_code_review/run/test_runtime_native.py:8: ModuleNotFoundError
 __________ test_native_inventory_does_not_copy_unrequested_host_files __________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-19/test_native_inventory_does_not0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-19/test_native_inventory_does_not0')
 
     def test_native_inventory_does_not_copy_unrequested_host_files(tmp_path: Path) -> None:
 >       from specfact_code_review.run.runtime_native import inventory_native

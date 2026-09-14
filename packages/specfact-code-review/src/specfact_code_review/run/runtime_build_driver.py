@@ -74,9 +74,15 @@ def _run(command: list[str], *, env: dict[str, str] | None = None) -> str:
 def select_hatch_environment(export: dict, requested: str, python: str) -> str:
     """Select a concrete native export entry without expanding resolver semantics."""
     if requested in export:
+        selected_python = export[requested].get("python")
+        if selected_python and not (python == selected_python or python.startswith(str(selected_python) + ".")):
+            raise RuntimeError(f"project_python_incompatible:{requested}:requested={selected_python}; signed={python}")
         return requested
     candidates = sorted(
-        name for name, config in export.items() if name.startswith(requested + ".") and config.get("python") == python
+        name
+        for name, config in export.items()
+        if name.startswith(requested + ".")
+        and (config.get("python") == python or python.startswith(str(config.get("python")) + "."))
     )
     if len(candidates) != 1:
         raise RuntimeError(
@@ -88,10 +94,12 @@ def select_hatch_environment(export: dict, requested: str, python: str) -> str:
 def _prepare_hatch(config: dict, tools_python: str, env: dict[str, str]) -> None:
     env["HATCH_UV"] = str(Path(tools_python).with_name("uv"))
     export = json.loads(_run([tools_python, "-m", "hatch", "env", "show", "--json"], env=env))
-    selected = select_hatch_environment(
-        export, str(config["environment"]), f"{sys.version_info.major}.{sys.version_info.minor}"
-    )
+    selected = select_hatch_environment(export, str(config["environment"]), ".".join(map(str, sys.version_info[:3])))
     config["environment"] = selected
+    arguments = export[selected].get("extra-args", [])
+    if not isinstance(arguments, list) or not all(isinstance(value, str) for value in arguments):
+        raise RuntimeError("project_hatch_pytest_arguments_invalid:extra-args must be strings")
+    config["pytest_arguments"] = arguments
     config["commands"] = [[tools_python, "-m", "hatch", "env", "create", selected]]
 
 
@@ -132,7 +140,7 @@ def copy_executables(environment: Path, artifact: Path, records: list[dict]) -> 
     copied = []
     for record in records:
         source = Path(record["path"])
-        if source.name.startswith("python") or not source.is_file():
+        if re.fullmatch(r"python(?:[23](?:\.\d+)*)?", source.name) or not source.is_file():
             continue
         if source.parent != environment / "bin" or not source.resolve().is_relative_to(environment):
             raise RuntimeError(f"project_executable_escape:{source.name}")
@@ -223,6 +231,7 @@ def main() -> None:
     _copy_site_packages(python, artifact / "site-packages")
     facts = clean_inventory(json.loads(inventory))
     facts["resolved_environment"] = config["environment"]
+    facts["pytest_arguments"] = config.get("pytest_arguments", [])
     facts["executables"] = copy_executables(environment, artifact, _executable_records(python))
     (artifact / "inventory.json").write_text(json.dumps(facts) + "\n", encoding="utf-8")
     (artifact / "bin").mkdir(exist_ok=True)

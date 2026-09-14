@@ -4,7 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from specfact_code_review.run import runner
-from specfact_code_review.run.portable_snapshot import run_project_snapshot
+from specfact_code_review.run.portable_snapshot import ProjectSnapshotRequest, run_project_snapshot
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
@@ -26,7 +26,10 @@ def test_failed_preparation_never_runs_dependency_members(tmp_path: Path, monkey
     monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
     snapshot, evidence = run_project_snapshot(
-        runtime, snapshot_root=tmp_path, files=[source], options=runner.ReviewOptions(), assurance_kind="explicit_files"
+        runtime,
+        ProjectSnapshotRequest(
+            snapshot_root=tmp_path, files=[source], options=runner.ReviewOptions(), assurance_kind="explicit_files"
+        ),
     )
     assert not set(calls) & {"basedpyright", "pylint", "contracts", "targeted-pytest-coverage"}
     assert "ruff" in calls
@@ -48,9 +51,9 @@ def test_immutable_pair_prepares_each_side_and_downgrades_authority(tmp_path: Pa
     head_root.mkdir()
     calls = []
 
-    def run_side(runtime, **kwargs):
-        calls.append((kwargs["snapshot_root"], kwargs["options"].project_runtime))
-        return runner.CapsuleSnapshotResult({}, {}), {"identity": str(kwargs["snapshot_root"])}
+    def run_side(runtime, request):
+        calls.append((request.snapshot_root, request.options.project_runtime))
+        return runner.CapsuleSnapshotResult({}, {}), {"identity": str(request.snapshot_root)}
 
     monkeypatch.setattr(portable_snapshot, "run_project_snapshot", run_side)
     monkeypatch.setattr(runner, "_snapshot_python_files", lambda *args: [])
@@ -70,3 +73,46 @@ def test_immutable_pair_prepares_each_side_and_downgrades_authority(tmp_path: Pa
     assert calls == [(base_root, None), (head_root, descriptor)]
     assert observed["assurance_kind"] == "range_preview"
     assert observed["project_runtime"]["base"]["identity"] != observed["project_runtime"]["head"]["identity"]
+
+
+def test_source_change_during_full_analysis_invalidates_runtime_binding(tmp_path: Path, monkeypatch) -> None:
+    from specfact_code_review.run import portable_snapshot
+    from specfact_code_review.run.portable_worker import DEPENDENT_MEMBERS
+    from specfact_code_review.run.runtime_models import PreparedRuntime
+
+    root = tmp_path / "project"
+    root.mkdir()
+    source = root / "app.py"
+    source.write_text("VALUE = 1\n")
+    artifact = tmp_path / "artifact"
+    prepared = PreparedRuntime(artifact, artifact / "project-runtime.json", "sha256:" + "b" * 64, {"inventory": {}})
+    runtime = runner.CapsuleRuntime(
+        root,
+        "sha256:" + "a" * 64,
+        "linux-x86_64-cp312",
+        "python",
+        "bootstrap",
+        runner.BubblewrapIdentity(
+            path="bwrap",
+            format="ELF",
+            architecture="x86_64",
+            linkage="static",
+            interpreter=(),
+            needed=(),
+            sha256="a" * 64,
+            descriptor_digest="b" * 64,
+        ),
+    )
+    monkeypatch.setattr(portable_snapshot, "prepare_runtime", lambda *args, **kwargs: prepared)
+    monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *args, **kwargs: prepared)
+
+    def analyze(*args, **kwargs):
+        source.write_text("VALUE = 2\n")
+        return runner.CapsuleSnapshotResult({name: {"evidence_outcome": "PASS"} for name in DEPENDENT_MEMBERS}, {})
+
+    monkeypatch.setattr(runner, "_run_capsule_snapshot", analyze)
+    snapshot, evidence = run_project_snapshot(
+        runtime, ProjectSnapshotRequest(root, [source], runner.ReviewOptions(no_tests=True), "full")
+    )
+    assert evidence["status"] == "UNKNOWN"
+    assert all(snapshot.evidence[name]["evidence_outcome"] == "UNKNOWN" for name in DEPENDENT_MEMBERS)

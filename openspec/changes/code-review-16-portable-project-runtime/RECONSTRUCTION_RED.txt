@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -11,7 +11,7 @@ tests/unit/test_external_capsule_corpus.py F                             [100%]
 =================================== FAILURES ===================================
 ____ test_reconstruction_materializes_real_source_without_mutating_template ____
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-75/test_reconstruction_materializ0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-75/test_reconstruction_materializ0')
 
     def test_reconstruction_materializes_real_source_without_mutating_template(tmp_path: Path) -> None:
         module = _load()

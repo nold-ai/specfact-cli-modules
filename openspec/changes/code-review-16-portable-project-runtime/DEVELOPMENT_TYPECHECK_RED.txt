@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -11,7 +11,7 @@ tests/unit/specfact_code_review/test_capsule_tool_commands.py F          [100%]
 =================================== FAILURES ===================================
 ______ test_development_context_runs_basedpyright_with_import_resolution _______
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-51/test_development_context_runs_0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-51/test_development_context_runs_0')
 
     def test_development_context_runs_basedpyright_with_import_resolution(tmp_path) -> None:
         import json
@@ -27,7 +27,7 @@ tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/p
 E       AssertionError: 'pythonpath' option cannot be used with 'venvpath' option
 E
 E       assert 4 in (0, 1)
-E        +  where 4 = CompletedProcess(args=['basedpyright', '--outputjson', '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytes...tree/.venv/bin/python'], returncode=4, stdout='', stderr="'pythonpath' option cannot be used with 'venvpath' option\n").returncode
+E        +  where 4 = CompletedProcess(args=['basedpyright', '--outputjson', '<TMPDIR>/pytes...tree/.venv/bin/python'], returncode=4, stdout='', stderr="'pythonpath' option cannot be used with 'venvpath' option\n").returncode
 
 tests/unit/specfact_code_review/test_capsule_tool_commands.py:70: AssertionError
 =========================== short test summary info ============================

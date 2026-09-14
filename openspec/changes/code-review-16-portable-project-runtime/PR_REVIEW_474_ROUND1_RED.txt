@@ -1,0 +1,65 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 13 items
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py ....... [ 53%]
+FF                                                                       [ 69%]
+tests/unit/specfact_code_review/run/test_runtime_native.py ...F          [100%]
+
+=================================== FAILURES ===================================
+________ test_exact_hatch_environment_cannot_select_an_incompatible_abi ________
+
+    def test_exact_hatch_environment_cannot_select_an_incompatible_abi() -> None:
+        import pytest
+        from specfact_code_review.run.runtime_build_driver import select_hatch_environment
+>       with pytest.raises(RuntimeError, match='project_python_incompatible'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py:109: Failed
+____________ test_python_prefixed_distribution_command_is_preserved ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-121/test_python_prefixed_distribut0')
+
+    def test_python_prefixed_distribution_command_is_preserved(tmp_path) -> None:
+        from specfact_code_review.run.runtime_build_driver import copy_executables
+        environment, artifact = tmp_path / 'environment', tmp_path / 'artifact'
+        (environment / 'bin').mkdir(parents=True)
+        artifact.mkdir()
+        command = environment / 'bin/python-lsp-server'
+        command.write_text('#!/build/python\nprint("language server")\n')
+        copied = copy_executables(environment, artifact, [{'path': str(command), 'distribution': 'python-lsp-server'}])
+>       assert copied == [{'name': 'python-lsp-server', 'distribution': 'python-lsp-server'}]
+E       AssertionError: assert [] == [{'name': 'py...-lsp-server'}]
+E
+E         Right contains one more item: {'name': 'python-lsp-server', 'distribution': 'python-lsp-server'}
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py:122: AssertionError
+______ test_owned_native_executables_include_their_shared_library_closure ______
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-121/test_owned_native_executables_0')
+
+    def test_owned_native_executables_include_their_shared_library_closure(tmp_path: Path) -> None:
+        from specfact_code_review.run.runtime_native import inventory_native
+        artifact, system = tmp_path / 'artifact', tmp_path / 'system'
+        (artifact / 'executables').mkdir(parents=True)
+        system.mkdir()
+        _elf(artifact / 'executables/customer-tool', ('libcustomer.so.1',))
+        _elf(system / 'libcustomer.so.1', ())
+        records = inventory_native(artifact, capsule_root=tmp_path / 'capsule', declared=(), system_roots=(system,))
+>       assert (artifact / 'native/libcustomer.so.1').is_file()
+E       AssertionError: assert False
+E        +  where False = is_file()
+E        +    where is_file = (PosixPath('<TMPDIR>/pytest-of-dom/pytest-121/test_owned_native_executables_0/artifact') / 'native/libcustomer.so.1').is_file
+
+tests/unit/specfact_code_review/run/test_runtime_native.py:77: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_build_driver.py::test_exact_hatch_environment_cannot_select_an_incompatible_abi
+FAILED tests/unit/specfact_code_review/run/test_runtime_build_driver.py::test_python_prefixed_distribution_command_is_preserved
+FAILED tests/unit/specfact_code_review/run/test_runtime_native.py::test_owned_native_executables_include_their_shared_library_closure
+========================= 3 failed, 10 passed in 0.11s =========================

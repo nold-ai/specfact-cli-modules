@@ -6884,15 +6884,21 @@ def _run_local_capsule_context(
                     scope_evidence=scope_evidence,
                 )
             worktree_identity = captured_identity
-        from specfact_code_review.run.portable_snapshot import project_runtime_requested, run_project_snapshot
+        from specfact_code_review.run.portable_snapshot import (
+            ProjectSnapshotRequest,
+            project_runtime_requested,
+            run_project_snapshot,
+        )
 
         if project_runtime_requested(snapshot_root, review_options):
             snapshot, project_evidence = run_project_snapshot(
                 runtime,
-                snapshot_root=snapshot_root,
-                files=snapshot_files,
-                options=review_options,
-                assurance_kind=assurance_kind,
+                ProjectSnapshotRequest(
+                    snapshot_root=snapshot_root,
+                    files=snapshot_files,
+                    options=review_options,
+                    assurance_kind=assurance_kind,
+                ),
             )
             scope_evidence["project_runtime"] = project_evidence
         else:

@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -19,7 +19,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x106de76f0>
 >       assert 'SPECFACT_CODE_REVIEW_CHANGED_DIFF' not in runner_api._pytest_env()
 E       AssertionError: assert 'SPECFACT_CODE_REVIEW_CHANGED_DIFF' not in {'RUST_LOG': 'warn', 'CODEX_SANDBOX_NETWORK_DISABLED': '1', 'TERM': 'dumb', 'SHELL': '/bin/zsh', ...}
 E        +  where {'RUST_LOG': 'warn', 'CODEX_SANDBOX_NETWORK_DISABLED': '1', 'TERM': 'dumb', 'SHELL': '/bin/zsh', ...} = <function _pytest_env at 0x1088768d0>()
-E        +    where <function _pytest_env at 0x1088768d0> = <module 'specfact_code_review.run.runner' from '/private/tmp/specfact-473-implementation/packages/specfact-code-review/src/specfact_code_review/run/runner.py'>._pytest_env
+E        +    where <function _pytest_env at 0x1088768d0> = <module 'specfact_code_review.run.runner' from '<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/runner.py'>._pytest_env
 
 tests/unit/specfact_code_review/run/test_runner.py:7724: AssertionError
 =========================== short test summary info ============================

@@ -74,3 +74,31 @@ def test_pytest_success_requires_coverage_evidence() -> None:
     }
     with pytest.raises(ProjectRuntimeError, match="coverage_missing"):
         validate_observation(observation, 0)
+
+
+def test_failed_pytest_startup_cannot_reuse_previous_observation(tmp_path, monkeypatch) -> None:
+    import json
+    from types import SimpleNamespace
+
+    from specfact_code_review.run import portable_worker, target_launch
+
+    observation = tmp_path / "pytest-observation.json"
+    observation.write_text(
+        json.dumps(
+            {
+                "exit_code": 0,
+                "collected": ["a"],
+                "records": [{"nodeid": "a", "phase": "call", "outcome": "passed"}],
+                "coverage": {"files": {"app.py": {}}},
+            }
+        )
+    )
+    monkeypatch.setattr(
+        portable_worker,
+        "Path",
+        lambda value: observation if value == "/opt/specfact/tmp/pytest-observation.json" else Path(value),
+    )
+    monkeypatch.setattr(target_launch, "target_command", lambda *args: ["child"])
+    monkeypatch.setattr(portable_worker.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=0))
+    assert portable_worker.run_portable_pytest([tmp_path / "app.py"], ("portable-pytest-v2", "{}"))
+    assert not observation.exists()

@@ -46,6 +46,16 @@ def _plugins(config: dict[str, Any]) -> list[str]:
     return plugins
 
 
+def _effective_pytest_config(descriptor: dict[str, Any]) -> dict[str, Any]:
+    config = dict(descriptor["project"]["pytest_config"])
+    options = config.get("addopts", [])
+    config["addopts"] = [
+        *(shlex.split(options) if isinstance(options, str) else options),
+        *descriptor["inventory"].get("pytest_arguments", []),
+    ]
+    return config
+
+
 class Observer:
     """Retain phase-specific facts without claiming setup failures executed test calls."""
 
@@ -58,6 +68,11 @@ class Observer:
     def pytest_internalerror(self, excrepr, excinfo):
         del excinfo
         self.internal_errors.append(str(excrepr))
+
+    def pytest_testnodedown(self, node, error):
+        del node
+        if error and str(error) not in self.internal_errors:
+            self.internal_errors.append(str(error))
 
     def pytest_itemcollected(self, item):
         self.collected.add(item.nodeid)
@@ -86,6 +101,7 @@ def main() -> None:
     import pytest
 
     pytest.hookimpl(optionalhook=True)(Observer.pytest_xdist_node_collection_finished)
+    pytest.hookimpl(optionalhook=True)(Observer.pytest_testnodedown)
     request = json.loads(sys.argv[1])
     descriptor = json.loads((ROOT / "project-runtime.json").read_text(encoding="utf-8"))
     output = Path("/opt/specfact/tmp/pytest-observation.json")
@@ -95,7 +111,8 @@ def main() -> None:
     coverage_output = Path("/opt/specfact/tmp/coverage.json")
     os.environ["COVERAGE_FILE"] = "/opt/specfact/tmp/.coverage"
     args = [
-        *_plugins(descriptor["project"]["pytest_config"]),
+        *_plugins(_effective_pytest_config(descriptor)),
+        *descriptor["inventory"].get("pytest_arguments", []),
         "-o",
         "cache_dir=/opt/specfact/tmp/pytest-cache",
         "--basetemp=/opt/specfact/tmp/pytest",

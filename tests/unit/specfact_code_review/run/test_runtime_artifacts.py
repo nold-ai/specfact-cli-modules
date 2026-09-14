@@ -111,3 +111,20 @@ def test_descriptor_rejects_a_different_analyzer_worker(tmp_path: Path) -> None:
             environment_id="linux-x86_64-cp312",
             worker_identity="sha256:" + "b" * 64,
         )
+
+
+@pytest.mark.parametrize("inventory", [[], {"analyzer_conflicts": []}, {"member_graphs": []}])
+def test_descriptor_rejects_malformed_inventory(tmp_path: Path, inventory) -> None:
+    from specfact_code_review.run.runtime_models import document_digest
+
+    source, artifact = tmp_path / "source", tmp_path / "artifact"
+    source.mkdir()
+    artifact.mkdir()
+    plan = discover_project(source)
+    prepared = seal_runtime(artifact, plan=plan, environment_id="linux-x86_64-cp312", worker_identity="worker")
+    data = prepared.descriptor
+    data["inventory"] = inventory
+    data["identity"] = document_digest({key: value for key, value in data.items() if key != "identity"})
+    prepared.descriptor_path.write_text(json.dumps(data))
+    with pytest.raises(ProjectRuntimeError, match="inventory_invalid"):
+        load_runtime(prepared.descriptor_path, plan=plan, environment_id="linux-x86_64-cp312", worker_identity="worker")

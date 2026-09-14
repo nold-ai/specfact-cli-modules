@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -11,7 +11,7 @@ tests/unit/test_external_capsule_corpus.py F                             [100%]
 =================================== FAILURES ===================================
 _________ test_corpus_attempts_remaining_repositories_after_a_failure __________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-77/test_corpus_attempts_remaining0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-77/test_corpus_attempts_remaining0')
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108ff7e10>
 
     def test_corpus_attempts_remaining_repositories_after_a_failure(tmp_path: Path, monkeypatch) -> None:
@@ -44,7 +44,7 @@ scripts/external_capsule_corpus.py:293: in main
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 entry = {'name': 'first'}
-workspace = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-77/test_corpus_attempts_remaining0/work')
+workspace = PosixPath('<TMPDIR>/pytest-of-dom/pytest-77/test_corpus_attempts_remaining0/work')
 
     def run_entry(entry, workspace):
         attempted.append(entry['name'])

@@ -148,3 +148,45 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **WHEN** it executes repository tests that invoke review themselves
 - **THEN** controller-only diff selection does not leak into those test processes
 - **AND** tests can explicitly select their own diff scope
+
+#### Scenario: Source changes during full or explicit-file analysis
+- **GIVEN** a local project runtime was prepared successfully
+- **WHEN** source, dependency inputs, or VCS version metadata change during analysis
+- **THEN** the final runtime binding is incomplete for every dependency-sensitive member
+- **AND** unchanged artifact bytes alone cannot authorize a passing source binding
+
+#### Scenario: Hatch-declared pytest arguments
+- **GIVEN** the selected native Hatch environment declares extra pytest arguments
+- **WHEN** runtime preparation exports that environment
+- **THEN** those arguments are retained in the runtime inventory and target pytest invocation
+- **AND** explicit or disabled plugin options participate in duplicate-registration prevention
+
+#### Scenario: Isolated xdist workers retain pytest coordination
+- **GIVEN** repository pytest configuration requests xdist workers and coverage
+- **WHEN** child Python processes enter fresh target namespaces
+- **THEN** they retain the pytest member's dependency domain and use private coverage storage
+- **AND** unrelated analyzers do not inherit that pytest domain
+- **AND** worker startup failures are retained in incomplete execution evidence
+
+#### Scenario: Analyzer package introspection respects member boundaries
+- **WHEN** a member discovers its bundled checkers through filesystem-to-module lookup
+- **THEN** its verified dependency closure is visible as a real import directory
+- **AND** unrelated sealed packages are absent from that directory and its metadata inventory
+
+#### Scenario: Invalid and stale runtime state fails explicitly
+- **WHEN** a supplied descriptor has invalid inventory types, preparation races with another publisher, or a pytest child fails before writing evidence
+- **THEN** malformed descriptors and stale observations cannot become completed evidence
+- **AND** a valid concurrent cache winner is verified and reused
+
+#### Scenario: Python startup controls cannot bypass runtime attachment
+- **WHEN** a project invokes Python with an option that disables mandatory runtime bootstrap
+- **THEN** execution rejects that exact option with a runtime diagnostic
+
+#### Scenario: Review selection and candidate policies survive normalization
+- **WHEN** review focus is normalized or a portable range adds referenced policy files
+- **THEN** explicit runtime paths and both candidate and target policy closures remain bound to the review
+
+#### Scenario: Source aliases cannot bypass build exclusions
+- **WHEN** a source link resolves into an excluded file, directory, descendant, or Git configuration
+- **THEN** discovery and copying reject it before any network-enabled build hook runs
+- **AND** valid included file and directory links remain inside the copied source with their target bytes bound before building

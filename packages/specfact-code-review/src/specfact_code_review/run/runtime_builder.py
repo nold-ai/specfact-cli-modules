@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import shutil
 import subprocess
 import tempfile
-from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +27,7 @@ from specfact_code_review.run.runtime_models import (
     document_digest,
 )
 from specfact_code_review.run.runtime_native import elf_dependencies, inventory_native
-from specfact_code_review.run.runtime_sources import IGNORED_INPUTS, verify_inputs
+from specfact_code_review.run.runtime_sources import IGNORED_INPUTS, source_identity, source_link_target, verify_inputs
 from specfact_code_review.run.runtime_vcs import copy_vcs_context
 
 
@@ -35,20 +35,27 @@ from specfact_code_review.run.runtime_vcs import copy_vcs_context
 def copy_project(source: Path, destination: Path, *, commit: str = "HEAD") -> None:
     """Copy inputs into private build storage without dereferencing source links."""
 
+    expected = source_identity(source)
+
     def ignored(directory: str, names: list[str]) -> set[str]:
         excluded = set(names) & IGNORED_INPUTS
         for name in set(names) - excluded:
             path = Path(directory) / name
             if path.is_symlink():
-                try:
-                    target = path.resolve(strict=True)
-                except (OSError, RuntimeError) as exc:
-                    raise ProjectRuntimeError(f"project_source_symlink_invalid:{path}") from exc
-                if not target.is_relative_to(source) or target == source or path.is_relative_to(target):
-                    raise ProjectRuntimeError(f"project_source_symlink_escape:{path}")
+                source_link_target(path, source)
         return excluded
 
-    shutil.copytree(source, destination, ignore=ignored)
+    # Never dereference aliases while reading the source. Validate the complete
+    # copied tree before a builder can access it, including concurrent link edits.
+    shutil.copytree(source, destination, ignore=ignored, symlinks=True)
+    for path in destination.rglob("*"):
+        if path.is_symlink():
+            original = source / path.relative_to(destination)
+            target = source_link_target(original, source)
+            path.unlink()
+            path.symlink_to(os.path.relpath(destination / target.relative_to(source), path.parent))
+    if source_identity(destination) != expected:
+        raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
     copy_vcs_context(source, destination, commit)
 
 
@@ -100,7 +107,10 @@ def builder_command(runtime: Any, *, staging: Path, executable: str) -> list[str
 
 
 def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
+    verify_inputs(plan)
     copy_project(plan.root, staging / "project", commit=plan.vcs.get("commit", "HEAD"))
+    if source_identity(staging / "project") != plan.source_identity:
+        raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
     if plan.vcs_repository and plan.vcs_repository != plan.root:
         copy_vcs_context(plan.vcs_repository, staging / "project", plan.vcs["commit"])
     if (staging / "project/.git").is_dir():
@@ -170,6 +180,16 @@ def _validate_python(plan: ProjectPlan, environment: str) -> None:
         raise ProjectRuntimeError(f"project_python_incompatible:{environment}:{plan.requires_python}")
     if plan.python and not (version == plan.python or version.startswith(plan.python + ".")):
         raise ProjectRuntimeError(f"project_python_incompatible:{version}:{plan.python}")
+
+
+@require(lambda artifact, destination: artifact != destination)
+def publish_artifact(artifact: Path, destination: Path) -> None:
+    """Allow a concurrent cache winner, which the caller must fully verify."""
+    try:
+        os.rename(artifact, destination)
+    except OSError as exc:
+        if exc.errno not in {errno.EEXIST, errno.ENOTEMPTY}:
+            raise
 
 
 @ensure(lambda result, plan: result.descriptor["project_identity"] == plan.identity)
@@ -242,7 +262,6 @@ def prepare_runtime(
         seal_runtime(
             artifact, plan=plan, environment_id=environment, worker_identity=runtime.identity, inventory=inventory
         )
-        with suppress(FileExistsError):
-            os.rename(artifact, destination)
+        publish_artifact(artifact, destination)
         # A concurrent preparation must still pass full verification below.
     return load_runtime(descriptor_path, plan=plan, environment_id=environment, worker_identity=runtime.identity)

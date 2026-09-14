@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -11,7 +11,7 @@ tests/unit/specfact_code_review/run/test_runtime_native.py F             [100%]
 =================================== FAILURES ===================================
 __________ test_project_native_libraries_use_their_own_loader_closure __________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_project_native_libraries_0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-79/test_project_native_libraries_0')
 
     def test_project_native_libraries_use_their_own_loader_closure(tmp_path: Path) -> None:
         from specfact_code_review.run.runtime_native import inventory_native
@@ -31,8 +31,8 @@ tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/p
 tests/unit/specfact_code_review/run/test_runtime_native.py:61:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
-args = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_project_native_libraries_0/artifact'),)
-kwargs = {'capsule_root': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_proj...sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_project_native_libraries_0/system'),), 'target_loader': True}
+args = (PosixPath('<TMPDIR>/pytest-of-dom/pytest-79/test_project_native_libraries_0/artifact'),)
+kwargs = {'capsule_root': PosixPath('<TMPDIR>/pytest-of-dom/pytest-79/test_proj...sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_project_native_libraries_0/system'),), 'target_loader': True}
 
     def wrapper(*args, **kwargs):  # type: ignore
         """Wrap func by checking the preconditions and postconditions."""

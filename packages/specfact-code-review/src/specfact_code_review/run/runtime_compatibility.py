@@ -49,7 +49,7 @@ def _member_conflicts(
                 continue
             dependency = str(canonicalize_name(requirement.name))
             actual = target.get(dependency)
-            if actual and actual["version"] not in requirement.specifier:
+            if actual and not requirement.specifier.contains(actual["version"], prereleases=True):
                 reasons.append(f"{dependency}: target={actual['version']}, required={requirement.specifier} by {name}")
             pending.append(dependency)
     return reasons

@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-worktree
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -11,7 +11,7 @@ tests/unit/specfact_code_review/run/test_runtime_compatibility.py FF     [100%]
 =================================== FAILURES ===================================
 _________ test_incompatible_dependency_identifies_only_affected_member _________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-36/test_incompatible_dependency_i0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-36/test_incompatible_dependency_i0')
 
     def test_incompatible_dependency_identifies_only_affected_member(tmp_path: Path) -> None:
 >       from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts
@@ -20,7 +20,7 @@ E       ModuleNotFoundError: No module named 'specfact_code_review.run.runtime_c
 tests/unit/specfact_code_review/run/test_runtime_compatibility.py:7: ModuleNotFoundError
 ____________ test_compatible_common_project_package_is_not_rejected ____________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-36/test_compatible_common_project0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-36/test_compatible_common_project0')
 
     def test_compatible_common_project_package_is_not_rejected(tmp_path: Path) -> None:
 >       from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts

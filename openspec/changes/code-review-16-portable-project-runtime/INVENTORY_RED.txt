@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+rootdir: <USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -13,7 +13,7 @@ ______________ test_inventory_never_serializes_index_credentials _______________
 
     def test_inventory_never_serializes_index_credentials() -> None:
 >       from specfact_code_review.run.runtime_build_driver import clean_inventory
-E       ImportError: cannot import name 'clean_inventory' from 'specfact_code_review.run.runtime_build_driver' (/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/packages/specfact-code-review/src/specfact_code_review/run/runtime_build_driver.py)
+E       ImportError: cannot import name 'clean_inventory' from 'specfact_code_review.run.runtime_build_driver' (<USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/packages/specfact-code-review/src/specfact_code_review/run/runtime_build_driver.py)
 
 tests/unit/specfact_code_review/run/test_runtime_builder.py:52: ImportError
 =========================== short test summary info ============================

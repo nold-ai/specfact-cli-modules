@@ -118,7 +118,9 @@ def inventory_native(
     target_loader: bool = False,
 ) -> list[dict[str, Any]]:
     """Copy required native closures into target storage; preserve the signed supervisor."""
-    extensions = sorted(path for path in artifact.rglob("*.so*") if path.is_file())
+    extensions = sorted(
+        {path for pattern in ("*.so*", "executables/*") for path in artifact.rglob(pattern) if path.is_file()}
+    )
     capsule = {path.name for path in capsule_root.rglob("*.so*") if path.is_file()}
     bundled = {path.name for path in extensions}
     records = [_native_record(extension, artifact, "project") for extension in extensions]

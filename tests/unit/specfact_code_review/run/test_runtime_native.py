@@ -64,3 +64,16 @@ def test_project_native_libraries_use_their_own_loader_closure(tmp_path: Path) -
     assert {Path(row["path"]).name for row in records} == {"libodbc.so.2", "libc.so.6", "ld-linux-x86-64.so.2"}
     assert (artifact / "native/ld-linux-x86-64.so.2").stat().st_mode & 0o111
     assert (capsule / "libc.so.6").read_bytes() == original
+
+
+def test_owned_native_executables_include_their_shared_library_closure(tmp_path: Path) -> None:
+    from specfact_code_review.run.runtime_native import inventory_native
+
+    artifact, system = tmp_path / "artifact", tmp_path / "system"
+    (artifact / "executables").mkdir(parents=True)
+    system.mkdir()
+    _elf(artifact / "executables/customer-tool", ("libcustomer.so.1",))
+    _elf(system / "libcustomer.so.1", ())
+    records = inventory_native(artifact, capsule_root=tmp_path / "capsule", declared=(), system_roots=(system,))
+    assert (artifact / "native/libcustomer.so.1").is_file()
+    assert any(row["path"] == "executables/customer-tool" for row in records)

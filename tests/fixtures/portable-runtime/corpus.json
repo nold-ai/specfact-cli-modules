@@ -76,7 +76,12 @@
       "paths": [
         "src/portable_customer/core.py",
         "tests/test_core.py"
-      ]
+      ],
+      "host_pytest_args": [
+        "-p",
+        "no:asyncio"
+      ],
+      "host_note": "Disable only the asyncio entry-point alias; pytest_asyncio.plugin remains explicitly loaded by the unchanged fixture addopts."
     }
   ]
 }

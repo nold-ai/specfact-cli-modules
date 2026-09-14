@@ -2116,6 +2116,11 @@ def _range_policy_paths(root: Path) -> frozenset[str]:
         return frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths))
 
 
+def _range_policy_closure(request: ScopeRequest, target: Path, head: Path) -> frozenset[str]:
+    paths = _range_policy_paths(target)
+    return paths | _range_policy_paths(head) if request.portable_project_runtime else paths
+
+
 def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResolution:
     claimed_context = _load_claimed_context(request)
     base = _resolve_commit(request.repository, cast(str, request.base_ref))
@@ -2146,7 +2151,7 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
         if request.portable_project_runtime and claimed_context is None:
             identity_locks = frozenset(path for path in source_locks if path in target_snapshot.contents)
         project_runtime_source_locks = _snapshot_source_lock_identities(target_snapshot, identity_locks)
-        additional_policy_paths = _range_policy_paths(target_snapshot.root)
+        additional_policy_paths = _range_policy_closure(request, target_snapshot.root, head_snapshot.root)
         selected = tuple(
             path
             for path in _range_paths(request.repository, merge_base, head)

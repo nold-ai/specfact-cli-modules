@@ -16,7 +16,7 @@ from pathlib import Path
 
 PROJECT = Path("/opt/specfact/project-runtime")
 SNAPSHOT = Path("/opt/specfact/snapshot")
-ANALYZERS = Path("/opt/specfact/analyzers")
+ANALYZERS = Path("/opt/specfact/config/member-analyzers")
 BUILTIN = Path("/opt/specfact/builtin")
 _TOOL_IMPORTS = {
     "pylint": {"pylint", "astroid"},
@@ -90,11 +90,37 @@ def _configure_runtime(module: str) -> None:
     if module != "project-python":
         graph = descriptor["inventory"]["member_graphs"][module]
         sys.meta_path.append(DomainFinder(graph))
+        sys.path.append(str(ANALYZERS))
     sys.executable = str(PROJECT / "bin/python")
+
+
+def python_execution_domain() -> str:
+    """Keep pytest subprocesses in the same recorded dependency domain."""
+    return "pytest-observe" if os.environ.get("SPECFACT_TARGET_PYTEST") == "1" else "project-python"
+
+
+def _validate_python_arguments(arguments: list[str]) -> None:
+    skip_value = False
+    for argument in arguments:
+        if skip_value:
+            skip_value = False
+            continue
+        if argument in {"-c", "-m", "--"} or not argument.startswith("-") or argument == "-":
+            break
+        if argument.startswith(("-W", "-X")):
+            skip_value = argument in {"-W", "-X"}
+            continue
+        if not argument.startswith("--"):
+            for option in "IES":
+                if option in argument[1:]:
+                    raise RuntimeError(
+                        f"project_python_option_unsupported:-{option}; this option disables required runtime attachment"
+                    )
 
 
 def _project_python_command(arguments: list[str]) -> tuple[list[str], dict[str, str]]:
     """Use the native Python CLI, preserving -c/-m/-u and future imports exactly."""
+    _validate_python_arguments(arguments)
     environment = dict(os.environ)
     environment.update(PYTHONPATH=str(BUILTIN / "specfact_code_review/run"), SPECFACT_PROJECT_PYTHON="1")
     launcher = runpy.run_path(str(Path(__file__).with_name("target_launch.py")))

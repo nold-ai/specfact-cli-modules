@@ -1,5 +1,6 @@
 """Runtime builder separates dependency acquisition from source and host state."""
 
+import errno
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -60,3 +61,69 @@ def test_python_patch_constraint_uses_signed_interpreter_version(tmp_path: Path)
     runtime = SimpleNamespace(environment_id="linux-x86_64-cp312", identity="sha256:" + "a" * 64)
     with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
         prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache", offline=True)
+
+
+@pytest.mark.parametrize("number", [errno.EEXIST, errno.ENOTEMPTY])
+def test_concurrent_cache_publication_accepts_existing_winner(tmp_path, monkeypatch, number) -> None:
+    from specfact_code_review.run import runtime_builder
+
+    def raced(source, destination):
+        raise OSError(number, "concurrent publication")
+
+    monkeypatch.setattr(runtime_builder.os, "rename", raced)
+    runtime_builder.publish_artifact(tmp_path / "candidate", tmp_path / "winner")
+
+
+@pytest.mark.parametrize("target", [".env", ".venv/private.txt", ".venv", ".git/config", "nested/.env"])
+def test_project_links_cannot_alias_excluded_inputs(tmp_path: Path, target: str) -> None:
+    from specfact_code_review.run.runtime_sources import source_identity
+
+    source = tmp_path / "source"
+    source.mkdir()
+    secret = source / target
+    if target == ".venv":
+        secret.mkdir()
+        (secret / "private.txt").write_text("synthetic excluded fixture")
+    else:
+        secret.parent.mkdir(parents=True, exist_ok=True)
+        secret.write_text("synthetic excluded fixture")
+    (source / "alias").symlink_to(target)
+    with pytest.raises(ProjectRuntimeError, match=r"symlink.*excluded"):
+        source_identity(source)
+    with pytest.raises(ProjectRuntimeError, match=r"symlink.*excluded"):
+        copy_project(source, tmp_path / "copy")
+
+
+def test_source_copy_preserves_directory_alias_without_copying_excluded_children(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    (source / "package").mkdir(parents=True)
+    (source / "package/app.py").write_text("VALUE = 1\n")
+    (source / "package/.env").write_text("synthetic excluded fixture")
+    (source / "alias").symlink_to("package")
+    target = tmp_path / "copy"
+    copy_project(source, target)
+    assert (target / "alias").is_symlink()
+    assert (target / "alias/app.py").read_text() == "VALUE = 1\n"
+    assert not (target / "alias/.env").exists()
+
+
+def test_source_copy_rebases_absolute_internal_alias(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "app.py").write_text("VALUE = 1\n")
+    (source / "alias.py").symlink_to(source / "app.py")
+    target = tmp_path / "copy"
+    copy_project(source, target)
+    assert (target / "alias.py").is_symlink()
+    assert (target / "alias.py").resolve() == target / "app.py"
+
+
+def test_source_copy_rebases_internal_link_spelled_through_parent(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "app.py").write_text("VALUE = 1\n")
+    (source / "alias.py").symlink_to("../source/app.py")
+    target = tmp_path / "copy"
+    copy_project(source, target)
+    assert (target / "alias.py").is_symlink()
+    assert (target / "alias.py").resolve() == target / "app.py"

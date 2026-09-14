@@ -85,3 +85,7 @@ Pytest configuration and selection controls remain active. The report records co
 The checked-in corpus pins Requests, Hatch, Flask, and Poetry commits and their initial source/test slices. The customer workflow exercises supported Python ABIs, records host tests separately, checks cold preparation and offline attachment, and injects controlled defects. Untouched upstream acceptance requires completed applicable analysis; it does not require zero findings.
 
 Track release acceptance in [User Story #473](https://github.com/nold-ai/specfact-cli-modules/issues/473) and the original [customer bug #472](https://github.com/nold-ai/specfact-cli-modules/issues/472). The reconstructed Hatch fixture is not proof that the inaccessible original customer reproduction is resolved.
+
+Python subprocess options `-I`, `-E`, and `-S` disable the startup mechanism used to attach the selected runtime. The worker rejects these exact options with `project_python_option_unsupported` rather than running without project dependencies. Ordinary `-c`, `-m`, `-u`, and script invocations retain native Python argument handling.
+
+Source aliases must resolve to included repository content. Aliases into excluded `.env`, virtual environments, or Git metadata are rejected before dependency building. Valid internal links are preserved in the private source copy, including absolute links rebased into that copy; the copied bytes are verified before build hooks execute.

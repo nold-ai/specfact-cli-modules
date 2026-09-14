@@ -982,6 +982,8 @@ def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
         focus_facets=request.focus_facets,
         review_focus=_review_focus_from_facets(request.focus_facets),
         requirements_evidence=request.requirements_evidence,
+        project_config=request.project_config,
+        project_runtime=request.project_runtime,
     )
 
 
@@ -1159,6 +1161,35 @@ def _canonical_json_digest(value: dict[str, Any]) -> str:
     return f"sha256:{hashlib.sha256(canonical_json.encode('utf-8')).hexdigest()}"
 
 
+def _resolve_worktree_files(request: ReviewRunRequest) -> list[Path]:
+    file_focus_facets = tuple(facet for facet in request.focus_facets if facet in {"source", "tests", "docs"})
+    include_for_resolve = request.include_tests or bool(file_focus_facets)
+    legacy_scope: Literal["changed", "full"] | None = None
+    if request.scope in {"changed", "worktree"}:
+        legacy_scope = "changed"
+    elif request.scope == "full":
+        legacy_scope = "full"
+    resolved_files = resolve_legacy_files(
+        request.files,
+        LegacyFileSelectionRequest(
+            include_tests=include_for_resolve,
+            scope=legacy_scope,
+            path_filters=request.path_filters or [],
+            changed_discovery=_changed_files_from_git_diff,
+            full_discovery=_all_python_files_from_git,
+        ),
+    )
+    resolved_files = _filter_files_by_focus(resolved_files, request.focus_facets)
+    if not resolved_files:
+        raise NoReviewableFilesError(
+            "No reviewable Python files matched the selected --focus facets."
+            if request.focus_facets
+            else "No Python files to review were provided or detected."
+        )
+
+    return resolved_files
+
+
 @beartype
 @require(
     lambda request_or_files: request_or_files is None or isinstance(request_or_files, (list, ReviewRunRequest)),
@@ -1190,30 +1221,7 @@ def run_command(
             )
         return _render_review_result(report, request)
 
-    file_focus_facets = tuple(facet for facet in request.focus_facets if facet in {"source", "tests", "docs"})
-    include_for_resolve = request.include_tests or bool(file_focus_facets)
-    legacy_scope: Literal["changed", "full"] | None = None
-    if request.scope in {"changed", "worktree"}:
-        legacy_scope = "changed"
-    elif request.scope == "full":
-        legacy_scope = "full"
-    resolved_files = resolve_legacy_files(
-        request.files,
-        LegacyFileSelectionRequest(
-            include_tests=include_for_resolve,
-            scope=legacy_scope,
-            path_filters=request.path_filters or [],
-            changed_discovery=_changed_files_from_git_diff,
-            full_discovery=_all_python_files_from_git,
-        ),
-    )
-    resolved_files = _filter_files_by_focus(resolved_files, request.focus_facets)
-    if not resolved_files:
-        raise NoReviewableFilesError(
-            "No reviewable Python files matched the selected --focus facets."
-            if request.focus_facets
-            else "No Python files to review were provided or detected."
-        )
+    resolved_files = _resolve_worktree_files(request)
 
     requirements_evidence = (
         _requirements_evidence_context(request.requirements_evidence)

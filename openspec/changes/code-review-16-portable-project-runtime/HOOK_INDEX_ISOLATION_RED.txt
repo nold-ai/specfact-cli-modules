@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -12,7 +12,7 @@ tests/unit/specfact_code_review/run/test_runner.py F                     [100%]
 =================================== FAILURES ===================================
 ____________ test_vcs_fixtures_never_change_the_calling_hooks_index ____________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-113/test_vcs_fixtures_never_change0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-113/test_vcs_fixtures_never_change0')
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e9de650>
 
     def test_vcs_fixtures_never_change_the_calling_hooks_index(tmp_path: Path, monkeypatch) -> None:
@@ -24,7 +24,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e9de650>
         _repository(tmp_path / 'child')
 >       assert index.read_bytes() == before
 E       assert b"DIRC\x00\x0...dc\x83\x0b'\n" == b'DIRC\x00\x0...b\xe4\xce\xc5'
-E         
+E
 E         At index 16 diff: b'\x12' != b'\x11'
 E         Use -v to get more diff
 
@@ -39,7 +39,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e9de2c0>
 >       assert 'GIT_INDEX_FILE' not in runner_api._pytest_env()
 E       AssertionError: assert 'GIT_INDEX_FILE' not in {'RUST_LOG': 'warn', 'CODEX_SANDBOX_NETWORK_DISABLED': '1', 'TERM': 'dumb', 'SHELL': '/bin/zsh', ...}
 E        +  where {'RUST_LOG': 'warn', 'CODEX_SANDBOX_NETWORK_DISABLED': '1', 'TERM': 'dumb', 'SHELL': '/bin/zsh', ...} = <function _pytest_env at 0x10cb87530>()
-E        +    where <function _pytest_env at 0x10cb87530> = <module 'specfact_code_review.run.runner' from '/private/tmp/specfact-473-implementation/packages/specfact-code-review/src/specfact_code_review/run/runner.py'>._pytest_env
+E        +    where <function _pytest_env at 0x10cb87530> = <module 'specfact_code_review.run.runner' from '<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/runner.py'>._pytest_env
 
 tests/unit/specfact_code_review/run/test_runner.py:7731: AssertionError
 =========================== short test summary info ============================

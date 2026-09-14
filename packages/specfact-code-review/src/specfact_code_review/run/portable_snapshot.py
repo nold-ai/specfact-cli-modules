@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,7 @@ from specfact_code_review.run.runtime_builder import prepare_runtime
 from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.runtime_interpreter import project_worker
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError, document_digest
+from specfact_code_review.run.runtime_sources import verify_inputs
 from specfact_code_review.run.runtime_vcs import vcs_context
 
 
@@ -52,28 +53,26 @@ def discover_snapshot(root: Path, *, config_path: Path | None, source_snapshot: 
     return replace(plan, vcs_repository=repository, vcs=vcs_context(repository, commit))
 
 
-@require(lambda snapshot_root: snapshot_root.is_dir())
-def run_project_snapshot(
-    runtime: Any,
-    *,
-    snapshot_root: Path,
-    files: list[Path],
-    options: Any,
-    assurance_kind: str,
-    source_snapshot: Any = None,
-) -> tuple[Any, dict[str, Any]]:
+@dataclass(frozen=True)
+class ProjectSnapshotRequest:
+    """Source and selection context for one independently bound review side."""
+
+    snapshot_root: Path
+    files: list[Path]
+    options: Any
+    assurance_kind: str
+    source_snapshot: Any = None
+
+
+@require(lambda request: request.snapshot_root.is_dir())
+def run_project_snapshot(runtime: Any, request: ProjectSnapshotRequest) -> tuple[Any, dict[str, Any]]:
     """Bind every review side to its selected signed Python worker."""
+    snapshot_root, files, options = request.snapshot_root, request.files, request.options
+    source_snapshot = request.source_snapshot
     try:
         plan = discover_snapshot(snapshot_root, config_path=options.project_config, source_snapshot=source_snapshot)
         with project_worker(runtime, plan) as selected:
-            return _run_project_snapshot(
-                selected,
-                snapshot_root=snapshot_root,
-                files=files,
-                options=options,
-                assurance_kind=assurance_kind,
-                plan=plan,
-            )
+            return _run_project_snapshot(selected, request, plan)
     except (OSError, ValueError) as exc:
         return _failed_project_snapshot(
             runtime, snapshot_root=snapshot_root, files=files, options=options, reason=str(exc)
@@ -102,19 +101,15 @@ def _failed_project_snapshot(
     }
 
 
-@require(lambda snapshot_root: snapshot_root.is_dir())
+@require(lambda request: request.snapshot_root.is_dir())
 def _run_project_snapshot(
-    runtime: Any,
-    *,
-    snapshot_root: Path,
-    files: list[Path],
-    options: Any,
-    assurance_kind: str,
-    plan: ProjectPlan,
+    runtime: Any, request: ProjectSnapshotRequest, plan: ProjectPlan
 ) -> tuple[Any, dict[str, Any]]:
     """Prepare once, execute applicable members, and retain independent evidence."""
     from specfact_code_review.run.runner import CapsuleSnapshotSettings, _run_capsule_snapshot
 
+    snapshot_root, files, options = request.snapshot_root, request.files, request.options
+    assurance_kind = request.assurance_kind
     try:
         prepared = (
             load_runtime(
@@ -174,6 +169,7 @@ def _run_project_snapshot(
         ),
     )
     try:
+        verify_inputs(plan)
         load_runtime(
             prepared.descriptor_path, plan=plan, environment_id=runtime.environment_id, worker_identity=runtime.identity
         )
@@ -199,11 +195,13 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
             files = [snapshot.root / path for path in sorted(snapshot.contents) if Path(path).suffix in {".py", ".pyi"}]
         result, binding = run_project_snapshot(
             runtime,
-            snapshot_root=snapshot.root,
-            source_snapshot=snapshot,
-            files=files,
-            options=side_options,
-            assurance_kind="index" if scope_evidence.get("assurance_kind") == "index" else "range_preview",
+            ProjectSnapshotRequest(
+                snapshot_root=snapshot.root,
+                source_snapshot=snapshot,
+                files=files,
+                options=side_options,
+                assurance_kind="index" if scope_evidence.get("assurance_kind") == "index" else "range_preview",
+            ),
         )
         results.append(result)
         bindings[side] = binding

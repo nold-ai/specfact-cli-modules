@@ -110,16 +110,23 @@ def checkout(entry: dict[str, Any], root: Path, evidence: Path) -> None:
 
 
 def tracked_identity(root: Path) -> dict[str, str]:
-    paths = (
-        subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().split("\0")
-        if (root / ".git").exists()
-        else [path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()]
-    )
-    return {
-        name: hashlib.sha256((root / name).read_bytes()).hexdigest()
-        for name in paths
-        if name and (root / name).is_file()
-    }
+    identities = {}
+    for directory, directories, files in os.walk(root, followlinks=False):
+        directories[:] = sorted(name for name in directories if name != ".git")
+        for name in sorted([*directories, *files]):
+            path = Path(directory) / name
+            if name == ".git":
+                continue
+            if path.is_symlink():
+                payload = os.readlink(path).encode()
+            elif path.is_file():
+                payload = path.read_bytes()
+            else:
+                continue
+            identities[path.relative_to(root).as_posix()] = hashlib.sha256(
+                payload + str(path.lstat().st_mode).encode()
+            ).hexdigest()
+    return identities
 
 
 def json_document(output: str) -> dict[str, Any]:
@@ -225,6 +232,7 @@ def host_test(entry: dict[str, Any], root: Path, evidence: Path, workspace: Path
     execute(
         [
             *run,
+            *entry.get("host_pytest_args", []),
             f"--junitxml={evidence / 'host-junit.xml'}",
             *[path for path in entry["paths"] if path.startswith("tests/")],
         ],
@@ -268,7 +276,10 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
     host_test(entry, root, evidence, workspace)
     config = evidence / "project-runtime.toml"
     config.write_text(
-        f"manager={json.dumps(entry['manager'])}\nenvironment={json.dumps(entry['environment'])}\ngroups={json.dumps(entry['groups'])}\nnative_libraries={json.dumps(entry.get('native_libraries', []))}\n"
+        f"manager={json.dumps(entry['manager'])}\n"
+        f"environment={json.dumps(entry['environment'])}\n"
+        f"groups={json.dumps(entry['groups'])}\n"
+        f"native_libraries={json.dumps(entry.get('native_libraries', []))}\n"
     )
     execute(
         ["specfact", "code", "review", "runtime", "inspect", "--project-config", str(config), "--json"],

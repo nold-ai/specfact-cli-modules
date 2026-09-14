@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -13,7 +13,7 @@ _ test_development_snapshot_uses_its_verified_runtime_without_leaking_context __
 
     def test_development_snapshot_uses_its_verified_runtime_without_leaking_context() -> None:
 >       from specfact_code_review._review_utils import _development_runtime, analyzer_command
-E       ImportError: cannot import name '_development_runtime' from 'specfact_code_review._review_utils' (/private/tmp/specfact-473-implementation/packages/specfact-code-review/src/specfact_code_review/_review_utils.py)
+E       ImportError: cannot import name '_development_runtime' from 'specfact_code_review._review_utils' (<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/_review_utils.py)
 
 tests/unit/specfact_code_review/test_capsule_tool_commands.py:48: ImportError
 =========================== short test summary info ============================

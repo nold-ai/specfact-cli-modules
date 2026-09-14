@@ -88,3 +88,39 @@ def test_hatch_dependencies_are_not_redirected_into_the_pip_environment() -> Non
     assert "VIRTUAL_ENV" not in hatch
     assert installer_environment("pip", {})["PIP_PYTHON"] == "/opt/specfact/output/env/bin/python"
     assert installer_environment("poetry", {})["VIRTUAL_ENV"] == "/opt/specfact/output/env"
+
+
+def test_hatch_native_extra_arguments_are_retained(monkeypatch) -> None:
+    from specfact_code_review.run import runtime_build_driver as driver
+
+    monkeypatch.setattr(
+        driver,
+        "_run",
+        lambda *args, **kwargs: '{"review": {"extra-args": ["--dist", "worksteal", "-p", "no:randomly"]}}',
+    )
+    config = {"environment": "review"}
+    driver._prepare_hatch(config, "/tools/bin/python", {})
+    assert config["pytest_arguments"] == ["--dist", "worksteal", "-p", "no:randomly"]
+
+
+def test_exact_hatch_environment_cannot_select_an_incompatible_abi() -> None:
+    import pytest
+
+    from specfact_code_review.run.runtime_build_driver import select_hatch_environment
+
+    with pytest.raises(RuntimeError, match="project_python_incompatible"):
+        select_hatch_environment({"review": {"python": "3.11"}}, "review", "3.12")
+    assert select_hatch_environment({"review": {}}, "review", "3.12") == "review"
+
+
+def test_python_prefixed_distribution_command_is_preserved(tmp_path) -> None:
+    from specfact_code_review.run.runtime_build_driver import copy_executables
+
+    environment, artifact = tmp_path / "environment", tmp_path / "artifact"
+    (environment / "bin").mkdir(parents=True)
+    artifact.mkdir()
+    command = environment / "bin/python-lsp-server"
+    command.write_text('#!/build/python\nprint("language server")\n')
+    copied = copy_executables(environment, artifact, [{"path": str(command), "distribution": "python-lsp-server"}])
+    assert copied == [{"name": "python-lsp-server", "distribution": "python-lsp-server"}]
+    assert (artifact / "bin/python-lsp-server").is_file()

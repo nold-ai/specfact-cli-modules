@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 
 def test_incompatible_dependency_identifies_only_affected_member(tmp_path: Path) -> None:
     from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts
@@ -21,7 +23,8 @@ def test_incompatible_dependency_identifies_only_affected_member(tmp_path: Path)
     assert "basedpyright" not in conflicts
 
 
-def test_compatible_common_project_package_is_not_rejected(tmp_path: Path) -> None:
+@pytest.mark.parametrize("version", ["2.1", "2.1rc1"])
+def test_compatible_common_project_package_is_not_rejected(tmp_path: Path, version: str) -> None:
     from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts
 
     metadata = tmp_path / "pylint-4.0.7.dist-info"
@@ -31,7 +34,7 @@ def test_compatible_common_project_package_is_not_rejected(tmp_path: Path) -> No
     )
     inventory = {
         "installed": [
-            {"metadata": {"name": "shared", "version": "2.1"}},
+            {"metadata": {"name": "shared", "version": version}},
             {"metadata": {"name": "requests", "version": "2.32.4"}},
         ]
     }

@@ -60,3 +60,20 @@ def test_member_metadata_lookup_cannot_expand_explicit_target_inventory(tmp_path
     assert not list(finder.find_distributions(context))
     default_context = DistributionFinder.Context(name="needed")
     assert [dist.version for dist in finder.find_distributions(default_context)] == ["1.0"]
+
+
+def test_only_pytest_children_receive_the_pytest_dependency_domain(monkeypatch) -> None:
+    from specfact_code_review.run.target_bootstrap import python_execution_domain
+
+    monkeypatch.delenv("SPECFACT_TARGET_PYTEST", raising=False)
+    assert python_execution_domain() == "project-python"
+    monkeypatch.setenv("SPECFACT_TARGET_PYTEST", "1")
+    assert python_execution_domain() == "pytest-observe"
+
+
+@pytest.mark.parametrize(
+    "arguments, option", [(["-I", "-c", "pass"], "-I"), (["-uS", "script"], "-S"), (["-E", "-m", "pytest"], "-E")]
+)
+def test_python_startup_cannot_bypass_runtime(arguments, option) -> None:
+    with pytest.raises(RuntimeError, match=f"project_python_option_unsupported:{option}"):
+        target_bootstrap._project_python_command(arguments)

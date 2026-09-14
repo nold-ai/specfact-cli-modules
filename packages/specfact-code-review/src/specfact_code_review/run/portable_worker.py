@@ -103,6 +103,7 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
 
     command = target_command("pytest-observe", [adapter_argv[1]])
     try:
+        Path("/opt/specfact/tmp/pytest-observation.json").unlink(missing_ok=True)
         completed = subprocess.run(command, text=True, capture_output=True, check=False, timeout=1200)
         observation = json.loads(Path("/opt/specfact/tmp/pytest-observation.json").read_text(encoding="utf-8"))
         records = observation["records"]

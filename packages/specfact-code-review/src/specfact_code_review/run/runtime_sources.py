@@ -29,16 +29,25 @@ IGNORED_INPUTS = frozenset(
 )
 
 
+@ensure(lambda result, root: result.is_relative_to(root))
+def source_link_target(path: Path, root: Path) -> Path:
+    """Apply the same exclusion boundary to aliases and ordinary source paths."""
+    relative = path.relative_to(root).as_posix()
+    try:
+        target = path.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ProjectRuntimeError(f"project_source_symlink_invalid:{relative}") from exc
+    if not target.is_relative_to(root) or target == root or path.is_relative_to(target):
+        raise ProjectRuntimeError(f"project_source_symlink_escape:{relative}")
+    if set(target.relative_to(root).parts) & IGNORED_INPUTS:
+        raise ProjectRuntimeError(f"project_source_symlink_excluded:{relative}")
+    return target
+
+
 def _source_entry(path: Path, root: Path) -> str | None:
     relative = path.relative_to(root).as_posix()
     if path.is_symlink():
-        try:
-            target = path.resolve(strict=True)
-        except (OSError, RuntimeError) as exc:
-            raise ProjectRuntimeError(f"project_source_symlink_invalid:{relative}") from exc
-        if not target.is_relative_to(root) or target == root or path.is_relative_to(target):
-            raise ProjectRuntimeError(f"project_source_symlink_escape:{relative}")
-        return "link:" + target.relative_to(root).as_posix()
+        return "link:" + source_link_target(path, root).relative_to(root).as_posix()
     if path.is_file():
         return content_digest(path.read_bytes())
     if not path.is_dir():

@@ -1361,3 +1361,18 @@ def test_portable_lock_only_range_remains_analyzable_preview(scope_api: Any, git
         assert "uv.lock" in result.selected_paths
     finally:
         scope_api.cleanup_scope_resolution(result)
+
+
+def test_portable_range_records_candidate_referenced_policy(scope_api: Any, git_repo: Path) -> None:
+    base = _git(git_repo, "rev-parse", "HEAD")
+    (git_repo / "config").mkdir()
+    (git_repo / "ruff.toml").write_text('extend="config/candidate.toml"\n')
+    (git_repo / "config/candidate.toml").write_text("line-length=99\n")
+    head = _commit(git_repo, "candidate policy closure")
+    result = scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head, portable_project_runtime=True))
+    try:
+        assert result.status == "PASS", result.diagnostics
+        assert "config/candidate.toml" in result.selected_paths
+        assert "config/candidate.toml" in result.policy_paths
+    finally:
+        scope_api.cleanup_scope_resolution(result)

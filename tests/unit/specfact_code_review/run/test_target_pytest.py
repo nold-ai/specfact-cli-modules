@@ -38,3 +38,17 @@ def test_observer_retains_internal_plugin_errors() -> None:
     observer = target_pytest.Observer()
     observer.pytest_internalerror("socket.gaierror: localhost unavailable", None)
     assert observer.internal_errors == ["socket.gaierror: localhost unavailable"]
+
+
+def test_native_hatch_plugin_options_participate_in_explicit_selection() -> None:
+    descriptor = {
+        "project": {"pytest_config": {"addopts": "-ra"}},
+        "inventory": {"pytest_arguments": ["-p", "no:randomly"]},
+    }
+    assert target_pytest._effective_pytest_config(descriptor)["addopts"] == ["-ra", "-p", "no:randomly"]
+
+
+def test_observer_retains_xdist_worker_startup_failure() -> None:
+    observer = target_pytest.Observer()
+    observer.pytest_testnodedown(None, "coverage storage is read-only")
+    assert observer.internal_errors == ["coverage storage is read-only"]

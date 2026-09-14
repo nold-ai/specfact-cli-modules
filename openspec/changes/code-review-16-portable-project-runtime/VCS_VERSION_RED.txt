@@ -1,6 +1,6 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
-rootdir: /private/tmp/specfact-473-implementation
+rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
@@ -11,7 +11,7 @@ tests/unit/specfact_code_review/run/test_runtime_vcs.py FF               [100%]
 =================================== FAILURES ===================================
 _____ test_private_copy_has_correct_index_and_retains_source_modifications _____
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-87/test_private_copy_has_correct_0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-87/test_private_copy_has_correct_0')
 
     def test_private_copy_has_correct_index_and_retains_source_modifications(tmp_path: Path) -> None:
         root = tmp_path / 'project'
@@ -26,7 +26,7 @@ E         + ?? app.py
 tests/unit/specfact_code_review/run/test_runtime_vcs.py:26: AssertionError
 _______ test_tag_change_invalidates_runtime_without_source_byte_changes ________
 
-tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-87/test_tag_change_invalidates_ru0')
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-87/test_tag_change_invalidates_ru0')
 
     def test_tag_change_invalidates_runtime_without_source_byte_changes(tmp_path: Path) -> None:
         root = tmp_path / 'project'
@@ -37,8 +37,8 @@ tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/p
         assert before.source_identity == after.source_identity
 >       assert before.identity != after.identity
 E       AssertionError: assert 'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4' != 'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4'
-E        +  where 'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4' = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-87/test_tag_...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}).identity
-E        +  and   'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4' = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-87/test_tag_...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}).identity
+E        +  where 'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4' = ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-87/test_tag_...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}).identity
+E        +  and   'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4' = ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-87/test_tag_...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}).identity
 
 tests/unit/specfact_code_review/run/test_runtime_vcs.py:39: AssertionError
 =========================== short test summary info ============================
