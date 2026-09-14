@@ -37,6 +37,8 @@ class ProjectPlan:
     python: str = ""
     requires_python: str = ""
     source_identity: str = ""
+    vcs_repository: Path | None = None
+    vcs: dict[str, str] = field(default_factory=dict)
     groups: tuple[str, ...] = ()
     extras: tuple[str, ...] = ()
     requirements: tuple[str, ...] = ()
@@ -51,9 +53,11 @@ class ProjectPlan:
         """Return relocation-independent inputs suitable for cache identity."""
         result = asdict(self)
         result.pop("root")
+        result.pop("vcs_repository")
         return result
 
     @property
+    @ensure(lambda result: result.startswith("sha256:") and len(result) == 71)
     def identity(self) -> str:
         return document_digest(self.document())
 

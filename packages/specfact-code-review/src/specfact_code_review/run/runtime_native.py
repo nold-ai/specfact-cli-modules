@@ -83,23 +83,11 @@ def _native_record(path: Path, artifact: Path, origin: str) -> dict[str, Any]:
     }
 
 
-@ensure(lambda result: all(row["sha256"].startswith("sha256:") for row in result))
-def inventory_native(
-    artifact: Path,
-    *,
-    capsule_root: Path,
-    declared: tuple[str, ...],
-    system_roots: tuple[Path, ...] = SYSTEM_LIBRARY_ROOTS,
+def _library_closure(
+    artifact: Path, pending: set[str], available: set[str], system_roots: tuple[Path, ...]
 ) -> list[dict[str, Any]]:
-    """Copy only required shared-library closures; preserve signed capsule libraries."""
-    extensions = sorted(path for path in artifact.rglob("*.so*") if path.is_file())
-    capsule = {path.name: path for path in capsule_root.rglob("*.so*") if path.is_file()}
-    bundled = {path.name: path for path in extensions}
-    pending = set(declared)
-    records = [_native_record(extension, artifact, "project") for extension in extensions]
-    for record in records:
-        pending.update(record["needed"])
     seen = set()
+    records = []
     while pending:
         name = min(pending)
         pending.remove(name)
@@ -108,14 +96,39 @@ def inventory_native(
         seen.add(name)
         if not re.fullmatch(r"[A-Za-z0-9_.+-]+\.so(?:\.[A-Za-z0-9_.+-]+)*", name):
             raise ProjectRuntimeError(f"project_native_library_invalid:{name}; declare ELF shared-library names")
-        if name in capsule or name in bundled:
+        if name in available:
             continue
         source = _system_library(name, system_roots)
-        needed = elf_dependencies(source)
-        pending.update(needed)
+        pending.update(elf_dependencies(source))
         target = artifact / "native" / name
         target.parent.mkdir(exist_ok=True)
         shutil.copyfile(source, target)
-        target.chmod(0o644)
+        target.chmod(0o755 if name == "ld-linux-x86-64.so.2" else 0o644)
         records.append({**_native_record(target, artifact, "system-library"), "source": str(source)})
     return records
+
+
+@ensure(lambda result: all(row["sha256"].startswith("sha256:") for row in result))
+def inventory_native(
+    artifact: Path,
+    *,
+    capsule_root: Path,
+    declared: tuple[str, ...],
+    system_roots: tuple[Path, ...] = SYSTEM_LIBRARY_ROOTS,
+    target_loader: bool = False,
+) -> list[dict[str, Any]]:
+    """Copy required native closures into target storage; preserve the signed supervisor."""
+    extensions = sorted(path for path in artifact.rglob("*.so*") if path.is_file())
+    capsule = {path.name for path in capsule_root.rglob("*.so*") if path.is_file()}
+    bundled = {path.name for path in extensions}
+    records = [_native_record(extension, artifact, "project") for extension in extensions]
+    pending = set(declared)
+    for record in records:
+        pending.update(record["needed"])
+    available = capsule | bundled
+    if target_loader and pending:
+        # Newer native libraries must use a matching loader/libc domain, never
+        # replace libc underneath the running signed supervisor.
+        pending.add("ld-linux-x86-64.so.2")
+        available = bundled | {name for name in capsule if name.startswith("libpython")}
+    return records + _library_closure(artifact, pending, available, system_roots)

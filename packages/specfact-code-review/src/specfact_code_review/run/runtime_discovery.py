@@ -14,6 +14,7 @@ from icontract import require
 
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError, content_digest
 from specfact_code_review.run.runtime_sources import source_identity
+from specfact_code_review.run.runtime_vcs import vcs_context
 
 
 PROJECT_INPUT_NAMES = (
@@ -75,6 +76,15 @@ def _toml(path: Path) -> dict[str, Any]:
         raise ProjectRuntimeError(f"project_config_invalid:{path.name}:{exc}") from exc
 
 
+def _validate_config_value(name: str, value: Any) -> None:
+    if name in {"manager", "environment", "python"}:
+        if not isinstance(value, str) or not value:
+            raise ProjectRuntimeError(f"project_config_invalid:{name} must be a nonempty string")
+        return
+    if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+        raise ProjectRuntimeError(f"project_config_invalid:{name} must be an array of strings")
+
+
 def _config(path: Path | None) -> dict[str, Any]:
     if path is None:
         return {}
@@ -84,14 +94,8 @@ def _config(path: Path | None) -> dict[str, Any]:
     unknown = sorted(set(values) - _CONFIG_FIELDS)
     if unknown:
         raise ProjectRuntimeError(f"project_config_unknown_fields:{','.join(unknown)}")
-    for name in ("manager", "environment", "python"):
-        if name in values and (not isinstance(values[name], str) or not values[name]):
-            raise ProjectRuntimeError(f"project_config_invalid:{name} must be a nonempty string")
-    for name in _CONFIG_FIELDS - {"manager", "environment", "python"}:
-        if name in values and (
-            not isinstance(values[name], list) or not all(isinstance(item, str) and item for item in values[name])
-        ):
-            raise ProjectRuntimeError(f"project_config_invalid:{name} must be an array of strings")
+    for name, value in values.items():
+        _validate_config_value(name, value)
     return values
 
 
@@ -136,6 +140,20 @@ def _manager(root: Path, project: dict[str, Any], hatch: dict[str, Any], config:
     return next(iter(candidates), "pip")
 
 
+def _requirement_include(line: str) -> str:
+    tokens = shlex.split(line, comments=True)
+    if not tokens:
+        return ""
+    flag = tokens[0]
+    if flag in {"-r", "--requirement", "-c", "--constraint"} and len(tokens) >= 2:
+        return tokens[1]
+    if flag.startswith(("--requirement=", "--constraint=")):
+        return flag.split("=", 1)[1]
+    if flag.startswith(("-r", "-c")) and len(flag) > 2:
+        return flag[2:]
+    return ""
+
+
 def _requirements_inputs(root: Path, names: tuple[str, ...]) -> set[str]:
     visited: set[str] = set()
 
@@ -151,23 +169,14 @@ def _requirements_inputs(root: Path, names: tuple[str, ...]) -> set[str]:
         visited.add(canonical)
         logical_lines = path.read_text(encoding="utf-8").replace("\\\n", "").splitlines()
         for line in logical_lines:
-            tokens = shlex.split(line, comments=True)
-            if not tokens:
+            included = _requirement_include(line)
+            if not included:
                 continue
-            flag = tokens[0]
-            included = ""
-            if flag in {"-r", "--requirement", "-c", "--constraint"} and len(tokens) >= 2:
-                included = tokens[1]
-            elif flag.startswith(("--requirement=", "--constraint=")):
-                included = flag.split("=", 1)[1]
-            elif flag.startswith(("-r", "-c")) and len(flag) > 2:
-                included = flag[2:]
-            if included:
-                child = Path(included)
-                if child.is_absolute():
-                    raise ProjectRuntimeError(f"project_input_escape:{included}")
-                relative = os.path.relpath(path.parent / child, root)
-                visit(relative, active | {canonical})
+            child = Path(included)
+            if child.is_absolute():
+                raise ProjectRuntimeError(f"project_input_escape:{included}")
+            relative = os.path.relpath(path.parent / child, root)
+            visit(relative, active | {canonical})
 
     for name in names:
         visit(name, frozenset())
@@ -216,7 +225,8 @@ def _selection(
         environments = hatch.get("envs", project.get("tool", {}).get("hatch", {}).get("envs", {}))
         if len(environments) > 1:
             raise ProjectRuntimeError(
-                f"project_environment_ambiguous:{','.join(sorted(environments))}; select environment in --project-config"
+                f"project_environment_ambiguous:{','.join(sorted(environments))}; "
+                "select environment in --project-config"
             )
         environment = next(iter(environments), "default")
     if "groups" in values:
@@ -262,7 +272,10 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
         source_identity=source_identity(root),
         manager=manager,
         environment=environment,
-        python=values.get("python", ""),
+        vcs=vcs_context(root),
+        python=values.get(
+            "python", (root / ".python-version").read_text().strip() if (root / ".python-version").is_file() else ""
+        ),
         requires_python=str(project.get("project", {}).get("requires-python", "")),
         groups=groups,
         extras=tuple(values.get("extras", [])),

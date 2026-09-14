@@ -51,10 +51,10 @@ def _hatch_commands(plan: ProjectPlan, python: str) -> tuple[tuple[str, ...], ..
         raise ProjectRuntimeError(
             "project_hatch_environment_required: select an environment declaring the requested groups/extras"
         )
-    return ((python, "-m", "hatch", "-e", plan.environment, "env", "create"),)
+    return ((python, "-m", "hatch", "env", "create", plan.environment),)
 
 
-@require(lambda python: bool(python))
+@require(lambda python: len(python) > 0)
 def install_commands(plan: ProjectPlan, *, python: str) -> tuple[tuple[str, ...], ...]:
     """Preserve the selected manager's resolution semantics and existing lock."""
     adapters = {"pip": _pip_commands, "uv": _uv_commands, "poetry": _poetry_commands, "hatch": _hatch_commands}

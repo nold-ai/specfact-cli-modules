@@ -23,3 +23,35 @@ def test_project_python_preserves_extensionless_script_arguments(monkeypatch) ->
     monkeypatch.setattr(target_launch.os, "execv", lambda executable, argv: captured.append(argv))
     target_launch.main()
     assert captured[0][-3:] == ["python-argv", "manage", "--version"]
+
+
+def test_native_worker_uses_matching_loader_without_mutating_supervisor(tmp_path, monkeypatch) -> None:
+    from specfact_code_review.run import target_launch
+
+    loader = tmp_path / "native/ld-linux-x86-64.so.2"
+    loader.parent.mkdir()
+    loader.touch()
+    monkeypatch.setattr(target_launch, "PROJECT", tmp_path)
+    command = target_launch.interpreter_command(["-I", "-S", "worker.py"])
+    assert command == [
+        str(loader),
+        "--library-path",
+        str(loader.parent),
+        "/opt/specfact/python/bin/python",
+        "-I",
+        "-S",
+        "worker.py",
+    ]
+    target = target_launch.target_command("pytest-observe", ["{}"])
+    assert "--setenv" not in target[target.index("--library-path") :]
+    assert "LD_LIBRARY_PATH" not in target
+
+
+def test_offline_target_has_private_localhost_resolution() -> None:
+    from specfact_code_review.run.target_launch import target_command
+
+    command = target_command("pytest-observe", [])
+    assert "/opt/specfact/project-runtime/worker-config" in command
+    assert "/etc" in command
+    assert "--unshare-all" in command
+    assert "--share-net" not in command

@@ -1,0 +1,56 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+tests/unit/specfact_code_review/run/test_runtime_interpreter.py FFFF     [100%]
+
+=================================== FAILURES ===================================
+__ test_python_version_file_is_selected_and_explicit_config_takes_precedence ___
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-94/test_python_version_file_is_se0')
+
+    def test_python_version_file_is_selected_and_explicit_config_takes_precedence(tmp_path: Path) -> None:
+        (tmp_path / '.python-version').write_text('3.11\n')
+>       assert discover_project(tmp_path).python == '3.11'
+E       AssertionError: assert '' == '3.11'
+E
+E         - 3.11
+
+tests/unit/specfact_code_review/run/test_runtime_interpreter.py:12: AssertionError
+______________ test_python_selection_uses_matching_signed_worker _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-94/test_python_selection_uses_mat0')
+
+    def test_python_selection_uses_matching_signed_worker(tmp_path: Path) -> None:
+>       from specfact_code_review.run.runtime_interpreter import select_environment
+E       ModuleNotFoundError: No module named 'specfact_code_review.run.runtime_interpreter'
+
+tests/unit/specfact_code_review/run/test_runtime_interpreter.py:19: ModuleNotFoundError
+________________ test_python_selection_rejects_conflicting_pin _________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-94/test_python_selection_rejects_0')
+
+    def test_python_selection_rejects_conflicting_pin(tmp_path: Path) -> None:
+>       from specfact_code_review.run.runtime_interpreter import select_environment
+E       ModuleNotFoundError: No module named 'specfact_code_review.run.runtime_interpreter'
+
+tests/unit/specfact_code_review/run/test_runtime_interpreter.py:25: ModuleNotFoundError
+______ test_python_constraints_can_select_compatible_worker_without_a_pin ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-94/test_python_constraints_can_se0')
+
+    def test_python_constraints_can_select_compatible_worker_without_a_pin(tmp_path: Path) -> None:
+>       from specfact_code_review.run.runtime_interpreter import select_environment
+E       ModuleNotFoundError: No module named 'specfact_code_review.run.runtime_interpreter'
+
+tests/unit/specfact_code_review/run/test_runtime_interpreter.py:33: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_interpreter.py::test_python_version_file_is_selected_and_explicit_config_takes_precedence
+FAILED tests/unit/specfact_code_review/run/test_runtime_interpreter.py::test_python_selection_uses_matching_signed_worker
+FAILED tests/unit/specfact_code_review/run/test_runtime_interpreter.py::test_python_selection_rejects_conflicting_pin
+FAILED tests/unit/specfact_code_review/run/test_runtime_interpreter.py::test_python_constraints_can_select_compatible_worker_without_a_pin
+============================== 4 failed in 0.12s ===============================

@@ -52,6 +52,10 @@ manager = "uv"
 groups = ["tests"]
 ```
 
+For a Hatch test matrix, `environment = "hatch-test"` selects its unique native environment matching the selected Python version. Multiple matching matrix entries require a concrete name such as `hatch-test.py3.12-feature`. Selection uses Hatch's exported configuration.
+
+The `python` setting overrides `.python-version`; both are checked against `requires-python` and the exact signed interpreter version. A compatible controller ABI is reused; an incompatible controller does not force that ABI onto the project. Base and head reviews select their workers independently.
+
 Supported manager names are `pip`, `hatch`, `uv`, and `poetry`. Optional fields are `python`, `groups`, `extras`, `requirements`, `constraints`, `source_roots`, and `native_libraries`. Paths are repository-relative. Native libraries use ELF names such as `libodbc.so.2`; unavailable libraries are named in the preparation diagnostic. Hatch extras and dependencies belong in the selected native Hatch environment.
 
 ```bash
@@ -68,13 +72,13 @@ specfact code review runtime prepare --project-config /tmp/review-runtime.toml -
 specfact code review run src/example.py tests/test_example.py --project-config /tmp/review-runtime.toml --project-runtime /path/from/prepare/project-runtime.json
 ```
 
-Attachment verifies the payload, project inputs, ABI, and analyzer worker identity. Changed workspace source invalidates built project packages as well as changed dependency files. A corrupt cache is rejected; remove only the identified invalid artifact and prepare again. Interrupted preparations do not publish partial descriptors.
+Attachment verifies the payload, project inputs, ABI, and analyzer worker identity. Changed workspace source invalidates built project packages as well as changed dependency files. Git commits, tags, and shallow-history boundaries also participate in cache identity for dynamically versioned packages. Private build copies retain a matching index and sanitized VCS metadata. A corrupt cache is rejected; remove only the identified invalid artifact and prepare again. Interrupted preparations do not publish partial descriptors.
 
 ## Interpret incomplete evidence
 
 Runtime failure preserves independent static findings. Affected analyzers reference the preparation diagnostic and remain incomplete. A real missing import after successful preparation remains a finding. A report can contain real failures while still showing incomplete required evidence.
 
-Pytest configuration and selection controls remain active. The report records collection, execution, configured options, versions, and coverage. Collection-only runs, early stopping that leaves collected tests unexecuted, and absent required coverage do not become successful test evidence.
+Pytest configuration and selection controls remain active. The report records collection, execution, setup and internal errors, configured options, versions, and coverage. Distribution-owned commands are available inside target workers. Localhost coordination for plugins stays inside the offline namespace. Collection-only runs, early stopping that leaves collected tests unexecuted, and absent required coverage do not become successful test evidence.
 
 ## Compatibility evidence
 

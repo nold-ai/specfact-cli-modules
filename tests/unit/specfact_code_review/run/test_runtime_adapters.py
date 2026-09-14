@@ -30,7 +30,7 @@ def test_hatch_prepare_uses_selected_native_environment(tmp_path: Path) -> None:
     config = tmp_path / "review.toml"
     config.write_text('manager="hatch"\nenvironment="review"\n')
     commands = install_commands(discover_project(tmp_path, config_path=config), python="/runtime/python")
-    assert any("-e" in command and "review" in command for command in commands)
+    assert commands == (("/runtime/python", "-m", "hatch", "env", "create", "review"),)
 
 
 def test_explicit_groups_do_not_install_unrelated_defaults(tmp_path: Path) -> None:

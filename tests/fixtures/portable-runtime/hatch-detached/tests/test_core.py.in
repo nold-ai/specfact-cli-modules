@@ -1,0 +1,10 @@
+"""Require explicit asyncio loading, source roots, and actual native imports."""
+
+from fixture_value import VALUE
+from portable_customer.core import installed_drivers, prepared_method
+
+
+async def test_runtime_dependencies() -> None:
+    assert prepared_method() == "GET"
+    assert isinstance(installed_drivers(), list)
+    assert VALUE == 42

@@ -380,6 +380,7 @@ class Snapshot:
     tree: str
     contents: dict[str, bytes]
     entries: dict[str, TreeEntry]
+    repository: Path | None = None
 
     @require(lambda relative_path: bool(str(relative_path)), "relative path must not be empty")
     @ensure(lambda result: isinstance(result, bytes))
@@ -643,7 +644,9 @@ def _materialize_tree(repository: Path, revision: str, *, snapshot_identity: str
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(payload)
         destination.chmod(0o755 if entry.git_mode == "100755" else 0o644)
-    return Snapshot(root=root, commit=snapshot_identity, tree=tree, contents=contents, entries=entries)
+    return Snapshot(
+        root=root, commit=snapshot_identity, tree=tree, contents=contents, entries=entries, repository=repository
+    )
 
 
 def _materialize_commit(repository: Path, commit: str) -> Snapshot:

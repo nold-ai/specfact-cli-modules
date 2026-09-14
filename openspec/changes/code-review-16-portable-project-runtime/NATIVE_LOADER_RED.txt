@@ -1,0 +1,102 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items / 2 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_runtime_native.py F             [100%]
+
+=================================== FAILURES ===================================
+__________ test_project_native_libraries_use_their_own_loader_closure __________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_project_native_libraries_0')
+
+    def test_project_native_libraries_use_their_own_loader_closure(tmp_path: Path) -> None:
+        from specfact_code_review.run.runtime_native import inventory_native
+
+        artifact, capsule, system = (tmp_path / name for name in ('artifact', 'capsule', 'system'))
+        for root in (artifact, capsule, system):
+            root.mkdir()
+        _elf(system / 'libodbc.so.2', ('libc.so.6',))
+        _elf(system / 'libc.so.6', ('ld-linux-x86-64.so.2',))
+        _elf(system / 'ld-linux-x86-64.so.2', ())
+        _elf(capsule / 'libc.so.6', ())
+        original = (capsule / 'libc.so.6').read_bytes()
+>       records = inventory_native(
+            artifact, capsule_root=capsule, declared=('libodbc.so.2',), system_roots=(system,), target_loader=True
+        )
+
+tests/unit/specfact_code_review/run/test_runtime_native.py:61:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_project_native_libraries_0/artifact'),)
+kwargs = {'capsule_root': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_proj...sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-79/test_project_native_libraries_0/system'),), 'target_loader': True}
+
+    def wrapper(*args, **kwargs):  # type: ignore
+        """Wrap func by checking the preconditions and postconditions."""
+        kwargs_error = _assert_no_invalid_kwargs(kwargs)
+        if kwargs_error:
+            raise kwargs_error
+
+        # We need to create a new in-progress set if it is None as the ``ContextVar`` does not accept
+        # a factory function for the default argument. If we didn't do this, and simply set an empty
+        # set as the default, ``ContextVar`` would always point to the same set by copying the default
+        # by reference.
+        in_progress = _IN_PROGRESS.get()
+        if in_progress is None:
+            in_progress = set()
+            _IN_PROGRESS.set(in_progress)
+
+        # Use try-finally instead of ExitStack for performance.
+        try:
+            # If the wrapper is already checking the contracts for the wrapped function, avoid a recursive loop
+            # by skipping any subsequent contract checks for the same function.
+            if id_func in in_progress:
+                return func(*args, **kwargs)
+
+            in_progress.add(id_func)
+
+            (preconditions, snapshots, postconditions) = _unpack_pre_snap_posts(
+                wrapper
+            )
+
+            resolved_kwargs = kwargs_from_call(
+                param_names=param_names,
+                kwdefaults=kwdefaults,
+                args=args,
+                kwargs=kwargs,
+            )
+
+            type_error = _assert_resolved_kwargs_valid(
+                postconditions=postconditions, resolved_kwargs=resolved_kwargs
+            )
+            if type_error:
+                raise type_error
+
+            violation_error = _assert_preconditions(
+                preconditions=preconditions,
+                resolved_kwargs=resolved_kwargs,
+                func=func,
+            )
+            if violation_error:
+                raise violation_error
+
+            # Capture the snapshots
+            if postconditions and snapshots:
+                resolved_kwargs["OLD"] = _capture_old(
+                    snapshots=snapshots, resolved_kwargs=resolved_kwargs, func=func
+                )
+
+            # Ideally, we would catch any exception here and strip the checkers from the traceback.
+            # Unfortunately, this can not be done in Python 3, see
+            # https://stackoverflow.com/questions/44813333/how-can-i-elide-a-function-wrapper-from-the-traceback-in-python-3
+>           result = func(*args, **kwargs)
+                     ^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: inventory_native() got an unexpected keyword argument 'target_loader'
+
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: TypeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_native.py::test_project_native_libraries_use_their_own_loader_closure
+======================= 1 failed, 2 deselected in 0.09s ========================

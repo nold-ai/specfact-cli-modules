@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py ...F    [100%]
+
+=================================== FAILURES ===================================
+_____ test_distribution_executables_are_rebased_and_unowned_files_excluded _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-85/test_distribution_executables_0')
+
+    def test_distribution_executables_are_rebased_and_unowned_files_excluded(tmp_path) -> None:
+>       from specfact_code_review.run.runtime_build_driver import copy_executables
+E       ImportError: cannot import name 'copy_executables' from 'specfact_code_review.run.runtime_build_driver' (/private/tmp/specfact-473-implementation/packages/specfact-code-review/src/specfact_code_review/run/runtime_build_driver.py)
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py:45: ImportError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_build_driver.py::test_distribution_executables_are_rebased_and_unowned_files_excluded
+========================= 1 failed, 3 passed in 0.09s ==========================

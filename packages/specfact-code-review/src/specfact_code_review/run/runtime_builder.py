@@ -18,6 +18,7 @@ from specfact_code_review.run import sandbox
 from specfact_code_review.run.runtime_adapters import MANAGER_REQUIREMENTS, install_commands
 from specfact_code_review.run.runtime_artifacts import load_runtime, seal_runtime
 from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts
+from specfact_code_review.run.runtime_domains import member_dependency_graphs
 from specfact_code_review.run.runtime_models import (
     PreparedRuntime,
     ProjectPlan,
@@ -27,10 +28,11 @@ from specfact_code_review.run.runtime_models import (
 )
 from specfact_code_review.run.runtime_native import elf_dependencies, inventory_native
 from specfact_code_review.run.runtime_sources import IGNORED_INPUTS, verify_inputs
+from specfact_code_review.run.runtime_vcs import copy_vcs_context
 
 
 @require(lambda source, destination: source.is_dir() and not destination.exists())
-def copy_project(source: Path, destination: Path) -> None:
+def copy_project(source: Path, destination: Path, *, commit: str = "HEAD") -> None:
     """Copy inputs into private build storage without dereferencing source links."""
 
     def ignored(directory: str, names: list[str]) -> set[str]:
@@ -47,32 +49,7 @@ def copy_project(source: Path, destination: Path) -> None:
         return excluded
 
     shutil.copytree(source, destination, ignore=ignored)
-    if (source / ".git").exists():
-        with tempfile.TemporaryDirectory(prefix="specfact-build-git-", dir=destination.parent) as directory:
-            clone = Path(directory) / "clone"
-            completed = subprocess.run(
-                [
-                    "git",
-                    "-c",
-                    "core.hooksPath=/dev/null",
-                    "clone",
-                    "--quiet",
-                    "--no-hardlinks",
-                    "--no-checkout",
-                    str(source),
-                    str(clone),
-                ],
-                capture_output=True,
-                check=False,
-                timeout=120,
-            )
-            if completed.returncode:
-                raise ProjectRuntimeError("project_git_snapshot_failed")
-            shutil.move(str(clone / ".git"), destination / ".git")
-        (destination / ".git/config").write_text(
-            "[core]\nrepositoryformatversion = 0\nbare = false\nhooksPath = /dev/null\n", encoding="utf-8"
-        )
-        shutil.rmtree(destination / ".git/hooks", ignore_errors=True)
+    copy_vcs_context(source, destination, commit)
 
 
 @ensure(lambda result: "--clearenv" in result and "--unshare-all" in result)
@@ -123,7 +100,9 @@ def builder_command(runtime: Any, *, staging: Path, executable: str) -> list[str
 
 
 def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
-    copy_project(plan.root, staging / "project")
+    copy_project(plan.root, staging / "project", commit=plan.vcs.get("commit", "HEAD"))
+    if plan.vcs_repository and plan.vcs_repository != plan.root:
+        copy_vcs_context(plan.vcs_repository, staging / "project", plan.vcs["commit"])
     if (staging / "project/.git").is_dir():
         git = Path("/usr/bin/git")
         if not git.is_file():
@@ -139,7 +118,10 @@ def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
         )
         (builder_tools / "native/ld-linux-x86-64.so.2").chmod(0o755)
         (builder_tools / "bin/git").write_text(
-            "#!/opt/specfact/python/bin/python\nimport os,sys\nroot='/opt/specfact/output/builder-tools'\nos.execv(root+'/native/ld-linux-x86-64.so.2', [root+'/native/ld-linux-x86-64.so.2', '--library-path', root+'/native', root+'/bin/git.real', *sys.argv[1:]])\n"
+            "#!/opt/specfact/python/bin/python\nimport os,sys\nroot='/opt/specfact/output/b"
+            "uilder-tools'\nos.execv(root+'/native/ld-linux-x86-64.so.2', [root+'/native/l"
+            "d-linux-x86-64.so.2', '--library-path', root+'/native', root+'/bin/git.real'"
+            ", *sys.argv[1:]])\n"
         )
         (builder_tools / "bin/git").chmod(0o755)
     (staging / "home").mkdir()
@@ -170,7 +152,8 @@ def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
             stream.write(completed.stdout + completed.stderr)
         # Build logs stay private; repository-controlled errors may contain index credentials.
         raise ProjectRuntimeError(
-            f"project_runtime_prepare_failed:exit={completed.returncode}; inspect private build log {staging / 'build.log'}"
+            f"project_runtime_prepare_failed:exit={completed.returncode}; "
+            f"inspect private build log {staging / 'build.log'}"
         )
     if not (staging / "artifact/site-packages").is_dir():
         raise ProjectRuntimeError("project_runtime_prepare_incomplete")
@@ -217,6 +200,12 @@ def prepare_runtime(
                     "runtime_builder.py",
                     "runtime_native.py",
                     "runtime_adapters.py",
+                    "runtime_domains.py",
+                    "runtime_vcs.py",
+                    "target_bootstrap.py",
+                    "target_launch.py",
+                    "target_pytest.py",
+                    "sitecustomize.py",
                 )
             },
             "git": content_digest(Path("/usr/bin/git").read_bytes()) if Path("/usr/bin/git").is_file() else None,
@@ -244,11 +233,12 @@ def prepare_runtime(
         verify_inputs(plan)
         inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
         inventory["native_libraries"] = inventory_native(
-            artifact, capsule_root=runtime.root, declared=plan.native_libraries
+            artifact, capsule_root=runtime.root, declared=plan.native_libraries, target_loader=True
         )
         inventory["analyzer_conflicts"] = analyzer_dependency_conflicts(
             inventory, runtime.root / "opt/specfact/analyzers"
         )
+        inventory["member_graphs"] = member_dependency_graphs(inventory, runtime.root / "opt/specfact/analyzers")
         seal_runtime(
             artifact, plan=plan, environment_id=environment, worker_identity=runtime.identity, inventory=inventory
         )

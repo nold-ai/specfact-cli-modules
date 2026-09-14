@@ -1,0 +1,3 @@
+"""Additional source root imported through the repository's pytest configuration."""
+
+VALUE = 42

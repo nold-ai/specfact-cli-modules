@@ -164,3 +164,50 @@ requirements:
         pinned Linux capsule corpus.
       observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
         Local unit or bootstrap results do not constitute signed release acceptance.
+  ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:native-environment-and-execution-evidence-fidelity
+  : rationale: Native environments, test phases, VCS versions and signed Python selection must match the actual
+      target project.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-16-portable-project-runtime/specs/portable-project-runtime/spec.md
+    verification_cases:
+    - case_id: 473-7-1
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Select a concrete native Hatch environment and reject ambiguity.
+      observable: Focused regression assertions and actual Linux corpus execution must pass; local component results
+        do not confer signed release acceptance.
+    - case_id: 473-7-2
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Retain owned executables and actual pytest phase errors.
+      observable: Focused regression assertions and actual Linux corpus execution must pass; local component results
+        do not confer signed release acceptance.
+    - case_id: 473-7-3
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Reject host manager startup failures without test calls.
+      observable: Focused regression assertions and actual Linux corpus execution must pass; local component results
+        do not confer signed release acceptance.
+    - case_id: 473-7-4
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Bind VCS version inputs and immutable snapshot contexts.
+      observable: Focused regression assertions and actual Linux corpus execution must pass; local component results
+        do not confer signed release acceptance.
+    - case_id: 473-7-5
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Select a signed Python worker matching project constraints.
+      observable: Focused regression assertions and actual Linux corpus execution must pass; local component results
+        do not confer signed release acceptance.
+    - case_id: 473-7-6
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Allow localhost plugin coordination while external networking remains disabled.
+      observable: Focused regression assertions and actual Linux corpus execution must pass; local component results
+        do not confer signed release acceptance.

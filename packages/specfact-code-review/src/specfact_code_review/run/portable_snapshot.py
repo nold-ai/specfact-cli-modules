@@ -13,7 +13,9 @@ from specfact_code_review.run.portable_worker import DEPENDENT_MEMBERS, preparat
 from specfact_code_review.run.runtime_artifacts import load_runtime
 from specfact_code_review.run.runtime_builder import prepare_runtime
 from specfact_code_review.run.runtime_discovery import discover_project
-from specfact_code_review.run.runtime_models import ProjectRuntimeError, document_digest
+from specfact_code_review.run.runtime_interpreter import project_worker
+from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError, document_digest
+from specfact_code_review.run.runtime_vcs import vcs_context
 
 
 @require(lambda root: root.is_dir())
@@ -37,6 +39,19 @@ def project_runtime_requested(root: Path, options: Any) -> bool:
     )
 
 
+@require(lambda root: root.is_dir())
+def discover_snapshot(root: Path, *, config_path: Path | None, source_snapshot: Any = None) -> ProjectPlan:
+    """Attach selected VCS metadata without changing the immutable source tree."""
+    plan = discover_project(root, config_path=config_path)
+    repository = getattr(source_snapshot, "repository", None)
+    if repository is None:
+        return plan
+    commit = source_snapshot.commit
+    if commit.startswith(("index:", "index-")):
+        commit = "HEAD"
+    return replace(plan, vcs_repository=repository, vcs=vcs_context(repository, commit))
+
+
 @require(lambda snapshot_root: snapshot_root.is_dir())
 def run_project_snapshot(
     runtime: Any,
@@ -45,12 +60,62 @@ def run_project_snapshot(
     files: list[Path],
     options: Any,
     assurance_kind: str,
+    source_snapshot: Any = None,
+) -> tuple[Any, dict[str, Any]]:
+    """Bind every review side to its selected signed Python worker."""
+    try:
+        plan = discover_snapshot(snapshot_root, config_path=options.project_config, source_snapshot=source_snapshot)
+        with project_worker(runtime, plan) as selected:
+            return _run_project_snapshot(
+                selected,
+                snapshot_root=snapshot_root,
+                files=files,
+                options=options,
+                assurance_kind=assurance_kind,
+                plan=plan,
+            )
+    except (OSError, ValueError) as exc:
+        return _failed_project_snapshot(
+            runtime, snapshot_root=snapshot_root, files=files, options=options, reason=str(exc)
+        )
+
+
+def _failed_project_snapshot(
+    runtime: Any, *, snapshot_root: Path, files: list[Path], options: Any, reason: str
+) -> tuple[Any, dict[str, Any]]:
+    from specfact_code_review.run.runner import CapsuleSnapshotSettings, _run_capsule_snapshot
+
+    unavailable = preparation_failure_snapshot(reason)
+    snapshot = _run_capsule_snapshot(
+        runtime,
+        snapshot_root=snapshot_root,
+        files=files,
+        options=options,
+        settings=CapsuleSnapshotSettings(portable_runtime=True, unavailable_members=unavailable),
+    )
+    return snapshot, {
+        "status": "UNKNOWN",
+        "diagnostic": reason,
+        "remedy": (
+            "Inspect project configuration with specfact code review runtime inspect --json, then run runtime prepare."
+        ),
+    }
+
+
+@require(lambda snapshot_root: snapshot_root.is_dir())
+def _run_project_snapshot(
+    runtime: Any,
+    *,
+    snapshot_root: Path,
+    files: list[Path],
+    options: Any,
+    assurance_kind: str,
+    plan: ProjectPlan,
 ) -> tuple[Any, dict[str, Any]]:
     """Prepare once, execute applicable members, and retain independent evidence."""
     from specfact_code_review.run.runner import CapsuleSnapshotSettings, _run_capsule_snapshot
 
     try:
-        plan = discover_project(snapshot_root, config_path=options.project_config)
         prepared = (
             load_runtime(
                 options.project_runtime,
@@ -62,20 +127,9 @@ def run_project_snapshot(
             else prepare_runtime(plan, runtime=runtime)
         )
     except (OSError, ValueError) as exc:
-        reason = str(exc)
-        unavailable = preparation_failure_snapshot(reason)
-        snapshot = _run_capsule_snapshot(
-            runtime,
-            snapshot_root=snapshot_root,
-            files=files,
-            options=options,
-            settings=CapsuleSnapshotSettings(portable_runtime=True, unavailable_members=unavailable),
+        return _failed_project_snapshot(
+            runtime, snapshot_root=snapshot_root, files=files, options=options, reason=str(exc)
         )
-        return snapshot, {
-            "status": "UNKNOWN",
-            "diagnostic": reason,
-            "remedy": "Inspect project configuration with specfact code review runtime inspect --json, then run runtime prepare.",
-        }
     evidence = {
         "status": "PASS",
         "schema": "project-runtime-layer-v2",
@@ -146,6 +200,7 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
         result, binding = run_project_snapshot(
             runtime,
             snapshot_root=snapshot.root,
+            source_snapshot=snapshot,
             files=files,
             options=side_options,
             assurance_kind="index" if scope_evidence.get("assurance_kind") == "index" else "range_preview",

@@ -7,10 +7,12 @@ import hashlib
 import json
 import os
 import platform
+import runpy
 import shutil
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -80,7 +82,24 @@ def execute(argv: list[str], *, cwd: Path, evidence: Path, name: str, allowed: t
     return result.stdout
 
 
+def materialize_reconstruction(source: Path, destination: Path) -> None:
+    """Create executable external fixtures without collecting them in the module suite."""
+    shutil.copytree(source, destination)
+    for template in destination.rglob("*.py.in"):
+        template.rename(template.with_suffix(""))
+
+
 def checkout(entry: dict[str, Any], root: Path, evidence: Path) -> None:
+    if entry.get("fixture"):
+        root.parent.mkdir(parents=True, exist_ok=True)
+        materialize_reconstruction(MANIFEST.parent / entry["fixture"], root)
+        identity = hashlib.sha256(json.dumps(tracked_identity(root), sort_keys=True).encode()).hexdigest()
+        entry["commit"] = "reconstructed-sha256:" + identity
+        evidence.mkdir(parents=True, exist_ok=True)
+        (evidence / "fixture-origin.json").write_text(
+            json.dumps({"kind": "reconstruction", "original_customer_reproduction": False, "source_identity": identity})
+        )
+        return
     root.mkdir(parents=True)
     execute(["git", "init", "--quiet"], cwd=root, evidence=evidence, name="git-init")
     execute(["git", "fetch", "--depth=1", entry["url"], entry["commit"]], cwd=root, evidence=evidence, name="git-fetch")
@@ -91,7 +110,11 @@ def checkout(entry: dict[str, Any], root: Path, evidence: Path) -> None:
 
 
 def tracked_identity(root: Path) -> dict[str, str]:
-    paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().split("\0")
+    paths = (
+        subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().split("\0")
+        if (root / ".git").exists()
+        else [path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()]
+    )
     return {
         name: hashlib.sha256((root / name).read_bytes()).hexdigest()
         for name in paths
@@ -138,6 +161,15 @@ def review(
     return report
 
 
+def assert_host_execution(result: Path) -> None:
+    """Reject manager startup errors and suites that never enter a test call."""
+    if not result.is_file():
+        raise ValueError("host has no actual test execution report")
+    cases = ET.parse(result).getroot().iter("testcase")
+    if not any(case.find("error") is None and case.find("skipped") is None for case in cases):
+        raise ValueError("host has no actual test execution")
+
+
 def host_test(entry: dict[str, Any], root: Path, evidence: Path, workspace: Path) -> None:
     """Record native-manager test execution in a separate disposable checkout."""
     host = workspace / "host-checkouts" / entry["name"]
@@ -170,19 +202,38 @@ def host_test(entry: dict[str, Any], root: Path, evidence: Path, workspace: Path
         ]
         run = [str(host / ".venv/bin/python"), "-m", "pytest"]
     elif manager == "hatch":
-        install = [python, "-m", "hatch", "-e", entry["environment"], "env", "create"]
-        run = [python, "-m", "hatch", "-e", entry["environment"], "run", "python", "-m", "pytest"]
+        export = json.loads(
+            execute(
+                ["env", f"HATCH_UV={environment / 'bin/uv'}", python, "-m", "hatch", "env", "show", "--json"],
+                cwd=host,
+                evidence=evidence,
+                name="host-environments",
+            )
+        )
+        driver = (
+            MANIFEST.parents[3] / "packages/specfact-code-review/src/specfact_code_review/run/runtime_build_driver.py"
+        )
+        selected = runpy.run_path(str(driver))["select_hatch_environment"](
+            export, entry["environment"], f"{sys.version_info.major}.{sys.version_info.minor}"
+        )
+        install = [python, "-m", "hatch", "env", "create", selected]
+        run = [python, "-m", "hatch", "-e", selected, "run", "python", "-m", "pytest"]
     else:
         install = [python, "-m", "poetry", "install", "--no-interaction", "--only", "main," + ",".join(entry["groups"])]
         run = [python, "-m", "poetry", "run", "python", "-m", "pytest"]
     execute(install, cwd=host, evidence=evidence, name="host-install")
     execute(
-        [*run, *[path for path in entry["paths"] if path.startswith("tests/")]],
+        [
+            *run,
+            f"--junitxml={evidence / 'host-junit.xml'}",
+            *[path for path in entry["paths"] if path.startswith("tests/")],
+        ],
         cwd=host,
         evidence=evidence,
         name="host-tests",
         allowed=(0, 1),
     )
+    assert_host_execution(evidence / "host-junit.xml")
 
 
 def controlled_defect(root: Path, evidence: Path, config: Path, workspace: Path) -> None:
@@ -217,7 +268,7 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
     host_test(entry, root, evidence, workspace)
     config = evidence / "project-runtime.toml"
     config.write_text(
-        f"manager={json.dumps(entry['manager'])}\nenvironment={json.dumps(entry['environment'])}\ngroups={json.dumps(entry['groups'])}\n"
+        f"manager={json.dumps(entry['manager'])}\nenvironment={json.dumps(entry['environment'])}\ngroups={json.dumps(entry['groups'])}\nnative_libraries={json.dumps(entry.get('native_libraries', []))}\n"
     )
     execute(
         ["specfact", "code", "review", "runtime", "inspect", "--project-config", str(config), "--json"],
@@ -260,17 +311,25 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, required=True)
-    parser.add_argument("--repository", choices=["requests", "hatch", "flask", "poetry"])
+    parser.add_argument("--repository", choices=["requests", "hatch", "flask", "poetry", "hatch-detached"])
     args = parser.parse_args()
     if platform.system() != "Linux" or platform.machine() != "x86_64" or os.getuid() == 0:
         raise ValueError("corpus requires non-root Linux x86-64")
     manifest = json.loads(MANIFEST.read_text())
     if f"{sys.version_info.major}.{sys.version_info.minor}" not in manifest["python"]:
         raise ValueError("unsupported corpus Python ABI")
-    for entry in manifest["repositories"]:
-        if not args.repository or args.repository == entry["name"]:
+    failures = []
+    for entry in [*manifest["repositories"], *manifest.get("reconstructions", [])]:
+        if args.repository and args.repository != entry["name"]:
+            continue
+        try:
             run_entry(entry, args.workspace.resolve())
-    return 0
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            failures.append({"repository": entry["name"], "diagnostic": str(exc)})
+    summary = args.workspace / "evidence" / "corpus-summary.json"
+    summary.parent.mkdir(parents=True, exist_ok=True)
+    summary.write_text(json.dumps({"status": "FAIL" if failures else "PASS", "failures": failures}, indent=2))
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

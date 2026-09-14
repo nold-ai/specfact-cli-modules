@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py ....F   [100%]
+
+=================================== FAILURES ===================================
+________________ test_hatch_export_has_its_owned_uv_executable _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1083fdcd0>
+
+    def test_hatch_export_has_its_owned_uv_executable(monkeypatch) -> None:
+        from specfact_code_review.run import runtime_build_driver as driver
+        observed = []
+
+        def run(command, *, env=None):
+            observed.append(env.copy())
+            return '{"review": {}}'
+
+        monkeypatch.setattr(driver, '_run', run)
+        driver._prepare_hatch({'environment': 'review'}, '/private/tools/bin/python', {})
+>       assert observed[0]['HATCH_UV'] == '/private/tools/bin/uv'
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'HATCH_UV'
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py:78: KeyError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_build_driver.py::test_hatch_export_has_its_owned_uv_executable
+========================= 1 failed, 4 passed in 0.09s ==========================

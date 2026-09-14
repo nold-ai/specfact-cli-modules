@@ -7716,3 +7716,17 @@ def test_customer_github_actions_uses_verified_installed_payload(
 def isolate_legacy_runtime_boundary(monkeypatch: MonkeyPatch) -> None:
     """These tests exercise the v1/stdlib path; portable preparation has dedicated tests."""
     monkeypatch.setattr("specfact_code_review.run.portable_snapshot.project_runtime_requested", lambda *args: False)
+
+
+def test_pytest_worker_does_not_inherit_controller_diff_selection(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    assert "SPECFACT_CODE_REVIEW_CHANGED_DIFF" not in runner_api._pytest_env()
+    assert os.environ["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] == "cached"
+
+
+def test_pytest_worker_does_not_inherit_calling_git_index(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setenv("GIT_INDEX_FILE", "/private/controller/index")
+    assert "GIT_INDEX_FILE" not in runner_api._pytest_env()
+    assert os.environ["GIT_INDEX_FILE"] == "/private/controller/index"

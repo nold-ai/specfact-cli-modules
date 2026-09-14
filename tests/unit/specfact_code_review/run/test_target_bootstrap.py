@@ -32,3 +32,31 @@ def test_python_cli_keeps_code_separate_from_bootstrap(monkeypatch) -> None:
     assert command[-3:] == ["-u", "-c", code]
     assert environment["SPECFACT_PROJECT_PYTHON"] == "1"
     assert environment["PYTHONPATH"] == "/opt/specfact/builtin/specfact_code_review/run"
+
+
+def test_member_fallback_rejects_unrelated_analyzer_imports(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "needed.py").write_text("VALUE = 1\n")
+    (tmp_path / "unrelated.py").write_text("VALUE = 2\n")
+    monkeypatch.setattr(target_bootstrap, "ANALYZERS", tmp_path)
+    finder = target_bootstrap.DomainFinder({"sealed_imports": ["needed"], "installed": []})
+    assert finder.find_spec("needed") is not None
+    assert finder.find_spec("unrelated") is None
+
+
+def test_member_metadata_lookup_cannot_expand_explicit_target_inventory(tmp_path: Path, monkeypatch) -> None:
+    from importlib.metadata import DistributionFinder
+
+    metadata = tmp_path / "needed-1.0.dist-info"
+    metadata.mkdir()
+    (metadata / "METADATA").write_text("Metadata-Version: 2.1\nName: needed\nVersion: 1.0\n")
+    monkeypatch.setattr(target_bootstrap, "ANALYZERS", tmp_path)
+    finder = target_bootstrap.DomainFinder(
+        {
+            "sealed_imports": ["needed"],
+            "installed": [{"name": "needed", "version": "1.0", "origin": "analyzer"}],
+        }
+    )
+    context = DistributionFinder.Context(path=["/project-only"])
+    assert not list(finder.find_distributions(context))
+    default_context = DistributionFinder.Context(name="needed")
+    assert [dist.version for dist in finder.find_distributions(default_context)] == ["1.0"]

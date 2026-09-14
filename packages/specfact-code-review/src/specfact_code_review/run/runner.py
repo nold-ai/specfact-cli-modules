@@ -661,20 +661,27 @@ def _selected_module_payload() -> SelectedModulePayload:
     return SelectedModulePayload(payload, reason)
 
 
-def _prepare_capsule_runtime(*, project_runtime_identity: str = "not-applicable") -> tuple[CapsuleRuntime | None, str]:
+def _capsule_lock_environment(environment_id: str | None) -> tuple[dict[str, object], str, dict[str, object]]:
+    lock_path = Path(__file__).parents[1] / "resources/contracts/pr-range-v1-toolchain-lock.json"
+    lock = cast(dict[str, object], json.loads(lock_path.read_text(encoding="utf-8")))
+    environment_id = environment_id or _capsule_environment_id()
+    environments = cast(list[dict[str, object]], lock["environments"])
+    environment = next(
+        item for item in environments if str(item.get("environment_id") or item.get("id")) == environment_id
+    )
+    return lock, environment_id, environment
+
+
+def _prepare_capsule_runtime(
+    *, project_runtime_identity: str = "not-applicable", environment_id: str | None = None
+) -> tuple[CapsuleRuntime | None, str]:
     """Materialize and compose the signed runtime without host analyzer fallback."""
 
     if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
         return None, "unsupported_controller_platform"
     capsule_root: Path | None = None
     try:
-        lock_path = Path(__file__).parents[1] / "resources/contracts/pr-range-v1-toolchain-lock.json"
-        lock = cast(dict[str, object], json.loads(lock_path.read_text(encoding="utf-8")))
-        environment_id = _capsule_environment_id()
-        environments = cast(list[dict[str, object]], lock["environments"])
-        environment = next(
-            item for item in environments if str(item.get("environment_id") or item.get("id")) == environment_id
-        )
+        lock, environment_id, environment = _capsule_lock_environment(environment_id)
         storage_root = Path(
             os.environ.get(
                 "SPECFACT_CODE_REVIEW_CAPSULE_CACHE",
@@ -3937,7 +3944,8 @@ def _pytest_in_capsule() -> bool:
 
 
 def _pytest_env() -> dict[str, str]:
-    env = os.environ.copy()
+    env = _candidate_git_environment()
+    env.pop("SPECFACT_CODE_REVIEW_CHANGED_DIFF", None)
     if _pytest_in_capsule():
         env.pop("PYTHONPATH", None)
         env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
@@ -6772,6 +6780,135 @@ def _run_local_capsule_snapshot(
             shutil.rmtree(root, ignore_errors=True)
 
 
+@dataclass(frozen=True)
+class _LocalCapsuleReviewContext:
+    files: list[Path]
+    options: ReviewOptions
+    scope_evidence: dict[str, object]
+    cached_snapshot: CachedAnalysisSnapshot | None
+    cached_diff: CachedDiffIdentity | None
+    worktree_identity: WorktreeReviewIdentity | Literal["not_repository"]
+
+
+def _finalize_local_capsule_snapshot(
+    snapshot: CapsuleSnapshotResult, context: _LocalCapsuleReviewContext
+) -> ReviewReport:
+    files, review_options, scope_evidence = context.files, context.options, context.scope_evidence
+    cached_snapshot, cached_diff = context.cached_snapshot, context.cached_diff
+    worktree_identity = context.worktree_identity
+    if _worktree_analysis_identity_changed(worktree_identity, files):
+        return _worktree_snapshot_unknown(
+            "worktree_snapshot_changed_during_analysis",
+            files=files,
+            options=review_options,
+            scope_evidence=scope_evidence,
+        )
+    findings_by_member = snapshot.findings_by_member
+    if cached_snapshot is not None:
+        rebased_findings = _rebase_cached_snapshot_findings(
+            findings_by_member,
+            snapshot_root=cached_snapshot.root,
+            repository=cached_snapshot.repository,
+        )
+        if rebased_findings is None:
+            return _with_capsule_enforcement(
+                _unknown_capsule_report(
+                    "cached_capsule_finding_path_unavailable",
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                ),
+                review_options,
+                files=files,
+                findings_by_member={},
+                cached_diff=cached_diff,
+            )
+        findings_by_member = rebased_findings
+    enforced_report = _with_capsule_enforcement(
+        _capsule_report(
+            snapshot.evidence,
+            findings_by_member,
+            options=review_options,
+            scope_evidence=scope_evidence,
+        ),
+        review_options,
+        files=files,
+        findings_by_member=findings_by_member,
+        cached_diff=cached_diff,
+    )
+    if _worktree_analysis_identity_changed(worktree_identity, files):
+        return _worktree_snapshot_unknown(
+            "worktree_snapshot_changed_during_analysis",
+            files=files,
+            options=review_options,
+            scope_evidence=scope_evidence,
+        )
+    return enforced_report
+
+
+def _run_local_capsule_context(
+    runtime: CapsuleRuntime,
+    files: list[Path],
+    review_options: ReviewOptions,
+    scope_evidence: dict[str, object],
+    assurance_kind: LocalAssuranceKind,
+) -> ReviewReport:
+    with ExitStack() as stack:
+        snapshot_root = Path.cwd()
+        snapshot_files = files
+        cached_diff: CachedDiffIdentity | None = None
+        cached_snapshot: CachedAnalysisSnapshot | None = None
+        worktree_identity: WorktreeReviewIdentity | Literal["not_repository"] = "not_repository"
+        if _cached_review_requested(review_options):
+            temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
+            cached_snapshot = _cached_analysis_snapshot(files, temporary_root)
+            if cached_snapshot is None:
+                return _with_capsule_enforcement(
+                    _unknown_capsule_report(
+                        "cached_snapshot_materialization_unavailable",
+                        options=review_options,
+                        scope_evidence=scope_evidence,
+                    ),
+                    review_options,
+                    files=files,
+                    findings_by_member={},
+                )
+            snapshot_root, snapshot_files = cached_snapshot.root, cached_snapshot.files
+            cached_diff = cached_snapshot.diff
+        elif review_options.review_mode == "changed":
+            captured_identity = _capture_worktree_analysis_identity(files)
+            if captured_identity is None:
+                return _worktree_snapshot_unknown(
+                    "worktree_snapshot_identity_unavailable",
+                    files=files,
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                )
+            worktree_identity = captured_identity
+        from specfact_code_review.run.portable_snapshot import project_runtime_requested, run_project_snapshot
+
+        if project_runtime_requested(snapshot_root, review_options):
+            snapshot, project_evidence = run_project_snapshot(
+                runtime,
+                snapshot_root=snapshot_root,
+                files=snapshot_files,
+                options=review_options,
+                assurance_kind=assurance_kind,
+            )
+            scope_evidence["project_runtime"] = project_evidence
+        else:
+            snapshot = _run_local_capsule_snapshot(
+                runtime,
+                snapshot_root=snapshot_root,
+                files=snapshot_files,
+                options=review_options,
+                assurance_kind=assurance_kind,
+            )
+        context = _LocalCapsuleReviewContext(
+            files, review_options, scope_evidence, cached_snapshot, cached_diff, worktree_identity
+        )
+        return _finalize_local_capsule_snapshot(snapshot, context)
+
+
 def run_capsule_review(
     files: list[Path],
     options: ReviewOptions | None = None,
@@ -6798,104 +6935,7 @@ def run_capsule_review(
             findings_by_member={},
         )
     try:
-        with ExitStack() as stack:
-            snapshot_root = Path.cwd()
-            snapshot_files = files
-            cached_diff: CachedDiffIdentity | None = None
-            cached_snapshot: CachedAnalysisSnapshot | None = None
-            worktree_identity: WorktreeReviewIdentity | Literal["not_repository"] = "not_repository"
-            if _cached_review_requested(review_options):
-                temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
-                cached_snapshot = _cached_analysis_snapshot(files, temporary_root)
-                if cached_snapshot is None:
-                    return _with_capsule_enforcement(
-                        _unknown_capsule_report(
-                            "cached_snapshot_materialization_unavailable",
-                            options=review_options,
-                            scope_evidence=scope_evidence,
-                        ),
-                        review_options,
-                        files=files,
-                        findings_by_member={},
-                    )
-                snapshot_root, snapshot_files = cached_snapshot.root, cached_snapshot.files
-                cached_diff = cached_snapshot.diff
-            elif review_options.review_mode == "changed":
-                captured_identity = _capture_worktree_analysis_identity(files)
-                if captured_identity is None:
-                    return _worktree_snapshot_unknown(
-                        "worktree_snapshot_identity_unavailable",
-                        files=files,
-                        options=review_options,
-                        scope_evidence=scope_evidence,
-                    )
-                worktree_identity = captured_identity
-            from specfact_code_review.run.portable_snapshot import project_runtime_requested, run_project_snapshot
-
-            if project_runtime_requested(snapshot_root, review_options):
-                snapshot, project_evidence = run_project_snapshot(
-                    runtime,
-                    snapshot_root=snapshot_root,
-                    files=snapshot_files,
-                    options=review_options,
-                    assurance_kind=assurance_kind,
-                )
-                scope_evidence["project_runtime"] = project_evidence
-            else:
-                snapshot = _run_local_capsule_snapshot(
-                    runtime,
-                    snapshot_root=snapshot_root,
-                    files=snapshot_files,
-                    options=review_options,
-                    assurance_kind=assurance_kind,
-                )
-            if _worktree_analysis_identity_changed(worktree_identity, files):
-                return _worktree_snapshot_unknown(
-                    "worktree_snapshot_changed_during_analysis",
-                    files=files,
-                    options=review_options,
-                    scope_evidence=scope_evidence,
-                )
-            findings_by_member = snapshot.findings_by_member
-            if cached_snapshot is not None:
-                rebased_findings = _rebase_cached_snapshot_findings(
-                    findings_by_member,
-                    snapshot_root=cached_snapshot.root,
-                    repository=cached_snapshot.repository,
-                )
-                if rebased_findings is None:
-                    return _with_capsule_enforcement(
-                        _unknown_capsule_report(
-                            "cached_capsule_finding_path_unavailable",
-                            options=review_options,
-                            scope_evidence=scope_evidence,
-                        ),
-                        review_options,
-                        files=files,
-                        findings_by_member={},
-                        cached_diff=cached_diff,
-                    )
-                findings_by_member = rebased_findings
-            enforced_report = _with_capsule_enforcement(
-                _capsule_report(
-                    snapshot.evidence,
-                    findings_by_member,
-                    options=review_options,
-                    scope_evidence=scope_evidence,
-                ),
-                review_options,
-                files=files,
-                findings_by_member=findings_by_member,
-                cached_diff=cached_diff,
-            )
-            if _worktree_analysis_identity_changed(worktree_identity, files):
-                return _worktree_snapshot_unknown(
-                    "worktree_snapshot_changed_during_analysis",
-                    files=files,
-                    options=review_options,
-                    scope_evidence=scope_evidence,
-                )
-            return enforced_report
+        return _run_local_capsule_context(runtime, files, review_options, scope_evidence, assurance_kind)
     finally:
         _cleanup_capsule_runtime(runtime)
 

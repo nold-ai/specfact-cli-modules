@@ -59,6 +59,12 @@ The system SHALL introduce project-runtime-layer-v2 for local runtime descriptor
 - **WHEN** preparation or worker preflight runs
 - **THEN** the exact incompatible dependency/library is reported without silently substituting versions
 
+#### Scenario: Member-specific dependency closure
+- **GIVEN** the signed analyzer environment contains packages outside a member's declared dependency graph
+- **WHEN** a project worker or that analyzer member resolves imports
+- **THEN** unrelated analyzer packages are unavailable, project-owned dependencies take precedence where compatible, and the selected member's dependency graph is recorded
+
+
 ### Requirement: Attach context to every review scope
 
 The system SHALL attach runtime evidence to explicit-file, full, worktree, index and range review. Base/head snapshots with different inputs SHALL receive different runtime bindings. Local provenance SHALL NOT become protected PR authority. Official installed customer modules SHALL work with GITHUB_ACTIONS=true.
@@ -95,3 +101,50 @@ The system SHALL require a pinned Requests/pip, Hatch/Hatch, Flask/uv and Poetry
 - **GIVEN** the published signed module and pinned upstream checkouts
 - **WHEN** cold and offline-warm customer reviews run
 - **THEN** actual applicable analysis and test execution complete without development overrides
+
+### Requirement: Native environment and execution evidence fidelity
+The runtime SHALL select a concrete environment from the package manager's native export, preserve installed executable entry points, and retain actual pytest setup, collection, and call failures. Corpus host baselines SHALL reject startup failures without executed tests.
+
+#### Scenario: Hatch internal matrix selection
+- **GIVEN** a Hatch test matrix with one environment matching the selected Python ABI
+- **WHEN** preparation selects the matrix
+- **THEN** Hatch creates and locates that concrete environment using its positional environment argument
+- **AND** multiple matching environments produce an ambiguity diagnostic before installation
+
+#### Scenario: Native executable required by test setup
+- **GIVEN** an installed distribution that owns a console script or native executable
+- **WHEN** a target worker starts tests
+- **THEN** the executable is available in the isolated target runtime and included in its inventory
+- **AND** its build-machine interpreter path is never retained
+
+#### Scenario: Test setup and host startup failures
+- **GIVEN** pytest fails before a test call
+- **WHEN** observations are recorded
+- **THEN** the failed phase and exception text remain available with incomplete evidence
+- **AND** a host command that never executes tests cannot satisfy corpus acceptance
+
+#### Scenario: VCS-derived build version and cache reuse
+- **GIVEN** a project whose build derives its version from Git history or tags
+- **WHEN** its runtime is prepared for a worktree or immutable review side
+- **THEN** the private build receives sanitized Git metadata and an index matching the selected commit
+- **AND** cache identity includes the selected commit, tag identities, and shallow-history boundary
+- **AND** source modifications remain modifications rather than becoming a fabricated clean version
+
+#### Scenario: Project Python differs from the controller
+- **GIVEN** a project selects Python 3.11 through explicit configuration or `.python-version`, while the controller uses Python 3.12
+- **WHEN** preparation or review starts
+- **THEN** the signed Python 3.11 worker is selected and verified against the project's full Python version constraint
+- **AND** base and head snapshots select their own compatible workers
+- **AND** an unsupported pin or conflicting version constraint produces an explicit diagnostic
+
+#### Scenario: Offline plugin coordination
+- **GIVEN** a pytest plugin uses localhost sockets to coordinate workers
+- **WHEN** tests run in an offline target namespace
+- **THEN** localhost resolves using a fixed private hosts file without granting external network access
+- **AND** pytest internal errors retain their exact traceback as incomplete evidence
+
+#### Scenario: Nested review tests do not inherit controller scope
+- **GIVEN** the development review controller uses cached-diff enforcement
+- **WHEN** it executes repository tests that invoke review themselves
+- **THEN** controller-only diff selection does not leak into those test processes
+- **AND** tests can explicitly select their own diff scope

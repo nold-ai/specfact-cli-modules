@@ -55,3 +55,31 @@ Latest local full run on 2026-09-14: `hatch run test` with public core 0.55.4 an
 Smart-test verification subsequently passed **2,008 tests in 82.95 seconds**. The development virtualenv lacked CrossHair, causing the review tool to discover a globally installed executable using a different interpreter. Installed the capsule-pinned `crosshair-tool==0.0.109` into the task-owned virtualenv; fresh review must be rerun with that environment. Earlier advisory reports containing the CrossHair import error are not complete passing analyzer evidence.
 
 The staged-snapshot pytest failure was isolated to `test_github_candidate_context_failure_never_uses_stale_official_payload`: it depended on the caller checkout containing `.git`. The test now constructs its own publisher-checkout fixture and preserves the original fail-closed assertions. Recorded failing transcripts are normalized only for trailing whitespace; their outcomes and diagnostics are unchanged.
+
+
+### Follow-up from candidate Linux evidence (2026-09-14)
+
+- Signed branch head `6499136806637c6c2075ea44c857e0b90a8fb301`, PR orchestrator run `34839312884`: existing capsule namespace/cold/warm/controlled-defect fixtures completed as expected on Python 3.11/3.12/3.13. Python 3.12 Requests external acceptance passed; Hatch analysis remained incomplete. Original customer reproduction remains inaccessible and unvalidated.
+- The Hatch adapter incorrectly supplied global `-e` to native `env create/find`, which take a positional name. The host command reported `Unknown environment: hatch-test` and the former harness accepted exit 1 without test inventory. These were implementation defects, not evidence of customer compatibility.
+- `HATCH_EXECUTION_RED.txt`, `HATCH_NATIVE_EXPORT_RED.txt`, `EXECUTABLE_INVENTORY_RED.txt`, and `OFFLINE_PLUGIN_RED.txt` record failures before fixes. Native exports now select the concrete ABI environment; artifacts retain owned scripts/native executables; host acceptance requires actual JUnit test execution; setup/collection/internal errors remain observable. Local Linux preparation selected `hatch-test.py3.12`; execution exposed missing localhost resolution in pytest-rerunfailures, addressed with private hosts configuration inside the offline namespace.
+- `MEMBER_CLOSURE_RED.txt`, `MEMBER_IMPORT_DOMAIN_RED.txt`, `NATIVE_LOADER_RED.txt`, and `NATIVE_WORKER_LAUNCH_RED.txt` precede member-specific sealed import graphs and target native loader/libc isolation. Unit checks do not substitute for Linux acceptance.
+- `RECONSTRUCTION_RED.txt` and `CORPUS_CONTINUATION_RED.txt` precede the labelled detached Hatch/src-layout/asyncio/requests/pyodbc fixture and continuation across failed corpus entries. Any failed entry still fails the gate.
+- `VCS_VERSION_RED.txt`, `VCS_SNAPSHOT_RED.txt`, and `PYTHON_SELECTION_RED.txt` precede Git version/cache binding and signed target Python selection independent from the controller.
+- Follow-up full run: 2011 passes and 15 Semgrep failures when the task's required SSL_CERT_FILE was omitted. Rerun with the established certificate bundle is required; that failed run is not passing evidence.
+
+
+### Passing follow-up evidence (2026-09-14)
+
+- Local full and smart suites: 2032 passed, two existing lark deprecation warnings, 100.91s and 99.93s respectively. Contract suite: 28 passed. Formatting, typing, lint (10.00/10), YAML, import boundaries, strict OpenSpec, planned Requirements mapping, and development checksum/version verification passed before review refinements.
+- Actual local Linux x86-64/non-root/Python 3.12 component runs: pinned Hatch `hatch-test.py3.12` collected/executed all five selected tests, exit 0; labelled detached reconstruction executed its asyncio/requests/pyodbc test, exit 0. Source and artifacts remained in private task storage. These use signed baseline Python with development worker components and are **not signed release acceptance**.
+- `HATCH_INSTALLER_DOMAIN_RED.txt` records the pip-backed detached failure before manager-specific environment controls were separated. Upstream Hatch's uv installer was unaffected; the reconstruction was essential to expose pip redirection.
+- Fresh SpecFact bug-hunt review identified a preparation complexity regression and long review function; refactoring passed 411 focused tests. Targeted pytest instrumentation subsequently recorded 1058 passes; a fresh review is required after the fixes.
+
+
+- Instrumenting the actual review subprocess (not a separately invoked test suite) revealed 30 worktree-test failures caused by inherited `SPECFACT_CODE_REVIEW_CHANGED_DIFF=cached`. `NESTED_SCOPE_RED.txt` precedes removal of that controller-only setting from child pytest environments. The controller setting remains intact, and tests may explicitly set their own scope.
+
+
+- Fresh SpecFact `--bug-hunt` after nested scope isolation: exit 0, no error findings, 43.54s. Lint/type/format recheck passed (10.00/10). Warning-level review work remains before final acceptance, including explicit standard-library bootstrap contract exceptions and snapshot argument grouping. The PR remains a draft and no release acceptance is claimed.
+
+
+- The first follow-up commit attempt was stopped by canonical hooks. A new VCS fixture inherited the hook's GIT_INDEX_FILE and staged its temporary app.py into the calling index. No commit was created. The fixture-only staged artifact was removed; `HOOK_INDEX_ISOLATION_RED.txt` records regression failures before sanitizing both fixture Git processes and the child pytest environment. Source changes were retained.

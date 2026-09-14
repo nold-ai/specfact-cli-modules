@@ -46,33 +46,50 @@ def _plugins(config: dict[str, Any]) -> list[str]:
     return plugins
 
 
+class Observer:
+    """Retain phase-specific facts without claiming setup failures executed test calls."""
+
+    def __init__(self) -> None:
+        self.records = []
+        self.collected = set()
+        self.collection_errors = []
+        self.internal_errors = []
+
+    def pytest_internalerror(self, excrepr, excinfo):
+        del excinfo
+        self.internal_errors.append(str(excrepr))
+
+    def pytest_itemcollected(self, item):
+        self.collected.add(item.nodeid)
+
+    def pytest_xdist_node_collection_finished(self, node, ids):
+        del node
+        self.collected.update(ids)
+
+    def pytest_collectreport(self, report):
+        if report.failed:
+            self.collection_errors.append({"nodeid": report.nodeid, "detail": report.longreprtext})
+
+    def pytest_runtest_logreport(self, report):
+        self.records.append(
+            {
+                "nodeid": report.nodeid,
+                "phase": report.when,
+                "outcome": report.outcome,
+                "wasxfail": str(getattr(report, "wasxfail", "")),
+                "detail": report.longreprtext if report.failed else "",
+            }
+        )
+
+
 def main() -> None:
     import pytest
 
+    pytest.hookimpl(optionalhook=True)(Observer.pytest_xdist_node_collection_finished)
     request = json.loads(sys.argv[1])
     descriptor = json.loads((ROOT / "project-runtime.json").read_text(encoding="utf-8"))
     output = Path("/opt/specfact/tmp/pytest-observation.json")
-    records = []
-    collected = set()
-
-    class Observer:
-        def pytest_itemcollected(self, item):
-            collected.add(item.nodeid)
-
-        @pytest.hookimpl(optionalhook=True)
-        def pytest_xdist_node_collection_finished(self, node, ids):
-            del node
-            collected.update(ids)
-
-        def pytest_runtest_logreport(self, report):
-            records.append(
-                {
-                    "nodeid": report.nodeid,
-                    "phase": report.when,
-                    "outcome": report.outcome,
-                    "wasxfail": str(getattr(report, "wasxfail", "")),
-                }
-            )
+    observer = Observer()
 
     os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
     coverage_output = Path("/opt/specfact/tmp/coverage.json")
@@ -86,13 +103,15 @@ def main() -> None:
         f"--cov-report=json:{coverage_output}",
         *request["selectors"],
     ]
-    code = pytest.main(args, plugins=[Observer()])
+    code = pytest.main(args, plugins=[observer])
     output.write_text(
         json.dumps(
             {
                 "exit_code": int(code),
-                "collected": sorted(collected),
-                "records": records,
+                "collected": sorted(observer.collected),
+                "records": observer.records,
+                "collection_errors": observer.collection_errors,
+                "internal_errors": observer.internal_errors,
                 "pytest_version": pytest.__version__,
                 "coverage_version": importlib.metadata.version("coverage"),
                 "pytest_cov_version": importlib.metadata.version("pytest-cov"),

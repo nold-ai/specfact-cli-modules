@@ -11,6 +11,7 @@ from icontract import require
 
 from specfact_code_review.run.runtime_builder import prepare_runtime
 from specfact_code_review.run.runtime_discovery import discover_project
+from specfact_code_review.run.runtime_interpreter import select_environment
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
@@ -44,12 +45,17 @@ def prepare_project(
     offline: Annotated[bool, typer.Option("--offline")] = False,
 ) -> None:
     """Prepare or verify a cached runtime using the signed capsule interpreter."""
-    from specfact_code_review.run.runner import _cleanup_capsule_runtime, _prepare_capsule_runtime
+    from specfact_code_review.run.runner import (
+        _capsule_environment_id,
+        _cleanup_capsule_runtime,
+        _prepare_capsule_runtime,
+    )
 
     runtime = None
     try:
         plan = discover_project(Path.cwd(), config_path=project_config)
-        runtime, reason = _prepare_capsule_runtime()
+        selected = select_environment(plan, current=_capsule_environment_id())
+        runtime, reason = _prepare_capsule_runtime(environment_id=selected)
         if runtime is None:
             raise ProjectRuntimeError(reason)
         prepared = prepare_runtime(plan, runtime=runtime, offline=offline)

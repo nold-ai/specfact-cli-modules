@@ -1,0 +1,7 @@
+# Reconstruction of reported conditions; this is not the inaccessible customer repository.
+[envs.default]
+dependencies = ["pytest<8"]
+
+[envs.review]
+detached = true
+dependencies = ["pytest>=9,<10", "pytest-asyncio>=1,<2", "requests>=2.32,<3", "pyodbc==5.3.0"]

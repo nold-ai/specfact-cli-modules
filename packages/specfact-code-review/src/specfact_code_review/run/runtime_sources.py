@@ -8,6 +8,7 @@ from pathlib import Path
 from icontract import ensure, require
 
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError, content_digest, document_digest
+from specfact_code_review.run.runtime_vcs import vcs_context
 
 
 IGNORED_INPUTS = frozenset(
@@ -67,5 +68,7 @@ def verify_inputs(plan: ProjectPlan) -> None:
         path = plan.root / name
         if path.is_symlink() or not path.is_file() or content_digest(path.read_bytes()) != expected:
             raise ProjectRuntimeError(f"project_runtime_inputs_changed_during_build:{name}")
+    if vcs_context(plan.vcs_repository or plan.root, plan.vcs.get("commit", "HEAD")) != plan.vcs:
+        raise ProjectRuntimeError("project_runtime_vcs_changed_during_build")
     if source_identity(plan.root) != plan.source_identity:
         raise ProjectRuntimeError("project_runtime_source_changed_during_build")

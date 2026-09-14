@@ -4,6 +4,19 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
+
+
+PROJECT = Path("/opt/specfact/project-runtime")
+
+
+def interpreter_command(arguments: list[str]) -> list[str]:
+    """Enter the target native loader domain while keeping the signed Python binary."""
+    python = "/opt/specfact/python/bin/python"
+    loader = PROJECT / "native/ld-linux-x86-64.so.2"
+    if loader.is_file():
+        return [str(loader), "--library-path", str(loader.parent), python, *arguments]
+    return [python, *arguments]
 
 
 def target_command(module: str, arguments: list[str]) -> list[str]:
@@ -24,6 +37,9 @@ def target_command(module: str, arguments: list[str]) -> list[str]:
         "/opt/specfact/control",
         "--tmpfs",
         "/tmp",
+        "--ro-bind",
+        "/opt/specfact/project-runtime/worker-config",
+        "/etc",
         "--bind",
         "/opt/specfact/tmp",
         "/opt/specfact/tmp",
@@ -41,17 +57,11 @@ def target_command(module: str, arguments: list[str]) -> list[str]:
         "--setenv",
         "PATH",
         "/opt/specfact/project-runtime/bin:/opt/specfact/python/bin:/opt/specfact/analyzers/bin",
-        "--setenv",
-        "LD_LIBRARY_PATH",
-        "/opt/specfact/project-runtime/native",
         "--chdir",
         "/opt/specfact/snapshot",
-        "/opt/specfact/python/bin/python",
-        "-I",
-        "-S",
-        "/opt/specfact/builtin/specfact_code_review/run/target_bootstrap.py",
-        module,
-        *arguments,
+        *interpreter_command(
+            ["-I", "-S", "/opt/specfact/builtin/specfact_code_review/run/target_bootstrap.py", module, *arguments]
+        ),
     ]
 
 

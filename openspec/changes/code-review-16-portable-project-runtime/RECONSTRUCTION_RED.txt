@@ -1,0 +1,30 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items / 3 deselected / 1 selected
+
+tests/unit/test_external_capsule_corpus.py F                             [100%]
+
+=================================== FAILURES ===================================
+____ test_reconstruction_materializes_real_source_without_mutating_template ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-75/test_reconstruction_materializ0')
+
+    def test_reconstruction_materializes_real_source_without_mutating_template(tmp_path: Path) -> None:
+        module = _load()
+        fixture = tmp_path / 'template'
+        fixture.mkdir()
+        template = fixture / 'test_native.py.in'
+        template.write_text('def test_native():\n    assert True\n')
+        destination = tmp_path / 'checkout'
+>       module.materialize_reconstruction(fixture, destination)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'external_capsule_corpus' has no attribute 'materialize_reconstruction'
+
+tests/unit/test_external_capsule_corpus.py:56: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_reconstruction_materializes_real_source_without_mutating_template
+======================= 1 failed, 3 deselected in 0.02s ========================
