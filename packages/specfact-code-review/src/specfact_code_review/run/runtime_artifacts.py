@@ -78,6 +78,9 @@ def seal_runtime(
 def _validate_inventory(inventory: object) -> None:
     if not isinstance(inventory, dict):
         raise ProjectRuntimeError("project_runtime_inventory_invalid: expected an object")
+    arguments = inventory.get("pytest_arguments", [])
+    if not isinstance(arguments, list) or not all(isinstance(value, str) for value in arguments):
+        raise ProjectRuntimeError("project_runtime_inventory_invalid: pytest_arguments must be an array of strings")
     conflicts = inventory.get("analyzer_conflicts", {})
     if not isinstance(conflicts, dict) or not all(
         isinstance(key, str) and isinstance(value, str) for key, value in conflicts.items()

@@ -3,9 +3,14 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from specfact_code_review.run import runner
-from specfact_code_review.run.portable_snapshot import ProjectSnapshotRequest, run_project_snapshot
-from specfact_code_review.run.runtime_models import ProjectRuntimeError
+from specfact_code_review.run import portable_snapshot, runner
+from specfact_code_review.run.portable_snapshot import (
+    ProjectSnapshotRequest,
+    project_runtime_requested,
+    run_project_snapshot,
+)
+from specfact_code_review.run.portable_worker import DEPENDENT_MEMBERS
+from specfact_code_review.run.runtime_models import PreparedRuntime, ProjectRuntimeError
 
 
 def test_failed_preparation_never_runs_dependency_members(tmp_path: Path, monkeypatch) -> None:
@@ -14,12 +19,12 @@ def test_failed_preparation_never_runs_dependency_members(tmp_path: Path, monkey
     source.write_text("import pandas\n")
     calls = []
 
-    def fail(*args, **kwargs):
+    def fail(*_args, **_kwargs):
         raise ProjectRuntimeError("project_native_library_missing:libodbc.so.2")
 
     monkeypatch.setattr("specfact_code_review.run.portable_snapshot.prepare_runtime", fail)
 
-    def dispatch(request, **kwargs):
+    def dispatch(request, **_kwargs):
         calls.append(request.member)
         return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
 
@@ -44,14 +49,13 @@ def test_runtime_kwargs_are_accepted(tmp_path: Path) -> None:
 
 
 def test_immutable_pair_prepares_each_side_and_downgrades_authority(tmp_path: Path, monkeypatch) -> None:
-    from specfact_code_review.run import portable_snapshot
 
     base_root, head_root = tmp_path / "base", tmp_path / "head"
     base_root.mkdir()
     head_root.mkdir()
     calls = []
 
-    def run_side(runtime, request):
+    def run_side(_runtime, request):
         calls.append((request.snapshot_root, request.options.project_runtime))
         return runner.CapsuleSnapshotResult({}, {}), {"identity": str(request.snapshot_root)}
 
@@ -76,9 +80,6 @@ def test_immutable_pair_prepares_each_side_and_downgrades_authority(tmp_path: Pa
 
 
 def test_source_change_during_full_analysis_invalidates_runtime_binding(tmp_path: Path, monkeypatch) -> None:
-    from specfact_code_review.run import portable_snapshot
-    from specfact_code_review.run.portable_worker import DEPENDENT_MEMBERS
-    from specfact_code_review.run.runtime_models import PreparedRuntime
 
     root = tmp_path / "project"
     root.mkdir()
@@ -106,7 +107,7 @@ def test_source_change_during_full_analysis_invalidates_runtime_binding(tmp_path
     monkeypatch.setattr(portable_snapshot, "prepare_runtime", lambda *args, **kwargs: prepared)
     monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *args, **kwargs: prepared)
 
-    def analyze(*args, **kwargs):
+    def analyze(*_args, **_kwargs):
         source.write_text("VALUE = 2\n")
         return runner.CapsuleSnapshotResult({name: {"evidence_outcome": "PASS"} for name in DEPENDENT_MEMBERS}, {})
 
@@ -116,3 +117,34 @@ def test_source_change_during_full_analysis_invalidates_runtime_binding(tmp_path
     )
     assert evidence["status"] == "UNKNOWN"
     assert all(snapshot.evidence[name]["evidence_outcome"] == "UNKNOWN" for name in DEPENDENT_MEMBERS)
+
+
+def test_pip_tools_source_input_triggers_automatic_runtime(tmp_path: Path) -> None:
+
+    (tmp_path / "requirements.in").write_text("requests\n")
+    assert project_runtime_requested(tmp_path, SimpleNamespace(project_config=None, project_runtime=None))
+
+
+def test_analysis_source_copy_excludes_local_environment_files(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "app.py").write_text("VALUE = 1\n")
+    (source / ".env").write_text("SYNTHETIC_SECRET=fixture\n")
+    (source / ".venv").mkdir()
+    (source / ".venv/private.txt").write_text("synthetic excluded fixture")
+    observed = []
+
+    def analyze(_runtime, *, snapshot_root, files, **_context):
+        assert snapshot_root != source
+        assert not (snapshot_root / ".env").exists()
+        assert not (snapshot_root / ".venv").exists()
+        assert files == [snapshot_root / "app.py"]
+        assert files[0].read_text() == "VALUE = 1\n"
+        observed.append(snapshot_root)
+        return runner.CapsuleSnapshotResult({}, {})
+
+    monkeypatch.setattr(runner, "_run_capsule_snapshot", analyze)
+    request = ProjectSnapshotRequest(source, [source / "app.py"], runner.ReviewOptions(), "explicit_files")
+    portable_snapshot._run_in_private_source(object(), request, runner.CapsuleSnapshotSettings())
+    assert observed and not observed[0].exists()
+    assert (source / ".env").read_text() == "SYNTHETIC_SECRET=fixture\n"

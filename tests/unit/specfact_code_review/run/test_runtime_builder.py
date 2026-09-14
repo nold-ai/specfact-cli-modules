@@ -6,8 +6,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from specfact_code_review.run import runtime_builder
 from specfact_code_review.run.runtime_builder import builder_command, copy_project, prepare_runtime
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError
+from specfact_code_review.run.runtime_sources import source_identity
 
 
 def test_builder_mounts_source_copy_and_no_host_home(tmp_path: Path) -> None:
@@ -65,7 +67,6 @@ def test_python_patch_constraint_uses_signed_interpreter_version(tmp_path: Path)
 
 @pytest.mark.parametrize("number", [errno.EEXIST, errno.ENOTEMPTY])
 def test_concurrent_cache_publication_accepts_existing_winner(tmp_path, monkeypatch, number) -> None:
-    from specfact_code_review.run import runtime_builder
 
     def raced(source, destination):
         raise OSError(number, "concurrent publication")
@@ -76,7 +77,6 @@ def test_concurrent_cache_publication_accepts_existing_winner(tmp_path, monkeypa
 
 @pytest.mark.parametrize("target", [".env", ".venv/private.txt", ".venv", ".git/config", "nested/.env"])
 def test_project_links_cannot_alias_excluded_inputs(tmp_path: Path, target: str) -> None:
-    from specfact_code_review.run.runtime_sources import source_identity
 
     source = tmp_path / "source"
     source.mkdir()

@@ -4,17 +4,25 @@ rootdir: <WORKTREE>
 configfile: pyproject.toml
 plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collected 0 items / 1 error
+collected 3 items
 
-==================================== ERRORS ====================================
-_ ERROR collecting tests/unit/specfact_code_review/run/test_runtime_domains.py _
-ImportError while importing test module '<WORKTREE>/tests/unit/specfact_code_review/run/test_runtime_domains.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-tests/unit/specfact_code_review/run/test_runtime_domains.py:5: in <module>
-    from specfact_code_review.run.runtime_domains import member_dependency_graphs
-E   ModuleNotFoundError: No module named 'specfact_code_review.run.runtime_domains'
+tests/unit/specfact_code_review/run/test_runtime_domains.py ..F          [100%]
+
+=================================== FAILURES ===================================
+__________ test_missing_member_dependency_cannot_be_silently_omitted ___________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-150/test_missing_member_dependency0')
+
+    def test_missing_member_dependency_cannot_be_silently_omitted(tmp_path: Path) -> None:
+        import pytest
+        from specfact_code_review.run.runtime_models import ProjectRuntimeError
+
+        _distribution(tmp_path, "pylint", dependencies=("absent>=1",))
+>       with pytest.raises(ProjectRuntimeError, match="project_analyzer_dependency_missing:pylint:absent"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:43: Failed
 =========================== short test summary info ============================
-ERROR tests/unit/specfact_code_review/run/test_runtime_domains.py
-!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
-=============================== 1 error in 0.11s ===============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_missing_member_dependency_cannot_be_silently_omitted
+========================= 1 failed, 2 passed in 0.10s ==========================

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,7 @@ from icontract import require
 
 from specfact_code_review.run.portable_worker import DEPENDENT_MEMBERS, preparation_failure_snapshot, select_test_paths
 from specfact_code_review.run.runtime_artifacts import load_runtime
-from specfact_code_review.run.runtime_builder import prepare_runtime
+from specfact_code_review.run.runtime_builder import copy_project, prepare_runtime
 from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.runtime_interpreter import project_worker
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError, document_digest
@@ -31,6 +32,8 @@ def project_runtime_requested(root: Path, options: Any) -> bool:
                 "pyproject.toml",
                 "hatch.toml",
                 "requirements.txt",
+                "requirements.in",
+                "pylock.toml",
                 "setup.py",
                 "setup.cfg",
                 "uv.lock",
@@ -101,12 +104,25 @@ def _failed_project_snapshot(
     }
 
 
+def _run_in_private_source(runtime: Any, request: ProjectSnapshotRequest, settings: Any) -> Any:
+    """Keep excluded host files out of every portable analyzer's source mount."""
+    from specfact_code_review.run.runner import _run_capsule_snapshot
+
+    with tempfile.TemporaryDirectory(prefix="specfact-project-source-") as directory:
+        source = Path(directory) / "source"
+        copy_project(request.snapshot_root, source)
+        files = [source / path.relative_to(request.snapshot_root) for path in request.files]
+        return _run_capsule_snapshot(
+            runtime, snapshot_root=source, files=files, options=request.options, settings=settings
+        )
+
+
 @require(lambda request: request.snapshot_root.is_dir())
 def _run_project_snapshot(
     runtime: Any, request: ProjectSnapshotRequest, plan: ProjectPlan
 ) -> tuple[Any, dict[str, Any]]:
     """Prepare once, execute applicable members, and retain independent evidence."""
-    from specfact_code_review.run.runner import CapsuleSnapshotSettings, _run_capsule_snapshot
+    from specfact_code_review.run.runner import CapsuleSnapshotSettings
 
     snapshot_root, files, options = request.snapshot_root, request.files, request.options
     assurance_kind = request.assurance_kind
@@ -156,12 +172,10 @@ def _run_project_snapshot(
     bound = replace(
         runtime, identity=document_digest({"capsule": runtime.identity, "project_runtime": prepared.identity})
     )
-    snapshot = _run_capsule_snapshot(
+    snapshot = _run_in_private_source(
         bound,
-        snapshot_root=snapshot_root,
-        files=files,
-        options=options,
-        settings=CapsuleSnapshotSettings(
+        request,
+        CapsuleSnapshotSettings(
             project_runtime_root=prepared.root,
             member_argv=arguments,
             portable_runtime=True,

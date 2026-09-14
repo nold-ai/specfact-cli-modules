@@ -4,10 +4,12 @@ import json
 
 import pytest
 
+from specfact_code_review.run import target_launch
+from specfact_code_review.run.target_launch import target_command
+
 
 @pytest.fixture(autouse=True)
 def empty_member_domains(tmp_path, monkeypatch):
-    from specfact_code_review.run import target_launch
 
     (tmp_path / "project-runtime.json").write_text(
         json.dumps(
@@ -27,7 +29,6 @@ def empty_member_domains(tmp_path, monkeypatch):
 
 
 def test_target_worker_cannot_write_controller_output_or_share_pid_namespace() -> None:
-    from specfact_code_review.run.target_launch import target_command
 
     argv = target_command("pylint", ["app.py"])
     assert "--unshare-all" in argv
@@ -41,7 +42,6 @@ def test_target_worker_cannot_write_controller_output_or_share_pid_namespace() -
 
 
 def test_project_python_preserves_extensionless_script_arguments(monkeypatch) -> None:
-    from specfact_code_review.run import target_launch
 
     captured = []
     monkeypatch.setattr(target_launch.sys, "argv", ["python", "manage", "--version"])
@@ -51,7 +51,6 @@ def test_project_python_preserves_extensionless_script_arguments(monkeypatch) ->
 
 
 def test_native_worker_uses_matching_loader_without_mutating_supervisor(tmp_path, monkeypatch) -> None:
-    from specfact_code_review.run import target_launch
 
     loader = tmp_path / "native/ld-linux-x86-64.so.2"
     loader.parent.mkdir()
@@ -73,7 +72,6 @@ def test_native_worker_uses_matching_loader_without_mutating_supervisor(tmp_path
 
 
 def test_offline_target_has_private_localhost_resolution() -> None:
-    from specfact_code_review.run.target_launch import target_command
 
     command = target_command("pytest-observe", [])
     assert "/opt/specfact/project-runtime/worker-config" in command
@@ -83,7 +81,6 @@ def test_offline_target_has_private_localhost_resolution() -> None:
 
 
 def test_pytest_children_keep_private_coverage_and_their_member_domain(monkeypatch) -> None:
-    from specfact_code_review.run.target_launch import target_command
 
     def environment(command):
         return {command[index + 1]: command[index + 2] for index, arg in enumerate(command) if arg == "--setenv"}
@@ -98,9 +95,6 @@ def test_pytest_children_keep_private_coverage_and_their_member_domain(monkeypat
 
 
 def test_member_mounts_expose_only_recorded_distribution_files(tmp_path, monkeypatch) -> None:
-    import json
-
-    from specfact_code_review.run import target_launch
 
     sealed = tmp_path / "sealed"
     sealed.mkdir()

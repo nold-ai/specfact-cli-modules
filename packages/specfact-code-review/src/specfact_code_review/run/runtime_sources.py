@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 from icontract import ensure, require
@@ -49,7 +50,7 @@ def _source_entry(path: Path, root: Path) -> str | None:
     if path.is_symlink():
         return "link:" + source_link_target(path, root).relative_to(root).as_posix()
     if path.is_file():
-        return content_digest(path.read_bytes())
+        return content_digest(path.read_bytes()) + f":mode={stat.S_IMODE(path.lstat().st_mode)}"
     if not path.is_dir():
         raise ProjectRuntimeError(f"project_source_special_file:{relative}")
     return None

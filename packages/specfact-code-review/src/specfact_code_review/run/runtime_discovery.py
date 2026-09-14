@@ -167,11 +167,17 @@ def _requirements_inputs(root: Path, names: tuple[str, ...]) -> set[str]:
         if not path.is_file():
             raise ProjectRuntimeError(f"project_input_missing:{canonical}")
         visited.add(canonical)
+        if path.name == "pylock.toml" or (path.name.startswith("pylock.") and path.suffix == ".toml"):
+            return
         logical_lines = path.read_text(encoding="utf-8").replace("\\\n", "").splitlines()
         for line in logical_lines:
             included = _requirement_include(line)
             if not included:
                 continue
+            if "://" in included:
+                raise ProjectRuntimeError(
+                    "project_requirements_remote_include_unsupported; provide a repository-local requirements include"
+                )
             child = Path(included)
             if child.is_absolute():
                 raise ProjectRuntimeError(f"project_input_escape:{included}")
@@ -231,7 +237,7 @@ def _selection(
         environment = next(iter(environments), "default")
     if "groups" in values:
         return environment, tuple(values["groups"])
-    if manager == "hatch":
+    if manager == "hatch" or "extras" in values:
         return environment, ()
     groups = project.get("dependency-groups", {})
     if manager == "poetry":
@@ -240,6 +246,45 @@ def _selection(
     if len(tests) > 1:
         raise ProjectRuntimeError(f"project_test_groups_ambiguous:{','.join(tests)}; select groups in --project-config")
     return environment, tuple(tests)
+
+
+def _default_requirements(root: Path) -> list[str]:
+    if (root / "pylock.toml").is_file() and (root / "requirements.txt").is_file():
+        raise ProjectRuntimeError(
+            "project_requirements_ambiguous:pylock.toml,requirements.txt; select requirements in --project-config"
+        )
+    for name in ("pylock.toml", "requirements.txt", "requirements.in"):
+        if (root / name).is_file():
+            return [name]
+    return []
+
+
+def _python_constraint(root: Path, project: dict[str, Any]) -> str:
+    declared = project.get("project", {}).get("requires-python")
+    if declared is not None:
+        return str(declared)
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read(root / "setup.cfg", encoding="utf-8")
+    return parser.get("options", "python_requires", fallback="")
+
+
+def _test_extras(
+    project: dict[str, Any], values: dict[str, Any], manager: str, groups: tuple[str, ...]
+) -> tuple[str, ...]:
+    if "extras" in values:
+        return tuple(values["extras"])
+    if manager == "hatch" or "groups" in values:
+        return ()
+    declared = project.get("project", {}).get("optional-dependencies", {})
+    if manager == "poetry":
+        declared = {**project.get("tool", {}).get("poetry", {}).get("extras", {}), **declared}
+    candidates = sorted(set(declared) & {"test", "tests", "testing"})
+    if len(candidates) > 1 or (candidates and groups):
+        choices = [*("extra:" + name for name in candidates), *("group:" + name for name in groups)]
+        raise ProjectRuntimeError(
+            f"project_test_dependencies_ambiguous:{','.join(choices)}; select groups/extras in --project-config"
+        )
+    return tuple(candidates)
 
 
 @require(lambda root: root.is_dir())
@@ -254,9 +299,7 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
             inputs[name] = content_digest(path.read_bytes())
     project = _toml(root / "pyproject.toml")
     hatch = _toml(root / "hatch.toml")
-    requirements = tuple(
-        values.get("requirements", ["requirements.txt"] if (root / "requirements.txt").exists() else [])
-    )
+    requirements = tuple(values["requirements"] if "requirements" in values else _default_requirements(root))
     constraints = tuple(values.get("constraints", []))
     for name in sorted(_requirements_inputs(root, requirements + constraints)):
         inputs[name] = content_digest((root / name).read_bytes())
@@ -276,9 +319,9 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
         python=values.get(
             "python", (root / ".python-version").read_text().strip() if (root / ".python-version").is_file() else ""
         ),
-        requires_python=str(project.get("project", {}).get("requires-python", "")),
+        requires_python=_python_constraint(root, project),
         groups=groups,
-        extras=tuple(values.get("extras", [])),
+        extras=_test_extras(project, selection, manager, groups),
         requirements=requirements,
         constraints=constraints,
         source_roots=_source_roots(root, values, pytest),

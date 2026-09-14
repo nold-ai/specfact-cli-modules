@@ -110,12 +110,11 @@ def _validate_python_arguments(arguments: list[str]) -> None:
         if argument.startswith(("-W", "-X")):
             skip_value = argument in {"-W", "-X"}
             continue
-        if not argument.startswith("--"):
-            for option in "IES":
-                if option in argument[1:]:
-                    raise RuntimeError(
-                        f"project_python_option_unsupported:-{option}; this option disables required runtime attachment"
-                    )
+        unsupported = next((option for option in "IES" if option in argument[1:]), None)
+        if not argument.startswith("--") and unsupported:
+            raise RuntimeError(
+                f"project_python_option_unsupported:-{unsupported}; this option disables required runtime attachment"
+            )
 
 
 def _project_python_command(arguments: list[str]) -> tuple[list[str], dict[str, str]]:

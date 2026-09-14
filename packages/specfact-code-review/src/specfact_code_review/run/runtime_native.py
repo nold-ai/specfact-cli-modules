@@ -19,6 +19,11 @@ SYSTEM_LIBRARY_ROOTS = (Path("/usr/lib/x86_64-linux-gnu"), Path("/lib/x86_64-lin
 def _elf_sections(payload: bytes, name: str) -> list[tuple[int, ...]]:
     if len(payload) < 64 or payload[4:6] != b"\x02\x01":
         raise ProjectRuntimeError(f"project_native_elf_unsupported:{name}")
+    machine = struct.unpack_from("<H", payload, 18)[0]
+    if machine != 62:  # EM_X86_64
+        raise ProjectRuntimeError(
+            f"project_native_elf_architecture_unsupported:{name}:machine={machine}; require x86_64"
+        )
     offset = struct.unpack_from("<Q", payload, 40)[0]
     size, count = struct.unpack_from("<HH", payload, 58)
     if size != 64 or offset + size * count > len(payload):
@@ -108,6 +113,12 @@ def _library_closure(
     return records
 
 
+def _native_extensions(artifact: Path) -> list[Path]:
+    return sorted(
+        {path for pattern in ("*.so*", "executables/*") for path in artifact.rglob(pattern) if path.is_file()}
+    )
+
+
 @ensure(lambda result: all(row["sha256"].startswith("sha256:") for row in result))
 def inventory_native(
     artifact: Path,
@@ -118,9 +129,7 @@ def inventory_native(
     target_loader: bool = False,
 ) -> list[dict[str, Any]]:
     """Copy required native closures into target storage; preserve the signed supervisor."""
-    extensions = sorted(
-        {path for pattern in ("*.so*", "executables/*") for path in artifact.rglob(pattern) if path.is_file()}
-    )
+    extensions = _native_extensions(artifact)
     capsule = {path.name for path in capsule_root.rglob("*.so*") if path.is_file()}
     bundled = {path.name for path in extensions}
     records = [_native_record(extension, artifact, "project") for extension in extensions]

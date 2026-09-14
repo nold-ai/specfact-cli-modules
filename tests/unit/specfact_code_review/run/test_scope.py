@@ -6,10 +6,13 @@ import json
 import os
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+from specfact_code_review.run import scope
 
 
 _GIT_LOCAL_ENV_VARS = frozenset(
@@ -49,8 +52,8 @@ def _commit(repo: Path, message: str) -> str:
     return _git(repo, "rev-parse", "HEAD")
 
 
-@pytest.fixture
-def git_repo(tmp_path: Path) -> Path:
+@pytest.fixture(name="git_repo")
+def git_repo_fixture(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-b", "main")
@@ -67,9 +70,8 @@ def git_repo(tmp_path: Path) -> Path:
     return repo
 
 
-@pytest.fixture
-def scope_api() -> Any:
-    from specfact_code_review.run import scope
+@pytest.fixture(name="scope_api")
+def scope_api_fixture() -> Any:
 
     return scope
 
@@ -1350,7 +1352,6 @@ def test_semgrep_ai_bloat_rule_pack_is_governed_and_sealed(scope_api: Any, tmp_p
 
 
 def test_portable_lock_only_range_remains_analyzable_preview(scope_api: Any, git_repo: Path) -> None:
-    from dataclasses import replace
 
     base, head = _make_range(git_repo, path="uv.lock", content="version = 1\n")
     request = replace(_range_request(scope_api, git_repo, base, head), portable_project_runtime=True)

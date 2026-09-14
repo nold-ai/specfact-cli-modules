@@ -58,25 +58,95 @@ def assert_completed_report(report: dict[str, Any]) -> None:
         raise ValueError("external capsule applicable analyzer did not complete")
 
 
+def network_counters(source: Path = Path("/proc/net/dev")) -> dict[str, int] | None:
+    """Measure Linux host-interface bytes without inspecting network payloads."""
+    if not source.is_file():
+        return None
+    totals = {"received_bytes": 0, "sent_bytes": 0}
+    for line in source.read_text(encoding="ascii").splitlines()[2:]:
+        interface, raw = line.split(":", 1)
+        if interface.strip() == "lo":
+            continue
+        fields = raw.split()
+        totals["received_bytes"] += int(fields[0])
+        totals["sent_bytes"] += int(fields[8])
+    return totals
+
+
+def network_delta(before: dict[str, int] | None, after: dict[str, int] | None) -> dict[str, Any] | None:
+    """Report host-wide traffic, explicitly not exact dependency download sizes."""
+    if before is None or after is None:
+        return None
+    return {
+        **{name: after[name] - value for name, value in before.items()},
+        "scope": "host_non_loopback_interface_counters",
+    }
+
+
+def offline_command(argv: list[str]) -> list[str]:
+    """Deny external networking independently of the customer's offline flag."""
+    launcher = os.environ.get("SPECFACT_CORPUS_OFFLINE_LAUNCHER")
+    if not launcher or not Path(launcher).is_file() or not os.access(launcher, os.X_OK):
+        raise ValueError("offline corpus requires an administrator-provisioned namespace launcher")
+    probe = (
+        "import fcntl,os,socket,struct,sys; probe_socket=socket.socket(); "
+        "valid=os.getuid()!=0 and os.readlink('/proc/self/ns/net')!=sys.argv[1] "
+        "and all(name=='lo' or not (struct.unpack_from('H',fcntl.ioctl(probe_socket.fileno(),"
+        "0x8913,struct.pack('256s',name.encode())),16)[0]&1) for _,name in socket.if_nameindex()); "
+        "probe_socket.close(); "
+        "valid or sys.exit(77); "
+        "print('SPECFACT_OFFLINE_NETWORK_VERIFIED',file=sys.stderr,flush=True); "
+        "os.execvp(sys.argv[2],sys.argv[2:])"
+    )
+    return [
+        str(launcher),
+        "--unshare-user",
+        "--unshare-net",
+        "--uid",
+        str(os.getuid()),
+        "--gid",
+        str(os.getgid()),
+        "--bind",
+        "/",
+        "/",
+        "--die-with-parent",
+        "--",
+        sys.executable,
+        "-c",
+        probe,
+        os.readlink("/proc/self/ns/net"),
+        *argv,
+    ]
+
+
 def execute(argv: list[str], *, cwd: Path, evidence: Path, name: str, allowed: tuple[int, ...] = (0,)) -> str:
     started = time.monotonic()
-    result = subprocess.run(argv, cwd=cwd, text=True, capture_output=True, check=False, timeout=4500)
+    network_before = network_counters()
+    offline = name in {"offline-prepare", "warm-attach"}
+    command = offline_command(argv) if offline else argv
+    result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, check=False, timeout=4500)
     evidence.mkdir(parents=True, exist_ok=True)
-    (evidence / f"{name}.stdout").write_text(result.stdout)
-    (evidence / f"{name}.stderr").write_text(result.stderr)
+    (evidence / f"{name}.stdout").write_text(result.stdout, encoding="utf-8")
+    (evidence / f"{name}.stderr").write_text(result.stderr, encoding="utf-8")
     (evidence / f"{name}.json").write_text(
         json.dumps(
             {
                 "argv": argv,
+                "execution_argv": command,
+                "offline_network_verified": offline and "SPECFACT_OFFLINE_NETWORK_VERIFIED" in result.stderr,
                 "exit": result.returncode,
                 "seconds": time.monotonic() - started,
+                "network": network_delta(network_before, network_counters()),
                 "python": sys.version,
                 "platform": platform.platform(),
                 "uid": os.getuid(),
             },
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
+    if offline and "SPECFACT_OFFLINE_NETWORK_VERIFIED" not in result.stderr:
+        raise ValueError(f"{name} did not verify network isolation; see {evidence}")
     if result.returncode not in allowed:
         raise ValueError(f"{name} failed with exit {result.returncode}; see {evidence}")
     return result.stdout
@@ -97,7 +167,10 @@ def checkout(entry: dict[str, Any], root: Path, evidence: Path) -> None:
         entry["commit"] = "reconstructed-sha256:" + identity
         evidence.mkdir(parents=True, exist_ok=True)
         (evidence / "fixture-origin.json").write_text(
-            json.dumps({"kind": "reconstruction", "original_customer_reproduction": False, "source_identity": identity})
+            json.dumps(
+                {"kind": "reconstruction", "original_customer_reproduction": False, "source_identity": identity}
+            ),
+            encoding="utf-8",
         )
         return
     root.mkdir(parents=True)
@@ -109,6 +182,16 @@ def checkout(entry: dict[str, Any], root: Path, evidence: Path) -> None:
         raise ValueError("corpus checkout identity mismatch")
 
 
+def _worktree_entry_identity(path: Path) -> str | None:
+    if path.is_symlink():
+        payload = os.readlink(path).encode()
+    elif path.is_file():
+        payload = path.read_bytes()
+    else:
+        return None
+    return hashlib.sha256(payload + str(path.lstat().st_mode).encode()).hexdigest()
+
+
 def tracked_identity(root: Path) -> dict[str, str]:
     identities = {}
     for directory, directories, files in os.walk(root, followlinks=False):
@@ -117,15 +200,9 @@ def tracked_identity(root: Path) -> dict[str, str]:
             path = Path(directory) / name
             if name == ".git":
                 continue
-            if path.is_symlink():
-                payload = os.readlink(path).encode()
-            elif path.is_file():
-                payload = path.read_bytes()
-            else:
-                continue
-            identities[path.relative_to(root).as_posix()] = hashlib.sha256(
-                payload + str(path.lstat().st_mode).encode()
-            ).hexdigest()
+            identity = _worktree_entry_identity(path)
+            if identity is not None:
+                identities[path.relative_to(root).as_posix()] = identity
     return identities
 
 
@@ -144,8 +221,9 @@ def json_document(output: str) -> dict[str, Any]:
 
 
 def review(
-    root: Path, evidence: Path, config: Path, paths: list[str], *, name: str, descriptor: str = ""
+    root: Path, evidence: Path, config: Path, paths: list[str], *, descriptor: str = "", name: str = ""
 ) -> dict[str, Any]:
+    name = name or ("warm-attach" if descriptor else "cold-auto")
     output = evidence / f"{name}-report.json"
     argv = [
         "specfact",
@@ -163,7 +241,7 @@ def review(
     if descriptor:
         argv += ["--project-runtime", descriptor]
     execute(argv, cwd=root, evidence=evidence, name=name, allowed=(0, 1, 2))
-    report = json.loads(output.read_text())
+    report = json.loads(output.read_text(encoding="utf-8"))
     assert_completed_report(report)
     return report
 
@@ -248,9 +326,11 @@ def controlled_defect(root: Path, evidence: Path, config: Path, workspace: Path)
     """Require actual test failure and static defect detection in an identified copy."""
     copy = workspace / "controlled" / root.name
     shutil.copytree(root, copy, symlinks=True)
-    (copy / "specfact_controlled.py").write_text('def controlled() -> int:\n    return "injected wrong type"\n')
+    (copy / "specfact_controlled.py").write_text(
+        'def controlled() -> int:\n    return "injected wrong type"\n', encoding="utf-8"
+    )
     (copy / "tests/test_specfact_controlled.py").write_text(
-        'def test_specfact_controlled_failure():\n    assert False, "SPECFACT_CONTROLLED_473"\n'
+        'def test_specfact_controlled_failure():\n    assert False, "SPECFACT_CONTROLLED_473"\n', encoding="utf-8"
     )
     report = review(
         copy,
@@ -279,7 +359,8 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
         f"manager={json.dumps(entry['manager'])}\n"
         f"environment={json.dumps(entry['environment'])}\n"
         f"groups={json.dumps(entry['groups'])}\n"
-        f"native_libraries={json.dumps(entry.get('native_libraries', []))}\n"
+        f"native_libraries={json.dumps(entry.get('native_libraries', []))}\n",
+        encoding="utf-8",
     )
     execute(
         ["specfact", "code", "review", "runtime", "inspect", "--project-config", str(config), "--json"],
@@ -288,7 +369,7 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
         name="inspect",
     )
     # Cold run exercises automatic preparation; the offline call must reuse it.
-    review(root, evidence, config, entry["paths"], name="cold-auto")
+    review(root, evidence, config, entry["paths"])
     raw = execute(
         ["specfact", "code", "review", "runtime", "prepare", "--project-config", str(config), "--offline", "--json"],
         cwd=root,
@@ -297,12 +378,13 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
     )
     prepared = json_document(raw)
     descriptor = Path(prepared["descriptor"])
-    data = json.loads(descriptor.read_text())
-    (evidence / "runtime-identity.json").write_text(json.dumps(data, indent=2))
+    data = json.loads(descriptor.read_text(encoding="utf-8"))
+    (evidence / "runtime-identity.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
     (evidence / "runtime-bytes.json").write_text(
-        json.dumps({"artifact_bytes": sum(p.stat().st_size for p in descriptor.parent.rglob("*") if p.is_file())})
+        json.dumps({"artifact_bytes": sum(p.stat().st_size for p in descriptor.parent.rglob("*") if p.is_file())}),
+        encoding="utf-8",
     )
-    review(root, evidence, config, entry["paths"], name="warm-attach", descriptor=str(descriptor))
+    review(root, evidence, config, entry["paths"], descriptor=str(descriptor))
     controlled_defect(root, evidence, config, workspace)
     if tracked_identity(root) != before:
         raise ValueError("capsule modified upstream source or environment inputs")
@@ -315,7 +397,8 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
                 "source_unchanged": True,
             },
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
 
 
@@ -326,7 +409,7 @@ def main() -> int:
     args = parser.parse_args()
     if platform.system() != "Linux" or platform.machine() != "x86_64" or os.getuid() == 0:
         raise ValueError("corpus requires non-root Linux x86-64")
-    manifest = json.loads(MANIFEST.read_text())
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if f"{sys.version_info.major}.{sys.version_info.minor}" not in manifest["python"]:
         raise ValueError("unsupported corpus Python ABI")
     failures = []
@@ -339,7 +422,9 @@ def main() -> int:
             failures.append({"repository": entry["name"], "diagnostic": str(exc)})
     summary = args.workspace / "evidence" / "corpus-summary.json"
     summary.parent.mkdir(parents=True, exist_ok=True)
-    summary.write_text(json.dumps({"status": "FAIL" if failures else "PASS", "failures": failures}, indent=2))
+    summary.write_text(
+        json.dumps({"status": "FAIL" if failures else "PASS", "failures": failures}, indent=2), encoding="utf-8"
+    )
     return 1 if failures else 0
 
 

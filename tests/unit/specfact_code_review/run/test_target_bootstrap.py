@@ -1,10 +1,12 @@
 """Analyzer entry-point lookup rejects project-owned replacements."""
 
+from importlib.metadata import DistributionFinder
 from pathlib import Path
 
 import pytest
 
 from specfact_code_review.run import target_bootstrap
+from specfact_code_review.run.target_bootstrap import _project_python_command, python_execution_domain
 
 
 def test_analyzer_entry_point_is_confined_to_verified_root(tmp_path: Path, monkeypatch) -> None:
@@ -24,8 +26,7 @@ def test_analyzer_entry_point_is_confined_to_verified_root(tmp_path: Path, monke
         finder.find_spec("owned", [str(hostile)])
 
 
-def test_python_cli_keeps_code_separate_from_bootstrap(monkeypatch) -> None:
-    from specfact_code_review.run.target_bootstrap import _project_python_command
+def test_python_cli_keeps_code_separate_from_bootstrap() -> None:
 
     code = 'from __future__ import annotations\nprint("project code")'
     command, environment = _project_python_command(["-u", "-c", code])
@@ -44,7 +45,6 @@ def test_member_fallback_rejects_unrelated_analyzer_imports(tmp_path: Path, monk
 
 
 def test_member_metadata_lookup_cannot_expand_explicit_target_inventory(tmp_path: Path, monkeypatch) -> None:
-    from importlib.metadata import DistributionFinder
 
     metadata = tmp_path / "needed-1.0.dist-info"
     metadata.mkdir()
@@ -63,7 +63,6 @@ def test_member_metadata_lookup_cannot_expand_explicit_target_inventory(tmp_path
 
 
 def test_only_pytest_children_receive_the_pytest_dependency_domain(monkeypatch) -> None:
-    from specfact_code_review.run.target_bootstrap import python_execution_domain
 
     monkeypatch.delenv("SPECFACT_TARGET_PYTEST", raising=False)
     assert python_execution_domain() == "project-python"

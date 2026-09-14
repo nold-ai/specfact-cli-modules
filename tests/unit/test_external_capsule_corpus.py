@@ -1,6 +1,7 @@
 """The external corpus accepts findings, but cannot accept incomplete execution."""
 
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -60,7 +61,6 @@ def test_reconstruction_materializes_real_source_without_mutating_template(tmp_p
 
 
 def test_corpus_attempts_remaining_repositories_after_a_failure(tmp_path: Path, monkeypatch) -> None:
-    import json
 
     module = _load()
     manifest = tmp_path / "corpus.json"
@@ -73,7 +73,7 @@ def test_corpus_attempts_remaining_repositories_after_a_failure(tmp_path: Path, 
     monkeypatch.setattr(module.os, "getuid", lambda: 1000)
     attempted = []
 
-    def run_entry(entry, workspace):
+    def run_entry(entry, _workspace):
         attempted.append(entry["name"])
         if entry["name"] == "first":
             raise ValueError("controlled incomplete analysis")
@@ -91,7 +91,8 @@ def test_host_baseline_rejects_startup_failure_without_test_execution(tmp_path: 
 def test_host_baseline_rejects_only_setup_errors(tmp_path: Path) -> None:
     result = tmp_path / "tests.xml"
     result.write_text(
-        '<testsuites><testsuite><testcase name="test_app"><error message="setup failed"/></testcase></testsuite></testsuites>'
+        '<testsuites><testsuite><testcase name="test_app"><error message="setup failed"/>'
+        "</testcase></testsuite></testsuites>"
     )
     with pytest.raises(ValueError, match=r"host.*execution"):
         _load().assert_host_execution(result)
@@ -104,3 +105,63 @@ def test_source_identity_detects_new_untracked_and_ignored_files(tmp_path: Path)
     before = module.tracked_identity(tmp_path)
     (tmp_path / "generated.py").write_text("VALUE = 2\n")
     assert module.tracked_identity(tmp_path) != before
+
+
+def test_network_evidence_excludes_loopback_and_reports_counter_deltas(tmp_path: Path) -> None:
+    module = _load()
+    counters = tmp_path / "net-dev"
+    counters.write_text(
+        "Inter-| Receive | Transmit\n"
+        " face |bytes packets errs drop fifo frame compressed multicast|"
+        "bytes packets errs drop fifo colls carrier compressed\n"
+        " lo: 900 0 0 0 0 0 0 0 800 0 0 0 0 0 0 0\n eth0: 120 0 0 0 0 0 0 0 70 0 0 0 0 0 0 0\n"
+    )
+    before = module.network_counters(counters)
+    assert before == {"received_bytes": 120, "sent_bytes": 70}
+    counters.write_text(counters.read_text().replace("eth0: 120", "eth0: 220").replace("0 70 0", "0 90 0"))
+    assert module.network_delta(before, module.network_counters(counters)) == {
+        "received_bytes": 100,
+        "sent_bytes": 20,
+        "scope": "host_non_loopback_interface_counters",
+    }
+    assert module.network_counters(tmp_path / "unavailable") is None
+
+
+def test_controlled_defect_preserves_separate_report(tmp_path: Path, monkeypatch) -> None:
+    module = _load()
+    root = tmp_path / "upstream"
+    (root / "tests").mkdir(parents=True)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    (evidence / "cold-auto-report.json").write_text('{"untouched": true}')
+
+    def execute(argv, **_context):
+        output = Path(argv[argv.index("--out") + 1])
+        output.write_text(
+            json.dumps(
+                {
+                    "findings": [
+                        {"rule": "TEST_OUTCOME_NOT_PASS"},
+                        {"tool": "basedpyright", "file": "specfact_controlled.py"},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        return ""
+
+    monkeypatch.setattr(module, "execute", execute)
+    monkeypatch.setattr(module, "assert_completed_report", lambda _report: None)
+    module.controlled_defect(root, evidence, tmp_path / "config.toml", tmp_path)
+    assert (evidence / "controlled-defect-report.json").is_file()
+    assert json.loads((evidence / "cold-auto-report.json").read_text()) == {"untouched": True}
+
+
+def test_offline_corpus_requires_provisioned_launcher(tmp_path: Path, monkeypatch) -> None:
+    module = _load()
+    monkeypatch.delenv("SPECFACT_CORPUS_OFFLINE_LAUNCHER", raising=False)
+    launcher = tmp_path / "root/opt/specfact/bin/bwrap-static"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_bytes(b"not the signed launcher")
+    with pytest.raises(ValueError, match=r"administrator-provisioned.*launcher"):
+        module.offline_command(["specfact", "code", "review", "runtime", "prepare", "--offline"])

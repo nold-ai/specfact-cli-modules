@@ -1,0 +1,85 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 11 items
+
+tests/unit/test_external_capsule_corpus.py .........FF                   [100%]
+
+=================================== FAILURES ===================================
+_______________ test_controlled_defect_preserves_separate_report _______________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-158/test_controlled_defect_preserv0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1088d3820>
+
+    def test_controlled_defect_preserves_separate_report(tmp_path: Path, monkeypatch) -> None:
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "tests").mkdir(parents=True)
+        evidence = tmp_path / "evidence"
+        evidence.mkdir()
+        (evidence / "cold-auto-report.json").write_text('{"untouched": true}')
+
+        def execute(argv, **_context):
+            output = Path(argv[argv.index("--out") + 1])
+            output.write_text(json.dumps({"findings": [
+                {"rule": "TEST_OUTCOME_NOT_PASS"},
+                {"tool": "basedpyright", "file": "specfact_controlled.py"},
+            ]}))
+            return ""
+
+        monkeypatch.setattr(module, "execute", execute)
+        monkeypatch.setattr(module, "assert_completed_report", lambda _report: None)
+>       module.controlled_defect(root, evidence, tmp_path / "config.toml", tmp_path)
+
+tests/unit/test_external_capsule_corpus.py:144:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('<TMPDIR>/pytest-of-dom/pytest-158/test_controlled_defect_preserv0/upstream')
+evidence = PosixPath('<TMPDIR>/pytest-of-dom/pytest-158/test_controlled_defect_preserv0/evidence')
+config = PosixPath('<TMPDIR>/pytest-of-dom/pytest-158/test_controlled_defect_preserv0/config.toml')
+workspace = PosixPath('<TMPDIR>/pytest-of-dom/pytest-158/test_controlled_defect_preserv0')
+
+    def controlled_defect(root: Path, evidence: Path, config: Path, workspace: Path) -> None:
+        """Require actual test failure and static defect detection in an identified copy."""
+        copy = workspace / "controlled" / root.name
+        shutil.copytree(root, copy, symlinks=True)
+        (copy / "specfact_controlled.py").write_text(
+            'def controlled() -> int:\n    return "injected wrong type"\n', encoding="utf-8"
+        )
+        (copy / "tests/test_specfact_controlled.py").write_text(
+            'def test_specfact_controlled_failure():\n    assert False, "SPECFACT_CONTROLLED_473"\n', encoding="utf-8"
+        )
+>       report = review(
+            copy,
+            evidence,
+            config,
+            ["specfact_controlled.py", "tests/test_specfact_controlled.py"],
+            name="controlled-defect",
+        )
+E       TypeError: review() got an unexpected keyword argument 'name'
+
+scripts/external_capsule_corpus.py:291: TypeError
+_______________ test_offline_corpus_rejects_unverified_launcher ________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-158/test_offline_corpus_rejects_un0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108f4f530>
+
+    def test_offline_corpus_rejects_unverified_launcher(tmp_path: Path, monkeypatch) -> None:
+        module = _load()
+        monkeypatch.setenv("SPECFACT_CODE_REVIEW_CAPSULE_CACHE", str(tmp_path))
+        launcher = tmp_path / "root/opt/specfact/bin/bwrap-static"
+        launcher.parent.mkdir(parents=True)
+        launcher.write_bytes(b"not the signed launcher")
+        with pytest.raises(ValueError, match="verified.*launcher"):
+>           module.offline_command(["specfact", "code", "review", "runtime", "prepare", "--offline"])
+            ^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'external_capsule_corpus' has no attribute 'offline_command'
+
+tests/unit/test_external_capsule_corpus.py:156: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_defect_preserves_separate_report
+FAILED tests/unit/test_external_capsule_corpus.py::test_offline_corpus_rejects_unverified_launcher
+========================= 2 failed, 9 passed in 0.04s ==========================

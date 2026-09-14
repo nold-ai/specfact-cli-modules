@@ -7,14 +7,14 @@
 - [x] 1.4 Validate OpenSpec strictly and capture failing tests before production edits.
 
 ## 2. Runtime implementation
-- [ ] 2.1 Implement read-only discovery, explicit configuration, adapter contracts and CLI inspect/prepare.
-- [ ] 2.2 Implement isolated preparation, private content-addressed cache, inventory and v2 attachment validation.
-- [ ] 2.3 Separate worker import domains, diagnose tool/native conflicts and retain v1 trust semantics.
-- [ ] 2.4 Attach runtime and provenance to every scope, including independent changed base/head inputs.
-- [ ] 2.5 Support ordinary pytest/plugin controls and actionable incomplete-evidence reporting.
+- [x] 2.1 Implement read-only discovery, explicit configuration, adapter contracts and CLI inspect/prepare.
+- [x] 2.2 Implement isolated preparation, private content-addressed cache, inventory and v2 attachment validation.
+- [x] 2.3 Separate worker import domains, diagnose tool/native conflicts and retain v1 trust semantics.
+- [x] 2.4 Attach runtime and provenance to every scope, including independent changed base/head inputs.
+- [x] 2.5 Support ordinary pytest/plugin controls and actionable incomplete-evidence reporting.
 
 ## 3. External verification
-- [ ] 3.1 Add pinned external corpus, reconstructed Hatch failure, corruption and controlled defect regressions.
+- [x] 3.1 Add pinned external corpus, reconstructed Hatch failure, corruption and controlled defect regressions.
 - [ ] 3.2 Execute non-root Linux 3.11/3.12/3.13 cold and offline-warm candidate matrix with ordinary GITHUB_ACTIONS.
 - [ ] 3.3 Record actual test inventory, analyzer completeness, identities, source immutability, timing and bytes.
 

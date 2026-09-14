@@ -12,6 +12,7 @@ from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
 from specfact_code_review.run.runtime_compatibility import MEMBER_DISTRIBUTIONS
+from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
 _DOMAIN_ENTRIES = {
@@ -79,7 +80,10 @@ def _domain_graph(
         visited.add(name)
         selected = _selected_distribution(name, target, sealed)
         if selected is None:
-            continue
+            raise ProjectRuntimeError(
+                f"project_analyzer_dependency_missing:{domain}:{name}; "
+                "rebuild the runtime with its complete declared dependencies"
+            )
         row, requirements, admitted_imports = selected
         dependencies = _dependency_names(requirements, environment)
         rows.append({**row, "dependencies": sorted(dependencies)})

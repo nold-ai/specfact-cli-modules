@@ -1,12 +1,15 @@
 """Native dependency inventories fail precisely without invoking untrusted binaries."""
 
+import struct
 from pathlib import Path
 
 import pytest
 
+from specfact_code_review.run.runtime_models import ProjectRuntimeError
+from specfact_code_review.run.runtime_native import elf_dependencies, inventory_native
+
 
 def test_declared_missing_native_library_names_exact_requirement(tmp_path: Path) -> None:
-    from specfact_code_review.run.runtime_native import inventory_native
 
     root = tmp_path / "runtime"
     root.mkdir()
@@ -17,7 +20,6 @@ def test_declared_missing_native_library_names_exact_requirement(tmp_path: Path)
 
 
 def test_native_inventory_does_not_copy_unrequested_host_files(tmp_path: Path) -> None:
-    from specfact_code_review.run.runtime_native import inventory_native
 
     root, system = tmp_path / "artifact", tmp_path / "system"
     root.mkdir()
@@ -28,7 +30,6 @@ def test_native_inventory_does_not_copy_unrequested_host_files(tmp_path: Path) -
 
 
 def _elf(path: Path, needed: tuple[str, ...]) -> None:
-    import struct
 
     strings = b"\0" + b"".join(name.encode() + b"\0" for name in needed)
     offsets = []
@@ -39,6 +40,7 @@ def _elf(path: Path, needed: tuple[str, ...]) -> None:
     dynamic = b"".join(struct.pack("<QQ", 1, offset) for offset in offsets) + struct.pack("<QQ", 0, 0)
     header = bytearray(64)
     header[:6] = b"\x7fELF\x02\x01"
+    struct.pack_into("<H", header, 18, 62)
     struct.pack_into("<Q", header, 40, 64)
     struct.pack_into("<HH", header, 58, 64, 3)
     sections = bytes(64)
@@ -48,7 +50,6 @@ def _elf(path: Path, needed: tuple[str, ...]) -> None:
 
 
 def test_project_native_libraries_use_their_own_loader_closure(tmp_path: Path) -> None:
-    from specfact_code_review.run.runtime_native import inventory_native
 
     artifact, capsule, system = (tmp_path / name for name in ("artifact", "capsule", "system"))
     for root in (artifact, capsule, system):
@@ -67,7 +68,6 @@ def test_project_native_libraries_use_their_own_loader_closure(tmp_path: Path) -
 
 
 def test_owned_native_executables_include_their_shared_library_closure(tmp_path: Path) -> None:
-    from specfact_code_review.run.runtime_native import inventory_native
 
     artifact, system = tmp_path / "artifact", tmp_path / "system"
     (artifact / "executables").mkdir(parents=True)
@@ -77,3 +77,14 @@ def test_owned_native_executables_include_their_shared_library_closure(tmp_path:
     records = inventory_native(artifact, capsule_root=tmp_path / "capsule", declared=(), system_roots=(system,))
     assert (artifact / "native/libcustomer.so.1").is_file()
     assert any(row["path"] == "executables/customer-tool" for row in records)
+
+
+def test_wrong_machine_elf_is_rejected_before_inventory(tmp_path: Path) -> None:
+    payload = bytearray(64)
+    payload[:6] = b"\x7fELF\x02\x01"
+    struct.pack_into("<H", payload, 18, 183)
+    struct.pack_into("<H", payload, 58, 64)
+    binary = tmp_path / "foreign.so"
+    binary.write_bytes(payload)
+    with pytest.raises(ProjectRuntimeError, match="architecture_unsupported"):
+        elf_dependencies(binary)

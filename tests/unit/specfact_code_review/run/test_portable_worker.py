@@ -1,10 +1,17 @@
 """Portable workers keep customer imports out of controller startup."""
 
+import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from specfact_code_review.run.portable_worker import preparation_failure_snapshot, select_test_paths
+from specfact_code_review.run import portable_worker
+from specfact_code_review.run.portable_worker import (
+    preparation_failure_snapshot,
+    select_test_paths,
+    validate_observation,
+)
 from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
@@ -46,14 +53,12 @@ def test_preparation_failure_marks_only_dependent_members() -> None:
 
 
 def test_pytest_collection_only_cannot_pass() -> None:
-    from specfact_code_review.run.portable_worker import validate_observation
 
     with pytest.raises(ProjectRuntimeError, match="execution_incomplete"):
         validate_observation({"exit_code": 0, "collected": ["tests/test_a.py::test_a"], "records": []}, 0)
 
 
 def test_pytest_early_stop_is_incomplete_even_with_real_failure() -> None:
-    from specfact_code_review.run.portable_worker import validate_observation
 
     observation = {
         "exit_code": 1,
@@ -65,7 +70,6 @@ def test_pytest_early_stop_is_incomplete_even_with_real_failure() -> None:
 
 
 def test_pytest_success_requires_coverage_evidence() -> None:
-    from specfact_code_review.run.portable_worker import validate_observation
 
     observation = {
         "exit_code": 0,
@@ -77,10 +81,6 @@ def test_pytest_success_requires_coverage_evidence() -> None:
 
 
 def test_failed_pytest_startup_cannot_reuse_previous_observation(tmp_path, monkeypatch) -> None:
-    import json
-    from types import SimpleNamespace
-
-    from specfact_code_review.run import portable_worker, target_launch
 
     observation = tmp_path / "pytest-observation.json"
     observation.write_text(
@@ -98,7 +98,20 @@ def test_failed_pytest_startup_cannot_reuse_previous_observation(tmp_path, monke
         "Path",
         lambda value: observation if value == "/opt/specfact/tmp/pytest-observation.json" else Path(value),
     )
-    monkeypatch.setattr(target_launch, "target_command", lambda *args: ["child"])
+    monkeypatch.setattr(portable_worker, "target_command", lambda *args: ["child"])
     monkeypatch.setattr(portable_worker.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=0))
     assert portable_worker.run_portable_pytest([tmp_path / "app.py"], ("portable-pytest-v2", "{}"))
     assert not observation.exists()
+
+
+@pytest.mark.parametrize("field", ["collection_errors", "internal_errors"])
+def test_real_failure_does_not_hide_partial_pytest_execution(field) -> None:
+    observation = {
+        "exit_code": 1,
+        "collected": ["a"],
+        "records": [{"nodeid": "a", "phase": "call", "outcome": "failed"}],
+        "coverage": {"files": {"app.py": {}}},
+        field: ["controlled startup or collection error"],
+    }
+    with pytest.raises(ProjectRuntimeError, match=r"project_pytest_.*error"):
+        validate_observation(observation, 1)

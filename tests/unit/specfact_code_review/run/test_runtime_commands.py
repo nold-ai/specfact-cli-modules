@@ -6,6 +6,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
+from specfact_code_review.run import runner
 from specfact_code_review.run.commands import _build_review_run_request
 from specfact_code_review.run.runner import ReviewOptions
 
@@ -36,7 +37,6 @@ def test_review_request_carries_runtime_options(tmp_path: Path) -> None:
 
 
 def test_customer_actions_source_layout_does_not_select_publisher(monkeypatch) -> None:
-    from specfact_code_review.run import runner
 
     marker = object()
     monkeypatch.setenv("GITHUB_ACTIONS", "true")

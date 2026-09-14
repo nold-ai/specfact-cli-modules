@@ -13,6 +13,7 @@ from typing import Any, Literal, cast
 import pytest
 from pytest import MonkeyPatch
 
+from specfact_code_review.run import portable_snapshot
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport, read_review_report
 from specfact_code_review.run.runner import (
     _changed_lines_from_git,
@@ -7730,3 +7731,23 @@ def test_pytest_worker_does_not_inherit_calling_git_index(monkeypatch: MonkeyPat
     monkeypatch.setenv("GIT_INDEX_FILE", "/private/controller/index")
     assert "GIT_INDEX_FILE" not in runner_api._pytest_env()
     assert os.environ["GIT_INDEX_FILE"] == "/private/controller/index"
+
+
+def test_cached_portable_request_carries_repository_and_index_context(tmp_path, monkeypatch) -> None:
+    runner_api = _c14_runner()
+    source = tmp_path / "index"
+    source.mkdir()
+    cached = runner_api.CachedAnalysisSnapshot(
+        tmp_path, source, [], {}, (), runner_api.CachedDiffIdentity("a" * 40, "b" * 40, "")
+    )
+    requests = []
+    monkeypatch.setattr(runner_api, "_cached_review_requested", lambda *_: True)
+    monkeypatch.setattr(runner_api, "_cached_analysis_snapshot", lambda *_: cached)
+    monkeypatch.setattr(portable_snapshot, "project_runtime_requested", lambda *_: True)
+    monkeypatch.setattr(
+        portable_snapshot, "run_project_snapshot", lambda _runtime, request: (requests.append(request), {})
+    )
+    monkeypatch.setattr(runner_api, "_finalize_local_capsule_snapshot", lambda *_: object())
+    runner_api._run_local_capsule_context(object(), [], runner_api.ReviewOptions(), {}, "worktree")
+    assert requests[0].source_snapshot is cached
+    assert cached.commit == "index-" + "b" * 40

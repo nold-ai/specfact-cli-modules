@@ -4,6 +4,7 @@ from pathlib import Path
 
 from specfact_code_review.run.runtime_adapters import install_commands
 from specfact_code_review.run.runtime_discovery import discover_project
+from specfact_code_review.run.runtime_models import ProjectPlan
 
 
 def test_pip_preserves_requirement_constraints_and_groups(tmp_path: Path) -> None:
@@ -34,8 +35,6 @@ def test_hatch_prepare_uses_selected_native_environment(tmp_path: Path) -> None:
 
 
 def test_explicit_groups_do_not_install_unrelated_defaults(tmp_path: Path) -> None:
-    from specfact_code_review.run.runtime_adapters import install_commands
-    from specfact_code_review.run.runtime_models import ProjectPlan
 
     uv = install_commands(ProjectPlan(root=tmp_path, manager="uv", groups=("tests",)), python="python")[0]
     poetry = install_commands(ProjectPlan(root=tmp_path, manager="poetry", groups=("test",)), python="python")[0]

@@ -190,3 +190,54 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **WHEN** a source link resolves into an excluded file, directory, descendant, or Git configuration
 - **THEN** discovery and copying reject it before any network-enabled build hook runs
 - **AND** valid included file and directory links remain inside the copied source with their target bytes bound before building
+
+#### Scenario: Unlocked pip-tools and legacy package metadata
+- **WHEN** a repository has requirements.in without a compiled requirements.txt, or static setup.cfg Python constraints
+- **THEN** discovery imports those inputs and pip prepares the selected dependencies without writing into the checkout
+- **AND** a compiled requirements.txt takes precedence when both pip-tools inputs exist
+
+#### Scenario: Optional test dependencies are selected without combining alternatives
+- **WHEN** a project declares one test extra and no selected test group
+- **THEN** automatic preparation selects that extra
+- **AND** conflicting test extras or group/extra alternatives require explicit selection
+
+#### Scenario: Executable source changes invalidate reuse
+- **WHEN** an included source file changes executable mode without changing bytes
+- **THEN** source identity and runtime reuse change with it
+
+#### Scenario: Corpus acquisition cost is measured transparently
+- **WHEN** the Linux corpus runs dependency acquisition and analysis commands
+- **THEN** evidence records wall time, artifact bytes, and non-loopback host network byte deltas
+- **AND** network counters are labelled as host-wide observations rather than exact package-payload transfer sizes
+
+#### Scenario: Recorded member dependency closure is complete
+- **WHEN** a required distribution is missing from both project inventory and sealed analyzer inventory
+- **THEN** preparation reports the member and missing distribution rather than silently omitting the dependency edge
+- **AND** genuinely undeclared project imports remain ordinary analyzer findings after successful preparation
+
+#### Scenario: Analysis workers cannot read excluded checkout files
+- **WHEN** an ordinary checkout contains excluded environment files or a local virtual environment
+- **THEN** portable analyzers receive a verified private source copy with those exclusions applied
+- **AND** selected included source bytes and configuration remain identical to the bound source snapshot
+
+#### Scenario: Cached enforcement retains staged VCS context
+- **WHEN** a changed-enforcement review materializes the staged index of a dynamically versioned project
+- **THEN** discovery receives its repository and index context so preparation preserves sanitized VCS facts
+
+#### Scenario: Partial pytest execution cannot hide collection or internal errors
+- **WHEN** tests execute or fail alongside collection or internal errors
+- **THEN** known failures remain visible and required test evidence remains incomplete
+
+#### Scenario: Runtime descriptors and native binaries match their execution domain
+- **WHEN** a descriptor has invalid pytest argument types or an ELF artifact targets another machine architecture
+- **THEN** validation rejects the artifact with a precise diagnostic before worker execution
+
+#### Scenario: Independent offline corpus proof
+- **GIVEN** a cold external review has populated the verified cache
+- **WHEN** the corpus repeats preparation and explicit attachment
+- **THEN** both commands execute as a non-root user in a network namespace with no active non-loopback interfaces, and the evidence records this isolation separately from the offline option
+
+#### Scenario: Controlled defect evidence remains separate
+- **GIVEN** an untouched upstream review and a disposable copy with injected defects
+- **WHEN** the corpus analyzes both
+- **THEN** their reports have distinct artifact names and the controlled report proves actual failing tests and static detection

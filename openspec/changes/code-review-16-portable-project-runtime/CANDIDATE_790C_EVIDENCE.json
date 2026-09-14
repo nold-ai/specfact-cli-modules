@@ -1,0 +1,653 @@
+{
+  "candidate_sha": "790c39eb47b89046f6525cce9f7345f746896706",
+  "run_url": "https://github.com/nold-ai/specfact-cli-modules/actions/runs/34850206113",
+  "public_release_acceptance": false,
+  "network_evidence": "Offline flag and cache reuse only; independent network denial is added in the subsequent candidate.",
+  "entries": [
+    {
+      "artifact": "capsule-candidate-cp3.11-2",
+      "repository": "flask",
+      "status": "PASS",
+      "commit": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:ae03a700cddecfe7ebe4267c6e1ec5281b5ea59775f18d187215a118ef515b79",
+      "artifact_bytes": 23339947,
+      "assurance_status": "PASS",
+      "findings": 38,
+      "collected": 19,
+      "test_calls": 19,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.8655445570000211,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 62.12832506099994,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 24.051680019999935,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 53.10843620199989,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 54.973957939000115,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "3bca0871445301d0872928d0e444449264c6903b2324f7e191f340bed3855b89"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.11-2",
+      "repository": "hatch",
+      "status": "PASS",
+      "commit": "d5f7bfe813dd4d81520def23b43f5d46aad1899c",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:1257851cadb4ac58c1deb992b767698d207737ce6b8ec29f1fce92713299d88e",
+      "artifact_bytes": 93538449,
+      "assurance_status": "PASS",
+      "findings": 29,
+      "collected": 5,
+      "test_calls": 5,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 1.3550481190000028,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 72.45076273200004,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 24.373922411999956,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 54.76910508699996,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 74.03236068899992,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "3d64c1c8fd390cd0e7ea38d82320a9b15819c14cdeedf26f52bddcdd950fd299"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.11-2",
+      "repository": "hatch-detached",
+      "status": "PASS",
+      "commit": "reconstructed-sha256:ab12ae4c46bb9bd24b4e2888c24e69ae6e74fbb362aa31ab4083a5622fe4d8c9",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:7e38ed23da9e51ffd91445347a3fbdfaeb5ae35d3b2f4ee3572dd73700df5c2c",
+      "artifact_bytes": 25182148,
+      "assurance_status": "FAIL",
+      "findings": 4,
+      "collected": 1,
+      "test_calls": 1,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.5101921289999609,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 1,
+          "seconds": 65.52007576200003,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 25.015769412000054,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 1,
+          "seconds": 45.76698404600006,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 66.83649849900007,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "a4328435658843e532e834d8c2357a63898f77fb4f5c0b4a364f64e2b37e287f"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.11-2",
+      "repository": "poetry",
+      "status": "PASS",
+      "commit": "be56ff07db06e9b82574648433ca228e4cac549b",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:89bc7c82a655a7531c9f5b9308424d89a133c9f5553b937b9f775ab3617fb3f6",
+      "artifact_bytes": 81202817,
+      "assurance_status": "PASS",
+      "findings": 17,
+      "collected": 7,
+      "test_calls": 7,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 4.061343480000005,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 83.482156218,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 24.598323703000005,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 61.010466065999935,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 84.68167394500006,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "6f4e0acada070cd298679e8e9a0f639170df9a85d9905a3f1dc8a8b2e3373def"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.11-2",
+      "repository": "requests",
+      "status": "PASS",
+      "commit": "dae7ef63b4df6eded86637f251fc4e3a06c3b479",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:1fd559fb3b50083db28582ed931d1ccfb613b62ac4de57cb75895fea681794d9",
+      "artifact_bytes": 54169978,
+      "assurance_status": "FAIL",
+      "findings": 76,
+      "collected": 24,
+      "test_calls": 24,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.8437639669999726,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 1,
+          "seconds": 63.777593712,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 24.226139390999947,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 1,
+          "seconds": 48.458951126000045,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 62.373512699,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "b8ae803c40a2bac14f0b99827ce99d2547b7e801fca0abb388f02b59109a146e"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.12-2",
+      "repository": "flask",
+      "status": "PASS",
+      "commit": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:0ac9968de38afa1a38875fd08ea39ba422defd5e90019f6f7199b4b0ce16aa64",
+      "artifact_bytes": 17459850,
+      "assurance_status": "PASS",
+      "findings": 38,
+      "collected": 19,
+      "test_calls": 19,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.7229073040000458,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 52.58311882199996,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 23.802622895000013,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 46.12251091799999,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 49.56557891399996,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "cd1efae20d844289addbdb98830e7fb4a657b18a5f497dd007a443633aa060e1"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.12-2",
+      "repository": "hatch",
+      "status": "PASS",
+      "commit": "d5f7bfe813dd4d81520def23b43f5d46aad1899c",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:94d5825793ec77e6e0c88888f4af58ad35d14d7454137d42712f7372c5b2b56e",
+      "artifact_bytes": 93337858,
+      "assurance_status": "PASS",
+      "findings": 29,
+      "collected": 5,
+      "test_calls": 5,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 1.2149815500000614,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 67.35375056400005,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 24.181192329000055,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 49.60144850200004,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 95.840027889,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "06318d652991594ad69b7ffd68eed16acf7557453b333b42211ff90386d08f4f"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.12-2",
+      "repository": "hatch-detached",
+      "status": "PASS",
+      "commit": "reconstructed-sha256:ab12ae4c46bb9bd24b4e2888c24e69ae6e74fbb362aa31ab4083a5622fe4d8c9",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:ce26a9b8d004aed4807221539962d987559da9fee89ba57ad412628ead7db79d",
+      "artifact_bytes": 22320028,
+      "assurance_status": "FAIL",
+      "findings": 4,
+      "collected": 1,
+      "test_calls": 1,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.38110269300000255,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 1,
+          "seconds": 62.84380643999998,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 23.88717918799989,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 1,
+          "seconds": 41.872338608000064,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 97.43103900999995,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "0f80a85f29cc99dd4824524900f194b354b72fdb8fde6f9d2446478918c767a9"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.12-2",
+      "repository": "poetry",
+      "status": "PASS",
+      "commit": "be56ff07db06e9b82574648433ca228e4cac549b",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:44ff272ae83f781f207f9c60a629a1ce9619125ccd52b69df9a8358abec3bdc8",
+      "artifact_bytes": 75073564,
+      "assurance_status": "PASS",
+      "findings": 17,
+      "collected": 7,
+      "test_calls": 7,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 3.2802367209999375,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 76.30958475900002,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 24.161435861999962,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 55.53275712499999,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 78.62037464700006,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "a3de9cffde2c14a530a4f0a3e2aa6c019ffaef377ef69d14160114cb406ebbdc"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.12-2",
+      "repository": "requests",
+      "status": "PASS",
+      "commit": "dae7ef63b4df6eded86637f251fc4e3a06c3b479",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:321a0ecc1660563aae95be6ac36da1a7c08af26ecc3bd77d032e5d65c547572e",
+      "artifact_bytes": 48155980,
+      "assurance_status": "FAIL",
+      "findings": 76,
+      "collected": 24,
+      "test_calls": 24,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.6940615159999766,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 1,
+          "seconds": 60.05805215800001,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 23.860793911999963,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 1,
+          "seconds": 44.90659736800001,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 58.515139234,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "fd91a4802160181968ffddaf1933d958df9c89032c8721c54aa9acb4e3467bee"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.13-2",
+      "repository": "flask",
+      "status": "PASS",
+      "commit": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:e530e2f77b02b50b8a9ae3826aecc6b2e69e67b791993d8d3a2841c790b5f715",
+      "artifact_bytes": 17129672,
+      "assurance_status": "PASS",
+      "findings": 38,
+      "collected": 19,
+      "test_calls": 19,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.9522328820000894,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 65.59216172000004,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 28.240223164999975,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 58.41699450100009,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 59.893755801,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "da86fbb2088fb3ca70f08fcb09d97a2ba19fa23f1e13a44ef81e0bf4c82e526b"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.13-2",
+      "repository": "hatch",
+      "status": "PASS",
+      "commit": "d5f7bfe813dd4d81520def23b43f5d46aad1899c",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:53be990533d25ee71e91de5f77d9ab68d81e85ef6ebf3e2e1aa43bd678167169",
+      "artifact_bytes": 93330864,
+      "assurance_status": "PASS",
+      "findings": 29,
+      "collected": 5,
+      "test_calls": 5,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 1.4603343349999705,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 77.93810508299998,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 28.432799085000056,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 61.59329719799996,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 78.14387591400009,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "a3aade877cfc2b709008083b56ce543debde587e20125d6aab1fd9cfb4242195"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.13-2",
+      "repository": "hatch-detached",
+      "status": "PASS",
+      "commit": "reconstructed-sha256:ab12ae4c46bb9bd24b4e2888c24e69ae6e74fbb362aa31ab4083a5622fe4d8c9",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:3b19e4568c49a2a2eb1b9961f79f65680d1df185f60e60805ca4d278d510b12e",
+      "artifact_bytes": 22154590,
+      "assurance_status": "FAIL",
+      "findings": 4,
+      "collected": 1,
+      "test_calls": 1,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.5152638150000257,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 1,
+          "seconds": 67.02093121899998,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 28.24764240000013,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 1,
+          "seconds": 51.17695420199993,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 66.37384881899993,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "de979e32e5fbf03fe35768725f37cac96f78acba932b51636ada0585c12f95a0"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.13-2",
+      "repository": "poetry",
+      "status": "PASS",
+      "commit": "be56ff07db06e9b82574648433ca228e4cac549b",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:79ed95d9a0d0b24f55c63e56a46c5f2158b0fc1e7629e8c2c0bb237d20126e02",
+      "artifact_bytes": 74528534,
+      "assurance_status": "PASS",
+      "findings": 17,
+      "collected": 7,
+      "test_calls": 7,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 4.568728027000134,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 0,
+          "seconds": 88.8511830970001,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 28.745056191999993,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 0,
+          "seconds": 68.16085630199996,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 87.39499571399983,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "e91ed3e4f437e90efbf9379b3b5fdcf48d73792bd96b86aa0510ef4b13468e61"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.13-2",
+      "repository": "requests",
+      "status": "PASS",
+      "commit": "dae7ef63b4df6eded86637f251fc4e3a06c3b479",
+      "mode": "candidate",
+      "source_unchanged": true,
+      "runtime_identity": "sha256:63f2963d0f8992cd7b5e32a187f788c11884c43b1385375b78e3e7a778bb4f5b",
+      "artifact_bytes": 47832822,
+      "assurance_status": "FAIL",
+      "findings": 76,
+      "collected": 24,
+      "test_calls": 24,
+      "pytest_version": "9.1.1",
+      "phases": {
+        "host-tests": {
+          "exit": 0,
+          "seconds": 0.7305600509999977,
+          "uid": 1001
+        },
+        "cold-auto": {
+          "exit": 1,
+          "seconds": 69.65158838100001,
+          "uid": 1001
+        },
+        "offline-prepare": {
+          "exit": 0,
+          "seconds": 28.390059093000048,
+          "uid": 1001
+        },
+        "warm-attach": {
+          "exit": 1,
+          "seconds": 55.32578684699996,
+          "uid": 1001
+        },
+        "controlled-defect": {
+          "exit": 1,
+          "seconds": 66.79110196400006,
+          "uid": 1001
+        }
+      },
+      "report_sha256": "2be26e057cb8334abcf223354160c94d0cd555dc26a39578a4c4e1e12feb3201"
+    }
+  ]
+}

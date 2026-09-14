@@ -9,3 +9,5 @@ A fresh read-only investigator independently reproduced four alias classes. A se
 Focused validation: `hatch run pytest tests/unit/specfact_code_review/run/test_runtime_builder.py tests/unit/specfact_code_review/run/test_runtime_discovery.py -q` passes. Whole-repository lint/type and final publication gates are recorded separately in TDD_EVIDENCE.md; this document does not grant release acceptance.
 
 Boundary limitation: hardlinks are ordinary source files and are not preserved by Git. A local process able to create hardlinks to local secrets is outside the committed-symlink trigger addressed here. Private staging must remain inaccessible to untrusted processes; same-user host compromise is outside the capsule's source-isolation claim.
+
+Portable analysis now also mounts the verified private source copy. The new regression demonstrates that `.env` and local virtual environments are absent from analyzer source mounts while included source remains readable; see `ANALYSIS_EXCLUSIONS_RED.txt`. This extends the exclusion boundary from acquisition to analysis. Final Linux candidate verification must cover this additional change.

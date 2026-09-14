@@ -4527,6 +4527,12 @@ class CachedAnalysisSnapshot:
     directories: tuple[MaterializedDirectoryIdentity, ...]
     diff: CachedDiffIdentity
 
+    @property
+    @ensure(lambda result: result.startswith("index-"))
+    def commit(self) -> str:
+        """Carry the staged tree context through common snapshot discovery."""
+        return "index-" + self.diff.index_tree
+
 
 @dataclass(frozen=True)
 class WorktreePathIdentity:
@@ -6898,6 +6904,7 @@ def _run_local_capsule_context(
                     files=snapshot_files,
                     options=review_options,
                     assurance_kind=assurance_kind,
+                    source_snapshot=cached_snapshot,
                 ),
             )
             scope_evidence["project_runtime"] = project_evidence

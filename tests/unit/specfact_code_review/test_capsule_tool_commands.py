@@ -1,10 +1,14 @@
 """Child analyzer commands retain sealed startup and private writable state."""
 
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from specfact_code_review import _review_utils
+from specfact_code_review._review_utils import analyzer_command, development_runtime
 
 
 @pytest.mark.parametrize(
@@ -47,7 +51,6 @@ def test_host_tool_commands_keep_existing_behavior() -> None:
 
 
 def test_development_snapshot_uses_its_verified_runtime_without_leaking_context() -> None:
-    from specfact_code_review._review_utils import analyzer_command, development_runtime
 
     original = ["basedpyright", "--outputjson", "src/app.py"]
     with development_runtime(Path("/private/development/.venv")):
@@ -58,9 +61,6 @@ def test_development_snapshot_uses_its_verified_runtime_without_leaking_context(
 
 
 def test_development_context_runs_basedpyright_with_import_resolution(tmp_path) -> None:
-    import json
-    import subprocess
-    import sys
 
     source = tmp_path / "app.py"
     source.write_text(

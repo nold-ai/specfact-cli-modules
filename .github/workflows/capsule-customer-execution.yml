@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Install declared external corpus native requirements
-        run: sudo apt-get update && sudo apt-get install -y libodbc2
+        run: sudo apt-get update && sudo apt-get install -y libodbc2 bubblewrap
       - name: Prepare fresh customer-owned installation
         shell: bash
         run: |
@@ -109,11 +109,17 @@ jobs:
           set -euo pipefail
           # Administrator prerequisite only: all installation and analysis runs as the runner user.
           # Keep Ubuntu's global AppArmor namespace restriction enabled.
+          mkdir -p "$CUSTOMER_ROOT/offline-network"
+          cp /usr/bin/bwrap "$CUSTOMER_ROOT/offline-network/bwrap"
+          echo "SPECFACT_CORPUS_OFFLINE_LAUNCHER=$CUSTOMER_ROOT/offline-network/bwrap" >> "$GITHUB_ENV"
           profile="$CUSTOMER_ROOT/capsule-userns.apparmor"
           cat > "$profile" <<EOF
           abi <abi/4.0>,
           include <tunables/global>
           profile specfact-customer-capsule "$CUSTOMER_ROOT/cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
+            userns,
+          }
+          profile specfact-customer-offline-network "$CUSTOMER_ROOT/offline-network/bwrap" flags=(unconfined) {
             userns,
           }
           profile specfact-customer-capsule-umask "$CUSTOMER_ROOT/cache-077/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {

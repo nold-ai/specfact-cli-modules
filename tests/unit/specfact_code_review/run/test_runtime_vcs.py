@@ -1,9 +1,12 @@
 """Dynamic package versions bind to sanitized, exact source VCS context."""
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
+from specfact_code_review.run import scope
+from specfact_code_review.run.portable_snapshot import discover_snapshot
 from specfact_code_review.run.runtime_builder import copy_project
 from specfact_code_review.run.runtime_discovery import discover_project
 
@@ -56,10 +59,6 @@ def test_tag_change_invalidates_runtime_without_source_byte_changes(tmp_path: Pa
 
 
 def test_immutable_snapshot_retains_selected_commit_context(tmp_path: Path) -> None:
-    import shutil
-
-    from specfact_code_review.run import scope
-    from specfact_code_review.run.portable_snapshot import discover_snapshot
 
     root = tmp_path / "project"
     _repository(root)

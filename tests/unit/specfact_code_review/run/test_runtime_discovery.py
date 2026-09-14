@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from specfact_code_review.run import runtime_discovery
 from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
@@ -31,7 +32,8 @@ def test_ambiguous_managers_need_explicit_selection(tmp_path: Path) -> None:
 
 def test_detached_hatch_env_does_not_inherit_default(tmp_path: Path) -> None:
     (tmp_path / "hatch.toml").write_text(
-        '[envs.default]\ndependencies=["unrelated"]\n[envs.review]\ndetached=true\ndependencies=["pandas", "pytest-asyncio"]\n'
+        '[envs.default]\ndependencies=["unrelated"]\n'
+        '[envs.review]\ndetached=true\ndependencies=["pandas", "pytest-asyncio"]\n'
     )
     (tmp_path / "review.toml").write_text('manager="hatch"\nenvironment="review"\n')
     plan = discover_project(tmp_path, config_path=tmp_path / "review.toml")
@@ -77,7 +79,8 @@ def test_input_change_invalidates_even_without_git(tmp_path: Path) -> None:
 def test_source_roots_and_pytest_config_are_recorded(tmp_path: Path) -> None:
     (tmp_path / "src").mkdir()
     (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname="consumer"\n[tool.pytest.ini_options]\npythonpath=["src", "tools", "."]\naddopts="-ra -v --import-mode=importlib -p pytest_asyncio.plugin"\n'
+        '[project]\nname="consumer"\n[tool.pytest.ini_options]\npythonpath=["src", "tools", "."]\n'
+        'addopts="-ra -v --import-mode=importlib -p pytest_asyncio.plugin"\n'
     )
     (tmp_path / "tools").mkdir()
     plan = discover_project(tmp_path)
@@ -144,8 +147,6 @@ def test_requirements_parent_include_inside_repository(tmp_path: Path) -> None:
 
 
 def test_verified_active_hatch_context_resolves_competing_signals(tmp_path: Path, monkeypatch) -> None:
-    from specfact_code_review.run import runtime_discovery
-
     environment = tmp_path / ".venv"
     environment.mkdir()
     (environment / "pyvenv.cfg").write_text("home = /usr/bin\n")
@@ -163,3 +164,70 @@ def test_unverified_active_context_cannot_override_repository(tmp_path: Path, mo
     monkeypatch.setenv("VIRTUAL_ENV", str(tmp_path / "missing-env"))
     monkeypatch.setenv("HATCH_ENV_ACTIVE", "review")
     assert discover_project(tmp_path).manager == "uv"
+
+
+def test_unlocked_pip_tools_input_is_discovered(tmp_path: Path) -> None:
+    (tmp_path / "requirements.in").write_text("requests<3\n")
+    plan = discover_project(tmp_path)
+    assert plan.requirements == ("requirements.in",)
+    assert "requirements.in" in plan.inputs
+    (tmp_path / "requirements.txt").write_text("requests==2.32.5\n")
+    assert discover_project(tmp_path).requirements == ("requirements.txt",)
+
+
+def test_legacy_static_python_constraint_is_imported(tmp_path: Path) -> None:
+    (tmp_path / "setup.cfg").write_text("[options]\npython_requires = >=3.11,<3.12\n")
+    assert discover_project(tmp_path).requires_python == ">=3.11,<3.12"
+
+
+def test_one_test_extra_is_prepared_automatically(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text('[project.optional-dependencies]\ntest=["pytest"]\n')
+    assert discover_project(tmp_path).extras == ("test",)
+
+
+def test_group_and_extra_require_explicit_selection(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project.optional-dependencies]\ntest=["pytest"]\n[dependency-groups]\ntest=["pytest<9"]\n'
+    )
+    with pytest.raises(ProjectRuntimeError, match="test_dependencies_ambiguous"):
+        discover_project(tmp_path)
+    configuration = tmp_path / "runtime.toml"
+    configuration.write_text('extras=["test"]\n')
+    plan = discover_project(tmp_path, config_path=configuration)
+    assert plan.extras == ("test",) and not plan.groups
+
+
+def test_executable_source_mode_is_part_of_runtime_identity(tmp_path: Path) -> None:
+    script = tmp_path / "manage"
+    script.write_text("#!/usr/bin/env python\nprint('ready')\n")
+    script.chmod(0o644)
+    before = discover_project(tmp_path).identity
+    script.chmod(0o755)
+    assert discover_project(tmp_path).identity != before
+
+
+def test_pylock_uses_native_pip_input_without_requirement_line_parsing(tmp_path: Path) -> None:
+    (tmp_path / "pylock.toml").write_text(
+        'lock-version="1.0"\ncreated-by="pip"\n[[packages]]\nname="requests"\nversion="2.32.5"\n'
+    )
+    assert discover_project(tmp_path).requirements == ("pylock.toml",)
+    (tmp_path / "requirements.txt").write_text("requests<2\n")
+    with pytest.raises(ProjectRuntimeError, match="requirements_ambiguous"):
+        discover_project(tmp_path)
+
+
+def test_remote_requirement_include_diagnostic_omits_credentials(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text("-r https://username:secret-token@example.invalid/requirements.txt\n")
+    with pytest.raises(ProjectRuntimeError) as error:
+        discover_project(tmp_path)
+    assert "remote_include" in str(error.value)
+    assert "secret-token" not in str(error.value)
+
+
+def test_source_identity_distinguishes_executable_permission_classes(tmp_path: Path) -> None:
+    script = tmp_path / "manage"
+    script.write_text("#!/usr/bin/env python\n")
+    script.chmod(0o754)
+    before = discover_project(tmp_path).identity
+    script.chmod(0o745)
+    assert discover_project(tmp_path).identity != before

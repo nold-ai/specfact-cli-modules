@@ -1,8 +1,19 @@
 """Builder inventories retain dependency facts without credentials."""
 
+import json
+
+import pytest
+
+from specfact_code_review.run import runtime_build_driver as driver
+from specfact_code_review.run.runtime_build_driver import (
+    clean_inventory,
+    copy_executables,
+    installer_environment,
+    select_hatch_environment,
+)
+
 
 def test_inventory_never_serializes_index_credentials() -> None:
-    from specfact_code_review.run.runtime_build_driver import clean_inventory
 
     inventory = clean_inventory(
         {
@@ -19,7 +30,6 @@ def test_inventory_never_serializes_index_credentials() -> None:
             ]
         }
     )
-    import json
 
     encoded = json.dumps(inventory)
     assert "secret" not in encoded
@@ -28,16 +38,12 @@ def test_inventory_never_serializes_index_credentials() -> None:
 
 
 def test_hatch_export_selects_one_native_matrix_environment() -> None:
-    from specfact_code_review.run.runtime_build_driver import select_hatch_environment
 
     export = {"hatch-test.py3.11": {"python": "3.11"}, "hatch-test.py3.12": {"python": "3.12"}}
     assert select_hatch_environment(export, "hatch-test", "3.12") == "hatch-test.py3.12"
 
 
 def test_hatch_export_rejects_ambiguous_matrix() -> None:
-    import pytest
-
-    from specfact_code_review.run.runtime_build_driver import select_hatch_environment
 
     export = {"test.py3.12-a": {"python": "3.12"}, "test.py3.12-b": {"python": "3.12"}}
     with pytest.raises(RuntimeError, match="project_environment_ambiguous"):
@@ -45,7 +51,6 @@ def test_hatch_export_rejects_ambiguous_matrix() -> None:
 
 
 def test_distribution_executables_are_rebased_and_unowned_files_excluded(tmp_path) -> None:
-    from specfact_code_review.run.runtime_build_driver import copy_executables
 
     environment, artifact = tmp_path / "env", tmp_path / "artifact"
     (environment / "bin").mkdir(parents=True)
@@ -66,11 +71,10 @@ def test_distribution_executables_are_rebased_and_unowned_files_excluded(tmp_pat
 
 
 def test_hatch_export_has_its_owned_uv_executable(monkeypatch) -> None:
-    from specfact_code_review.run import runtime_build_driver as driver
 
     observed = []
 
-    def run(command, *, env=None):
+    def run(_command, *, env=None):
         assert env is not None
         observed.append(env.copy())
         return '{"review": {}}'
@@ -81,7 +85,6 @@ def test_hatch_export_has_its_owned_uv_executable(monkeypatch) -> None:
 
 
 def test_hatch_dependencies_are_not_redirected_into_the_pip_environment() -> None:
-    from specfact_code_review.run.runtime_build_driver import installer_environment
 
     hatch = installer_environment("hatch", {"PATH": "/usr/bin", "PIP_PYTHON": "/wrong/python", "VIRTUAL_ENV": "/wrong"})
     assert "PIP_PYTHON" not in hatch
@@ -91,7 +94,6 @@ def test_hatch_dependencies_are_not_redirected_into_the_pip_environment() -> Non
 
 
 def test_hatch_native_extra_arguments_are_retained(monkeypatch) -> None:
-    from specfact_code_review.run import runtime_build_driver as driver
 
     monkeypatch.setattr(
         driver,
@@ -104,9 +106,6 @@ def test_hatch_native_extra_arguments_are_retained(monkeypatch) -> None:
 
 
 def test_exact_hatch_environment_cannot_select_an_incompatible_abi() -> None:
-    import pytest
-
-    from specfact_code_review.run.runtime_build_driver import select_hatch_environment
 
     with pytest.raises(RuntimeError, match="project_python_incompatible"):
         select_hatch_environment({"review": {"python": "3.11"}}, "review", "3.12")
@@ -114,7 +113,6 @@ def test_exact_hatch_environment_cannot_select_an_incompatible_abi() -> None:
 
 
 def test_python_prefixed_distribution_command_is_preserved(tmp_path) -> None:
-    from specfact_code_review.run.runtime_build_driver import copy_executables
 
     environment, artifact = tmp_path / "environment", tmp_path / "artifact"
     (environment / "bin").mkdir(parents=True)

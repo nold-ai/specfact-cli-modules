@@ -20,6 +20,8 @@ Portable project runtimes let the code review capsule use a repository's own dep
 
 Execution requires Linux x86-64 with the capsule's supported Python 3.11, 3.12, or 3.13 ABI and working unprivileged user namespaces. A local descriptor does not grant protected pull-request authority.
 
+Windows and macOS host-to-worker setup is not implemented or validated by this change. Runtime inspection reads project metadata, but automatic preparation and capsule execution require the Linux environment above. A future container or VM handoff must validate source transfer, architecture, native dependencies, and returned evidence. Linux execution cannot establish Windows- or macOS-specific test behavior.
+
 ## Inspect and review
 
 From the repository root, inspect the selected manager and input identities without installing dependencies:
@@ -34,7 +36,7 @@ Existing review commands prepare the target runtime automatically before depende
 specfact code review run src/example.py tests/test_example.py --bug-hunt --json --out /tmp/review.json
 ```
 
-A single declared test dependency group is selected automatically. Hatchling alone is a build backend, so it does not imply a Hatch environment. Competing environment choices produce a diagnostic; select the intended environment explicitly.
+A single declared test dependency group or test extra is selected automatically. Explicit groups and extras suppress automatic selection of the other category; competing choices require configuration. Hatchling alone is a build backend, so it does not imply a Hatch environment. Competing environment choices produce a diagnostic; select the intended environment explicitly.
 
 ## Select an environment
 
@@ -89,3 +91,7 @@ Track release acceptance in [User Story #473](https://github.com/nold-ai/specfac
 Python subprocess options `-I`, `-E`, and `-S` disable the startup mechanism used to attach the selected runtime. The worker rejects these exact options with `project_python_option_unsupported` rather than running without project dependencies. Ordinary `-c`, `-m`, `-u`, and script invocations retain native Python argument handling.
 
 Source aliases must resolve to included repository content. Aliases into excluded `.env`, virtual environments, or Git metadata are rejected before dependency building. Valid internal links are preserved in the private source copy, including absolute links rebased into that copy; the copied bytes are verified before build hooks execute.
+
+Pip discovery recognizes `requirements.txt`, pip-tools `requirements.in`, and `pylock.toml`. Multiple lock/requirements alternatives require explicit selection. Standard lock handling is delegated to pip; pip 26.2.1 documents `pylock.toml` support as experimental ([pip install reference](https://pip.pypa.io/en/stable/cli/pip_install/), accessed 2026-09-14). Static `setup.cfg` Python constraints are imported when PEP 621 metadata does not provide them.
+
+Portable analysis uses a verified private source copy with local environments and excluded secret files removed. The corpus records artifact bytes and Linux host-interface transfer counters; those counters include concurrent host traffic and are not exact package download sizes. Its warm preparation and attachment commands additionally run in a non-root network namespace, independently of the offline option.
