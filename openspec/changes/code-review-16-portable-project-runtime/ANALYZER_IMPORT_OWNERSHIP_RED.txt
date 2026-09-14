@@ -1,0 +1,941 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- <temporary>/worktree/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: <repository>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 29 items
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_member_graph_excludes_unrelated_analyzer_packages PASSED [  3%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_project_distribution_replaces_compatible_tool_dependency PASSED [  6%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_missing_member_dependency_cannot_be_silently_omitted PASSED [ 10%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_pytest_worker_validates_selected_dependency_versions[7.0-True] PASSED [ 13%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_pytest_worker_validates_selected_dependency_versions[8.4-False] PASSED [ 17%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.py-None] FAILED [ 20%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.py-owned\nstale\n] FAILED [ 24%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.py-stale\n] FAILED [ 27%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-None] FAILED [ 31%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-owned\nstale\n] FAILED [ 34%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-stale\n] FAILED [ 37%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-None] FAILED [ 41%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-owned\nstale\n] FAILED [ 44%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-stale\n] FAILED [ 48%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-None] FAILED [ 51%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-owned\nstale\n] FAILED [ 55%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-stale\n] FAILED [ 58%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-None] FAILED [ 62%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-owned\nstale\n] FAILED [ 65%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-stale\n] FAILED [ 68%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-None] FAILED [ 72%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-owned\nstale\n] FAILED [ 75%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-stale\n] FAILED [ 79%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.so-None] FAILED [ 82%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.so-owned\nstale\n] FAILED [ 86%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.so-stale\n] FAILED [ 89%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_stale_top_level_cannot_claim_another_distributions_build_package FAILED [ 93%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_missing_recorded_module_is_not_admitted_from_stale_metadata FAILED [ 96%]
+tests/unit/specfact_code_review/run/test_runtime_domains.py::test_missing_file_inventory_cannot_guess_analyzer_ownership FAILED [100%]
+
+=================================== FAILURES ===================================
+___ test_import_ownership_comes_from_recorded_runtime_payload[owned.py-None] ___
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr0')
+declaration = None, payload = 'owned.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'docs', 'inv...ned', 'stubs'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stubs'
+E         'docs'
+E         'invalid'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.py-owned\nstale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr1')
+declaration = 'owned\nstale\n', payload = 'owned.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'owned', 'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         
+E         Full diff:
+E           {
+E               'owned',
+E         +     'stale',
+E           }
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.py-stale\n] __
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr2')
+declaration = 'stale\n', payload = 'owned.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         Extra items in the right set:
+E         'owned'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (4 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-None] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr3')
+declaration = None, payload = 'owned/__init__.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'docs', 'inv...ned', 'stubs'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stubs'
+E         'docs'
+E         'invalid'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-owned\nstale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr4')
+declaration = 'owned\nstale\n', payload = 'owned/__init__.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'owned', 'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         
+E         Full diff:
+E           {
+E               'owned',
+E         +     'stale',
+E           }
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-stale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr5')
+declaration = 'stale\n', payload = 'owned/__init__.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         Extra items in the right set:
+E         'owned'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (4 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-None] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr6')
+declaration = None, payload = 'owned/component.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'docs', 'inv...ned', 'stubs'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stubs'
+E         'docs'
+E         'invalid'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-owned\nstale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr7')
+declaration = 'owned\nstale\n', payload = 'owned/component.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'owned', 'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         
+E         Full diff:
+E           {
+E               'owned',
+E         +     'stale',
+E           }
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-stale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr8')
+declaration = 'stale\n', payload = 'owned/component.py'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         Extra items in the right set:
+E         'owned'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (4 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-None] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr9')
+declaration = None, payload = 'owned.cpython-311-x86_64-linux-gnu.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'docs', 'inv...ned', 'stubs'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stubs'
+E         'docs'
+E         'invalid'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-owned\nstale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr10')
+declaration = 'owned\nstale\n'
+payload = 'owned.cpython-311-x86_64-linux-gnu.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'owned', 'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         
+E         Full diff:
+E           {
+E               'owned',
+E         +     'stale',
+E           }
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-stale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr11')
+declaration = 'stale\n', payload = 'owned.cpython-311-x86_64-linux-gnu.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         Extra items in the right set:
+E         'owned'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (4 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-None] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr12')
+declaration = None, payload = 'owned.cp312-win_amd64.pyd'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'docs', 'inv...ned', 'stubs'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stubs'
+E         'docs'
+E         'invalid'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-owned\nstale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr13')
+declaration = 'owned\nstale\n', payload = 'owned.cp312-win_amd64.pyd'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'owned', 'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         
+E         Full diff:
+E           {
+E               'owned',
+E         +     'stale',
+E           }
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-stale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr14')
+declaration = 'stale\n', payload = 'owned.cp312-win_amd64.pyd'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         Extra items in the right set:
+E         'owned'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (4 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-None] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr15')
+declaration = None, payload = 'owned.abi3.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'docs', 'inv...ned', 'stubs'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stubs'
+E         'docs'
+E         'invalid'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-owned\nstale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr16')
+declaration = 'owned\nstale\n', payload = 'owned.abi3.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'owned', 'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         
+E         Full diff:
+E           {
+E               'owned',
+E         +     'stale',
+E           }
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-stale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr17')
+declaration = 'stale\n', payload = 'owned.abi3.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         Extra items in the right set:
+E         'owned'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (4 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+___ test_import_ownership_comes_from_recorded_runtime_payload[owned.so-None] ___
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr18')
+declaration = None, payload = 'owned.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'docs', 'inv...ned', 'stubs'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stubs'
+E         'docs'
+E         'invalid'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.so-owned\nstale\n] _
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr19')
+declaration = 'owned\nstale\n', payload = 'owned.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'owned', 'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         
+E         Full diff:
+E           {
+E               'owned',
+E         +     'stale',
+E           }
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+_ test_import_ownership_comes_from_recorded_runtime_payload[owned.so-stale\n] __
+
+tmp_path = PosixPath('<temporary>/test_import_ownership_comes_fr20')
+declaration = 'stale\n', payload = 'owned.so'
+
+    @pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "owned.py",
+            "owned/__init__.py",
+            "owned/component.py",
+            "owned.cpython-311-x86_64-linux-gnu.so",
+            "owned.cp312-win_amd64.pyd",
+            "owned.abi3.so",
+            "owned.so",
+        ],
+    )
+    def test_import_ownership_comes_from_recorded_runtime_payload(
+        tmp_path: Path, declaration: str | None, payload: str
+    ) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+        if declaration is None:
+            (metadata / "top_level.txt").unlink()
+        else:
+            (metadata / "top_level.txt").write_text(declaration)
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'stale'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'stale'
+E         Extra items in the right set:
+E         'owned'
+E         
+E         Full diff:...
+E         
+E         ...Full output truncated (4 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:98: AssertionError
+____ test_stale_top_level_cannot_claim_another_distributions_build_package _____
+
+tmp_path = PosixPath('<temporary>/test_stale_top_level_cannot_cl0')
+
+    def test_stale_top_level_cannot_claim_another_distributions_build_package(tmp_path: Path) -> None:
+        metadata = _distribution(tmp_path, "pylint")
+        (metadata / "top_level.txt").write_text("pylint\nbuild\n")
+        _distribution(tmp_path, "build", files=("build/__init__.py",))
+        graph = member_dependency_graphs({"installed": []}, tmp_path)["pylint"]
+>       assert graph["sealed_imports"] == ["pylint"]
+E       AssertionError: assert ['build', 'pylint'] == ['pylint']
+E         
+E         At index 0 diff: 'build' != 'pylint'
+E         Left contains one more item: 'pylint'
+E         
+E         Full diff:
+E           [
+E         +     'build',
+E               'pylint',
+E           ]
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:106: AssertionError
+_______ test_missing_recorded_module_is_not_admitted_from_stale_metadata _______
+
+tmp_path = PosixPath('<temporary>/test_missing_recorded_module_i0')
+
+    def test_missing_recorded_module_is_not_admitted_from_stale_metadata(tmp_path: Path) -> None:
+        metadata = _distribution(tmp_path, "fixture", files=("owned.py", "missing.py"))
+        (tmp_path / "missing.py").unlink()
+        (metadata / "top_level.txt").write_text("owned\nmissing\n")
+>       assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+E       AssertionError: assert {'missing', 'owned'} == {'owned'}
+E         
+E         Extra items in the left set:
+E         'missing'
+E         
+E         Full diff:
+E           {
+E         +     'missing',
+E               'owned',
+E           }
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:114: AssertionError
+_________ test_missing_file_inventory_cannot_guess_analyzer_ownership __________
+
+tmp_path = PosixPath('<temporary>/test_missing_file_inventory_ca0')
+
+    def test_missing_file_inventory_cannot_guess_analyzer_ownership(tmp_path: Path) -> None:
+        metadata = _distribution(tmp_path, "fixture")
+        (metadata / "RECORD").unlink()
+>       with pytest.raises(ProjectRuntimeError, match="project_analyzer_import_inventory_missing:fixture"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_domains.py:120: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.py-None]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.py-owned\nstale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.py-stale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-None]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-owned\nstale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/__init__.py-stale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-None]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-owned\nstale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned/component.py-stale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-None]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-owned\nstale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cpython-311-x86_64-linux-gnu.so-stale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-None]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-owned\nstale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.cp312-win_amd64.pyd-stale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-None]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-owned\nstale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.abi3.so-stale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.so-None]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.so-owned\nstale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_import_ownership_comes_from_recorded_runtime_payload[owned.so-stale\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_stale_top_level_cannot_claim_another_distributions_build_package
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_missing_recorded_module_is_not_admitted_from_stale_metadata
+FAILED tests/unit/specfact_code_review/run/test_runtime_domains.py::test_missing_file_inventory_cannot_guess_analyzer_ownership
+========================= 24 failed, 5 passed in 0.81s =========================

@@ -1,0 +1,47 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py FF               [100%]
+
+=================================== FAILURES ===================================
+_____ test_private_copy_has_correct_index_and_retains_source_modifications _____
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-87/test_private_copy_has_correct_0')
+
+    def test_private_copy_has_correct_index_and_retains_source_modifications(tmp_path: Path) -> None:
+        root = tmp_path / 'project'
+        _repository(root)
+        copy_project(root, tmp_path / 'clean')
+>       assert _git(tmp_path / 'clean', 'status', '--porcelain') == ''
+E       AssertionError: assert 'D  app.py\n?? app.py' == ''
+E
+E         + D  app.py
+E         + ?? app.py
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:26: AssertionError
+_______ test_tag_change_invalidates_runtime_without_source_byte_changes ________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-87/test_tag_change_invalidates_ru0')
+
+    def test_tag_change_invalidates_runtime_without_source_byte_changes(tmp_path: Path) -> None:
+        root = tmp_path / 'project'
+        _repository(root)
+        before = discover_project(root)
+        _git(root, 'tag', 'v1.0.0')
+        after = discover_project(root)
+        assert before.source_identity == after.source_identity
+>       assert before.identity != after.identity
+E       AssertionError: assert 'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4' != 'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4'
+E        +  where 'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4' = ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-87/test_tag_...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}).identity
+E        +  and   'sha256:c25645a5681ace92334702141f2b5eceaabeb2e5c4aa00d7328031cdaca2edf4' = ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-87/test_tag_...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}).identity
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:39: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_private_copy_has_correct_index_and_retains_source_modifications
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_tag_change_invalidates_runtime_without_source_byte_changes
+============================== 2 failed in 0.20s ===============================

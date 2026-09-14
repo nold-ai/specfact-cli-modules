@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 11 items
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py ......F [ 63%]
+                                                                         [ 63%]
+tests/unit/specfact_code_review/run/test_target_pytest.py ...F           [100%]
+
+=================================== FAILURES ===================================
+________________ test_hatch_native_extra_arguments_are_retained ________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f9a3f0>
+
+    def test_hatch_native_extra_arguments_are_retained(monkeypatch) -> None:
+        from specfact_code_review.run import runtime_build_driver as driver
+        monkeypatch.setattr(driver, '_run', lambda *args, **kwargs: '{"review": {"extra-args": ["--dist", "worksteal", "-p", "no:randomly"]}}')
+        config = {'environment': 'review'}
+        driver._prepare_hatch(config, '/tools/bin/python', {})
+>       assert config['pytest_arguments'] == ['--dist', 'worksteal', '-p', 'no:randomly']
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'pytest_arguments'
+
+tests/unit/specfact_code_review/run/test_runtime_build_driver.py:98: KeyError
+______ test_native_hatch_plugin_options_participate_in_explicit_selection ______
+
+    def test_native_hatch_plugin_options_participate_in_explicit_selection() -> None:
+        descriptor = {'project': {'pytest_config': {'addopts': '-ra'}}, 'inventory': {'pytest_arguments': ['-p', 'no:randomly']}}
+>       assert target_pytest._effective_pytest_config(descriptor)['addopts'] == ['-ra', '-p', 'no:randomly']
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_effective_pytest_config'
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:45: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_build_driver.py::test_hatch_native_extra_arguments_are_retained
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_native_hatch_plugin_options_participate_in_explicit_selection
+========================= 2 failed, 9 passed in 0.30s ==========================

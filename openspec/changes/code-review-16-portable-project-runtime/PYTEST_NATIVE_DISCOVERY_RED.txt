@@ -1,0 +1,370 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 51 items
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py FF [  3%]
+FFF....FF                                                                [ 21%]
+tests/unit/specfact_code_review/run/test_portable_worker.py ..........FF [ 45%]
+F.....................FF....                                             [100%]
+
+=================================== FAILURES ===================================
+_ test_full_review_matches_native_discovery[testpaths = absent-expected0-True] _
+
+tmp_path = PosixPath('<pytest-temp>/test_full_review_matches_nativ0')
+configuration = 'testpaths = absent'
+expected = ['tests/test_app.py', 'other/test_else.py'], warns = True
+
+    @pytest.mark.parametrize(
+        ("configuration", "expected", "warns"),
+        [
+            ("testpaths = absent", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = absent tests", ["tests/test_app.py"], False),
+            ("testpaths = tests/*.py", ["tests/test_app.py"], False),
+            ("testpaths = absent*", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = tests\naddopts = other/test_else.py", ["other/test_else.py"], False),
+            ("testpaths =", ["tests/test_app.py", "other/test_else.py"], False),
+        ],
+    )
+    def test_full_review_matches_native_discovery(
+        tmp_path: Path, configuration: str, expected: list[str], warns: bool
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\n{configuration}\n")
+        for name in ("tests/test_app.py", "other/test_else.py"):
+            test = root / name
+            test.parent.mkdir(exist_ok=True)
+            test.write_text("def test_valid(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native.json", ())
+        selectors = select_test_paths(discover_project(root), [], full=True)
+        portable, portable_output = _observe_discovery(root, tmp_path / "portable.json", selectors)
+        assert native["exit_code"] == 0, native_output
+>       assert portable["exit_code"] == 0, portable_output
+E       AssertionError:
+E         no tests ran in 0.00s
+E         ERROR: file or directory not found: absent
+E
+E
+E       assert 4 == 0
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:99: AssertionError
+_ test_full_review_matches_native_discovery[testpaths = absent tests-expected1-False] _
+
+tmp_path = PosixPath('<pytest-temp>/test_full_review_matches_nativ1')
+configuration = 'testpaths = absent tests', expected = ['tests/test_app.py']
+warns = False
+
+    @pytest.mark.parametrize(
+        ("configuration", "expected", "warns"),
+        [
+            ("testpaths = absent", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = absent tests", ["tests/test_app.py"], False),
+            ("testpaths = tests/*.py", ["tests/test_app.py"], False),
+            ("testpaths = absent*", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = tests\naddopts = other/test_else.py", ["other/test_else.py"], False),
+            ("testpaths =", ["tests/test_app.py", "other/test_else.py"], False),
+        ],
+    )
+    def test_full_review_matches_native_discovery(
+        tmp_path: Path, configuration: str, expected: list[str], warns: bool
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\n{configuration}\n")
+        for name in ("tests/test_app.py", "other/test_else.py"):
+            test = root / name
+            test.parent.mkdir(exist_ok=True)
+            test.write_text("def test_valid(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native.json", ())
+        selectors = select_test_paths(discover_project(root), [], full=True)
+        portable, portable_output = _observe_discovery(root, tmp_path / "portable.json", selectors)
+        assert native["exit_code"] == 0, native_output
+>       assert portable["exit_code"] == 0, portable_output
+E       AssertionError:
+E         no tests ran in 0.00s
+E         ERROR: file or directory not found: absent
+E
+E
+E       assert 4 == 0
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:99: AssertionError
+_ test_full_review_matches_native_discovery[testpaths = tests/*.py-expected2-False] _
+
+tmp_path = PosixPath('<pytest-temp>/test_full_review_matches_nativ2')
+configuration = 'testpaths = tests/*.py', expected = ['tests/test_app.py']
+warns = False
+
+    @pytest.mark.parametrize(
+        ("configuration", "expected", "warns"),
+        [
+            ("testpaths = absent", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = absent tests", ["tests/test_app.py"], False),
+            ("testpaths = tests/*.py", ["tests/test_app.py"], False),
+            ("testpaths = absent*", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = tests\naddopts = other/test_else.py", ["other/test_else.py"], False),
+            ("testpaths =", ["tests/test_app.py", "other/test_else.py"], False),
+        ],
+    )
+    def test_full_review_matches_native_discovery(
+        tmp_path: Path, configuration: str, expected: list[str], warns: bool
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\n{configuration}\n")
+        for name in ("tests/test_app.py", "other/test_else.py"):
+            test = root / name
+            test.parent.mkdir(exist_ok=True)
+            test.write_text("def test_valid(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native.json", ())
+        selectors = select_test_paths(discover_project(root), [], full=True)
+        portable, portable_output = _observe_discovery(root, tmp_path / "portable.json", selectors)
+        assert native["exit_code"] == 0, native_output
+>       assert portable["exit_code"] == 0, portable_output
+E       AssertionError:
+E         no tests ran in 0.00s
+E         ERROR: file or directory not found: tests/*.py
+E
+E
+E       assert 4 == 0
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:99: AssertionError
+_ test_full_review_matches_native_discovery[testpaths = absent*-expected3-True] _
+
+tmp_path = PosixPath('<pytest-temp>/test_full_review_matches_nativ3')
+configuration = 'testpaths = absent*'
+expected = ['tests/test_app.py', 'other/test_else.py'], warns = True
+
+    @pytest.mark.parametrize(
+        ("configuration", "expected", "warns"),
+        [
+            ("testpaths = absent", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = absent tests", ["tests/test_app.py"], False),
+            ("testpaths = tests/*.py", ["tests/test_app.py"], False),
+            ("testpaths = absent*", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = tests\naddopts = other/test_else.py", ["other/test_else.py"], False),
+            ("testpaths =", ["tests/test_app.py", "other/test_else.py"], False),
+        ],
+    )
+    def test_full_review_matches_native_discovery(
+        tmp_path: Path, configuration: str, expected: list[str], warns: bool
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\n{configuration}\n")
+        for name in ("tests/test_app.py", "other/test_else.py"):
+            test = root / name
+            test.parent.mkdir(exist_ok=True)
+            test.write_text("def test_valid(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native.json", ())
+        selectors = select_test_paths(discover_project(root), [], full=True)
+        portable, portable_output = _observe_discovery(root, tmp_path / "portable.json", selectors)
+        assert native["exit_code"] == 0, native_output
+>       assert portable["exit_code"] == 0, portable_output
+E       AssertionError:
+E         no tests ran in 0.00s
+E         ERROR: file or directory not found: absent*
+E
+E
+E       assert 4 == 0
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:99: AssertionError
+_ test_full_review_matches_native_discovery[testpaths = tests\naddopts = other/test_else.py-expected4-False] _
+
+tmp_path = PosixPath('<pytest-temp>/test_full_review_matches_nativ4')
+configuration = 'testpaths = tests\naddopts = other/test_else.py'
+expected = ['other/test_else.py'], warns = False
+
+    @pytest.mark.parametrize(
+        ("configuration", "expected", "warns"),
+        [
+            ("testpaths = absent", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = absent tests", ["tests/test_app.py"], False),
+            ("testpaths = tests/*.py", ["tests/test_app.py"], False),
+            ("testpaths = absent*", ["tests/test_app.py", "other/test_else.py"], True),
+            ("testpaths = tests\naddopts = other/test_else.py", ["other/test_else.py"], False),
+            ("testpaths =", ["tests/test_app.py", "other/test_else.py"], False),
+        ],
+    )
+    def test_full_review_matches_native_discovery(
+        tmp_path: Path, configuration: str, expected: list[str], warns: bool
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\n{configuration}\n")
+        for name in ("tests/test_app.py", "other/test_else.py"):
+            test = root / name
+            test.parent.mkdir(exist_ok=True)
+            test.write_text("def test_valid(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native.json", ())
+        selectors = select_test_paths(discover_project(root), [], full=True)
+        portable, portable_output = _observe_discovery(root, tmp_path / "portable.json", selectors)
+        assert native["exit_code"] == 0, native_output
+        assert portable["exit_code"] == 0, portable_output
+        expected_nodes = sorted(f"{name}::test_valid" for name in expected)
+>       assert native["collected"] == portable["collected"] == expected_nodes
+E       AssertionError: assert ['other/test_...::test_valid'] == ['other/test_...::test_valid']
+E
+E         Right contains one more item: 'tests/test_app.py::test_valid'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:101: AssertionError
+_______ test_native_fallback_preserves_failure_and_empty_execution[True] _______
+
+tmp_path = PosixPath('<pytest-temp>/test_native_fallback_preserves0')
+has_failure = True
+
+    @pytest.mark.parametrize("has_failure", [True, False])
+    def test_native_fallback_preserves_failure_and_empty_execution(tmp_path: Path, has_failure: bool) -> None:
+        (tmp_path / "pytest.ini").write_text("[pytest]\ntestpaths = absent\n")
+        if has_failure:
+            (tmp_path / "test_case.py").write_text("def test_defect(): assert 2 + 2 == 5\n")
+        selectors = select_test_paths(discover_project(tmp_path), [], full=True)
+        observation, output = _observe_discovery(tmp_path, tmp_path / "portable.json", selectors)
+>       assert "No files were found in testpaths" in output
+E       AssertionError: assert 'No files were found in testpaths' in '\nno tests ran in 0.00s\nERROR: file or directory not found: absent\n\n'
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:130: AssertionError
+______ test_native_fallback_preserves_failure_and_empty_execution[False] _______
+
+tmp_path = PosixPath('<pytest-temp>/test_native_fallback_preserves1')
+has_failure = False
+
+    @pytest.mark.parametrize("has_failure", [True, False])
+    def test_native_fallback_preserves_failure_and_empty_execution(tmp_path: Path, has_failure: bool) -> None:
+        (tmp_path / "pytest.ini").write_text("[pytest]\ntestpaths = absent\n")
+        if has_failure:
+            (tmp_path / "test_case.py").write_text("def test_defect(): assert 2 + 2 == 5\n")
+        selectors = select_test_paths(discover_project(tmp_path), [], full=True)
+        observation, output = _observe_discovery(tmp_path, tmp_path / "portable.json", selectors)
+>       assert "No files were found in testpaths" in output
+E       AssertionError: assert 'No files were found in testpaths' in '\nno tests ran in 0.00s\nERROR: file or directory not found: absent\n\n'
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:130: AssertionError
+_________ test_pytest_native_default_root_is_preserved[configuration0] _________
+
+tmp_path = PosixPath('<pytest-temp>/test_pytest_native_default_roo0')
+configuration = {}
+
+    @pytest.mark.parametrize("configuration", [{}, {"testpaths": []}, {"testpaths": ""}])
+    def test_pytest_native_default_root_is_preserved(tmp_path: Path, configuration: dict) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config=configuration)
+>       assert not select_test_paths(plan, [source], full=True)
+E       AssertionError: assert not ('.',)
+E        +  where ('.',) = select_test_paths(ProjectPlan(root=PosixPath('<pytest-temp>/test_pyt...oups=(), extras=(), requirements=(), constraints=(), source_roots=(), native_libraries=(), inputs={}, pytest_config={}), [PosixPath('<pytest-temp>/test_pytest_native_default_roo0/app.py')], full=True)
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:126: AssertionError
+_________ test_pytest_native_default_root_is_preserved[configuration1] _________
+
+tmp_path = PosixPath('<pytest-temp>/test_pytest_native_default_roo1')
+configuration = {'testpaths': []}
+
+    @pytest.mark.parametrize("configuration", [{}, {"testpaths": []}, {"testpaths": ""}])
+    def test_pytest_native_default_root_is_preserved(tmp_path: Path, configuration: dict) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config=configuration)
+>       assert not select_test_paths(plan, [source], full=True)
+E       AssertionError: assert not ('.',)
+E        +  where ('.',) = select_test_paths(ProjectPlan(root=PosixPath('<pytest-temp>/test_pyt...=(), requirements=(), constraints=(), source_roots=(), native_libraries=(), inputs={}, pytest_config={'testpaths': []}), [PosixPath('<pytest-temp>/test_pytest_native_default_roo1/app.py')], full=True)
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:126: AssertionError
+_________ test_pytest_native_default_root_is_preserved[configuration2] _________
+
+tmp_path = PosixPath('<pytest-temp>/test_pytest_native_default_roo2')
+configuration = {'testpaths': ''}
+
+    @pytest.mark.parametrize("configuration", [{}, {"testpaths": []}, {"testpaths": ""}])
+    def test_pytest_native_default_root_is_preserved(tmp_path: Path, configuration: dict) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config=configuration)
+>       assert not select_test_paths(plan, [source], full=True)
+E       AssertionError: assert not ('.',)
+E        +  where ('.',) = select_test_paths(ProjectPlan(root=PosixPath('<pytest-temp>/test_pyt...=(), requirements=(), constraints=(), source_roots=(), native_libraries=(), inputs={}, pytest_config={'testpaths': ''}), [PosixPath('<pytest-temp>/test_pytest_native_default_roo2/app.py')], full=True)
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:126: AssertionError
+____________ test_quoted_pytest_paths_match_native_configuration["] ____________
+
+tmp_path = PosixPath('<pytest-temp>/test_quoted_pytest_paths_match0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f4ed70>
+quote = '"'
+
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    def test_quoted_pytest_paths_match_native_configuration(tmp_path: Path, monkeypatch, quote: str) -> None:
+        monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+        (tmp_path / "source tree").mkdir()
+        (tmp_path / "integration tests").mkdir()
+        source = tmp_path / "source tree/app name.py"
+        source.touch()
+        selected = tmp_path / "integration tests/test_app name.py"
+        selected.write_text("def test_example(): assert True\n")
+        configuration = tmp_path / "pytest.ini"
+        configuration.write_text(
+            "[pytest]\n"
+            f"testpaths = {quote}integration tests{quote}\n"
+            f"pythonpath = {quote}source tree{quote}\n"
+            f"python_files = {quote}test_* name.py{quote}\n"
+        )
+        native = pytest.Config.fromdictargs({}, ["-c", str(configuration)])
+        try:
+            plan = discover_project(tmp_path)
+            assert plan.source_roots == tuple(path.relative_to(tmp_path).as_posix() for path in native.getini("pythonpath"))
+>           assert not select_test_paths(plan, [source], full=True)
+E           assert not ('integration tests',)
+E            +  where ('integration tests',) = select_test_paths(ProjectPlan(root=PosixPath('<pytest-temp>/test_quo... pytest_config={'testpaths': '"integration tests"', 'pythonpath': '"source tree"', 'python_files': '"test_* name.py"'}), [PosixPath('<pytest-temp>/test_quoted_pytest_paths_match0/source tree/app name.py')], full=True)
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:216: AssertionError
+____________ test_quoted_pytest_paths_match_native_configuration['] ____________
+
+tmp_path = PosixPath('<pytest-temp>/test_quoted_pytest_paths_match1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f72580>
+quote = "'"
+
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    def test_quoted_pytest_paths_match_native_configuration(tmp_path: Path, monkeypatch, quote: str) -> None:
+        monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+        (tmp_path / "source tree").mkdir()
+        (tmp_path / "integration tests").mkdir()
+        source = tmp_path / "source tree/app name.py"
+        source.touch()
+        selected = tmp_path / "integration tests/test_app name.py"
+        selected.write_text("def test_example(): assert True\n")
+        configuration = tmp_path / "pytest.ini"
+        configuration.write_text(
+            "[pytest]\n"
+            f"testpaths = {quote}integration tests{quote}\n"
+            f"pythonpath = {quote}source tree{quote}\n"
+            f"python_files = {quote}test_* name.py{quote}\n"
+        )
+        native = pytest.Config.fromdictargs({}, ["-c", str(configuration)])
+        try:
+            plan = discover_project(tmp_path)
+            assert plan.source_roots == tuple(path.relative_to(tmp_path).as_posix() for path in native.getini("pythonpath"))
+>           assert not select_test_paths(plan, [source], full=True)
+E           assert not ('integration tests',)
+E            +  where ('integration tests',) = select_test_paths(ProjectPlan(root=PosixPath('<pytest-temp>/test_quo... pytest_config={'testpaths': "'integration tests'", 'pythonpath': "'source tree'", 'python_files': "'test_* name.py'"}), [PosixPath('<pytest-temp>/test_quoted_pytest_paths_match1/source tree/app name.py')], full=True)
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:216: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_full_review_matches_native_discovery[testpaths = absent-expected0-True]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_full_review_matches_native_discovery[testpaths = absent tests-expected1-False]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_full_review_matches_native_discovery[testpaths = tests/*.py-expected2-False]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_full_review_matches_native_discovery[testpaths = absent*-expected3-True]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_full_review_matches_native_discovery[testpaths = tests\naddopts = other/test_else.py-expected4-False]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_native_fallback_preserves_failure_and_empty_execution[True]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_native_fallback_preserves_failure_and_empty_execution[False]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_native_default_root_is_preserved[configuration0]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_native_default_root_is_preserved[configuration1]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_native_default_root_is_preserved[configuration2]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_quoted_pytest_paths_match_native_configuration["]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_quoted_pytest_paths_match_native_configuration[']
+======================== 12 failed, 39 passed in 5.15s =========================

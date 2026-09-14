@@ -1,0 +1,193 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 283 items / 265 deselected / 18 selected
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py FF         [ 11%]
+tests/unit/specfact_code_review/run/test_target_bootstrap.py FF......... [ 72%]
+.....                                                                    [100%]
+
+=================================== FAILURES ===================================
+________ test_undeclared_pythonpath_does_not_invent_import_roots[flat] _________
+
+tmp_path = PosixPath('<temporary>/test_undeclared_pythonpath_doe0')
+layout = 'flat'
+
+    @pytest.mark.parametrize("layout", ["flat", "src"])
+    def test_undeclared_pythonpath_does_not_invent_import_roots(tmp_path: Path, layout: str) -> None:
+        if layout == "src":
+            (tmp_path / "src").mkdir()
+        (tmp_path / "requirements.txt").touch()
+>       assert discover_project(tmp_path).source_roots == ()
+E       AssertionError: assert ('.',) == ()
+E
+E         Left contains one more item: '.'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:439: AssertionError
+_________ test_undeclared_pythonpath_does_not_invent_import_roots[src] _________
+
+tmp_path = PosixPath('<temporary>/test_undeclared_pythonpath_doe1')
+layout = 'src'
+
+    @pytest.mark.parametrize("layout", ["flat", "src"])
+    def test_undeclared_pythonpath_does_not_invent_import_roots(tmp_path: Path, layout: str) -> None:
+        if layout == "src":
+            (tmp_path / "src").mkdir()
+        (tmp_path / "requirements.txt").touch()
+>       assert discover_project(tmp_path).source_roots == ()
+E       AssertionError: assert ('src', '.') == ()
+E
+E         Left contains 2 more items, first extra item: 'src'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:439: AssertionError
+_ test_target_pytest_preserves_built_or_explicit_source_imports[undeclared-prepend] _
+
+tmp_path = PosixPath('<temporary>/test_target_pytest_preserves_b0')
+paths_mode = 'undeclared', import_mode = 'prepend'
+
+    @pytest.mark.parametrize("import_mode", ["prepend", "importlib"])
+    @pytest.mark.parametrize("paths_mode", ["undeclared", "empty", "pytest", "explicit", "editable"])
+    def test_target_pytest_preserves_built_or_explicit_source_imports(
+        tmp_path: Path, paths_mode: str, import_mode: str
+    ) -> None:
+        from specfact_code_review.run.runtime_discovery import discover_project
+
+        project, snapshot = tmp_path / "runtime", tmp_path / "snapshot"
+        project.mkdir()
+        source = snapshot / "src with spaces" if paths_mode == "pytest" else snapshot / "src"
+        package = source / "capsule_origin"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text('ORIGIN = "raw"\n')
+        (snapshot / "tests").mkdir()
+        _install_generated_package(project)
+        expected = "raw" if paths_mode in {"pytest", "explicit", "editable"} else "built"
+        (snapshot / "tests/test_origin.py").write_text(
+            f'import capsule_origin\ndef test_origin():\n    assert capsule_origin.ORIGIN == {expected!r}\n'
+        )
+        configuration = None
+        if paths_mode == "pytest":
+            (snapshot / "pytest.ini").write_text('[pytest]\npythonpath = "src with spaces"\n')
+        elif paths_mode == "empty":
+            (snapshot / "pytest.ini").write_text('[pytest]\npythonpath =\n')
+        elif paths_mode == "explicit":
+            configuration = snapshot / "review.toml"
+            configuration.write_text('source_roots = ["src"]\n')
+        elif paths_mode == "editable":
+            # The selected environment's ordinary .pth editable mapping owns this path.
+            (project / "site-packages/capsule-editable.pth").write_text(str(source) + "\n")
+            # A real editable installation supplies source instead of the built package.
+            import shutil
+
+            shutil.rmtree(project / "site-packages/capsule_origin")
+        plan = discover_project(snapshot, config_path=configuration)
+        descriptor = {"project": plan.document(), "inventory": {"member_graphs": {
+            "pytest-observe": {"sealed_imports": [], "installed": []}
+        }}}
+        (project / "project-runtime.json").write_text(json.dumps(descriptor))
+        paths = {"PROJECT": project, "SNAPSHOT": snapshot, "ANALYZERS": Path(pytest.__file__).parent.parent}
+        if paths_mode != "explicit":
+            native = _run_origin_pytest(paths, capsule=False, import_mode=import_mode)
+            assert native.returncode == 0, native.stdout + native.stderr
+        observed = _run_origin_pytest(paths, capsule=True, import_mode=import_mode)
+>       assert observed.returncode == 0, observed.stdout + observed.stderr
+E       AssertionError: F                                                                        [100%]
+E         =================================== FAILURES ===================================
+E         _________________________________ test_origin __________________________________
+E
+E             def test_origin():
+E         >       assert capsule_origin.ORIGIN == 'built'
+E         E       AssertionError: assert 'raw' == 'built'
+E         E
+E         E         - built
+E         E         + raw
+E
+E         tests/test_origin.py:3: AssertionError
+E         =========================== short test summary info ============================
+E         FAILED tests/test_origin.py::test_origin - AssertionError: assert 'raw' == 'b...
+E         1 failed in 0.01s
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<test-environment>/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...===\nFAILED tests/test_origin.py::test_origin - AssertionError: assert 'raw' == 'b...\n1 failed in 0.01s\n", stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:387: AssertionError
+_ test_target_pytest_preserves_built_or_explicit_source_imports[undeclared-importlib] _
+
+tmp_path = PosixPath('<temporary>/test_target_pytest_preserves_b1')
+paths_mode = 'undeclared', import_mode = 'importlib'
+
+    @pytest.mark.parametrize("import_mode", ["prepend", "importlib"])
+    @pytest.mark.parametrize("paths_mode", ["undeclared", "empty", "pytest", "explicit", "editable"])
+    def test_target_pytest_preserves_built_or_explicit_source_imports(
+        tmp_path: Path, paths_mode: str, import_mode: str
+    ) -> None:
+        from specfact_code_review.run.runtime_discovery import discover_project
+
+        project, snapshot = tmp_path / "runtime", tmp_path / "snapshot"
+        project.mkdir()
+        source = snapshot / "src with spaces" if paths_mode == "pytest" else snapshot / "src"
+        package = source / "capsule_origin"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text('ORIGIN = "raw"\n')
+        (snapshot / "tests").mkdir()
+        _install_generated_package(project)
+        expected = "raw" if paths_mode in {"pytest", "explicit", "editable"} else "built"
+        (snapshot / "tests/test_origin.py").write_text(
+            f'import capsule_origin\ndef test_origin():\n    assert capsule_origin.ORIGIN == {expected!r}\n'
+        )
+        configuration = None
+        if paths_mode == "pytest":
+            (snapshot / "pytest.ini").write_text('[pytest]\npythonpath = "src with spaces"\n')
+        elif paths_mode == "empty":
+            (snapshot / "pytest.ini").write_text('[pytest]\npythonpath =\n')
+        elif paths_mode == "explicit":
+            configuration = snapshot / "review.toml"
+            configuration.write_text('source_roots = ["src"]\n')
+        elif paths_mode == "editable":
+            # The selected environment's ordinary .pth editable mapping owns this path.
+            (project / "site-packages/capsule-editable.pth").write_text(str(source) + "\n")
+            # A real editable installation supplies source instead of the built package.
+            import shutil
+
+            shutil.rmtree(project / "site-packages/capsule_origin")
+        plan = discover_project(snapshot, config_path=configuration)
+        descriptor = {"project": plan.document(), "inventory": {"member_graphs": {
+            "pytest-observe": {"sealed_imports": [], "installed": []}
+        }}}
+        (project / "project-runtime.json").write_text(json.dumps(descriptor))
+        paths = {"PROJECT": project, "SNAPSHOT": snapshot, "ANALYZERS": Path(pytest.__file__).parent.parent}
+        if paths_mode != "explicit":
+            native = _run_origin_pytest(paths, capsule=False, import_mode=import_mode)
+            assert native.returncode == 0, native.stdout + native.stderr
+        observed = _run_origin_pytest(paths, capsule=True, import_mode=import_mode)
+>       assert observed.returncode == 0, observed.stdout + observed.stderr
+E       AssertionError: F                                                                        [100%]
+E         =================================== FAILURES ===================================
+E         _________________________________ test_origin __________________________________
+E
+E             def test_origin():
+E         >       assert capsule_origin.ORIGIN == 'built'
+E         E       AssertionError: assert 'raw' == 'built'
+E         E
+E         E         - built
+E         E         + raw
+E
+E         tests/test_origin.py:3: AssertionError
+E         =========================== short test summary info ============================
+E         FAILED tests/test_origin.py::test_origin - AssertionError: assert 'raw' == 'b...
+E         1 failed in 0.01s
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<test-environment>/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...===\nFAILED tests/test_origin.py::test_origin - AssertionError: assert 'raw' == 'b...\n1 failed in 0.01s\n", stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:387: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_undeclared_pythonpath_does_not_invent_import_roots[flat]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_undeclared_pythonpath_does_not_invent_import_roots[src]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_target_pytest_preserves_built_or_explicit_source_imports[undeclared-prepend]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_target_pytest_preserves_built_or_explicit_source_imports[undeclared-importlib]
+================= 4 failed, 14 passed, 265 deselected in 4.88s =================

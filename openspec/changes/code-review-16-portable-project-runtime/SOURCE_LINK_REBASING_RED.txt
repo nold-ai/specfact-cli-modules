@@ -1,0 +1,60 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py F            [100%]
+
+=================================== FAILURES ===================================
+________ test_source_copy_rebases_internal_link_spelled_through_parent _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-136/test_source_copy_rebases_inter0')
+
+    def test_source_copy_rebases_internal_link_spelled_through_parent(tmp_path: Path) -> None:
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "app.py").write_text("VALUE = 1\n")
+        (source / "alias.py").symlink_to("../source/app.py")
+        target = tmp_path / "copy"
+>       copy_project(source, target)
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:127:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:57: in copy_project
+    if source_identity(destination) != expected:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_sources.py:66: in source_identity
+    identity = _source_entry(path, root)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_sources.py:49: in _source_entry
+    return "link:" + source_link_target(path, root).relative_to(root).as_posix()
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-136/test_source_copy_rebases_inter0/copy/alias.py')
+root = PosixPath('<TMPDIR>/pytest-of-dom/pytest-136/test_source_copy_rebases_inter0/copy')
+
+    def source_link_target(path: Path, root: Path) -> Path:
+        """Apply the same exclusion boundary to aliases and ordinary source paths."""
+        relative = path.relative_to(root).as_posix()
+        try:
+            target = path.resolve(strict=True)
+        except (OSError, RuntimeError) as exc:
+            raise ProjectRuntimeError(f"project_source_symlink_invalid:{relative}") from exc
+        if not target.is_relative_to(root) or target == root or path.is_relative_to(target):
+>           raise ProjectRuntimeError(f"project_source_symlink_escape:{relative}")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_source_symlink_escape:alias.py
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_sources.py:40: ProjectRuntimeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_source_copy_rebases_internal_link_spelled_through_parent
+============================== 1 failed in 0.12s ===============================

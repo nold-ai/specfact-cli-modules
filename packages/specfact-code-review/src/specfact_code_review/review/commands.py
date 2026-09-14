@@ -26,6 +26,7 @@ from specfact_code_review.run.commands import (
     RunCommandError,
     run_command,
 )
+from specfact_code_review.run.runtime_commands import app as runtime_app
 
 
 app = typer.Typer(help="Code command extensions for structured review workflows.", no_args_is_help=True)
@@ -107,6 +108,9 @@ class _ReviewRunCommandInputs:
     with_mutation: bool
     requirements_evidence: Path | None
     interactive: bool
+
+    project_config: Path | None = None
+    project_runtime: Path | None = None
 
 
 def _friendly_run_command_error(exc: RunCommandError | ValueError | ViolationError) -> str:
@@ -256,6 +260,8 @@ def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
             preview_fixes=inputs.preview_fixes,
             with_mutation=inputs.with_mutation,
             requirements_evidence=inputs.requirements_evidence,
+            project_config=inputs.project_config,
+            project_runtime=inputs.project_runtime,
         )
     except (ValueError, ViolationError) as exc:
         raise typer.BadParameter(_friendly_run_command_error(exc)) from exc
@@ -286,6 +292,12 @@ def run(
         None,
         "--pr-context-file",
         help="Absolute, event-derived GitHub Actions PR/merge-queue context JSON.",
+    ),
+    project_config: Path | None = typer.Option(
+        None, "--project-config", help="Portable project environment selection TOML."
+    ),
+    project_runtime: Path | None = typer.Option(
+        None, "--project-runtime", help="Prepared project-runtime.json descriptor."
     ),
     include_tests: bool | None = typer.Option(None, "--include-tests"),
     exclude_tests: bool | None = typer.Option(None, "--exclude-tests"),
@@ -366,11 +378,14 @@ def run(
             preview_fixes=preview_fixes,
             with_mutation=with_mutation,
             requirements_evidence=requirements_evidence,
+            project_config=project_config,
+            project_runtime=project_runtime,
             interactive=interactive,
         )
     )
 
 
+review_app.add_typer(runtime_app, name="runtime")
 review_app.add_typer(ledger_app, name="ledger")
 review_app.add_typer(rules_app, name="rules")
 app.add_typer(review_app, name="review")

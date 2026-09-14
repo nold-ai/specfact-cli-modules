@@ -43,6 +43,8 @@ jobs:
               - "packages/specfact-code-review/**"
               - "registry/**"
               - "scripts/capsule_customer_gate.py"
+              - "scripts/external_capsule_corpus.py"
+              - "tests/fixtures/portable-runtime/**"
               - "scripts/link_dev_module.py"
               - "publish_bundle_selection.py"
               - "tests/unit/test_publish_bundle_selection.py"

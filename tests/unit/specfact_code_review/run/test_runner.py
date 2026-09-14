@@ -13,6 +13,7 @@ from typing import Any, Literal, cast
 import pytest
 from pytest import MonkeyPatch
 
+from specfact_code_review.run import portable_snapshot
 from specfact_code_review.run.findings import ReviewFinding, ReviewReport, read_review_report
 from specfact_code_review.run.runner import (
     _changed_lines_from_git,
@@ -2604,7 +2605,7 @@ def test_sealed_target_bugs_policy_activates_semgrep_bugs_without_bug_hunt(monke
         snapshot_root=Path("/snapshot"),
         files=[Path("/snapshot/src/app.py")],
         options=runner_api.ReviewOptions(bug_hunt=False),
-        member_argv={"semgrep-bugs": ("/opt/specfact/config/0",)},
+        settings=runner_api.CapsuleSnapshotSettings(member_argv={"semgrep-bugs": ("/opt/specfact/config/0",)}),
     )
 
     assert "semgrep-bugs" in observed
@@ -2650,8 +2651,10 @@ def test_deleted_python_head_runs_complete_pytest_inventory(monkeypatch: MonkeyP
         snapshot_root=Path("/snapshot"),
         files=[],
         options=runner_api.ReviewOptions(),
-        member_argv={"targeted-pytest-coverage": ("--", "tests/test_app.py::test_app")},
-        scope_paths=("src/deleted.py",),
+        settings=runner_api.CapsuleSnapshotSettings(
+            member_argv={"targeted-pytest-coverage": ("--", "tests/test_app.py::test_app")},
+            scope_paths=("src/deleted.py",),
+        ),
     )
 
     assert launched == ["targeted-pytest-coverage"]
@@ -2902,7 +2905,7 @@ def test_immutable_review_reuses_authenticated_project_runtime_for_both_snapshot
     )
 
     def run_snapshot(*_args: object, **kwargs: object) -> Any:
-        observed_roots.append(cast(Path | None, kwargs.get("project_runtime_root")))
+        observed_roots.append(cast(Path | None, kwargs["settings"].project_runtime_root))
         return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
 
     monkeypatch.setattr(runner_api, "_run_capsule_snapshot", run_snapshot)
@@ -3035,7 +3038,9 @@ def test_immutable_review_explicitly_loads_only_authenticated_project_pytest_plu
     )
 
     def run_snapshot(*_args: object, **kwargs: object) -> Any:
-        observed_argv.append(cast(dict[str, tuple[str, ...]], kwargs["member_argv"])["targeted-pytest-coverage"])
+        observed_argv.append(
+            cast(dict[str, tuple[str, ...]], kwargs["settings"].member_argv)["targeted-pytest-coverage"]
+        )
         return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
 
     monkeypatch.setattr(runner_api, "_run_capsule_snapshot", run_snapshot)
@@ -3174,7 +3179,7 @@ def test_index_review_uses_head_policy_for_both_immutable_snapshots(monkeypatch:
     )
 
     def run_snapshot(*_args: object, **kwargs: object) -> Any:
-        config_roots = cast(tuple[Path, ...], kwargs["config_roots"])
+        config_roots = cast(tuple[Path, ...], kwargs["settings"].config_roots)
         pytest_config = next(path for root in config_roots for path in root.iterdir() if path.name == "pytest.ini")
         observed_configs.append(pytest_config.read_text(encoding="utf-8"))
         return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
@@ -3221,7 +3226,7 @@ def test_immutable_review_binds_each_complete_pytest_inventory_to_its_snapshot(
     monkeypatch.setattr(runner_api, "_prepare_capsule_runtime", lambda **_kwargs: (capsule, ""))
 
     def run_snapshot(*_args: object, **kwargs: object) -> Any:
-        observed_argv.append(cast(dict[str, tuple[str, ...]], kwargs["member_argv"]))
+        observed_argv.append(cast(dict[str, tuple[str, ...]], kwargs["settings"].member_argv))
         return runner_api.CapsuleSnapshotResult(_synthetic_complete_profile_evidence(runner_api), {})
 
     monkeypatch.setattr(runner_api, "_run_capsule_snapshot", run_snapshot)
@@ -3410,8 +3415,15 @@ def test_protected_pr_candidate_payload_is_reconstructed_from_verified_git_bytes
             selected.staged_source.cleanup()
 
 
-def test_github_candidate_context_failure_never_uses_stale_official_payload(monkeypatch: MonkeyPatch) -> None:
+def test_github_candidate_context_failure_never_uses_stale_official_payload(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
     runner_api = _c14_runner()
+    (tmp_path / ".git").mkdir()
+    runner_file = tmp_path / "packages/specfact-code-review/src/specfact_code_review/run/runner.py"
+    runner_file.parent.mkdir(parents=True)
+    runner_file.write_text("# isolated publisher checkout fixture\n", encoding="utf-8")
+    monkeypatch.setattr(runner_api, "__file__", str(runner_file))
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.setenv("GITHUB_REPOSITORY", "nold-ai/specfact-cli-modules")
     monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
@@ -7283,6 +7295,47 @@ def test_pytest_outcome_reconciliation_accepts_complete_parametrized_expansion()
     assert result.status == "PASS"
 
 
+def test_pytest_parameter_delimiters_preserve_real_junit_identities(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    tests_root = tmp_path / "tests"
+    tests_root.mkdir()
+    test_file = tests_root / "test_param.py"
+    test_file.write_text(
+        "import pytest\n"
+        "parameters = pytest.mark.parametrize('value', ['plain', 'left::right', '[left::right]'])\n"
+        "@parameters\n"
+        "def test_value(value):\n"
+        "    assert value\n"
+        "class TestValues:\n"
+        "    @parameters\n"
+        "    def test_value(self, value):\n"
+        "        assert value\n",
+        encoding="utf-8",
+    )
+
+    process, coverage_path, observer_path, junit_path = runner_api._run_pytest_selection_with_coverage(
+        (str(test_file),),
+        coverage_source=tmp_path,
+        policy_argv=("--rootdir", str(tmp_path)),
+    )
+    try:
+        observer, junit = runner_api._load_pytest_outcome_evidence(observer_path, junit_path)
+        result = runner_api.reconcile_pytest_outcomes(
+            observer=observer,
+            junit=junit,
+            process_exit=process.returncode,
+            planned=("tests/test_param.py::test_value", "tests/test_param.py::TestValues::test_value"),
+        )
+    finally:
+        coverage_path.unlink(missing_ok=True)
+        observer_path.unlink(missing_ok=True)
+        junit_path.unlink(missing_ok=True)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert len(junit) == 6
+    assert result.status == "PASS"
+
+
 def test_partial_parametrized_deselection_is_unknown_from_real_pytest(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -7639,7 +7692,7 @@ def test_capsule_snapshot_does_not_launch_targeted_pytest_for_stub_only_input(
         snapshot_root=tmp_path,
         files=[stub],
         options=runner_api.ReviewOptions(),
-        member_argv={"targeted-pytest-coverage": ("--",)},
+        settings=runner_api.CapsuleSnapshotSettings(member_argv={"targeted-pytest-coverage": ("--",)}),
     )
 
     assert "targeted-pytest-coverage" not in launched
@@ -7699,3 +7752,43 @@ def test_customer_github_actions_uses_verified_installed_payload(
     )
     result = runner_api._selected_module_payload()
     assert result.payload is installed
+
+
+@pytest.fixture(autouse=True)
+def isolate_legacy_runtime_boundary(monkeypatch: MonkeyPatch) -> None:
+    """These tests exercise the v1/stdlib path; portable preparation has dedicated tests."""
+    monkeypatch.setattr("specfact_code_review.run.portable_snapshot.project_runtime_requested", lambda *args: False)
+
+
+def test_pytest_worker_does_not_inherit_controller_diff_selection(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    assert "SPECFACT_CODE_REVIEW_CHANGED_DIFF" not in runner_api._pytest_env()
+    assert os.environ["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] == "cached"
+
+
+def test_pytest_worker_does_not_inherit_calling_git_index(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    monkeypatch.setenv("GIT_INDEX_FILE", "/private/controller/index")
+    assert "GIT_INDEX_FILE" not in runner_api._pytest_env()
+    assert os.environ["GIT_INDEX_FILE"] == "/private/controller/index"
+
+
+def test_cached_portable_request_carries_repository_and_index_context(tmp_path, monkeypatch) -> None:
+    runner_api = _c14_runner()
+    source = tmp_path / "index"
+    source.mkdir()
+    cached = runner_api.CachedAnalysisSnapshot(
+        tmp_path, source, [], {}, (), runner_api.CachedDiffIdentity("a" * 40, "b" * 40, "")
+    )
+    requests = []
+    monkeypatch.setattr(runner_api, "_cached_review_requested", lambda *_: True)
+    monkeypatch.setattr(runner_api, "_cached_analysis_snapshot", lambda *_: cached)
+    monkeypatch.setattr(portable_snapshot, "project_runtime_requested", lambda *_: True)
+    monkeypatch.setattr(
+        portable_snapshot, "run_project_snapshot", lambda _runtime, request: (requests.append(request), {})
+    )
+    monkeypatch.setattr(runner_api, "_finalize_local_capsule_snapshot", lambda *_: object())
+    runner_api._run_local_capsule_context(object(), [], runner_api.ReviewOptions(), {}, "worktree")
+    assert requests[0].source_snapshot is cached
+    assert cached.commit == "index-" + "b" * 40

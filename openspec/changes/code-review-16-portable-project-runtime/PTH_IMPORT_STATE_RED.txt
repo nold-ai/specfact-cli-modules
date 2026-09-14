@@ -1,0 +1,207 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 27 items
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py .........FF [ 40%]
+FFF.F.F.........                                                         [100%]
+
+=================================== FAILURES ===================================
+_ test_executable_pth_cannot_change_protected_import_state[sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]] _
+
+collision_runtime = {'PROJECT': PosixPath('<temporary>/test_executab...<temporary>/test_executable_pth_cannot_cha0/analyzers')}
+operation = "sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]"
+
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            "sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None",
+            "importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None",
+            "builtins.__import__ = lambda *args, **kwargs: None",
+        ],
+    )
+    def test_executable_pth_cannot_change_protected_import_state(
+        collision_runtime: dict[str, Path], operation: str
+    ) -> None:
+        pth = collision_runtime["PROJECT"] / "site-packages/changed-imports.pth"
+        pth.write_text(f"import sys, importlib.machinery, builtins; {operation}\n")
+        completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+>       assert completed.returncode != 0
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['<temporary>/worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport json, runpy,...<temporary>/test_executable_pth_cannot_cha0/snapshot/packaging.py", "project", false]\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:149: AssertionError
+_ test_executable_pth_cannot_change_protected_import_state[next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()] _
+
+collision_runtime = {'PROJECT': PosixPath('<temporary>/test_executab...<temporary>/test_executable_pth_cannot_cha1/analyzers')}
+operation = "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()"
+
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            "sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None",
+            "importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None",
+            "builtins.__import__ = lambda *args, **kwargs: None",
+        ],
+    )
+    def test_executable_pth_cannot_change_protected_import_state(
+        collision_runtime: dict[str, Path], operation: str
+    ) -> None:
+        pth = collision_runtime["PROJECT"] / "site-packages/changed-imports.pth"
+        pth.write_text(f"import sys, importlib.machinery, builtins; {operation}\n")
+        completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+>       assert completed.returncode != 0
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['<temporary>/worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport json, runpy,...<temporary>/test_executable_pth_cannot_cha1/snapshot/packaging.py", "project", false]\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:149: AssertionError
+_ test_executable_pth_cannot_change_protected_import_state[next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None] _
+
+collision_runtime = {'PROJECT': PosixPath('<temporary>/test_executab...<temporary>/test_executable_pth_cannot_cha2/analyzers')}
+operation = "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None"
+
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            "sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None",
+            "importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None",
+            "builtins.__import__ = lambda *args, **kwargs: None",
+        ],
+    )
+    def test_executable_pth_cannot_change_protected_import_state(
+        collision_runtime: dict[str, Path], operation: str
+    ) -> None:
+        pth = collision_runtime["PROJECT"] / "site-packages/changed-imports.pth"
+        pth.write_text(f"import sys, importlib.machinery, builtins; {operation}\n")
+        completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+>       assert completed.returncode != 0
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['<temporary>/worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport json, runpy,...<temporary>/test_executable_pth_cannot_cha2/snapshot/packaging.py", "project", false]\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:149: AssertionError
+_ test_executable_pth_cannot_change_protected_import_state[importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None] _
+
+collision_runtime = {'PROJECT': PosixPath('<temporary>/test_executab...<temporary>/test_executable_pth_cannot_cha3/analyzers')}
+operation = 'importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None'
+
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            "sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None",
+            "importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None",
+            "builtins.__import__ = lambda *args, **kwargs: None",
+        ],
+    )
+    def test_executable_pth_cannot_change_protected_import_state(
+        collision_runtime: dict[str, Path], operation: str
+    ) -> None:
+        pth = collision_runtime["PROJECT"] / "site-packages/changed-imports.pth"
+        pth.write_text(f"import sys, importlib.machinery, builtins; {operation}\n")
+        completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+        assert completed.returncode != 0
+>       assert "project_worker_startup_import_state_changed" in completed.stderr
+E       assert 'project_worker_startup_import_state_changed' in 'Traceback (most recent call last):\n  File "<string>", line 17, in <module>\n  File "<temporary>/repository...project_worker_analyzer_origin_mismatch:{fullname}")\nImportError: project_worker_analyzer_origin_mismatch:packaging\n'
+E        +  where 'Traceback (most recent call last):\n  File "<string>", line 17, in <module>\n  File "<temporary>/repository...project_worker_analyzer_origin_mismatch:{fullname}")\nImportError: project_worker_analyzer_origin_mismatch:packaging\n' = CompletedProcess(args=['<temporary>/worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport json, runpy,...roject_worker_analyzer_origin_mismatch:{fullname}")\nImportError: project_worker_analyzer_origin_mismatch:packaging\n').stderr
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:150: AssertionError
+_ test_executable_pth_cannot_change_protected_import_state[builtins.__import__ = lambda *args, **kwargs: None] _
+
+collision_runtime = {'PROJECT': PosixPath('<temporary>/test_executab...<temporary>/test_executable_pth_cannot_cha4/analyzers')}
+operation = 'builtins.__import__ = lambda *args, **kwargs: None'
+
+    @pytest.mark.parametrize(
+        "operation",
+        [
+            "sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None",
+            "importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None",
+            "builtins.__import__ = lambda *args, **kwargs: None",
+        ],
+    )
+    def test_executable_pth_cannot_change_protected_import_state(
+        collision_runtime: dict[str, Path], operation: str
+    ) -> None:
+        pth = collision_runtime["PROJECT"] / "site-packages/changed-imports.pth"
+        pth.write_text(f"import sys, importlib.machinery, builtins; {operation}\n")
+        completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+        assert completed.returncode != 0
+>       assert "project_worker_startup_import_state_changed" in completed.stderr
+E       assert 'project_worker_startup_import_state_changed' in 'Traceback (most recent call last):\n  File "<string>", line 18, in <module>\nAttributeError: \'NoneType\' object has no attribute \'OWNER\'\n'
+E        +  where 'Traceback (most recent call last):\n  File "<string>", line 18, in <module>\nAttributeError: \'NoneType\' object has no attribute \'OWNER\'\n' = CompletedProcess(args=['<temporary>/worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport json, runpy,...all last):\n  File "<string>", line 18, in <module>\nAttributeError: \'NoneType\' object has no attribute \'OWNER\'\n').stderr
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:150: AssertionError
+_ test_executable_editable_finder_remains_available_behind_sealed_imports[prepend] _
+
+collision_runtime = {'PROJECT': PosixPath('<temporary>/test_executab...<temporary>/test_executable_editable_finde1/analyzers')}
+placement = 'prepend'
+
+    @pytest.mark.parametrize("placement", ["append", "prepend"])
+    def test_executable_editable_finder_remains_available_behind_sealed_imports(
+        collision_runtime: dict[str, Path], placement: str
+    ) -> None:
+        workspace = _workspace_dependency(collision_runtime)
+        installed = collision_runtime["PROJECT"] / "site-packages"
+        hook = f"""
+    import importlib.machinery, sys
+    class EditableFinder:
+        def find_spec(self, fullname, path=None, target=None):
+            roots = {{'project_owned': {str(workspace)!r}, 'packaging': {str(collision_runtime['SNAPSHOT'])!r}}}
+            if fullname in roots:
+                return importlib.machinery.PathFinder.find_spec(fullname, [roots[fullname]])
+    def install():
+        if {placement!r} == 'prepend':
+            sys.meta_path.insert(0, EditableFinder())
+        else:
+            sys.meta_path.append(EditableFinder())
+    """
+        (installed / "editable_fixture.py").write_text(hook)
+        (installed / "editable.pth").write_text("import editable_fixture; editable_fixture.install()\n")
+        completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+        assert completed.returncode == 0, completed.stderr
+        owner, origin, project_owner, _ = json.loads(completed.stdout)
+>       assert owner == "analyzer"
+E       AssertionError: assert 'snapshot' == 'analyzer'
+E         
+E         - analyzer
+E         + snapshot
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:186: AssertionError
+_______ test_pth_paths_outside_runtime_roots_have_actionable_diagnostic ________
+
+collision_runtime = {'PROJECT': PosixPath('<temporary>/test_pth_path...<temporary>/test_pth_paths_outside_runtime0/analyzers')}
+tmp_path = PosixPath('<temporary>/test_pth_paths_outside_runtime0')
+
+    def test_pth_paths_outside_runtime_roots_have_actionable_diagnostic(
+        collision_runtime: dict[str, Path], tmp_path: Path
+    ) -> None:
+        outside = tmp_path / "outside-runtime"
+        outside.mkdir()
+        pth = collision_runtime["PROJECT"] / "site-packages/external.pth"
+        pth.write_text(str(outside) + "\n")
+        completed = _probe_dependency_origins(collision_runtime, "pylint", "none")
+>       assert completed.returncode != 0
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['<temporary>/worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport json, runpy,...<temporary>/test_pth_paths_outside_runtime0/analyzers/packaging.py", "project", false]\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:208: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_change_protected_import_state[sys.meta_path[:] = [entry for entry in sys.meta_path if not hasattr(entry, 'names')]]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_change_protected_import_state[next(entry for entry in sys.meta_path if hasattr(entry, 'names')).names.clear()]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_change_protected_import_state[next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec = lambda *args: None]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_change_protected_import_state[importlib.machinery.PathFinder.find_spec = lambda *args, **kwargs: None]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_change_protected_import_state[builtins.__import__ = lambda *args, **kwargs: None]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_editable_finder_remains_available_behind_sealed_imports[prepend]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_pth_paths_outside_runtime_roots_have_actionable_diagnostic
+========================= 7 failed, 20 passed in 0.66s =========================

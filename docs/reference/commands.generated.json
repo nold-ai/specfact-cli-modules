@@ -979,7 +979,8 @@
     "subcommands": [
       "ledger",
       "rules",
-      "run"
+      "run",
+      "runtime"
     ]
   },
   {
@@ -1143,11 +1144,65 @@
       "--path",
       "--pr-context-file",
       "--preview-fixes",
+      "--project-config",
+      "--project-runtime",
       "--requirements-evidence",
       "--scope",
       "--score-only",
       "--suppress-noise",
       "--with-mutation"
+    ],
+    "owner_package": "nold-ai/specfact-code-review",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_code_review.review.commands:review_app",
+    "subcommands": []
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "requires-subcommand",
+    "command": "specfact code review runtime",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
+    "options": [],
+    "owner_package": "nold-ai/specfact-code-review",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_code_review.review.commands:review_app",
+    "subcommands": [
+      "inspect",
+      "prepare"
+    ]
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "executes",
+    "command": "specfact code review runtime inspect",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
+    "options": [
+      "--json",
+      "--project-config"
+    ],
+    "owner_package": "nold-ai/specfact-code-review",
+    "owner_repo": "nold-ai/specfact-cli-modules",
+    "short_help": "",
+    "source": "specfact_code_review.review.commands:review_app",
+    "subcommands": []
+  },
+  {
+    "arguments": [],
+    "bare_invocation": "executes",
+    "command": "specfact code review runtime prepare",
+    "deprecated": false,
+    "hidden": false,
+    "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
+    "options": [
+      "--json",
+      "--offline",
+      "--project-config"
     ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",

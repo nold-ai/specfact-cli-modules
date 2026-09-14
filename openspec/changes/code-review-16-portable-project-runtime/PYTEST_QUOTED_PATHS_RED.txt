@@ -1,0 +1,137 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 40 items / 34 deselected / 6 selected
+
+tests/unit/specfact_code_review/run/test_portable_worker.py FFFFFF       [100%]
+
+=================================== FAILURES ===================================
+____________ test_quoted_pytest_paths_match_native_configuration["] ____________
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_match0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10894cc30>
+quote = '"'
+
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    def test_quoted_pytest_paths_match_native_configuration(tmp_path: Path, monkeypatch, quote: str) -> None:
+        monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+        (tmp_path / "source tree").mkdir()
+        (tmp_path / "integration tests").mkdir()
+        source = tmp_path / "source tree/app name.py"
+        source.touch()
+        selected = tmp_path / "integration tests/test_app name.py"
+        selected.write_text("def test_example(): assert True\n")
+        configuration = tmp_path / "pytest.ini"
+        configuration.write_text(
+            "[pytest]\n"
+            f"testpaths = {quote}integration tests{quote}\n"
+            f"pythonpath = {quote}source tree{quote}\n"
+            f"python_files = {quote}test_* name.py{quote}\n"
+        )
+        native = pytest.Config.fromdictargs({}, ["-c", str(configuration)])
+        try:
+            plan = discover_project(tmp_path)
+>           assert plan.source_roots == tuple(path.relative_to(tmp_path).as_posix() for path in native.getini("pythonpath"))
+E           assert ('"source', 'tree"') == ('source tree',)
+E             
+E             At index 0 diff: '"source' != 'source tree'
+E             Left contains one more item: 'tree"'
+E             Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:215: AssertionError
+____________ test_quoted_pytest_paths_match_native_configuration['] ____________
+
+tmp_path = PosixPath('<temporary>/test_quoted_pytest_paths_match1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1088f70b0>
+quote = "'"
+
+    @pytest.mark.parametrize("quote", ['"', "'"])
+    def test_quoted_pytest_paths_match_native_configuration(tmp_path: Path, monkeypatch, quote: str) -> None:
+        monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+        (tmp_path / "source tree").mkdir()
+        (tmp_path / "integration tests").mkdir()
+        source = tmp_path / "source tree/app name.py"
+        source.touch()
+        selected = tmp_path / "integration tests/test_app name.py"
+        selected.write_text("def test_example(): assert True\n")
+        configuration = tmp_path / "pytest.ini"
+        configuration.write_text(
+            "[pytest]\n"
+            f"testpaths = {quote}integration tests{quote}\n"
+            f"pythonpath = {quote}source tree{quote}\n"
+            f"python_files = {quote}test_* name.py{quote}\n"
+        )
+        native = pytest.Config.fromdictargs({}, ["-c", str(configuration)])
+        try:
+            plan = discover_project(tmp_path)
+>           assert plan.source_roots == tuple(path.relative_to(tmp_path).as_posix() for path in native.getini("pythonpath"))
+E           assert ("'source", "tree'") == ('source tree',)
+E             
+E             At index 0 diff: "'source" != 'source tree'
+E             Left contains one more item: "tree'"
+E             Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:215: AssertionError
+______ test_invalid_pytest_quoting_names_configuration_option[pythonpath] ______
+
+tmp_path = PosixPath('<temporary>/test_invalid_pytest_quoting_na0')
+option = 'pythonpath'
+
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths", "python_files", "norecursedirs"])
+    def test_invalid_pytest_quoting_names_configuration_option(tmp_path: Path, option: str) -> None:
+        (tmp_path / "pytest.ini").write_text(f'[pytest]\n{option} = "unterminated\n')
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:pytest.ini:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:226: Failed
+______ test_invalid_pytest_quoting_names_configuration_option[testpaths] _______
+
+tmp_path = PosixPath('<temporary>/test_invalid_pytest_quoting_na1')
+option = 'testpaths'
+
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths", "python_files", "norecursedirs"])
+    def test_invalid_pytest_quoting_names_configuration_option(tmp_path: Path, option: str) -> None:
+        (tmp_path / "pytest.ini").write_text(f'[pytest]\n{option} = "unterminated\n')
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:pytest.ini:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:226: Failed
+_____ test_invalid_pytest_quoting_names_configuration_option[python_files] _____
+
+tmp_path = PosixPath('<temporary>/test_invalid_pytest_quoting_na2')
+option = 'python_files'
+
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths", "python_files", "norecursedirs"])
+    def test_invalid_pytest_quoting_names_configuration_option(tmp_path: Path, option: str) -> None:
+        (tmp_path / "pytest.ini").write_text(f'[pytest]\n{option} = "unterminated\n')
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:pytest.ini:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:226: Failed
+____ test_invalid_pytest_quoting_names_configuration_option[norecursedirs] _____
+
+tmp_path = PosixPath('<temporary>/test_invalid_pytest_quoting_na3')
+option = 'norecursedirs'
+
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths", "python_files", "norecursedirs"])
+    def test_invalid_pytest_quoting_names_configuration_option(tmp_path: Path, option: str) -> None:
+        (tmp_path / "pytest.ini").write_text(f'[pytest]\n{option} = "unterminated\n')
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:pytest.ini:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:226: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_quoted_pytest_paths_match_native_configuration["]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_quoted_pytest_paths_match_native_configuration[']
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_invalid_pytest_quoting_names_configuration_option[pythonpath]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_invalid_pytest_quoting_names_configuration_option[testpaths]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_invalid_pytest_quoting_names_configuration_option[python_files]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_invalid_pytest_quoting_names_configuration_option[norecursedirs]
+======================= 6 failed, 34 deselected in 0.27s =======================

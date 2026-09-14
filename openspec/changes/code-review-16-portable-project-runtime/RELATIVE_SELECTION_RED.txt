@@ -1,0 +1,73 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 10 items
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py ......F... [100%]
+
+=================================== FAILURES ===================================
+_______ test_analysis_source_copy_excludes_local_environment_files[True] _______
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-176/test_analysis_source_copy_excl1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c8b1590>
+relative = True
+
+    @pytest.mark.parametrize("relative", [False, True])
+    def test_analysis_source_copy_excludes_local_environment_files(tmp_path: Path, monkeypatch, relative: bool) -> None:
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "app.py").write_text("VALUE = 1\n")
+        (source / ".env").write_text("SYNTHETIC_SECRET=fixture\n")
+        (source / ".venv").mkdir()
+        (source / ".venv/private.txt").write_text("synthetic excluded fixture")
+        observed = []
+
+        def analyze(_runtime, *, snapshot_root, files, **_context):
+            assert snapshot_root != source
+            assert not (snapshot_root / ".env").exists()
+            assert not (snapshot_root / ".venv").exists()
+            assert files == [snapshot_root / "app.py"]
+            assert files[0].read_text() == "VALUE = 1\n"
+            observed.append(snapshot_root)
+            return runner.CapsuleSnapshotResult({}, {})
+
+        monkeypatch.setattr(runner, "_run_capsule_snapshot", analyze)
+        selected = Path("app.py") if relative else source / "app.py"
+        request = ProjectSnapshotRequest(source, [selected], runner.ReviewOptions(), "explicit_files")
+>       portable_snapshot._run_in_private_source(object(), request, runner.CapsuleSnapshotSettings())
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:152:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:114: in _run_in_private_source
+    files = [source / path.relative_to(request.snapshot_root) for path in request.files]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = PosixPath('app.py')
+other = PosixPath('<temporary>/pytest-of-user/pytest-176/test_analysis_source_copy_excl1/source')
+walk_up = False
+
+    def relative_to(self, other, *, walk_up=False):
+        """Return the relative path to another path identified by the passed
+        arguments.  If the operation is not possible (because this is not
+        related to the other path), raise ValueError.
+
+        The *walk_up* parameter controls whether `..` may be used to resolve
+        the path.
+        """
+        if not hasattr(other, 'with_segments'):
+            other = self.with_segments(other)
+        for step, path in enumerate(chain([other], other.parents)):
+            if path == self or path in self.parents:
+                break
+            elif not walk_up:
+>               raise ValueError(f"{str(self)!r} is not in the subpath of {str(other)!r}")
+E               ValueError: 'app.py' is not in the subpath of '<temporary>/pytest-of-user/pytest-176/test_analysis_source_copy_excl1/source'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:490: ValueError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_analysis_source_copy_excludes_local_environment_files[True]
+========================= 1 failed, 9 passed in 0.22s ==========================

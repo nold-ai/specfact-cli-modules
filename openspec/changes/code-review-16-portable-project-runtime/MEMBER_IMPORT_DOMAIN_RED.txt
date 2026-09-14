@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items / 2 deselected / 2 selected
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py FF          [100%]
+
+=================================== FAILURES ===================================
+___________ test_member_fallback_rejects_unrelated_analyzer_imports ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-73/test_member_fallback_rejects_u0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b20ba80>
+
+    def test_member_fallback_rejects_unrelated_analyzer_imports(tmp_path: Path, monkeypatch) -> None:
+        (tmp_path / 'needed.py').write_text('VALUE = 1\n')
+        (tmp_path / 'unrelated.py').write_text('VALUE = 2\n')
+        monkeypatch.setattr(target_bootstrap, 'ANALYZERS', tmp_path)
+>       finder = target_bootstrap.DomainFinder({'sealed_imports': ['needed'], 'installed': []})
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.target_bootstrap' has no attribute 'DomainFinder'
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:41: AttributeError
+_____ test_member_metadata_lookup_cannot_expand_explicit_target_inventory ______
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-73/test_member_metadata_lookup_ca0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bfb6060>
+
+    def test_member_metadata_lookup_cannot_expand_explicit_target_inventory(tmp_path: Path, monkeypatch) -> None:
+        from importlib.metadata import DistributionFinder
+
+        metadata = tmp_path / 'needed-1.0.dist-info'
+        metadata.mkdir()
+        (metadata / 'METADATA').write_text('Metadata-Version: 2.1\nName: needed\nVersion: 1.0\n')
+        monkeypatch.setattr(target_bootstrap, 'ANALYZERS', tmp_path)
+>       finder = target_bootstrap.DomainFinder({
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            'sealed_imports': ['needed'],
+            'installed': [{'name': 'needed', 'version': '1.0', 'origin': 'analyzer'}],
+        })
+E       AttributeError: module 'specfact_code_review.run.target_bootstrap' has no attribute 'DomainFinder'
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:53: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_member_fallback_rejects_unrelated_analyzer_imports
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_member_metadata_lookup_cannot_expand_explicit_target_inventory
+======================= 2 failed, 2 deselected in 0.46s ========================

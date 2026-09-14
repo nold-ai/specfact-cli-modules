@@ -85,6 +85,9 @@
         - title: Run
           url: /bundles/code-review/run/
           expertise: [intermediate, advanced]
+        - title: External Python runtimes
+          url: /guides/portable-project-runtime/
+          expertise: [intermediate, advanced]
         - title: Ledger
           url: /bundles/code-review/ledger/
           expertise: [intermediate, advanced]

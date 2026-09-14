@@ -1,0 +1,455 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <implementation-worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 31 items
+
+tests/unit/specfact_code_review/run/test_portable_worker.py ............ [ 38%]
+....FFFFFFFFFFFF...                                                      [100%]
+
+=================================== FAILURES ===================================
+____ test_default_recursion_exclusions_prevent_false_test_ambiguity[build] _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_default_recursion_exclusi0')
+directory = 'build'
+
+    @pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+    def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("tests", directory):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:149:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'build/test_app.py', 'tests/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+_____ test_default_recursion_exclusions_prevent_false_test_ambiguity[dist] _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_default_recursion_exclusi1')
+directory = 'dist'
+
+    @pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+    def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("tests", directory):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:149:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'dist/test_app.py', 'tests/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+____ test_default_recursion_exclusions_prevent_false_test_ambiguity[.cache] ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_default_recursion_exclusi2')
+directory = '.cache'
+
+    @pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+    def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("tests", directory):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:149:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'.cache/test_app.py', 'tests/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+_ test_default_recursion_exclusions_prevent_false_test_ambiguity[package.egg] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_default_recursion_exclusi3')
+directory = 'package.egg'
+
+    @pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+    def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("tests", directory):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:149:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py'
+candidates = {'package.egg/test_app.py', 'tests/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+____ test_default_recursion_exclusions_prevent_false_test_ambiguity[_darcs] ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_default_recursion_exclusi4')
+directory = '_darcs'
+
+    @pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+    def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("tests", directory):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:149:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'_darcs/test_app.py', 'tests/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+_____ test_default_recursion_exclusions_prevent_false_test_ambiguity[CVS] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_default_recursion_exclusi5')
+directory = 'CVS'
+
+    @pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+    def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("tests", directory):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:149:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'CVS/test_app.py', 'tests/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+_____ test_default_recursion_exclusions_prevent_false_test_ambiguity[venv] _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_default_recursion_exclusi6')
+directory = 'venv'
+
+    @pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+    def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("tests", directory):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:149:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'tests/test_app.py', 'venv/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+____ test_default_recursion_exclusions_prevent_false_test_ambiguity[{arch}] ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_default_recursion_exclusi7')
+directory = '{arch}'
+
+    @pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+    def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("tests", directory):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:149:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'tests/test_app.py', '{arch}/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+_____ test_custom_recursion_exclusions_replace_pytest_defaults[patterns0] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_custom_recursion_exclusio0')
+patterns = ['generated']
+
+    @pytest.mark.parametrize("patterns", [["generated"], "generated", ["fixtures/generated"], "fixtures/generated"])
+    def test_custom_recursion_exclusions_replace_pytest_defaults(tmp_path: Path, patterns: object) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("build", "fixtures/generated"):
+            (tmp_path / name).mkdir(parents=True)
+            (tmp_path / name / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"norecursedirs": patterns})
+>       assert select_test_paths(plan, [source], full=False) == ("build/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:160:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py'
+candidates = {'build/test_app.py', 'fixtures/generated/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+_____ test_custom_recursion_exclusions_replace_pytest_defaults[generated] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_custom_recursion_exclusio1')
+patterns = 'generated'
+
+    @pytest.mark.parametrize("patterns", [["generated"], "generated", ["fixtures/generated"], "fixtures/generated"])
+    def test_custom_recursion_exclusions_replace_pytest_defaults(tmp_path: Path, patterns: object) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("build", "fixtures/generated"):
+            (tmp_path / name).mkdir(parents=True)
+            (tmp_path / name / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"norecursedirs": patterns})
+>       assert select_test_paths(plan, [source], full=False) == ("build/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:160:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py'
+candidates = {'build/test_app.py', 'fixtures/generated/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+_____ test_custom_recursion_exclusions_replace_pytest_defaults[patterns2] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_custom_recursion_exclusio2')
+patterns = ['fixtures/generated']
+
+    @pytest.mark.parametrize("patterns", [["generated"], "generated", ["fixtures/generated"], "fixtures/generated"])
+    def test_custom_recursion_exclusions_replace_pytest_defaults(tmp_path: Path, patterns: object) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("build", "fixtures/generated"):
+            (tmp_path / name).mkdir(parents=True)
+            (tmp_path / name / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"norecursedirs": patterns})
+>       assert select_test_paths(plan, [source], full=False) == ("build/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:160:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py'
+candidates = {'build/test_app.py', 'fixtures/generated/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+_ test_custom_recursion_exclusions_replace_pytest_defaults[fixtures/generated] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-208/test_custom_recursion_exclusio3')
+patterns = 'fixtures/generated'
+
+    @pytest.mark.parametrize("patterns", [["generated"], "generated", ["fixtures/generated"], "fixtures/generated"])
+    def test_custom_recursion_exclusions_replace_pytest_defaults(tmp_path: Path, patterns: object) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        for name in ("build", "fixtures/generated"):
+            (tmp_path / name).mkdir(parents=True)
+            (tmp_path / name / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"norecursedirs": patterns})
+>       assert select_test_paths(plan, [source], full=False) == ("build/test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:160:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:70: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py'
+candidates = {'build/test_app.py', 'fixtures/generated/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:37: ProjectRuntimeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_recursion_exclusions_prevent_false_test_ambiguity[build]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_recursion_exclusions_prevent_false_test_ambiguity[dist]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_recursion_exclusions_prevent_false_test_ambiguity[.cache]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_recursion_exclusions_prevent_false_test_ambiguity[package.egg]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_recursion_exclusions_prevent_false_test_ambiguity[_darcs]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_recursion_exclusions_prevent_false_test_ambiguity[CVS]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_recursion_exclusions_prevent_false_test_ambiguity[venv]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_recursion_exclusions_prevent_false_test_ambiguity[{arch}]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_custom_recursion_exclusions_replace_pytest_defaults[patterns0]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_custom_recursion_exclusions_replace_pytest_defaults[generated]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_custom_recursion_exclusions_replace_pytest_defaults[patterns2]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_custom_recursion_exclusions_replace_pytest_defaults[fixtures/generated]
+======================== 12 failed, 19 passed in 0.96s =========================

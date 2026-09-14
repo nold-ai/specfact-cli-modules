@@ -1,0 +1,105 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <implementation-worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/unit/specfact_code_review/run/test_target_pytest.py ......         [ 50%]
+tests/unit/specfact_code_review/run/test_target_pytest_selection.py FFF. [ 83%]
+FF                                                                       [100%]
+
+=================================== FAILURES ===================================
+___ test_native_addopts_deselection_does_not_require_removed_tests[-k keep] ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-222/test_native_addopts_deselectio0')
+addopts = '-k keep'
+
+    @pytest.mark.parametrize("addopts", ["-k keep", "--deselect=test_case.py::test_drop"])
+    def test_native_addopts_deselection_does_not_require_removed_tests(tmp_path: Path, addopts: str) -> None:
+        observation = _observe(tmp_path, addopts, "def test_keep(): pass\ndef test_drop(): pass\n")
+        assert observation["exit_code"] == 0
+>       assert observation["collected"] == ["test_case.py::test_keep"]
+E       AssertionError: assert ['test_case.p...y::test_keep'] == ['test_case.py::test_keep']
+E
+E         At index 0 diff: 'test_case.py::test_drop' != 'test_case.py::test_keep'
+E         Left contains one more item: 'test_case.py::test_keep'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_target_pytest_selection.py:55: AssertionError
+_ test_native_addopts_deselection_does_not_require_removed_tests[--deselect=test_case.py::test_drop] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-222/test_native_addopts_deselectio1')
+addopts = '--deselect=test_case.py::test_drop'
+
+    @pytest.mark.parametrize("addopts", ["-k keep", "--deselect=test_case.py::test_drop"])
+    def test_native_addopts_deselection_does_not_require_removed_tests(tmp_path: Path, addopts: str) -> None:
+        observation = _observe(tmp_path, addopts, "def test_keep(): pass\ndef test_drop(): pass\n")
+        assert observation["exit_code"] == 0
+>       assert observation["collected"] == ["test_case.py::test_keep"]
+E       AssertionError: assert ['test_case.p...y::test_keep'] == ['test_case.py::test_keep']
+E
+E         At index 0 diff: 'test_case.py::test_drop' != 'test_case.py::test_keep'
+E         Left contains one more item: 'test_case.py::test_keep'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_target_pytest_selection.py:55: AssertionError
+_________ test_final_native_inventory_honors_plugin_collection_changes _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-222/test_final_native_inventory_ho0')
+
+    def test_final_native_inventory_honors_plugin_collection_changes(tmp_path: Path) -> None:
+        (tmp_path / "conftest.py").write_text(
+            "def pytest_collection_modifyitems(items):\n"
+            "    items[:] = [item for item in items if item.name == 'test_keep']\n"
+        )
+        observation = _observe(tmp_path, "", "def test_keep(): pass\ndef test_drop(): pass\n")
+        assert observation["exit_code"] == 0
+>       assert observation["collected"] == ["test_case.py::test_keep"]
+E       AssertionError: assert ['test_case.p...y::test_keep'] == ['test_case.py::test_keep']
+E
+E         At index 0 diff: 'test_case.py::test_drop' != 'test_case.py::test_keep'
+E         Left contains one more item: 'test_case.py::test_keep'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_target_pytest_selection.py:69: AssertionError
+_______ test_final_inventory_preserves_distributed_selected_items[True] ________
+
+local_finish_first = True
+
+    @pytest.mark.parametrize("local_finish_first", [True, False])
+    def test_final_inventory_preserves_distributed_selected_items(local_finish_first: bool) -> None:
+        observer = target_pytest.Observer()
+        session = SimpleNamespace(items=[])
+        if local_finish_first:
+>           observer.pytest_collection_finish(session)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'Observer' object has no attribute 'pytest_collection_finish'
+
+tests/unit/specfact_code_review/run/test_target_pytest_selection.py:88: AttributeError
+_______ test_final_inventory_preserves_distributed_selected_items[False] _______
+
+local_finish_first = False
+
+    @pytest.mark.parametrize("local_finish_first", [True, False])
+    def test_final_inventory_preserves_distributed_selected_items(local_finish_first: bool) -> None:
+        observer = target_pytest.Observer()
+        session = SimpleNamespace(items=[])
+        if local_finish_first:
+            observer.pytest_collection_finish(session)
+        observer.pytest_xdist_node_collection_finished(None, ["test_case.py::test_keep"])
+        observer.pytest_xdist_node_collection_finished(None, ["test_case.py::test_keep"])
+        if not local_finish_first:
+>           observer.pytest_collection_finish(session)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'Observer' object has no attribute 'pytest_collection_finish'
+
+tests/unit/specfact_code_review/run/test_target_pytest_selection.py:92: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_pytest_selection.py::test_native_addopts_deselection_does_not_require_removed_tests[-k keep]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest_selection.py::test_native_addopts_deselection_does_not_require_removed_tests[--deselect=test_case.py::test_drop]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest_selection.py::test_final_native_inventory_honors_plugin_collection_changes
+FAILED tests/unit/specfact_code_review/run/test_target_pytest_selection.py::test_final_inventory_preserves_distributed_selected_items[True]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest_selection.py::test_final_inventory_preserves_distributed_selected_items[False]
+========================= 5 failed, 7 passed in 0.49s ==========================

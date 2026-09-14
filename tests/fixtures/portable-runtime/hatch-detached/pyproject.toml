@@ -1,0 +1,10 @@
+[project]
+name = "specfact-472-reconstructed-fixture"
+version = "0.0.0"
+requires-python = ">=3.11,<3.14"
+
+[tool.pytest.ini_options]
+addopts = "-ra -v --import-mode=importlib -p pytest_asyncio.plugin"
+pythonpath = ["src", "tools", "."]
+testpaths = ["tests"]
+asyncio_mode = "auto"

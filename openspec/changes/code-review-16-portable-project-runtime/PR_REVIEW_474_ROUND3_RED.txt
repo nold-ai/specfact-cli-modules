@@ -1,0 +1,192 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 53 items
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py .......FF  [ 16%]
+tests/unit/specfact_code_review/run/test_runtime_native.py ....F         [ 26%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py .......... [ 45%]
+.................F                                                       [ 79%]
+tests/unit/specfact_code_review/run/test_portable_worker.py ........FF   [ 98%]
+tests/unit/specfact_code_review/run/test_runner.py E                     [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_cached_portable_request_carries_repository_and_index_context _
+file <WORKTREE>/tests/unit/specfact_code_review/run/test_runner.py, line 7735
+  def test_cached_portable_request_carries_repository_and_index_context(runner_api, tmp_path, monkeypatch) -> None:
+E       fixture 'runner_api' not found
+>       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, class_mocker, cov, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, host_analyzer_cli_contract, isolate_legacy_runtime_boundary, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, session_mocker, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+<WORKTREE>/tests/unit/specfact_code_review/run/test_runner.py:7735
+=================================== FAILURES ===================================
+___________ test_descriptor_rejects_malformed_inventory[inventory3] ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-154/test_descriptor_rejects_malfor3')
+inventory = {'pytest_arguments': 7}
+
+    @pytest.mark.parametrize("inventory", [[], {"analyzer_conflicts": []}, {"member_graphs": []}, {"pytest_arguments": 7}, {"pytest_arguments": [False]}])
+    def test_descriptor_rejects_malformed_inventory(tmp_path: Path, inventory) -> None:
+
+        source, artifact = tmp_path / "source", tmp_path / "artifact"
+        source.mkdir()
+        artifact.mkdir()
+        plan = discover_project(source)
+        prepared = seal_runtime(artifact, plan=plan, environment_id="linux-x86_64-cp312", worker_identity="worker")
+        data = prepared.descriptor
+        data["inventory"] = inventory
+        data["identity"] = document_digest({key: value for key, value in data.items() if key != "identity"})
+        prepared.descriptor_path.write_text(json.dumps(data), encoding="utf-8")
+>       with pytest.raises(ProjectRuntimeError, match="inventory_invalid"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py:128: Failed
+___________ test_descriptor_rejects_malformed_inventory[inventory4] ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-154/test_descriptor_rejects_malfor4')
+inventory = {'pytest_arguments': [False]}
+
+    @pytest.mark.parametrize("inventory", [[], {"analyzer_conflicts": []}, {"member_graphs": []}, {"pytest_arguments": 7}, {"pytest_arguments": [False]}])
+    def test_descriptor_rejects_malformed_inventory(tmp_path: Path, inventory) -> None:
+
+        source, artifact = tmp_path / "source", tmp_path / "artifact"
+        source.mkdir()
+        artifact.mkdir()
+        plan = discover_project(source)
+        prepared = seal_runtime(artifact, plan=plan, environment_id="linux-x86_64-cp312", worker_identity="worker")
+        data = prepared.descriptor
+        data["inventory"] = inventory
+        data["identity"] = document_digest({key: value for key, value in data.items() if key != "identity"})
+        prepared.descriptor_path.write_text(json.dumps(data), encoding="utf-8")
+>       with pytest.raises(ProjectRuntimeError, match="inventory_invalid"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py:128: Failed
+_____________ test_wrong_machine_elf_is_rejected_before_inventory ______________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-154/test_wrong_machine_elf_is_reje0')
+
+    def test_wrong_machine_elf_is_rejected_before_inventory(tmp_path: Path) -> None:
+        import struct
+
+        payload = bytearray(64)
+        payload[:6] = b"\x7fELF\x02\x01"
+        struct.pack_into("<H", payload, 18, 183)
+        struct.pack_into("<H", payload, 58, 64)
+        binary = tmp_path / "foreign.so"
+        binary.write_bytes(payload)
+>       with pytest.raises(ProjectRuntimeError, match="architecture_unsupported"):
+                           ^^^^^^^^^^^^^^^^^^^
+E       NameError: name 'ProjectRuntimeError' is not defined
+
+tests/unit/specfact_code_review/run/test_runtime_native.py:89: NameError
+_______ test_source_identity_distinguishes_executable_permission_classes _______
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-154/test_source_identity_distingui0')
+
+    def test_source_identity_distinguishes_executable_permission_classes(tmp_path: Path) -> None:
+        script = tmp_path / "manage"
+        script.write_text("#!/usr/bin/env python\n")
+        script.chmod(0o754)
+        before = discover_project(tmp_path).identity
+        script.chmod(0o745)
+>       assert discover_project(tmp_path).identity != before
+E       AssertionError: assert 'sha256:831e2affb5e4c731e04bf14e1b619362b52bf2e58a4c5a944f1e2229fa339fba' != 'sha256:831e2affb5e4c731e04bf14e1b619362b52bf2e58a4c5a944f1e2229fa339fba'
+E        +  where 'sha256:831e2affb5e4c731e04bf14e1b619362b52bf2e58a4c5a944f1e2229fa339fba' = ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-154/test_sou...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}).identity
+E        +    where ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-154/test_sou...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}) = discover_project(PosixPath('<TMPDIR>/pytest-of-dom/pytest-154/test_source_identity_distingui0'))
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:232: AssertionError
+_ test_real_failure_does_not_hide_partial_pytest_execution[collection_errors] __
+
+field = 'collection_errors'
+
+    @pytest.mark.parametrize("field", ["collection_errors", "internal_errors"])
+    def test_real_failure_does_not_hide_partial_pytest_execution(field) -> None:
+        observation = {"exit_code": 1, "collected": ["a"], "records": [{"nodeid": "a", "phase": "call", "outcome": "failed"}], "coverage": {"files": {"app.py": {}}}, field: ["controlled startup or collection error"]}
+>       with pytest.raises(ProjectRuntimeError, match="project_pytest_.*error"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:110: Failed
+__ test_real_failure_does_not_hide_partial_pytest_execution[internal_errors] ___
+
+field = 'internal_errors'
+
+    @pytest.mark.parametrize("field", ["collection_errors", "internal_errors"])
+    def test_real_failure_does_not_hide_partial_pytest_execution(field) -> None:
+        observation = {"exit_code": 1, "collected": ["a"], "records": [{"nodeid": "a", "phase": "call", "outcome": "failed"}], "coverage": {"files": {"app.py": {}}}, field: ["controlled startup or collection error"]}
+>       with pytest.raises(ProjectRuntimeError, match="project_pytest_.*error"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:110: Failed
+=========================== short test summary info ============================
+ERROR tests/unit/specfact_code_review/run/test_runner.py::test_cached_portable_request_carries_repository_and_index_context
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifacts.py::test_descriptor_rejects_malformed_inventory[inventory3]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifacts.py::test_descriptor_rejects_malformed_inventory[inventory4]
+FAILED tests/unit/specfact_code_review/run/test_runtime_native.py::test_wrong_machine_elf_is_rejected_before_inventory
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_source_identity_distinguishes_executable_permission_classes
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_real_failure_does_not_hide_partial_pytest_execution[collection_errors]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_real_failure_does_not_hide_partial_pytest_execution[internal_errors]
+==================== 6 failed, 46 passed, 1 error in 0.48s =====================
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+tests/unit/specfact_code_review/run/test_runtime_native.py F             [ 50%]
+tests/unit/specfact_code_review/run/test_runner.py F                     [100%]
+
+=================================== FAILURES ===================================
+_____________ test_wrong_machine_elf_is_rejected_before_inventory ______________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-155/test_wrong_machine_elf_is_reje0')
+
+    def test_wrong_machine_elf_is_rejected_before_inventory(tmp_path: Path) -> None:
+        payload = bytearray(64)
+        payload[:6] = b"\x7fELF\x02\x01"
+        struct.pack_into("<H", payload, 18, 183)
+        struct.pack_into("<H", payload, 58, 64)
+        binary = tmp_path / "foreign.so"
+        binary.write_bytes(payload)
+>       with pytest.raises(ProjectRuntimeError, match="architecture_unsupported"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_native.py:88: Failed
+______ test_cached_portable_request_carries_repository_and_index_context _______
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-155/test_cached_portable_request_c0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a021e00>
+
+    def test_cached_portable_request_carries_repository_and_index_context(tmp_path, monkeypatch) -> None:
+        runner_api = _c14_runner()
+        from specfact_code_review.run import portable_snapshot
+
+        source = tmp_path / "index"
+        source.mkdir()
+        cached = runner_api.CachedAnalysisSnapshot(tmp_path, source, [], {}, (), runner_api.CachedDiffIdentity("a" * 40, "b" * 40, ""))
+        requests = []
+        monkeypatch.setattr(runner_api, "_cached_review_requested", lambda *_: True)
+        monkeypatch.setattr(runner_api, "_cached_analysis_snapshot", lambda *_: cached)
+        monkeypatch.setattr(portable_snapshot, "project_runtime_requested", lambda *_: True)
+        monkeypatch.setattr(portable_snapshot, "run_project_snapshot", lambda _runtime, request: (requests.append(request), {}))
+        monkeypatch.setattr(runner_api, "_finalize_local_capsule_snapshot", lambda *_: object())
+        runner_api._run_local_capsule_context(object(), [], runner_api.ReviewOptions(), {}, "worktree")
+>       assert requests[0].source_snapshot is cached
+E       AssertionError: assert None is CachedAnalysisSnapshot(repository=PosixPath('<TMPDIR>/pytest-of-dom/py...e='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', index_tree='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', caller_prefix=''))
+E        +  where None = ProjectSnapshotRequest(snapshot_root=PosixPath('<TMPDIR>/pytest-of-dom...w_mode='full', focus=None, project_config=None, project_runtime=None), assurance_kind='worktree', source_snapshot=None).source_snapshot
+
+tests/unit/specfact_code_review/run/test_runner.py:7749: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_native.py::test_wrong_machine_elf_is_rejected_before_inventory
+FAILED tests/unit/specfact_code_review/run/test_runner.py::test_cached_portable_request_carries_repository_and_index_context
+============================== 2 failed in 0.40s ===============================

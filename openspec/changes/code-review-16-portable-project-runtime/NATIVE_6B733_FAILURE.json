@@ -1,0 +1,126 @@
+{
+  "candidate_sha": "6b733865cbefdcfb7633b7390779c3b0eb8f969e",
+  "tested_merge_sha": "cceae5b2d0ac101d0782a7f7bc54c7d5dff83141",
+  "run_id": 34881298236,
+  "run_url": "https://github.com/nold-ai/specfact-cli-modules/actions/runs/34881298236",
+  "root_cause": "Our sealed-import ownership trusts stale CrossHair top_level.txt names. CrossHair declares build without owning installed build files. Prioritizing that false ownership blocks Poetry project build import.",
+  "not_customer_dependency_failure": true,
+  "rows": [
+    {
+      "artifact": "capsule-candidate-cp3.11-2",
+      "runtime_preparation": "PASS",
+      "contracts": {
+        "id": "contracts",
+        "execution_state": "error",
+        "evidence_outcome": "UNKNOWN",
+        "version": "crosshair-tool-0.0.109+icontract-2.7.1",
+        "diagnostic": "analyzer_reported_incomplete_execution",
+        "sandbox_invocation": "fresh",
+        "capsule_identity": "sha256:691ab0f395ea838bf4775b975901b217764470b80e7f7e2b87fec0fe71982536",
+        "environment_id": "linux-x86_64-cp311"
+      },
+      "poetry_tests": {
+        "collected": 7,
+        "calls": 7,
+        "exit": 0
+      },
+      "host_test_exit": 0,
+      "cold_command": [
+        "specfact",
+        "code",
+        "review",
+        "run",
+        "src/poetry/utils/extras.py",
+        "tests/utils/test_extras.py",
+        "--project-config",
+        "/home/runner/work/_temp/specfact-customer-3.11/external/evidence/poetry/project-runtime.toml",
+        "--json",
+        "--out",
+        "/home/runner/work/_temp/specfact-customer-3.11/external/evidence/poetry/cold-auto-report.json",
+        "--bug-hunt"
+      ],
+      "cold_exit": 1,
+      "diagnostic": "project_worker_analyzer_origin_mismatch:build",
+      "report": "<artifact-root>/capsule-candidate-cp3.11-2/external/evidence/poetry/cold-auto-report.json",
+      "report_sha256": "297d7c283e3a61ab203a730f7822c0ffe54ec0cb32542ca85777495af5d72a27"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.12-2",
+      "runtime_preparation": "PASS",
+      "contracts": {
+        "id": "contracts",
+        "execution_state": "error",
+        "evidence_outcome": "UNKNOWN",
+        "version": "crosshair-tool-0.0.109+icontract-2.7.1",
+        "diagnostic": "analyzer_reported_incomplete_execution",
+        "sandbox_invocation": "fresh",
+        "capsule_identity": "sha256:2cff9f4ede1635f5aed0ca8dd25115526dca40e9f934ea6aeaa104bcc7ca902f",
+        "environment_id": "linux-x86_64-cp312"
+      },
+      "poetry_tests": {
+        "collected": 7,
+        "calls": 7,
+        "exit": 0
+      },
+      "host_test_exit": 0,
+      "cold_command": [
+        "specfact",
+        "code",
+        "review",
+        "run",
+        "src/poetry/utils/extras.py",
+        "tests/utils/test_extras.py",
+        "--project-config",
+        "/home/runner/work/_temp/specfact-customer-3.12/external/evidence/poetry/project-runtime.toml",
+        "--json",
+        "--out",
+        "/home/runner/work/_temp/specfact-customer-3.12/external/evidence/poetry/cold-auto-report.json",
+        "--bug-hunt"
+      ],
+      "cold_exit": 1,
+      "diagnostic": "project_worker_analyzer_origin_mismatch:build",
+      "report": "<artifact-root>/capsule-candidate-cp3.12-2/external/evidence/poetry/cold-auto-report.json",
+      "report_sha256": "4c2419655bc8189c30edb04e3628df7f459ea91a77d7819cbbd3923d5c81fcce"
+    },
+    {
+      "artifact": "capsule-candidate-cp3.13-2",
+      "runtime_preparation": "PASS",
+      "contracts": {
+        "id": "contracts",
+        "execution_state": "error",
+        "evidence_outcome": "UNKNOWN",
+        "version": "crosshair-tool-0.0.109+icontract-2.7.1",
+        "diagnostic": "analyzer_reported_incomplete_execution",
+        "sandbox_invocation": "fresh",
+        "capsule_identity": "sha256:05fdb1a37bae1666205fb6b8da5706e42c72ae1d6d60ae2a980d9243db95a6a2",
+        "environment_id": "linux-x86_64-cp313"
+      },
+      "poetry_tests": {
+        "collected": 7,
+        "calls": 7,
+        "exit": 0
+      },
+      "host_test_exit": 0,
+      "cold_command": [
+        "specfact",
+        "code",
+        "review",
+        "run",
+        "src/poetry/utils/extras.py",
+        "tests/utils/test_extras.py",
+        "--project-config",
+        "/home/runner/work/_temp/specfact-customer-3.13/external/evidence/poetry/project-runtime.toml",
+        "--json",
+        "--out",
+        "/home/runner/work/_temp/specfact-customer-3.13/external/evidence/poetry/cold-auto-report.json",
+        "--bug-hunt"
+      ],
+      "cold_exit": 1,
+      "diagnostic": "project_worker_analyzer_origin_mismatch:build",
+      "report": "<artifact-root>/capsule-candidate-cp3.13-2/external/evidence/poetry/cold-auto-report.json",
+      "report_sha256": "26eee2347fe335d26f20349ad5c37934c9e961410ab74defd8e0ab368b8515ea"
+    }
+  ],
+  "limit": "Native failure evidence at historical candidate 6b733; not a local native Poetry reproduction or successful/public release acceptance.",
+  "report_hashes": "SHA-256 of original downloaded report bytes; report paths are relative to the downloaded artifact root."
+}
