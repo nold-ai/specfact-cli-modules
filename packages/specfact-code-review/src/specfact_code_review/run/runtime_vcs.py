@@ -13,9 +13,11 @@ from icontract import require
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
-def _git_bytes(root: Path, *arguments: str, input_data: bytes | None = None, shallow_file: Path | None = None) -> bytes:
+def _git_result(
+    root: Path, *arguments: str, input_data: bytes | None = None, shallow_file: Path | None = None
+) -> subprocess.CompletedProcess[bytes]:
     try:
-        result = subprocess.run(
+        return subprocess.run(
             [
                 "git",
                 "-C",
@@ -44,6 +46,10 @@ def _git_bytes(root: Path, *arguments: str, input_data: bytes | None = None, sha
         raise ProjectRuntimeError(
             f"project_git_snapshot_failed:{arguments[0]}:{type(exc).__name__}; retry local metadata export"
         ) from exc
+
+
+def _git_bytes(root: Path, *arguments: str, input_data: bytes | None = None, shallow_file: Path | None = None) -> bytes:
+    result = _git_result(root, *arguments, input_data=input_data, shallow_file=shallow_file)
     if result.returncode:
         raise ProjectRuntimeError(
             "project_git_snapshot_failed:"
@@ -57,12 +63,28 @@ def _git(root: Path, *arguments: str) -> str:
     return _git_bytes(root, *arguments).decode("utf-8").strip()
 
 
+def _unborn_head(root: Path) -> bool:
+    reference = _git_result(root, "symbolic-ref", "--quiet", "HEAD")
+    if reference.returncode:
+        return False
+    branch = reference.stdout.decode("utf-8").strip()
+    return (
+        branch.startswith("refs/heads/")
+        and _git_result(root, "show-ref", "--verify", "--quiet", branch).returncode == 1
+    )
+
+
 @require(lambda root: root.is_dir())
 def vcs_context(root: Path, commit: str = "HEAD", *, tree: str | None = None) -> dict[str, str]:
     """Bind commits, tags and shallow boundaries without importing user Git config."""
     if not (root / ".git").exists():
         return {}
-    selected = _git(root, "rev-parse", "--verify", commit + "^{commit}")
+    try:
+        selected = _git(root, "rev-parse", "--verify", commit + "^{commit}")
+    except ProjectRuntimeError as exc:
+        if exc.__cause__ is None and commit == "HEAD" and tree is None and _unborn_head(root):
+            return {}
+        raise
     shallow = _git(root, "rev-parse", "--git-path", "shallow")
     boundary = Path(shallow)
     if not boundary.is_absolute():

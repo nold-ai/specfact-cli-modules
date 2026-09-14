@@ -67,7 +67,7 @@ specfact code review runtime prepare --project-config /tmp/review-runtime.toml -
 specfact code review run src/example.py tests/test_example.py --project-config /tmp/review-runtime.toml
 ```
 
-Plain package-index dependencies do not require Git. Preparation stages available Git capabilities; a dependency that actually needs a missing Git executable or HTTP transport fails with a preparation diagnostic and installation remedy.
+Plain package-index dependencies do not require Git. Preparation stages available Git capabilities; a dependency that actually needs a missing Git executable or HTTP transport fails with a preparation diagnostic and installation remedy. A newly initialized repository without a first commit has no VCS version context; ordinary dependency discovery can still proceed. Missing requested revisions or corrupt Git state remain errors.
 
 Preparation returns the path to `project-runtime.json`. Generated environments, resolutions, and inventories stay in the private cache, outside customer source. Keep descriptors private: they contain project dependency and path metadata. Index credentials are excluded from published descriptor inventory; private failed-build logs are owner-readable.
 
@@ -83,6 +83,8 @@ Attachment verifies the payload, project inputs, ABI, and analyzer worker identi
 ## Interpret incomplete evidence
 
 Runtime failure preserves independent static findings. Affected analyzers reference the preparation diagnostic and remain incomplete. A real missing import after successful preparation remains a finding. A report can contain real failures while still showing incomplete required evidence.
+
+Runtime attachment adds import roots only when declared through pytest `pythonpath` or explicit review `source_roots`. It does not infer `src/` or repository-root overrides from layout: installed packages, build-generated contents, editable hooks, and native pytest import modes retain their normal precedence.
 
 Pytest configuration and selection controls remain active. Deselected tests are recorded separately from the selected execution inventory; distributed deselection visibility is labelled as controller-observed. Quoted pytest paths and file patterns preserve spaces using native argument rules. Malformed tables, invalid path/pattern value shapes, and unclosed quotes identify the section or option and configuration file. The report records collection, execution, setup and internal errors, configured options, versions, and coverage. Distribution-owned commands are available inside target workers. Localhost coordination for plugins stays inside the offline namespace. Collection-only runs, early stopping that leaves collected tests unexecuted, and absent required coverage do not become successful test evidence.
 

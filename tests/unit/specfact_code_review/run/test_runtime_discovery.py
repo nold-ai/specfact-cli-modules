@@ -429,3 +429,11 @@ def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
         ProjectRuntimeError, match=re.escape(f"project_config_invalid:{filename}:{section}; expected a table")
     ):
         discover_project(tmp_path, config_path=config if explicit else None)
+
+
+@pytest.mark.parametrize("layout", ["flat", "src"])
+def test_undeclared_pythonpath_does_not_invent_import_roots(tmp_path: Path, layout: str) -> None:
+    if layout == "src":
+        (tmp_path / "src").mkdir()
+    (tmp_path / "requirements.txt").touch()
+    assert not discover_project(tmp_path).source_roots

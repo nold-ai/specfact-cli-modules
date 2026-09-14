@@ -467,3 +467,19 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **AND** quoted parent traversal, absolute paths, and escaping symlink paths MUST fail before preparation or selection
 - **AND** explicit review `source_roots` MUST NOT suppress validation of pytest's own `pythonpath`
 - **AND** valid repository-relative paths containing spaces and native list values MUST remain unchanged in recorded configuration
+
+#### Scenario: Unborn Git repositories have no version context
+
+- **GIVEN** a newly initialized Git repository has a valid symbolic HEAD pointing to an absent branch and no first commit
+- **WHEN** runtime discovery or inspection gathers optional VCS version context without requesting an explicit revision
+- **THEN** it SHALL return empty VCS context and permit ordinary dependency discovery and preparation
+- **AND** missing explicit revisions, detached or malformed HEAD state, and corrupt repositories SHALL remain precise diagnostics rather than being silently treated as unborn repositories
+
+#### Scenario: Runtime attachment preserves installed-package import precedence
+
+- **GIVEN** a project has a built package installed in its selected runtime and raw source under `src/`, with no declared pytest `pythonpath` or explicit review `source_roots`
+- **WHEN** the capsule attaches the runtime and executes the project's tests
+- **THEN** attachment SHALL NOT invent `src` or repository-root import overrides
+- **AND** native pytest import/configuration behavior SHALL select the installed package, including build-generated package contents, while source-file analysis remains available
+- **AND** explicitly configured review `source_roots`, pytest `pythonpath`, and installed editable hooks SHALL retain their declared import behavior
+- **AND** native Python CLI current-directory and script-path behavior, and pytest's own test-module path handling, SHALL remain effective for uninstalled source-only repositories

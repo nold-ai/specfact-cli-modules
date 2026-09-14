@@ -43,7 +43,7 @@ class ProjectPlan:
     extras: tuple[str, ...] = ()
     requirements: tuple[str, ...] = ()
     constraints: tuple[str, ...] = ()
-    source_roots: tuple[str, ...] = (".",)
+    source_roots: tuple[str, ...] = ()
     native_libraries: tuple[str, ...] = ()
     inputs: dict[str, str] = field(default_factory=dict)
     pytest_config: dict[str, Any] = field(default_factory=dict)

@@ -273,7 +273,8 @@ def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
 
 
 def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
-    roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+    # File discovery is independent: import paths must come from declared runtime configuration.
+    roots = config.get("source_roots", pytest.get("pythonpath", ()))
     if isinstance(roots, str):
         roots = shlex.split(roots)
     result = tuple(dict.fromkeys(roots))

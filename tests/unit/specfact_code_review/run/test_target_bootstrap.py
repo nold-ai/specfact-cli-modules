@@ -1,14 +1,18 @@
 """Analyzer entry-point lookup rejects project-owned replacements."""
 
 import json
+import os
+import shutil
 import subprocess
 import sys
+import zipfile
 from importlib.metadata import DistributionFinder
 from pathlib import Path
 
 import pytest
 
 from specfact_code_review.run import target_bootstrap
+from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.target_bootstrap import _project_python_command, python_execution_domain
 
 
@@ -288,3 +292,163 @@ def test_only_pytest_children_receive_the_pytest_dependency_domain(monkeypatch) 
 def test_python_startup_cannot_bypass_runtime(arguments, option) -> None:
     with pytest.raises(RuntimeError, match=f"project_python_option_unsupported:{option}"):
         target_bootstrap._project_python_command(arguments)
+
+
+def _write_pytest_runtime(project: Path, snapshot: Path, configuration: Path | None = None) -> dict[str, Path]:
+    descriptor = {
+        "project": discover_project(snapshot, config_path=configuration).document(),
+        "inventory": {"member_graphs": {"pytest-observe": {"sealed_imports": [], "installed": []}}},
+    }
+    (project / "project-runtime.json").write_text(json.dumps(descriptor))
+    return {"PROJECT": project, "SNAPSHOT": snapshot, "ANALYZERS": Path(pytest.__file__).parent.parent}
+
+
+def _install_generated_package(project: Path) -> None:
+    """Install a local wheel whose generated output differs from the raw sources."""
+    wheel = project / "capsule_origin-1.0-py3-none-any.whl"
+    files = {
+        "capsule_origin/__init__.py": "from .generated import ORIGIN\n",
+        "capsule_origin/generated.py": 'ORIGIN = "built"\n',
+        "capsule_origin-1.0.dist-info/METADATA": "Metadata-Version: 2.1\nName: capsule-origin\nVersion: 1.0\n",
+        "capsule_origin-1.0.dist-info/WHEEL": (
+            "Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
+        ),
+    }
+    record = "capsule_origin-1.0.dist-info/RECORD"
+    files[record] = "".join(f"{name},,\n" for name in [*files, record])
+    with zipfile.ZipFile(wheel, "w") as archive:
+        for name, content in files.items():
+            archive.writestr(name, content)
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--no-index",
+            "--no-deps",
+            "--disable-pip-version-check",
+            "--target",
+            str(project / "site-packages"),
+            str(wheel),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _run_origin_pytest(
+    paths: dict[str, Path], *, capsule: bool, import_mode: str, selection: str = "tests/test_origin.py"
+) -> subprocess.CompletedProcess[str]:
+    native_setup = f"""
+import site
+site.addsitedir({str(paths["PROJECT"] / "site-packages")!r})
+site.addsitedir({str(paths["ANALYZERS"])!r})
+"""
+    capsule_setup = f"""
+bootstrap = runpy.run_path({str(Path(target_bootstrap.__file__))!r})
+configure = bootstrap['_configure_runtime']
+configure.__globals__.update({", ".join(f"{key}=Path({str(value)!r})" for key, value in paths.items())})
+configure('pytest-observe')
+"""
+    script = f"""
+import runpy, sys
+from pathlib import Path
+{capsule_setup if capsule else native_setup}
+import pytest
+raise SystemExit(pytest.main(['-q', '--import-mode={import_mode}', {selection!r}]))
+"""
+    return subprocess.run(
+        [sys.executable, "-I", "-S", "-c", script],
+        cwd=paths["SNAPSHOT"],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
+    )
+
+
+@pytest.mark.parametrize("import_mode", ["prepend", "importlib"])
+@pytest.mark.parametrize("paths_mode", ["undeclared", "empty", "pytest", "explicit", "editable"])
+def test_target_pytest_preserves_built_or_explicit_source_imports(
+    tmp_path: Path, paths_mode: str, import_mode: str
+) -> None:
+    project, snapshot = tmp_path / "runtime", tmp_path / "snapshot"
+    project.mkdir()
+    source = snapshot / "src with spaces" if paths_mode == "pytest" else snapshot / "src"
+    package = source / "capsule_origin"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text('ORIGIN = "raw"\n')
+    (snapshot / "tests").mkdir()
+    _install_generated_package(project)
+    expected = "raw" if paths_mode in {"pytest", "explicit", "editable"} else "built"
+    (snapshot / "tests/test_origin.py").write_text(
+        f"import capsule_origin\ndef test_origin():\n    assert capsule_origin.ORIGIN == {expected!r}\n"
+    )
+    configuration = None
+    if paths_mode == "pytest":
+        (snapshot / "pytest.ini").write_text('[pytest]\npythonpath = "src with spaces"\n')
+    if paths_mode == "empty":
+        (snapshot / "pytest.ini").write_text("[pytest]\npythonpath =\n")
+    if paths_mode == "explicit":
+        configuration = snapshot / "review.toml"
+        configuration.write_text('source_roots = ["src"]\n')
+    if paths_mode == "editable":
+        # The selected environment's ordinary .pth editable mapping owns this path.
+        (project / "site-packages/capsule-editable.pth").write_text(str(source) + "\n")
+        # A real editable installation supplies source instead of the built package.
+        shutil.rmtree(project / "site-packages/capsule_origin")
+    paths = _write_pytest_runtime(project, snapshot, configuration)
+    if paths_mode != "explicit":
+        native = _run_origin_pytest(paths, capsule=False, import_mode=import_mode)
+        assert native.returncode == 0, native.stdout + native.stderr
+    observed = _run_origin_pytest(paths, capsule=True, import_mode=import_mode)
+    assert observed.returncode == 0, observed.stdout + observed.stderr
+
+
+@pytest.mark.parametrize("pytest_child", [False, True])
+@pytest.mark.parametrize("invocation", ["code", "module", "script"])
+def test_native_python_path_zero_survives_runtime_startup(tmp_path: Path, pytest_child: bool, invocation: str) -> None:
+    project, snapshot = tmp_path / "runtime", tmp_path / "snapshot"
+    (project / "site-packages").mkdir(parents=True)
+    snapshot.mkdir()
+    source = snapshot / "tools" if invocation == "script" else snapshot
+    source.mkdir(exist_ok=True)
+    (source / "flat_module.py").write_text('VALUE = "native-path-zero"\n')
+    probe = "import flat_module\nprint(flat_module.VALUE)\n"
+    (source / "probe.py").write_text(probe)
+    _write_pytest_runtime(project, snapshot)
+    startup = tmp_path / "startup"
+    startup.mkdir()
+    (startup / "sitecustomize.py").write_text(f"""
+import runpy
+from pathlib import Path
+bootstrap = runpy.run_path({str(Path(target_bootstrap.__file__))!r})
+configure = bootstrap['_configure_runtime']
+configure.__globals__.update(PROJECT=Path({str(project)!r}), SNAPSHOT=Path({str(snapshot)!r}),
+    ANALYZERS=Path({str(Path(pytest.__file__).parent.parent)!r}))
+configure(bootstrap['python_execution_domain']())
+""")
+    arguments = {"code": ["-c", probe], "module": ["-m", "probe"], "script": [str(source / "probe.py")]}[invocation]
+    environment = {**os.environ, "SPECFACT_TARGET_PYTEST": "1" if pytest_child else "0"}
+    environment.pop("PYTHONPATH", None)
+    command = [sys.executable, "-s", *arguments]
+    native = subprocess.run(command, cwd=snapshot, env=environment, capture_output=True, text=True, check=False)
+    environment["PYTHONPATH"] = str(startup)
+    attached = subprocess.run(command, cwd=snapshot, env=environment, capture_output=True, text=True, check=False)
+    assert native.returncode == attached.returncode == 0, attached.stderr
+    assert native.stdout == attached.stdout == "native-path-zero\n"
+    assert not attached.stderr
+
+
+def test_native_pytest_adds_flat_test_module_root_without_runtime_override(tmp_path: Path) -> None:
+    project, snapshot = tmp_path / "runtime", tmp_path / "snapshot"
+    (project / "site-packages").mkdir(parents=True)
+    snapshot.mkdir()
+    (snapshot / "flat_module.py").write_text("VALUE = 42\n")
+    (snapshot / "test_flat.py").write_text("import flat_module\ndef test_flat():\n    assert flat_module.VALUE == 42\n")
+    paths = _write_pytest_runtime(project, snapshot)
+    for capsule in (False, True):
+        result = _run_origin_pytest(paths, capsule=capsule, import_mode="prepend", selection="test_flat.py")
+        assert result.returncode == 0, result.stdout + result.stderr

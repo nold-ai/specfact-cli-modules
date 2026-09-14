@@ -1,13 +1,15 @@
 """Dynamic package versions bind to sanitized, exact source VCS context."""
 
+import json
 import os
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
-from specfact_code_review.run import portable_snapshot, runner, runtime_builder, runtime_vcs, scope
+from specfact_code_review.run import portable_snapshot, runner, runtime_builder, runtime_commands, runtime_vcs, scope
 from specfact_code_review.run.portable_snapshot import discover_snapshot
 from specfact_code_review.run.runtime_builder import copy_project
 from specfact_code_review.run.runtime_discovery import discover_project
@@ -61,6 +63,78 @@ def test_tag_change_invalidates_runtime_without_source_byte_changes(tmp_path: Pa
     after = discover_project(root)
     assert before.source_identity == after.source_identity
     assert before.identity != after.identity
+
+
+@pytest.mark.parametrize("state", ["fresh", "staged", "orphan"])
+def test_unborn_head_allows_discovery_inspection_and_private_copy(tmp_path: Path, monkeypatch, state: str) -> None:
+    root = tmp_path / "project"
+    if state == "orphan":
+        _repository(root)
+        _git(root, "tag", "unrelated-v1")
+        _git(root, "checkout", "--orphan", "new-branch")
+    else:
+        root.mkdir()
+        _git(root, "init", "-q", "--initial-branch=main")
+    (root / "pyproject.toml").write_text('[project]\nname="fixture"\n')
+    if state == "staged":
+        _git(root, "add", "pyproject.toml")
+    plan = discover_project(root)
+    assert not plan.vcs
+    verify_inputs(plan)
+    monkeypatch.chdir(root)
+    result = CliRunner().invoke(runtime_commands.app, ["inspect", "--json"])
+    assert result.exit_code == 0, result.stdout
+    assert json.loads(result.stdout)["vcs"] == {}
+    copied = tmp_path / "copied"
+    copy_project(root, copied)
+    assert (copied / "pyproject.toml").read_bytes() == (root / "pyproject.toml").read_bytes()
+    assert not (copied / ".git").exists()
+    _commit_fixture(root, "first commit on selected branch")
+    with pytest.raises(ProjectRuntimeError, match="project_runtime_vcs_changed_during_build"):
+        verify_inputs(plan)
+
+
+@pytest.mark.parametrize("selection", [{"commit": "missing"}, {"commit": "HEAD~1"}, {"tree": "1" * 40}])
+def test_unborn_head_does_not_hide_missing_explicit_revision(tmp_path: Path, selection) -> None:
+    _git(tmp_path, "init", "-q", "--initial-branch=main")
+    with pytest.raises(ProjectRuntimeError, match="project_git_snapshot_failed"):
+        vcs_context(tmp_path, **selection)
+
+
+@pytest.mark.parametrize(
+    ("metadata_path", "content"),
+    [
+        ("HEAD", "1" * 40 + "\n"),
+        ("HEAD", "malformed head\n"),
+        ("HEAD", "ref: refs/tags/missing\n"),
+        ("refs/heads/main", "1" * 40 + "\n"),
+        ("refs/heads/main", "malformed ref\n"),
+        ("config", "[malformed configuration\n"),
+    ],
+    ids=["detached-missing", "malformed-head", "non-branch-head", "missing-object", "malformed-branch", "bad-config"],
+)
+def test_invalid_git_state_is_not_treated_as_unborn(tmp_path: Path, metadata_path: str, content: str) -> None:
+    _git(tmp_path, "init", "-q", "--initial-branch=main")
+    (tmp_path / ".git" / metadata_path).write_text(content)
+    with pytest.raises(ProjectRuntimeError, match="project_git_snapshot_failed"):
+        vcs_context(tmp_path)
+
+
+@pytest.mark.parametrize("failure", [OSError("synthetic detail"), subprocess.TimeoutExpired("git", 120)])
+def test_git_execution_failure_cannot_be_downgraded_to_unborn(tmp_path: Path, monkeypatch, failure: Exception) -> None:
+    _git(tmp_path, "init", "-q", "--initial-branch=main")
+    commands = []
+
+    def fail(*args, **_kwargs):
+        commands.append(args)
+        raise failure
+
+    monkeypatch.setattr(runtime_vcs.subprocess, "run", fail)
+    with pytest.raises(ProjectRuntimeError) as caught:
+        vcs_context(tmp_path)
+    assert caught.value.__cause__ is failure
+    assert len(commands) == 1
+    assert "synthetic detail" not in str(caught.value)
 
 
 def test_immutable_snapshot_retains_selected_commit_context(tmp_path: Path) -> None:
