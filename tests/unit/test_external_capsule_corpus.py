@@ -1,8 +1,10 @@
 """The external corpus accepts findings, but cannot accept incomplete execution."""
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -165,3 +167,45 @@ def test_offline_corpus_requires_provisioned_launcher(tmp_path: Path, monkeypatc
     launcher.write_bytes(b"not the signed launcher")
     with pytest.raises(ValueError, match=r"administrator-provisioned.*launcher"):
         module.offline_command(["specfact", "code", "review", "runtime", "prepare", "--offline"])
+
+
+def test_offline_corpus_rejects_customer_writable_launcher(tmp_path: Path, monkeypatch) -> None:
+    module = _load()
+    launcher = tmp_path / "bwrap"
+    launcher.write_text('#!/bin/sh\necho SPECFACT_OFFLINE_NETWORK_VERIFIED >&2\nexec "$@"\n')
+    launcher.chmod(0o755)
+    monkeypatch.setenv("SPECFACT_CORPUS_OFFLINE_LAUNCHER", str(launcher))
+    monkeypatch.setattr(module.os, "readlink", lambda _path: "net:[fixture]")
+    with pytest.raises(ValueError, match="offline_launcher"):
+        module.offline_command(["specfact", "code", "review", "run"])
+
+
+def test_corpus_identity_detects_empty_directories(tmp_path: Path) -> None:
+    module = _load()
+    before = module.tracked_identity(tmp_path)
+    (tmp_path / "new-empty-directory").mkdir()
+    assert module.tracked_identity(tmp_path) != before
+
+
+@pytest.mark.parametrize("owner,mode", [(1001, 0o100555), (0, 0o100775), (0, 0o100557), (0, 0o120777)])
+def test_offline_launcher_rejects_untrusted_ownership_or_mode(owner: int, mode: int) -> None:
+    module = _load()
+    path = SimpleNamespace(name="launcher", lstat=lambda: SimpleNamespace(st_uid=owner, st_mode=mode))
+    with pytest.raises(ValueError, match="offline_launcher_untrusted"):
+        module._check_offline_path(path)
+
+
+def test_offline_launcher_rejects_changed_provisioned_bytes(tmp_path: Path, monkeypatch) -> None:
+    module = _load()
+    launcher = tmp_path / "bwrap"
+    launcher.write_bytes(b"original provisioned executable")
+    launcher.chmod(0o555)
+    (tmp_path / "bwrap.sha256").write_text(hashlib.sha256(launcher.read_bytes()).hexdigest())
+    monkeypatch.setattr(module, "OFFLINE_ROOT", tmp_path)
+    # Isolate the byte identity check; ownership/mode rejection is tested separately.
+    monkeypatch.setattr(module, "_check_offline_path", lambda *_args, **_kwargs: None)
+    assert module._verified_offline_launcher(str(launcher)) == launcher
+    launcher.chmod(0o755)
+    launcher.write_bytes(b"replacement")
+    with pytest.raises(ValueError, match="offline_launcher_untrusted:identity"):
+        module._verified_offline_launcher(str(launcher))

@@ -19,6 +19,7 @@ from specfact_code_review.run.runtime_adapters import MANAGER_REQUIREMENTS, inst
 from specfact_code_review.run.runtime_artifacts import load_runtime, seal_runtime
 from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts
 from specfact_code_review.run.runtime_domains import member_dependency_graphs
+from specfact_code_review.run.runtime_git import git_identity, stage_git
 from specfact_code_review.run.runtime_models import (
     PreparedRuntime,
     ProjectPlan,
@@ -26,7 +27,7 @@ from specfact_code_review.run.runtime_models import (
     content_digest,
     document_digest,
 )
-from specfact_code_review.run.runtime_native import elf_dependencies, inventory_native
+from specfact_code_review.run.runtime_native import inventory_native
 from specfact_code_review.run.runtime_sources import IGNORED_INPUTS, source_identity, source_link_target, verify_inputs
 from specfact_code_review.run.runtime_vcs import copy_vcs_context
 
@@ -91,6 +92,9 @@ def builder_command(runtime: Any, *, staging: Path, executable: str) -> list[str
         "PATH",
         "/opt/specfact/output/builder-tools/bin:/opt/specfact/python/bin:/usr/bin:/bin",
         "--setenv",
+        "GIT_EXEC_PATH",
+        "/opt/specfact/output/builder-tools/git-core",
+        "--setenv",
         "GIT_CONFIG_NOSYSTEM",
         "1",
         "--setenv",
@@ -113,27 +117,7 @@ def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
         raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
     if plan.vcs_repository and plan.vcs_repository != plan.root:
         copy_vcs_context(plan.vcs_repository, staging / "project", plan.vcs["commit"])
-    if (staging / "project/.git").is_dir():
-        git = Path("/usr/bin/git")
-        if not git.is_file():
-            raise ProjectRuntimeError("project_builder_tool_missing:git; install Git on the builder")
-        builder_tools = staging / "builder-tools"
-        (builder_tools / "bin").mkdir(parents=True)
-        shutil.copyfile(git, builder_tools / "bin/git.real")
-        (builder_tools / "bin/git.real").chmod(0o755)
-        inventory_native(
-            builder_tools,
-            capsule_root=staging / "no-capsule-libraries",
-            declared=(*elf_dependencies(git), "ld-linux-x86-64.so.2"),
-        )
-        (builder_tools / "native/ld-linux-x86-64.so.2").chmod(0o755)
-        (builder_tools / "bin/git").write_text(
-            "#!/opt/specfact/python/bin/python\nimport os,sys\nroot='/opt/specfact/output/b"
-            "uilder-tools'\nos.execv(root+'/native/ld-linux-x86-64.so.2', [root+'/native/l"
-            "d-linux-x86-64.so.2', '--library-path', root+'/native', root+'/bin/git.real'"
-            ", *sys.argv[1:]])\n"
-        )
-        (builder_tools / "bin/git").chmod(0o755)
+    stage_git(staging)
     (staging / "home").mkdir()
     driver = Path(__file__).with_name("runtime_build_driver.py")
     shutil.copyfile(driver, staging / "build_driver.py")
@@ -222,13 +206,14 @@ def prepare_runtime(
                     "runtime_adapters.py",
                     "runtime_domains.py",
                     "runtime_vcs.py",
+                    "runtime_git.py",
                     "target_bootstrap.py",
                     "target_launch.py",
                     "target_pytest.py",
                     "sitecustomize.py",
                 )
             },
-            "git": content_digest(Path("/usr/bin/git").read_bytes()) if Path("/usr/bin/git").is_file() else None,
+            "git": git_identity(),
         }
     )[7:]
     destination = cache / key

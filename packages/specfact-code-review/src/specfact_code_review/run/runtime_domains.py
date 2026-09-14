@@ -37,12 +37,26 @@ def _top_level_imports(distribution: Distribution) -> set[str]:
     return names
 
 
-def _dependency_names(requirements: list[str], environment: dict[str, str]) -> list[str]:
+def _dependency_names(
+    requirements: list[str],
+    environment: dict[str, str],
+    *,
+    domain: str,
+    target: dict[str, Any],
+    sealed: dict[str, Distribution],
+) -> list[str]:
     names = []
     for raw in requirements:
         requirement = Requirement(raw)
         if requirement.marker is None or requirement.marker.evaluate(environment):
-            names.append(str(canonicalize_name(requirement.name)))
+            name = str(canonicalize_name(requirement.name))
+            selected = _selected_distribution(name, target, sealed)
+            if selected is not None and not requirement.specifier.contains(selected[0]["version"], prereleases=True):
+                raise ProjectRuntimeError(
+                    f"project_analyzer_dependency_incompatible:{domain}:{name}; "
+                    f"selected={selected[0]['version']}, required={requirement.specifier}"
+                )
+            names.append(name)
     return names
 
 
@@ -85,7 +99,7 @@ def _domain_graph(
                 "rebuild the runtime with its complete declared dependencies"
             )
         row, requirements, admitted_imports = selected
-        dependencies = _dependency_names(requirements, environment)
+        dependencies = _dependency_names(requirements, environment, domain=domain, target=target, sealed=sealed)
         rows.append({**row, "dependencies": sorted(dependencies)})
         imports.update(admitted_imports)
         pending.extend(dependencies)

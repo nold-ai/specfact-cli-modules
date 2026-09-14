@@ -45,7 +45,7 @@ def source_link_target(path: Path, root: Path) -> Path:
     return target
 
 
-def _source_entry(path: Path, root: Path) -> str | None:
+def _source_entry(path: Path, root: Path) -> str:
     relative = path.relative_to(root).as_posix()
     if path.is_symlink():
         return "link:" + source_link_target(path, root).relative_to(root).as_posix()
@@ -53,13 +53,13 @@ def _source_entry(path: Path, root: Path) -> str | None:
         return content_digest(path.read_bytes()) + f":mode={stat.S_IMODE(path.lstat().st_mode)}"
     if not path.is_dir():
         raise ProjectRuntimeError(f"project_source_special_file:{relative}")
-    return None
+    return f"directory:mode={stat.S_IMODE(path.lstat().st_mode)}"
 
 
 @ensure(lambda result: result.startswith("sha256:") and len(result) == 71)
 def source_identity(root: Path) -> str:
     """Bind locally built packages and workspace members to their actual bytes."""
-    entries = {}
+    entries = {".": _source_entry(root, root)}
     for directory, directories, files in os.walk(root, followlinks=False):
         directories[:] = sorted(name for name in directories if name not in IGNORED_INPUTS)
         names = [*directories, *(name for name in sorted(files) if name not in IGNORED_INPUTS)]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -111,7 +112,10 @@ def _run_in_private_source(runtime: Any, request: ProjectSnapshotRequest, settin
     with tempfile.TemporaryDirectory(prefix="specfact-project-source-") as directory:
         source = Path(directory) / "source"
         copy_project(request.snapshot_root, source)
-        files = [source / path.relative_to(request.snapshot_root) for path in request.files]
+        files = [
+            source / Path(os.path.abspath(request.snapshot_root / path)).relative_to(request.snapshot_root)
+            for path in request.files
+        ]
         return _run_capsule_snapshot(
             runtime, snapshot_root=source, files=files, options=request.options, settings=settings
         )

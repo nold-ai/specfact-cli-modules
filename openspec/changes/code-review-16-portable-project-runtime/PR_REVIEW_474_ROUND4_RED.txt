@@ -1,0 +1,256 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 53 items
+
+tests/unit/specfact_code_review/run/test_target_pytest.py .....F         [ 11%]
+tests/unit/specfact_code_review/run/test_runtime_sources.py .F           [ 15%]
+tests/unit/specfact_code_review/run/test_runtime_discovery.py .......... [ 33%]
+..................FFFF                                                   [ 75%]
+tests/unit/test_external_capsule_corpus.py ...........FF                 [100%]
+
+=================================== FAILURES ===================================
+_____ test_disabled_autoload_preserves_only_explicit_plugins_and_coverage ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1080335c0>
+
+    def test_disabled_autoload_preserves_only_explicit_plugins_and_coverage(monkeypatch) -> None:
+        packages = [
+            SimpleNamespace(metadata={"Name": name}, entry_points=[SimpleNamespace(group="pytest11", name=entry, value=value)])
+            for name, entry, value in [
+                ("pytest-asyncio", "asyncio", "pytest_asyncio.plugin"),
+                ("pytest-cov", "pytest_cov", "pytest_cov.plugin"),
+            ]
+        ]
+        monkeypatch.setattr(target_pytest.importlib.metadata, "distributions", lambda **_kwargs: packages)
+        for options in ["--disable-plugin-autoload", ["--disable-plugin-autoload"]]:
+>           assert target_pytest._plugins({"addopts": options}) == ["-p", "pytest_cov"]
+E           AssertionError: assert ['-p', 'async... 'pytest_cov'] == ['-p', 'pytest_cov']
+E
+E             At index 1 diff: 'asyncio' != 'pytest_cov'
+E             Left contains 2 more items, first extra item: '-p'
+E             Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:67: AssertionError
+____________ test_directory_presence_and_modes_bind_source_identity ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_directory_presence_and_mo0')
+
+    def test_directory_presence_and_modes_bind_source_identity(tmp_path: Path) -> None:
+        before = source_identity(tmp_path)
+        empty = tmp_path / "optional-source"
+        empty.mkdir()
+        added = source_identity(tmp_path)
+>       assert added != before
+E       AssertionError: assert 'sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a' != 'sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a'
+
+tests/unit/specfact_code_review/run/test_runtime_sources.py:23: AssertionError
+_______ test_pylock_and_uncompiled_requirements_need_explicit_selection ________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_pylock_and_uncompiled_req0')
+
+    def test_pylock_and_uncompiled_requirements_need_explicit_selection(tmp_path: Path) -> None:
+        (tmp_path / "pylock.toml").write_text('lock-version="1.0"\n')
+        (tmp_path / "requirements.in").write_text('requests\n')
+>       with pytest.raises(ProjectRuntimeError, match=r"ambiguous.*pylock.toml.*requirements.in"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:239: Failed
+____________ test_malformed_ini_is_a_project_diagnostic[setup.cfg] _____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec0')
+filename = 'setup.cfg'
+
+    @pytest.mark.parametrize("filename", ["setup.cfg", "pytest.ini", "tox.ini"])
+    def test_malformed_ini_is_a_project_diagnostic(tmp_path: Path, filename: str) -> None:
+        (tmp_path / filename).write_text('not an INI section\n')
+        with pytest.raises(ProjectRuntimeError, match=r"project_config_invalid:" + filename):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:250:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:306: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:206: in _pytest_config
+    parser.read(path, encoding="utf-8")
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:761: in read
+    self._read(fp, filename)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1079: in _read
+    ParsingError._raise_all(self._read_inner(fp, fpname))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1107: in _read_inner
+    self._handle_rest(st, line, fpname)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <configparser.ConfigParser object at 0x108772ad0>
+st = <configparser._ReadState object at 0x108033a80>
+line = 'not an INI section\n'
+fpname = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec0/setup.cfg')
+
+    def _handle_rest(self, st, line, fpname):
+        # a section header or option header?
+        if self._allow_unnamed_section and st.cursect is None:
+            self._handle_header(st, UNNAMED_SECTION, fpname)
+
+        st.indent_level = st.cur_indent_level
+        # is it a section header?
+        mo = self.SECTCRE.match(line.clean)
+
+        if not mo and st.cursect is None:
+>           raise MissingSectionHeaderError(fpname, st.lineno, line)
+E           configparser.MissingSectionHeaderError: File contains no section headers.
+E           file: PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec0/setup.cfg'), line: 1
+E           'not an INI section\n'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1131: MissingSectionHeaderError
+____________ test_malformed_ini_is_a_project_diagnostic[pytest.ini] ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec1')
+filename = 'pytest.ini'
+
+    @pytest.mark.parametrize("filename", ["setup.cfg", "pytest.ini", "tox.ini"])
+    def test_malformed_ini_is_a_project_diagnostic(tmp_path: Path, filename: str) -> None:
+        (tmp_path / filename).write_text('not an INI section\n')
+        with pytest.raises(ProjectRuntimeError, match=r"project_config_invalid:" + filename):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:250:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:306: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:206: in _pytest_config
+    parser.read(path, encoding="utf-8")
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:761: in read
+    self._read(fp, filename)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1079: in _read
+    ParsingError._raise_all(self._read_inner(fp, fpname))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1107: in _read_inner
+    self._handle_rest(st, line, fpname)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <configparser.ConfigParser object at 0x107263c50>
+st = <configparser._ReadState object at 0x1087b0050>
+line = 'not an INI section\n'
+fpname = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec1/pytest.ini')
+
+    def _handle_rest(self, st, line, fpname):
+        # a section header or option header?
+        if self._allow_unnamed_section and st.cursect is None:
+            self._handle_header(st, UNNAMED_SECTION, fpname)
+
+        st.indent_level = st.cur_indent_level
+        # is it a section header?
+        mo = self.SECTCRE.match(line.clean)
+
+        if not mo and st.cursect is None:
+>           raise MissingSectionHeaderError(fpname, st.lineno, line)
+E           configparser.MissingSectionHeaderError: File contains no section headers.
+E           file: PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec1/pytest.ini'), line: 1
+E           'not an INI section\n'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1131: MissingSectionHeaderError
+_____________ test_malformed_ini_is_a_project_diagnostic[tox.ini] ______________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec2')
+filename = 'tox.ini'
+
+    @pytest.mark.parametrize("filename", ["setup.cfg", "pytest.ini", "tox.ini"])
+    def test_malformed_ini_is_a_project_diagnostic(tmp_path: Path, filename: str) -> None:
+        (tmp_path / filename).write_text('not an INI section\n')
+        with pytest.raises(ProjectRuntimeError, match=r"project_config_invalid:" + filename):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:250:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:306: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:206: in _pytest_config
+    parser.read(path, encoding="utf-8")
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:761: in read
+    self._read(fp, filename)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1079: in _read
+    ParsingError._raise_all(self._read_inner(fp, fpname))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1107: in _read_inner
+    self._handle_rest(st, line, fpname)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <configparser.ConfigParser object at 0x108772710>
+st = <configparser._ReadState object at 0x108695370>
+line = 'not an INI section\n'
+fpname = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec2/tox.ini')
+
+    def _handle_rest(self, st, line, fpname):
+        # a section header or option header?
+        if self._allow_unnamed_section and st.cursect is None:
+            self._handle_header(st, UNNAMED_SECTION, fpname)
+
+        st.indent_level = st.cur_indent_level
+        # is it a section header?
+        mo = self.SECTCRE.match(line.clean)
+
+        if not mo and st.cursect is None:
+>           raise MissingSectionHeaderError(fpname, st.lineno, line)
+E           configparser.MissingSectionHeaderError: File contains no section headers.
+E           file: PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_malformed_ini_is_a_projec2/tox.ini'), line: 1
+E           'not an INI section\n'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/configparser.py:1131: MissingSectionHeaderError
+____________ test_offline_corpus_rejects_customer_writable_launcher ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_offline_corpus_rejects_cu0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108837d40>
+
+    def test_offline_corpus_rejects_customer_writable_launcher(tmp_path: Path, monkeypatch) -> None:
+        module = _load()
+        launcher = tmp_path / "bwrap"
+        launcher.write_text('#!/bin/sh\necho SPECFACT_OFFLINE_NETWORK_VERIFIED >&2\nexec "$@"\n')
+        launcher.chmod(0o755)
+        monkeypatch.setenv("SPECFACT_CORPUS_OFFLINE_LAUNCHER", str(launcher))
+        monkeypatch.setattr(module.os, "readlink", lambda _path: "net:[fixture]")
+>       with pytest.raises(ValueError, match="offline_launcher"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:177: Failed
+________________ test_corpus_identity_detects_empty_directories ________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_corpus_identity_detects_e0')
+
+    def test_corpus_identity_detects_empty_directories(tmp_path: Path) -> None:
+        module = _load()
+        before = module.tracked_identity(tmp_path)
+        (tmp_path / "new-empty-directory").mkdir()
+>       assert module.tracked_identity(tmp_path) != before
+E       AssertionError: assert {} != {}
+E        +  where {} = <function tracked_identity at 0x1087499b0>(PosixPath('<TMPDIR>/pytest-of-user/pytest-171/test_corpus_identity_detects_e0'))
+E        +    where <function tracked_identity at 0x1087499b0> = <module 'external_capsule_corpus' from '<WORKTREE>/scripts/external_capsule_corpus.py'>.tracked_identity
+
+tests/unit/test_external_capsule_corpus.py:185: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_disabled_autoload_preserves_only_explicit_plugins_and_coverage
+FAILED tests/unit/specfact_code_review/run/test_runtime_sources.py::test_directory_presence_and_modes_bind_source_identity
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_pylock_and_uncompiled_requirements_need_explicit_selection
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_ini_is_a_project_diagnostic[setup.cfg]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_ini_is_a_project_diagnostic[pytest.ini]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_ini_is_a_project_diagnostic[tox.ini]
+FAILED tests/unit/test_external_capsule_corpus.py::test_offline_corpus_rejects_customer_writable_launcher
+FAILED tests/unit/test_external_capsule_corpus.py::test_corpus_identity_detects_empty_directories
+========================= 8 failed, 45 passed in 0.76s =========================

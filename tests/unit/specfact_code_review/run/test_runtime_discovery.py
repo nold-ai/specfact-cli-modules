@@ -231,3 +231,20 @@ def test_source_identity_distinguishes_executable_permission_classes(tmp_path: P
     before = discover_project(tmp_path).identity
     script.chmod(0o745)
     assert discover_project(tmp_path).identity != before
+
+
+def test_pylock_and_uncompiled_requirements_need_explicit_selection(tmp_path: Path) -> None:
+    (tmp_path / "pylock.toml").write_text('lock-version="1.0"\n')
+    (tmp_path / "requirements.in").write_text("requests\n")
+    with pytest.raises(ProjectRuntimeError, match=r"ambiguous.*pylock.toml.*requirements.in"):
+        discover_project(tmp_path)
+    config = tmp_path / "selection.toml"
+    config.write_text('requirements=["requirements.in"]\n')
+    assert discover_project(tmp_path, config_path=config).requirements == ("requirements.in",)
+
+
+@pytest.mark.parametrize("filename", ["setup.cfg", "pytest.ini", "tox.ini"])
+def test_malformed_ini_is_a_project_diagnostic(tmp_path: Path, filename: str) -> None:
+    (tmp_path / filename).write_text("not an INI section\n")
+    with pytest.raises(ProjectRuntimeError, match=r"project_config_invalid:" + filename):
+        discover_project(tmp_path)

@@ -189,6 +189,15 @@ def _requirements_inputs(root: Path, names: tuple[str, ...]) -> set[str]:
     return visited
 
 
+def _ini(path: Path) -> configparser.ConfigParser:
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        parser.read(path, encoding="utf-8")
+    except (UnicodeError, configparser.Error) as exc:
+        raise ProjectRuntimeError(f"project_config_invalid:{path.name}:{exc}") from exc
+    return parser
+
+
 def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
     for name in ("pytest.toml", ".pytest.toml"):
         if (root / name).exists():
@@ -202,8 +211,7 @@ def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
         path = root / name
         if not path.exists():
             continue
-        parser = configparser.ConfigParser(interpolation=None)
-        parser.read(path, encoding="utf-8")
+        parser = _ini(path)
         section = "tool:pytest" if name == "setup.cfg" else "pytest"
         if parser.has_section(section):
             return dict(parser[section])
@@ -249,9 +257,10 @@ def _selection(
 
 
 def _default_requirements(root: Path) -> list[str]:
-    if (root / "pylock.toml").is_file() and (root / "requirements.txt").is_file():
+    texts = [name for name in ("requirements.txt", "requirements.in") if (root / name).is_file()]
+    if (root / "pylock.toml").is_file() and texts:
         raise ProjectRuntimeError(
-            "project_requirements_ambiguous:pylock.toml,requirements.txt; select requirements in --project-config"
+            f"project_requirements_ambiguous:pylock.toml,{','.join(texts)}; select requirements in --project-config"
         )
     for name in ("pylock.toml", "requirements.txt", "requirements.in"):
         if (root / name).is_file():
@@ -263,8 +272,7 @@ def _python_constraint(root: Path, project: dict[str, Any]) -> str:
     declared = project.get("project", {}).get("requires-python")
     if declared is not None:
         return str(declared)
-    parser = configparser.ConfigParser(interpolation=None)
-    parser.read(root / "setup.cfg", encoding="utf-8")
+    parser = _ini(root / "setup.cfg")
     return parser.get("options", "python_requires", fallback="")
 
 

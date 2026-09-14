@@ -52,3 +52,22 @@ def test_observer_retains_xdist_worker_startup_failure() -> None:
     observer = target_pytest.Observer()
     observer.pytest_testnodedown(None, "coverage storage is read-only")
     assert observer.internal_errors == ["coverage storage is read-only"]
+
+
+def test_disabled_autoload_preserves_only_explicit_plugins_and_coverage(monkeypatch) -> None:
+    packages = [
+        SimpleNamespace(
+            metadata={"Name": name}, entry_points=[SimpleNamespace(group="pytest11", name=entry, value=value)]
+        )
+        for name, entry, value in [
+            ("pytest-asyncio", "asyncio", "pytest_asyncio.plugin"),
+            ("pytest-cov", "pytest_cov", "pytest_cov.plugin"),
+        ]
+    ]
+    monkeypatch.setattr(target_pytest.importlib.metadata, "distributions", lambda **_kwargs: packages)
+    for options in ["--disable-plugin-autoload", ["--disable-plugin-autoload"]]:
+        assert target_pytest._plugins({"addopts": options}) == ["-p", "pytest_cov"]
+    assert not target_pytest._plugins(
+        {"addopts": "--disable-plugin-autoload -p pytest_cov.plugin -p pytest_asyncio.plugin"}
+    )
+    assert not target_pytest._plugins({"addopts": "--disable-plugin-autoload -p no:pytest_cov"})

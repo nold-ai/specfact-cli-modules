@@ -48,3 +48,17 @@ def test_missing_member_dependency_cannot_be_silently_omitted(tmp_path: Path) ->
     _distribution(tmp_path, "pylint", dependencies=("absent>=1",))
     with pytest.raises(ProjectRuntimeError, match="project_analyzer_dependency_missing:pylint:absent"):
         member_dependency_graphs({"installed": []}, tmp_path)
+
+
+@pytest.mark.parametrize("version,conflict", [("7.0", True), ("8.4", False)])
+def test_pytest_worker_validates_selected_dependency_versions(tmp_path: Path, version: str, conflict: bool) -> None:
+    _distribution(tmp_path, "pylint")
+    metadata = tmp_path / "pytest-cov-1.0.dist-info/METADATA"
+    metadata.write_text(metadata.read_text() + "Requires-Dist: pytest>=8.2\n")
+    inventory = {"installed": [{"metadata": {"name": "pytest", "version": version}}]}
+    if conflict:
+        with pytest.raises(ProjectRuntimeError, match="project_analyzer_dependency_incompatible:pytest-observe:pytest"):
+            member_dependency_graphs(inventory, tmp_path)
+    else:
+        graph = member_dependency_graphs(inventory, tmp_path)["pytest-observe"]
+        assert next(row for row in graph["installed"] if row["name"] == "pytest")["version"] == version

@@ -37,11 +37,14 @@ def _entry_plugins(distribution: importlib.metadata.Distribution, explicit: set[
 def _plugins(config: dict[str, Any]) -> list[str]:
     explicit = _explicit_plugins(config)
     plugins = []
-    target_names = set()
+    raw = config.get("addopts", [])
+    options = shlex.split(raw) if isinstance(raw, str) else list(raw)
+    autoload = "--disable-plugin-autoload" not in options
     for distribution in importlib.metadata.distributions(path=[str(ROOT / "site-packages")]):
-        target_names.add(distribution.metadata["Name"].lower().replace("_", "-"))
-        plugins.extend(_entry_plugins(distribution, explicit))
-    if "pytest-cov" not in target_names and not {"no:pytest_cov", "no:pytest_cov.plugin"} & explicit:
+        if autoload:
+            plugins.extend(_entry_plugins(distribution, explicit))
+    coverage_choices = {"pytest_cov", "pytest_cov.plugin", "no:pytest_cov", "no:pytest_cov.plugin"}
+    if "pytest_cov" not in plugins and not coverage_choices & explicit:
         plugins.extend(("-p", "pytest_cov"))
     return plugins
 

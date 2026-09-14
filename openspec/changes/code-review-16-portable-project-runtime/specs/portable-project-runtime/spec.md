@@ -246,3 +246,44 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **GIVEN** warm validation runs inside a non-root user and network namespace
 - **WHEN** the customer CLI or Git opens /dev/null
 - **THEN** a private device filesystem supports ordinary subprocess execution without exposing host devices or external networking
+
+#### Scenario: Disabled pytest metadata autoload
+- **GIVEN** project or selected environment options disable plugin autoload
+- **WHEN** the worker constructs pytest arguments
+- **THEN** it does not synthesize installed third-party entry points, preserves explicit plugin choices, and loads required coverage only once unless explicitly disabled
+
+#### Scenario: Directory-sensitive runtime identity
+- **GIVEN** a cached runtime whose build can inspect directory existence and permissions
+- **WHEN** an included directory is added, removed, or changes mode
+- **THEN** source identity and cache reuse reflect that change, including the root directory mode
+
+#### Scenario: Pip lock and source requirements conflict
+- **GIVEN** pylock.toml and either requirements.txt or requirements.in without explicit selection
+- **WHEN** discovery runs
+- **THEN** one diagnostic names all competing inputs and requests explicit configuration
+
+#### Scenario: Invalid INI remains an actionable preparation failure
+- **GIVEN** malformed setup.cfg or pytest INI configuration
+- **WHEN** discovery reads the configuration
+- **THEN** ProjectRuntimeError identifies the affected file and review retains independent findings with incomplete runtime evidence
+
+#### Scenario: Protected offline test launcher
+- **GIVEN** customer code has run before the offline validation step
+- **WHEN** the corpus selects its namespace launcher
+- **THEN** only the expected regular executable under a root-owned non-writable directory is accepted, with its bytes matching an administrator-owned digest record; writable, substituted, symlinked, or mismatched launchers are rejected before execution
+
+#### Scenario: Relative customer file selections enter the private source copy
+- **WHEN** an ordinary review selects repository-relative source and test paths
+- **THEN** the private analysis copy SHALL preserve those selections as paths within the copied repository
+- **AND** equivalent absolute selections SHALL resolve to the same files
+- **AND** a selection escaping the repository SHALL be rejected before analyzer execution.
+
+#### Scenario: Git HTTPS dependencies are acquired in the disposable builder
+- **WHEN** dependencies use Git HTTPS transport, including a source tree without Git metadata
+- **THEN** preparation SHALL provide the Git executable and HTTP/HTTPS transport helpers with their native dependencies and an explicit private Git exec path
+- **AND** helper identities SHALL participate in cache reuse.
+
+#### Scenario: A selected pytest dependency violates an analyzer requirement
+- **WHEN** a selected project distribution violates an active worker dependency specifier
+- **THEN** preparation SHALL report the domain, dependency, selected version and required specifier before sealing the runtime
+- **AND** independent static analysis SHALL remain available without silently replacing the project version.

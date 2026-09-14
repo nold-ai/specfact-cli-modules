@@ -3,6 +3,8 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from specfact_code_review.run import portable_snapshot, runner
 from specfact_code_review.run.portable_snapshot import (
     ProjectSnapshotRequest,
@@ -125,7 +127,8 @@ def test_pip_tools_source_input_triggers_automatic_runtime(tmp_path: Path) -> No
     assert project_runtime_requested(tmp_path, SimpleNamespace(project_config=None, project_runtime=None))
 
 
-def test_analysis_source_copy_excludes_local_environment_files(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize("relative", [False, True])
+def test_analysis_source_copy_excludes_local_environment_files(tmp_path: Path, monkeypatch, relative: bool) -> None:
     source = tmp_path / "source"
     source.mkdir()
     (source / "app.py").write_text("VALUE = 1\n")
@@ -144,7 +147,39 @@ def test_analysis_source_copy_excludes_local_environment_files(tmp_path: Path, m
         return runner.CapsuleSnapshotResult({}, {})
 
     monkeypatch.setattr(runner, "_run_capsule_snapshot", analyze)
-    request = ProjectSnapshotRequest(source, [source / "app.py"], runner.ReviewOptions(), "explicit_files")
+    selected = Path("app.py") if relative else source / "app.py"
+    request = ProjectSnapshotRequest(source, [selected], runner.ReviewOptions(), "explicit_files")
     portable_snapshot._run_in_private_source(object(), request, runner.CapsuleSnapshotSettings())
     assert observed and not observed[0].exists()
     assert (source / ".env").read_text() == "SYNTHETIC_SECRET=fixture\n"
+
+
+def test_malformed_setup_preserves_independent_analyzer_evidence(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "setup.cfg").write_text("missing section header\n")
+    source = tmp_path / "app.py"
+    source.write_text("import dependency\n")
+    calls = []
+
+    def dispatch(request, **_context):
+        calls.append(request.member)
+        return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+
+    monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+    snapshot, evidence = run_project_snapshot(
+        runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
+    )
+    assert "ruff" in calls and not set(calls) & DEPENDENT_MEMBERS
+    assert evidence["diagnostic"].startswith("project_config_invalid:setup.cfg:")
+    assert snapshot.evidence["basedpyright"]["evidence_outcome"] == "UNKNOWN"
+
+
+@pytest.mark.parametrize("selected", ["../outside.py", "/outside.py"])
+def test_analysis_source_copy_rejects_escaping_selection(tmp_path: Path, monkeypatch, selected: str) -> None:
+    def unexpected(*_args, **_kwargs):
+        pytest.fail("escaping selection reached analysis")
+
+    monkeypatch.setattr(runner, "_run_capsule_snapshot", unexpected)
+    request = ProjectSnapshotRequest(tmp_path, [Path(selected)], runner.ReviewOptions(), "explicit_files")
+    with pytest.raises(ValueError):
+        portable_snapshot._run_in_private_source(object(), request, runner.CapsuleSnapshotSettings())

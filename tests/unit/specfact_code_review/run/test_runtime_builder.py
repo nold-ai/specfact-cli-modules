@@ -127,3 +127,10 @@ def test_source_copy_rebases_internal_link_spelled_through_parent(tmp_path: Path
     copy_project(source, target)
     assert (target / "alias.py").is_symlink()
     assert (target / "alias.py").resolve() == target / "app.py"
+
+
+def test_builder_sets_private_git_transport_path(tmp_path: Path) -> None:
+    runtime = SimpleNamespace(root=tmp_path / "capsule", interpreter="/opt/specfact/python/bin/python")
+    command = builder_command(runtime, staging=tmp_path / "staging", executable="/proc/self/fd/12")
+    index = command.index("GIT_EXEC_PATH")
+    assert command[index + 1] == "/opt/specfact/output/builder-tools/git-core"

@@ -9,6 +9,7 @@ import os
 import platform
 import runpy
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -83,11 +84,41 @@ def network_delta(before: dict[str, int] | None, after: dict[str, int] | None) -
     }
 
 
+OFFLINE_ROOT = Path("/opt/specfact-corpus-offline")
+
+
+def _check_offline_path(path: Path, *, directory: bool = False) -> None:
+    metadata = path.lstat()
+    expected_type = stat.S_ISDIR if directory else stat.S_ISREG
+    if metadata.st_uid != 0 or metadata.st_mode & 0o022 or not expected_type(metadata.st_mode):
+        raise ValueError(f"offline_launcher_untrusted:{path.name}")
+
+
+def _verified_offline_launcher(configured: str) -> Path:
+    launcher = OFFLINE_ROOT / "bwrap"
+    if Path(configured) != launcher:
+        raise ValueError("offline_launcher_untrusted:unexpected_path")
+    try:
+        for directory in (OFFLINE_ROOT, *OFFLINE_ROOT.parents):
+            _check_offline_path(directory, directory=True)
+        identity = OFFLINE_ROOT / "bwrap.sha256"
+        _check_offline_path(launcher)
+        _check_offline_path(identity)
+        expected = identity.read_text(encoding="ascii").strip()
+        actual = hashlib.sha256(launcher.read_bytes()).hexdigest()
+        if expected != actual or not os.access(launcher, os.X_OK):
+            raise ValueError("offline_launcher_untrusted:identity_or_mode")
+    except OSError as exc:
+        raise ValueError("offline_launcher_untrusted:unavailable") from exc
+    return launcher
+
+
 def offline_command(argv: list[str]) -> list[str]:
     """Deny external networking independently of the customer's offline flag."""
     launcher = os.environ.get("SPECFACT_CORPUS_OFFLINE_LAUNCHER")
-    if not launcher or not Path(launcher).is_file() or not os.access(launcher, os.X_OK):
+    if not launcher:
         raise ValueError("offline corpus requires an administrator-provisioned namespace launcher")
+    launcher = _verified_offline_launcher(launcher)
     probe = (
         "import fcntl,os,socket,struct,sys; probe_socket=socket.socket(); "
         "valid=os.getuid()!=0 and os.readlink('/proc/self/ns/net')!=sys.argv[1] "
@@ -189,13 +220,18 @@ def _worktree_entry_identity(path: Path) -> str | None:
         payload = os.readlink(path).encode()
     elif path.is_file():
         payload = path.read_bytes()
+    elif path.is_dir():
+        payload = b"directory"
     else:
         return None
     return hashlib.sha256(payload + str(path.lstat().st_mode).encode()).hexdigest()
 
 
 def tracked_identity(root: Path) -> dict[str, str]:
-    identities = {}
+    identities: dict[str, str] = {}
+    root_identity = _worktree_entry_identity(root)
+    if root_identity is not None:
+        identities["."] = root_identity
     for directory, directories, files in os.walk(root, followlinks=False):
         directories[:] = sorted(name for name in directories if name != ".git")
         for name in sorted([*directories, *files]):
