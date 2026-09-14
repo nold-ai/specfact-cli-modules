@@ -2804,24 +2804,36 @@ def _materialized_index_context_from_capture(
             shutil.rmtree(base_snapshot.root, ignore_errors=True)
             shutil.rmtree(index_snapshot.root, ignore_errors=True)
             return _index_unknown("policy_parse_failure", policy_error)
-        selected_paths = tuple(
-            path
-            for path in sorted(changed_paths)
-            if _governed_path(
-                path,
-                frozenset(),
-                base=base_snapshot,
-                head=index_snapshot,
-                additional_policy_paths=additional_policy_paths,
-            )
+        return _index_context_with_policy_evidence(
+            preliminary_context, changed_paths, base_policy_paths, additional_policy_paths
         )
-        return replace(
-            preliminary_context,
-            selected_paths=selected_paths,
-            base_manifest=_snapshot_input_manifest(base_snapshot, selected_paths),
-            manifest=_snapshot_input_manifest(index_snapshot, selected_paths),
-            policy_paths=tuple(sorted(additional_policy_paths)),
+
+
+def _index_context_with_policy_evidence(
+    context: _IndexResolutionContext,
+    changed_paths: set[str],
+    base_policy_paths: frozenset[str],
+    additional_policy_paths: frozenset[str],
+) -> _IndexResolutionContext:
+    selected_paths = tuple(
+        path
+        for path in sorted(changed_paths)
+        if _governed_path(
+            path,
+            frozenset(),
+            base=context.base_snapshot,
+            head=context.index_snapshot,
+            additional_policy_paths=additional_policy_paths,
         )
+    )
+    manifest_paths = sorted(set(selected_paths) | base_policy_paths | additional_policy_paths)
+    return replace(
+        context,
+        selected_paths=selected_paths,
+        base_manifest=_snapshot_input_manifest(context.base_snapshot, manifest_paths),
+        manifest=_snapshot_input_manifest(context.index_snapshot, manifest_paths),
+        policy_paths=tuple(sorted(additional_policy_paths)),
+    )
 
 
 def _unsafe_index_path(context: _IndexResolutionContext) -> str | None:

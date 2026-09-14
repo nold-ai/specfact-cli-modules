@@ -6,7 +6,7 @@ import json
 import os
 import subprocess
 import sys
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -776,6 +776,130 @@ def test_index_change_to_transitive_policy_file_is_governed(
 
     assert result.status == "PASS"
     assert result.selected_paths == (referenced_path,)
+
+
+@dataclass(frozen=True)
+class _TransitivePolicyCase:
+    primary_path: str
+    primary_content: str
+    reference_path: str
+    reference_content: str
+    leaf_path: str
+    leaf_content: str
+
+
+@dataclass(frozen=True)
+class _PolicyReferenceChangeCase:
+    primary_path: str
+    before: str
+    after: str
+    old_path: str
+    new_path: str
+    content: str
+
+
+@pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+@pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        _TransitivePolicyCase(
+            "ruff.toml",
+            "extend='config/base.toml'\n",
+            "config/base.toml",
+            "extend='leaf.toml'\n",
+            "config/leaf.toml",
+            "line-length=80\n",
+        ),
+        _TransitivePolicyCase(
+            "pyrightconfig.json",
+            '{"extends":"config/base.json"}\n',
+            "config/base.json",
+            '{"extends":"leaf.json"}\n',
+            "config/leaf.json",
+            '{"typeCheckingMode":"basic"}\n',
+        ),
+    ],
+    ids=["ruff", "basedpyright"],
+)
+def test_index_unchanged_policy_manifest_preserves_selection(
+    git_repo: Path,
+    portable: bool,
+    changed: bool,
+    case: _TransitivePolicyCase,
+) -> None:
+    """Harden pre-existing evidence omission without widening index review selection."""
+    (git_repo / "config").mkdir()
+    for path, content in (
+        (case.primary_path, case.primary_content),
+        (case.reference_path, case.reference_content),
+        (case.leaf_path, case.leaf_content),
+    ):
+        (git_repo / path).write_text(content, encoding="utf-8")
+    _commit(git_repo, "add transitive policy closure")
+    if changed:
+        (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+        _git(git_repo, "add", "src/app.py")
+
+    result = scope.resolve_scope(
+        scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+    )
+    try:
+        assert result.selected_paths == (("src/app.py",) if changed else ())
+        assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+        assert result.reason == ("resolved" if changed else "no_governed_impact")
+        assert result.assurance_kind == result.effective_assurance_kind == "index"
+        for path in (case.reference_path, case.leaf_path):
+            assert path in result.policy_paths
+            assert result.input_manifest[path] == result.base_input_manifest[path]
+            assert result.input_manifest[path].blob_sha == _git(git_repo, "rev-parse", f"HEAD:{path}")
+            assert result.input_manifest[path].open_policy == "descriptor-relative-nofollow"
+    finally:
+        scope.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        _PolicyReferenceChangeCase(
+            "ruff.toml",
+            "extend='config/old.toml'\n",
+            "extend='config/new.toml'\n",
+            "config/old.toml",
+            "config/new.toml",
+            "line-length=80\n",
+        ),
+        _PolicyReferenceChangeCase(
+            "pyrightconfig.json",
+            '{"extends":"config/old.json"}\n',
+            '{"extends":"config/new.json"}\n',
+            "config/old.json",
+            "config/new.json",
+            '{"typeCheckingMode":"basic"}\n',
+        ),
+    ],
+    ids=["ruff", "basedpyright"],
+)
+def test_index_policy_manifest_retains_base_and_head_reference_closures(
+    git_repo: Path, case: _PolicyReferenceChangeCase
+) -> None:
+    (git_repo / "config").mkdir()
+    (git_repo / case.primary_path).write_text(case.before, encoding="utf-8")
+    for path in (case.old_path, case.new_path):
+        (git_repo / path).write_text(case.content, encoding="utf-8")
+    _commit(git_repo, "add alternative policy references")
+    (git_repo / case.primary_path).write_text(case.after, encoding="utf-8")
+    _git(git_repo, "add", case.primary_path)
+
+    result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index"))
+    try:
+        assert result.status == "PASS"
+        assert result.selected_paths == (case.primary_path,)
+        for path in (case.old_path, case.new_path):
+            assert result.base_input_manifest[path].blob_sha == _git(git_repo, "rev-parse", f"HEAD:{path}")
+            assert result.input_manifest[path] == result.base_input_manifest[path]
+    finally:
+        scope.cleanup_scope_resolution(result)
 
 
 @pytest.mark.parametrize(

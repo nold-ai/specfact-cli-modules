@@ -25,6 +25,17 @@ _TOOL_IMPORTS = {
 }
 
 
+def _verified_analyzer_spec(fullname: str, spec):
+    """Confine module origins and every namespace portion to the verified mount."""
+    locations = [] if spec is None else list(spec.submodule_search_locations or ())
+    if spec is not None and spec.origin:
+        locations.append(spec.origin)
+    root = ANALYZERS.resolve()
+    if not locations or any(not Path(location).resolve().is_relative_to(root) for location in locations):
+        raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
+    return spec
+
+
 class AnalyzerFinder:
     """Pin analyzer entry-point packages while allowing target-owned dependencies."""
 
@@ -36,23 +47,21 @@ class AnalyzerFinder:
         if fullname.split(".")[0] not in self.names:
             return None
         spec = importlib.machinery.PathFinder.find_spec(fullname, path or [str(ANALYZERS)])
-        if spec is None or (spec.origin and not Path(spec.origin).is_relative_to(ANALYZERS)):
-            raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
-        return spec
+        return _verified_analyzer_spec(fullname, spec)
+
+    def validate_loaded(self) -> None:
+        """Reject cached project modules instead of silently replacing their objects."""
+        for fullname, module in tuple(sys.modules.items()):
+            if fullname.split(".")[0] in self.names:
+                _verified_analyzer_spec(fullname, getattr(module, "__spec__", None))
 
 
-class DomainFinder(importlib.metadata.DistributionFinder):
-    """Fallback only to this member's recorded sealed dependency closure."""
+class DomainFinder(AnalyzerFinder, importlib.metadata.DistributionFinder):
+    """Pin this member's recorded analyzer-owned dependency closure."""
 
     def __init__(self, graph: dict) -> None:
-        self.imports = set(graph["sealed_imports"])
+        super().__init__(set(graph["sealed_imports"]))
         self.distributions = {row["name"] for row in graph["installed"] if row["origin"] == "analyzer"}
-
-    def find_spec(self, fullname: str, path=None, target=None):
-        del target
-        if fullname.split(".", maxsplit=1)[0] not in self.imports:
-            return None
-        return importlib.machinery.PathFinder.find_spec(fullname, path or [str(ANALYZERS)])
 
     def find_distributions(self, context=None):
         context = context or importlib.metadata.DistributionFinder.Context()
@@ -83,13 +92,17 @@ def _configure_runtime(module: str) -> None:
     """Initialize only the target worker; project Python gets no analyzer fallbacks."""
     descriptor = json.loads((PROJECT / "project-runtime.json").read_text(encoding="utf-8"))
     sys.path[:] = _stdlib_paths()
-    sys.meta_path.insert(0, AnalyzerFinder(_TOOL_IMPORTS.get(module, set())))
+    finder = AnalyzerFinder(set(_TOOL_IMPORTS.get(module, set())))
+    if module != "project-python":
+        finder = DomainFinder(descriptor["inventory"]["member_graphs"][module])
+        finder.names.update(_TOOL_IMPORTS.get(module, set()))
+    sys.meta_path.insert(0, finder)
+    finder.validate_loaded()
     roots = descriptor["project"]["source_roots"]
     sys.path.extend(str(SNAPSHOT / root) for root in roots)
     site.addsitedir(str(PROJECT / "site-packages"))
+    finder.validate_loaded()
     if module != "project-python":
-        graph = descriptor["inventory"]["member_graphs"][module]
-        sys.meta_path.append(DomainFinder(graph))
         sys.path.append(str(ANALYZERS))
     sys.executable = str(PROJECT / "bin/python")
 

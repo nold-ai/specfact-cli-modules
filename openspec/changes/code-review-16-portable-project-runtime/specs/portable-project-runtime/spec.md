@@ -377,3 +377,34 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **GIVEN** both immutable index snapshots have been created
 - **WHEN** changed-path, policy, or manifest discovery raises before ownership is returned
 - **THEN** both temporary snapshot roots SHALL be removed and the existing scope failure diagnostic SHALL remain intact.
+
+#### Scenario: Private build Git metadata contains only identity-bound objects
+- **GIVEN** a source repository also contains unrelated branches, remote refs, or unreachable objects
+- **WHEN** portable preparation copies Git context
+- **THEN** the private repository SHALL contain only the reachable object closure bound by the selected commit, captured index tree, declared tags, and shallow boundary
+- **AND** selected ancestry, SCM tags, and detached staged objects SHALL remain available without unrelated refs or object storage.
+
+#### Scenario: Analyzer-owned dependencies precede project imports during startup
+- **GIVEN** a member dependency graph records a package as analyzer-owned and the snapshot or target site-packages contains an import with the same name
+- **WHEN** the member configures its runtime, including imports executed by target `.pth` files
+- **THEN** the analyzer-owned package and its submodules SHALL resolve only from the verified member analyzer root before ordinary path lookup can select project code
+- **AND** invalid or unavailable sealed origins SHALL fail closed rather than fall back to project code
+- **AND** graph entries owned by the project and ordinary project-Python execution SHALL retain project import behavior.
+
+#### Scenario: Discovery validates consumed metadata tables before selection
+- **GIVEN** pyproject or Hatch metadata declares a table consumed by discovery as a scalar or array
+- **WHEN** discovery parses metadata, including with an explicit manager selection
+- **THEN** it SHALL reject the malformed table before selection or constraint processing with a project-runtime diagnostic naming the source file and table path
+- **AND** ordinary review SHALL preserve independent static findings and mark dependency-sensitive evidence incomplete.
+
+#### Scenario: Index manifests retain unchanged referenced policy evidence without widening selection
+- **GIVEN** an index snapshot whose Ruff or basedpyright policy transitively references unchanged regular files
+- **WHEN** index scope resolution constructs its input evidence
+- **THEN** head and base input manifests SHALL retain the resolved policy closure identities in addition to selected changed paths
+- **AND** selected_paths SHALL remain limited to changed governed inputs, preserving NOT_APPLICABLE/no_governed_impact for an unchanged index.
+
+#### Scenario: Bound Git metadata disappears during preparation
+- **GIVEN** a runtime plan records nonempty Git provenance
+- **WHEN** the bound repository loses its Git metadata after input verification
+- **THEN** preparation SHALL fail before dependency acquisition instead of silently omitting that provenance
+- **AND** intentionally metadata-free immutable source copies SHALL use their separately bound repository for Git export.

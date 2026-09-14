@@ -55,6 +55,18 @@ _CONFIG_FIELDS = frozenset(
     }
 )
 _MANAGERS = frozenset({"pip", "hatch", "uv", "poetry"})
+_PROJECT_TABLES = (
+    "tool",
+    "project",
+    "dependency-groups",
+    "project.optional-dependencies",
+    "tool.hatch",
+    "tool.hatch.envs",
+    "tool.poetry",
+    "tool.poetry.dependencies",
+    "tool.poetry.group",
+    "tool.poetry.extras",
+)
 
 
 def _safe_input(root: Path, relative: str) -> Path:
@@ -76,6 +88,19 @@ def _toml(path: Path) -> dict[str, Any]:
         return tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise ProjectRuntimeError(f"project_config_invalid:{path.name}:{exc}") from exc
+
+
+def _metadata_tables(path: Path, tables: tuple[str, ...]) -> dict[str, Any]:
+    document = _toml(path)
+    for table in tables:
+        value = document
+        parts = table.split(".")
+        for index, part in enumerate(parts):
+            value = value.get(part, {})
+            if not isinstance(value, dict):
+                section = ".".join(parts[: index + 1])
+                raise ProjectRuntimeError(f"project_config_invalid:{path.name}:{section}; expected a table")
+    return document
 
 
 def _validate_config_value(name: str, value: Any) -> None:
@@ -335,8 +360,8 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
         path = _safe_input(root, name)
         if path.is_file():
             inputs[name] = content_digest(path.read_bytes())
-    project = _toml(root / "pyproject.toml")
-    hatch = _toml(root / "hatch.toml")
+    project = _metadata_tables(root / "pyproject.toml", _PROJECT_TABLES)
+    hatch = _metadata_tables(root / "hatch.toml", ("envs",))
     selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
     manager = _manager(root, project, hatch, selection)
     requirements = tuple(values.get("requirements", ()))

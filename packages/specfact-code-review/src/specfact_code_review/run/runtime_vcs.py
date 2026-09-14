@@ -13,18 +13,48 @@ from icontract import require
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
-def _git(root: Path, *arguments: str) -> str:
-    result = subprocess.run(
-        ["git", "-C", str(root), "-c", "core.hooksPath=/dev/null", *arguments],
-        env={"PATH": os.defpath, "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null"},
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=120,
-    )
+def _git_bytes(root: Path, *arguments: str, input_data: bytes | None = None, shallow_file: Path | None = None) -> bytes:
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "-c",
+                "core.hooksPath=/dev/null",
+                *(["--shallow-file", str(shallow_file)] if shallow_file is not None else []),
+                *arguments,
+            ],
+            env={
+                "PATH": os.defpath,
+                "GIT_CONFIG_NOSYSTEM": "1",
+                "GIT_CONFIG_GLOBAL": "/dev/null",
+                "GIT_NO_REPLACE_OBJECTS": "1",
+                "GIT_GRAFT_FILE": os.devnull,
+                "GIT_NO_LAZY_FETCH": "1",
+                "GIT_ALLOW_PROTOCOL": "",
+                "GIT_TERMINAL_PROMPT": "0",
+            },
+            input=input_data,
+            capture_output=True,
+            check=False,
+            timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ProjectRuntimeError(
+            f"project_git_snapshot_failed:{arguments[0]}:{type(exc).__name__}; retry local metadata export"
+        ) from exc
     if result.returncode:
-        raise ProjectRuntimeError("project_git_snapshot_failed:" + arguments[0])
-    return result.stdout.strip()
+        raise ProjectRuntimeError(
+            "project_git_snapshot_failed:"
+            + arguments[0]
+            + "; ensure required Git objects are available locally; metadata export disables network acquisition"
+        )
+    return result.stdout
+
+
+def _git(root: Path, *arguments: str) -> str:
+    return _git_bytes(root, *arguments).decode("utf-8").strip()
 
 
 @require(lambda root: root.is_dir())
@@ -45,19 +75,62 @@ def vcs_context(root: Path, commit: str = "HEAD", *, tree: str | None = None) ->
     }
 
 
-@require(lambda source, destination: source.is_dir() and destination.is_dir())
-def copy_vcs_context(source: Path, destination: Path, commit: str = "HEAD", *, tree: str | None = None) -> None:
-    """Copy metadata, remove local configuration, and populate the selected index."""
-    if not (source / ".git").exists():
-        return
-    selected = vcs_context(source, commit, tree=tree)
-    with tempfile.TemporaryDirectory(prefix="specfact-build-git-", dir=destination.parent) as directory:
-        clone = Path(directory) / "clone"
-        _git(source, "clone", "--quiet", "--no-hardlinks", "--no-checkout", str(source), str(clone))
-        shutil.move(str(clone / ".git"), destination / ".git")
-    (destination / ".git/config").write_text(
-        "[core]\nrepositoryformatversion = 0\nbare = false\nhooksPath = /dev/null\n", encoding="utf-8"
+def _copy_bound_objects(source: Path, private: Path, selected: dict[str, str]) -> None:
+    tags = dict(line.rsplit(" ", 1) for line in selected["tags"].splitlines())
+    roots = {selected["commit"], selected["tree"], *tags.values()}
+    objects = _git_bytes(
+        source,
+        "rev-list",
+        "--objects",
+        "--no-object-names",
+        "--stdin",
+        input_data=("\n".join(sorted(roots)) + "\n").encode("ascii"),
+        shallow_file=private / ".git/shallow",
     )
-    shutil.rmtree(destination / ".git/hooks", ignore_errors=True)
-    (destination / ".git/HEAD").write_text(selected["commit"] + "\n", encoding="ascii")
-    _git(destination, "read-tree", selected["tree"])
+    pack_prefix = private / ".git/objects/pack/pack"
+    _git_bytes(
+        source,
+        "pack-objects",
+        "--no-reuse-delta",
+        str(pack_prefix),
+        input_data=objects,
+        shallow_file=private / ".git/shallow",
+    )
+    actual = _git(private, "cat-file", "--batch-all-objects", "--batch-check=%(objectname)")
+    if set(actual.splitlines()) != set(objects.decode("ascii").splitlines()):
+        raise ProjectRuntimeError("project_git_snapshot_object_closure_mismatch")
+    for name, identity in tags.items():
+        _git(private, "update-ref", name, identity)
+
+
+@require(lambda source, destination: source.is_dir() and destination.is_dir())
+def copy_vcs_context(
+    source: Path,
+    destination: Path,
+    commit: str = "HEAD",
+    *,
+    tree: str | None = None,
+    bound_vcs: dict[str, str] | None = None,
+) -> None:
+    """Transfer only identity-bound history and staged objects into fresh metadata."""
+    if not (source / ".git").exists():
+        if bound_vcs:
+            raise ProjectRuntimeError(
+                "project_git_snapshot_origin_missing; restore captured repository metadata and retry"
+            )
+        return
+    selected = dict(bound_vcs) if bound_vcs is not None else vcs_context(source, commit, tree=tree)
+    if not selected:
+        return
+    with tempfile.TemporaryDirectory(prefix="specfact-build-git-", dir=destination.parent) as directory:
+        private = Path(directory) / "repository"
+        object_format = _git(source, "rev-parse", "--show-object-format")
+        _git(source, "init", "--quiet", "--template=", f"--object-format={object_format}", str(private))
+        _git(private, "config", "--local", "core.hooksPath", "/dev/null")
+        (private / ".git/shallow").write_text(selected["shallow"], encoding="ascii")
+        _copy_bound_objects(source, private, selected)
+        if not selected["shallow"]:
+            (private / ".git/shallow").unlink()
+        (private / ".git/HEAD").write_text(selected["commit"] + "\n", encoding="ascii")
+        _git(private, "read-tree", selected["tree"])
+        shutil.move(str(private / ".git"), destination / ".git")

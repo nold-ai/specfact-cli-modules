@@ -158,6 +158,8 @@ def test_analysis_source_copy_excludes_local_environment_files(tmp_path: Path, m
     ("filename", "contents", "diagnostic"),
     [
         ("setup.cfg", "missing section header\n", "project_config_invalid:setup.cfg:"),
+        ("pyproject.toml", "tool=1\n", "project_config_invalid:pyproject.toml:tool"),
+        ("hatch.toml", "envs=false\n", "project_config_invalid:hatch.toml:envs"),
         ("pytest.toml", "pytest=1\n", "project_pytest_config_invalid:pytest.toml:pytest"),
         ("pyproject.toml", "[tool]\npytest=false\n", "project_pytest_config_invalid:pyproject.toml:tool.pytest"),
         (

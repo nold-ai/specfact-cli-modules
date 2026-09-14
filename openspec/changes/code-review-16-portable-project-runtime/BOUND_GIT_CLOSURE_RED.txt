@@ -1,0 +1,182 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 17 items
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py ............FFFF [ 94%]
+F                                                                        [100%]
+
+=================================== FAILURES ===================================
+_______ test_private_git_contains_only_bound_objects_and_tag_refs[False] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-267/test_private_git_contains_only0')
+packed = False
+
+    @pytest.mark.parametrize("packed", [False, True])
+    def test_private_git_contains_only_bound_objects_and_tag_refs(tmp_path: Path, packed: bool) -> None:
+        root = tmp_path / "source"
+        _repository(root)
+        _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "tag", "-a", "v1", "-m", "bound annotated tag")
+        _git(root, "tag", "lightweight")
+        (root / "app.py").write_text("VALUE = 2\n")
+        selected = _commit_fixture(root, "selected ancestry")
+        _git(root, "checkout", "--orphan", "unrelated")
+        _git(root, "rm", "-rf", ".")
+        (root / "private.txt").write_text("unbound branch data")
+        unrelated = _commit_fixture(root, "unrelated branch")
+        _git(root, "update-ref", "refs/remotes/origin/private", unrelated)
+        _git(root, "checkout", "--detach", selected)
+        if packed:
+            _git(root, "repack", "-ad")
+        secret = tmp_path / "unreachable.txt"
+        secret.write_text("unreachable object data")
+        unreachable = _git(root, "hash-object", "-w", str(secret))
+        before = vcs_context(root, selected)
+        copied = tmp_path / "copy"
+        copied.mkdir()
+        copy_vcs_context(root, copied, selected)
+        expected = set(_git(root, "rev-list", "--objects", "--no-object-names", selected, "refs/tags/v1", "refs/tags/lightweight").splitlines())
+        actual = set(_git(copied, "cat-file", "--batch-all-objects", "--batch-check=%(objectname)").splitlines())
+>       assert actual == expected
+E       AssertionError: assert {'1550f105848...3ddf0b7', ...} == {'378237afc43...6ef7942', ...}
+E         
+E         Extra items in the left set:
+E         '6647d0cc9292d6e995ea4c5dfdbdee110a185105'
+E         'c78dcb4a83bb1f5e86b16d9591553526b50804e7'
+E         '748edf51a0f9396595b334822f668bfaad13be3f'
+E         '1550f1058488ea05be9d7f58a4e6c6757649de50'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:288: AssertionError
+----------------------------- Captured stderr call -----------------------------
+Switched to a new branch 'unrelated'
+HEAD is now at aec8842 selected ancestry
+_______ test_private_git_contains_only_bound_objects_and_tag_refs[True] ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-267/test_private_git_contains_only1')
+packed = True
+
+    @pytest.mark.parametrize("packed", [False, True])
+    def test_private_git_contains_only_bound_objects_and_tag_refs(tmp_path: Path, packed: bool) -> None:
+        root = tmp_path / "source"
+        _repository(root)
+        _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "tag", "-a", "v1", "-m", "bound annotated tag")
+        _git(root, "tag", "lightweight")
+        (root / "app.py").write_text("VALUE = 2\n")
+        selected = _commit_fixture(root, "selected ancestry")
+        _git(root, "checkout", "--orphan", "unrelated")
+        _git(root, "rm", "-rf", ".")
+        (root / "private.txt").write_text("unbound branch data")
+        unrelated = _commit_fixture(root, "unrelated branch")
+        _git(root, "update-ref", "refs/remotes/origin/private", unrelated)
+        _git(root, "checkout", "--detach", selected)
+        if packed:
+            _git(root, "repack", "-ad")
+        secret = tmp_path / "unreachable.txt"
+        secret.write_text("unreachable object data")
+        unreachable = _git(root, "hash-object", "-w", str(secret))
+        before = vcs_context(root, selected)
+        copied = tmp_path / "copy"
+        copied.mkdir()
+        copy_vcs_context(root, copied, selected)
+        expected = set(_git(root, "rev-list", "--objects", "--no-object-names", selected, "refs/tags/v1", "refs/tags/lightweight").splitlines())
+        actual = set(_git(copied, "cat-file", "--batch-all-objects", "--batch-check=%(objectname)").splitlines())
+>       assert actual == expected
+E       AssertionError: assert {'1550f105848...3ddf0b7', ...} == {'378237afc43...6ef7942', ...}
+E         
+E         Extra items in the left set:
+E         '6647d0cc9292d6e995ea4c5dfdbdee110a185105'
+E         'c78dcb4a83bb1f5e86b16d9591553526b50804e7'
+E         '748edf51a0f9396595b334822f668bfaad13be3f'
+E         '1550f1058488ea05be9d7f58a4e6c6757649de50'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:288: AssertionError
+----------------------------- Captured stderr call -----------------------------
+Switched to a new branch 'unrelated'
+HEAD is now at aec8842 selected ancestry
+______ test_private_git_preserves_bound_shallow_history_and_annotated_tag ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-267/test_private_git_preserves_bou0')
+
+    def test_private_git_preserves_bound_shallow_history_and_annotated_tag(tmp_path: Path) -> None:
+        original = tmp_path / "original"
+        _repository(original)
+        ancestor = _git(original, "rev-parse", "HEAD")
+        (original / "app.py").write_text("VALUE = 2\n")
+        selected = _commit_fixture(original, "shallow tip")
+        _git(original, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "tag", "-a", "v2", "-m", "tip tag")
+        source = tmp_path / "shallow"
+        _git(original, "clone", "--quiet", "--depth=1", original.as_uri(), str(source))
+        copied = tmp_path / "copy"
+        copied.mkdir()
+        copy_vcs_context(source, copied)
+        assert _git(copied, "rev-parse", "HEAD") == selected
+        assert _git(copied, "describe", "--tags", "HEAD") == "v2"
+        assert _git(copied, "rev-parse", "--is-shallow-repository") == "true"
+        assert _git(copied, "rev-list", "--count", "HEAD") == "1"
+>       assert vcs_context(copied) == vcs_context(source)
+E       AssertionError: assert {'commit': '4...50d7147975\n'} == {'commit': '4...50d7147975\n'}
+E         
+E         Omitting 3 identical items, use -vv to show
+E         Differing items:
+E         {'shallow': '49184c378d13047c85d995fb3ace1350d7147975\n49184c378d13047c85d995fb3ace1350d7147975\n'} != {'shallow': '49184c378d13047c85d995fb3ace1350d7147975\n'}
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:312: AssertionError
+_______ test_unbound_replacement_ref_cannot_change_selected_vcs_context ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-267/test_unbound_replacement_ref_c0')
+
+    def test_unbound_replacement_ref_cannot_change_selected_vcs_context(tmp_path: Path) -> None:
+        root = tmp_path / "source"
+        _repository(root)
+        ancestor = _git(root, "rev-parse", "HEAD")
+        (root / "app.py").write_text("VALUE = 2\n")
+        selected = _commit_fixture(root, "selected")
+        before = vcs_context(root)
+        _git(root, "replace", selected, ancestor)
+>       assert vcs_context(root) == before
+E       AssertionError: assert {'commit': '1...'shallow': ''} == {'commit': '1...'shallow': ''}
+E         
+E         Omitting 3 identical items, use -vv to show
+E         Differing items:
+E         {'tree': 'ae7df65c33f278677e0d7eb633690c0053ddf0b7'} != {'tree': 'dc72567ae5cda25891b9ab3e4fc6c31f523e86ee'}
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:326: AssertionError
+___________ test_missing_promisor_object_does_not_run_host_transport ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-267/test_missing_promisor_object_d0')
+
+    def test_missing_promisor_object_does_not_run_host_transport(tmp_path: Path) -> None:
+        root = tmp_path / "source"
+        _repository(root)
+        blob = _git(root, "rev-parse", "HEAD:app.py")
+        marker = tmp_path / "transport-executed"
+        transport = tmp_path / "transport.sh"
+        transport.write_text(f"#!/bin/sh\ntouch '{marker}'\nexit 1\n")
+        transport.chmod(0o700)
+        _git(root, "config", "core.repositoryformatversion", "1")
+        _git(root, "config", "extensions.partialClone", "origin")
+        _git(root, "config", "remote.origin.promisor", "true")
+        _git(root, "config", "remote.origin.url", "ssh://example.invalid/project")
+        _git(root, "config", "core.sshCommand", str(transport))
+        (root / ".git/objects" / blob[:2] / blob[2:]).unlink()
+        copied = tmp_path / "copy"
+        copied.mkdir()
+>       with pytest.raises(ValueError, match="project_git_snapshot_failed"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:350: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_private_git_contains_only_bound_objects_and_tag_refs[False]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_private_git_contains_only_bound_objects_and_tag_refs[True]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_private_git_preserves_bound_shallow_history_and_annotated_tag
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_unbound_replacement_ref_cannot_change_selected_vcs_context
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_missing_promisor_object_does_not_run_host_transport
+========================= 5 failed, 12 passed in 2.86s =========================

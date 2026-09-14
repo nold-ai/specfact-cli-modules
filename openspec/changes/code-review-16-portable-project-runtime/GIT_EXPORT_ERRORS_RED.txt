@@ -1,0 +1,73 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 20 items / 18 deselected / 2 selected
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py FF               [100%]
+
+=================================== FAILURES ===================================
+______ test_git_export_process_failure_uses_runtime_diagnostic[failure0] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-272/test_git_export_process_failur0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107217820>
+failure = TimeoutExpired('git', 120)
+
+    @pytest.mark.parametrize("failure", [subprocess.TimeoutExpired("git", 120, stderr=b"private transport detail"), OSError("private filesystem detail")])
+    def test_git_export_process_failure_uses_runtime_diagnostic(tmp_path: Path, monkeypatch, failure: Exception) -> None:
+        def fail_process(*_args, **_kwargs):
+            raise failure
+    
+        monkeypatch.setattr(runtime_vcs.subprocess, "run", fail_process)
+        with pytest.raises(ProjectRuntimeError, match="project_git_snapshot_failed:rev-list") as caught:
+>           runtime_vcs._git_bytes(tmp_path, "rev-list", "--objects", "HEAD")
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:405: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:17: in _git_bytes
+    result = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = (['git', '-C', '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-272/test_git_export_process_failur0', '-c', 'core.hooksPath=/dev/null', 'rev-list', ...],)
+_kwargs = {'env': {'PATH': '/bin:/usr/bin', 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_NO_REPLACE_OBJECTS': '1', ...}, 'input': None, 'capture_output': True, 'check': False, ...}
+
+    def fail_process(*_args, **_kwargs):
+>       raise failure
+E       subprocess.TimeoutExpired: Command 'git' timed out after 120 seconds
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:401: TimeoutExpired
+______ test_git_export_process_failure_uses_runtime_diagnostic[failure1] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-272/test_git_export_process_failur1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107c29480>
+failure = OSError('private filesystem detail')
+
+    @pytest.mark.parametrize("failure", [subprocess.TimeoutExpired("git", 120, stderr=b"private transport detail"), OSError("private filesystem detail")])
+    def test_git_export_process_failure_uses_runtime_diagnostic(tmp_path: Path, monkeypatch, failure: Exception) -> None:
+        def fail_process(*_args, **_kwargs):
+            raise failure
+    
+        monkeypatch.setattr(runtime_vcs.subprocess, "run", fail_process)
+        with pytest.raises(ProjectRuntimeError, match="project_git_snapshot_failed:rev-list") as caught:
+>           runtime_vcs._git_bytes(tmp_path, "rev-list", "--objects", "HEAD")
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:405: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:17: in _git_bytes
+    result = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = (['git', '-C', '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-272/test_git_export_process_failur1', '-c', 'core.hooksPath=/dev/null', 'rev-list', ...],)
+_kwargs = {'env': {'PATH': '/bin:/usr/bin', 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_NO_REPLACE_OBJECTS': '1', ...}, 'input': None, 'capture_output': True, 'check': False, ...}
+
+    def fail_process(*_args, **_kwargs):
+>       raise failure
+E       OSError: private filesystem detail
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:401: OSError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_git_export_process_failure_uses_runtime_diagnostic[failure0]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_git_export_process_failure_uses_runtime_diagnostic[failure1]
+======================= 2 failed, 18 deselected in 0.19s =======================

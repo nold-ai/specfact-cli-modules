@@ -16,7 +16,7 @@ exempt_reason: ""
 
 # Review external Python projects
 
-Portable project runtimes let the code review capsule use a repository's own dependencies and test configuration. Runtime acquisition runs in a disposable builder; analysis runs offline in separate target workers. The signed supervisor keeps its own dependencies.
+Portable project runtimes let the code review capsule use a repository's own dependencies and test configuration. Runtime acquisition runs in a disposable builder; analysis runs offline in separate target workers. The signed supervisor keeps its own dependencies. Analyzer-owned imports follow the recorded member graph and resolve from the verified analyzer installation before project paths or startup imports are considered; project-owned dependencies keep their selected versions.
 
 Execution requires Linux x86-64 with the capsule's supported Python 3.11, 3.12, or 3.13 ABI and working unprivileged user namespaces. A local descriptor does not grant protected pull-request authority.
 
@@ -36,7 +36,7 @@ Existing review commands prepare the target runtime automatically before depende
 specfact code review run src/example.py tests/test_example.py --bug-hunt --json --out /tmp/review.json
 ```
 
-A single declared test dependency group or test extra is selected automatically. Explicit groups and extras suppress automatic selection of the other category; competing choices require configuration. Hatchling alone is a build backend, so it does not imply a Hatch environment. Competing environment choices produce a diagnostic; select the intended environment explicitly.
+A single declared test dependency group or test extra is selected automatically. Explicit groups and extras suppress automatic selection of the other category; competing choices require configuration. Hatchling alone is a build backend, so it does not imply a Hatch environment. Competing environment choices produce a diagnostic; select the intended environment explicitly. Discovery validates the metadata tables it consumes before choosing an environment, including when a manager is explicitly selected; malformed tables identify the source file and section.
 
 ## Select an environment
 
@@ -78,7 +78,7 @@ specfact code review runtime prepare --project-config /tmp/review-runtime.toml -
 specfact code review run src/example.py tests/test_example.py --project-config /tmp/review-runtime.toml --project-runtime /path/from/prepare/project-runtime.json
 ```
 
-Attachment verifies the payload, project inputs, ABI, and analyzer worker identity. Changed workspace source invalidates built project packages as well as changed dependency files. Git commits, tags, and shallow-history boundaries also participate in cache identity for dynamically versioned packages. Staged reviews bind the captured Git tree separately from its HEAD commit, so private build copies retain the staged index and sanitized VCS metadata even if the live index later changes. A corrupt cache is rejected; remove only the identified invalid artifact and prepare again. Interrupted preparations do not publish partial descriptors.
+Attachment verifies the payload, project inputs, ABI, and analyzer worker identity. Changed workspace source invalidates built project packages as well as changed dependency files. Git commits, tags, and shallow-history boundaries also participate in cache identity for dynamically versioned packages. Staged reviews bind the captured Git tree separately from its HEAD commit, so private build copies retain the staged index and sanitized VCS metadata even if the live index later changes. Private Git metadata contains only the object closure recorded by the selected commit, staged tree, tags, and shallow boundary; unrelated branch refs and unreachable objects are excluded. A corrupt cache is rejected; remove only the identified invalid artifact and prepare again. Interrupted preparations do not publish partial descriptors.
 
 ## Interpret incomplete evidence
 

@@ -360,3 +360,33 @@ def test_malformed_pytest_table_has_project_diagnostic(
         ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"
     ):
         discover_project(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "filename,section",
+    [
+        ("pyproject.toml", "tool"),
+        ("pyproject.toml", "project"),
+        ("pyproject.toml", "dependency-groups"),
+        ("pyproject.toml", "project.optional-dependencies"),
+        ("pyproject.toml", "tool.hatch"),
+        ("pyproject.toml", "tool.hatch.envs"),
+        ("pyproject.toml", "tool.poetry"),
+        ("pyproject.toml", "tool.poetry.dependencies"),
+        ("pyproject.toml", "tool.poetry.group"),
+        ("pyproject.toml", "tool.poetry.extras"),
+        ("hatch.toml", "envs"),
+    ],
+)
+@pytest.mark.parametrize("value", ["1", "false", "[]", '"invalid"'])
+@pytest.mark.parametrize("explicit", [False, True])
+def test_consumed_metadata_tables_have_actionable_shape_diagnostics(
+    tmp_path: Path, filename: str, section: str, value: str, explicit: bool
+) -> None:
+    parent, _, option = section.rpartition(".")
+    declaration = (f"[{parent}]\n" if parent else "") + f"{option}={value}\n"
+    (tmp_path / filename).write_text(declaration)
+    config = tmp_path / "review-runtime.toml"
+    config.write_text('manager="pip"\n')
+    with pytest.raises(ProjectRuntimeError, match=f"project_config_invalid:{filename}:{section}; expected a table"):
+        discover_project(tmp_path, config_path=config if explicit else None)
