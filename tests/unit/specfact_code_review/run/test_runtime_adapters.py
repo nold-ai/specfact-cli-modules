@@ -2,9 +2,11 @@
 
 from pathlib import Path
 
+import pytest
+
 from specfact_code_review.run.runtime_adapters import install_commands
 from specfact_code_review.run.runtime_discovery import discover_project
-from specfact_code_review.run.runtime_models import ProjectPlan
+from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError
 
 
 def test_pip_preserves_requirement_constraints_and_groups(tmp_path: Path) -> None:
@@ -40,3 +42,17 @@ def test_explicit_groups_do_not_install_unrelated_defaults(tmp_path: Path) -> No
     poetry = install_commands(ProjectPlan(root=tmp_path, manager="poetry", groups=("test",)), python="python")[0]
     assert "--no-default-groups" in uv
     assert poetry[poetry.index("--only") + 1] == "main,test"
+
+
+@pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+@pytest.mark.parametrize("field", ["requirements", "constraints"])
+def test_native_adapter_rejects_unconsumed_dependency_inputs(tmp_path: Path, manager: str, field: str) -> None:
+    plan = ProjectPlan(
+        root=tmp_path,
+        manager=manager,
+        requirements=("dependencies.txt",) if field == "requirements" else (),
+        constraints=("dependencies.txt",) if field == "constraints" else (),
+    )
+    with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+        install_commands(plan, python="python")
+    assert field in str(error.value)

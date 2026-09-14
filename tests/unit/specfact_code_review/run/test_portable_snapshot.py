@@ -183,3 +183,48 @@ def test_analysis_source_copy_rejects_escaping_selection(tmp_path: Path, monkeyp
     request = ProjectSnapshotRequest(tmp_path, [Path(selected)], runner.ReviewOptions(), "explicit_files")
     with pytest.raises(ValueError):
         portable_snapshot._run_in_private_source(object(), request, runner.CapsuleSnapshotSettings())
+
+
+@pytest.mark.parametrize("reason", ["project_config_invalid:setup.cfg", "project_native_library_missing:libodbc.so.2"])
+def test_preparation_fallback_uses_only_sanitized_source(tmp_path: Path, monkeypatch, reason: str) -> None:
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n")
+    (tmp_path / ".env").write_text("PRIVATE=fixture\n")
+    (tmp_path / ".git/objects").mkdir(parents=True)
+    observed = []
+
+    def dispatch(request, **_kwargs):
+        assert request.snapshot_root != tmp_path
+        assert not (request.snapshot_root / ".env").exists()
+        assert not (request.snapshot_root / ".git").exists()
+        assert request.files[0].read_text() == "VALUE = 1\n"
+        observed.append(request.member)
+        return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+
+    monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+    snapshot, evidence = portable_snapshot._failed_project_snapshot(
+        runtime, snapshot_root=tmp_path, files=[source], options=runner.ReviewOptions(), reason=reason
+    )
+    assert "ruff" in observed and not set(observed) & DEPENDENT_MEMBERS
+    assert snapshot.evidence["basedpyright"]["evidence_outcome"] == "UNKNOWN"
+    assert evidence["diagnostic"] == reason
+
+
+def test_unsafe_fallback_source_never_dispatches_analyzer(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n")
+    (tmp_path / ".env").write_text("PRIVATE=fixture\n")
+    (tmp_path / "alias.py").symlink_to(".env")
+
+    def dispatch(*_args, **_kwargs):
+        pytest.fail("unsafe original source reached an analyzer")
+
+    monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+    snapshot, evidence = run_project_snapshot(
+        runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
+    )
+    assert evidence["status"] == "UNKNOWN"
+    assert "project_source_copy_failed" in evidence["diagnostic"]
+    assert all(row["evidence_outcome"] == "UNKNOWN" for row in snapshot.evidence.values())

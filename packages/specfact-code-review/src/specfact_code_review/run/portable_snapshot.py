@@ -86,16 +86,17 @@ def run_project_snapshot(runtime: Any, request: ProjectSnapshotRequest) -> tuple
 def _failed_project_snapshot(
     runtime: Any, *, snapshot_root: Path, files: list[Path], options: Any, reason: str
 ) -> tuple[Any, dict[str, Any]]:
-    from specfact_code_review.run.runner import CapsuleSnapshotSettings, _run_capsule_snapshot
+    from specfact_code_review.run.runner import CapsuleSnapshotSettings
 
     unavailable = preparation_failure_snapshot(reason)
-    snapshot = _run_capsule_snapshot(
-        runtime,
-        snapshot_root=snapshot_root,
-        files=files,
-        options=options,
-        settings=CapsuleSnapshotSettings(portable_runtime=True, unavailable_members=unavailable),
-    )
+    request = ProjectSnapshotRequest(snapshot_root, files, options, "explicit_files")
+    try:
+        snapshot = _run_in_private_source(
+            runtime, request, CapsuleSnapshotSettings(portable_runtime=True, unavailable_members=unavailable)
+        )
+    except (OSError, ValueError) as exc:
+        reason = f"project_source_copy_failed:{exc}; preparation={reason}"
+        snapshot = _blocked_source_snapshot(runtime, options, reason)
     return snapshot, {
         "status": "UNKNOWN",
         "diagnostic": reason,
@@ -103,6 +104,28 @@ def _failed_project_snapshot(
             "Inspect project configuration with specfact code review runtime inspect --json, then run runtime prepare."
         ),
     }
+
+
+def _blocked_source_snapshot(runtime: Any, options: Any, reason: str) -> Any:
+    """Record incomplete evidence without exposing an unsafe original source mount."""
+    from specfact_code_review.run.runner import (
+        CapsuleSnapshotSettings,
+        _run_capsule_snapshot,
+        default_pr_range_profile,
+    )
+
+    blocked: dict[str, dict[str, object]] = {
+        member: {"execution_state": "error", "evidence_outcome": "UNKNOWN", "diagnostic": reason}
+        for member in default_pr_range_profile().all_ids
+    }
+    with tempfile.TemporaryDirectory(prefix="specfact-unavailable-source-") as directory:
+        return _run_capsule_snapshot(
+            runtime,
+            snapshot_root=Path(directory),
+            files=[],
+            options=options,
+            settings=CapsuleSnapshotSettings(portable_runtime=True, unavailable_members=blocked),
+        )
 
 
 def _run_in_private_source(runtime: Any, request: ProjectSnapshotRequest, settings: Any) -> Any:

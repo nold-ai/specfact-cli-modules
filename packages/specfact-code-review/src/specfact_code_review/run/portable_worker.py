@@ -5,6 +5,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import os
+import shlex
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
@@ -20,6 +21,8 @@ from specfact_code_review.run.target_launch import target_command
 
 
 DEPENDENT_MEMBERS = frozenset({"basedpyright", "pylint", "contracts", "targeted-pytest-coverage"})
+# Native pytest 9.1.1 defaults; explicit norecursedirs replaces this set.
+DEFAULT_NORECURSEDIRS = ("*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}")
 
 
 def _strings(value: object) -> tuple[str, ...]:
@@ -38,14 +41,42 @@ def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
     return matches
 
 
-def _candidate_test_files(root: Path) -> Iterator[Path]:
+def _matches_directory_pattern(path: Path, pattern: str) -> bool:
+    """Match native pytest basename and relative/absolute directory patterns."""
+    if os.sep != "/" and os.sep not in pattern:
+        pattern = pattern.replace("/", os.sep)
+    candidate = path.name
+    if os.sep in pattern:
+        candidate = str(path)
+        if path.is_absolute() and not os.path.isabs(pattern):
+            pattern = f"*{os.sep}{pattern}"
+    return fnmatch.fnmatch(candidate, pattern)
+
+
+def _candidate_test_files(root: Path, norecursedirs: tuple[str, ...]) -> Iterator[Path]:
     if is_excluded_source(root):
         return
     for directory, directories, files in os.walk(root, followlinks=False):
-        directories[:] = [name for name in directories if not is_excluded_source(Path(directory) / name)]
+        directories[:] = [
+            name
+            for name in directories
+            if not is_excluded_source(Path(directory) / name)
+            and not any(_matches_directory_pattern(Path(directory) / name, pattern) for pattern in norecursedirs)
+        ]
         for name in files:
             if name.endswith(".py"):
                 yield Path(directory) / name
+
+
+def _test_candidates(plan: ProjectPlan, roots: tuple[str, ...], patterns: tuple[str, ...]) -> set[str]:
+    recursion = plan.pytest_config.get("norecursedirs", DEFAULT_NORECURSEDIRS)
+    norecursedirs = tuple(shlex.split(recursion)) if isinstance(recursion, str) else _strings(recursion)
+    return {
+        path.relative_to(plan.root).as_posix()
+        for root in roots
+        for path in _candidate_test_files(plan.root / root, norecursedirs)
+        if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
+    }
 
 
 @ensure(lambda result: bool(result) and len(result) == len(set(result)))
@@ -54,13 +85,8 @@ def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tu
     roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
     patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
     if full:
-        return roots or (".",)
-    candidates = {
-        path.relative_to(plan.root).as_posix()
-        for root in roots
-        for path in _candidate_test_files(plan.root / root)
-        if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
-    }
+        return roots
+    candidates = _test_candidates(plan, roots, patterns)
     selected = set()
     for path in files:
         relative = path.resolve().relative_to(plan.root).as_posix()

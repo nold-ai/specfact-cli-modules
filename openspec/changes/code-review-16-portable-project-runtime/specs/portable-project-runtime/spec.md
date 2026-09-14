@@ -318,3 +318,23 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **WHEN** repository-root test discovery encounters tests inside an excluded virtual environment
 - **THEN** those installed dependency tests SHALL not create ambiguity or enter the customer test selection
 - **AND** discovery SHALL prune excluded environment directories before traversal.
+
+#### Scenario: Runtime preparation fails before independent static analysis
+- **WHEN** discovery or preparation fails and independent static members remain applicable
+- **THEN** those members SHALL receive the same sanitized private source copy as successful preparation
+- **AND** if that copy cannot be established safely, no analyzer SHALL receive the original source and required evidence SHALL remain incomplete.
+
+#### Scenario: Poetry constrains the effective Python runtime
+- **WHEN** Poetry declares its Python constraint in tool.poetry.dependencies.python
+- **THEN** discovery SHALL import that constraint and intersect it with PEP621 requires-python when both are declared
+- **AND** unsupported manager-specific constraint syntax SHALL identify the exact declaration and remedy rather than be ignored or passed unmodified to a PEP440 interpreter selector.
+
+#### Scenario: Non-pip manager receives explicit pip dependency inputs
+- **WHEN** explicit project configuration supplies requirements or constraints for uv, Hatch or Poetry
+- **THEN** discovery and adapter dispatch SHALL reject unsupported fields with the selected manager and a remedy before installation
+- **AND** unrelated exported requirements files SHALL not override native manager configuration.
+
+#### Scenario: Source-only pytest selection respects recursion exclusions
+- **WHEN** matching test discovery traverses the repository root
+- **THEN** pytest's default norecursedirs exclusions SHALL be retained when unspecified
+- **AND** explicit norecursedirs configuration SHALL replace those defaults consistently with native pytest.

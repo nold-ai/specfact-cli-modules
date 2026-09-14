@@ -15,6 +15,17 @@ MANAGER_REQUIREMENTS = {
 }
 
 
+@require(lambda manager: len(manager) > 0)
+def validate_adapter_inputs(manager: str, requirements: tuple[str, ...], constraints: tuple[str, ...]) -> None:
+    """Reject inputs that the native adapter cannot consume without changing semantics."""
+    unsupported = [name for name, values in (("requirements", requirements), ("constraints", constraints)) if values]
+    if manager != "pip" and unsupported:
+        raise ProjectRuntimeError(
+            f"project_manager_inputs_unsupported:{manager}:{','.join(unsupported)}; "
+            "declare dependencies in the selected manager configuration or select manager=pip in --project-config"
+        )
+
+
 def _pip_commands(plan: ProjectPlan, python: str) -> tuple[tuple[str, ...], ...]:
     arguments = [python, "-m", "pip", "install", "--disable-pip-version-check"]
     for option, values in (("--group", plan.groups), ("-r", plan.requirements), ("-c", plan.constraints)):
@@ -61,4 +72,5 @@ def install_commands(plan: ProjectPlan, *, python: str) -> tuple[tuple[str, ...]
     adapter = adapters.get(plan.manager)
     if adapter is None:
         raise ProjectRuntimeError(f"project_manager_unsupported:{plan.manager}")
+    validate_adapter_inputs(plan.manager, plan.requirements, plan.constraints)
     return adapter(plan, python)

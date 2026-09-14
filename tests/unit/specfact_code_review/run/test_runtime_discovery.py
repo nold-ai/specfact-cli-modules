@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from packaging.specifiers import SpecifierSet
 
 from specfact_code_review.run import runtime_discovery
 from specfact_code_review.run.runtime_discovery import discover_project
@@ -178,6 +179,66 @@ def test_unlocked_pip_tools_input_is_discovered(tmp_path: Path) -> None:
 def test_legacy_static_python_constraint_is_imported(tmp_path: Path) -> None:
     (tmp_path / "setup.cfg").write_text("[options]\npython_requires = >=3.11,<3.12\n")
     assert discover_project(tmp_path).requires_python == ">=3.11,<3.12"
+
+
+def test_poetry_python_constraint_intersects_package_metadata(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nrequires-python=">=3.12"\n[tool.poetry.dependencies]\npython=">=3.11,<3.13"\n'
+    )
+    constraint = SpecifierSet(discover_project(tmp_path).requires_python)
+    assert "3.12.1" in constraint
+    assert "3.11.1" not in constraint and "3.13.1" not in constraint
+
+
+@pytest.mark.parametrize("declared", ["^3.12", "~3.12", ">=3.11,<3.12 || >=3.13", {"version": ">=3.12"}])
+def test_unsupported_poetry_python_syntax_has_exact_remedy(tmp_path: Path, declared) -> None:
+    text = '{version=">=3.12"}' if isinstance(declared, dict) else f'"{declared}"'
+    (tmp_path / "pyproject.toml").write_text(f"[tool.poetry.dependencies]\npython={text}\n")
+    with pytest.raises(ProjectRuntimeError, match="project_python_constraint_unsupported") as error:
+        discover_project(tmp_path)
+    assert "tool.poetry.dependencies.python" in str(error.value)
+    assert "PEP440" in str(error.value)
+
+
+def test_explicit_pip_does_not_import_poetry_resolver_constraint(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nrequires-python=">=3.11"\n[tool.poetry.dependencies]\npython="^3.12"\n'
+    )
+    config = tmp_path / "review.toml"
+    config.write_text('manager="pip"\n')
+    assert discover_project(tmp_path, config_path=config).requires_python == ">=3.11"
+
+
+@pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+@pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+    config = tmp_path / "review.toml"
+    config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+    with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+        discover_project(tmp_path, config_path=config)
+    assert all(field in str(error.value) for field in fields)
+    assert "pip" in str(error.value) and "--project-config" in str(error.value)
+
+
+@pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+def test_native_manager_does_not_select_unrelated_pip_exports(tmp_path: Path, manager: str) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        f"[tool.{manager}]\n" if manager != "hatch" else "[tool.hatch.envs.test]\n"
+    )
+    (tmp_path / "pylock.toml").write_text('lock-version="1.0"\n')
+    (tmp_path / "requirements.txt").write_text("-r absent.txt\n")
+    plan = discover_project(tmp_path)
+    assert plan.manager == manager
+    assert not plan.requirements and not plan.constraints
+    assert "requirements.txt" not in plan.inputs
+
+
+@pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+def test_non_pip_accepts_empty_dependency_overrides(tmp_path: Path, manager: str) -> None:
+    config = tmp_path / "review.toml"
+    config.write_text(f'manager="{manager}"\nrequirements=[]\nconstraints=[]\n')
+    plan = discover_project(tmp_path, config_path=config)
+    assert not plan.requirements and not plan.constraints
 
 
 def test_one_test_extra_is_prepared_automatically(tmp_path: Path) -> None:

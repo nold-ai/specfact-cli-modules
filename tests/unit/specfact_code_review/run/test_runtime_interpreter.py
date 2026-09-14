@@ -30,7 +30,23 @@ def test_python_selection_rejects_conflicting_pin(tmp_path: Path) -> None:
         select_environment(discover_project(tmp_path), current="linux-x86_64-cp312")
 
 
-def test_python_constraints_can_select_compatible_worker_without_a_pin(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("declaration", "current", "expected"),
+    [
+        ('[project]\nrequires-python=">=3.13,<3.14"\n', "cp312", "cp313"),
+        ('[tool.poetry.dependencies]\npython=">=3.12,<3.13"\n', "cp313", "cp312"),
+    ],
+)
+def test_python_constraints_can_select_compatible_worker_without_a_pin(
+    tmp_path: Path, declaration: str, current: str, expected: str
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(declaration)
+    assert (
+        select_environment(discover_project(tmp_path), current=f"linux-x86_64-{current}") == f"linux-x86_64-{expected}"
+    )
 
-    (tmp_path / "pyproject.toml").write_text('[project]\nrequires-python=">=3.13,<3.14"\n')
-    assert select_environment(discover_project(tmp_path), current="linux-x86_64-cp312") == "linux-x86_64-cp313"
+
+def test_poetry_constraint_preserves_ambiguous_worker_selection(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text('[tool.poetry.dependencies]\npython=">=3.11,<3.13"\n')
+    with pytest.raises(ValueError, match="project_python_ambiguous"):
+        select_environment(discover_project(tmp_path), current="linux-x86_64-cp313")

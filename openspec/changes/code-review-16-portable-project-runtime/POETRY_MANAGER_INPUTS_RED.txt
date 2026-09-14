@@ -1,0 +1,476 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <implementation-worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 69 items
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py .......... [ 14%]
+............FFFFF.FFFFFFFFFFFF.............                              [ 76%]
+tests/unit/specfact_code_review/run/test_runtime_adapters.py ....FFFFFF  [ 91%]
+tests/unit/specfact_code_review/run/test_runtime_interpreter.py ....FF   [100%]
+
+=================================== FAILURES ===================================
+__________ test_poetry_python_constraint_intersects_package_metadata ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_poetry_python_constraint_0')
+
+    def test_poetry_python_constraint_intersects_package_metadata(tmp_path: Path) -> None:
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nrequires-python=">=3.12"\n[tool.poetry.dependencies]\npython=">=3.11,<3.13"\n'
+        )
+        constraint = SpecifierSet(discover_project(tmp_path).requires_python)
+        assert "3.12.1" in constraint
+>       assert "3.11.1" not in constraint and "3.13.1" not in constraint
+E       AssertionError: assert ('3.11.1' not in <SpecifierSet('>=3.12')> and '3.13.1' not in <SpecifierSet('>=3.12')>)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:190: AssertionError
+________ test_unsupported_poetry_python_syntax_has_exact_remedy[^3.12] _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_unsupported_poetry_python0')
+declared = '^3.12'
+
+    @pytest.mark.parametrize("declared", ["^3.12", "~3.12", ">=3.11,<3.12 || >=3.13", {"version": ">=3.12"}])
+    def test_unsupported_poetry_python_syntax_has_exact_remedy(tmp_path: Path, declared) -> None:
+        text = '{version=">=3.12"}' if isinstance(declared, dict) else f'"{declared}"'
+        (tmp_path / "pyproject.toml").write_text(f"[tool.poetry.dependencies]\npython={text}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_python_constraint_unsupported") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:197: Failed
+________ test_unsupported_poetry_python_syntax_has_exact_remedy[~3.12] _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_unsupported_poetry_python1')
+declared = '~3.12'
+
+    @pytest.mark.parametrize("declared", ["^3.12", "~3.12", ">=3.11,<3.12 || >=3.13", {"version": ">=3.12"}])
+    def test_unsupported_poetry_python_syntax_has_exact_remedy(tmp_path: Path, declared) -> None:
+        text = '{version=">=3.12"}' if isinstance(declared, dict) else f'"{declared}"'
+        (tmp_path / "pyproject.toml").write_text(f"[tool.poetry.dependencies]\npython={text}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_python_constraint_unsupported") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:197: Failed
+_ test_unsupported_poetry_python_syntax_has_exact_remedy[>=3.11,<3.12 || >=3.13] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_unsupported_poetry_python2')
+declared = '>=3.11,<3.12 || >=3.13'
+
+    @pytest.mark.parametrize("declared", ["^3.12", "~3.12", ">=3.11,<3.12 || >=3.13", {"version": ">=3.12"}])
+    def test_unsupported_poetry_python_syntax_has_exact_remedy(tmp_path: Path, declared) -> None:
+        text = '{version=">=3.12"}' if isinstance(declared, dict) else f'"{declared}"'
+        (tmp_path / "pyproject.toml").write_text(f"[tool.poetry.dependencies]\npython={text}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_python_constraint_unsupported") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:197: Failed
+______ test_unsupported_poetry_python_syntax_has_exact_remedy[declared3] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_unsupported_poetry_python3')
+declared = {'version': '>=3.12'}
+
+    @pytest.mark.parametrize("declared", ["^3.12", "~3.12", ">=3.11,<3.12 || >=3.13", {"version": ">=3.12"}])
+    def test_unsupported_poetry_python_syntax_has_exact_remedy(tmp_path: Path, declared) -> None:
+        text = '{version=">=3.12"}' if isinstance(declared, dict) else f'"{declared}"'
+        (tmp_path / "pyproject.toml").write_text(f"[tool.poetry.dependencies]\npython={text}\n")
+>       with pytest.raises(ProjectRuntimeError, match="project_python_constraint_unsupported") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:197: Failed
+__ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields0-uv] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_0')
+manager = 'uv', fields = ('requirements',)
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:uv'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+_ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields0-hatch] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_1')
+manager = 'hatch', fields = ('requirements',)
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:hatch'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+_ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields0-poetry] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_2')
+manager = 'poetry', fields = ('requirements',)
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:poetry'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+__ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields1-uv] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_3')
+manager = 'uv', fields = ('constraints',)
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:uv'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+_ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields1-hatch] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_4')
+manager = 'hatch', fields = ('constraints',)
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:hatch'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+_ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields1-poetry] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_5')
+manager = 'poetry', fields = ('constraints',)
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:poetry'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+__ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields2-uv] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_6')
+manager = 'uv', fields = ('requirements', 'constraints')
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:uv'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+_ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields2-hatch] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_7')
+manager = 'hatch', fields = ('requirements', 'constraints')
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:hatch'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+_ test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields2-poetry] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_non_pip_rejects_explicit_8')
+manager = 'poetry', fields = ('requirements', 'constraints')
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("fields", [("requirements",), ("constraints",), ("requirements", "constraints")])
+    def test_non_pip_rejects_explicit_dependency_inputs_before_reading(tmp_path: Path, manager: str, fields) -> None:
+        config = tmp_path / "review.toml"
+        config.write_text(f'manager="{manager}"\n' + "".join(f'{field}=["absent.txt"]\n' for field in fields))
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_manager_inputs_unsupported:poetry'
+E         Actual message: 'project_input_missing:absent.txt'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:217: AssertionError
+________ test_native_manager_does_not_select_unrelated_pip_exports[uv] _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_manager_does_not_s0')
+manager = 'uv'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    def test_native_manager_does_not_select_unrelated_pip_exports(tmp_path: Path, manager: str) -> None:
+        (tmp_path / "pyproject.toml").write_text(f"[tool.{manager}]\n" if manager != "hatch" else "[tool.hatch.envs.test]\n")
+        (tmp_path / "pylock.toml").write_text('lock-version="1.0"\n')
+        (tmp_path / "requirements.txt").write_text("-r absent.txt\n")
+>       plan = discover_project(tmp_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:228:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:310: in discover_project
+    requirements = tuple(values["requirements"] if "requirements" in values else _default_requirements(root))
+                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_manager_does_not_s0')
+
+    def _default_requirements(root: Path) -> list[str]:
+        texts = [name for name in ("requirements.txt", "requirements.in") if (root / name).is_file()]
+        if (root / "pylock.toml").is_file() and texts:
+>           raise ProjectRuntimeError(
+                f"project_requirements_ambiguous:pylock.toml,{','.join(texts)}; select requirements in --project-config"
+            )
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_requirements_ambiguous:pylock.toml,requirements.txt; select requirements in --project-config
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:262: ProjectRuntimeError
+_______ test_native_manager_does_not_select_unrelated_pip_exports[hatch] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_manager_does_not_s1')
+manager = 'hatch'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    def test_native_manager_does_not_select_unrelated_pip_exports(tmp_path: Path, manager: str) -> None:
+        (tmp_path / "pyproject.toml").write_text(f"[tool.{manager}]\n" if manager != "hatch" else "[tool.hatch.envs.test]\n")
+        (tmp_path / "pylock.toml").write_text('lock-version="1.0"\n')
+        (tmp_path / "requirements.txt").write_text("-r absent.txt\n")
+>       plan = discover_project(tmp_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:228:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:310: in discover_project
+    requirements = tuple(values["requirements"] if "requirements" in values else _default_requirements(root))
+                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_manager_does_not_s1')
+
+    def _default_requirements(root: Path) -> list[str]:
+        texts = [name for name in ("requirements.txt", "requirements.in") if (root / name).is_file()]
+        if (root / "pylock.toml").is_file() and texts:
+>           raise ProjectRuntimeError(
+                f"project_requirements_ambiguous:pylock.toml,{','.join(texts)}; select requirements in --project-config"
+            )
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_requirements_ambiguous:pylock.toml,requirements.txt; select requirements in --project-config
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:262: ProjectRuntimeError
+______ test_native_manager_does_not_select_unrelated_pip_exports[poetry] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_manager_does_not_s2')
+manager = 'poetry'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    def test_native_manager_does_not_select_unrelated_pip_exports(tmp_path: Path, manager: str) -> None:
+        (tmp_path / "pyproject.toml").write_text(f"[tool.{manager}]\n" if manager != "hatch" else "[tool.hatch.envs.test]\n")
+        (tmp_path / "pylock.toml").write_text('lock-version="1.0"\n')
+        (tmp_path / "requirements.txt").write_text("-r absent.txt\n")
+>       plan = discover_project(tmp_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:228:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:310: in discover_project
+    requirements = tuple(values["requirements"] if "requirements" in values else _default_requirements(root))
+                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_manager_does_not_s2')
+
+    def _default_requirements(root: Path) -> list[str]:
+        texts = [name for name in ("requirements.txt", "requirements.in") if (root / name).is_file()]
+        if (root / "pylock.toml").is_file() and texts:
+>           raise ProjectRuntimeError(
+                f"project_requirements_ambiguous:pylock.toml,{','.join(texts)}; select requirements in --project-config"
+            )
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_requirements_ambiguous:pylock.toml,requirements.txt; select requirements in --project-config
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:262: ProjectRuntimeError
+__ test_native_adapter_rejects_unconsumed_dependency_inputs[requirements-uv] ___
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_adapter_rejects_un0')
+manager = 'uv', field = 'requirements'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("field", ["requirements", "constraints"])
+    def test_native_adapter_rejects_unconsumed_dependency_inputs(tmp_path: Path, manager: str, field: str) -> None:
+        plan = ProjectPlan(root=tmp_path, manager=manager, **{field: ("dependencies.txt",)})
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:51: Failed
+_ test_native_adapter_rejects_unconsumed_dependency_inputs[requirements-hatch] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_adapter_rejects_un1')
+manager = 'hatch', field = 'requirements'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("field", ["requirements", "constraints"])
+    def test_native_adapter_rejects_unconsumed_dependency_inputs(tmp_path: Path, manager: str, field: str) -> None:
+        plan = ProjectPlan(root=tmp_path, manager=manager, **{field: ("dependencies.txt",)})
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:51: Failed
+_ test_native_adapter_rejects_unconsumed_dependency_inputs[requirements-poetry] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_adapter_rejects_un2')
+manager = 'poetry', field = 'requirements'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("field", ["requirements", "constraints"])
+    def test_native_adapter_rejects_unconsumed_dependency_inputs(tmp_path: Path, manager: str, field: str) -> None:
+        plan = ProjectPlan(root=tmp_path, manager=manager, **{field: ("dependencies.txt",)})
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:51: Failed
+___ test_native_adapter_rejects_unconsumed_dependency_inputs[constraints-uv] ___
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_adapter_rejects_un3')
+manager = 'uv', field = 'constraints'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("field", ["requirements", "constraints"])
+    def test_native_adapter_rejects_unconsumed_dependency_inputs(tmp_path: Path, manager: str, field: str) -> None:
+        plan = ProjectPlan(root=tmp_path, manager=manager, **{field: ("dependencies.txt",)})
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:51: Failed
+_ test_native_adapter_rejects_unconsumed_dependency_inputs[constraints-hatch] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_adapter_rejects_un4')
+manager = 'hatch', field = 'constraints'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("field", ["requirements", "constraints"])
+    def test_native_adapter_rejects_unconsumed_dependency_inputs(tmp_path: Path, manager: str, field: str) -> None:
+        plan = ProjectPlan(root=tmp_path, manager=manager, **{field: ("dependencies.txt",)})
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:51: Failed
+_ test_native_adapter_rejects_unconsumed_dependency_inputs[constraints-poetry] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_native_adapter_rejects_un5')
+manager = 'poetry', field = 'constraints'
+
+    @pytest.mark.parametrize("manager", ["uv", "hatch", "poetry"])
+    @pytest.mark.parametrize("field", ["requirements", "constraints"])
+    def test_native_adapter_rejects_unconsumed_dependency_inputs(tmp_path: Path, manager: str, field: str) -> None:
+        plan = ProjectPlan(root=tmp_path, manager=manager, **{field: ("dependencies.txt",)})
+>       with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:51: Failed
+__________ test_poetry_constraint_selects_the_only_compatible_worker ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_poetry_constraint_selects0')
+
+    def test_poetry_constraint_selects_the_only_compatible_worker(tmp_path: Path) -> None:
+        (tmp_path / "pyproject.toml").write_text('[tool.poetry.dependencies]\npython=">=3.12,<3.13"\n')
+>       assert select_environment(discover_project(tmp_path), current="linux-x86_64-cp313") == "linux-x86_64-cp312"
+E       AssertionError: assert 'linux-x86_64-cp313' == 'linux-x86_64-cp312'
+E
+E         - linux-x86_64-cp312
+E         ?                  ^
+E         + linux-x86_64-cp313
+E         ?                  ^
+
+tests/unit/specfact_code_review/run/test_runtime_interpreter.py:41: AssertionError
+_________ test_poetry_constraint_preserves_ambiguous_worker_selection __________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-209/test_poetry_constraint_preserv0')
+
+    def test_poetry_constraint_preserves_ambiguous_worker_selection(tmp_path: Path) -> None:
+        (tmp_path / "pyproject.toml").write_text('[tool.poetry.dependencies]\npython=">=3.11,<3.13"\n')
+>       with pytest.raises(ValueError, match="project_python_ambiguous"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/specfact_code_review/run/test_runtime_interpreter.py:46: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_poetry_python_constraint_intersects_package_metadata
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_unsupported_poetry_python_syntax_has_exact_remedy[^3.12]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_unsupported_poetry_python_syntax_has_exact_remedy[~3.12]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_unsupported_poetry_python_syntax_has_exact_remedy[>=3.11,<3.12 || >=3.13]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_unsupported_poetry_python_syntax_has_exact_remedy[declared3]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields0-uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields0-hatch]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields0-poetry]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields1-uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields1-hatch]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields1-poetry]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields2-uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields2-hatch]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_non_pip_rejects_explicit_dependency_inputs_before_reading[fields2-poetry]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_native_manager_does_not_select_unrelated_pip_exports[uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_native_manager_does_not_select_unrelated_pip_exports[hatch]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_native_manager_does_not_select_unrelated_pip_exports[poetry]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_native_adapter_rejects_unconsumed_dependency_inputs[requirements-uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_native_adapter_rejects_unconsumed_dependency_inputs[requirements-hatch]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_native_adapter_rejects_unconsumed_dependency_inputs[requirements-poetry]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_native_adapter_rejects_unconsumed_dependency_inputs[constraints-uv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_native_adapter_rejects_unconsumed_dependency_inputs[constraints-hatch]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_native_adapter_rejects_unconsumed_dependency_inputs[constraints-poetry]
+FAILED tests/unit/specfact_code_review/run/test_runtime_interpreter.py::test_poetry_constraint_selects_the_only_compatible_worker
+FAILED tests/unit/specfact_code_review/run/test_runtime_interpreter.py::test_poetry_constraint_preserves_ambiguous_worker_selection
+======================== 25 failed, 44 passed in 0.89s =========================

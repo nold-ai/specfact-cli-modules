@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from icontract import require
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
 
+from specfact_code_review.run.runtime_adapters import validate_adapter_inputs
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError, content_digest
 from specfact_code_review.run.runtime_sources import source_identity
 from specfact_code_review.run.runtime_vcs import vcs_context
@@ -268,12 +270,24 @@ def _default_requirements(root: Path) -> list[str]:
     return []
 
 
-def _python_constraint(root: Path, project: dict[str, Any]) -> str:
+def _python_constraint(root: Path, project: dict[str, Any], manager: str) -> str:
     declared = project.get("project", {}).get("requires-python")
-    if declared is not None:
+    if declared is None:
+        declared = _ini(root / "setup.cfg").get("options", "python_requires", fallback="")
+    poetry = project.get("tool", {}).get("poetry", {}).get("dependencies", {}).get("python")
+    if manager != "poetry" or poetry is None:
         return str(declared)
-    parser = _ini(root / "setup.cfg")
-    return parser.get("options", "python_requires", fallback="")
+    remedy = (
+        "project_python_constraint_unsupported:tool.poetry.dependencies.python="
+        f"{poetry!r}; express the declaration as an equivalent PEP440 version range"
+    )
+    if not isinstance(poetry, str):
+        raise ProjectRuntimeError(remedy)
+    try:
+        constraint = SpecifierSet(poetry)
+    except InvalidSpecifier as exc:
+        raise ProjectRuntimeError(remedy) from exc
+    return str(SpecifierSet(str(declared)) & constraint)
 
 
 def _test_extras(
@@ -307,16 +321,19 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
             inputs[name] = content_digest(path.read_bytes())
     project = _toml(root / "pyproject.toml")
     hatch = _toml(root / "hatch.toml")
-    requirements = tuple(values["requirements"] if "requirements" in values else _default_requirements(root))
+    selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+    manager = _manager(root, project, hatch, selection)
+    requirements = tuple(values.get("requirements", ()))
     constraints = tuple(values.get("constraints", []))
+    validate_adapter_inputs(manager, requirements, constraints)
+    if manager == "pip" and "requirements" not in values:
+        requirements = tuple(_default_requirements(root))
     for name in sorted(_requirements_inputs(root, requirements + constraints)):
         inputs[name] = content_digest((root / name).read_bytes())
     pytest = _pytest_config(root, project)
     testpaths = pytest.get("testpaths", [])
     for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
         _safe_input(root, testpath)
-    selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
-    manager = _manager(root, project, hatch, selection)
     environment, groups = _selection(project, hatch, selection, manager)
     return ProjectPlan(
         root=root,
@@ -327,7 +344,7 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
         python=values.get(
             "python", (root / ".python-version").read_text().strip() if (root / ".python-version").is_file() else ""
         ),
-        requires_python=_python_constraint(root, project),
+        requires_python=_python_constraint(root, project, manager),
         groups=groups,
         extras=_test_extras(project, selection, manager, groups),
         requirements=requirements,

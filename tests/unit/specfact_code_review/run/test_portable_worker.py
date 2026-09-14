@@ -137,3 +137,57 @@ def test_default_test_discovery_excludes_environment_tests(tmp_path: Path, name:
     (environment / "pyvenv.cfg").write_text("home=/usr/bin\n")
     (environment / "test_app.py").touch()
     assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("test_app.py",)
+
+
+@pytest.mark.parametrize("directory", ["build", "dist", ".cache", "package.egg", "_darcs", "CVS", "venv", "{arch}"])
+def test_default_recursion_exclusions_prevent_false_test_ambiguity(tmp_path: Path, directory: str) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    for name in ("tests", directory):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "test_app.py").touch()
+    assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("tests/test_app.py",)
+
+
+@pytest.mark.parametrize(
+    "patterns", [["generated"], "generated", ["fixtures/generated"], "fixtures/generated", ["fixtures/*"]]
+)
+def test_custom_recursion_exclusions_replace_pytest_defaults(tmp_path: Path, patterns: object) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    for name in ("build", "fixtures/generated"):
+        (tmp_path / name).mkdir(parents=True)
+        (tmp_path / name / "test_app.py").touch()
+    plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"norecursedirs": patterns})
+    assert select_test_paths(plan, [source], full=False) == ("build/test_app.py",)
+
+
+@pytest.mark.parametrize("patterns", [[], ""])
+def test_empty_recursion_exclusions_enable_default_excluded_directory(tmp_path: Path, patterns: object) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    (tmp_path / "build").mkdir()
+    (tmp_path / "build/test_app.py").touch()
+    plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"norecursedirs": patterns})
+    assert select_test_paths(plan, [source], full=False) == ("build/test_app.py",)
+
+
+def test_explicit_test_root_is_not_pruned_by_recursion_defaults(tmp_path: Path) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    (tmp_path / "build").mkdir()
+    (tmp_path / "build/test_app.py").touch()
+    plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"testpaths": ["build"]})
+    assert select_test_paths(plan, [source], full=False) == ("build/test_app.py",)
+
+
+@pytest.mark.parametrize("absolute", [True, False])
+def test_recursion_exclusions_support_absolute_and_quoted_directory_names(tmp_path: Path, absolute: bool) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    for name in ("tests", "generated cache"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "test_app.py").touch()
+    patterns = [str(tmp_path / "generated cache")] if absolute else '"generated cache"'
+    plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"norecursedirs": patterns})
+    assert select_test_paths(plan, [source], full=False) == ("tests/test_app.py",)
