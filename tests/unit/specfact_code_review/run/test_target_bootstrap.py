@@ -459,6 +459,7 @@ def _probe_member_dispatch(paths: dict[str, Path], module: str, operation: str) 
     observer = builtin / "specfact_code_review/run/target_pytest.py"
     observer.parent.mkdir(parents=True)
     observer.write_text('print("VERIFIED_DISPATCH")\n')
+    observer.with_name("target_pylint.py").write_text("import pylint\n")
     (paths["ANALYZERS"] / "pylint.py").write_text('print("VERIFIED_DISPATCH")\n')
     (paths["SNAPSHOT"] / "counterfeit.py").write_text('print("COUNTERFEIT_DISPATCH")\n')
     descriptor_path = paths["PROJECT"] / "project-runtime.json"

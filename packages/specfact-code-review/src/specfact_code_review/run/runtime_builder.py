@@ -222,6 +222,7 @@ def prepare_runtime(
                     "target_bootstrap.py",
                     "target_launch.py",
                     "target_pytest.py",
+                    "target_pylint.py",
                     "sitecustomize.py",
                 )
             },

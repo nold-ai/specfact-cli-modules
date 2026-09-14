@@ -60,6 +60,23 @@
       "paths": [
         "src/poetry/utils/extras.py",
         "tests/utils/test_extras.py"
+      ],
+      "verified_imports": [
+        {
+          "file": "tests/utils/test_extras.py",
+          "line": 7,
+          "module": "poetry.core.packages.package"
+        },
+        {
+          "file": "tests/utils/test_extras.py",
+          "line": 9,
+          "module": "poetry.factory"
+        },
+        {
+          "file": "tests/utils/test_extras.py",
+          "line": 10,
+          "module": "poetry.utils.extras"
+        }
       ]
     }
   ],

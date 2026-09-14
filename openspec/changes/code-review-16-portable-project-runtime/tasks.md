@@ -19,10 +19,15 @@
 - [ ] 3.3 Record actual test inventory, analyzer completeness, identities, source immutability, timing and bytes.
 
 ## 4. Gates and delivery
-- [ ] 4.1 Run format, type-check, lint, yaml-lint, check-bundle-imports, contract/smart/full tests and Requirements evidence.
-- [ ] 4.2 Run fresh SpecFact review with --bug-hunt; fix all actionable findings and strict OpenSpec failures.
+- [x] 4.1 Run format, type-check, lint, yaml-lint, check-bundle-imports, contract/smart/full tests and Requirements evidence.
+- [x] 4.2 Run fresh SpecFact review with --bug-hunt; fix all actionable findings and strict OpenSpec failures.
 - [ ] 4.3 Bump minor version, sign immutable changed assets and update registry through canonical tooling.
 - [ ] 4.4 Open PR to dev, fix incoming review findings, and complete protected merge/release integration.
 - [ ] 4.5 Repeat public signed installation corpus; validate original customer reproduction before closing #472.
 - [ ] 4.6 Close accepted story and archive via openspec archive after merge and acceptance.
 - [ ] 4.7 Reconcile paired-core generated command documentation and registration scenarios against the final signed module revision; preserve independent Requirements fixture authority and record exact command/option parity evidence.
+
+## Native corpus namespace finding follow-up
+- [x] Specify verified Pylint fallback source roots and native configuration precedence.
+- [x] Record real namespace-shadowing RED, implement fallback defaults, and pass focused regression/dispatch tests.
+- [ ] Confirm corrected Poetry import findings through the Linux signed candidate and public release corpus.

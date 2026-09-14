@@ -196,3 +196,46 @@ def test_alias_cannot_import_actual_custom_named_environment(tmp_path: Path) -> 
     (source / "alias.txt").symlink_to("custom-python/private.txt")
     with pytest.raises(ProjectRuntimeError, match="symlink_excluded"):
         copy_project(source, tmp_path / "copy", include_vcs=False)
+
+
+def test_pylint_dispatcher_change_invalidates_offline_runtime_reuse(tmp_path: Path, monkeypatch) -> None:
+    helpers = tmp_path / "helpers"
+    helpers.mkdir()
+    for helper in Path(runtime_builder.__file__).parent.glob("*.py"):
+        (helpers / helper.name).write_bytes(helper.read_bytes())
+    lock = Path("resources/contracts/pr-range-v1-toolchain-lock.json")
+    (tmp_path / lock).parent.mkdir(parents=True)
+    (tmp_path / lock).write_bytes((Path(runtime_builder.__file__).parents[1] / lock).read_bytes())
+    monkeypatch.setattr(runtime_builder, "__file__", str(helpers / "runtime_builder.py"))
+    monkeypatch.setattr(runtime_builder, "git_identity", lambda: "fixed-git-identity")
+    plan = ProjectPlan(tmp_path, manager="pip")
+    runtime = SimpleNamespace(environment_id="linux-x86_64-cp312", identity="sha256:" + "a" * 64)
+    cache = tmp_path / "cache"
+    identities = []
+    digest = runtime_builder.document_digest
+
+    def record_identity(values):
+        identities.append(values)
+        return digest(values)
+
+    monkeypatch.setattr(runtime_builder, "document_digest", record_identity)
+    with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
+        prepare_runtime(plan, runtime=runtime, cache_root=cache, offline=True)
+    cached_path = cache / digest(identities[-1])[7:]
+    cached_path.mkdir()
+    loaded = []
+
+    def load_cached(path, **_kwargs):
+        loaded.append(path)
+        return SimpleNamespace(descriptor={"project_identity": plan.identity})
+
+    monkeypatch.setattr(runtime_builder, "load_runtime", load_cached)
+    prepare_runtime(plan, runtime=runtime, cache_root=cache, offline=True)
+    helper = helpers / "target_pylint.py"
+    helper.write_bytes(helper.read_bytes() + b"\n# changed dispatcher fixture\n")
+    with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
+        prepare_runtime(plan, runtime=runtime, cache_root=cache, offline=True)
+    assert loaded == [cached_path / "project-runtime.json"]
+    assert identities[0] == identities[1]
+    assert identities[2]["builder"]["target_pylint.py"] == runtime_builder.content_digest(helper.read_bytes())
+    assert digest(identities[2]) != digest(identities[0])

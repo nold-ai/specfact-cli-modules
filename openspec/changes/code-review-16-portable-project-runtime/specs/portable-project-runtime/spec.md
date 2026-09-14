@@ -519,3 +519,31 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **AND** an observed failure outside the call phase SHALL NOT by itself prove that the test body executed
 - **AND** failures during a completed call or its subsequent teardown SHALL retain genuine failure evidence without incorrectly claiming that the observed call never ran
 - **AND** intentional pytest skips SHALL remain visible and preserve existing selection semantics
+
+### Requirement: Pylint preserves attached namespace source roots
+
+The portable Pylint worker SHALL use already verified snapshot import paths as fallback source roots before native Pylint configuration parsing. It SHALL NOT infer import roots merely from analyzed file locations, add undeclared raw source over an installed package, or suppress missing-import diagnostics.
+
+#### Scenario: Editable namespace contains a same-name leaf module
+- **GIVEN** an attached editable runtime or explicit runtime source root exposes an implicit namespace package containing a same-name leaf module
+- **WHEN** Pylint analyzes source and tests together
+- **THEN** Pylint SHALL resolve imports using the verified namespace source root instead of treating the leaf module as the namespace
+- **AND** genuinely unavailable imports SHALL retain their findings
+
+#### Scenario: Native Pylint configuration overrides fallback roots
+- **GIVEN** verified runtime roots and explicit Pylint source-roots configuration exist
+- **WHEN** the worker initializes Pylint
+- **THEN** native repository configuration selection and CLI precedence SHALL override the fallback, including an explicitly empty source-roots value
+- **AND** a built package without a declared snapshot import root or editable hook SHALL NOT acquire a raw source overlay
+
+#### Scenario: Corpus rejects known namespace import misresolution
+- **GIVEN** the pinned Poetry corpus manifest identifies independently verified import statements
+- **WHEN** either cold automatic review or warm descriptor attachment reports Pylint E0401/E0611 at one of those statements
+- **THEN** corpus acceptance SHALL fail even when all analyzer members ran
+- **AND** unrelated findings SHALL remain permitted and retained in the report
+
+#### Scenario: Pylint dispatcher changes invalidate runtime reuse
+- **GIVEN** a cached runtime with unchanged project inputs and signed worker identity
+- **WHEN** only the trusted Pylint dispatcher implementation changes
+- **THEN** its content digest SHALL change the builder cache identity and offline preparation SHALL report a cache miss
+- **AND** unchanged dispatcher bytes SHALL retain warm cache reuse

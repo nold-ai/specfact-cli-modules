@@ -211,3 +211,48 @@ requirements:
       intent: Allow localhost plugin coordination while external networking remains disabled.
       observable: Focused regression assertions and actual Linux corpus execution must pass; local component results
         do not confer signed release acceptance.
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:pylint-preserves-attached-namespace-source-roots:
+    rationale: Attached editable namespace imports must not be shadowed by Pylint's legacy file-root discovery.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: namespace-source-root-dispatch
+      kind: config_file
+      locator: packages/specfact-code-review/src/specfact_code_review/run/target_pylint.py
+    verification_cases:
+    - case_id: 473-8-1
+      scenario_id: pylint-preserves-attached-namespace-source-roots
+      method: test
+      intent: Run real Pylint against editable, declared and overlapping namespace import roots with a same-name leaf.
+      observable: test_attached_namespace_root_prevents_leaf_shadowing passes its three parameter cases.
+    - case_id: 473-8-2
+      scenario_id: pylint-preserves-attached-namespace-source-roots
+      method: test
+      intent: Preserve actual missing imports after correcting namespace source roots.
+      observable: test_missing_import_is_preserved_with_attached_roots retains exactly the genuine E0401 finding.
+    - case_id: 473-8-3
+      scenario_id: pylint-preserves-attached-namespace-source-roots
+      method: test
+      intent: Keep native repository and command-line source-roots precedence, including an explicit empty value.
+      observable: test_native_config_overrides_runtime_fallback and test_native_cli_overrides_repository_roots pass.
+    - case_id: 473-8-4
+      scenario_id: pylint-preserves-attached-namespace-source-roots
+      method: test
+      intent: Avoid unconfigured source overlays and preserve ordinary Pylint multiprocessing serialization.
+      observable: test_built_runtime_does_not_infer_raw_source_root and test_parallel_pylint_retains_runtime_roots pass.
+    - case_id: 473-8-5
+      scenario_id: pylint-preserves-attached-namespace-source-roots
+      method: test
+      intent: Reject E0401/E0611 at all three verified Poetry import statements in cold and warm acceptance.
+      observable: test_poetry_corpus_rejects_known_import_misresolution rejects all twelve phase/location/rule cases.
+    - case_id: 473-8-6
+      scenario_id: pylint-preserves-attached-namespace-source-roots
+      method: test
+      intent: Preserve unrelated upstream findings rather than imposing zero findings on untouched projects.
+      observable: test_poetry_corpus_preserves_unrelated_findings accepts other files, lines and diagnostic classes.
+    - case_id: 473-8-7
+      scenario_id: pylint-preserves-attached-namespace-source-roots
+      method: test
+      intent: Invalidate cached runtime identity when only the trusted Pylint dispatcher changes.
+      observable: test_pylint_dispatcher_change_invalidates_offline_runtime_reuse preserves unchanged reuse and rejects changed bytes.

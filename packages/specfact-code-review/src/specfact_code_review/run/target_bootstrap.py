@@ -244,6 +244,8 @@ def main() -> None:
         os.execve(command[0], command, environment)
     run_module, run_path = runpy.run_module, runpy.run_path
     observer_path = str(BUILTIN / "specfact_code_review/run/target_pytest.py")
+    pylint_path = str(BUILTIN / "specfact_code_review/run/target_pylint.py")
+    snapshot_root = SNAPSHOT
     try:
         _configure_runtime(module)
     except (RuntimeError, ImportError) as exc:
@@ -251,6 +253,8 @@ def main() -> None:
         raise SystemExit(78) from exc
     if module == "pytest-observe":
         run_path(observer_path, run_name="__main__")
+    elif module == "pylint":
+        run_path(pylint_path, init_globals={"SNAPSHOT_ROOT": snapshot_root}, run_name="__main__")
     else:
         run_module(module, run_name="__main__", alter_sys=True)
 

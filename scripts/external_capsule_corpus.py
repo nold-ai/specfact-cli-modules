@@ -386,6 +386,19 @@ def controlled_defect(root: Path, evidence: Path, config: Path, workspace: Path)
         raise ValueError("controlled type defect was not detected")
 
 
+def _assert_verified_imports(report: dict[str, Any], entry: dict[str, Any]) -> None:
+    """Reject known namespace regressions without requiring unrelated findings to vanish."""
+    expected = {(row["file"], row["line"]) for row in entry.get("verified_imports", [])}
+    for finding in report.get("findings", []):
+        path = finding.get("file", "").removeprefix("/opt/specfact/snapshot/").removeprefix("./")
+        if (
+            finding.get("tool") == "pylint"
+            and finding.get("rule") in {"E0401", "E0611"}
+            and (path, finding.get("line")) in expected
+        ):
+            raise ValueError(f"external capsule misresolved verified import at {path}:{finding['line']}")
+
+
 def run_entry(entry: dict[str, Any], workspace: Path) -> None:
     evidence = workspace / "evidence" / entry["name"]
     root = workspace / "checkouts" / entry["name"]
@@ -407,7 +420,7 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
         name="inspect",
     )
     # Cold run exercises automatic preparation; the offline call must reuse it.
-    review(root, evidence, config, entry["paths"])
+    _assert_verified_imports(review(root, evidence, config, entry["paths"]), entry)
     raw = execute(
         ["specfact", "code", "review", "runtime", "prepare", "--project-config", str(config), "--offline", "--json"],
         cwd=root,
@@ -422,7 +435,7 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
         json.dumps({"artifact_bytes": sum(p.stat().st_size for p in descriptor.parent.rglob("*") if p.is_file())}),
         encoding="utf-8",
     )
-    review(root, evidence, config, entry["paths"], descriptor=str(descriptor))
+    _assert_verified_imports(review(root, evidence, config, entry["paths"], descriptor=str(descriptor)), entry)
     controlled_defect(root, evidence, config, workspace)
     if tracked_identity(root) != before:
         raise ValueError("capsule modified upstream source or environment inputs")

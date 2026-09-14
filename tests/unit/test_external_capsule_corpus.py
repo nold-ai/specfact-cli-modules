@@ -227,3 +227,47 @@ def test_offline_provisioning_avoids_writable_hosted_runner_ancestor(monkeypatch
     monkeypatch.setattr(module.os, "access", lambda *_args: True)
     launcher = module.OFFLINE_ROOT / "bwrap"
     assert module._verified_offline_launcher(str(launcher)) == launcher
+
+
+def _run_poetry_import_guard(tmp_path: Path, monkeypatch, phase: str, finding: dict) -> None:
+    module = _load()
+    entry = next(row for row in json.loads(module.MANIFEST.read_text())["repositories"] if row["name"] == "poetry")
+    evidence = tmp_path / "evidence/poetry"
+    evidence.mkdir(parents=True)
+    descriptor = tmp_path / "runtime/project-runtime.json"
+    descriptor.parent.mkdir()
+    descriptor.write_text("{}")
+    monkeypatch.setattr(module, "checkout", lambda *_args: None)
+    monkeypatch.setattr(module, "tracked_identity", lambda *_args: "unchanged")
+    monkeypatch.setattr(module, "host_test", lambda *_args: None)
+    monkeypatch.setattr(module, "controlled_defect", lambda *_args: None)
+    monkeypatch.setattr(module, "execute", lambda *_args, **_kwargs: json.dumps({"descriptor": str(descriptor)}))
+
+    def review(*_args, **kwargs):
+        actual_phase = "warm" if "descriptor" in kwargs else "cold"
+        return {"findings": [finding] if actual_phase == phase else []}
+
+    monkeypatch.setattr(module, "review", review)
+    module.run_entry(entry, tmp_path)
+
+
+@pytest.mark.parametrize("phase", ["cold", "warm"])
+@pytest.mark.parametrize("line", [7, 9, 10])
+@pytest.mark.parametrize("rule", ["E0401", "E0611"])
+def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+    finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+    with pytest.raises(ValueError, match="verified import"):
+        _run_poetry_import_guard(tmp_path, monkeypatch, phase, finding)
+
+
+@pytest.mark.parametrize(
+    "finding",
+    [
+        {"tool": "pylint", "rule": "E0401", "file": "tests/other.py", "line": 7},
+        {"tool": "pylint", "rule": "E0401", "file": "tests/utils/test_extras.py", "line": 20},
+        {"tool": "pylint", "rule": "W0611", "file": "tests/utils/test_extras.py", "line": 7},
+    ],
+)
+def test_poetry_corpus_preserves_unrelated_findings(tmp_path: Path, monkeypatch, finding) -> None:
+    _run_poetry_import_guard(tmp_path, monkeypatch, "cold", finding)
+    assert json.loads((tmp_path / "evidence/poetry/acceptance.json").read_text())["status"] == "PASS"
