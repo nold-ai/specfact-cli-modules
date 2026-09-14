@@ -5,11 +5,13 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from specfact_code_review.run import target_pytest
+from specfact_code_review.run import portable_worker, target_pytest
 from specfact_code_review.run.portable_worker import select_test_paths, validate_observation
+from specfact_code_review.run.runner import _capsule_member_response
 from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
@@ -136,3 +138,85 @@ def test_native_fallback_preserves_failure_and_empty_execution(tmp_path: Path, h
         assert observation["exit_code"] == 5, output
         with pytest.raises(ProjectRuntimeError, match="execution_incomplete"):
             validate_observation(observation, 5)
+
+
+def _parse_recorded_observation(tmp_path: Path, observation: dict, monkeypatch) -> list:
+    output = tmp_path / "adapter-observation.json"
+    monkeypatch.setattr(
+        portable_worker,
+        "Path",
+        lambda value: output if value == "/opt/specfact/tmp/pytest-observation.json" else Path(value),
+    )
+    monkeypatch.setattr(portable_worker, "target_command", lambda *_args: ["recorded-worker"])
+
+    def recorded_worker(*_args, **_kwargs):
+        output.write_text(json.dumps(observation))
+        return SimpleNamespace(returncode=observation["exit_code"])
+
+    monkeypatch.setattr(portable_worker.subprocess, "run", recorded_worker)
+    return portable_worker.run_portable_pytest([tmp_path / "test_case.py"], ("portable-pytest-v2", "{}"))
+
+
+def _assert_incomplete_setup(response: dict, findings: list) -> None:
+    assert response["execution_state"] == "error"
+    assert response["evidence_outcome"] == "UNKNOWN"
+    diagnostic = next(finding.message for finding in findings if finding.category == "tool_error")
+    assert "project_pytest_unexecuted:test_case.py::test_affected" in diagnostic
+    assert "fixture setup" in diagnostic
+
+
+def _assert_phase_failure_evidence(findings: list, phase: str) -> None:
+    failures = [finding.message for finding in findings if finding.rule == "TEST_OUTCOME_NOT_PASS"]
+    assert failures == [f"Test test_case.py::test_affected failed during {phase}."]
+    response = _capsule_member_response("targeted-pytest-coverage", findings)
+    if phase == "setup":
+        _assert_incomplete_setup(response, findings)
+    else:
+        assert response["execution_state"] == "ran"
+        assert response["evidence_outcome"] == "FAIL"
+        assert not any(finding.category == "tool_error" for finding in findings)
+
+
+@pytest.mark.parametrize("phase", ["setup", "call", "teardown"])
+def test_mixed_phase_failures_preserve_actual_body_execution(tmp_path: Path, monkeypatch, phase: str) -> None:
+    effects = {
+        "setup": "    raise RuntimeError('controlled setup failure')\n    yield\n",
+        "call": "    yield\n",
+        "teardown": "    yield\n    raise RuntimeError('controlled teardown failure')\n",
+    }
+    body = "assert False" if phase == "call" else "assert True"
+    (tmp_path / "pytest.ini").write_text("[pytest]\n")
+    (tmp_path / "test_case.py").write_text(
+        "import pytest\n"
+        "@pytest.fixture\n"
+        "def fixture_effect():\n"
+        f"{effects[phase]}"
+        f"def test_affected(fixture_effect): {body}\n"
+        "def test_healthy(): assert True\n"
+    )
+    observation, output = _observe_discovery(tmp_path, tmp_path / "phases.json", ("test_case.py",))
+    assert observation["exit_code"] == 1, output
+    executed = {row["nodeid"] for row in observation["records"] if row["phase"] == "call"}
+    assert "test_case.py::test_healthy" in executed
+    assert ("test_case.py::test_affected" in executed) == (phase != "setup")
+    findings = _parse_recorded_observation(tmp_path, observation, monkeypatch)
+    _assert_phase_failure_evidence(findings, phase)
+
+
+@pytest.mark.parametrize("outcome", ["skip", "xfail"])
+def test_intentional_setup_outcomes_retain_existing_policy(tmp_path: Path, outcome: str) -> None:
+    (tmp_path / "pytest.ini").write_text("[pytest]\n")
+    (tmp_path / "test_case.py").write_text(
+        "import pytest\n"
+        "@pytest.fixture\n"
+        f"def fixture_outcome(): pytest.{outcome}('intentional setup outcome')\n"
+        "def test_affected(fixture_outcome): assert False\n"
+        "def test_healthy(): assert True\n"
+    )
+    observation, output = _observe_discovery(tmp_path, tmp_path / "outcomes.json", ("test_case.py",))
+    assert observation["exit_code"] == 0, output
+    assert any(
+        row["nodeid"] == "test_case.py::test_affected" and row["phase"] == "setup" and row["outcome"] == "skipped"
+        for row in observation["records"]
+    )
+    validate_observation(observation, 0)

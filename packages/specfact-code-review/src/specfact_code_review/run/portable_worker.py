@@ -134,13 +134,15 @@ def validate_observation(observation: dict[str, Any], exit_code: int) -> None:
     records = observation["records"]
     collected = set(observation["collected"])
     executed = {row["nodeid"] for row in records if row["phase"] == "call"}
-    terminal = executed | {row["nodeid"] for row in records if row["outcome"] in {"failed", "skipped"}}
+    terminal = executed | {row["nodeid"] for row in records if row["outcome"] == "skipped"}
     if observation["exit_code"] != exit_code or not collected or not executed:
         raise ProjectRuntimeError(
             f"project_pytest_execution_incomplete:exit={exit_code}; check collection/selection options"
         )
     if missing := collected - terminal:
-        raise ProjectRuntimeError(f"project_pytest_unexecuted:{','.join(sorted(missing))}; check -x/--maxfail options")
+        raise ProjectRuntimeError(
+            f"project_pytest_unexecuted:{','.join(sorted(missing))}; check fixture setup and -x/--maxfail options"
+        )
     if exit_code not in {0, 1}:
         raise ProjectRuntimeError(f"project_pytest_configuration_or_collection_failed:exit={exit_code}")
     if not observation.get("coverage", {}).get("files"):

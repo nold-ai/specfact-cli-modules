@@ -510,3 +510,12 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **AND** pytest's own configured path expansion, warnings and fallback when configured paths are absent, and positional selections in configured options SHALL remain effective
 - **AND** explicit-file, mixed source/test, source-only, index and range review selections SHALL retain their existing explicit selection behavior
 - **AND** required collection, execution and coverage evidence SHALL remain enforced; an empty selector list for native discovery SHALL NOT itself count as successful test execution
+
+#### Scenario: Setup failures retain incomplete test-body execution
+
+- **GIVEN** selected pytest tests include one setup failure and another test whose call phase executes
+- **WHEN** the capsule evaluates the observed test phases
+- **THEN** it SHALL retain the genuine setup failure finding and mark the missing test-body execution incomplete
+- **AND** an observed failure outside the call phase SHALL NOT by itself prove that the test body executed
+- **AND** failures during a completed call or its subsequent teardown SHALL retain genuine failure evidence without incorrectly claiming that the observed call never ran
+- **AND** intentional pytest skips SHALL remain visible and preserve existing selection semantics
