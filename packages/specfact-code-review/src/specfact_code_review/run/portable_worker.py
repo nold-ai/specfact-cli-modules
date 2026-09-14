@@ -79,13 +79,14 @@ def _test_candidates(plan: ProjectPlan, roots: tuple[str, ...], patterns: tuple[
     }
 
 
-@ensure(lambda result: bool(result) and len(result) == len(set(result)))
+@ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
 def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
     """Select real native test paths without rewriting the customer's pytest policy."""
+    if full:
+        # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+        return ()
     roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
     patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
-    if full:
-        return roots
     candidates = _test_candidates(plan, roots, patterns)
     selected = set()
     for path in files:

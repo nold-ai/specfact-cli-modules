@@ -501,3 +501,12 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **AND** this protection SHALL describe a startup-integrity boundary, not a general sandbox against arbitrary code sharing the analyzer interpreter
 
 - **AND** startup-integrity failures SHALL use a reserved non-analysis exit status, and analyzer result parsing SHALL retain that failure even when a startup hook writes valid analyzer-shaped JSON to stdout
+
+#### Scenario: Full reviews use native pytest discovery
+
+- **GIVEN** a full project review without explicit test selectors
+- **WHEN** the target worker starts pytest
+- **THEN** it SHALL delegate collection roots to pytest without converting configured `testpaths` or the repository root into positional selectors
+- **AND** pytest's own configured path expansion, warnings and fallback when configured paths are absent, and positional selections in configured options SHALL remain effective
+- **AND** explicit-file, mixed source/test, source-only, index and range review selections SHALL retain their existing explicit selection behavior
+- **AND** required collection, execution and coverage evidence SHALL remain enforced; an empty selector list for native discovery SHALL NOT itself count as successful test execution

@@ -123,7 +123,7 @@ def test_pytest_native_default_root_is_preserved(tmp_path: Path, configuration: 
     source.touch()
     (tmp_path / "test_app.py").touch()
     plan = ProjectPlan(tmp_path, manager="pip", pytest_config=configuration)
-    assert select_test_paths(plan, [source], full=True) == (".",)
+    assert not select_test_paths(plan, [source], full=True)
     assert select_test_paths(plan, [source], full=False) == ("test_app.py",)
 
 
@@ -213,7 +213,7 @@ def test_quoted_pytest_paths_match_native_configuration(tmp_path: Path, monkeypa
     try:
         plan = discover_project(tmp_path)
         assert plan.source_roots == tuple(path.relative_to(tmp_path).as_posix() for path in native.getini("pythonpath"))
-        assert select_test_paths(plan, [source], full=True) == tuple(native.getini("testpaths"))
+        assert not select_test_paths(plan, [source], full=True)
         assert select_test_paths(plan, [source], full=False) == (selected.relative_to(tmp_path).as_posix(),)
         assert select_test_paths(plan, [selected], full=False) == (selected.relative_to(tmp_path).as_posix(),)
     finally:
