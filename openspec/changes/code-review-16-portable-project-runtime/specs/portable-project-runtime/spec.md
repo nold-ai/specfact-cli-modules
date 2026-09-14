@@ -241,3 +241,8 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **GIVEN** an untouched upstream review and a disposable copy with injected defects
 - **WHEN** the corpus analyzes both
 - **THEN** their reports have distinct artifact names and the controlled report proves actual failing tests and static detection
+
+#### Scenario: Offline wrapper preserves ordinary process devices
+- **GIVEN** warm validation runs inside a non-root user and network namespace
+- **WHEN** the customer CLI or Git opens /dev/null
+- **THEN** a private device filesystem supports ordinary subprocess execution without exposing host devices or external networking

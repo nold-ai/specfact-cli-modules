@@ -109,6 +109,8 @@ def offline_command(argv: list[str]) -> list[str]:
         "--bind",
         "/",
         "/",
+        "--dev",
+        "/dev",
         "--die-with-parent",
         "--",
         sys.executable,

@@ -1,0 +1,11 @@
+2026-09-14, local Ubuntu 24.04 x86-64 component host, UID 1001.
+Before the wrapper correction, the strengthened offline wrapper used --bind / / without a private /dev.
+
+Command:
+bwrap --unshare-user --unshare-net --uid 1001 --gid 1001 --bind / / -- git --version
+Observed stderr:
+fatal: could not open '/dev/null' for reading and writing: Permission denied
+
+The same host outside the wrapper returned git version 2.43.0.
+The component preparation command inside the wrapper reported core_installed_module_handoff_unavailable. Unwrapped diagnostic inspection traced it to GitPython's Bad git executable ImportError, not dependency resolution or a missing signed module.
+This is failing-before harness evidence, not a capsule acceptance result.
