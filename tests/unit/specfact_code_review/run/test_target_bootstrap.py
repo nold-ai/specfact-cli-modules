@@ -452,3 +452,121 @@ def test_native_pytest_adds_flat_test_module_root_without_runtime_override(tmp_p
     for capsule in (False, True):
         result = _run_origin_pytest(paths, capsule=capsule, import_mode="prepend", selection="test_flat.py")
         assert result.returncode == 0, result.stdout + result.stderr
+
+
+def _probe_member_dispatch(paths: dict[str, Path], module: str, operation: str) -> subprocess.CompletedProcess[str]:
+    builtin = paths["SNAPSHOT"] / "builtin"
+    observer = builtin / "specfact_code_review/run/target_pytest.py"
+    observer.parent.mkdir(parents=True)
+    observer.write_text('print("VERIFIED_DISPATCH")\n')
+    (paths["ANALYZERS"] / "pylint.py").write_text('print("VERIFIED_DISPATCH")\n')
+    (paths["SNAPSHOT"] / "counterfeit.py").write_text('print("COUNTERFEIT_DISPATCH")\n')
+    descriptor_path = paths["PROJECT"] / "project-runtime.json"
+    descriptor = json.loads(descriptor_path.read_text())
+    descriptor["inventory"]["member_graphs"]["pytest-observe"] = {"sealed_imports": [], "installed": []}
+    descriptor_path.write_text(json.dumps(descriptor))
+    (paths["PROJECT"] / "site-packages/dispatch.pth").write_text(
+        f"import sys, runpy, pkgutil, io, builtins, importlib.util; {operation}\n"
+    )
+    script = f"""
+import runpy, sys
+from pathlib import Path
+bootstrap = runpy.run_path({str(Path(target_bootstrap.__file__))!r})
+bootstrap['main'].__globals__.update({", ".join(f"{key}=Path({str(value)!r})" for key, value in paths.items())},
+    BUILTIN=Path({str(builtin)!r}))
+sys.argv[:] = ['target_bootstrap.py', {module!r}]
+bootstrap['main']()
+"""
+    return subprocess.run(
+        [sys.executable, "-I", "-S", "-c", script], cwd=paths["SNAPSHOT"], capture_output=True, text=True, check=False
+    )
+
+
+@pytest.mark.parametrize(
+    "module,operation",
+    [
+        ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+        ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+        ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+        ("pylint", "runpy._run_code.__globals__['exec'] = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+        ("pylint", "runpy._TempModule.__enter__ = lambda *a: None"),
+        ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+        ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+        (
+            "pytest-observe",
+            "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')",
+        ),
+        (
+            "pytest-observe",
+            "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')",
+        ),
+        ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+        (
+            "pylint",
+            "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')",
+        ),
+        (
+            "pylint",
+            "importlib.machinery.SourceFileLoader.get_code = lambda *a: "
+            "compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')",
+        ),
+        ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+        (
+            "pytest-observe",
+            "next(entry for entry in sys.meta_path if hasattr(entry, 'names'))"
+            ".find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')",
+        ),
+    ],
+)
+def test_executable_pth_cannot_substitute_analyzer_dispatch(
+    collision_runtime: dict[str, Path], module: str, operation: str
+) -> None:
+    completed = _probe_member_dispatch(collision_runtime, module, operation)
+    assert completed.returncode != 0, completed.stdout
+    assert "project_worker_startup_import_state_changed" in completed.stderr
+    assert "VERIFIED_DISPATCH" not in completed.stdout
+
+
+@pytest.mark.parametrize("module", ["pylint", "pytest-observe"])
+def test_additive_startup_hooks_preserve_verified_member_dispatch(
+    collision_runtime: dict[str, Path], module: str
+) -> None:
+    editable = collision_runtime["SNAPSHOT"] / "editable"
+    editable.mkdir()
+    completed = _probe_member_dispatch(collision_runtime, module, f"sys.path.append({str(editable)!r})")
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout == "VERIFIED_DISPATCH\n"
+
+
+@pytest.mark.parametrize("module", ["pylint", "pytest-observe"])
+def test_startup_rejection_has_distinct_exit_despite_analyzer_shaped_stdout(
+    collision_runtime: dict[str, Path], module: str
+) -> None:
+    completed = _probe_member_dispatch(collision_runtime, module, "print('[]'); runpy._run_code = lambda *a, **k: None")
+    assert completed.returncode == 78
+    assert completed.stdout == "[]\n"
+    assert "project_worker_startup_import_state_changed" in completed.stderr
+
+
+def test_preloaded_analyzer_origin_failure_uses_startup_exit(collision_runtime: dict[str, Path]) -> None:
+    operation = (
+        "spec = importlib.util.spec_from_file_location('packaging', 'packaging.py'); "
+        "module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
+        "sys.modules['packaging'] = module; print('[]')"
+    )
+    completed = _probe_member_dispatch(collision_runtime, "pylint", operation)
+    assert completed.returncode == 78
+    assert completed.stdout == "[]\n"
+    assert "project_worker_analyzer_origin_mismatch:packaging" in completed.stderr
+
+
+@pytest.mark.parametrize("owner", ["SourceFileLoader", "SourceFileLoader.__mro__[1]"])
+def test_loader_filename_substitution_cannot_redirect_verified_dispatch(
+    collision_runtime: dict[str, Path], owner: str
+) -> None:
+    operation = f"importlib.machinery.{owner}.get_filename = lambda self, fullname=None: 'counterfeit.py'"
+    completed = _probe_member_dispatch(collision_runtime, "pylint", operation)
+    assert completed.returncode == 78, completed.stdout + completed.stderr
+    assert "project_worker_startup_import_state_changed" in completed.stderr
+    assert "VERIFIED_DISPATCH" not in completed.stdout
+    assert "COUNTERFEIT_DISPATCH" not in completed.stdout

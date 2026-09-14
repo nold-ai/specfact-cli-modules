@@ -5,13 +5,17 @@ from __future__ import annotations
 import builtins
 import importlib.machinery
 import importlib.metadata
+import importlib.util
+import io
 import json
 import os
+import pkgutil
 import re
 import runpy
 import site
 import sys
 import sysconfig
+from collections.abc import Mapping
 from pathlib import Path
 
 
@@ -89,6 +93,45 @@ def _stdlib_paths() -> list[str]:
     return [path for path in sys.path if path and Path(path) in allowed]
 
 
+def _dispatch_callable_state(value) -> tuple:
+    """Detect replacement and in-place changes to dispatch function implementations."""
+    return (
+        id(value),
+        getattr(value, "__code__", None),
+        getattr(value, "__defaults__", None),
+        tuple(sorted((getattr(value, "__kwdefaults__", None) or {}).items())),
+    )
+
+
+def _dispatch_namespace_state(namespace: Mapping[str, object]) -> tuple:
+    """Retain each namespace member's identity and callable implementation."""
+    return tuple((name, _dispatch_callable_state(value)) for name, value in namespace.items())
+
+
+def _protected_dispatch_state() -> tuple:
+    """Bind runpy's dispatch namespace and the code-loading primitives it consumes."""
+    namespace = _dispatch_namespace_state(vars(runpy))
+    classes = (
+        importlib.machinery.SourceFileLoader,
+        importlib.machinery.SourcelessFileLoader,
+        *(value for value in vars(runpy).values() if isinstance(value, type)),
+    )
+    class_state = tuple((id(base), _dispatch_namespace_state(vars(base))) for cls in classes for base in cls.__mro__)
+    primitives = (
+        builtins.exec,
+        builtins.compile,
+        io.open_code,
+        importlib.util.find_spec,
+        importlib.util.find_spec.__globals__.get("_find_spec"),
+        pkgutil.get_importer,
+        pkgutil.read_code,
+        os.fsdecode,
+        os.path.abspath,
+    )
+    modules = tuple(id(sys.modules.get(name)) for name in ("runpy", "pkgutil", "io", "importlib.util"))
+    return namespace, class_state, tuple(_dispatch_callable_state(value) for value in primitives), modules
+
+
 def _protected_import_state(finder: AnalyzerFinder) -> tuple:
     """Snapshot the lookup machinery and graph that startup hooks must preserve."""
     return (
@@ -104,6 +147,8 @@ def _protected_import_state(finder: AnalyzerFinder) -> tuple:
         PROJECT.resolve(),
         SNAPSHOT.resolve(),
         ANALYZERS.resolve(),
+        BUILTIN.resolve(),
+        _protected_dispatch_state(),
     )
 
 
@@ -197,11 +242,17 @@ def main() -> None:
         arguments = sys.argv[1:] if module == "python-argv" else [module, *sys.argv[1:]]
         command, environment = _project_python_command(arguments)
         os.execve(command[0], command, environment)
-    _configure_runtime(module)
+    run_module, run_path = runpy.run_module, runpy.run_path
+    observer_path = str(BUILTIN / "specfact_code_review/run/target_pytest.py")
+    try:
+        _configure_runtime(module)
+    except (RuntimeError, ImportError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(78) from exc
     if module == "pytest-observe":
-        runpy.run_path(str(BUILTIN / "specfact_code_review/run/target_pytest.py"), run_name="__main__")
+        run_path(observer_path, run_name="__main__")
     else:
-        runpy.run_module(module, run_name="__main__", alter_sys=True)
+        run_module(module, run_name="__main__", alter_sys=True)
 
 
 if __name__ == "__main__":

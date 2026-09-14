@@ -26,9 +26,21 @@ def _elf_sections(payload: bytes, name: str) -> list[tuple[int, ...]]:
         )
     offset = struct.unpack_from("<Q", payload, 40)[0]
     size, count = struct.unpack_from("<HH", payload, 58)
+    if offset == 0 and count == 0 and size in (0, 64):
+        return []
     if size != 64 or offset + size * count > len(payload):
         raise ProjectRuntimeError(f"project_native_elf_invalid:{name}")
     return [struct.unpack_from("<IIQQQQIIQQ", payload, offset + index * size) for index in range(count)]
+
+
+def _dependency_name(table: bytes, offset: int) -> str:
+    end = table.find(b"\0", offset)
+    if end < 0:
+        raise ProjectRuntimeError("project_native_elf_invalid:unterminated dependency")
+    try:
+        return table[offset:end].decode("ascii")
+    except UnicodeDecodeError as exc:
+        raise ProjectRuntimeError("project_native_elf_invalid:non-ASCII dependency") from exc
 
 
 def _needed_names(payload: bytes, section: tuple[int, ...], sections: list[tuple[int, ...]]) -> list[str]:
@@ -44,21 +56,88 @@ def _needed_names(payload: bytes, section: tuple[int, ...], sections: list[tuple
         tag, value = struct.unpack_from("<QQ", payload, position)
         if tag != 1:
             continue
-        end = table.find(b"\0", value)
-        if end < 0:
-            raise ProjectRuntimeError("project_native_elf_invalid:unterminated dependency")
-        names.append(table[value:end].decode("ascii"))
+        names.append(_dependency_name(table, value))
     return names
+
+
+def _validate_segment_bounds(segment: tuple[int, ...], payload_size: int) -> None:
+    if segment[0] not in (1, 2):  # PT_LOAD, PT_DYNAMIC
+        return
+    start, address, length, memory = segment[2], segment[3], segment[5], segment[6]
+    if start + length > payload_size or length > memory or address + memory > 2**64:
+        raise ProjectRuntimeError("project_native_elf_invalid:program segment bounds")
+
+
+def _elf_segments(payload: bytes) -> list[tuple[int, ...]]:
+    offset = struct.unpack_from("<Q", payload, 32)[0]
+    size, count = struct.unpack_from("<HH", payload, 54)
+    if count == 0:
+        return []
+    if size != 56 or offset < 64 or offset + size * count > len(payload):
+        raise ProjectRuntimeError("project_native_elf_invalid:program header bounds")
+    segments = [struct.unpack_from("<IIQQQQQQ", payload, offset + index * size) for index in range(count)]
+    for segment in segments:
+        _validate_segment_bounds(segment, len(payload))
+    return segments
+
+
+def _dynamic_entries(payload: bytes, segment: tuple[int, ...]) -> list[tuple[int, int]]:
+    start, length = segment[2], segment[5]
+    if length % 16:
+        raise ProjectRuntimeError("project_native_elf_invalid:dynamic segment size")
+    entries = []
+    for position in range(start, start + length, 16):
+        tag, value = struct.unpack_from("<QQ", payload, position)
+        if tag == 0:  # DT_NULL
+            return entries
+        entries.append((tag, value))
+    raise ProjectRuntimeError("project_native_elf_invalid:unterminated dynamic segment")
+
+
+def _dynamic_value(entries: list[tuple[int, int]], requested: int) -> int:
+    values = [value for tag, value in entries if tag == requested]
+    if len(values) != 1:
+        raise ProjectRuntimeError("project_native_elf_invalid:dynamic string table metadata")
+    return values[0]
+
+
+def _segment_string_table(payload: bytes, segments: list[tuple[int, ...]], entries: list[tuple[int, int]]) -> bytes:
+    address = _dynamic_value(entries, 5)  # DT_STRTAB
+    length = _dynamic_value(entries, 10)  # DT_STRSZ
+    offsets = {
+        segment[2] + address - segment[3]
+        for segment in segments
+        if segment[0] == 1 and segment[3] <= address and address + length <= segment[3] + segment[5]
+    }
+    if len(offsets) != 1:
+        raise ProjectRuntimeError("project_native_elf_invalid:dynamic string table mapping")
+    start = offsets.pop()
+    return payload[start : start + length]
+
+
+def _segment_needed_names(payload: bytes) -> list[str]:
+    segments = _elf_segments(payload)
+    dynamic = [segment for segment in segments if segment[0] == 2]
+    if not dynamic:
+        return []
+    if len(dynamic) != 1:
+        raise ProjectRuntimeError("project_native_elf_invalid:multiple dynamic segments")
+    entries = _dynamic_entries(payload, dynamic[0])
+    needed = [value for tag, value in entries if tag == 1]
+    if not needed:
+        return []
+    table = _segment_string_table(payload, segments, entries)
+    return [_dependency_name(table, offset) for offset in needed]
 
 
 @ensure(lambda result: result == tuple(sorted(set(result))))
 def elf_dependencies(path: Path) -> tuple[str, ...]:
-    """Read ELF64 dynamic section DT_NEEDED names, with strict bounds checks."""
+    """Read ELF64 DT_NEEDED names from sections or sectionless program segments."""
     payload = path.read_bytes()
     if not payload.startswith(b"\x7fELF"):
         return ()
     sections = _elf_sections(payload, path.name)
-    names = []
+    names = [] if sections else _segment_needed_names(payload)
     for section in sections:
         if section[1] == 6:  # SHT_DYNAMIC
             names.extend(_needed_names(payload, section, sections))

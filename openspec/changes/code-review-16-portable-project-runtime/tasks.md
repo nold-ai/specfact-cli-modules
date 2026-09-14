@@ -25,3 +25,4 @@
 - [ ] 4.4 Open PR to dev, fix incoming review findings, and complete protected merge/release integration.
 - [ ] 4.5 Repeat public signed installation corpus; validate original customer reproduction before closing #472.
 - [ ] 4.6 Close accepted story and archive via openspec archive after merge and acceptance.
+- [ ] 4.7 Reconcile paired-core generated command documentation and registration scenarios against the final signed module revision; preserve independent Requirements fixture authority and record exact command/option parity evidence.

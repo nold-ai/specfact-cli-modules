@@ -483,3 +483,21 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **AND** native pytest import/configuration behavior SHALL select the installed package, including build-generated package contents, while source-file analysis remains available
 - **AND** explicitly configured review `source_roots`, pytest `pythonpath`, and installed editable hooks SHALL retain their declared import behavior
 - **AND** native Python CLI current-directory and script-path behavior, and pytest's own test-module path handling, SHALL remain effective for uninstalled source-only repositories
+
+#### Scenario: Native dependency discovery supports sectionless ELF files
+
+- **GIVEN** a valid supported x86-64 ELF object retains bounded PT_LOAD and PT_DYNAMIC segments but has no section-header table
+- **WHEN** project runtime preparation inventories its shared-library dependencies
+- **THEN** it SHALL discover DT_NEEDED entries from the dynamic program segment and its mapped string table
+- **AND** invalid segment ranges, invalid string-table mappings, unterminated dynamic entries or dependency names, and unsupported ELF encodings or platforms SHALL remain explicit diagnostics
+
+#### Scenario: Executable startup hooks cannot substitute analyzer dispatch
+
+- **GIVEN** a target runtime contains executable `.pth` startup hooks and a verified analyzer entry point
+- **WHEN** target startup prepares the analyzer execution domain
+- **THEN** it SHALL reject substitutions of the analyzer dispatch functions, their execution/code-loading helpers, or the verified built-in entry-point path before invoking analyzer code
+- **AND** replacement of `runpy.run_module`, `runpy.run_path`, their internal execution helpers, or their function code SHALL produce one actionable startup-integrity diagnostic instead of a successful counterfeit analyzer run
+- **AND** ordinary additive editable import hooks and path mappings SHALL remain supported
+- **AND** this protection SHALL describe a startup-integrity boundary, not a general sandbox against arbitrary code sharing the analyzer interpreter
+
+- **AND** startup-integrity failures SHALL use a reserved non-analysis exit status, and analyzer result parsing SHALL retain that failure even when a startup hook writes valid analyzer-shaped JSON to stdout
