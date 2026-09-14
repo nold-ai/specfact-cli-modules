@@ -1,14 +1,17 @@
 """Worker fallbacks include only the selected member's dependency closure."""
 
+from importlib.metadata import Distribution
 from pathlib import Path
 
 import pytest
 
-from specfact_code_review.run.runtime_domains import member_dependency_graphs
+from specfact_code_review.run.runtime_domains import _top_level_imports, member_dependency_graphs
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
-def _distribution(root: Path, name: str, *, dependencies: tuple[str, ...] = ()) -> None:
+def _distribution(
+    root: Path, name: str, *, dependencies: tuple[str, ...] = (), files: tuple[str, ...] | None = None
+) -> Path:
     metadata = root / f"{name}-1.0.dist-info"
     metadata.mkdir()
     (metadata / "METADATA").write_text(
@@ -16,6 +19,13 @@ def _distribution(root: Path, name: str, *, dependencies: tuple[str, ...] = ()) 
         + "".join(f"Requires-Dist: {dependency}\n" for dependency in dependencies)
     )
     (metadata / "top_level.txt").write_text(name + "\n")
+    files = files if files is not None else (name.replace("-", "_") + ".py",)
+    for relative in files:
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("")
+    (metadata / "RECORD").write_text("".join(f"{relative},,\n" for relative in files))
+    return metadata
 
 
 @pytest.fixture(autouse=True)
@@ -62,3 +72,50 @@ def test_pytest_worker_validates_selected_dependency_versions(tmp_path: Path, ve
     else:
         graph = member_dependency_graphs(inventory, tmp_path)["pytest-observe"]
         assert next(row for row in graph["installed"] if row["name"] == "pytest")["version"] == version
+
+
+@pytest.mark.parametrize("declaration", [None, "owned\nstale\n", "stale\n"])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "owned.py",
+        "owned/__init__.py",
+        "owned/component.py",
+        "owned.cpython-311-x86_64-linux-gnu.so",
+        "owned.cp312-win_amd64.pyd",
+        "owned.abi3.so",
+        "owned.so",
+    ],
+)
+def test_import_ownership_comes_from_recorded_runtime_payload(
+    tmp_path: Path, declaration: str | None, payload: str
+) -> None:
+    metadata = _distribution(tmp_path, "fixture", files=(payload, "docs/readme.md", "stubs.pyi", "invalid.name.py"))
+    if declaration is None:
+        (metadata / "top_level.txt").unlink()
+    else:
+        (metadata / "top_level.txt").write_text(declaration)
+    assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+
+
+def test_stale_top_level_cannot_claim_another_distributions_build_package(tmp_path: Path) -> None:
+    metadata = _distribution(tmp_path, "pylint")
+    (metadata / "top_level.txt").write_text("pylint\nbuild\n")
+    _distribution(tmp_path, "build", files=("build/__init__.py",))
+    graph = member_dependency_graphs({"installed": []}, tmp_path)["pylint"]
+    assert graph["sealed_imports"] == ["pylint"]
+    assert {row["name"] for row in graph["installed"]} == {"pylint"}
+
+
+def test_missing_recorded_module_is_not_admitted(tmp_path: Path) -> None:
+    metadata = _distribution(tmp_path, "fixture", files=("owned.py", "missing.py"))
+    (tmp_path / "missing.py").unlink()
+    (metadata / "top_level.txt").write_text("owned\nmissing\n")
+    assert _top_level_imports(Distribution.at(metadata)) == {"owned"}
+
+
+def test_missing_file_inventory_cannot_guess_analyzer_ownership(tmp_path: Path) -> None:
+    metadata = _distribution(tmp_path, "fixture")
+    (metadata / "RECORD").unlink()
+    with pytest.raises(ProjectRuntimeError, match="project_analyzer_import_inventory_missing:fixture"):
+        _top_level_imports(Distribution.at(metadata))

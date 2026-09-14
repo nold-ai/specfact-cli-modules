@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from importlib.metadata import Distribution, distributions
 from pathlib import Path
 from typing import Any
@@ -24,16 +25,33 @@ _DOMAIN_ENTRIES = {
 _PINNED = frozenset(name for _, names in MEMBER_DISTRIBUTIONS.values() for name in names)
 
 
+def _runtime_module_name(filename: str) -> str:
+    """Recognize Python payload names without using the supervisor's native ABI."""
+    if filename.endswith((".py", ".pyc")):
+        name = filename.rsplit(".", maxsplit=1)[0]
+    elif filename.endswith((".so", ".pyd")):
+        name, _, suffix = filename.partition(".")
+        if suffix not in {"so", "pyd", "abi3.so", "abi3.pyd"} and not re.fullmatch(
+            r"(?:cpython-\d+[a-z]*|cp\d+[a-z]*)-[\w-]+\.(?:so|pyd)", suffix
+        ):
+            return ""
+    else:
+        return ""
+    return name if name.isidentifier() else ""
+
+
 def _top_level_imports(distribution: Distribution) -> set[str]:
-    declared = distribution.read_text("top_level.txt")
-    if declared:
-        return {name for name in declared.splitlines() if name.isidentifier()}
+    """Bind ownership to present recorded modules, not stale build metadata."""
+    files = distribution.files
+    if files is None:
+        raise ProjectRuntimeError(f"project_analyzer_import_inventory_missing:{distribution.metadata['Name']}")
     names = set()
-    for entry in distribution.files or ():
-        first = entry.parts[0]
-        name = first.split(".", maxsplit=1)[0]
-        if name.isidentifier() and not first.endswith((".dist-info", ".data")):
-            names.add(name)
+    for entry in files:
+        module = _runtime_module_name(entry.name)
+        if not module or not all(part.isidentifier() for part in entry.parts[:-1]):
+            continue
+        if Path(str(distribution.locate_file(entry))).is_file():
+            names.add(entry.parts[0] if len(entry.parts) > 1 else module)
     return names
 
 

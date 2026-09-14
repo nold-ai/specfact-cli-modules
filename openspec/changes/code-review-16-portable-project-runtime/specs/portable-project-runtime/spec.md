@@ -441,3 +441,13 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **GIVEN** pyproject metadata contains a scalar or array `tool.uv` value
 - **WHEN** discovery validates manager signals, including with explicit manager selection
 - **THEN** it SHALL reject the value before selection with the precise `project_config_invalid:pyproject.toml:tool.uv` table diagnostic
+
+#### Scenario: Analyzer import ownership follows its installed payload
+
+- **GIVEN** an analyzer distribution has missing or stale `top_level.txt` metadata, including names for build directories absent from its installed payload
+- **WHEN** review constructs a member's sealed dependency graph
+- **THEN** sealed import names MUST be derived from that distribution's recorded, present Python module, package, namespace, or native-extension payload, independently of the supervisor Python ABI
+- **AND** a directory installed by another distribution MUST NOT establish ownership for a stale declared name
+- **AND** a project-owned package sharing a stale name MUST remain importable in the project domain while actual analyzer imports retain strict origin enforcement
+- **AND** unavailable distribution file inventory MUST produce an explicit analyzer inventory diagnostic instead of trusting unverified declarations
+- **AND** changes to import-ownership logic MUST invalidate cached runtime preparation through the existing builder source identity
