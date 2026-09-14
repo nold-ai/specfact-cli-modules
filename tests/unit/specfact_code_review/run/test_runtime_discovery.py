@@ -309,3 +309,34 @@ def test_malformed_ini_is_a_project_diagnostic(tmp_path: Path, filename: str) ->
     (tmp_path / filename).write_text("not an INI section\n")
     with pytest.raises(ProjectRuntimeError, match=r"project_config_invalid:" + filename):
         discover_project(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "filename,section",
+    [
+        ("pytest.toml", "pytest"),
+        (".pytest.toml", "pytest"),
+        ("pyproject.toml", "tool.pytest.ini_options"),
+        ("pyproject.toml", "tool.pytest"),
+    ],
+)
+@pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+@pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+def test_invalid_pytest_path_shape_has_project_diagnostic(
+    tmp_path: Path, filename: str, section: str, option: str, value: str
+) -> None:
+    (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+    with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+        discover_project(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "filename,section",
+    [("pytest.ini", "pytest"), (".pytest.ini", "pytest"), ("tox.ini", "pytest"), ("setup.cfg", "tool:pytest")],
+)
+def test_ini_pytest_path_strings_are_preserved(tmp_path: Path, filename: str, section: str) -> None:
+    (tmp_path / filename).write_text(f"[{section}]\npythonpath = src tests\ntestpaths = tests\n")
+    plan = discover_project(tmp_path)
+    assert plan.pytest_config["pythonpath"] == "src tests"
+    assert plan.pytest_config["testpaths"] == "tests"
+    assert plan.source_roots == ("src", "tests")

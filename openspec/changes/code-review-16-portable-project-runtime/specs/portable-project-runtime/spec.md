@@ -338,3 +338,18 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **WHEN** matching test discovery traverses the repository root
 - **THEN** pytest's default norecursedirs exclusions SHALL be retained when unspecified
 - **AND** explicit norecursedirs configuration SHALL replace those defaults consistently with native pytest.
+
+#### Scenario: Pytest deselection preserves the executed selection inventory
+- **GIVEN** repository pytest options select a subset with `-k` or `--deselect`
+- **WHEN** the isolated worker collects and executes that selection
+- **THEN** its required execution inventory contains the final selected items, deselected items do not become false unexecuted evidence, and actual selected failures or interrupted execution remain visible, including distributed execution.
+
+#### Scenario: Immutable portable snapshots retain safe tracked project links
+- **GIVEN** an immutable Git snapshot contains tracked package or data symlinks needed by the project runtime
+- **WHEN** portable discovery and preparation materialize that snapshot
+- **THEN** safe in-snapshot links remain available with their original targets, while escaping or excluded-source aliases fail closed and existing governed-Python symlink restrictions remain enforced.
+
+#### Scenario: Invalid pytest path options preserve static fallback
+- **GIVEN** a supported pytest configuration declares `pythonpath` or `testpaths` with a value other than a string or list of strings
+- **WHEN** runtime discovery consumes that configuration
+- **THEN** it returns a project-runtime diagnostic naming the option and source configuration, and ordinary review retains independent static evidence without an uncaught type error.

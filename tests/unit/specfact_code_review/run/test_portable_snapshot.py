@@ -154,8 +154,26 @@ def test_analysis_source_copy_excludes_local_environment_files(tmp_path: Path, m
     assert (source / ".env").read_text() == "SYNTHETIC_SECRET=fixture\n"
 
 
-def test_malformed_setup_preserves_independent_analyzer_evidence(tmp_path: Path, monkeypatch) -> None:
-    (tmp_path / "setup.cfg").write_text("missing section header\n")
+@pytest.mark.parametrize(
+    ("filename", "contents", "diagnostic"),
+    [
+        ("setup.cfg", "missing section header\n", "project_config_invalid:setup.cfg:"),
+        (
+            "pyproject.toml",
+            "[tool.pytest.ini_options]\npythonpath=[1]\n",
+            "project_pytest_config_invalid:pyproject.toml:pythonpath",
+        ),
+        (
+            "pyproject.toml",
+            "[tool.pytest.ini_options]\ntestpaths=1\n",
+            "project_pytest_config_invalid:pyproject.toml:testpaths",
+        ),
+    ],
+)
+def test_malformed_configuration_preserves_independent_analyzer_evidence(
+    tmp_path: Path, monkeypatch, filename: str, contents: str, diagnostic: str
+) -> None:
+    (tmp_path / filename).write_text(contents)
     source = tmp_path / "app.py"
     source.write_text("import dependency\n")
     calls = []
@@ -170,7 +188,7 @@ def test_malformed_setup_preserves_independent_analyzer_evidence(tmp_path: Path,
         runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
     )
     assert "ruff" in calls and not set(calls) & DEPENDENT_MEMBERS
-    assert evidence["diagnostic"].startswith("project_config_invalid:setup.cfg:")
+    assert evidence["diagnostic"].startswith(diagnostic)
     assert snapshot.evidence["basedpyright"]["evidence_outcome"] == "UNKNOWN"
 
 

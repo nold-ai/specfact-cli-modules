@@ -65,6 +65,9 @@ class Observer:
     def __init__(self) -> None:
         self.records = []
         self.collected = set()
+        self.deselected = set()
+        self.deselection_inventory = "complete"
+        self.worker_collected = set()
         self.collection_errors = []
         self.internal_errors = []
 
@@ -80,8 +83,20 @@ class Observer:
     def pytest_itemcollected(self, item):
         self.collected.add(item.nodeid)
 
+    def pytest_deselected(self, items):
+        removed = {item.nodeid for item in items}
+        self.deselected.update(removed)
+        self.collected.difference_update(removed)
+
+    def pytest_collection_finish(self, session):
+        selected = {item.nodeid for item in session.items} | self.worker_collected
+        self.deselected.update(self.collected - selected)
+        self.collected = selected
+
     def pytest_xdist_node_collection_finished(self, node, ids):
         del node
+        self.deselection_inventory = "controller_observed"
+        self.worker_collected.update(ids)
         self.collected.update(ids)
 
     def pytest_collectreport(self, report):
@@ -129,6 +144,8 @@ def main() -> None:
             {
                 "exit_code": int(code),
                 "collected": sorted(observer.collected),
+                "deselected": sorted(observer.deselected),
+                "deselection_inventory": observer.deselection_inventory,
                 "records": observer.records,
                 "collection_errors": observer.collection_errors,
                 "internal_errors": observer.internal_errors,

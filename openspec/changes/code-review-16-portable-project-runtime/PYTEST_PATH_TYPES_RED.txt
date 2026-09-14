@@ -1,0 +1,1898 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <implementation-worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 112 items
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py .......... [  8%]
+...........................................FFFFFFFFFFFFFFFFFFFFFFFFFFFFF [ 73%]
+FFFFFFFFFFF....                                                          [ 86%]
+tests/unit/specfact_code_review/run/test_portable_snapshot.py ........FF [ 95%]
+.....                                                                    [100%]
+
+=================================== FAILURES ===================================
+_ test_invalid_pytest_path_shape_has_project_diagnostic[1-pythonpath-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape0')
+filename = 'pytest.toml', section = 'pytest', option = 'pythonpath', value = '1'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape0')
+config = {}, pytest = {'pythonpath': 1}
+
+    def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
+        roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+        if isinstance(roots, str):
+            roots = roots.split()
+>       result = tuple(dict.fromkeys(roots))
+                       ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:229: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[1-pythonpath-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape1')
+filename = '.pytest.toml', section = 'pytest', option = 'pythonpath'
+value = '1'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape1')
+config = {}, pytest = {'pythonpath': 1}
+
+    def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
+        roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+        if isinstance(roots, str):
+            roots = roots.split()
+>       result = tuple(dict.fromkeys(roots))
+                       ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:229: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[1-pythonpath-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape2')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'pythonpath', value = '1'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape2')
+config = {}, pytest = {'pythonpath': 1}
+
+    def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
+        roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+        if isinstance(roots, str):
+            roots = roots.split()
+>       result = tuple(dict.fromkeys(roots))
+                       ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:229: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[1-pythonpath-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape3')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'pythonpath'
+value = '1'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape3')
+config = {}, pytest = {'pythonpath': 1}
+
+    def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
+        roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+        if isinstance(roots, str):
+            roots = roots.split()
+>       result = tuple(dict.fromkeys(roots))
+                       ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:229: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[1-testpaths-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape4')
+filename = 'pytest.toml', section = 'pytest', option = 'testpaths', value = '1'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape4')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[1-testpaths-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape5')
+filename = '.pytest.toml', section = 'pytest', option = 'testpaths', value = '1'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape5')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[1-testpaths-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape6')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'testpaths', value = '1'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape6')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[1-testpaths-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape7')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'testpaths'
+value = '1'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape7')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[true-pythonpath-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape8')
+filename = 'pytest.toml', section = 'pytest', option = 'pythonpath'
+value = 'true'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape8')
+config = {}, pytest = {'pythonpath': True}
+
+    def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
+        roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+        if isinstance(roots, str):
+            roots = roots.split()
+>       result = tuple(dict.fromkeys(roots))
+                       ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:229: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[true-pythonpath-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape9')
+filename = '.pytest.toml', section = 'pytest', option = 'pythonpath'
+value = 'true'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape9')
+config = {}, pytest = {'pythonpath': True}
+
+    def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
+        roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+        if isinstance(roots, str):
+            roots = roots.split()
+>       result = tuple(dict.fromkeys(roots))
+                       ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:229: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[true-pythonpath-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape10')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'pythonpath', value = 'true'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape10')
+config = {}, pytest = {'pythonpath': True}
+
+    def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
+        roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+        if isinstance(roots, str):
+            roots = roots.split()
+>       result = tuple(dict.fromkeys(roots))
+                       ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:229: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[true-pythonpath-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape11')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'pythonpath'
+value = 'true'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape11')
+config = {}, pytest = {'pythonpath': True}
+
+    def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:
+        roots = config.get("source_roots", pytest.get("pythonpath", ["src", "."] if (root / "src").is_dir() else ["."]))
+        if isinstance(roots, str):
+            roots = roots.split()
+>       result = tuple(dict.fromkeys(roots))
+                       ^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:229: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[true-testpaths-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape12')
+filename = 'pytest.toml', section = 'pytest', option = 'testpaths'
+value = 'true'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape12')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[true-testpaths-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape13')
+filename = '.pytest.toml', section = 'pytest', option = 'testpaths'
+value = 'true'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape13')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[true-testpaths-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape14')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'testpaths', value = 'true'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape14')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[true-testpaths-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape15')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'testpaths'
+value = 'true'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape15')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[[1]-pythonpath-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape16')
+filename = 'pytest.toml', section = 'pytest', option = 'pythonpath'
+value = '[1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10af83ca0>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[[1]-pythonpath-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape17')
+filename = '.pytest.toml', section = 'pytest', option = 'pythonpath'
+value = '[1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x1093328f0>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[[1]-pythonpath-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape18')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'pythonpath', value = '[1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x109332ff0>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[[1]-pythonpath-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape19')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'pythonpath'
+value = '[1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x1093319a0>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[[1]-testpaths-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape20')
+filename = 'pytest.toml', section = 'pytest', option = 'testpaths'
+value = '[1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:336: in discover_project
+    _safe_input(root, testpath)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x109331bd0>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[[1]-testpaths-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape21')
+filename = '.pytest.toml', section = 'pytest', option = 'testpaths'
+value = '[1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:336: in discover_project
+    _safe_input(root, testpath)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x109331c40>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[[1]-testpaths-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape22')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'testpaths', value = '[1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:336: in discover_project
+    _safe_input(root, testpath)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aed9850>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[[1]-testpaths-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape23')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'testpaths'
+value = '[1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:336: in discover_project
+    _safe_input(root, testpath)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aed9b60>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-pythonpath-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape24')
+filename = 'pytest.toml', section = 'pytest', option = 'pythonpath'
+value = '["tests", 1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aed9d90>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-pythonpath-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape25')
+filename = '.pytest.toml', section = 'pytest', option = 'pythonpath'
+value = '["tests", 1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aed8dd0>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-pythonpath-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape26')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'pythonpath', value = '["tests", 1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aeda420>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-pythonpath-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape27')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'pythonpath'
+value = '["tests", 1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aeda1f0>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-testpaths-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape28')
+filename = 'pytest.toml', section = 'pytest', option = 'testpaths'
+value = '["tests", 1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:336: in discover_project
+    _safe_input(root, testpath)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aed9620>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-testpaths-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape29')
+filename = '.pytest.toml', section = 'pytest', option = 'testpaths'
+value = '["tests", 1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:336: in discover_project
+    _safe_input(root, testpath)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aedbc30>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-testpaths-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape30')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'testpaths', value = '["tests", 1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:336: in discover_project
+    _safe_input(root, testpath)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aed90e0>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-testpaths-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape31')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'testpaths'
+value = '["tests", 1]'
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:320:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:336: in discover_project
+    _safe_input(root, testpath)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aed9b60>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-pythonpath-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape32')
+filename = 'pytest.toml', section = 'pytest', option = 'pythonpath'
+value = "{path = 'tests'}"
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:319: Failed
+_ test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-pythonpath-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape33')
+filename = '.pytest.toml', section = 'pytest', option = 'pythonpath'
+value = "{path = 'tests'}"
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:319: Failed
+_ test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-pythonpath-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape34')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'pythonpath', value = "{path = 'tests'}"
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:319: Failed
+_ test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-pythonpath-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape35')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'pythonpath'
+value = "{path = 'tests'}"
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:319: Failed
+_ test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-testpaths-pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape36')
+filename = 'pytest.toml', section = 'pytest', option = 'testpaths'
+value = "{path = 'tests'}"
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:319: Failed
+_ test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-testpaths-.pytest.toml-pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape37')
+filename = '.pytest.toml', section = 'pytest', option = 'testpaths'
+value = "{path = 'tests'}"
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:319: Failed
+_ test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-testpaths-pyproject.toml-tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape38')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+option = 'testpaths', value = "{path = 'tests'}"
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:319: Failed
+_ test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-testpaths-pyproject.toml-tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_invalid_pytest_path_shape39')
+filename = 'pyproject.toml', section = 'tool.pytest', option = 'testpaths'
+value = "{path = 'tests'}"
+
+    @pytest.mark.parametrize("filename,section", [("pytest.toml", "pytest"), (".pytest.toml", "pytest"), ("pyproject.toml", "tool.pytest.ini_options"), ("pyproject.toml", "tool.pytest")])
+    @pytest.mark.parametrize("option", ["pythonpath", "testpaths"])
+    @pytest.mark.parametrize("value", ["1", "true", "[1]", '["tests", 1]', "{path = 'tests'}"])
+    def test_invalid_pytest_path_shape_has_project_diagnostic(tmp_path: Path, filename: str, section: str, option: str, value: str) -> None:
+        (tmp_path / filename).write_text(f"[{section}]\n{option} = {value}\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:319: Failed
+_ test_malformed_configuration_preserves_independent_analyzer_evidence[pyproject.toml-[tool.pytest.ini_options]\npythonpath=[1]\n-project_pytest_config_invalid:pyproject.toml:pythonpath] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_malformed_configuration_p1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10aedfa70>
+filename = 'pyproject.toml'
+contents = '[tool.pytest.ini_options]\npythonpath=[1]\n'
+diagnostic = 'project_pytest_config_invalid:pyproject.toml:pythonpath'
+
+    @pytest.mark.parametrize(
+        ("filename", "contents", "diagnostic"),
+        [
+            ("setup.cfg", "missing section header\n", "project_config_invalid:setup.cfg:"),
+            ("pyproject.toml", "[tool.pytest.ini_options]\npythonpath=[1]\n", "project_pytest_config_invalid:pyproject.toml:pythonpath"),
+            ("pyproject.toml", "[tool.pytest.ini_options]\ntestpaths=1\n", "project_pytest_config_invalid:pyproject.toml:testpaths"),
+        ],
+    )
+    def test_malformed_configuration_preserves_independent_analyzer_evidence(
+        tmp_path: Path, monkeypatch, filename: str, contents: str, diagnostic: str
+    ) -> None:
+        (tmp_path / filename).write_text(contents)
+        source = tmp_path / "app.py"
+        source.write_text("import dependency\n")
+        calls = []
+
+        def dispatch(request, **_context):
+            calls.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+>       snapshot, evidence = run_project_snapshot(
+            runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
+        )
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:179:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:77: in run_project_snapshot
+    plan = discover_snapshot(snapshot_root, config_path=options.project_config, source_snapshot=source_snapshot)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:50: in discover_snapshot
+    plan = discover_project(root, config_path=config_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:352: in discover_project
+    source_roots=_source_roots(root, values, pytest),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:231: in _source_roots
+    _safe_input(root, relative)
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:61: in _safe_input
+    path = Path(relative)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <[AttributeError("'pathlib.PosixPath' object has no attribute '_raw_paths'") raised in repr()] PosixPath object at 0x10aedb220>
+args = (1,)
+
+    def __init__(self, *args):
+        paths = []
+        for arg in args:
+            if isinstance(arg, PurePath):
+                if arg.parser is not self.parser:
+                    # GH-103631: Convert separators for backwards compatibility.
+                    paths.append(arg.as_posix())
+                else:
+                    paths.extend(arg._raw_paths)
+            else:
+                try:
+                    path = os.fspath(arg)
+                except TypeError:
+                    path = arg
+                if not isinstance(path, str):
+>                   raise TypeError(
+                        "argument should be a str or an os.PathLike "
+                        "object where __fspath__ returns a str, "
+                        f"not {type(path).__name__!r}")
+E                   TypeError: argument should be a str or an os.PathLike object where __fspath__ returns a str, not 'int'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:150: TypeError
+_ test_malformed_configuration_preserves_independent_analyzer_evidence[pyproject.toml-[tool.pytest.ini_options]\ntestpaths=1\n-project_pytest_config_invalid:pyproject.toml:testpaths] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_malformed_configuration_p2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a32e510>
+filename = 'pyproject.toml'
+contents = '[tool.pytest.ini_options]\ntestpaths=1\n'
+diagnostic = 'project_pytest_config_invalid:pyproject.toml:testpaths'
+
+    @pytest.mark.parametrize(
+        ("filename", "contents", "diagnostic"),
+        [
+            ("setup.cfg", "missing section header\n", "project_config_invalid:setup.cfg:"),
+            ("pyproject.toml", "[tool.pytest.ini_options]\npythonpath=[1]\n", "project_pytest_config_invalid:pyproject.toml:pythonpath"),
+            ("pyproject.toml", "[tool.pytest.ini_options]\ntestpaths=1\n", "project_pytest_config_invalid:pyproject.toml:testpaths"),
+        ],
+    )
+    def test_malformed_configuration_preserves_independent_analyzer_evidence(
+        tmp_path: Path, monkeypatch, filename: str, contents: str, diagnostic: str
+    ) -> None:
+        (tmp_path / filename).write_text(contents)
+        source = tmp_path / "app.py"
+        source.write_text("import dependency\n")
+        calls = []
+
+        def dispatch(request, **_context):
+            calls.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+>       snapshot, evidence = run_project_snapshot(
+            runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
+        )
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:179:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:77: in run_project_snapshot
+    plan = discover_snapshot(snapshot_root, config_path=options.project_config, source_snapshot=source_snapshot)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:50: in discover_snapshot
+    plan = discover_project(root, config_path=config_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-227/test_malformed_configuration_p2')
+config_path = None
+
+    @require(lambda root: root.is_dir())
+    def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+        """Inspect project manifests; never install dependencies or import setup code."""
+        root = root.resolve()
+        values = _config(config_path)
+        inputs: dict[str, str] = {}
+        for name in PROJECT_INPUT_NAMES:
+            path = _safe_input(root, name)
+            if path.is_file():
+                inputs[name] = content_digest(path.read_bytes())
+        project = _toml(root / "pyproject.toml")
+        hatch = _toml(root / "hatch.toml")
+        selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+        manager = _manager(root, project, hatch, selection)
+        requirements = tuple(values.get("requirements", ()))
+        constraints = tuple(values.get("constraints", []))
+        validate_adapter_inputs(manager, requirements, constraints)
+        if manager == "pip" and "requirements" not in values:
+            requirements = tuple(_default_requirements(root))
+        for name in sorted(_requirements_inputs(root, requirements + constraints)):
+            inputs[name] = content_digest((root / name).read_bytes())
+        pytest = _pytest_config(root, project)
+        testpaths = pytest.get("testpaths", [])
+>       for testpath in testpaths.split() if isinstance(testpaths, str) else testpaths:
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:335: TypeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[1-pythonpath-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[1-pythonpath-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[1-pythonpath-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[1-pythonpath-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[1-testpaths-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[1-testpaths-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[1-testpaths-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[1-testpaths-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[true-pythonpath-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[true-pythonpath-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[true-pythonpath-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[true-pythonpath-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[true-testpaths-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[true-testpaths-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[true-testpaths-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[true-testpaths-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[[1]-pythonpath-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[[1]-pythonpath-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[[1]-pythonpath-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[[1]-pythonpath-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[[1]-testpaths-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[[1]-testpaths-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[[1]-testpaths-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[[1]-testpaths-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-pythonpath-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-pythonpath-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-pythonpath-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-pythonpath-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-testpaths-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-testpaths-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-testpaths-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[["tests", 1]-testpaths-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-pythonpath-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-pythonpath-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-pythonpath-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-pythonpath-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-testpaths-pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-testpaths-.pytest.toml-pytest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-testpaths-pyproject.toml-tool.pytest.ini_options]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_invalid_pytest_path_shape_has_project_diagnostic[{path = 'tests'}-testpaths-pyproject.toml-tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_malformed_configuration_preserves_independent_analyzer_evidence[pyproject.toml-[tool.pytest.ini_options]\npythonpath=[1]\n-project_pytest_config_invalid:pyproject.toml:pythonpath]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_malformed_configuration_preserves_independent_analyzer_evidence[pyproject.toml-[tool.pytest.ini_options]\ntestpaths=1\n-project_pytest_config_invalid:pyproject.toml:testpaths]
+======================== 42 failed, 70 passed in 0.87s =========================

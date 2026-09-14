@@ -200,15 +200,26 @@ def _ini(path: Path) -> configparser.ConfigParser:
     return parser
 
 
+def _validated_pytest_paths(configuration: dict[str, Any], source: str) -> dict[str, Any]:
+    for option in ("pythonpath", "testpaths"):
+        value = configuration.get(option, "")
+        if isinstance(value, str) or (isinstance(value, list) and all(isinstance(item, str) for item in value)):
+            continue
+        raise ProjectRuntimeError(
+            f"project_pytest_config_invalid:{source}:{option}; expected a string or list of strings"
+        )
+    return configuration
+
+
 def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
     for name in ("pytest.toml", ".pytest.toml"):
         if (root / name).exists():
-            return dict(_toml(root / name).get("pytest", {}))
+            return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
     for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
         if name == "pyproject.toml":
             pytest = project.get("tool", {}).get("pytest", {})
             if pytest:
-                return dict(pytest.get("ini_options", pytest))
+                return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
             continue
         path = root / name
         if not path.exists():
@@ -216,10 +227,10 @@ def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
         parser = _ini(path)
         section = "tool:pytest" if name == "setup.cfg" else "pytest"
         if parser.has_section(section):
-            return dict(parser[section])
+            return _validated_pytest_paths(dict(parser[section]), name)
     tools = project.get("tool", {})
     pytest = tools.get("pytest", {})
-    return dict(pytest.get("ini_options", pytest))
+    return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), "pyproject.toml")
 
 
 def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:

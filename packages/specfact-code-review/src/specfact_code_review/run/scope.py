@@ -17,11 +17,14 @@ import tempfile
 import tomllib
 from collections.abc import Callable, Iterable, Sequence
 from contextlib import ExitStack
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
+from functools import partial
 from pathlib import Path, PurePosixPath
 from typing import Literal, cast
 
 from icontract import ensure, require
+
+from specfact_code_review.run.runtime_sources import source_link_target
 
 
 ScopeKind = Literal["worktree", "index", "range", "full", "explicit_files"]
@@ -628,29 +631,53 @@ def _safe_snapshot_path(root: Path, relative: str) -> Path:
     return root.joinpath(*path.parts)
 
 
-def _materialize_tree(repository: Path, revision: str, *, snapshot_identity: str) -> Snapshot:
+def _materialize_project_links(root: Path, entries: dict[str, TreeEntry], contents: dict[str, bytes]) -> None:
+    """Recreate tracked links only after writing blobs, then validate the entire graph."""
+    links = [entry for entry in entries.values() if entry.object_type == "blob" and entry.git_mode == "120000"]
+    try:
+        for entry in links:
+            destination = _safe_snapshot_path(root, entry.path)
+            if any(parent.is_symlink() for parent in destination.parents if parent.is_relative_to(root)):
+                raise GitResolutionError(f"Git link has a symlink parent: {entry.path}")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.symlink_to(os.fsdecode(contents[entry.path]))
+        for entry in links:
+            source_link_target(_safe_snapshot_path(root, entry.path), root)
+    except (OSError, ValueError) as exc:
+        raise GitResolutionError(f"Unsafe project link in Git snapshot: {exc}") from exc
+
+
+def _materialize_tree(
+    repository: Path, revision: str, *, snapshot_identity: str, preserve_links: bool = False
+) -> Snapshot:
     tree = _resolve_tree(repository, revision)
-    root = Path(tempfile.mkdtemp(prefix=f"specfact-review-{snapshot_identity[:12]}-"))
-    contents: dict[str, bytes] = {}
-    entries = {entry.path: entry for entry in _tree_entries(repository, revision)}
-    for entry in entries.values():
-        if entry.object_type != "blob":
-            continue
-        payload = _git_bytes(repository, ["cat-file", "blob", entry.object_id])
-        contents[entry.path] = payload
-        if entry.git_mode not in _REGULAR_GIT_MODES:
-            continue
-        destination = _safe_snapshot_path(root, entry.path)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(payload)
-        destination.chmod(0o755 if entry.git_mode == "100755" else 0o644)
-    return Snapshot(
-        root=root, commit=snapshot_identity, tree=tree, contents=contents, entries=entries, repository=repository
-    )
+    root = Path(tempfile.mkdtemp(prefix=f"specfact-review-{snapshot_identity[:12]}-")).resolve()
+    with ExitStack() as cleanup:
+        cleanup.callback(shutil.rmtree, root, ignore_errors=True)
+        contents: dict[str, bytes] = {}
+        entries = {entry.path: entry for entry in _tree_entries(repository, revision)}
+        for entry in entries.values():
+            if entry.object_type != "blob":
+                continue
+            payload = _git_bytes(repository, ["cat-file", "blob", entry.object_id])
+            contents[entry.path] = payload
+            if entry.git_mode not in _REGULAR_GIT_MODES:
+                continue
+            destination = _safe_snapshot_path(root, entry.path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(payload)
+            destination.chmod(0o755 if entry.git_mode == "100755" else 0o644)
+        if preserve_links:
+            _materialize_project_links(root, entries, contents)
+        snapshot = Snapshot(
+            root=root, commit=snapshot_identity, tree=tree, contents=contents, entries=entries, repository=repository
+        )
+        cleanup.pop_all()
+        return snapshot
 
 
-def _materialize_commit(repository: Path, commit: str) -> Snapshot:
-    return _materialize_tree(repository, commit, snapshot_identity=commit)
+def _materialize_commit(repository: Path, commit: str, *, preserve_links: bool = False) -> Snapshot:
+    return _materialize_tree(repository, commit, snapshot_identity=commit, preserve_links=preserve_links)
 
 
 def _is_test_path(path: Path) -> bool:
@@ -2135,16 +2162,17 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             candidate_identities=identities,
         )
     merge_base = candidates[0]
+    materialize = partial(_materialize_commit, request.repository, preserve_links=request.portable_project_runtime)
     with ExitStack() as cleanup:
-        base_snapshot = _materialize_commit(request.repository, merge_base)
+        base_snapshot = materialize(merge_base)
         cleanup.callback(shutil.rmtree, base_snapshot.root, ignore_errors=True)
-        head_snapshot = _materialize_commit(request.repository, head)
+        head_snapshot = materialize(head)
         cleanup.callback(shutil.rmtree, head_snapshot.root, ignore_errors=True)
         source_locks = frozenset(PurePosixPath(path).as_posix() for path in request.project_runtime_source_lock_paths)
         source_locks |= _context_source_lock_paths(claimed_context)
         if request.portable_project_runtime and claimed_context is None:
             source_locks |= _portable_source_locks(base_snapshot, head_snapshot)
-        target_snapshot = base_snapshot if base == merge_base else _materialize_commit(request.repository, base)
+        target_snapshot = base_snapshot if base == merge_base else materialize(base)
         if target_snapshot is not base_snapshot:
             cleanup.callback(shutil.rmtree, target_snapshot.root, ignore_errors=True)
         identity_locks = source_locks
@@ -2175,16 +2203,6 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             statuses,
             additional_policy_paths,
         )
-        rename_projection = [
-            {
-                "blob_sha": item.blob_sha,
-                "disposition": item.disposition,
-                "git_mode": item.git_mode,
-                "new_path": item.new_path,
-                "old_path": item.old_path,
-            }
-            for item in renames
-        ]
         result = _ResolvedRange(
             candidates,
             base,
@@ -2196,7 +2214,7 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             project_runtime_source_locks,
             statuses,
             renames,
-            _canonical_json_digest(rename_projection),
+            _canonical_json_digest([asdict(item) for item in renames]),
             _source_manifest_digest(base_snapshot),
             _source_manifest_digest(head_snapshot),
             policy_bundle,
@@ -2554,7 +2572,7 @@ def _index_unknown(
 
 def _resolve_index(request: ScopeRequest) -> ScopeResolution:
     try:
-        context = _materialized_index_context(request.repository)
+        context = _materialized_index_context(request.repository, preserve_links=request.portable_project_runtime)
     except GitResolutionError as exc:
         return _index_unknown("git_resolution_failed", str(exc))
     if isinstance(context, ScopeResolution):
@@ -2569,10 +2587,12 @@ def _resolve_index(request: ScopeRequest) -> ScopeResolution:
     return _resolved_index(context)
 
 
-def _materialized_index_context(repository: Path) -> _IndexResolutionContext | ScopeResolution:
+def _materialized_index_context(
+    repository: Path, *, preserve_links: bool = False
+) -> _IndexResolutionContext | ScopeResolution:
     capture = _capture_index(repository)
     try:
-        return _materialized_index_context_from_capture(repository, capture)
+        return _materialized_index_context_from_capture(repository, capture, preserve_links=preserve_links)
     finally:
         shutil.rmtree(capture.path.parent, ignore_errors=True)
 
@@ -2706,8 +2726,20 @@ def _snapshot_input_manifest(snapshot: Snapshot, paths: Iterable[str]) -> dict[s
     return {path: identity for path in paths if (identity := _input_identity(snapshot, path)) is not None}
 
 
+def _materialized_index_snapshots(
+    repository: Path, tree: str, identity: str, *, preserve_links: bool
+) -> tuple[Snapshot, Snapshot]:
+    with ExitStack() as cleanup:
+        head = _resolve_commit(repository, "HEAD")
+        base = _materialize_commit(repository, head, preserve_links=preserve_links)
+        cleanup.callback(shutil.rmtree, base.root, ignore_errors=True)
+        index = _materialize_tree(repository, tree, snapshot_identity=identity, preserve_links=preserve_links)
+        cleanup.pop_all()
+        return base, index
+
+
 def _materialized_index_context_from_capture(
-    repository: Path, capture: _IndexCapture
+    repository: Path, capture: _IndexCapture, *, preserve_links: bool = False
 ) -> _IndexResolutionContext | ScopeResolution:
     _after_index_capture()
     stage_entries = _index_stage_entries(repository, capture)
@@ -2716,9 +2748,10 @@ def _materialized_index_context_from_capture(
     tree = _write_index_tree(repository, capture)
     tree_entries = {entry.path: entry for entry in _tree_entries(repository, tree)}
     metadata = _index_metadata(stage_entries, _index_flag_tags(repository, capture), tree_entries)
-    head_commit = _resolve_commit(repository, "HEAD")
-    base_snapshot = _materialize_commit(repository, head_commit)
-    index_snapshot = _materialize_tree(repository, tree, snapshot_identity=f"index-{capture.digest[7:]}")
+    base_snapshot, index_snapshot = _materialized_index_snapshots(
+        repository, tree, f"index-{capture.digest[7:]}", preserve_links=preserve_links
+    )
+    head_commit = base_snapshot.commit
     changed_paths = set(_range_paths(repository, head_commit, tree))
     changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
     base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
@@ -2739,16 +2772,14 @@ def _materialized_index_context_from_capture(
             additional_policy_paths=preliminary_policy_paths,
         )
     )
-    preliminary_manifest = _snapshot_input_manifest(index_snapshot, preliminary_paths)
-    preliminary_base_manifest = _snapshot_input_manifest(base_snapshot, preliminary_paths)
     preliminary_context = _IndexResolutionContext(
         base_snapshot,
         index_snapshot,
         preliminary_paths,
         metadata,
         tree,
-        preliminary_base_manifest,
-        preliminary_manifest,
+        _snapshot_input_manifest(base_snapshot, preliminary_paths),
+        _snapshot_input_manifest(index_snapshot, preliminary_paths),
         tuple(
             path
             for path in preliminary_paths
@@ -2780,17 +2811,12 @@ def _materialized_index_context_from_capture(
             additional_policy_paths=additional_policy_paths,
         )
     )
-    manifest = _snapshot_input_manifest(index_snapshot, selected_paths)
-    base_manifest = _snapshot_input_manifest(base_snapshot, selected_paths)
-    return _IndexResolutionContext(
-        base_snapshot,
-        index_snapshot,
-        selected_paths,
-        metadata,
-        tree,
-        base_manifest,
-        manifest,
-        tuple(sorted(additional_policy_paths)),
+    return replace(
+        preliminary_context,
+        selected_paths=selected_paths,
+        base_manifest=_snapshot_input_manifest(base_snapshot, selected_paths),
+        manifest=_snapshot_input_manifest(index_snapshot, selected_paths),
+        policy_paths=tuple(sorted(additional_policy_paths)),
     )
 
 

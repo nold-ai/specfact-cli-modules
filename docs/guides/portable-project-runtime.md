@@ -58,7 +58,9 @@ For a Hatch test matrix, `environment = "hatch-test"` selects its unique native 
 
 The `python` setting overrides `.python-version`; both are checked against `requires-python` and the exact signed interpreter version. A compatible controller ABI is reused; an incompatible controller does not force that ABI onto the project. Base and head reviews select their workers independently.
 
-Supported manager names are `pip`, `hatch`, `uv`, and `poetry`. Optional fields are `python`, `groups`, `extras`, `requirements`, `constraints`, `source_roots`, and `native_libraries`. Paths are repository-relative. Native libraries use ELF names such as `libodbc.so.2`; unavailable libraries are named in the preparation diagnostic. Hatch extras and dependencies belong in the selected native Hatch environment.
+Poetry Python constraints are intersected with project `requires-python` before choosing a worker. PEP 440 ranges are supported; Poetry caret, tilde, union and table syntax currently produce an explicit unsupported-constraint diagnostic. Express the declaration as an equivalent PEP 440 range to proceed.
+
+Supported manager names are `pip`, `hatch`, `uv`, and `poetry`. Optional fields are `python`, `groups`, `extras`, `requirements`, `constraints`, `source_roots`, and `native_libraries`. Explicit `requirements` and `constraints` fields apply to `pip`; other managers reject these fields with a diagnostic rather than ignore them. Paths are repository-relative. Native libraries use ELF names such as `libodbc.so.2`; unavailable libraries are named in the preparation diagnostic. Hatch extras and dependencies belong in the selected native Hatch environment.
 
 ```bash
 specfact code review runtime prepare --project-config /tmp/review-runtime.toml --json
@@ -80,7 +82,7 @@ Attachment verifies the payload, project inputs, ABI, and analyzer worker identi
 
 Runtime failure preserves independent static findings. Affected analyzers reference the preparation diagnostic and remain incomplete. A real missing import after successful preparation remains a finding. A report can contain real failures while still showing incomplete required evidence.
 
-Pytest configuration and selection controls remain active. The report records collection, execution, setup and internal errors, configured options, versions, and coverage. Distribution-owned commands are available inside target workers. Localhost coordination for plugins stays inside the offline namespace. Collection-only runs, early stopping that leaves collected tests unexecuted, and absent required coverage do not become successful test evidence.
+Pytest configuration and selection controls remain active. Deselected tests are recorded separately from the selected execution inventory; distributed deselection visibility is labelled as controller-observed. Invalid `pythonpath` or `testpaths` value shapes identify the option and configuration file. The report records collection, execution, setup and internal errors, configured options, versions, and coverage. Distribution-owned commands are available inside target workers. Localhost coordination for plugins stays inside the offline namespace. Collection-only runs, early stopping that leaves collected tests unexecuted, and absent required coverage do not become successful test evidence.
 
 ## Compatibility evidence
 

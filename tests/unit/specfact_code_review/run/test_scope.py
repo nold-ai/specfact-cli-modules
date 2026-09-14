@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 
 from specfact_code_review.run import scope
+from specfact_code_review.run.runtime_builder import copy_project
 
 
 _GIT_LOCAL_ENV_VARS = frozenset(
@@ -291,7 +292,7 @@ def test_materialized_governed_input_uses_nofollow_regular_blob_identity(scope_a
 @pytest.mark.parametrize("scope_name", ["index", "range"])
 @pytest.mark.parametrize("option", ["fix", "preview_fixes", "with_mutation"])
 def test_index_and_range_reject_fix_preview_and_mutation_options(
-    scope_api: Any, git_repo: Path, scope_name: str, option: str
+    scope_api: Any, git_repo: Path, scope_name: scope.ScopeKind, option: str
 ) -> None:
     base, head = _make_range(git_repo)
     kwargs: dict[str, Any] = {option: True}
@@ -1377,3 +1378,99 @@ def test_portable_range_records_candidate_referenced_policy(scope_api: Any, git_
         assert "config/candidate.toml" in result.policy_paths
     finally:
         scope_api.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize("scope_name", ["range", "index"])
+def test_portable_immutable_snapshots_retain_package_and_data_links(
+    git_repo: Path, tmp_path: Path, scope_name: scope.ScopeKind
+) -> None:
+    package = git_repo / "src/customer"
+    package.mkdir()
+    (package / "__init__.py").write_text("VALUE = 1\n")
+    (package / "data.txt").write_text("original")
+    (git_repo / "customer").symlink_to("src/customer", target_is_directory=True)
+    (git_repo / "data-link").symlink_to("src/customer/data.txt")
+    base = _commit(git_repo, "project links")
+    (git_repo / "src/app.py").write_text("VALUE = 2\n")
+    (package / "data.txt").write_text("updated")
+    _git(git_repo, "add", "-A")
+    head = _commit(git_repo, "update project") if scope_name == "range" else None
+    request = scope.ScopeRequest(
+        repository=git_repo,
+        scope=scope_name,
+        base_ref=base if head else None,
+        head_ref=head,
+        portable_project_runtime=True,
+    )
+    result = scope.resolve_scope(request)
+    try:
+        assert result.status == "PASS"
+        for side, snapshot in (("base", result.base_snapshot), ("head", result.head_snapshot)):
+            assert snapshot is not None
+            assert (snapshot.root / "customer").is_symlink()
+            assert os.readlink(snapshot.root / "data-link") == "src/customer/data.txt"
+            copied = tmp_path / side
+            copy_project(snapshot.root, copied, include_vcs=False)
+            assert (copied / "customer/__init__.py").read_text() == "VALUE = 1\n"
+            assert (copied / "data-link").read_text() == ("original" if side == "base" else "updated")
+    finally:
+        scope.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize("scope_name", ["range", "index"])
+@pytest.mark.parametrize(
+    "link_name,target", [("data-link", "../outside.toml"), ("pyproject.toml", "../outside.toml"), ("setup.cfg", ".env")]
+)
+def test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads(
+    git_repo: Path, scope_name: scope.ScopeKind, link_name: str, target: str, monkeypatch
+) -> None:
+    base = _git(git_repo, "rev-parse", "HEAD")
+    (git_repo.parent / "outside.toml").write_text('[project]\nname="private"\n')
+    (git_repo / ".env").write_text("private fixture")
+    (git_repo / link_name).symlink_to(target)
+    _git(git_repo, "add", "-A")
+    head = _commit(git_repo, "unsafe project link") if scope_name == "range" else None
+
+    def forbid_policy_read(*_args, **_kwargs):
+        pytest.fail("unsafe source links reached policy discovery")
+
+    monkeypatch.setattr(scope, "_range_policy_closure", forbid_policy_read)
+    monkeypatch.setattr(scope, "_resolved_index_policy_paths", forbid_policy_read)
+    result = scope.resolve_scope(
+        scope.ScopeRequest(
+            repository=git_repo,
+            scope=scope_name,
+            base_ref=base if head else None,
+            head_ref=head,
+            portable_project_runtime=True,
+        )
+    )
+    try:
+        assert result.status == "UNKNOWN"
+        assert "project_source_symlink_" in result.diagnostics
+    finally:
+        scope.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize("scope_name", ["range", "index"])
+def test_portable_governed_python_links_remain_rejected(git_repo: Path, scope_name: scope.ScopeKind) -> None:
+    base = _git(git_repo, "rev-parse", "HEAD")
+    (git_repo / "README.md").write_text("VALUE = 1\n")
+    (git_repo / "src/app.py").unlink()
+    (git_repo / "src/app.py").symlink_to("../README.md")
+    _git(git_repo, "add", "-A")
+    head = _commit(git_repo, "governed link") if scope_name == "range" else None
+    result = scope.resolve_scope(
+        scope.ScopeRequest(
+            repository=git_repo,
+            scope=scope_name,
+            base_ref=base if head else None,
+            head_ref=head,
+            portable_project_runtime=True,
+        )
+    )
+    try:
+        assert result.status == "UNKNOWN"
+        assert result.reason == "unsafe_governed_input"
+    finally:
+        scope.cleanup_scope_resolution(result)
