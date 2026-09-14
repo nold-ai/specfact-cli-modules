@@ -15,8 +15,8 @@ import stat
 import subprocess
 import tempfile
 import tomllib
-from collections.abc import Callable, Iterable, Sequence
-from contextlib import ExitStack
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import ExitStack, contextmanager
 from dataclasses import asdict, dataclass, field, replace
 from functools import partial
 from pathlib import Path, PurePosixPath
@@ -384,6 +384,7 @@ class Snapshot:
     contents: dict[str, bytes]
     entries: dict[str, TreeEntry]
     repository: Path | None = None
+    vcs_commit: str = ""
 
     @require(lambda relative_path: bool(str(relative_path)), "relative path must not be empty")
     @ensure(lambda result: isinstance(result, bytes))
@@ -2726,16 +2727,19 @@ def _snapshot_input_manifest(snapshot: Snapshot, paths: Iterable[str]) -> dict[s
     return {path: identity for path in paths if (identity := _input_identity(snapshot, path)) is not None}
 
 
+@contextmanager
 def _materialized_index_snapshots(
     repository: Path, tree: str, identity: str, *, preserve_links: bool
-) -> tuple[Snapshot, Snapshot]:
+) -> Iterator[tuple[Snapshot, Snapshot]]:
     with ExitStack() as cleanup:
         head = _resolve_commit(repository, "HEAD")
         base = _materialize_commit(repository, head, preserve_links=preserve_links)
         cleanup.callback(shutil.rmtree, base.root, ignore_errors=True)
         index = _materialize_tree(repository, tree, snapshot_identity=identity, preserve_links=preserve_links)
+        index = replace(index, vcs_commit=head)
+        cleanup.callback(shutil.rmtree, index.root, ignore_errors=True)
+        yield base, index
         cleanup.pop_all()
-        return base, index
 
 
 def _materialized_index_context_from_capture(
@@ -2748,76 +2752,76 @@ def _materialized_index_context_from_capture(
     tree = _write_index_tree(repository, capture)
     tree_entries = {entry.path: entry for entry in _tree_entries(repository, tree)}
     metadata = _index_metadata(stage_entries, _index_flag_tags(repository, capture), tree_entries)
-    base_snapshot, index_snapshot = _materialized_index_snapshots(
+    with _materialized_index_snapshots(
         repository, tree, f"index-{capture.digest[7:]}", preserve_links=preserve_links
-    )
-    head_commit = base_snapshot.commit
-    changed_paths = set(_range_paths(repository, head_commit, tree))
-    changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
-    base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
-    discovered_policy_paths = _discovered_index_policy_paths(index_snapshot)
-    preliminary_policy_paths = base_policy_paths | discovered_policy_paths
-    preliminary_candidates = changed_paths | set(
-        _unsafe_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
-        | _missing_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
-    )
-    preliminary_paths = tuple(
-        path
-        for path in sorted(preliminary_candidates)
-        if _governed_path(
-            path,
-            frozenset(),
-            base=base_snapshot,
-            head=index_snapshot,
-            additional_policy_paths=preliminary_policy_paths,
+    ) as (base_snapshot, index_snapshot):
+        head_commit = base_snapshot.commit
+        changed_paths = set(_range_paths(repository, head_commit, tree))
+        changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
+        base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
+        discovered_policy_paths = _discovered_index_policy_paths(index_snapshot)
+        preliminary_policy_paths = base_policy_paths | discovered_policy_paths
+        preliminary_candidates = changed_paths | set(
+            _unsafe_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
+            | _missing_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
         )
-    )
-    preliminary_context = _IndexResolutionContext(
-        base_snapshot,
-        index_snapshot,
-        preliminary_paths,
-        metadata,
-        tree,
-        _snapshot_input_manifest(base_snapshot, preliminary_paths),
-        _snapshot_input_manifest(index_snapshot, preliminary_paths),
-        tuple(
+        preliminary_paths = tuple(
             path
-            for path in preliminary_paths
-            if _is_policy_path(
+            for path in sorted(preliminary_candidates)
+            if _governed_path(
                 path,
                 frozenset(),
                 base=base_snapshot,
                 head=index_snapshot,
                 additional_policy_paths=preliminary_policy_paths,
             )
-        ),
-    )
-    if _unsafe_index_path(preliminary_context) is not None:
-        return preliminary_context
-
-    additional_policy_paths, policy_error = _resolved_index_policy_paths(index_snapshot.root)
-    if policy_error:
-        shutil.rmtree(base_snapshot.root, ignore_errors=True)
-        shutil.rmtree(index_snapshot.root, ignore_errors=True)
-        return _index_unknown("policy_parse_failure", policy_error)
-    selected_paths = tuple(
-        path
-        for path in sorted(changed_paths)
-        if _governed_path(
-            path,
-            frozenset(),
-            base=base_snapshot,
-            head=index_snapshot,
-            additional_policy_paths=additional_policy_paths,
         )
-    )
-    return replace(
-        preliminary_context,
-        selected_paths=selected_paths,
-        base_manifest=_snapshot_input_manifest(base_snapshot, selected_paths),
-        manifest=_snapshot_input_manifest(index_snapshot, selected_paths),
-        policy_paths=tuple(sorted(additional_policy_paths)),
-    )
+        preliminary_context = _IndexResolutionContext(
+            base_snapshot,
+            index_snapshot,
+            preliminary_paths,
+            metadata,
+            tree,
+            _snapshot_input_manifest(base_snapshot, preliminary_paths),
+            _snapshot_input_manifest(index_snapshot, preliminary_paths),
+            tuple(
+                path
+                for path in preliminary_paths
+                if _is_policy_path(
+                    path,
+                    frozenset(),
+                    base=base_snapshot,
+                    head=index_snapshot,
+                    additional_policy_paths=preliminary_policy_paths,
+                )
+            ),
+        )
+        if _unsafe_index_path(preliminary_context) is not None:
+            return preliminary_context
+
+        additional_policy_paths, policy_error = _resolved_index_policy_paths(index_snapshot.root)
+        if policy_error:
+            shutil.rmtree(base_snapshot.root, ignore_errors=True)
+            shutil.rmtree(index_snapshot.root, ignore_errors=True)
+            return _index_unknown("policy_parse_failure", policy_error)
+        selected_paths = tuple(
+            path
+            for path in sorted(changed_paths)
+            if _governed_path(
+                path,
+                frozenset(),
+                base=base_snapshot,
+                head=index_snapshot,
+                additional_policy_paths=additional_policy_paths,
+            )
+        )
+        return replace(
+            preliminary_context,
+            selected_paths=selected_paths,
+            base_manifest=_snapshot_input_manifest(base_snapshot, selected_paths),
+            manifest=_snapshot_input_manifest(index_snapshot, selected_paths),
+            policy_paths=tuple(sorted(additional_policy_paths)),
+        )
 
 
 def _unsafe_index_path(context: _IndexResolutionContext) -> str | None:

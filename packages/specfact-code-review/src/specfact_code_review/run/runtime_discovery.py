@@ -211,15 +211,22 @@ def _validated_pytest_paths(configuration: dict[str, Any], source: str) -> dict[
     return configuration
 
 
+def _pytest_table(value: Any, source: str, section: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ProjectRuntimeError(f"project_pytest_config_invalid:{source}:{section}; expected a table")
+    return value
+
+
 def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
     for name in ("pytest.toml", ".pytest.toml"):
         if (root / name).exists():
-            return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+            return _validated_pytest_paths(_pytest_table(_toml(root / name).get("pytest", {}), name, "pytest"), name)
     for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
         if name == "pyproject.toml":
-            pytest = project.get("tool", {}).get("pytest", {})
+            pytest = _pytest_table(project.get("tool", {}).get("pytest", {}), name, "tool.pytest")
             if pytest:
-                return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                options = _pytest_table(pytest.get("ini_options", pytest), name, "tool.pytest.ini_options")
+                return _validated_pytest_paths(options, name)
             continue
         path = root / name
         if not path.exists():
@@ -228,9 +235,7 @@ def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
         section = "tool:pytest" if name == "setup.cfg" else "pytest"
         if parser.has_section(section):
             return _validated_pytest_paths(dict(parser[section]), name)
-    tools = project.get("tool", {})
-    pytest = tools.get("pytest", {})
-    return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), "pyproject.toml")
+    return {}
 
 
 def _source_roots(root: Path, config: dict[str, Any], pytest: dict[str, Any]) -> tuple[str, ...]:

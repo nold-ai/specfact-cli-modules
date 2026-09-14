@@ -122,7 +122,7 @@ def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
     if source_identity(staging / "project") != plan.source_identity:
         raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
     if plan.vcs_repository and plan.vcs_repository != plan.root:
-        copy_vcs_context(plan.vcs_repository, staging / "project", plan.vcs["commit"])
+        copy_vcs_context(plan.vcs_repository, staging / "project", plan.vcs["commit"], tree=plan.vcs.get("tree"))
     stage_git(staging)
     (staging / "home").mkdir()
     driver = Path(__file__).with_name("runtime_build_driver.py")

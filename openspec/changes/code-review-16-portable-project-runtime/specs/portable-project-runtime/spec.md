@@ -353,3 +353,27 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **GIVEN** a supported pytest configuration declares `pythonpath` or `testpaths` with a value other than a string or list of strings
 - **WHEN** runtime discovery consumes that configuration
 - **THEN** it returns a project-runtime diagnostic naming the option and source configuration, and ordinary review retains independent static evidence without an uncaught type error.
+
+#### Scenario: Staged snapshots retain their captured Git tree
+- **GIVEN** an index review captures a staged tree that differs from HEAD
+- **WHEN** its portable project runtime records VCS identity and prepares a private build copy
+- **THEN** the descriptor and cache identity SHALL bind the captured tree separately from the HEAD commit
+- **AND** the private Git index SHALL be populated from that captured tree while HEAD remains the selected commit
+- **AND** staged-only paths and renames SHALL remain visible to Git-aware build hooks without reading the mutable live index.
+
+#### Scenario: Plain dependency preparation does not require unused Git capabilities
+- **GIVEN** a plain project uses package-index dependencies without VCS context
+- **WHEN** Git or its HTTP transport helpers are unavailable on the builder
+- **THEN** preparation SHALL stage and fingerprint only available Git capabilities and SHALL permit ordinary dependency installation
+- **AND** an actual acquisition requiring an unavailable Git capability SHALL retain the package manager failure and an actionable remedy rather than claim successful preparation.
+
+#### Scenario: Malformed pytest tables preserve runtime diagnostics
+- **GIVEN** a pytest TOML file or pyproject declares its pytest or ini_options section as a scalar or array
+- **WHEN** discovery selects that configuration
+- **THEN** it SHALL reject the malformed table with the source filename and section path before converting or reading options
+- **AND** ordinary review SHALL retain independent static findings and incomplete dependency-sensitive evidence.
+
+#### Scenario: Index policy discovery fails after snapshot materialization
+- **GIVEN** both immutable index snapshots have been created
+- **WHEN** changed-path, policy, or manifest discovery raises before ownership is returned
+- **THEN** both temporary snapshot roots SHALL be removed and the existing scope failure diagnostic SHALL remain intact.

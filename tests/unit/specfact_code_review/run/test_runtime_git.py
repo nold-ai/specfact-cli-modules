@@ -1,6 +1,7 @@
 """Git transport helpers and their identity travel with the disposable builder."""
 
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -10,14 +11,30 @@ from specfact_code_review.run import runtime_git
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
-def test_missing_git_https_helper_has_precise_diagnostic(tmp_path: Path, monkeypatch) -> None:
+def test_missing_git_https_helper_only_fails_when_used(tmp_path: Path, monkeypatch) -> None:
     git = tmp_path / "git"
     git.write_bytes(b"\x7fELFgit")
     (tmp_path / "git-remote-http").write_bytes(b"\x7fELFhttp")
     monkeypatch.setattr(runtime_git, "GIT", git)
+    run = subprocess.run
     monkeypatch.setattr(runtime_git.subprocess, "run", lambda *_args, **_kwargs: SimpleNamespace(stdout=str(tmp_path)))
-    with pytest.raises(ProjectRuntimeError, match="project_builder_tool_missing:git-remote-https"):
-        runtime_git.git_identity()
+    assert set(runtime_git.git_identity()) == {"bin/git", "git-core/git-remote-http"}
+    monkeypatch.setattr(runtime_git, "elf_dependencies", lambda _path: ())
+    monkeypatch.setattr(runtime_git, "inventory_native", lambda *_args, **_kwargs: None)
+    runtime_git.stage_git(tmp_path)
+    helper = tmp_path / "builder-tools/git-core/git-remote-https"
+    completed = run([sys.executable, str(helper)], capture_output=True, text=True, check=False)
+    assert completed.returncode == 127
+    assert "project_builder_tool_missing:git-remote-https" in completed.stderr
+    assert "install Git HTTP transport helpers" in completed.stderr
+    assert not helper.with_name(helper.name + ".real").exists()
+
+
+def test_missing_git_is_optional_for_identity_and_staging(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runtime_git, "GIT", tmp_path / "unavailable-git")
+    assert runtime_git.git_identity() == {}
+    runtime_git.stage_git(tmp_path)
+    assert not (tmp_path / "builder-tools").exists()
 
 
 def test_transport_change_invalidates_builder_identity_and_is_staged(tmp_path: Path, monkeypatch) -> None:

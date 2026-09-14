@@ -4526,6 +4526,13 @@ class CachedAnalysisSnapshot:
     entries: dict[str, tuple[str, str]]
     directories: tuple[MaterializedDirectoryIdentity, ...]
     diff: CachedDiffIdentity
+    vcs_commit: str = ""
+
+    @property
+    @ensure(lambda result: re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", result) is not None)
+    def tree(self) -> str:
+        """Expose the captured index tree through common snapshot discovery."""
+        return self.diff.index_tree
 
     @property
     @ensure(lambda result: result.startswith("index-"))
@@ -5120,6 +5127,15 @@ def _cached_caller_prefix(repository: Path) -> str | None:
     return "" if prefix == "." else f"{prefix}/"
 
 
+def _cached_head_commit(repository: Path) -> str:
+    """Capture a real HEAD commit while retaining unborn cached-analysis support."""
+    result = _run_changed_line_git_command(["git", "-C", str(repository), "rev-parse", "--verify", "HEAD^{commit}"])
+    if result is None or not result.stdout.endswith("\n"):
+        return ""
+    commit = result.stdout.removesuffix("\n")
+    return commit if re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", commit) else ""
+
+
 def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAnalysisSnapshot | None:
     """Bind selected paths and analyzer input to one immutable staged tree."""
     repository_paths = _cached_repository_paths(files)
@@ -5127,11 +5143,12 @@ def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAna
         return None
     repository, selected = repository_paths
     caller_prefix = _cached_caller_prefix(repository)
+    vcs_commit = _cached_head_commit(repository)
     base_tree = _cached_base_tree_identity(repository)
     tree_oid = _git_tree_identity(repository, "index")
     if caller_prefix is None or base_tree is None or tree_oid is None:
         return None
-    if _cached_base_tree_identity(repository) != base_tree:
+    if (_cached_base_tree_identity(repository), _cached_head_commit(repository)) != (base_tree, vcs_commit):
         return None
     entries = _cached_tree_entries(repository, tree_oid)
     selected_unsupported = entries is not None and any(
@@ -5150,6 +5167,7 @@ def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAna
         entries=entries,
         directories=directories,
         diff=CachedDiffIdentity(base_tree=base_tree, index_tree=tree_oid, caller_prefix=caller_prefix),
+        vcs_commit=vcs_commit,
     )
 
 

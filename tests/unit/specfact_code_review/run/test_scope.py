@@ -1474,3 +1474,33 @@ def test_portable_governed_python_links_remain_rejected(git_repo: Path, scope_na
         assert result.reason == "unsafe_governed_input"
     finally:
         scope.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize(
+    "failure_stage", ["_range_paths", "_discovered_index_policy_paths", "_snapshot_input_manifest"]
+)
+def test_index_discovery_failure_removes_both_materialized_roots(
+    git_repo: Path, tmp_path: Path, monkeypatch, failure_stage: str
+) -> None:
+    (git_repo / "src/app.py").write_text("VALUE = 2\n")
+    _git(git_repo, "add", "-A")
+    created = []
+
+    def tracked_mkdtemp(*, prefix: str) -> str:
+        root = tmp_path / f"{prefix}{len(created)}"
+        root.mkdir()
+        created.append(root)
+        return str(root)
+
+    def fail_discovery(*_args, **_kwargs):
+        raise scope.GitResolutionError("simulated immutable input read failure")
+
+    monkeypatch.setattr(scope.tempfile, "mkdtemp", tracked_mkdtemp)
+    monkeypatch.setattr(scope, failure_stage, fail_discovery)
+    result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=True))
+    assert result.status == "UNKNOWN"
+    assert result.reason == "git_resolution_failed"
+    assert "simulated immutable input read failure" in result.diagnostics
+    snapshots = [root for root in created if root.name.startswith("specfact-review-")]
+    assert len(snapshots) == 2
+    assert all(not root.exists() for root in created)

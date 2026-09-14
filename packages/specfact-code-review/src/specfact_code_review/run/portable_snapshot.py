@@ -51,10 +51,14 @@ def discover_snapshot(root: Path, *, config_path: Path | None, source_snapshot: 
     repository = getattr(source_snapshot, "repository", None)
     if repository is None:
         return plan
-    commit = source_snapshot.commit
+    commit = getattr(source_snapshot, "vcs_commit", "") or source_snapshot.commit
     if commit.startswith(("index:", "index-")):
-        commit = "HEAD"
-    return replace(plan, vcs_repository=repository, vcs=vcs_context(repository, commit))
+        raise ProjectRuntimeError("project_index_vcs_commit_missing: recapture the review index")
+    return replace(
+        plan,
+        vcs_repository=repository,
+        vcs=vcs_context(repository, commit, tree=getattr(source_snapshot, "tree", None)),
+    )
 
 
 @dataclass(frozen=True)

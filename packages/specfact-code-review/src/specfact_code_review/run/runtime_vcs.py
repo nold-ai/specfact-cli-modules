@@ -28,7 +28,7 @@ def _git(root: Path, *arguments: str) -> str:
 
 
 @require(lambda root: root.is_dir())
-def vcs_context(root: Path, commit: str = "HEAD") -> dict[str, str]:
+def vcs_context(root: Path, commit: str = "HEAD", *, tree: str | None = None) -> dict[str, str]:
     """Bind commits, tags and shallow boundaries without importing user Git config."""
     if not (root / ".git").exists():
         return {}
@@ -39,17 +39,18 @@ def vcs_context(root: Path, commit: str = "HEAD") -> dict[str, str]:
         boundary = root / boundary
     return {
         "commit": selected,
+        "tree": _git(root, "rev-parse", "--verify", (tree or selected) + "^{tree}"),
         "tags": _git(root, "for-each-ref", "--format=%(refname) %(objectname)", "refs/tags"),
         "shallow": boundary.read_text(encoding="ascii") if boundary.is_file() else "",
     }
 
 
 @require(lambda source, destination: source.is_dir() and destination.is_dir())
-def copy_vcs_context(source: Path, destination: Path, commit: str = "HEAD") -> None:
+def copy_vcs_context(source: Path, destination: Path, commit: str = "HEAD", *, tree: str | None = None) -> None:
     """Copy metadata, remove local configuration, and populate the selected index."""
     if not (source / ".git").exists():
         return
-    selected = vcs_context(source, commit)["commit"]
+    selected = vcs_context(source, commit, tree=tree)
     with tempfile.TemporaryDirectory(prefix="specfact-build-git-", dir=destination.parent) as directory:
         clone = Path(directory) / "clone"
         _git(source, "clone", "--quiet", "--no-hardlinks", "--no-checkout", str(source), str(clone))
@@ -58,5 +59,5 @@ def copy_vcs_context(source: Path, destination: Path, commit: str = "HEAD") -> N
         "[core]\nrepositoryformatversion = 0\nbare = false\nhooksPath = /dev/null\n", encoding="utf-8"
     )
     shutil.rmtree(destination / ".git/hooks", ignore_errors=True)
-    (destination / ".git/HEAD").write_text(selected + "\n", encoding="ascii")
-    _git(destination, "read-tree", selected)
+    (destination / ".git/HEAD").write_text(selected["commit"] + "\n", encoding="ascii")
+    _git(destination, "read-tree", selected["tree"])

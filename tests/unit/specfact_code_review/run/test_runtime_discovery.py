@@ -340,3 +340,23 @@ def test_ini_pytest_path_strings_are_preserved(tmp_path: Path, filename: str, se
     assert plan.pytest_config["pythonpath"] == "src tests"
     assert plan.pytest_config["testpaths"] == "tests"
     assert plan.source_roots == ("src", "tests")
+
+
+@pytest.mark.parametrize(
+    "filename,section,prefix",
+    [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ],
+)
+@pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+def test_malformed_pytest_table_has_project_diagnostic(
+    tmp_path: Path, filename: str, section: str, prefix: str, value: str
+) -> None:
+    (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+    with pytest.raises(
+        ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"
+    ):
+        discover_project(tmp_path)

@@ -85,7 +85,10 @@ def verify_inputs(plan: ProjectPlan) -> None:
         path = plan.root / name
         if path.is_symlink() or not path.is_file() or content_digest(path.read_bytes()) != expected:
             raise ProjectRuntimeError(f"project_runtime_inputs_changed_during_build:{name}")
-    if vcs_context(plan.vcs_repository or plan.root, plan.vcs.get("commit", "HEAD")) != plan.vcs:
+    if (
+        vcs_context(plan.vcs_repository or plan.root, plan.vcs.get("commit", "HEAD"), tree=plan.vcs.get("tree"))
+        != plan.vcs
+    ):
         raise ProjectRuntimeError("project_runtime_vcs_changed_during_build")
     if source_identity(plan.root) != plan.source_identity:
         raise ProjectRuntimeError("project_runtime_source_changed_during_build")

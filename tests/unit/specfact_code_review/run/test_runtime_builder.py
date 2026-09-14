@@ -1,15 +1,47 @@
 """Runtime builder separates dependency acquisition from source and host state."""
 
 import errno
+import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from specfact_code_review.run import runtime_builder
+from specfact_code_review.run import runtime_builder, runtime_git
 from specfact_code_review.run.runtime_builder import builder_command, copy_project, prepare_runtime
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError
 from specfact_code_review.run.runtime_sources import source_identity
+
+
+def test_plain_pip_build_runs_without_git(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "requirements.txt").write_text("example-package==1.0\n")
+    plan = ProjectPlan(
+        source, manager="pip", requirements=("requirements.txt",), source_identity=source_identity(source)
+    )
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    runtime = SimpleNamespace(
+        root=tmp_path / "capsule", interpreter="/opt/specfact/python/bin/python", bubblewrap="bwrap"
+    )
+    monkeypatch.setattr(runtime_git, "GIT", tmp_path / "unavailable-git")
+    monkeypatch.setattr(
+        runtime_builder.sandbox, "_verified_bubblewrap_descriptor", lambda *_args: os.open(os.devnull, os.O_RDONLY)
+    )
+    launched = []
+
+    def acquire(command, **_kwargs):
+        launched.append(command)
+        (staging / "artifact/site-packages").mkdir(parents=True)
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(runtime_builder.subprocess, "run", acquire)
+    assert runtime_builder._build(plan, runtime, staging) == staging / "artifact"
+    assert len(launched) == 1
+    config = json.loads((staging / "build.json").read_text())
+    assert config["commands"][0][-2:] == ["-r", "requirements.txt"]
 
 
 def test_builder_mounts_source_copy_and_no_host_home(tmp_path: Path) -> None:
