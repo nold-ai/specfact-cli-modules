@@ -1,0 +1,92 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py F          [ 50%]
+tests/unit/specfact_code_review/run/test_target_launch.py F              [100%]
+
+=================================== FAILURES ===================================
+______________ test_requirements_parent_include_inside_repository ______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-46/test_requirements_parent_inclu0')
+
+    def test_requirements_parent_include_inside_repository(tmp_path: Path) -> None:
+        (tmp_path / 'requirements').mkdir()
+        (tmp_path / 'requirements.txt').write_text('-r requirements/dev.txt\n')
+        (tmp_path / 'requirements/dev.txt').write_text('-c ../constraints.txt\nrequests\n')
+        (tmp_path / 'constraints.txt').write_text('requests<3\n')
+>       assert 'constraints.txt' in discover_project(tmp_path).inputs
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:143:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:228: in discover_project
+    for name in sorted(_requirements_inputs(root, requirements + constraints)):
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:150: in _requirements_inputs
+    visit(name, frozenset())
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:147: in visit
+    visit((path.parent.relative_to(root) / child).as_posix(), active | {canonical})
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'requirements/dev.txt', active = frozenset({'requirements.txt'})
+
+    def visit(name: str, active: frozenset[str]) -> None:
+        path = _safe_input(root, name)
+        canonical = path.relative_to(root).as_posix()
+        if canonical in active:
+            raise ProjectRuntimeError(f"project_requirements_cycle:{canonical}")
+        if canonical in visited:
+            return
+        if not path.is_file():
+            raise ProjectRuntimeError(f"project_input_missing:{canonical}")
+        visited.add(canonical)
+        logical_lines = path.read_text(encoding="utf-8").replace("\\\n", "").splitlines()
+        for line in logical_lines:
+            tokens = shlex.split(line, comments=True)
+            if not tokens:
+                continue
+            flag = tokens[0]
+            included = ""
+            if flag in {"-r", "--requirement", "-c", "--constraint"} and len(tokens) >= 2:
+                included = tokens[1]
+            elif flag.startswith(("--requirement=", "--constraint=")):
+                included = flag.split("=", 1)[1]
+            elif flag.startswith(("-r", "-c")) and len(flag) > 2:
+                included = flag[2:]
+            if included:
+                child = Path(included)
+                if child.is_absolute() or ".." in child.parts:
+>                   raise ProjectRuntimeError(f"project_input_escape:{included}")
+E                   specfact_code_review.run.runtime_models.ProjectRuntimeError: project_input_escape:../constraints.txt
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:146: ProjectRuntimeError
+_________ test_project_python_preserves_extensionless_script_arguments _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a44b360>
+
+    def test_project_python_preserves_extensionless_script_arguments(monkeypatch) -> None:
+        from specfact_code_review.run import target_launch
+
+        captured = []
+        monkeypatch.setattr(target_launch.sys, 'argv', ['python', 'manage', '--version'])
+        monkeypatch.setattr(target_launch.os, 'execv', lambda executable, argv: captured.append(argv))
+        target_launch.main()
+>       assert captured[0][-3:] == ['python-argv', 'manage', '--version']
+E       AssertionError: assert ['/opt/specfa..., '--version'] == ['python-argv..., '--version']
+E
+E         At index 0 diff: '/opt/specfact/builtin/specfact_code_review/run/target_bootstrap.py' != 'python-argv'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_target_launch.py:25: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_requirements_parent_include_inside_repository
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_project_python_preserves_extensionless_script_arguments
+============================== 2 failed in 0.10s ===============================

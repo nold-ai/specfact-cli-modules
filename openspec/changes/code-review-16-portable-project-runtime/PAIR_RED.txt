@@ -1,0 +1,39 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py ..F        [100%]
+
+=================================== FAILURES ===================================
+_______ test_immutable_pair_prepares_each_side_and_downgrades_authority ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-7/test_immutable_pair_prepares_e0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c74e3f0>
+
+    def test_immutable_pair_prepares_each_side_and_downgrades_authority(tmp_path: Path, monkeypatch) -> None:
+        from specfact_code_review.run import portable_snapshot
+        base_root, head_root = tmp_path / 'base', tmp_path / 'head'
+        base_root.mkdir()
+        head_root.mkdir()
+        calls = []
+        def run_side(runtime, **kwargs):
+            calls.append((kwargs['snapshot_root'], kwargs['options'].project_runtime))
+            return runner.CapsuleSnapshotResult({}, {}), {'identity': str(kwargs['snapshot_root'])}
+        monkeypatch.setattr(portable_snapshot, 'run_project_snapshot', run_side)
+        monkeypatch.setattr(runner, '_snapshot_python_files', lambda *args: [])
+        monkeypatch.setattr(runner, '_classify_range_findings', lambda *args: ({}, {}))
+        monkeypatch.setattr(runner, '_capsule_report', lambda *args, **kwargs: kwargs['scope_evidence'])
+        resolution = SimpleNamespace(base_snapshot=SimpleNamespace(root=base_root), head_snapshot=SimpleNamespace(root=head_root))
+        descriptor = tmp_path / 'project-runtime.json'
+>       observed = portable_snapshot.run_project_scope_pair(resolution, runtime=object(), options=runner.ReviewOptions(project_runtime=descriptor), scope_evidence={'assurance_kind': 'range_candidate'})
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.portable_snapshot' has no attribute 'run_project_scope_pair'
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:52: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_immutable_pair_prepares_each_side_and_downgrades_authority
+========================= 1 failed, 2 passed in 0.16s ==========================

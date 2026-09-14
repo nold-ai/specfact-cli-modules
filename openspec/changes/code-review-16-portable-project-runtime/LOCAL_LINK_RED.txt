@@ -1,0 +1,47 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py ...F         [100%]
+
+=================================== FAILURES ===================================
+_____________ test_copy_project_supports_repository_local_symlink ______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-13/test_copy_project_supports_rep0')
+
+    def test_copy_project_supports_repository_local_symlink(tmp_path: Path) -> None:
+        source = tmp_path / 'source'
+        source.mkdir()
+        (source / 'cert.pem').write_text('test certificate fixture')
+        (source / 'cert-link.pem').symlink_to('cert.pem')
+>       copy_project(source, tmp_path / 'copy')
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:47:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:34: in copy_project
+    shutil.copytree(source, destination, ignore=ignored)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py:654: in copytree
+    return _copytree(entries=entries, src=src, dst=dst, symlinks=symlinks,
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py:548: in _copytree
+    ignored_names = ignore(os.fspath(src), [x.name for x in entries])
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+directory = '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-13/test_copy_project_supports_rep0/source'
+names = ['cert.pem', 'cert-link.pem']
+
+    def ignored(directory: str, names: list[str]) -> set[str]:
+        excluded = set(names) & IGNORED_INPUTS
+        for name in set(names) - excluded:
+            if (Path(directory) / name).is_symlink():
+>               raise ProjectRuntimeError(f"project_source_symlink:{Path(directory) / name}")
+E               specfact_code_review.run.runtime_models.ProjectRuntimeError: project_source_symlink:/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-13/test_copy_project_supports_rep0/source/cert-link.pem
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:31: ProjectRuntimeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_copy_project_supports_repository_local_symlink
+========================= 1 failed, 3 passed in 0.11s ==========================

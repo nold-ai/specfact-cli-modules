@@ -1,0 +1,72 @@
+"""Automatic scope attachment preserves static evidence on preparation failure."""
+
+from pathlib import Path
+from types import SimpleNamespace
+
+from specfact_code_review.run import runner
+from specfact_code_review.run.portable_snapshot import run_project_snapshot
+from specfact_code_review.run.runtime_models import ProjectRuntimeError
+
+
+def test_failed_preparation_never_runs_dependency_members(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "pyproject.toml").write_text('[project]\nname="consumer"\ndependencies=["pandas"]\n')
+    source = tmp_path / "app.py"
+    source.write_text("import pandas\n")
+    calls = []
+
+    def fail(*args, **kwargs):
+        raise ProjectRuntimeError("project_native_library_missing:libodbc.so.2")
+
+    monkeypatch.setattr("specfact_code_review.run.portable_snapshot.prepare_runtime", fail)
+
+    def dispatch(request, **kwargs):
+        calls.append(request.member)
+        return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+
+    monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+    runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+    snapshot, evidence = run_project_snapshot(
+        runtime, snapshot_root=tmp_path, files=[source], options=runner.ReviewOptions(), assurance_kind="explicit_files"
+    )
+    assert not set(calls) & {"basedpyright", "pylint", "contracts", "targeted-pytest-coverage"}
+    assert "ruff" in calls
+    assert evidence["diagnostic"] == "project_native_library_missing:libodbc.so.2"
+    assert snapshot.evidence["basedpyright"]["evidence_outcome"] == "UNKNOWN"
+
+
+def test_runtime_kwargs_are_accepted(tmp_path: Path) -> None:
+    config = tmp_path / "review.toml"
+    options = runner._review_options_from_kwargs(None, {"project_config": config})
+    assert options.project_config == config
+
+
+def test_immutable_pair_prepares_each_side_and_downgrades_authority(tmp_path: Path, monkeypatch) -> None:
+    from specfact_code_review.run import portable_snapshot
+
+    base_root, head_root = tmp_path / "base", tmp_path / "head"
+    base_root.mkdir()
+    head_root.mkdir()
+    calls = []
+
+    def run_side(runtime, **kwargs):
+        calls.append((kwargs["snapshot_root"], kwargs["options"].project_runtime))
+        return runner.CapsuleSnapshotResult({}, {}), {"identity": str(kwargs["snapshot_root"])}
+
+    monkeypatch.setattr(portable_snapshot, "run_project_snapshot", run_side)
+    monkeypatch.setattr(runner, "_snapshot_python_files", lambda *args: [])
+    monkeypatch.setattr(runner, "_classify_range_findings", lambda *args: ({}, {}))
+    monkeypatch.setattr(runner, "_capsule_report", lambda *args, **kwargs: kwargs["scope_evidence"])
+    resolution = SimpleNamespace(
+        base_snapshot=SimpleNamespace(root=base_root, contents={"app.py": b""}),
+        head_snapshot=SimpleNamespace(root=head_root, contents={"app.py": b""}),
+    )
+    descriptor = tmp_path / "project-runtime.json"
+    observed = portable_snapshot.run_project_scope_pair(
+        resolution,
+        runtime=object(),
+        options=runner.ReviewOptions(project_runtime=descriptor),
+        scope_evidence={"assurance_kind": "range_candidate"},
+    )
+    assert calls == [(base_root, None), (head_root, descriptor)]
+    assert observed["assurance_kind"] == "range_preview"
+    assert observed["project_runtime"]["base"]["identity"] != observed["project_runtime"]["head"]["identity"]

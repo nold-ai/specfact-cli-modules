@@ -1,0 +1,44 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+tests/unit/specfact_code_review/run/test_runtime_cli.py ...F             [100%]
+
+=================================== FAILURES ===================================
+________ test_customer_actions_source_layout_does_not_select_publisher _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d1782b0>
+
+    def test_customer_actions_source_layout_does_not_select_publisher(monkeypatch) -> None:
+        from specfact_code_review.run import runner
+        marker = object()
+        monkeypatch.setenv('GITHUB_ACTIONS', 'true')
+        monkeypatch.setenv('GITHUB_REPOSITORY', 'customer/project')
+        monkeypatch.setattr(runner, '_official_installed_payload', lambda: (marker, ''))
+        monkeypatch.setattr(runner, '_protected_candidate_payload', lambda: (_ for _ in ()).throw(AssertionError('publisher selected')))
+>       assert runner._selected_module_payload().payload is marker
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_cli.py:45:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+packages/specfact-code-review/src/specfact_code_review/run/runner.py:655: in _selected_module_payload
+    return _protected_candidate_payload()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/specfact_code_review/run/test_runtime_cli.py:44: in <lambda>
+    monkeypatch.setattr(runner, '_protected_candidate_payload', lambda: (_ for _ in ()).throw(AssertionError('publisher selected')))
+                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+.0 = <tuple_iterator object at 0x10b09fee0>
+
+>   monkeypatch.setattr(runner, '_protected_candidate_payload', lambda: (_ for _ in ()).throw(AssertionError('publisher selected')))
+E   AssertionError: publisher selected
+
+tests/unit/specfact_code_review/run/test_runtime_cli.py:44: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_cli.py::test_customer_actions_source_layout_does_not_select_publisher
+========================= 1 failed, 3 passed in 0.30s ==========================

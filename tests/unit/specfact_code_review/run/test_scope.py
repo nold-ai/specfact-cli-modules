@@ -1347,3 +1347,17 @@ def test_semgrep_ai_bloat_rule_pack_is_governed_and_sealed(scope_api: Any, tmp_p
     assert bundle.clean.identity_kind == "signed_module_payload"
     assert bundle.ai_bloat.identity_kind == "signed_module_payload"
     assert bundle.bundle_digest.startswith("sha256:")
+
+
+def test_portable_lock_only_range_remains_analyzable_preview(scope_api: Any, git_repo: Path) -> None:
+    from dataclasses import replace
+
+    base, head = _make_range(git_repo, path="uv.lock", content="version = 1\n")
+    request = replace(_range_request(scope_api, git_repo, base, head), portable_project_runtime=True)
+    result = scope_api.resolve_scope(request)
+    try:
+        assert result.status == "PASS", (result.reason, result.diagnostics)
+        assert result.effective_assurance_kind == "range_preview"
+        assert "uv.lock" in result.selected_paths
+    finally:
+        scope_api.cleanup_scope_resolution(result)

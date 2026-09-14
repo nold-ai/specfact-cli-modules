@@ -1,0 +1,61 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+tests/unit/test_external_capsule_corpus.py FF                            [100%]
+
+=================================== FAILURES ===================================
+____________ test_external_gate_rejects_unknown_despite_fail_status ____________
+
+    def test_external_gate_rejects_unknown_despite_fail_status() -> None:
+>       module = _load()
+                 ^^^^^^^
+
+tests/unit/test_external_capsule_corpus.py:18:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/test_external_capsule_corpus.py:13: in _load
+    spec.loader.exec_module(module)
+<frozen importlib._bootstrap_external>:755: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:892: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x1076b14f0>
+path = '/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/scripts/external_capsule_corpus.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/scripts/external_capsule_corpus.py'
+
+<frozen importlib._bootstrap_external>:950: FileNotFoundError
+______________ test_external_gate_requires_actual_test_execution _______________
+
+    def test_external_gate_requires_actual_test_execution() -> None:
+>       module = _load()
+                 ^^^^^^^
+
+tests/unit/test_external_capsule_corpus.py:24:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/test_external_capsule_corpus.py:13: in _load
+    spec.loader.exec_module(module)
+<frozen importlib._bootstrap_external>:755: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:892: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x1076b1730>
+path = '/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/scripts/external_capsule_corpus.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/scripts/external_capsule_corpus.py'
+
+<frozen importlib._bootstrap_external>:950: FileNotFoundError
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_external_gate_rejects_unknown_despite_fail_status
+FAILED tests/unit/test_external_capsule_corpus.py::test_external_gate_requires_actual_test_execution
+============================== 2 failed in 0.02s ===============================

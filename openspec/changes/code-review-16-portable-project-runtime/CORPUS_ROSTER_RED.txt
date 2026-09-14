@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/unit/test_external_capsule_corpus.py ..F                           [100%]
+
+=================================== FAILURES ===================================
+_______ test_external_gate_rejects_missing_analyzer_even_with_real_tests _______
+
+    def test_external_gate_rejects_missing_analyzer_even_with_real_tests() -> None:
+        report = {
+            'assurance_status': 'PASS',
+            'analyzer_evidence': [{
+                'id': 'targeted-pytest-coverage', 'evidence_outcome': 'PASS',
+                'target_execution': {
+                    'collected': ['test_app.py::test_app'],
+                    'records': [{'nodeid': 'test_app.py::test_app', 'phase': 'call', 'outcome': 'passed'}],
+                    'coverage': {'files': {'app.py': {}}},
+                },
+            }],
+        }
+>       with pytest.raises(ValueError, match='roster'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:42: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_external_gate_rejects_missing_analyzer_even_with_real_tests
+========================= 1 failed, 2 passed in 0.02s ==========================

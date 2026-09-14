@@ -1,0 +1,35 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py .F          [ 66%]
+tests/unit/specfact_code_review/run/test_sitecustomize.py F              [100%]
+
+=================================== FAILURES ===================================
+______________ test_python_cli_keeps_code_separate_from_bootstrap ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108d57490>
+
+    def test_python_cli_keeps_code_separate_from_bootstrap(monkeypatch) -> None:
+>       from specfact_code_review.run.target_bootstrap import _project_python_command
+E       ImportError: cannot import name '_project_python_command' from 'specfact_code_review.run.target_bootstrap' (/private/tmp/specfact-473-implementation/packages/specfact-code-review/src/specfact_code_review/run/target_bootstrap.py)
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:23: ImportError
+__ test_project_python_fails_closed_before_executing_code_without_descriptor ___
+
+    def test_project_python_fails_closed_before_executing_code_without_descriptor() -> None:
+        env = {**os.environ, 'PYTHONPATH': str(Path(target_bootstrap.__file__).parent), 'SPECFACT_PROJECT_PYTHON': '1'}
+        result = subprocess.run([sys.executable, '-s', '-c', 'print("MUST_NOT_EXECUTE")'], env=env, capture_output=True, text=True, check=False)
+>       assert result.returncode == 78
+E       assert 0 == 78
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-s', '-c', 'print("MUST_NOT_EXECUTE")'], returncode=0, stdout='MUST_NOT_EXECUTE\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_sitecustomize.py:12: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_python_cli_keeps_code_separate_from_bootstrap
+FAILED tests/unit/specfact_code_review/run/test_sitecustomize.py::test_project_python_fails_closed_before_executing_code_without_descriptor
+========================= 2 failed, 1 passed in 0.84s ==========================

@@ -1,0 +1,34 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 20 items / 18 deselected / 2 selected
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py F.         [100%]
+
+=================================== FAILURES ===================================
+________ test_verified_active_hatch_context_resolves_competing_signals _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-53/test_verified_active_hatch_con0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b856fd0>
+
+    def test_verified_active_hatch_context_resolves_competing_signals(tmp_path: Path, monkeypatch) -> None:
+        from specfact_code_review.run import runtime_discovery
+
+        environment = tmp_path / '.venv'
+        environment.mkdir()
+        (environment / 'pyvenv.cfg').write_text('home = /usr/bin\n')
+        (tmp_path / 'uv.lock').touch()
+        (tmp_path / 'hatch.toml').write_text('[envs.default]\n[envs.review]\ndetached=true\n')
+        monkeypatch.setenv('VIRTUAL_ENV', str(environment))
+        monkeypatch.setenv('HATCH_ENV_ACTIVE', 'review')
+>       monkeypatch.setattr(runtime_discovery.sys, 'prefix', str(environment))
+                            ^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.runtime_discovery' has no attribute 'sys'
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:156: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_verified_active_hatch_context_resolves_competing_signals
+================== 1 failed, 1 passed, 18 deselected in 0.09s ==================

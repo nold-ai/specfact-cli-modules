@@ -368,6 +368,7 @@ class ScopeRequest:
     pr_context_file: Path | None = None
     repository_slug: str | None = None
     project_runtime_source_lock_paths: tuple[Path, ...] = ()
+    portable_project_runtime: bool = False
 
 
 @dataclass(frozen=True)
@@ -2085,6 +2086,33 @@ def _context_failure(reason: str, diagnostics: str, resolved: _ResolvedRange) ->
     )
 
 
+def _portable_source_locks(base: Snapshot, head: Snapshot) -> frozenset[str]:
+    from specfact_code_review.run.runtime_discovery import PROJECT_INPUT_NAMES
+
+    return frozenset(
+        path
+        for path in set(base.contents) | set(head.contents)
+        if Path(path).name in PROJECT_INPUT_NAMES
+        or Path(path).suffix == ".lock"
+        or Path(path).name.startswith(("requirements", "constraints"))
+    )
+
+
+def _range_policy_paths(root: Path) -> frozenset[str]:
+    with ExitStack() as cleanup:
+        ruff_policy = resolve_ruff_policy(root, expected_version="0.15.12")
+        if ruff_policy.bundle_root is not None:
+            cleanup.callback(shutil.rmtree, ruff_policy.bundle_root, ignore_errors=True)
+        if ruff_policy.status != "PASS":
+            raise PolicyResolutionError(ruff_policy.reason)
+        basedpyright_policy = resolve_basedpyright_policy(root, expected_version="1.39.10")
+        if basedpyright_policy.bundle_root is not None:
+            cleanup.callback(shutil.rmtree, basedpyright_policy.bundle_root, ignore_errors=True)
+        if basedpyright_policy.status != "PASS":
+            raise PolicyResolutionError(basedpyright_policy.reason)
+        return frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths))
+
+
 def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResolution:
     claimed_context = _load_claimed_context(request)
     base = _resolve_commit(request.repository, cast(str, request.base_ref))
@@ -2106,21 +2134,16 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
         cleanup.callback(shutil.rmtree, head_snapshot.root, ignore_errors=True)
         source_locks = frozenset(PurePosixPath(path).as_posix() for path in request.project_runtime_source_lock_paths)
         source_locks |= _context_source_lock_paths(claimed_context)
+        if request.portable_project_runtime and claimed_context is None:
+            source_locks |= _portable_source_locks(base_snapshot, head_snapshot)
         target_snapshot = base_snapshot if base == merge_base else _materialize_commit(request.repository, base)
         if target_snapshot is not base_snapshot:
             cleanup.callback(shutil.rmtree, target_snapshot.root, ignore_errors=True)
-        project_runtime_source_locks = _snapshot_source_lock_identities(target_snapshot, source_locks)
-        ruff_policy = resolve_ruff_policy(target_snapshot.root, expected_version="0.15.12")
-        if ruff_policy.bundle_root is not None:
-            cleanup.callback(shutil.rmtree, ruff_policy.bundle_root, ignore_errors=True)
-        if ruff_policy.status != "PASS":
-            raise PolicyResolutionError(ruff_policy.reason)
-        basedpyright_policy = resolve_basedpyright_policy(target_snapshot.root, expected_version="1.39.10")
-        if basedpyright_policy.bundle_root is not None:
-            cleanup.callback(shutil.rmtree, basedpyright_policy.bundle_root, ignore_errors=True)
-        if basedpyright_policy.status != "PASS":
-            raise PolicyResolutionError(basedpyright_policy.reason)
-        additional_policy_paths = frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths))
+        identity_locks = source_locks
+        if request.portable_project_runtime and claimed_context is None:
+            identity_locks = frozenset(path for path in source_locks if path in target_snapshot.contents)
+        project_runtime_source_locks = _snapshot_source_lock_identities(target_snapshot, identity_locks)
+        additional_policy_paths = _range_policy_paths(target_snapshot.root)
         selected = tuple(
             path
             for path in _range_paths(request.repository, merge_base, head)
@@ -2176,10 +2199,6 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
         )
         if target_snapshot is not base_snapshot:
             shutil.rmtree(target_snapshot.root, ignore_errors=True)
-        if ruff_policy.bundle_root is not None:
-            shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
-        if basedpyright_policy.bundle_root is not None:
-            shutil.rmtree(basedpyright_policy.bundle_root, ignore_errors=True)
         cleanup.pop_all()
         return result
 
@@ -2239,7 +2258,8 @@ def _range_result(request: ScopeRequest, resolved: _ResolvedRange) -> ScopeResol
         head_manifest,
         claimed_context=claimed_context,
     )
-    if any(path in resolved.source_lock_paths for path in resolved.selected_paths):
+    portable = request.portable_project_runtime and claimed_context is None
+    if not portable and any(path in resolved.source_lock_paths for path in resolved.selected_paths):
         return _range_resolution(
             context,
             status="UNKNOWN",
@@ -2247,7 +2267,7 @@ def _range_result(request: ScopeRequest, resolved: _ResolvedRange) -> ScopeResol
             ci_exit_code=1,
             diagnostics="Candidate source-lock bytes are governed evidence and cannot build the project-runtime layer.",
         )
-    if resolved.candidate_policy_paths:
+    if resolved.candidate_policy_paths and not portable:
         return _range_resolution(
             context,
             status="UNKNOWN",

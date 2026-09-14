@@ -95,6 +95,8 @@ class ReviewRunRequest:
     focus_facets: tuple[str, ...] = ()
     review_focus: ReviewFocus | None = None
     requirements_evidence: Path | None = None
+    project_config: Path | None = None
+    project_runtime: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -110,6 +112,8 @@ class _ReviewLoopFlags:
     review_level: ReviewLevelFilter | None
     review_focus: ReviewFocus | None
     assurance_kind: LocalAssuranceKind = "explicit_files"
+    project_config: Path | None = None
+    project_runtime: Path | None = None
 
 
 def _changed_files_from_git_diff(*, include_tests: bool) -> list[Path]:
@@ -518,6 +522,8 @@ def _run_review_with_progress(
             review_level=flags.review_level,
             review_focus=flags.review_focus,
             assurance_kind=flags.assurance_kind,
+            project_config=flags.project_config,
+            project_runtime=flags.project_runtime,
         ),
     )
 
@@ -539,6 +545,8 @@ def _run_review_with_status(
             review_level=flags.review_level,
             review_focus=flags.review_focus,
             assurance_kind=flags.assurance_kind,
+            project_config=flags.project_config,
+            project_runtime=flags.project_runtime,
         )
         report = _run_review_once(files, base)
         applied_simplification_findings: list[ReviewFinding] = []
@@ -571,6 +579,8 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
         review_level=flags.review_level,
         focus=flags.review_focus,
         assurance_kind=flags.assurance_kind,
+        project_config=flags.project_config,
+        project_runtime=flags.project_runtime,
     )
     applied_simplification_findings: list[ReviewFinding] = []
     if flags.fix:
@@ -599,6 +609,8 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
             review_level=flags.review_level,
             focus=flags.review_focus,
             assurance_kind=flags.assurance_kind,
+            project_config=flags.project_config,
+            project_runtime=flags.project_runtime,
         )
         report = _with_applied_simplification_findings(report, applied_simplification_findings)
     if flags.preview_fixes:
@@ -744,6 +756,8 @@ def _build_review_run_request(
         focus_facets=focus_facets,
         review_focus=_review_focus_from_facets(focus_facets),
         requirements_evidence=requirements_evidence,
+        project_config=cast(Path | None, _get_optional_param("project_config", _as_optional_path)),
+        project_runtime=cast(Path | None, _get_optional_param("project_runtime", _as_optional_path)),
     )
 
     # Reject any unexpected keyword arguments
@@ -853,6 +867,7 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
             with_mutation=request.with_mutation,
             pr_context_file=request.pr_context_file,
             repository_slug=_repository_slug(Path.cwd()),
+            portable_project_runtime=request.pr_context_file is None,
         )
     )
     try:
@@ -863,6 +878,8 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
                 resolution,
                 options=ReviewOptions(
                     no_tests=request.no_tests,
+                    project_config=request.project_config,
+                    project_runtime=request.project_runtime,
                     include_noise=request.include_noise,
                     bug_hunt=request.bug_hunt,
                     review_level=request.review_level,
@@ -1207,6 +1224,8 @@ def run_command(
         resolved_files,
         _ReviewLoopFlags(
             no_tests=request.no_tests,
+            project_config=request.project_config,
+            project_runtime=request.project_runtime,
             include_noise=request.include_noise,
             fix=request.fix,
             preview_fixes=request.preview_fixes,

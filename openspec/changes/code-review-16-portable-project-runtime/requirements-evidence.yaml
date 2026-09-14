@@ -1,0 +1,166 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:discover-a-project-without-executing-its-code:
+    rationale: Discover a project without executing its code. The approved portable-runtime story requires independent
+      customer runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-16-portable-project-runtime/specs/portable-project-runtime/spec.md
+    verification_cases:
+    - case_id: 473-1-1
+      scenario_id: discover-a-project-without-executing-its-code
+      method: test
+      intent: Verify hatchling is only a build backend through the focused regression suite and, for execution claims,
+        the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-1-2
+      scenario_id: discover-a-project-without-executing-its-code
+      method: test
+      intent: Verify external hatch configuration through the focused regression suite and, for execution claims,
+        the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-1-3
+      scenario_id: discover-a-project-without-executing-its-code
+      method: test
+      intent: Verify conflicting environment evidence through the focused regression suite and, for execution claims,
+        the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-1-4
+      scenario_id: discover-a-project-without-executing-its-code
+      method: test
+      intent: Verify requirements constraints and local inputs through the focused regression suite and, for execution
+        claims, the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:prepare-an-isolated-reproducible-runtime:
+    rationale: Prepare an isolated reproducible runtime. The approved portable-runtime story requires independent
+      customer runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-16-portable-project-runtime/specs/portable-project-runtime/spec.md
+    verification_cases:
+    - case_id: 473-2-1
+      scenario_id: prepare-an-isolated-reproducible-runtime
+      method: test
+      intent: Verify cold preparation and offline warm reuse through the focused regression suite and, for execution
+        claims, the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-2-2
+      scenario_id: prepare-an-isolated-reproducible-runtime
+      method: test
+      intent: Verify changed dependency inputs through the focused regression suite and, for execution claims, the
+        pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-2-3
+      scenario_id: prepare-an-isolated-reproducible-runtime
+      method: test
+      intent: Verify corrupt or escaping artifact through the focused regression suite and, for execution claims,
+        the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+  ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:separate-project-imports-from-the-sealed-supervisor
+  : rationale: Separate project imports from the sealed supervisor. The approved portable-runtime story requires
+      independent customer runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-16-portable-project-runtime/specs/portable-project-runtime/spec.md
+    verification_cases:
+    - case_id: 473-3-1
+      scenario_id: separate-project-imports-from-the-sealed-supervisor
+      method: test
+      intent: Verify common dependency collision through the focused regression suite and, for execution claims,
+        the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-3-2
+      scenario_id: separate-project-imports-from-the-sealed-supervisor
+      method: test
+      intent: Verify real incompatibility through the focused regression suite and, for execution claims, the pinned
+        Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:attach-context-to-every-review-scope:
+    rationale: Attach context to every review scope. The approved portable-runtime story requires independent customer
+      runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-16-portable-project-runtime/specs/portable-project-runtime/spec.md
+    verification_cases:
+    - case_id: 473-4-1
+      scenario_id: attach-context-to-every-review-scope
+      method: test
+      intent: Verify explicit-file customer review through the focused regression suite and, for execution claims,
+        the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-4-2
+      scenario_id: attach-context-to-every-review-scope
+      method: test
+      intent: Verify missing runtime preserves independent evidence through the focused regression suite and, for
+        execution claims, the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:observe-ordinary-customer-pytest-execution:
+    rationale: Observe ordinary customer pytest execution. The approved portable-runtime story requires independent
+      customer runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-16-portable-project-runtime/specs/portable-project-runtime/spec.md
+    verification_cases:
+    - case_id: 473-5-1
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Verify detached hatch reconstruction through the focused regression suite and, for execution claims,
+        the pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-5-2
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Verify controlled regression through the focused regression suite and, for execution claims, the pinned
+        Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.
+  ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:validate-external-repositories-through-released-installation
+  : rationale: Validate external repositories through released installation. The approved portable-runtime story
+      requires independent customer runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-16-portable-project-runtime/specs/portable-project-runtime/spec.md
+    verification_cases:
+    - case_id: 473-6-1
+      scenario_id: validate-external-repositories-through-released-installation
+      method: test
+      intent: Verify signed release acceptance through the focused regression suite and, for execution claims, the
+        pinned Linux capsule corpus.
+      observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
+        Local unit or bootstrap results do not constitute signed release acceptance.

@@ -1,0 +1,35 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/specfact_code_review/test_capsule_tool_commands.py F          [100%]
+
+=================================== FAILURES ===================================
+______ test_development_context_runs_basedpyright_with_import_resolution _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-51/test_development_context_runs_0')
+
+    def test_development_context_runs_basedpyright_with_import_resolution(tmp_path) -> None:
+        import json
+        import subprocess
+        import sys
+
+        source = tmp_path / 'app.py'
+        source.write_text('from icontract import require\n@require(lambda x: x > 0)\ndef positive(x: int) -> int:\n    return x\n')
+        with _review_utils._development_runtime(Path(sys.prefix)):
+            command = _review_utils.analyzer_command(['basedpyright', '--outputjson', str(source)])
+        result = subprocess.run(command, cwd=tmp_path, text=True, capture_output=True, check=False)
+>       assert result.returncode in (0, 1), result.stderr
+E       AssertionError: 'pythonpath' option cannot be used with 'venvpath' option
+E
+E       assert 4 in (0, 1)
+E        +  where 4 = CompletedProcess(args=['basedpyright', '--outputjson', '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytes...tree/.venv/bin/python'], returncode=4, stdout='', stderr="'pythonpath' option cannot be used with 'venvpath' option\n").returncode
+
+tests/unit/specfact_code_review/test_capsule_tool_commands.py:70: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/test_capsule_tool_commands.py::test_development_context_runs_basedpyright_with_import_resolution
+============================== 1 failed in 0.27s ===============================

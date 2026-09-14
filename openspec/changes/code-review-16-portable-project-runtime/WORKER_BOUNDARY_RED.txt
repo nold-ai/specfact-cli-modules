@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/unit/specfact_code_review/run/test_portable_worker.py .......F     [100%]
+
+=================================== FAILURES ===================================
+___ test_target_worker_cannot_write_controller_output_or_share_pid_namespace ___
+
+    def test_target_worker_cannot_write_controller_output_or_share_pid_namespace() -> None:
+>       from specfact_code_review.run.target_launch import target_command
+E       ModuleNotFoundError: No module named 'specfact_code_review.run.target_launch'
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:69: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_target_worker_cannot_write_controller_output_or_share_pid_namespace
+========================= 1 failed, 7 passed in 0.10s ==========================

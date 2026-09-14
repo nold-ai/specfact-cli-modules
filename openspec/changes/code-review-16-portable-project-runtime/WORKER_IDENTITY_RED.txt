@@ -1,0 +1,30 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-worktree
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py .......F   [100%]
+
+=================================== FAILURES ===================================
+_____________ test_descriptor_rejects_a_different_analyzer_worker ______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-34/test_descriptor_rejects_a_diff0')
+
+    def test_descriptor_rejects_a_different_analyzer_worker(tmp_path: Path) -> None:
+        source = tmp_path / 'source'
+        source.mkdir()
+        artifact = tmp_path / 'artifact'
+        artifact.mkdir()
+        plan = discover_project(source)
+        prepared = seal_runtime(artifact, plan=plan, environment_id='linux-x86_64-cp312', worker_identity='sha256:' + 'a' * 64)
+        with pytest.raises(ProjectRuntimeError, match='worker_identity_mismatch'):
+>           load_runtime(prepared.descriptor_path, plan=plan, environment_id='linux-x86_64-cp312', worker_identity='sha256:' + 'b' * 64)
+E           TypeError: load_runtime() got an unexpected keyword argument 'worker_identity'
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py:121: TypeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifacts.py::test_descriptor_rejects_a_different_analyzer_worker
+========================= 1 failed, 7 passed in 0.12s ==========================

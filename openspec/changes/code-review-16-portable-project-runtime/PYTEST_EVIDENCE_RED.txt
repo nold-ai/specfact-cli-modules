@@ -1,0 +1,37 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/specfact_code_review/run/test_portable_worker.py ....FFF      [100%]
+
+=================================== FAILURES ===================================
+___________________ test_pytest_collection_only_cannot_pass ____________________
+
+    def test_pytest_collection_only_cannot_pass() -> None:
+>       from specfact_code_review.run.portable_worker import validate_observation
+E       ImportError: cannot import name 'validate_observation' from 'specfact_code_review.run.portable_worker' (/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py)
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:49: ImportError
+_________ test_pytest_early_stop_is_incomplete_even_with_real_failure __________
+
+    def test_pytest_early_stop_is_incomplete_even_with_real_failure() -> None:
+>       from specfact_code_review.run.portable_worker import validate_observation
+E       ImportError: cannot import name 'validate_observation' from 'specfact_code_review.run.portable_worker' (/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py)
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:55: ImportError
+________________ test_pytest_success_requires_coverage_evidence ________________
+
+    def test_pytest_success_requires_coverage_evidence() -> None:
+>       from specfact_code_review.run.portable_worker import validate_observation
+E       ImportError: cannot import name 'validate_observation' from 'specfact_code_review.run.portable_worker' (/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py)
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:62: ImportError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_collection_only_cannot_pass
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_early_stop_is_incomplete_even_with_real_failure
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_success_requires_coverage_evidence
+========================= 3 failed, 4 passed in 0.35s ==========================

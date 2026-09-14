@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py .....F       [100%]
+
+=================================== FAILURES ===================================
+______ test_builder_provides_vcs_metadata_tool_without_host_configuration ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-29/test_builder_provides_vcs_meta0')
+
+    def test_builder_provides_vcs_metadata_tool_without_host_configuration(tmp_path: Path) -> None:
+        runtime = SimpleNamespace(root=tmp_path / 'capsule', interpreter='/opt/specfact/python/bin/python')
+        command = builder_command(runtime, staging=tmp_path / 'staging', executable='/proc/self/fd/12')
+>       assert '/opt/specfact/output/builder-tools/bin:/opt/specfact/python/bin:/usr/bin:/bin' in command
+E       AssertionError: assert '/opt/specfact/output/builder-tools/bin:/opt/specfact/python/bin:/usr/bin:/bin' in ['/proc/self/fd/12', '--die-with-parent', '--new-session', '--unshare-all', '--share-net', '--ro-bind', ...]
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:64: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_builder_provides_vcs_metadata_tool_without_host_configuration
+========================= 1 failed, 5 passed in 0.11s ==========================

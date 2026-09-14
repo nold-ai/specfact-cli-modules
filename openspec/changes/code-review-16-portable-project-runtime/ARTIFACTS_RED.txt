@@ -1,0 +1,20 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+_ ERROR collecting tests/unit/specfact_code_review/run/test_runtime_artifacts.py _
+ImportError while importing test module '/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/tests/unit/specfact_code_review/run/test_runtime_artifacts.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py:8: in <module>
+    from specfact_code_review.run.runtime_artifacts import load_runtime, seal_runtime
+E   ModuleNotFoundError: No module named 'specfact_code_review.run.runtime_artifacts'
+=========================== short test summary info ============================
+ERROR tests/unit/specfact_code_review/run/test_runtime_artifacts.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.11s ===============================

@@ -1,0 +1,71 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 127 items / 126 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_scope.py F                      [100%]
+
+=================================== FAILURES ===================================
+___________ test_portable_lock_only_range_remains_analyzable_preview ___________
+
+scope_api = <module 'specfact_code_review.run.scope' from '/Users/dom/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/packages/specfact-code-review/src/specfact_code_review/run/scope.py'>
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-27/test_portable_lock_only_range_0/repo')
+
+    def test_portable_lock_only_range_remains_analyzable_preview(scope_api: Any, git_repo: Path) -> None:
+        from dataclasses import replace
+        base, head = _make_range(git_repo, path='uv.lock', content='version = 1\n')
+>       request = replace(_range_request(scope_api, git_repo, base, head), portable_project_runtime=True)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_scope.py:1355:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/dataclasses.py:1779: in replace
+    return _replace(obj, **changes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = ScopeRequest(repository=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-27/te...iew_fixes=False, with_mutation=False, pr_context_file=None, repository_slug=None, project_runtime_source_lock_paths=())
+changes = {'portable_project_runtime': True, 'repository': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-27/test_portable_lock_only_range_0/repo'), 'scope': 'range', 'files': (), ...}
+
+    def _replace(self, /, **changes):
+        # We're going to mutate 'changes', but that's okay because it's a
+        # new dict, even if called with 'replace(self, **my_changes)'.
+
+        # It's an error to have init=False fields in 'changes'.
+        # If a field is not in 'changes', read its value from the provided 'self'.
+
+        for f in getattr(self, _FIELDS).values():
+            # Only consider normal fields or InitVars.
+            if f._field_type is _FIELD_CLASSVAR:
+                continue
+
+            if not f.init:
+                # Error if this field is specified in changes.
+                if f.name in changes:
+                    raise TypeError(f'field {f.name} is declared with '
+                                    f'init=False, it cannot be specified with '
+                                    f'replace()')
+                continue
+
+            if f.name not in changes:
+                if f._field_type is _FIELD_INITVAR and f.default is MISSING:
+                    raise TypeError(f"InitVar {f.name!r} "
+                                    f'must be specified with replace()')
+                changes[f.name] = getattr(self, f.name)
+
+        # Create the new object, which calls __init__() and
+        # __post_init__() (if defined), using all of the init fields we've
+        # added and/or left in 'changes'.  If there are values supplied in
+        # changes that aren't fields, this will correctly raise a
+        # TypeError.
+>       return self.__class__(**changes)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ScopeRequest.__init__() got an unexpected keyword argument 'portable_project_runtime'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/dataclasses.py:1813: TypeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_lock_only_range_remains_analyzable_preview
+====================== 1 failed, 126 deselected in 0.25s =======================
