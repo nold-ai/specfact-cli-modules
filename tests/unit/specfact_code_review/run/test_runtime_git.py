@@ -1,5 +1,6 @@
 """Git transport helpers and their identity travel with the disposable builder."""
 
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -38,3 +39,20 @@ def test_transport_change_invalidates_builder_identity_and_is_staged(tmp_path: P
     launcher = copied.with_suffix("").read_text()
     assert "GIT_EXEC_PATH" in launcher and "--library-path" in launcher
     assert "libcurl.so.4" in observed[0]
+
+
+@pytest.mark.parametrize(
+    "failure", [subprocess.CalledProcessError(1, "git"), subprocess.TimeoutExpired("git", 10), OSError("unavailable")]
+)
+def test_git_identity_failures_use_runtime_diagnostic(tmp_path: Path, monkeypatch, failure: Exception) -> None:
+    git = tmp_path / "git"
+    git.write_bytes(b"\x7fELFgit")
+    monkeypatch.setattr(runtime_git, "GIT", git)
+
+    def fail(*_args, **_kwargs):
+        raise failure
+
+    monkeypatch.setattr(runtime_git.subprocess, "run", fail)
+    with pytest.raises(ProjectRuntimeError, match="project_builder_git_identity_failed") as caught:
+        runtime_git.git_identity()
+    assert caught.value.__cause__ is failure

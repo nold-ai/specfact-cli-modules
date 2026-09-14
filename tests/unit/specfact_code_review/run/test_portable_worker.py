@@ -13,7 +13,7 @@ from specfact_code_review.run.portable_worker import (
     validate_observation,
 )
 from specfact_code_review.run.runtime_discovery import discover_project
-from specfact_code_review.run.runtime_models import ProjectRuntimeError
+from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError
 
 
 def test_explicit_test_selection_preserves_hatch_plugin_config(tmp_path: Path) -> None:
@@ -115,3 +115,25 @@ def test_real_failure_does_not_hide_partial_pytest_execution(field) -> None:
     }
     with pytest.raises(ProjectRuntimeError, match=r"project_pytest_.*error"):
         validate_observation(observation, 1)
+
+
+@pytest.mark.parametrize("configuration", [{}, {"testpaths": []}, {"testpaths": ""}])
+def test_pytest_native_default_root_is_preserved(tmp_path: Path, configuration: dict) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    (tmp_path / "test_app.py").touch()
+    plan = ProjectPlan(tmp_path, manager="pip", pytest_config=configuration)
+    assert select_test_paths(plan, [source], full=True) == (".",)
+    assert select_test_paths(plan, [source], full=False) == ("test_app.py",)
+
+
+@pytest.mark.parametrize("name", [".venv", "venv", "custom-python"])
+def test_default_test_discovery_excludes_environment_tests(tmp_path: Path, name: str) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    (tmp_path / "test_app.py").touch()
+    environment = tmp_path / name
+    environment.mkdir()
+    (environment / "pyvenv.cfg").write_text("home=/usr/bin\n")
+    (environment / "test_app.py").touch()
+    assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("test_app.py",)

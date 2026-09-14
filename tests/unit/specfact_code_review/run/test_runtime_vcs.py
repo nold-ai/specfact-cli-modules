@@ -5,7 +5,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from specfact_code_review.run import scope
+from specfact_code_review.run import portable_snapshot, runner, scope
 from specfact_code_review.run.portable_snapshot import discover_snapshot
 from specfact_code_review.run.runtime_builder import copy_project
 from specfact_code_review.run.runtime_discovery import discover_project
@@ -82,3 +82,21 @@ def test_vcs_fixtures_never_change_the_calling_hooks_index(tmp_path: Path, monke
     monkeypatch.setenv("GIT_INDEX_FILE", str(index))
     _repository(tmp_path / "child")
     assert index.read_bytes() == before
+
+
+def test_analyzer_copy_excludes_reachable_git_history(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "project"
+    _repository(root)
+    observed = []
+
+    def analyze(_runtime, *, snapshot_root, **_kwargs):
+        assert not (snapshot_root / ".git").exists()
+        assert (snapshot_root / "app.py").read_text() == "VALUE = 1\n"
+        observed.append(snapshot_root)
+
+    monkeypatch.setattr(runner, "_run_capsule_snapshot", analyze)
+    request = portable_snapshot.ProjectSnapshotRequest(
+        root, [root / "app.py"], runner.ReviewOptions(), "explicit_files"
+    )
+    portable_snapshot._run_in_private_source(object(), request, runner.CapsuleSnapshotSettings())
+    assert observed and (root / ".git/objects").is_dir()

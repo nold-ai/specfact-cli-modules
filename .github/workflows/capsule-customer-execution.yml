@@ -109,11 +109,11 @@ jobs:
           set -euo pipefail
           # Administrator prerequisite only: all installation and analysis runs as the runner user.
           # Keep Ubuntu's global AppArmor namespace restriction enabled.
-          sudo install -d -o root -g root -m 0755 /opt/specfact-corpus-offline
-          sudo install -o root -g root -m 0555 /usr/bin/bwrap /opt/specfact-corpus-offline/bwrap
-          sha256sum /usr/bin/bwrap | cut -d ' ' -f 1 | sudo tee /opt/specfact-corpus-offline/bwrap.sha256 > /dev/null
-          sudo chmod 0444 /opt/specfact-corpus-offline/bwrap.sha256
-          echo "SPECFACT_CORPUS_OFFLINE_LAUNCHER=/opt/specfact-corpus-offline/bwrap" >> "$GITHUB_ENV"
+          sudo install -d -o root -g root -m 0755 /specfact-corpus-offline
+          sudo install -o root -g root -m 0555 /usr/bin/bwrap /specfact-corpus-offline/bwrap
+          sha256sum /usr/bin/bwrap | cut -d ' ' -f 1 | sudo tee /specfact-corpus-offline/bwrap.sha256 > /dev/null
+          sudo chmod 0444 /specfact-corpus-offline/bwrap.sha256
+          echo "SPECFACT_CORPUS_OFFLINE_LAUNCHER=/specfact-corpus-offline/bwrap" >> "$GITHUB_ENV"
           profile="$CUSTOMER_ROOT/capsule-userns.apparmor"
           cat > "$profile" <<EOF
           abi <abi/4.0>,
@@ -121,7 +121,7 @@ jobs:
           profile specfact-customer-capsule "$CUSTOMER_ROOT/cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
             userns,
           }
-          profile specfact-customer-offline-network "/opt/specfact-corpus-offline/bwrap" flags=(unconfined) {
+          profile specfact-customer-offline-network "/specfact-corpus-offline/bwrap" flags=(unconfined) {
             userns,
           }
           profile specfact-customer-capsule-umask "$CUSTOMER_ROOT/cache-077/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {

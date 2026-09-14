@@ -28,18 +28,23 @@ from specfact_code_review.run.runtime_models import (
     document_digest,
 )
 from specfact_code_review.run.runtime_native import inventory_native
-from specfact_code_review.run.runtime_sources import IGNORED_INPUTS, source_identity, source_link_target, verify_inputs
+from specfact_code_review.run.runtime_sources import (
+    is_excluded_source,
+    source_identity,
+    source_link_target,
+    verify_inputs,
+)
 from specfact_code_review.run.runtime_vcs import copy_vcs_context
 
 
 @require(lambda source, destination: source.is_dir() and not destination.exists())
-def copy_project(source: Path, destination: Path, *, commit: str = "HEAD") -> None:
+def copy_project(source: Path, destination: Path, *, commit: str = "HEAD", include_vcs: bool = True) -> None:
     """Copy inputs into private build storage without dereferencing source links."""
 
     expected = source_identity(source)
 
     def ignored(directory: str, names: list[str]) -> set[str]:
-        excluded = set(names) & IGNORED_INPUTS
+        excluded = {name for name in names if is_excluded_source(Path(directory) / name)}
         for name in set(names) - excluded:
             path = Path(directory) / name
             if path.is_symlink():
@@ -57,7 +62,8 @@ def copy_project(source: Path, destination: Path, *, commit: str = "HEAD") -> No
             path.symlink_to(os.path.relpath(destination / target.relative_to(source), path.parent))
     if source_identity(destination) != expected:
         raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
-    copy_vcs_context(source, destination, commit)
+    if include_vcs:
+        copy_vcs_context(source, destination, commit)
 
 
 @ensure(lambda result: "--clearenv" in result and "--unshare-all" in result)

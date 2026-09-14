@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +15,7 @@ from icontract import ensure, require
 from specfact_code_review._review_utils import tool_error
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError
+from specfact_code_review.run.runtime_sources import is_excluded_source
 from specfact_code_review.run.target_launch import target_command
 
 
@@ -35,17 +38,27 @@ def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
     return matches
 
 
+def _candidate_test_files(root: Path) -> Iterator[Path]:
+    if is_excluded_source(root):
+        return
+    for directory, directories, files in os.walk(root, followlinks=False):
+        directories[:] = [name for name in directories if not is_excluded_source(Path(directory) / name)]
+        for name in files:
+            if name.endswith(".py"):
+                yield Path(directory) / name
+
+
 @ensure(lambda result: bool(result) and len(result) == len(set(result)))
 def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
     """Select real native test paths without rewriting the customer's pytest policy."""
-    roots = _strings(plan.pytest_config.get("testpaths", ["tests"]))
+    roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
     patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
     if full:
         return roots or (".",)
     candidates = {
         path.relative_to(plan.root).as_posix()
         for root in roots
-        for path in (plan.root / root).rglob("*.py")
+        for path in _candidate_test_files(plan.root / root)
         if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
     }
     selected = set()

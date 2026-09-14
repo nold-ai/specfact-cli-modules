@@ -111,7 +111,7 @@ def _run_in_private_source(runtime: Any, request: ProjectSnapshotRequest, settin
 
     with tempfile.TemporaryDirectory(prefix="specfact-project-source-") as directory:
         source = Path(directory) / "source"
-        copy_project(request.snapshot_root, source)
+        copy_project(request.snapshot_root, source, include_vcs=False)
         files = [
             source / Path(os.path.abspath(request.snapshot_root / path)).relative_to(request.snapshot_root)
             for path in request.files

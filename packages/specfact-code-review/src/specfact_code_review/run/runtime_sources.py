@@ -16,7 +16,6 @@ IGNORED_INPUTS = frozenset(
     {
         ".git",
         ".venv",
-        "venv",
         ".tox",
         ".specfact",
         "__pycache__",
@@ -30,6 +29,12 @@ IGNORED_INPUTS = frozenset(
 )
 
 
+@require(lambda path: bool(path.name))
+def is_excluded_source(path: Path) -> bool:
+    """Distinguish actual environments from ordinary packages with common names."""
+    return path.name in IGNORED_INPUTS or (path.is_dir() and (path / "pyvenv.cfg").is_file())
+
+
 @ensure(lambda result, root: result.is_relative_to(root))
 def source_link_target(path: Path, root: Path) -> Path:
     """Apply the same exclusion boundary to aliases and ordinary source paths."""
@@ -40,7 +45,9 @@ def source_link_target(path: Path, root: Path) -> Path:
         raise ProjectRuntimeError(f"project_source_symlink_invalid:{relative}") from exc
     if not target.is_relative_to(root) or target == root or path.is_relative_to(target):
         raise ProjectRuntimeError(f"project_source_symlink_escape:{relative}")
-    if set(target.relative_to(root).parts) & IGNORED_INPUTS:
+    if any(
+        is_excluded_source(entry) for entry in (target, *target.parents) if entry != root and entry.is_relative_to(root)
+    ):
         raise ProjectRuntimeError(f"project_source_symlink_excluded:{relative}")
     return target
 
@@ -61,8 +68,8 @@ def source_identity(root: Path) -> str:
     """Bind locally built packages and workspace members to their actual bytes."""
     entries = {".": _source_entry(root, root)}
     for directory, directories, files in os.walk(root, followlinks=False):
-        directories[:] = sorted(name for name in directories if name not in IGNORED_INPUTS)
-        names = [*directories, *(name for name in sorted(files) if name not in IGNORED_INPUTS)]
+        directories[:] = sorted(name for name in directories if not is_excluded_source(Path(directory) / name))
+        names = [*directories, *(name for name in sorted(files) if not is_excluded_source(Path(directory) / name))]
         for name in names:
             path = Path(directory) / name
             identity = _source_entry(path, root)

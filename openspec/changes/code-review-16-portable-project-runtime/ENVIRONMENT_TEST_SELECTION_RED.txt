@@ -1,0 +1,128 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 16 items
+
+tests/unit/specfact_code_review/run/test_portable_worker.py ............ [ 75%]
+.FFF                                                                     [100%]
+
+=================================== FAILURES ===================================
+________ test_default_test_discovery_excludes_environment_tests[.venv] _________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-201/test_default_test_discovery_ex0')
+name = '.venv'
+
+    @pytest.mark.parametrize("name", [".venv", "venv", "custom-python"])
+    def test_default_test_discovery_excludes_environment_tests(tmp_path: Path, name: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        environment = tmp_path / name
+        environment.mkdir()
+        (environment / "pyvenv.cfg").write_text("home=/usr/bin\n")
+        (environment / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:139:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:57: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'.venv/test_app.py', 'test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:34: ProjectRuntimeError
+_________ test_default_test_discovery_excludes_environment_tests[venv] _________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-201/test_default_test_discovery_ex1')
+name = 'venv'
+
+    @pytest.mark.parametrize("name", [".venv", "venv", "custom-python"])
+    def test_default_test_discovery_excludes_environment_tests(tmp_path: Path, name: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        environment = tmp_path / name
+        environment.mkdir()
+        (environment / "pyvenv.cfg").write_text("home=/usr/bin\n")
+        (environment / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:139:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:57: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'test_app.py', 'venv/test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:34: ProjectRuntimeError
+____ test_default_test_discovery_excludes_environment_tests[custom-python] _____
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-201/test_default_test_discovery_ex2')
+name = 'custom-python'
+
+    @pytest.mark.parametrize("name", [".venv", "venv", "custom-python"])
+    def test_default_test_discovery_excludes_environment_tests(tmp_path: Path, name: str) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        environment = tmp_path / name
+        environment.mkdir()
+        (environment / "pyvenv.cfg").write_text("home=/usr/bin\n")
+        (environment / "test_app.py").touch()
+>       assert select_test_paths(ProjectPlan(tmp_path, manager="pip"), [source], full=False) == ("test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:139:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:57: in select_test_paths
+    selected.update(_matching_source_tests(relative, candidates))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+relative = 'app.py', candidates = {'custom-python/test_app.py', 'test_app.py'}
+
+    def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+        stem = Path(relative).stem
+        matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+        if len(matches) > 1:
+>           raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_ambiguous:app.py; include explicit test paths
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:34: ProjectRuntimeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_test_discovery_excludes_environment_tests[.venv]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_test_discovery_excludes_environment_tests[venv]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_default_test_discovery_excludes_environment_tests[custom-python]
+========================= 3 failed, 13 passed in 0.14s =========================

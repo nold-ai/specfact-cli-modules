@@ -35,12 +35,18 @@ def _programs() -> dict[str, Path]:
 @ensure(lambda result: all(value.startswith("sha256:") and len(value) == 71 for value in result.values()))
 def git_identity() -> dict[str, str]:
     """Bind available transport helpers as well as the main executable."""
-    if not GIT.is_file():
-        return {}
-    # Inspection and offline cache lookup must remain usable on non-Linux hosts.
-    if not GIT.read_bytes().startswith(b"\x7fELF"):
-        return {"bin/git": content_digest(GIT.read_bytes())}
-    return {name: content_digest(path.read_bytes()) for name, path in _programs().items()}
+    try:
+        if not GIT.is_file():
+            return {}
+        # Inspection and offline cache lookup must remain usable on non-Linux hosts.
+        if not GIT.read_bytes().startswith(b"\x7fELF"):
+            return {"bin/git": content_digest(GIT.read_bytes())}
+        return {name: content_digest(path.read_bytes()) for name, path in _programs().items()}
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ProjectRuntimeError(
+            f"project_builder_git_identity_failed:{type(exc).__name__}; "
+            "verify Git and its transport helper installation"
+        ) from exc
 
 
 @require(lambda staging: staging.is_dir())

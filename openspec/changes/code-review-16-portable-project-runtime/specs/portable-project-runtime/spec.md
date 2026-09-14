@@ -287,3 +287,34 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **WHEN** a selected project distribution violates an active worker dependency specifier
 - **THEN** preparation SHALL report the domain, dependency, selected version and required specifier before sealing the runtime
 - **AND** independent static analysis SHALL remain available without silently replacing the project version.
+
+#### Scenario: Analyzer source mounts exclude Git history
+- **WHEN** an ordinary worktree is copied for analyzer execution
+- **THEN** its source mount SHALL exclude Git metadata and historical objects
+- **AND** the separate disposable build copy SHALL retain sanitized VCS context for dynamic package versions.
+
+#### Scenario: Pytest configuration leaves discovery roots unspecified
+- **WHEN** pytest testpaths is absent or empty
+- **THEN** full review SHALL use the repository root as pytest's native default
+- **AND** explicit source review SHALL discover corresponding root-level tests.
+
+#### Scenario: Git identity probing fails before cache lookup
+- **WHEN** Git exec-path discovery fails, times out or cannot execute
+- **THEN** preparation SHALL raise a precise ProjectRuntimeError with the original exception chained
+- **AND** review SHALL retain the existing incomplete-runtime diagnostic path.
+
+#### Scenario: Hosted runner has writable optional-tool directories
+- **WHEN** a hosted runner exposes a customer-writable `/opt` ancestor
+- **THEN** the offline corpus launcher SHALL be provisioned outside that ancestor
+- **AND** all launcher ownership and ancestor permission checks SHALL remain enforced.
+
+#### Scenario: Source package is named venv
+- **WHEN** a repository contains a legitimate package directory named `venv` without a virtual-environment marker
+- **THEN** source identity and both build/analysis copies SHALL retain that package
+- **AND** actual environments identified by `pyvenv.cfg` SHALL remain excluded regardless of directory name
+- **AND** symlink aliases SHALL not expose excluded environment contents.
+
+#### Scenario: Default test discovery encounters an existing environment
+- **WHEN** repository-root test discovery encounters tests inside an excluded virtual environment
+- **THEN** those installed dependency tests SHALL not create ambiguity or enter the customer test selection
+- **AND** discovery SHALL prune excluded environment directories before traversal.

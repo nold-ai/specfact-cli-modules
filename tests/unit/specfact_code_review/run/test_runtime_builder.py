@@ -134,3 +134,33 @@ def test_builder_sets_private_git_transport_path(tmp_path: Path) -> None:
     command = builder_command(runtime, staging=tmp_path / "staging", executable="/proc/self/fd/12")
     index = command.index("GIT_EXEC_PATH")
     assert command[index + 1] == "/opt/specfact/output/builder-tools/git-core"
+
+
+def test_source_package_named_venv_is_retained_but_real_environments_are_excluded(tmp_path: Path) -> None:
+    source = tmp_path / "project"
+    package = source / "src/customer/venv"
+    package.mkdir(parents=True)
+    (package / "core.py").write_text("VALUE = 1\n")
+    before = source_identity(source)
+    (package / "core.py").write_text("VALUE = 2\n")
+    assert source_identity(source) != before
+    for name in ("venv", "custom-python"):
+        environment = source / name
+        environment.mkdir()
+        (environment / "pyvenv.cfg").write_text("home = /usr/bin\n")
+        (environment / "private.txt").write_text("excluded fixture")
+    copy_project(source, tmp_path / "copy", include_vcs=False)
+    assert (tmp_path / "copy/src/customer/venv/core.py").read_text() == "VALUE = 2\n"
+    assert not (tmp_path / "copy/venv").exists()
+    assert not (tmp_path / "copy/custom-python").exists()
+
+
+def test_alias_cannot_import_actual_custom_named_environment(tmp_path: Path) -> None:
+    source = tmp_path / "project"
+    environment = source / "custom-python"
+    environment.mkdir(parents=True)
+    (environment / "pyvenv.cfg").write_text("home = /usr/bin\n")
+    (environment / "private.txt").write_text("excluded fixture")
+    (source / "alias.txt").symlink_to("custom-python/private.txt")
+    with pytest.raises(ProjectRuntimeError, match="symlink_excluded"):
+        copy_project(source, tmp_path / "copy", include_vcs=False)

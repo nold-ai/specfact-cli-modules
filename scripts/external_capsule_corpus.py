@@ -84,7 +84,7 @@ def network_delta(before: dict[str, int] | None, after: dict[str, int] | None) -
     }
 
 
-OFFLINE_ROOT = Path("/opt/specfact-corpus-offline")
+OFFLINE_ROOT = Path("/specfact-corpus-offline")
 
 
 def _check_offline_path(path: Path, *, directory: bool = False) -> None:

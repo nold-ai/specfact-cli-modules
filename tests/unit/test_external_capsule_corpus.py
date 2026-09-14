@@ -209,3 +209,21 @@ def test_offline_launcher_rejects_changed_provisioned_bytes(tmp_path: Path, monk
     launcher.write_bytes(b"replacement")
     with pytest.raises(ValueError, match="offline_launcher_untrusted:identity"):
         module._verified_offline_launcher(str(launcher))
+
+
+def test_offline_provisioning_avoids_writable_hosted_runner_ancestor(monkeypatch) -> None:
+    module = _load()
+    payload = b"administrator-provisioned launcher fixture"
+
+    def permissions(path):
+        mode = 0o100555 if path.name in {"bwrap", "bwrap.sha256"} else 0o40755
+        if path == Path("/opt"):
+            mode = 0o40775
+        return SimpleNamespace(st_uid=0, st_mode=mode)
+
+    monkeypatch.setattr(Path, "lstat", permissions)
+    monkeypatch.setattr(Path, "read_bytes", lambda _path: payload)
+    monkeypatch.setattr(Path, "read_text", lambda _path, **_kwargs: hashlib.sha256(payload).hexdigest())
+    monkeypatch.setattr(module.os, "access", lambda *_args: True)
+    launcher = module.OFFLINE_ROOT / "bwrap"
+    assert module._verified_offline_launcher(str(launcher)) == launcher
