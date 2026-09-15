@@ -185,3 +185,30 @@ def test_external_pytest_root_is_incomplete(tmp_path, monkeypatch):
     observation["pytest_root"] = str(tmp_path.parent)
     findings = _run(tmp_path, monkeypatch, observation)
     assert any(item.rule == "tool_error" and "pytest_root" in item.message for item in findings)
+
+
+@pytest.mark.parametrize("pytest_root", ["checks", "absolute"])
+def test_nested_nonpass_finding_uses_snapshot_relative_path(tmp_path, monkeypatch, pytest_root):
+    nodeid = "check_app.py::test_failure"
+    observation = _observation(_record(nodeid, "failed"))
+    observation["exit_code"] = 1
+    observation["pytest_root"] = str(tmp_path / "checks") if pytest_root == "absolute" else pytest_root
+    findings = _run(tmp_path, monkeypatch, observation, ("src/app.py", "checks/check_app.py"))
+    failed = [finding for finding in findings if finding.rule == "TEST_OUTCOME_NOT_PASS"]
+    assert len(failed) == 1
+    assert failed[0].file == "checks/check_app.py"
+    assert nodeid in failed[0].message
+    assert observation["records"][0]["nodeid"] == nodeid
+    assert observation["collected"] == [nodeid]
+
+
+@pytest.mark.parametrize(
+    "pytest_root,nodeid", [("../outside", "check_app.py::test_failure"), (".", "../check_app.py::test_failure")]
+)
+def test_escaping_outcome_path_is_incomplete_without_false_attribution(tmp_path, monkeypatch, pytest_root, nodeid):
+    observation = _observation(_record(nodeid, "failed"))
+    observation["exit_code"] = 1
+    observation["pytest_root"] = pytest_root
+    findings = _run(tmp_path, monkeypatch, observation)
+    assert any(finding.rule == "tool_error" for finding in findings)
+    assert not any(finding.rule == "TEST_OUTCOME_NOT_PASS" for finding in findings)

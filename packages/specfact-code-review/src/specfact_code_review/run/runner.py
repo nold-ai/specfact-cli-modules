@@ -6136,11 +6136,19 @@ def _coverage_findings(
     return findings, coverage_by_source
 
 
-def _portable_coverage_sources(files: list[Path], observation: dict[str, Any]) -> list[Path]:
+@ensure(lambda result: result.is_absolute() and result.is_relative_to(Path.cwd().resolve()))
+def resolve_portable_pytest_root(observation: dict[str, Any]) -> Path:
+    """Resolve the native pytest root within the reviewed source snapshot."""
     snapshot = Path.cwd().resolve()
     pytest_root = (snapshot / observation.get("pytest_root", ".")).resolve()
     if not pytest_root.is_relative_to(snapshot):
         raise ValueError("project_pytest_root_outside_snapshot")
+    return pytest_root
+
+
+def _portable_coverage_sources(files: list[Path], observation: dict[str, Any]) -> list[Path]:
+    snapshot = Path.cwd().resolve()
+    pytest_root = resolve_portable_pytest_root(observation)
     test_files = {
         (pytest_root / str(nodeid).split("::", maxsplit=1)[0]).resolve()
         for nodeid in (*observation.get("collected", []), *observation.get("deselected", []))

@@ -185,7 +185,7 @@ def validate_observation(observation: dict[str, Any], exit_code: int) -> None:
         )
 
 
-def _nonpassing_observation_findings(records: list[dict[str, Any]]) -> list[ReviewFinding]:
+def _nonpassing_observation_findings(records: list[dict[str, Any]], pytest_root: Path) -> list[ReviewFinding]:
     findings = []
     for record in records:
         has_xfail = bool(record.get("has_xfail") or record.get("wasxfail"))
@@ -196,7 +196,10 @@ def _nonpassing_observation_findings(records: list[dict[str, Any]]) -> list[Revi
                     severity="error",
                     tool="pytest",
                     rule="TEST_OUTCOME_NOT_PASS",
-                    file=str(record["nodeid"]).split("::", maxsplit=1)[0],
+                    file=(pytest_root / str(record["nodeid"]).split("::", maxsplit=1)[0])
+                    .resolve()
+                    .relative_to(Path(".").resolve())
+                    .as_posix(),
                     line=1,
                     message=(
                         f"Test {record['nodeid']} {record['outcome']} during {record['phase']}"
@@ -215,12 +218,16 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
     if len(adapter_argv) != 2 or adapter_argv[0] != "portable-pytest-v2":
         return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_request_invalid")]
 
+    from specfact_code_review.run.runner import evaluate_portable_pytest_coverage, resolve_portable_pytest_root
+
     command = target_command("pytest-observe", [adapter_argv[1]])
     try:
         Path("/opt/specfact/tmp/pytest-observation.json").unlink(missing_ok=True)
         completed = subprocess.run(command, text=True, capture_output=True, check=False, timeout=1200)
         observation = json.loads(Path("/opt/specfact/tmp/pytest-observation.json").read_text(encoding="utf-8"))
         records = observation["records"]
+        pytest_root = resolve_portable_pytest_root(observation)
+        findings = _nonpassing_observation_findings(records, pytest_root)
         validation_error = ""
         try:
             validate_observation(observation, completed.returncode)
@@ -228,12 +235,9 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
             validation_error = str(exc)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         return [tool_error(tool="pytest", file_path=anchor, message=str(exc))]
-    findings = _nonpassing_observation_findings(records)
     if validation_error:
         findings.append(tool_error(tool="pytest", file_path=anchor, message=validation_error))
     else:
-        from specfact_code_review.run.runner import evaluate_portable_pytest_coverage
-
         findings.extend(evaluate_portable_pytest_coverage(files, observation))
     if completed.returncode == 1 and not findings:
         return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_failure_without_observed_test")]

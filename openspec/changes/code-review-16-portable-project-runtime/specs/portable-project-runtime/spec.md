@@ -119,6 +119,14 @@ The system SHALL preserve pytest configuration, source paths, plugins and select
 - **AND** it SHALL reject an observed pytest root outside the snapshot with an explicit incomplete-evidence diagnostic
 - **AND** a discovery root containing production modules SHALL NOT exempt those modules from coverage requirements
 
+#### Scenario: Nested pytest outcome findings identify snapshot files
+
+- **GIVEN** pytest reports a non-passing node identifier relative to a contained nested pytest root
+- **WHEN** the portable adapter creates a review finding
+- **THEN** the finding file SHALL identify the actual snapshot-relative test path while the native node identifier remains unchanged in observed evidence and diagnostic text
+- **AND** absolute or escaping pytest roots outside the snapshot SHALL produce incomplete-evidence diagnostics before outcome paths are mapped
+- **AND** an escaping observed node path SHALL NOT create a finding attributed outside the snapshot
+
 ### Requirement: Validate external repositories through released installation
 
 The system SHALL require a pinned Requests/pip, Hatch/Hatch, Flask/uv and Poetry/Poetry corpus on Ubuntu 24.04 CPython 3.11/3.12/3.13 for relevant changes and published releases. Tests SHALL reject empty or UNKNOWN required analysis, retain real findings, verify source immutability, and capture exact artifacts, test inventory, exit codes, duration and transfer cost.

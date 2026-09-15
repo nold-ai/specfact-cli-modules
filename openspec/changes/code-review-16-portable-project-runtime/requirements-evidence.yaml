@@ -164,6 +164,12 @@ requirements:
       intent: Nested pytest roots resolve actual test files without exempting production under discovery roots.
       observable: Actual regressions in test_portable_pytest_evidence.py and test_portable_pytest_policy.py preserve
         RED/GREEN evidence; Linux signed capsule acceptance remains required.
+    - case_id: 478-pytest-paths
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Non-passing nested pytest nodeids identify snapshot-relative test files without changing raw evidence.
+      observable: Nested relative and absolute roots map findings to the reviewed test file; outside roots and
+        escaping node paths yield incomplete-evidence diagnostics without false file attribution.
   ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:validate-external-repositories-through-released-installation
   : rationale: Validate external repositories through released installation. The approved portable-runtime story
       requires independent customer runtime evidence.

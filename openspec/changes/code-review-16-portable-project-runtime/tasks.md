@@ -60,3 +60,9 @@
 - [x] Record regressions for mixed passing/non-passing pytest outcomes and per-source coverage, including native threshold and test-only selection controls.
 - [x] Preserve observed non-pass failures and validate reviewed production-source coverage without changing customer selection.
 - [ ] Validate, CI-sign and publish an immutable correction, then resolve findings 4019944740 and 4019944751 after current-head acceptance.
+
+## PR #478 nested pytest outcome paths
+
+- [x] Specify snapshot-relative outcome finding paths and record failing regressions before implementation.
+- [x] Reuse contained pytest-root validation for outcome findings and coverage, preserving native node identifiers.
+- [ ] Complete independent review, combined gates, CI signing and current-head validation before resolving finding 4020270168.
