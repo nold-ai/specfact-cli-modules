@@ -1,0 +1,99 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 29 items / 25 deselected / 4 selected
+
+tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py FFF [ 75%]
+F                                                                        [100%]
+
+=================================== FAILURES ===================================
+_______ test_nested_nonpass_finding_uses_snapshot_relative_path[checks] ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-552/test_nested_nonpass_finding_us0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10beff490>
+pytest_root = 'checks'
+
+    @pytest.mark.parametrize("pytest_root", ["checks", "absolute"])
+    def test_nested_nonpass_finding_uses_snapshot_relative_path(tmp_path, monkeypatch, pytest_root):
+        nodeid = "check_app.py::test_failure"
+        observation = _observation(_record(nodeid, "failed"))
+        observation["exit_code"] = 1
+        observation["pytest_root"] = str(tmp_path / "checks") if pytest_root == "absolute" else pytest_root
+        findings = _run(tmp_path, monkeypatch, observation, ("src/app.py", "checks/check_app.py"))
+        failed = [finding for finding in findings if finding.rule == "TEST_OUTCOME_NOT_PASS"]
+        assert len(failed) == 1
+>       assert failed[0].file == "checks/check_app.py"
+E       AssertionError: assert 'check_app.py' == 'checks/check_app.py'
+E         
+E         - checks/check_app.py
+E         ? -------
+E         + check_app.py
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:199: AssertionError
+______ test_nested_nonpass_finding_uses_snapshot_relative_path[absolute] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-552/test_nested_nonpass_finding_us1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10beff6f0>
+pytest_root = 'absolute'
+
+    @pytest.mark.parametrize("pytest_root", ["checks", "absolute"])
+    def test_nested_nonpass_finding_uses_snapshot_relative_path(tmp_path, monkeypatch, pytest_root):
+        nodeid = "check_app.py::test_failure"
+        observation = _observation(_record(nodeid, "failed"))
+        observation["exit_code"] = 1
+        observation["pytest_root"] = str(tmp_path / "checks") if pytest_root == "absolute" else pytest_root
+        findings = _run(tmp_path, monkeypatch, observation, ("src/app.py", "checks/check_app.py"))
+        failed = [finding for finding in findings if finding.rule == "TEST_OUTCOME_NOT_PASS"]
+        assert len(failed) == 1
+>       assert failed[0].file == "checks/check_app.py"
+E       AssertionError: assert 'check_app.py' == 'checks/check_app.py'
+E         
+E         - checks/check_app.py
+E         ? -------
+E         + check_app.py
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:199: AssertionError
+_ test_escaping_outcome_path_is_incomplete_without_false_attribution[../outside-check_app.py::test_failure] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-552/test_escaping_outcome_path_is_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d09f530>
+pytest_root = '../outside', nodeid = 'check_app.py::test_failure'
+
+    @pytest.mark.parametrize("pytest_root,nodeid", [("../outside", "check_app.py::test_failure"), (".", "../check_app.py::test_failure")])
+    def test_escaping_outcome_path_is_incomplete_without_false_attribution(tmp_path, monkeypatch, pytest_root, nodeid):
+        observation = _observation(_record(nodeid, "failed"))
+        observation["exit_code"] = 1
+        observation["pytest_root"] = pytest_root
+        findings = _run(tmp_path, monkeypatch, observation)
+        assert any(finding.rule == "tool_error" for finding in findings)
+>       assert not any(finding.rule == "TEST_OUTCOME_NOT_PASS" for finding in findings)
+E       assert not True
+E        +  where True = any(<generator object test_escaping_outcome_path_is_incomplete_without_false_attribution.<locals>.<genexpr> at 0x10d18f510>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:212: AssertionError
+_ test_escaping_outcome_path_is_incomplete_without_false_attribution[.-../check_app.py::test_failure] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-552/test_escaping_outcome_path_is_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c526250>
+pytest_root = '.', nodeid = '../check_app.py::test_failure'
+
+    @pytest.mark.parametrize("pytest_root,nodeid", [("../outside", "check_app.py::test_failure"), (".", "../check_app.py::test_failure")])
+    def test_escaping_outcome_path_is_incomplete_without_false_attribution(tmp_path, monkeypatch, pytest_root, nodeid):
+        observation = _observation(_record(nodeid, "failed"))
+        observation["exit_code"] = 1
+        observation["pytest_root"] = pytest_root
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(finding.rule == "tool_error" for finding in findings)
+E       assert False
+E        +  where False = any(<generator object test_escaping_outcome_path_is_incomplete_without_false_attribution.<locals>.<genexpr> at 0x10d18e330>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:211: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_nested_nonpass_finding_uses_snapshot_relative_path[checks]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_nested_nonpass_finding_uses_snapshot_relative_path[absolute]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_escaping_outcome_path_is_incomplete_without_false_attribution[../outside-check_app.py::test_failure]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_escaping_outcome_path_is_incomplete_without_false_attribution[.-../check_app.py::test_failure]
+======================= 4 failed, 25 deselected in 0.24s =======================

@@ -1,0 +1,74 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 17 items / 8 deselected / 9 selected
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py ..... [ 55%]
+.FFF                                                                     [100%]
+
+=================================== FAILURES ===================================
+______ test_native_custom_test_nodeids_retain_their_configuration_root[.] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-543/test_native_custom_test_nodeid0')
+directory = '.'
+
+    @pytest.mark.parametrize("directory", [".", "checks"])
+    def test_native_custom_test_nodeids_retain_their_configuration_root(tmp_path: Path, directory: str) -> None:
+        project = tmp_path / "project"
+        config_root = project / directory
+        config_root.mkdir(parents=True)
+        configuration = config_root / "pytest.ini"
+        configuration.write_text("[pytest]\ntestpaths = check_app.py\npython_files = check_*.py\n")
+        (config_root / "check_app.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "root-context.json", ["-c", str(configuration)])
+        assert result["collected"] == ["check_app.py::test_valid"]
+>       assert result["pytest_root"] == directory
+E       AssertionError: assert None == '.'
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:131: AssertionError
+___ test_native_custom_test_nodeids_retain_their_configuration_root[checks] ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-543/test_native_custom_test_nodeid1')
+directory = 'checks'
+
+    @pytest.mark.parametrize("directory", [".", "checks"])
+    def test_native_custom_test_nodeids_retain_their_configuration_root(tmp_path: Path, directory: str) -> None:
+        project = tmp_path / "project"
+        config_root = project / directory
+        config_root.mkdir(parents=True)
+        configuration = config_root / "pytest.ini"
+        configuration.write_text("[pytest]\ntestpaths = check_app.py\npython_files = check_*.py\n")
+        (config_root / "check_app.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "root-context.json", ["-c", str(configuration)])
+        assert result["collected"] == ["check_app.py::test_valid"]
+>       assert result["pytest_root"] == directory
+E       AssertionError: assert None == 'checks'
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:131: AssertionError
+______________ test_native_outside_configuration_root_is_explicit ______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-543/test_native_outside_configurat0')
+
+    def test_native_outside_configuration_root_is_explicit(tmp_path: Path) -> None:
+        project = tmp_path / "project"
+        project.mkdir()
+        configuration = tmp_path / "pytest.ini"
+        configuration.write_text("[pytest]\n")
+        (project / "test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "outside-root.json", ["-c", str(configuration), "test_policy.py"])
+        assert result["collected"] == ["project/test_policy.py::test_valid"]
+>       assert result["pytest_root"] == str(tmp_path.resolve())
+E       AssertionError: assert None == '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-543/test_native_outside_configurat0'
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-543/test_native_outside_configurat0' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-543/test_native_outside_configurat0'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-543/test_native_outside_configurat0') = resolve()
+E        +      where resolve = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-543/test_native_outside_configurat0').resolve
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:142: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_custom_test_nodeids_retain_their_configuration_root[.]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_custom_test_nodeids_retain_their_configuration_root[checks]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_outside_configuration_root_is_explicit
+================== 3 failed, 6 passed, 8 deselected in 1.46s ===================

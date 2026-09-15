@@ -1,0 +1,348 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 21 items
+
+tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py FFF [ 14%]
+F.FFFF...FFFFFFFFF                                                       [100%]
+
+=================================== FAILURES ===================================
+___________ test_mixed_non_pass_outcomes_cannot_pass[skipped-setup-] ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_mixed_non_pass_outcomes_c0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a115f30>
+outcome = 'skipped', phase = 'setup', xfail = ''
+
+    @pytest.mark.parametrize("outcome,phase,xfail", [
+        ("skipped", "setup", ""), ("skipped", "call", ""),
+        ("skipped", "call", "known bug"), ("passed", "call", "known bug"),
+        ("failed", "teardown", ""),
+    ])
+    def test_mixed_non_pass_outcomes_cannot_pass(tmp_path, monkeypatch, outcome, phase, xfail):
+        observation = _observation(
+            _record("tests/test_app.py::test_pass"),
+            _record("tests/test_app.py::test_other", outcome, phase, xfail),
+        )
+        if outcome == "failed":
+            observation["exit_code"] = 1
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == "TEST_OUTCOME_NOT_PASS" and item.severity == "error" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_mixed_non_pass_outcomes_cannot_pass.<locals>.<genexpr> at 0x10a1dedc0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:61: AssertionError
+___________ test_mixed_non_pass_outcomes_cannot_pass[skipped-call-] ____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_mixed_non_pass_outcomes_c1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a115a70>
+outcome = 'skipped', phase = 'call', xfail = ''
+
+    @pytest.mark.parametrize("outcome,phase,xfail", [
+        ("skipped", "setup", ""), ("skipped", "call", ""),
+        ("skipped", "call", "known bug"), ("passed", "call", "known bug"),
+        ("failed", "teardown", ""),
+    ])
+    def test_mixed_non_pass_outcomes_cannot_pass(tmp_path, monkeypatch, outcome, phase, xfail):
+        observation = _observation(
+            _record("tests/test_app.py::test_pass"),
+            _record("tests/test_app.py::test_other", outcome, phase, xfail),
+        )
+        if outcome == "failed":
+            observation["exit_code"] = 1
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == "TEST_OUTCOME_NOT_PASS" and item.severity == "error" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_mixed_non_pass_outcomes_cannot_pass.<locals>.<genexpr> at 0x10a1df440>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:61: AssertionError
+_______ test_mixed_non_pass_outcomes_cannot_pass[skipped-call-known bug] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_mixed_non_pass_outcomes_c2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109bc7e30>
+outcome = 'skipped', phase = 'call', xfail = 'known bug'
+
+    @pytest.mark.parametrize("outcome,phase,xfail", [
+        ("skipped", "setup", ""), ("skipped", "call", ""),
+        ("skipped", "call", "known bug"), ("passed", "call", "known bug"),
+        ("failed", "teardown", ""),
+    ])
+    def test_mixed_non_pass_outcomes_cannot_pass(tmp_path, monkeypatch, outcome, phase, xfail):
+        observation = _observation(
+            _record("tests/test_app.py::test_pass"),
+            _record("tests/test_app.py::test_other", outcome, phase, xfail),
+        )
+        if outcome == "failed":
+            observation["exit_code"] = 1
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == "TEST_OUTCOME_NOT_PASS" and item.severity == "error" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_mixed_non_pass_outcomes_cannot_pass.<locals>.<genexpr> at 0x10a1dfed0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:61: AssertionError
+_______ test_mixed_non_pass_outcomes_cannot_pass[passed-call-known bug] ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_mixed_non_pass_outcomes_c3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a2245a0>
+outcome = 'passed', phase = 'call', xfail = 'known bug'
+
+    @pytest.mark.parametrize("outcome,phase,xfail", [
+        ("skipped", "setup", ""), ("skipped", "call", ""),
+        ("skipped", "call", "known bug"), ("passed", "call", "known bug"),
+        ("failed", "teardown", ""),
+    ])
+    def test_mixed_non_pass_outcomes_cannot_pass(tmp_path, monkeypatch, outcome, phase, xfail):
+        observation = _observation(
+            _record("tests/test_app.py::test_pass"),
+            _record("tests/test_app.py::test_other", outcome, phase, xfail),
+        )
+        if outcome == "failed":
+            observation["exit_code"] = 1
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == "TEST_OUTCOME_NOT_PASS" and item.severity == "error" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_mixed_non_pass_outcomes_cannot_pass.<locals>.<genexpr> at 0x10a29b370>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:61: AssertionError
+_ test_each_reviewed_source_requires_sufficient_coverage[coverage0-None-tool_error] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_each_reviewed_source_requ0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a203050>
+coverage = {'src/other.py': {'summary': {'percent_covered': 100}}}
+threshold = None, expected = 'tool_error'
+
+    @pytest.mark.parametrize("coverage,threshold,expected", [
+        ({"src/other.py": {"summary": {"percent_covered": 100}}}, None, "tool_error"),
+        ({"src/app.py": {"summary": {"percent_covered": 20}}}, None, "TEST_COVERAGE_LOW"),
+        ({"src/app.py": {"summary": {"percent_covered": 85}},
+          "src/other.py": {"summary": {"percent_covered": 100}}}, 90, "TEST_COVERAGE_LOW"),
+        ({"src/app.py": {"summary": {"percent_covered": 79}}}, 20, "TEST_COVERAGE_LOW"),
+    ])
+    def test_each_reviewed_source_requires_sufficient_coverage(tmp_path, monkeypatch, coverage, threshold, expected):
+        observation = _observation(_record("tests/test_app.py::test_pass"), coverage=coverage, threshold=threshold)
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == expected and item.severity == "error" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_each_reviewed_source_requires_sufficient_coverage.<locals>.<genexpr> at 0x10a20b220>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:76: AssertionError
+_ test_each_reviewed_source_requires_sufficient_coverage[coverage1-None-TEST_COVERAGE_LOW] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_each_reviewed_source_requ1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a203250>
+coverage = {'src/app.py': {'summary': {'percent_covered': 20}}}
+threshold = None, expected = 'TEST_COVERAGE_LOW'
+
+    @pytest.mark.parametrize("coverage,threshold,expected", [
+        ({"src/other.py": {"summary": {"percent_covered": 100}}}, None, "tool_error"),
+        ({"src/app.py": {"summary": {"percent_covered": 20}}}, None, "TEST_COVERAGE_LOW"),
+        ({"src/app.py": {"summary": {"percent_covered": 85}},
+          "src/other.py": {"summary": {"percent_covered": 100}}}, 90, "TEST_COVERAGE_LOW"),
+        ({"src/app.py": {"summary": {"percent_covered": 79}}}, 20, "TEST_COVERAGE_LOW"),
+    ])
+    def test_each_reviewed_source_requires_sufficient_coverage(tmp_path, monkeypatch, coverage, threshold, expected):
+        observation = _observation(_record("tests/test_app.py::test_pass"), coverage=coverage, threshold=threshold)
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == expected and item.severity == "error" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_each_reviewed_source_requires_sufficient_coverage.<locals>.<genexpr> at 0x10a20a960>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:76: AssertionError
+_ test_each_reviewed_source_requires_sufficient_coverage[coverage2-90-TEST_COVERAGE_LOW] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_each_reviewed_source_requ2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a222990>
+coverage = {'src/app.py': {'summary': {'percent_covered': 85}}, 'src/other.py': {'summary': {'percent_covered': 100}}}
+threshold = 90, expected = 'TEST_COVERAGE_LOW'
+
+    @pytest.mark.parametrize("coverage,threshold,expected", [
+        ({"src/other.py": {"summary": {"percent_covered": 100}}}, None, "tool_error"),
+        ({"src/app.py": {"summary": {"percent_covered": 20}}}, None, "TEST_COVERAGE_LOW"),
+        ({"src/app.py": {"summary": {"percent_covered": 85}},
+          "src/other.py": {"summary": {"percent_covered": 100}}}, 90, "TEST_COVERAGE_LOW"),
+        ({"src/app.py": {"summary": {"percent_covered": 79}}}, 20, "TEST_COVERAGE_LOW"),
+    ])
+    def test_each_reviewed_source_requires_sufficient_coverage(tmp_path, monkeypatch, coverage, threshold, expected):
+        observation = _observation(_record("tests/test_app.py::test_pass"), coverage=coverage, threshold=threshold)
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == expected and item.severity == "error" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_each_reviewed_source_requires_sufficient_coverage.<locals>.<genexpr> at 0x10a20a0a0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:76: AssertionError
+_ test_each_reviewed_source_requires_sufficient_coverage[coverage3-20-TEST_COVERAGE_LOW] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_each_reviewed_source_requ3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a220aa0>
+coverage = {'src/app.py': {'summary': {'percent_covered': 79}}}, threshold = 20
+expected = 'TEST_COVERAGE_LOW'
+
+    @pytest.mark.parametrize("coverage,threshold,expected", [
+        ({"src/other.py": {"summary": {"percent_covered": 100}}}, None, "tool_error"),
+        ({"src/app.py": {"summary": {"percent_covered": 20}}}, None, "TEST_COVERAGE_LOW"),
+        ({"src/app.py": {"summary": {"percent_covered": 85}},
+          "src/other.py": {"summary": {"percent_covered": 100}}}, 90, "TEST_COVERAGE_LOW"),
+        ({"src/app.py": {"summary": {"percent_covered": 79}}}, 20, "TEST_COVERAGE_LOW"),
+    ])
+    def test_each_reviewed_source_requires_sufficient_coverage(tmp_path, monkeypatch, coverage, threshold, expected):
+        observation = _observation(_record("tests/test_app.py::test_pass"), coverage=coverage, threshold=threshold)
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == expected and item.severity == "error" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_each_reviewed_source_requires_sufficient_coverage.<locals>.<genexpr> at 0x10a20a880>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:76: AssertionError
+_______ test_project_root_as_test_root_cannot_exempt_production_sources ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_project_root_as_test_root0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a249d90>
+
+    def test_project_root_as_test_root_cannot_exempt_production_sources(tmp_path, monkeypatch):
+        observation = _observation(
+            _record("tests/test_app.py::test_pass"),
+            coverage={"src/other.py": {"summary": {"percent_covered": 100}}},
+        )
+        observation["test_roots"] = ["."]
+>       assert any(item.rule == "tool_error" for item in _run(tmp_path, monkeypatch, observation))
+E       assert False
+E        +  where False = any(<generator object test_project_root_as_test_root_cannot_exempt_production_sources.<locals>.<genexpr> at 0x10a2a8fb0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:105: AssertionError
+____ test_customer_nonempty_initializer_cannot_use_specfact_omit_exemption _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_customer_nonempty_initial0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a249fd0>
+
+    def test_customer_nonempty_initializer_cannot_use_specfact_omit_exemption(tmp_path, monkeypatch):
+        observation = _observation(_record("tests/test_app.py::test_pass"))
+>       assert any(item.rule == "tool_error" for item in _run(
+            tmp_path, monkeypatch, observation, ("src/customer/__init__.py", "tests/test_app.py"),
+        ))
+E       assert False
+E        +  where False = any(<generator object test_customer_nonempty_initializer_cannot_use_specfact_omit_exemption.<locals>.<genexpr> at 0x10a2a9a40>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:110: AssertionError
+_________ test_real_failure_remains_visible_alongside_missing_coverage _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_real_failure_remains_visi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a20f8b0>
+
+    def test_real_failure_remains_visible_alongside_missing_coverage(tmp_path, monkeypatch):
+        observation = _observation(
+            _record("tests/test_app.py::test_pass", "failed"),
+            coverage={"src/other.py": {"summary": {"percent_covered": 100}}},
+        )
+        observation["exit_code"] = 1
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert {"TEST_OUTCOME_NOT_PASS", "tool_error"} <= {item.rule for item in findings}
+E       AssertionError: assert {'TEST_OUTCOM... 'tool_error'} <= {'TEST_OUTCOME_NOT_PASS'}
+E
+E         Extra items in the left set:
+E         'tool_error'
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:122: AssertionError
+______________ test_invalid_effective_threshold_cannot_pass[bad] _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_invalid_effective_thresho0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a20f960>
+threshold = 'bad'
+
+    @pytest.mark.parametrize("threshold", ["bad", -1, 101, float("nan"), float("inf"), True])
+    def test_invalid_effective_threshold_cannot_pass(tmp_path, monkeypatch, threshold):
+        observation = _observation(_record("tests/test_app.py::test_pass"), threshold=threshold)
+>       assert any(item.rule == "tool_error" for item in _run(tmp_path, monkeypatch, observation))
+E       assert False
+E        +  where False = any(<generator object test_invalid_effective_threshold_cannot_pass.<locals>.<genexpr> at 0x10a2b3440>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:128: AssertionError
+_______________ test_invalid_effective_threshold_cannot_pass[-1] _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_invalid_effective_thresho1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a25b7f0>
+threshold = -1
+
+    @pytest.mark.parametrize("threshold", ["bad", -1, 101, float("nan"), float("inf"), True])
+    def test_invalid_effective_threshold_cannot_pass(tmp_path, monkeypatch, threshold):
+        observation = _observation(_record("tests/test_app.py::test_pass"), threshold=threshold)
+>       assert any(item.rule == "tool_error" for item in _run(tmp_path, monkeypatch, observation))
+E       assert False
+E        +  where False = any(<generator object test_invalid_effective_threshold_cannot_pass.<locals>.<genexpr> at 0x10a2b2b50>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:128: AssertionError
+______________ test_invalid_effective_threshold_cannot_pass[101] _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_invalid_effective_thresho2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a25bb10>
+threshold = 101
+
+    @pytest.mark.parametrize("threshold", ["bad", -1, 101, float("nan"), float("inf"), True])
+    def test_invalid_effective_threshold_cannot_pass(tmp_path, monkeypatch, threshold):
+        observation = _observation(_record("tests/test_app.py::test_pass"), threshold=threshold)
+>       assert any(item.rule == "tool_error" for item in _run(tmp_path, monkeypatch, observation))
+E       assert False
+E        +  where False = any(<generator object test_invalid_effective_threshold_cannot_pass.<locals>.<genexpr> at 0x10a1df100>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:128: AssertionError
+______________ test_invalid_effective_threshold_cannot_pass[nan] _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_invalid_effective_thresho3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108e83da0>
+threshold = nan
+
+    @pytest.mark.parametrize("threshold", ["bad", -1, 101, float("nan"), float("inf"), True])
+    def test_invalid_effective_threshold_cannot_pass(tmp_path, monkeypatch, threshold):
+        observation = _observation(_record("tests/test_app.py::test_pass"), threshold=threshold)
+>       assert any(item.rule == "tool_error" for item in _run(tmp_path, monkeypatch, observation))
+E       assert False
+E        +  where False = any(<generator object test_invalid_effective_threshold_cannot_pass.<locals>.<genexpr> at 0x10a1dedc0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:128: AssertionError
+______________ test_invalid_effective_threshold_cannot_pass[inf] _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_invalid_effective_thresho4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a285350>
+threshold = inf
+
+    @pytest.mark.parametrize("threshold", ["bad", -1, 101, float("nan"), float("inf"), True])
+    def test_invalid_effective_threshold_cannot_pass(tmp_path, monkeypatch, threshold):
+        observation = _observation(_record("tests/test_app.py::test_pass"), threshold=threshold)
+>       assert any(item.rule == "tool_error" for item in _run(tmp_path, monkeypatch, observation))
+E       assert False
+E        +  where False = any(<generator object test_invalid_effective_threshold_cannot_pass.<locals>.<genexpr> at 0x10a1df370>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:128: AssertionError
+______________ test_invalid_effective_threshold_cannot_pass[True] ______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-532/test_invalid_effective_thresho5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a23e5d0>
+threshold = True
+
+    @pytest.mark.parametrize("threshold", ["bad", -1, 101, float("nan"), float("inf"), True])
+    def test_invalid_effective_threshold_cannot_pass(tmp_path, monkeypatch, threshold):
+        observation = _observation(_record("tests/test_app.py::test_pass"), threshold=threshold)
+>       assert any(item.rule == "tool_error" for item in _run(tmp_path, monkeypatch, observation))
+E       assert False
+E        +  where False = any(<generator object test_invalid_effective_threshold_cannot_pass.<locals>.<genexpr> at 0x10a2b5ff0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:128: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_mixed_non_pass_outcomes_cannot_pass[skipped-setup-]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_mixed_non_pass_outcomes_cannot_pass[skipped-call-]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_mixed_non_pass_outcomes_cannot_pass[skipped-call-known bug]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_mixed_non_pass_outcomes_cannot_pass[passed-call-known bug]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_each_reviewed_source_requires_sufficient_coverage[coverage0-None-tool_error]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_each_reviewed_source_requires_sufficient_coverage[coverage1-None-TEST_COVERAGE_LOW]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_each_reviewed_source_requires_sufficient_coverage[coverage2-90-TEST_COVERAGE_LOW]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_each_reviewed_source_requires_sufficient_coverage[coverage3-20-TEST_COVERAGE_LOW]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_project_root_as_test_root_cannot_exempt_production_sources
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_customer_nonempty_initializer_cannot_use_specfact_omit_exemption
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_real_failure_remains_visible_alongside_missing_coverage
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_invalid_effective_threshold_cannot_pass[bad]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_invalid_effective_threshold_cannot_pass[-1]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_invalid_effective_threshold_cannot_pass[101]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_invalid_effective_threshold_cannot_pass[nan]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_invalid_effective_threshold_cannot_pass[inf]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_invalid_effective_threshold_cannot_pass[True]
+========================= 17 failed, 4 passed in 1.38s =========================

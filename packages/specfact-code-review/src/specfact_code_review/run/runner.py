@@ -6136,6 +6136,55 @@ def _coverage_findings(
     return findings, coverage_by_source
 
 
+@ensure(lambda result: result.is_absolute() and result.is_relative_to(Path.cwd().resolve()))
+def resolve_portable_pytest_root(observation: dict[str, Any]) -> Path:
+    """Resolve the native pytest root within the reviewed source snapshot."""
+    snapshot = Path.cwd().resolve()
+    pytest_root = (snapshot / observation.get("pytest_root", ".")).resolve()
+    if not pytest_root.is_relative_to(snapshot):
+        raise ValueError("project_pytest_root_outside_snapshot")
+    return pytest_root
+
+
+def _portable_coverage_sources(files: list[Path], observation: dict[str, Any]) -> list[Path]:
+    snapshot = Path.cwd().resolve()
+    pytest_root = resolve_portable_pytest_root(observation)
+    test_files = {
+        (pytest_root / str(nodeid).split("::", maxsplit=1)[0]).resolve()
+        for nodeid in (*observation.get("collected", []), *observation.get("deselected", []))
+    }
+    return [
+        path
+        for path in files
+        if path.suffix == ".py"
+        and path.name != "conftest.py"
+        and path.resolve() not in test_files
+        and not _is_test_file(path.resolve().relative_to(snapshot))
+    ]
+
+
+@ensure(lambda result: all(isinstance(finding, ReviewFinding) for finding in result))
+def evaluate_portable_pytest_coverage(files: list[Path], observation: dict[str, Any]) -> list[ReviewFinding]:
+    """Apply the production-source gate to native target-worker coverage evidence."""
+    anchor = files[0] if files else Path.cwd()
+    configured = observation.get("coverage_threshold")
+    threshold = _COVERAGE_THRESHOLD if configured is None else configured
+    if isinstance(threshold, bool) or not isinstance(threshold, int | float) or not 0 <= threshold <= 100:
+        return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_coverage_threshold_invalid")]
+    try:
+        sources = _portable_coverage_sources(files, observation)
+    except ValueError as exc:
+        return [tool_error(tool="pytest", file_path=anchor, message=str(exc))]
+    findings, _coverage = _coverage_findings(
+        sources,
+        observation["coverage"],
+        allow_project_omitted_initializers=False,
+        threshold=max(_COVERAGE_THRESHOLD, threshold),
+        blocking_low_coverage=True,
+    )
+    return findings
+
+
 def _pytest_junit_identities(observer: tuple[dict[str, object], ...]) -> dict[tuple[str, str], list[str]]:
     observed_nodes = tuple(dict.fromkeys(str(record.get("nodeid", "")) for record in observer))
     junit_identities: dict[tuple[str, str], list[str]] = {}

@@ -55,3 +55,14 @@
 - [x] Specify safe preparation reasons and preserved nested PYTHONPATH before regressions.
 - [x] Record actual failing evidence, implement both corrections and pass focused and combined gates.
 - [ ] Publish CI-signed fixes, verify current Linux acceptance and then resolve 4011304439 and 4011304448.
+
+## Release PR #477 pytest evidence findings
+- [x] Record regressions for mixed passing/non-passing pytest outcomes and per-source coverage, including native threshold and test-only selection controls.
+- [x] Preserve observed non-pass failures and validate reviewed production-source coverage without changing customer selection.
+- [ ] Validate, CI-sign and publish an immutable correction, then resolve findings 4019944740 and 4019944751 after current-head acceptance.
+
+## PR #478 nested pytest outcome paths
+
+- [x] Specify snapshot-relative outcome finding paths and record failing regressions before implementation.
+- [x] Reuse contained pytest-root validation for outcome findings and coverage, preserving native node identifiers.
+- [ ] Complete independent review, combined gates, CI signing and current-head validation before resolving finding 4020270168.

@@ -101,3 +101,6 @@ Source aliases must resolve to included repository content. Aliases into exclude
 Pip discovery recognizes `requirements.txt`, pip-tools `requirements.in`, and `pylock.toml`. Multiple lock/requirements alternatives require explicit selection. Standard lock handling is delegated to pip; pip 26.2.1 documents `pylock.toml` support as experimental ([pip install reference](https://pip.pypa.io/en/stable/cli/pip_install/), accessed 2026-09-14). Static `setup.cfg` Python constraints are imported when PEP 621 metadata does not provide them.
 
 Portable analysis uses a verified private source copy with local environments and excluded secret files removed. The corpus records artifact bytes and Linux host-interface transfer counters; those counters include concurrent host traffic and are not exact package download sizes. Its warm preparation and attachment commands additionally run in a non-root network namespace, independently of the offline option.
+
+
+Portable reviews retain skipped, XFAIL, and XPASS outcomes as non-passing test evidence, even when other tests pass. Each reviewed production Python source needs coverage evidence of at least 80 percent, or the effective project threshold when higher. A package directory used for pytest discovery does not exempt its production files from coverage. Missing coverage remains incomplete evidence.
