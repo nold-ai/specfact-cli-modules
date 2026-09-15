@@ -118,3 +118,26 @@ def test_nested_python_shares_caller_owned_temporary_file() -> None:
             subprocess.run([sys.executable, "-c", script, stream.name], check=True, timeout=30)
             stream.seek(0)
             assert stream.read() == "child-data"
+
+
+def test_nested_python_preserves_explicit_pythonpath(tmp_path: Path) -> None:
+    extra = tmp_path / "extra"
+    extra.mkdir()
+    (extra / "caller_only.py").write_text("VALUE = 'caller-path'\n", encoding="utf-8")
+    child = "import caller_only; print(caller_only.VALUE)"
+    script = (
+        "import caller_only,os,subprocess,sys; "
+        "assert caller_only.VALUE == 'caller-path'; "
+        "assert os.environ['PYTHONPATH'] == 'extra'; "
+        "subprocess.run([sys.executable, '-c', sys.argv[1]], check=True, timeout=30)"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script, child],
+        cwd=tmp_path,
+        env={"PYTHONPATH": "extra"},
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    assert result.stdout.strip() == "caller-path"

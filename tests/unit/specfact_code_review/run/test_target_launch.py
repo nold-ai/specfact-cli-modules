@@ -284,3 +284,73 @@ def test_actual_nested_exec_preserves_environment_and_member_imports(tmp_path, d
         "project-owned",
         environment.get("CUSTOMER_CONFIG"),
     ]
+
+
+def _pythonpath_probe(tmp_path, path_case):
+    """Use a script away from cwd so PYTHONPATH empty components are observable."""
+    cwd = tmp_path / "caller"
+    first, second = cwd / "first", cwd / "second"
+    first.mkdir(parents=True)
+    second.mkdir()
+    for directory, value in ((first, "first"), (second, "second"), (cwd, "cwd")):
+        (directory / "caller_module.py").write_text(f"VALUE = {value!r}\n")
+        (directory / "analyzer_only.py").write_text("VALUE = 'counterfeit'\n")
+    values = {
+        "absolute": os.pathsep.join((str(first), str(second))),
+        "relative": os.pathsep.join(("second", "first")),
+        "empty-component": os.pathsep.join(("missing", "", "first")),
+        "empty": "",
+        "omitted": None,
+    }
+    probe = tmp_path / "probe.py"
+    body = "import json,os\nvalues = [os.environ.get('PYTHONPATH')]\n"
+    if path_case not in {"empty", "omitted"}:
+        body += "import caller_module\nvalues.append(caller_module.VALUE)\n"
+    probe.write_text(body + "print(json.dumps(values))\n")
+    return cwd, probe, values[path_case]
+
+
+@pytest.mark.parametrize("domain", ["project-python", "pylint"])
+@pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+@pytest.mark.parametrize("inherited", [False, True])
+def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+    wrapper = _native_nested_wrapper(tmp_path, domain)
+    cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+    monkeypatch.delenv("PYTHONHOME", raising=False)
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+    if pythonpath is not None:
+        monkeypatch.setenv("PYTHONPATH", pythonpath)
+    environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+    options = {"cwd": cwd, "env": environment, "capture_output": True, "text": True, "timeout": 30}
+    native = subprocess.run([sys.executable, "-s", str(probe)], check=False, **options)
+    assert native.returncode == 0, native.stderr
+    if domain == "pylint":
+        with probe.open("a") as stream:
+            stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+    attached = subprocess.run([str(wrapper), str(probe)], check=False, **options)
+    assert attached.returncode == 0, attached.stderr
+    assert attached.stdout == native.stdout
+
+
+def test_caller_path_prepend_does_not_invoke_project_container_hooks(tmp_path):
+    wrapper = _native_nested_wrapper(tmp_path, "pylint")
+    installed = wrapper.parents[1] / "site-packages"
+    (installed / "analyzer_only.py").write_text("VALUE = 'counterfeit'\n")
+    hook = (
+        "class HookedPaths(list):\n"
+        "    def __setitem__(self, key, value):\n"
+        "        sys.meta_path.pop(0)\n"
+        "        return super().__setitem__(key, value)\n"
+        "sys.path = HookedPaths(sys.path)\n"
+    )
+    (installed / "container_hook.pth").write_text(f"import sys; exec({hook!r})\n")
+    result = subprocess.run(
+        [str(wrapper), "-c", "import analyzer_only; print(analyzer_only.VALUE)"],
+        env={},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "member-owned"

@@ -104,7 +104,7 @@ def test_prepare_rejects_log_alias_before_inventory(tmp_path: Path, monkeypatch,
     monkeypatch.setattr(Path, "read_text", read)
     with pytest.raises(ProjectRuntimeError) as error:
         runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=cache)
-    assert "hardlink" in str(error.value.__cause__ or error.value)
+    assert "hardlink" in str(error.value)
     assert "DISPOSABLE_PRIVATE_DIAGNOSTIC" not in str(error.value)
     logs = list(cache.glob("failed-*.log"))
     assert len(logs) == 1

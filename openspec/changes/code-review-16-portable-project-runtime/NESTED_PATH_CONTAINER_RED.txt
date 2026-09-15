@@ -1,0 +1,46 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <delivery-worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 48 items / 47 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_target_launch.py F              [100%]
+
+=================================== FAILURES ===================================
+_______ test_caller_path_prepend_does_not_invoke_project_container_hooks _______
+
+tmp_path = PosixPath('<temporary-path>')
+
+    def test_caller_path_prepend_does_not_invoke_project_container_hooks(tmp_path):
+        wrapper = _native_nested_wrapper(tmp_path, "pylint")
+        installed = wrapper.parents[1] / "site-packages"
+        (installed / "analyzer_only.py").write_text("VALUE = 'counterfeit'\n")
+        hook = (
+            "class HookedPaths(list):\n"
+            "    def __setitem__(self, key, value):\n"
+            "        sys.meta_path.pop(0)\n"
+            "        return super().__setitem__(key, value)\n"
+            "sys.path = HookedPaths(sys.path)\n"
+        )
+        (installed / "container_hook.pth").write_text(f"import sys; exec({hook!r})\n")
+        result = subprocess.run(
+            [str(wrapper), "-c", "import analyzer_only; print(analyzer_only.VALUE)"],
+            env={},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        assert result.returncode == 0, result.stderr
+>       assert result.stdout.strip() == "member-owned"
+E       AssertionError: assert 'counterfeit' == 'member-owned'
+E
+E         - member-owned
+E         + counterfeit
+
+tests/unit/specfact_code_review/run/test_target_launch.py:356: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_caller_path_prepend_does_not_invoke_project_container_hooks
+======================= 1 failed, 47 deselected in 0.49s =======================

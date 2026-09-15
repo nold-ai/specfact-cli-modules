@@ -613,3 +613,19 @@ The portable Pylint worker SHALL use already verified snapshot import paths as f
 - **THEN** those descriptors SHALL identify pipes, never the controller's regular diagnostic file
 - **AND** the controller SHALL stream diagnostics with bounded buffering, preserve partial timeout/failure output and close all capture descriptors and helpers
 - **AND** normal successful and downstream-failure log retention semantics SHALL remain unchanged
+
+#### Scenario: Preparation failures retain safe controller reasons
+
+- **GIVEN** a builder exits unsuccessfully or controller artifact validation rejects its output
+- **WHEN** preparation reports the failure to a review or runtime command
+- **THEN** the public diagnostic SHALL retain the controller's stable failure code and a numeric builder exit status when available, alongside the private log path
+- **AND** arbitrary exception text, selected paths and raw subprocess output SHALL NOT be copied into the public error
+- **AND** existing private diagnostic capture and retention SHALL remain unchanged; reporting a controller code SHALL NOT require an extra filesystem operation
+
+#### Scenario: Nested Python preserves caller import paths
+
+- **GIVEN** a process already executing in an isolated target worker supplies inherited or explicit PYTHONPATH entries for customer modules
+- **WHEN** it invokes the attached Python executable
+- **THEN** the trusted startup directory SHALL remain first and caller import-path entries SHALL retain their order and normal empty/relative path semantics inside the existing namespace
+- **AND** member analyzer imports SHALL remain sealed and host-only paths or supervisor state SHALL remain inaccessible
+- **AND** empty or omitted caller PYTHONPATH SHALL not weaken trusted startup or member-domain verification

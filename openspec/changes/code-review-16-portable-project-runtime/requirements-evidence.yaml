@@ -251,6 +251,16 @@ requirements:
       method: test
       intent: Keep controller diagnostic file descriptors outside the build namespace.
       observable: Actual child processes see pipe stdout rather than regular log storage; bounded capture preserves failure, timeout and downstream diagnostics and closes resources.
+    - case_id: 473-7-15
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Preserve safe controller validation reasons in public preparation errors.
+      observable: Actual nonzero and signal exits retain numeric status; artifact symlink, special-node and hardlink rejections expose their stable codes while arbitrary exception details stay private.
+    - case_id: 473-7-16
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Preserve caller import paths for nested Python without replacing trusted startup or analyzer ownership.
+      observable: Real nested wrappers match native caller imports for inherited and explicit absolute, relative, empty-component, empty and omitted PYTHONPATH in project and analyzer domains; reconstructed Hatch validates caller-only imports in its private temporary namespace.
   openspec:code-review-16-portable-project-runtime:portable-project-runtime:pylint-preserves-attached-namespace-source-roots:
     rationale: Attached editable namespace imports must not be shadowed by Pylint's legacy file-root discovery.
     stakeholder_refs:

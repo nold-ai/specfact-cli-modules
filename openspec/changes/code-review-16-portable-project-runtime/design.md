@@ -45,3 +45,7 @@ The supervisor always enters target workers through the sanitizing `target_comma
 ### PR #475 hardlink follow-up
 
 Build-output topology is an execution boundary, independent of the earlier source-symlink scope. Require single-link regular files during pre-enrichment validation and payload sealing/reuse. The driver copies installed distributions into the artifact, so package-manager hardlinks need not survive this boundary. Reject linked entries before reading their content; retain controller failure diagnostics privately. Stream builder stdout through a pipe with bounded reads and a controller-owned binary log; the builder never inherits the regular capture descriptor. Preserve timeout and downstream failure retention, and close the subprocess and capture resources on every exit. Tests reconstruct the filesystem condition using disposable log bytes and do not claim reproduction of the review's Linux `/proc`/bind-mount attack path.
+
+### PR #475 diagnostic and nested import-path follow-up
+
+Keep stable controller error codes and numeric exit status in public preparation diagnostics, alongside the existing private log path. Treat arbitrary exception text and paths as untrusted diagnostic content. Preserve existing log capture and retention without adding diagnostic writes or changing descriptor lifetime. Nested project PYTHONPATH is application configuration: retain it after the trusted startup directory without widening namespace mounts or changing analyzer import ownership.

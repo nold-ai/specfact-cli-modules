@@ -338,3 +338,41 @@ def test_pipe_readiness_race_retries_without_blocking_past_deadline(tmp_path: Pa
     _failed_build(plan, runtime, cache)
     assert _retained_logs(cache)[0].read_text() == "before\nafter\n"
     assert observed_blocking == [False]
+
+
+@pytest.mark.parametrize(("termination", "exit_status"), [("sys.exit(7)", 7), ("os.kill(os.getpid(), 15)", -15)])
+def test_preparation_reports_numeric_builder_exit(tmp_path: Path, monkeypatch, termination, exit_status) -> None:
+    plan, runtime, cache, _ = _builder(
+        tmp_path, monkeypatch, "print('PRIVATE_FIXTURE_OUTPUT', flush=True); " + termination
+    )
+    error = _failed_build(plan, runtime, cache)
+    assert f"project_runtime_prepare_failed:exit={exit_status}" in str(error)
+    assert "PRIVATE_FIXTURE_OUTPUT" not in str(error)
+    log = _retained_logs(cache)[0].read_text(encoding="utf-8")
+    assert "PRIVATE_FIXTURE_OUTPUT" in log
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected"),
+    [
+        (
+            ProjectRuntimeError("project_runtime_inputs_changed_during_build:PRIVATE_FIXTURE_PATH"),
+            "project_runtime_inputs_changed_during_build",
+        ),
+        (ProjectRuntimeError("PRIVATE_FIXTURE_MESSAGE"), "ProjectRuntimeError"),
+        (OSError("PRIVATE_FIXTURE_IO"), "OSError"),
+        (ValueError("PRIVATE_FIXTURE_VALUE"), "ValueError"),
+    ],
+)
+def test_preparation_separates_public_codes_from_private_details(
+    tmp_path: Path, monkeypatch, failure, expected
+) -> None:
+    plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, "pass")
+
+    def fail_build(*_args, **_kwargs):
+        raise failure
+
+    monkeypatch.setattr(runtime_builder, "_build", fail_build)
+    error = _failed_build(plan, runtime, cache)
+    assert expected in str(error)
+    assert "PRIVATE_FIXTURE" not in str(error)

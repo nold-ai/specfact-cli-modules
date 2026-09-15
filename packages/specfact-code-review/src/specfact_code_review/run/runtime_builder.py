@@ -5,6 +5,7 @@ from __future__ import annotations
 import errno
 import json
 import os
+import re
 import selectors
 import shutil
 import subprocess
@@ -241,6 +242,19 @@ def publish_artifact(artifact: Path, destination: Path) -> None:
             raise
 
 
+def _public_build_failure_reason(error: BaseException) -> str:
+    """Expose stable controller codes without arbitrary exception details or paths."""
+    if not isinstance(error, ProjectRuntimeError):
+        return type(error).__name__
+    code, _, detail = str(error).partition(":")
+    code = code.partition(";")[0]
+    if re.fullmatch(r"project_[a-z0-9_]+", code) is None:
+        return type(error).__name__
+    if code == "project_runtime_prepare_failed" and re.fullmatch(r"exit=-?[0-9]+", detail):
+        return f"{code}:{detail}"
+    return code
+
+
 @ensure(lambda result, plan: result.descriptor["project_identity"] == plan.identity)
 def prepare_runtime(
     plan: ProjectPlan,
@@ -284,7 +298,8 @@ def prepare_runtime(
                 validate_build_artifact(artifact)
             except (OSError, ValueError, subprocess.SubprocessError) as exc:
                 raise ProjectRuntimeError(
-                    f"project_runtime_prepare_failed; private log: {build_log.name}; {type(exc).__name__}"
+                    f"project_runtime_prepare_failed; private log: {build_log.name}; "
+                    f"{_public_build_failure_reason(exc)}"
                 ) from exc
         try:
             verify_inputs(plan)

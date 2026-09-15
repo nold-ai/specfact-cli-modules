@@ -50,3 +50,8 @@
 - [x] Specify rejection of multiply linked runtime files before reads, sealing and reuse.
 - [x] Record failing hardlink regressions, implement rejection and validate ordinary copied package compatibility.
 - [ ] Complete independent review, required gates, CI signing, pushed validation and fresh native corpus before resolving 4011119813.
+
+## PR #475 diagnostic and nested import-path findings
+- [x] Specify safe preparation reasons and preserved nested PYTHONPATH before regressions.
+- [x] Record actual failing evidence, implement both corrections and pass focused and combined gates.
+- [ ] Publish CI-signed fixes, verify current Linux acceptance and then resolve 4011304439 and 4011304448.

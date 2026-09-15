@@ -81,7 +81,7 @@ def test_prepare_rejects_artifact_topology_before_inventory_access(
     monkeypatch.setattr(runtime_builder, "inventory_native", forbidden_native)
     with pytest.raises(ProjectRuntimeError) as error:
         runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache")
-    assert "project_runtime_build_artifact_invalid" in str(error.value.__cause__ or error.value)
+    assert "project_runtime_build_artifact_invalid" in str(error.value)
     assert sentinel.read_bytes() == original
 
 

@@ -185,6 +185,8 @@ def _configure_member_site(finder: AnalyzerFinder, stdlib_paths: list[str]) -> N
 
 def _configure_runtime(module: str) -> None:
     """Initialize only the target worker; project Python gets no analyzer fallbacks."""
+    caller_paths = _caller_pythonpath()
+    set_paths, prepend = list.__setitem__, slice(0, 0)
     descriptor = json.loads((PROJECT / "project-runtime.json").read_text(encoding="utf-8"))
     stdlib_paths = _stdlib_paths()
     sys.path[:] = stdlib_paths
@@ -201,7 +203,21 @@ def _configure_runtime(module: str) -> None:
     else:
         _configure_member_site(finder, stdlib_paths)
         sys.path.append(str(ANALYZERS))
+    set_paths(sys.path, prepend, caller_paths)
     sys.executable = str(PROJECT / "bin/python")
+
+
+def _caller_pythonpath() -> list[str]:
+    """Consume caller configuration before hooks; defer paths until member sealing."""
+    encoded = os.environ.pop("_SPECFACT_CALLER_PYTHONPATH", None)
+    if encoded is None:
+        return []
+    pythonpath = json.loads(encoded)
+    if pythonpath is None:
+        os.environ.pop("PYTHONPATH", None)
+        return []
+    os.environ["PYTHONPATH"] = pythonpath
+    return [os.path.abspath(path) for path in pythonpath.split(os.pathsep)] if pythonpath else []
 
 
 def python_execution_domain() -> str:
@@ -234,6 +250,7 @@ def _project_python_command(arguments: list[str]) -> tuple[list[str], dict[str, 
     """Use the native Python CLI, preserving -c/-m/-u and future imports exactly."""
     _validate_python_arguments(arguments)
     environment = dict(os.environ)
+    environment["_SPECFACT_CALLER_PYTHONPATH"] = json.dumps(environment.get("PYTHONPATH"))
     environment.update(PYTHONPATH=str(BUILTIN / "specfact_code_review/run"), SPECFACT_PROJECT_PYTHON="1")
     launcher = runpy.run_path(str(Path(__file__).with_name("target_launch.py")))
     return launcher["interpreter_command"](["-s", *arguments]), environment
