@@ -543,7 +543,7 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **GIVEN** runtime preparation executes untrusted package-manager or build-hook code in its disposable namespace
 - **WHEN** the controller captures or retains build diagnostics
 - **THEN** it SHALL create a private regular log with an exclusive controller-owned file descriptor outside all builder-writable directory mounts before starting the builder
-- **AND** builder and native-manager stdout/stderr SHALL be captured through that descriptor without the controller opening or copying a builder-chosen log path after execution
+- **AND** builder and native-manager stdout/stderr SHALL reach the controller through a pipe; only the controller SHALL hold the regular log descriptor, without opening or copying a builder-chosen log path after execution
 - **AND** symlink, directory, or FIFO substitutions at the former staging log path or a predictable failure-log path SHALL NOT cause host-file writes, reads, permission changes, or blocking opens
 - **AND** failed and timed-out preparation SHALL retain the trusted private diagnostic log, close its descriptor, and remove disposable staging storage
 - **AND** successful preparation SHALL close and remove its temporary diagnostic log
@@ -596,3 +596,20 @@ The portable Pylint worker SHALL use already verified snapshot import paths as f
 - **WHEN** only the trusted Pylint dispatcher implementation changes
 - **THEN** its content digest SHALL change the builder cache identity and offline preparation SHALL report a cache miss
 - **AND** unchanged dispatcher bytes SHALL retain warm cache reuse
+
+#### Scenario: Runtime payloads cannot retain controller diagnostic hardlinks
+
+- **GIVEN** a builder leaves a regular artifact file sharing an inode with a controller diagnostic log or another file outside the artifact
+- **WHEN** the controller validates build output, seals it, or verifies it for reuse
+- **THEN** regular files with multiple hardlinks SHALL be rejected before their payload is read or the runtime is attached
+- **AND** the controller SHALL retain its private failure log without publishing diagnostic bytes in the runtime or public error
+- **AND** ordinary copied package files with a single link SHALL remain accepted, including when the package manager uses hardlinks inside its disposable environment
+- **AND** a hardlink introduced after sealing SHALL invalidate attachment even when its bytes still match the recorded digest
+
+#### Scenario: Builder children cannot reopen controller log storage
+
+- **GIVEN** untrusted build hooks execute as descendants of the isolated build driver
+- **WHEN** the driver or its children inspect or reopen their stdout/stderr through process descriptors
+- **THEN** those descriptors SHALL identify pipes, never the controller's regular diagnostic file
+- **AND** the controller SHALL stream diagnostics with bounded buffering, preserve partial timeout/failure output and close all capture descriptors and helpers
+- **AND** normal successful and downstream-failure log retention semantics SHALL remain unchanged

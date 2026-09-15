@@ -23,12 +23,20 @@ from specfact_code_review.run.runtime_models import (
 _DESCRIPTOR = "project-runtime.json"
 
 
+def _reject_hardlink(metadata: os.stat_result, name: str) -> None:
+    """Require independent regular files before reading untrusted payload bytes."""
+    if stat.S_ISREG(metadata.st_mode) and metadata.st_nlink != 1:
+        raise ProjectRuntimeError(f"project_runtime_hardlink_invalid:{name}; independent file required")
+
+
 def _validate_build_directory(directory: Path, root: Path) -> list[Path]:
     """Check immediate nodes without reading payloads, returning directories to visit."""
     children = []
     with os.scandir(directory) as entries:
         for entry in entries:
-            mode = entry.stat(follow_symlinks=False).st_mode
+            metadata = entry.stat(follow_symlinks=False)
+            _reject_hardlink(metadata, Path(entry.path).relative_to(root).as_posix())
+            mode = metadata.st_mode
             if stat.S_ISDIR(mode):
                 children.append(Path(entry.path))
                 continue
@@ -57,7 +65,9 @@ def _payload_manifest(root: Path) -> dict[str, dict[str, object]]:
         name = path.relative_to(root).as_posix()
         if name in {_DESCRIPTOR, "." + _DESCRIPTOR + ".tmp"}:
             continue
-        mode = path.lstat().st_mode
+        metadata = path.lstat()
+        _reject_hardlink(metadata, name)
+        mode = metadata.st_mode
         if stat.S_ISLNK(mode):
             raise ProjectRuntimeError(f"project_runtime_payload_symlink:{name}")
         if stat.S_ISDIR(mode):
@@ -146,6 +156,7 @@ def _validate_member_graph(graph: object) -> None:
 def _read_descriptor(path: Path) -> dict[str, Any]:
     if path.is_symlink() or not path.is_file() or path.name != _DESCRIPTOR:
         raise ProjectRuntimeError("project_runtime_descriptor_invalid: expected project-runtime.json")
+    _reject_hardlink(path.lstat(), path.name)
     try:
         descriptor = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:

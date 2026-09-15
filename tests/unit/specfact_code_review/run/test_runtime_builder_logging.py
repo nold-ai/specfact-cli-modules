@@ -3,6 +3,8 @@
 import os
 import subprocess
 import sys
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -62,7 +64,18 @@ def _builder(tmp_path: Path, monkeypatch, script: str, *, timeout: bool = False)
             str(staging),
         ],
     )
-    captures = _capture_subprocess(monkeypatch, timeout=timeout)
+    captures = []
+    native_log = runtime_builder.tempfile.NamedTemporaryFile
+
+    @contextmanager
+    def capture_log(**kwargs):
+        with native_log(**kwargs) as log:
+            captures.append(log.file)
+            yield log
+
+    monkeypatch.setattr(runtime_builder.tempfile, "NamedTemporaryFile", capture_log)
+    if timeout:
+        monkeypatch.setattr(runtime_builder, "_BUILD_TIMEOUT_SECONDS", 0.3)
     return plan, runtime, tmp_path / "cache", captures
 
 
@@ -218,3 +231,110 @@ def test_driver_forwards_native_timeout_partial_output(tmp_path: Path, monkeypat
             [sys.executable, "-c", "import time; print('native-partial', flush=True); time.sleep(10)"]
         )
     assert capsys.readouterr().out == "native-partial\n"
+
+
+def test_builder_stdout_is_pipe_not_private_log_inode(tmp_path: Path, monkeypatch) -> None:
+    script = (
+        "import stat; "
+        "assert stat.S_ISFIFO(os.fstat(1).st_mode), 'controller log inode exposed'; "
+        "print('PIPE_BOUNDARY_OK', flush=True); sys.exit(1)"
+    )
+    plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, script)
+    _failed_build(plan, runtime, cache)
+    assert _retained_logs(cache)[0].read_text() == "PIPE_BOUNDARY_OK\n"
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux proc descriptor contract")
+def test_builder_proc_reopen_cannot_access_regular_log_inode(tmp_path: Path, monkeypatch) -> None:
+    script = (
+        "import stat; "
+        "fd=os.open('/proc/self/fd/1', os.O_RDONLY | os.O_NONBLOCK); "
+        "assert stat.S_ISFIFO(os.fstat(fd).st_mode), 'proc reopened private log inode'; "
+        "os.close(fd); print('PROC_PIPE_BOUNDARY_OK', flush=True); sys.exit(1)"
+    )
+    plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, script)
+    _failed_build(plan, runtime, cache)
+    assert _retained_logs(cache)[0].read_text() == "PROC_PIPE_BOUNDARY_OK\n"
+
+
+def test_pipe_capture_preserves_large_binary_output_without_communicate(tmp_path: Path, monkeypatch) -> None:
+    script = "sys.stdout.buffer.write(bytes(range(256))*8192); sys.stdout.buffer.flush(); sys.exit(1)"
+    plan, runtime, cache, captures = _builder(tmp_path, monkeypatch, script)
+
+    def forbidden_communicate(*_args, **_kwargs):
+        raise AssertionError("builder capture must not buffer its complete output")
+
+    monkeypatch.setattr(subprocess.Popen, "communicate", forbidden_communicate)
+    _failed_build(plan, runtime, cache)
+    assert _retained_logs(cache)[0].read_bytes() == bytes(range(256)) * 8192
+    assert captures[0].closed
+
+
+def test_closed_output_pipe_does_not_disable_child_timeout(tmp_path: Path, monkeypatch) -> None:
+    plan, runtime, cache, captures = _builder(
+        tmp_path, monkeypatch, "os.close(1); os.close(2); time.sleep(10)", timeout=True
+    )
+    started = time.monotonic()
+    _failed_build(plan, runtime, cache)
+    assert time.monotonic() - started < 5
+    assert captures[0].closed
+    assert _retained_logs(cache)[0].read_bytes() == b""
+
+
+def test_log_write_failure_reaps_child_and_closes_capture(tmp_path: Path, monkeypatch) -> None:
+    plan, runtime, cache, captures = _builder(tmp_path, monkeypatch, "print('output', flush=True); time.sleep(10)")
+    native_log = runtime_builder.tempfile.NamedTemporaryFile
+    native_popen = subprocess.Popen
+    children = []
+
+    class BrokenLog:
+        def write(self, _chunk: bytes) -> None:
+            raise OSError("controller log write failed")
+
+    @contextmanager
+    def broken_log(**kwargs):
+        with native_log(**kwargs) as log:
+            yield SimpleNamespace(name=log.name, file=BrokenLog())
+
+    @contextmanager
+    def record_child(*args, **kwargs):
+        with native_popen(*args, **kwargs) as process:
+            children.append(process)
+            yield process
+
+    monkeypatch.setattr(runtime_builder.tempfile, "NamedTemporaryFile", broken_log)
+    monkeypatch.setattr(subprocess, "Popen", record_child)
+    started = time.monotonic()
+    _failed_build(plan, runtime, cache)
+    assert time.monotonic() - started < 5
+    assert len(children) == 1 and children[0].poll() is not None
+    assert children[0].stdout.closed and captures[0].closed
+
+
+def test_pipe_readiness_race_retries_without_blocking_past_deadline(tmp_path: Path, monkeypatch) -> None:
+    plan, runtime, cache, _ = _builder(
+        tmp_path, monkeypatch, "print('before', flush=True); time.sleep(0.05); print('after', flush=True); sys.exit(1)"
+    )
+    native_popen = subprocess.Popen
+    native_read = os.read
+    stdout_descriptors = []
+    observed_blocking = []
+
+    @contextmanager
+    def record_stdout(*args, **kwargs):
+        with native_popen(*args, **kwargs) as process:
+            assert process.stdout is not None
+            stdout_descriptors.append(process.stdout.fileno())
+            yield process
+
+    def transiently_drained(fd, size):
+        if fd in stdout_descriptors and not observed_blocking:
+            observed_blocking.append(os.get_blocking(fd))
+            raise BlockingIOError("another reader drained the pipe after readiness")
+        return native_read(fd, size)
+
+    monkeypatch.setattr(subprocess, "Popen", record_stdout)
+    monkeypatch.setattr(os, "read", transiently_drained)
+    _failed_build(plan, runtime, cache)
+    assert _retained_logs(cache)[0].read_text() == "before\nafter\n"
+    assert observed_blocking == [False]

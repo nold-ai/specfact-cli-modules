@@ -5,9 +5,11 @@ from __future__ import annotations
 import errno
 import json
 import os
+import selectors
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import IO, Any
 
@@ -40,6 +42,7 @@ from specfact_code_review.run.runtime_vcs import copy_vcs_context
 _BUILDER_FILES = (
     "runtime_build_driver.py",
     "runtime_builder.py",
+    "runtime_artifacts.py",
     "runtime_native.py",
     "runtime_adapters.py",
     "runtime_domains.py",
@@ -51,6 +54,42 @@ _BUILDER_FILES = (
     "target_pylint.py",
     "sitecustomize.py",
 )
+_BUILD_TIMEOUT_SECONDS = 4500
+
+
+def _stream_builder_output(process: subprocess.Popen[bytes], build_log: IO[bytes], deadline: float) -> None:
+    """Drain bounded binary chunks without exposing the destination file to children."""
+    assert process.stdout is not None
+    os.set_blocking(process.stdout.fileno(), False)
+    with selectors.DefaultSelector() as selector:
+        selector.register(process.stdout, selectors.EVENT_READ)
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(process.args, _BUILD_TIMEOUT_SECONDS)
+            if not selector.select(remaining):
+                raise subprocess.TimeoutExpired(process.args, _BUILD_TIMEOUT_SECONDS)
+            try:
+                chunk = os.read(process.stdout.fileno(), 65536)
+            except BlockingIOError:
+                continue
+            if not chunk:
+                return
+            build_log.write(chunk)
+            build_log.flush()
+
+
+def _run_logged_builder(command: list[str], descriptor: int, build_log: IO[bytes]) -> int:
+    """Keep the private log inode in the controller while supervising one child."""
+    deadline = time.monotonic() + _BUILD_TIMEOUT_SECONDS
+    with subprocess.Popen(command, pass_fds=(descriptor,), stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
+        try:
+            _stream_builder_output(process, build_log, deadline)
+            return process.wait(timeout=max(0.0, deadline - time.monotonic()))
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.wait()
 
 
 @require(lambda source, destination: source.is_dir() and not destination.exists())
@@ -132,7 +171,7 @@ def builder_command(runtime: Any, *, staging: Path, executable: str) -> list[str
     return command
 
 
-def _build(plan: ProjectPlan, runtime: Any, staging: Path, *, build_log: IO[str] | None = None) -> Path:
+def _build(plan: ProjectPlan, runtime: Any, staging: Path, *, build_log: IO[bytes] | None = None) -> Path:
     verify_inputs(plan)
     copy_project(plan.root, staging / "project", include_vcs=False)
     if source_identity(staging / "project") != plan.source_identity:
@@ -159,19 +198,22 @@ def _build(plan: ProjectPlan, runtime: Any, staging: Path, *, build_log: IO[str]
     (staging / "build.json").write_text(json.dumps(config), encoding="utf-8")
     descriptor = sandbox._verified_bubblewrap_descriptor(runtime.root, runtime.bubblewrap)
     try:
-        completed = subprocess.run(
-            builder_command(runtime, staging=staging, executable=f"/proc/self/fd/{descriptor}"),
-            pass_fds=(descriptor,),
-            stdout=build_log if build_log is not None else subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            check=False,
-            timeout=4500,
-        )
+        command = builder_command(runtime, staging=staging, executable=f"/proc/self/fd/{descriptor}")
+        if build_log is not None:
+            returncode = _run_logged_builder(command, descriptor, build_log)
+        else:
+            returncode = subprocess.run(
+                command,
+                pass_fds=(descriptor,),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+                check=False,
+                timeout=_BUILD_TIMEOUT_SECONDS,
+            ).returncode
     finally:
         os.close(descriptor)
-    if completed.returncode:
-        raise ProjectRuntimeError(f"project_runtime_prepare_failed:exit={completed.returncode}")
+    if returncode:
+        raise ProjectRuntimeError(f"project_runtime_prepare_failed:exit={returncode}")
     if not (staging / "artifact/site-packages").is_dir():
         raise ProjectRuntimeError("project_runtime_prepare_incomplete")
     return staging / "artifact"
@@ -235,7 +277,7 @@ def prepare_runtime(
         # The exclusive 0600 file is outside the builder's writable staging mount.
         # Never reopen a path supplied by the builder, including for log retention.
         with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", prefix=f"failed-{key}-", suffix=".log", dir=cache, delete=False
+            mode="wb", prefix=f"failed-{key}-", suffix=".log", dir=cache, delete=False
         ) as build_log:
             try:
                 artifact = _build(plan, runtime, staging, build_log=build_log.file)

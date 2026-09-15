@@ -35,13 +35,18 @@
 ## PR #475 review follow-up
 - [x] Specify pip installable-directory markers and targeted pytest file/glob discovery before regression tests.
 - [x] Record both real failures, implement the fixes and pass focused plus required combined gates.
-- [ ] Push verified Git ancestry with CI-produced publisher signatures, then reply and resolve findings 4010452407 and 4010452417.
+- [x] Push verified Git ancestry with CI-produced publisher signatures, then reply and resolve findings 4010452407 and 4010452417.
 - [x] Specify controller-owned build-log capture before the P1 security regression.
-- [ ] Validate safe failure/timeout log retention and success cleanup, then resolve security finding 4010477055 after the validated signed update is pushed.
+- [x] Validate safe failure/timeout log retention and success cleanup, then resolve security finding 4010477055 after the validated signed update is pushed.
 - [x] Specify artifact topology validation before controller-side inventory and native-library enrichment.
 - [x] Reproduce and reject artifact redirection before host reads or writes, with independent safety review and combined gates.
 
 ## Late nested-process findings from superseded PR #474
 - [x] Specify and reproduce lost nested Python environment, working directory and private temporary files without weakening first-entry isolation.
-- [ ] Preserve verified runtime domain for nested children, including explicit replacement environments; run focused regressions and the reconstructed Hatch corpus.
-- [ ] Complete fresh combined gates and signed push to PR #475 before replying and resolving findings 4010422180 and 4010422190 on #474.
+- [x] Preserve verified runtime domain for nested children, including explicit replacement environments; run focused regressions and the reconstructed Hatch corpus.
+- [x] Complete fresh combined gates and signed push to PR #475 before replying and resolving findings 4010422180 and 4010422190 on #474.
+
+## PR #475 diagnostic hardlink finding
+- [x] Specify rejection of multiply linked runtime files before reads, sealing and reuse.
+- [x] Record failing hardlink regressions, implement rejection and validate ordinary copied package compatibility.
+- [ ] Complete independent review, required gates, CI signing, pushed validation and fresh native corpus before resolving 4011119813.
