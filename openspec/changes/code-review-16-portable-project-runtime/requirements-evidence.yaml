@@ -170,6 +170,12 @@ requirements:
       intent: Non-passing nested pytest nodeids identify snapshot-relative test files without changing raw evidence.
       observable: Nested relative and absolute roots map findings to the reviewed test file; outside roots and
         escaping node paths yield incomplete-evidence diagnostics without false file attribution.
+    - case_id: 478-pytest-startup
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Native pytest usage errors preserve the targeted member and recorded execution without a fabricated root.
+      observable: A real unknown-option exit four with null root retains target_execution in the capsule response;
+        malformed roots on otherwise usable observations produce actionable incomplete-evidence diagnostics.
   ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:validate-external-repositories-through-released-installation
   : rationale: Validate external repositories through released installation. The approved portable-runtime story
       requires independent customer runtime evidence.

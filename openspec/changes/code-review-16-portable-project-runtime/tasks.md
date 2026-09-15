@@ -66,3 +66,9 @@
 - [x] Specify snapshot-relative outcome finding paths and record failing regressions before implementation.
 - [x] Reuse contained pytest-root validation for outcome findings and coverage, preserving native node identifiers.
 - [ ] Complete independent review, combined gates, CI signing and current-head validation before resolving finding 4020270168.
+
+## PR #478 native pytest startup failure
+
+- [x] Specify and reproduce native usage-error observations with null pytest roots and lost capsule execution evidence.
+- [x] Validate incomplete execution before outcome-path resolution, reject malformed roots explicitly and preserve native observations.
+- [ ] Complete independent review, combined gates, CI signing and current-head validation before resolving finding 4020397305.

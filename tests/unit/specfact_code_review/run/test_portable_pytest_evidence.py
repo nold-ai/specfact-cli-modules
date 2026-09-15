@@ -1,12 +1,16 @@
 """Portable evidence must enforce the same non-pass and source coverage gates."""
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
-from specfact_code_review.run import portable_worker
+from specfact_code_review.run import portable_worker, runner, target_pytest
 
 
 def _record(nodeid, outcome="passed", phase="call", wasxfail="") -> dict[str, object]:
@@ -212,3 +216,79 @@ def test_escaping_outcome_path_is_incomplete_without_false_attribution(tmp_path,
     findings = _run(tmp_path, monkeypatch, observation)
     assert any(finding.rule == "tool_error" for finding in findings)
     assert not any(finding.rule == "TEST_OUTCOME_NOT_PASS" for finding in findings)
+
+
+@pytest.mark.parametrize("pytest_root", [None, "", 12, [], {}])
+def test_malformed_observed_root_is_an_actionable_diagnostic(tmp_path, monkeypatch, pytest_root):
+    observation = _observation(_record("tests/test_app.py::test_pass"))
+    observation["pytest_root"] = pytest_root
+    findings = _run(tmp_path, monkeypatch, observation)
+    assert len(findings) == 1
+    assert findings[0].rule == "tool_error"
+    assert "project_pytest_root_missing_or_invalid" in findings[0].message
+
+
+def test_native_usage_error_retains_capsule_member_and_target_execution(tmp_path, monkeypatch):
+    (tmp_path / "pytest.ini").write_text("[pytest]\n")
+    native_output = tmp_path / "native-observation.json"
+    program = """
+import importlib.util, json, sys
+from pathlib import Path
+import pytest
+spec = importlib.util.spec_from_file_location('native_observer', sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+observer = module.Observer()
+code = pytest.main(['--specfact-controlled-invalid-option'], plugins=[observer])
+Path(sys.argv[2]).write_text(json.dumps({
+    'exit_code': int(code), 'pytest_root': observer.pytest_root,
+    'records': observer.records, 'collected': sorted(observer.collected),
+    'coverage': {}, 'argv': ['--specfact-controlled-invalid-option'],
+}))
+raise SystemExit(int(code))
+"""
+    native = subprocess.run(
+        [sys.executable, "-c", program, str(Path(target_pytest.__file__).resolve()), str(native_output)],
+        cwd=tmp_path,
+        env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "PYTEST_ADDOPTS": ""},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert native.returncode == 4, native.stdout + native.stderr
+    observation = json.loads(native_output.read_text())
+    assert observation["pytest_root"] is None
+    assert observation["records"] == []
+    assert "--specfact-controlled-invalid-option" in native.stderr
+    result_path = tmp_path / "result.json"
+    observed_path = tmp_path / "observation.json"
+    files = [tmp_path / "src/app.py"]
+    monkeypatch.setattr(
+        runner,
+        "_load_capsule_request",
+        lambda _path: ("targeted-pytest-coverage", files, False, ("portable-pytest-v2", "{}"), False),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_member_findings",
+        lambda *_args, **_kwargs: _run(tmp_path, monkeypatch, observation),
+    )
+    redirects = {
+        "/opt/specfact/tmp/pytest-observation.json": observed_path,
+        "/opt/specfact/output/result.json": result_path,
+    }
+    monkeypatch.setattr(
+        runner, "Path", Mock(wraps=Path, side_effect=lambda value: redirects.get(str(value), Path(value)))
+    )
+    runner._capsule_process_request(tmp_path / "request.json")
+    response = json.loads(result_path.read_text())
+    assert response["member"] == "targeted-pytest-coverage"
+    assert response["execution_state"] == "error"
+    assert response["evidence_outcome"] == "UNKNOWN"
+    assert response["target_execution"] == observation
+    assert any(
+        "project_pytest_configuration_or_collection_failed:exit=4" in finding["message"]
+        and "target_execution" in finding["message"]
+        for finding in response["findings"]
+    )

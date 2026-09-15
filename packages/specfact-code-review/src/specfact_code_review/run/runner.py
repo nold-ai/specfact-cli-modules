@@ -6139,8 +6139,11 @@ def _coverage_findings(
 @ensure(lambda result: result.is_absolute() and result.is_relative_to(Path.cwd().resolve()))
 def resolve_portable_pytest_root(observation: dict[str, Any]) -> Path:
     """Resolve the native pytest root within the reviewed source snapshot."""
+    recorded_root = observation.get("pytest_root", ".")
+    if not isinstance(recorded_root, str) or not recorded_root:
+        raise ValueError("project_pytest_root_missing_or_invalid; inspect target_execution")
     snapshot = Path.cwd().resolve()
-    pytest_root = (snapshot / observation.get("pytest_root", ".")).resolve()
+    pytest_root = (snapshot / recorded_root).resolve()
     if not pytest_root.is_relative_to(snapshot):
         raise ValueError("project_pytest_root_outside_snapshot")
     return pytest_root

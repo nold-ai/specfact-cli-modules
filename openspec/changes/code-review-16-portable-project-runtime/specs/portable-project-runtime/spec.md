@@ -127,6 +127,14 @@ The system SHALL preserve pytest configuration, source paths, plugins and select
 - **AND** absolute or escaping pytest roots outside the snapshot SHALL produce incomplete-evidence diagnostics before outcome paths are mapped
 - **AND** an escaping observed node path SHALL NOT create a finding attributed outside the snapshot
 
+#### Scenario: Pytest startup failure preserves recorded execution
+
+- **GIVEN** native pytest exits with a usage error before session finish and records no pytest root or test outcomes
+- **WHEN** the portable adapter evaluates the observation
+- **THEN** it SHALL retain the targeted pytest member identity, the original target execution record and an actionable configuration diagnostic naming the native exit code
+- **AND** it SHALL NOT invent a root or attempt outcome-path mapping for absent outcomes
+- **AND** otherwise usable observations with null, empty or non-string roots SHALL return an explicit incomplete-evidence diagnostic instead of an uncaught adapter exception
+
 ### Requirement: Validate external repositories through released installation
 
 The system SHALL require a pinned Requests/pip, Hatch/Hatch, Flask/uv and Poetry/Poetry corpus on Ubuntu 24.04 CPython 3.11/3.12/3.13 for relevant changes and published releases. Tests SHALL reject empty or UNKNOWN required analysis, retain real findings, verify source immutability, and capture exact artifacts, test inventory, exit codes, duration and transfer cost.

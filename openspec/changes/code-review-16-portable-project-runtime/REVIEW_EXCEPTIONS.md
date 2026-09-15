@@ -41,3 +41,7 @@ For this Linux-only capsule change, accept these local coverage warnings conditi
 ## Portable pytest release correction
 
 The deferred coverage-policy import in `portable_worker.run_portable_pytest` reuses the supervisor's established coverage evaluator only when executing analysis. Test selection and runtime discovery can import `portable_worker` without initializing the large runner and its analyzer integrations. Keep this scoped deferred import rather than duplicate coverage policy or make discovery import the analyzer stack. `Observer.pytest_sessionfinish` is covered by the existing target-worker contract exception: importing icontract into the customer interpreter would add supervisor dependencies; native subprocess tests prove its evidence fields and precedence.
+
+## Native pytest usage-error proof
+
+`ai-bloat.loc-vs-complexity` in `test_native_usage_error_retains_capsule_member_and_target_execution`: retain the explicit native subprocess, captured observation and capsule-envelope replay in one integration regression. Most length is the isolated observer script and boundary-specific assertions; these establish that a real usage error preserves member identity and the exact target evidence. Extracting single-use setup would hide the sequence without removing behavior. Six failing-before cases and the combined 120-case passing run cover this correction.

@@ -165,6 +165,10 @@ def _validate_collection_errors(observation: dict[str, Any]) -> None:
 def validate_observation(observation: dict[str, Any], exit_code: int) -> None:
     """Reject incomplete execution without discarding native pytest selection policy."""
     _validate_collection_errors(observation)
+    if exit_code == 4:
+        raise ProjectRuntimeError(
+            "project_pytest_configuration_or_collection_failed:exit=4; inspect target_execution and pytest options"
+        )
     records = observation["records"]
     collected = set(observation["collected"])
     executed = {row["nodeid"] for row in records if row["phase"] == "call"}
@@ -226,13 +230,15 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
         completed = subprocess.run(command, text=True, capture_output=True, check=False, timeout=1200)
         observation = json.loads(Path("/opt/specfact/tmp/pytest-observation.json").read_text(encoding="utf-8"))
         records = observation["records"]
-        pytest_root = resolve_portable_pytest_root(observation)
-        findings = _nonpassing_observation_findings(records, pytest_root)
         validation_error = ""
         try:
             validate_observation(observation, completed.returncode)
         except ProjectRuntimeError as exc:
             validation_error = str(exc)
+        if validation_error and not records:
+            return [tool_error(tool="pytest", file_path=anchor, message=validation_error)]
+        pytest_root = resolve_portable_pytest_root(observation)
+        findings = _nonpassing_observation_findings(records, pytest_root)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         return [tool_error(tool="pytest", file_path=anchor, message=str(exc))]
     if validation_error:
