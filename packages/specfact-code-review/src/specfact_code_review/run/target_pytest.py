@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import glob
 import importlib.metadata
 import json
 import os
@@ -12,6 +13,7 @@ from typing import Any
 
 
 ROOT = Path("/opt/specfact/project-runtime")
+SNAPSHOT_ROOT = Path("/opt/specfact/snapshot")
 
 
 def _explicit_plugins(config: dict[str, Any]) -> set[str]:
@@ -59,6 +61,18 @@ def _effective_pytest_config(descriptor: dict[str, Any]) -> dict[str, Any]:
     return config
 
 
+def _test_support_roots(config) -> list[str]:
+    """Retain configured test directories without excluding the whole snapshot."""
+    snapshot = SNAPSHOT_ROOT.resolve()
+    roots = set()
+    for pattern in config.getini("testpaths"):
+        for relative in glob.iglob(pattern, root_dir=config.rootpath, recursive=True):
+            path = (config.rootpath / relative).resolve()
+            if path.is_dir() and path != snapshot and path.is_relative_to(snapshot):
+                roots.add(path.relative_to(snapshot).as_posix())
+    return sorted(roots)
+
+
 class Observer:
     """Retain phase-specific facts without claiming setup failures executed test calls."""
 
@@ -70,6 +84,18 @@ class Observer:
         self.worker_collected = set()
         self.collection_errors = []
         self.internal_errors = []
+        self.coverage_threshold = None
+        self.test_roots = []
+        self.pytest_root = None
+
+    def pytest_sessionfinish(self, session, exitstatus):
+        del exitstatus
+        coverage_plugin = session.config.pluginmanager.getplugin("_cov")
+        self.coverage_threshold = getattr(getattr(coverage_plugin, "options", None), "cov_fail_under", None)
+        self.test_roots = _test_support_roots(session.config)
+        root = session.config.rootpath.resolve()
+        snapshot = SNAPSHOT_ROOT.resolve()
+        self.pytest_root = root.relative_to(snapshot).as_posix() if root.is_relative_to(snapshot) else str(root)
 
     def pytest_internalerror(self, excrepr, excinfo):
         del excinfo
@@ -110,6 +136,7 @@ class Observer:
                 "phase": report.when,
                 "outcome": report.outcome,
                 "wasxfail": str(getattr(report, "wasxfail", "")),
+                "has_xfail": hasattr(report, "wasxfail"),
                 "detail": report.longreprtext if report.failed else "",
             }
         )
@@ -152,6 +179,9 @@ def main() -> None:
                 "pytest_version": pytest.__version__,
                 "coverage_version": importlib.metadata.version("coverage"),
                 "pytest_cov_version": importlib.metadata.version("pytest-cov"),
+                "coverage_threshold": observer.coverage_threshold,
+                "test_roots": observer.test_roots,
+                "pytest_root": observer.pytest_root,
                 "argv": args,
                 "configured_addopts": descriptor["project"]["pytest_config"].get("addopts", []),
                 "coverage": json.loads(coverage_output.read_text(encoding="utf-8"))

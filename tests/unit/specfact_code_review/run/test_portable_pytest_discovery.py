@@ -141,6 +141,7 @@ def test_native_fallback_preserves_failure_and_empty_execution(tmp_path: Path, h
 
 
 def _parse_recorded_observation(tmp_path: Path, observation: dict, monkeypatch) -> list:
+    monkeypatch.chdir(tmp_path)
     output = tmp_path / "adapter-observation.json"
     monkeypatch.setattr(
         portable_worker,

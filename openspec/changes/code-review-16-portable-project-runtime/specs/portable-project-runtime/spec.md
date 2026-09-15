@@ -93,6 +93,32 @@ The system SHALL preserve pytest configuration, source paths, plugins and select
 - **WHEN** review runs
 - **THEN** real findings and failing evidence remain visible
 
+#### Scenario: Portable pytest preserves non-passing outcomes
+
+- **GIVEN** a portable suite contains a passing call and a skipped, XFAIL, non-strict XPASS, or failed selected test
+- **WHEN** the capsule evaluates the observed phases
+- **THEN** it SHALL emit a blocking `TEST_OUTCOME_NOT_PASS` finding for every non-passing observed test outcome
+- **AND** intentional skips SHALL remain terminal observations without inventing executed call phases
+- **AND** genuine non-pass findings SHALL remain visible alongside incomplete execution diagnostics
+
+#### Scenario: Portable coverage validates each reviewed production source
+
+- **GIVEN** a portable suite completes and produces a coverage document
+- **WHEN** the capsule evaluates reviewed production Python files
+- **THEN** every applicable reviewed source SHALL have coverage evidence, and absent evidence SHALL mark analysis incomplete
+- **AND** measured coverage below the greater of the established 80 percent floor and the effective project threshold SHALL emit blocking `TEST_COVERAGE_LOW` findings
+- **AND** unrelated covered files SHALL NOT satisfy another source file's coverage requirement
+- **AND** actual selected test modules, conventional test support directories, conftest files and type stubs SHALL NOT be treated as production coverage targets
+- **AND** source initializers SHALL retain only the established empty-initializer exemption, without assuming SpecFact's own omit policy applies to customers
+
+#### Scenario: Native pytest roots do not redefine production sources
+
+- **GIVEN** pytest selects a nested configuration root or uses a package directory as its test-discovery root
+- **WHEN** the capsule maps observed node identifiers and determines production coverage targets
+- **THEN** it SHALL resolve raw node identifiers against pytest's actual root inside the source snapshot
+- **AND** it SHALL reject an observed pytest root outside the snapshot with an explicit incomplete-evidence diagnostic
+- **AND** a discovery root containing production modules SHALL NOT exempt those modules from coverage requirements
+
 ### Requirement: Validate external repositories through released installation
 
 The system SHALL require a pinned Requests/pip, Hatch/Hatch, Flask/uv and Poetry/Poetry corpus on Ubuntu 24.04 CPython 3.11/3.12/3.13 for relevant changes and published releases. Tests SHALL reject empty or UNKNOWN required analysis, retain real findings, verify source immutability, and capture exact artifacts, test inventory, exit codes, duration and transfer cost.

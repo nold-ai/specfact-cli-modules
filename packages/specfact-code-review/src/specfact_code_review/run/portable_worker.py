@@ -185,6 +185,29 @@ def validate_observation(observation: dict[str, Any], exit_code: int) -> None:
         )
 
 
+def _nonpassing_observation_findings(records: list[dict[str, Any]]) -> list[ReviewFinding]:
+    findings = []
+    for record in records:
+        has_xfail = bool(record.get("has_xfail") or record.get("wasxfail"))
+        if record["outcome"] != "passed" or has_xfail:
+            findings.append(
+                ReviewFinding(
+                    category="testing",
+                    severity="error",
+                    tool="pytest",
+                    rule="TEST_OUTCOME_NOT_PASS",
+                    file=str(record["nodeid"]).split("::", maxsplit=1)[0],
+                    line=1,
+                    message=(
+                        f"Test {record['nodeid']} {record['outcome']} during {record['phase']}"
+                        + (" with an xfail marker." if has_xfail else ".")
+                    ),
+                    fixable=False,
+                )
+            )
+    return findings
+
+
 @ensure(lambda result: all(isinstance(finding, ReviewFinding) for finding in result))
 def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> list[ReviewFinding]:
     """Parse actual child observations while leaving project plugins out of this process."""
@@ -205,23 +228,13 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
             validation_error = str(exc)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         return [tool_error(tool="pytest", file_path=anchor, message=str(exc))]
-    findings = []
-    for record in records:
-        if record["outcome"] == "failed":
-            findings.append(
-                ReviewFinding(
-                    category="testing",
-                    severity="error",
-                    tool="pytest",
-                    rule="TEST_OUTCOME_NOT_PASS",
-                    file=str(record["nodeid"]).split("::", maxsplit=1)[0],
-                    line=1,
-                    message=f"Test {record['nodeid']} failed during {record['phase']}.",
-                    fixable=False,
-                )
-            )
+    findings = _nonpassing_observation_findings(records)
     if validation_error:
         findings.append(tool_error(tool="pytest", file_path=anchor, message=validation_error))
+    else:
+        from specfact_code_review.run.runner import evaluate_portable_pytest_coverage
+
+        findings.extend(evaluate_portable_pytest_coverage(files, observation))
     if completed.returncode == 1 and not findings:
         return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_failure_without_observed_test")]
     return findings

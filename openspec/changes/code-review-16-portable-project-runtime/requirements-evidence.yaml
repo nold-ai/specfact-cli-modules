@@ -146,6 +146,24 @@ requirements:
         Linux capsule corpus.
       observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
         Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 477-pytest-1
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Mixed PASS/SKIP/XFAIL/XPASS outcomes and empty expected-failure reasons yield blocking findings.
+      observable: Actual regressions in test_portable_pytest_evidence.py and test_portable_pytest_policy.py preserve
+        RED/GREEN evidence; Linux signed capsule acceptance remains required.
+    - case_id: 477-pytest-2
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Missing and low per-source coverage fail with effective native thresholds and an 80 percent minimum.
+      observable: Actual regressions in test_portable_pytest_evidence.py and test_portable_pytest_policy.py preserve
+        RED/GREEN evidence; Linux signed capsule acceptance remains required.
+    - case_id: 477-pytest-3
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Nested pytest roots resolve actual test files without exempting production under discovery roots.
+      observable: Actual regressions in test_portable_pytest_evidence.py and test_portable_pytest_policy.py preserve
+        RED/GREEN evidence; Linux signed capsule acceptance remains required.
   ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:validate-external-repositories-through-released-installation
   : rationale: Validate external repositories through released installation. The approved portable-runtime story
       requires independent customer runtime evidence.
@@ -214,53 +232,69 @@ requirements:
     - case_id: 473-7-7
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
-      intent: Preserve tool-only setup.cfg configuration without attempting a root package installation, while retaining native pip installable-directory behavior.
-      observable: Adapter regressions retain requirements and constraints, omit an unbuildable root, and keep pyproject.toml or setup.py installation and extras controls passing.
+      intent: Preserve tool-only setup.cfg configuration without attempting a root package installation, while retaining
+        native pip installable-directory behavior.
+      observable: Adapter regressions retain requirements and constraints, omit an unbuildable root, and keep pyproject.toml
+        or setup.py installation and extras controls passing.
     - case_id: 473-7-8
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Match targeted source tests through configured pytest directories, literal files and glob paths.
-      observable: Real pytest-compatible cases select corresponding tests after path expansion, retain native no-match fallback and reject escaping roots without changing explicit selection or full native discovery.
+      observable: Real pytest-compatible cases select corresponding tests after path expansion, retain native no-match
+        fallback and reject escaping roots without changing explicit selection or full native discovery.
     - case_id: 473-7-9
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Isolate controller diagnostic capture from builder-controlled filesystem paths.
-      observable: Disposable sentinel tests reject symlink and special-file redirection, retain private failure and timeout diagnostics through a pre-created controller file descriptor, and close and remove successful logs without exposing captured output.
+      observable: Disposable sentinel tests reject symlink and special-file redirection, retain private failure
+        and timeout diagnostics through a pre-created controller file descriptor, and close and remove successful
+        logs without exposing captured output.
     - case_id: 473-7-10
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Validate untrusted builder artifact topology before controller-side reads or enrichment.
-      observable: Disposable sentinel regressions reject root, native-directory, inventory and nested-file symlinks and special nodes before inventory access or native writes, while valid regular artifacts and final sealing remain accepted.
+      observable: Disposable sentinel regressions reject root, native-directory, inventory and nested-file symlinks
+        and special nodes before inventory access or native writes, while valid regular artifacts and final sealing
+        remain accepted.
     - case_id: 473-7-11
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
-      intent: Preserve nested Python environment additions, overrides and removals, working directory and caller-private temporary files.
-      observable: Real nested subprocess regressions retain caller context and relative file access; the reconstructed Hatch corpus exercises the same behavior through host, cold capsule and offline warm capsule execution.
+      intent: Preserve nested Python environment additions, overrides and removals, working directory and caller-private
+        temporary files.
+      observable: Real nested subprocess regressions retain caller context and relative file access; the reconstructed
+        Hatch corpus exercises the same behavior through host, cold capsule and offline warm capsule execution.
     - case_id: 473-7-12
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
-      intent: Preserve the verified member dependency domain independently of mutable environment markers while retaining initial worker isolation.
-      observable: Nested launch controls retain the mounted member domain under replacement environments; first-entry commands always clear inherited supervisor state and establish private process, mount and network namespaces.
+      intent: Preserve the verified member dependency domain independently of mutable environment markers while
+        retaining initial worker isolation.
+      observable: Nested launch controls retain the mounted member domain under replacement environments; first-entry
+        commands always clear inherited supervisor state and establish private process, mount and network namespaces.
     - case_id: 473-7-13
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Reject multiply linked runtime payloads and descriptors before content reads or attachment.
-      observable: Disposable hardlinks fail preparation, sealing and same-byte post-seal reuse before payload reads; copied package-manager cache files remain accepted.
+      observable: Disposable hardlinks fail preparation, sealing and same-byte post-seal reuse before payload reads;
+        copied package-manager cache files remain accepted.
     - case_id: 473-7-14
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Keep controller diagnostic file descriptors outside the build namespace.
-      observable: Actual child processes see pipe stdout rather than regular log storage; bounded capture preserves failure, timeout and downstream diagnostics and closes resources.
+      observable: Actual child processes see pipe stdout rather than regular log storage; bounded capture preserves
+        failure, timeout and downstream diagnostics and closes resources.
     - case_id: 473-7-15
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Preserve safe controller validation reasons in public preparation errors.
-      observable: Actual nonzero and signal exits retain numeric status; artifact symlink, special-node and hardlink rejections expose their stable codes while arbitrary exception details stay private.
+      observable: Actual nonzero and signal exits retain numeric status; artifact symlink, special-node and hardlink
+        rejections expose their stable codes while arbitrary exception details stay private.
     - case_id: 473-7-16
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Preserve caller import paths for nested Python without replacing trusted startup or analyzer ownership.
-      observable: Real nested wrappers match native caller imports for inherited and explicit absolute, relative, empty-component, empty and omitted PYTHONPATH in project and analyzer domains; reconstructed Hatch validates caller-only imports in its private temporary namespace.
+      observable: Real nested wrappers match native caller imports for inherited and explicit absolute, relative,
+        empty-component, empty and omitted PYTHONPATH in project and analyzer domains; reconstructed Hatch validates
+        caller-only imports in its private temporary namespace.
   openspec:code-review-16-portable-project-runtime:portable-project-runtime:pylint-preserves-attached-namespace-source-roots:
     rationale: Attached editable namespace imports must not be shadowed by Pylint's legacy file-root discovery.
     stakeholder_refs:
@@ -274,7 +308,8 @@ requirements:
     - case_id: 473-8-1
       scenario_id: pylint-preserves-attached-namespace-source-roots
       method: test
-      intent: Run real Pylint against editable, declared and overlapping namespace import roots with a same-name leaf.
+      intent: Run real Pylint against editable, declared and overlapping namespace import roots with a same-name
+        leaf.
       observable: test_attached_namespace_root_prevents_leaf_shadowing passes its three parameter cases.
     - case_id: 473-8-2
       scenario_id: pylint-preserves-attached-namespace-source-roots
@@ -290,7 +325,8 @@ requirements:
       scenario_id: pylint-preserves-attached-namespace-source-roots
       method: test
       intent: Avoid unconfigured source overlays and preserve ordinary Pylint multiprocessing serialization.
-      observable: test_built_runtime_does_not_infer_raw_source_root and test_parallel_pylint_retains_runtime_roots pass.
+      observable: test_built_runtime_does_not_infer_raw_source_root and test_parallel_pylint_retains_runtime_roots
+        pass.
     - case_id: 473-8-5
       scenario_id: pylint-preserves-attached-namespace-source-roots
       method: test
@@ -305,4 +341,5 @@ requirements:
       scenario_id: pylint-preserves-attached-namespace-source-roots
       method: test
       intent: Invalidate cached runtime identity when only the trusted Pylint dispatcher changes.
-      observable: test_pylint_dispatcher_change_invalidates_offline_runtime_reuse preserves unchanged reuse and rejects changed bytes.
+      observable: test_pylint_dispatcher_change_invalidates_offline_runtime_reuse preserves unchanged reuse and
+        rejects changed bytes.

@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 22 items / 21 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py F   [100%]
+
+=================================== FAILURES ===================================
+_____________________ test_empty_reason_xpass_cannot_pass ______________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-538/test_empty_reason_xpass_cannot0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1081e2d70>
+
+    def test_empty_reason_xpass_cannot_pass(tmp_path, monkeypatch):
+        record = _record("tests/test_app.py::test_xpass")
+        record["has_xfail"] = True
+        observation = _observation(record)
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == "TEST_OUTCOME_NOT_PASS" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_empty_reason_xpass_cannot_pass.<locals>.<genexpr> at 0x1087fdf20>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:136: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_empty_reason_xpass_cannot_pass
+======================= 1 failed, 21 deselected in 0.19s =======================
