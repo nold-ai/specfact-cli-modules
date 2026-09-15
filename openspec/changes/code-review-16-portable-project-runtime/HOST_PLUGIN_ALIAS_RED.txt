@@ -1,0 +1,2 @@
+CI run 34845391063, cp312, reconstructed Hatch native host baseline
+ValueError: Plugin already registered under a different name: asyncio=<module 'pytest_asyncio.plugin' from '/home/runner/work/_temp/specfact-customer-3.12/home/.local/share/hatch/env/virtual/specfact-472-reconstructed-fixture/ObuU0CXe/review/lib/python3.12/site-packages/pytest_asyncio/plugin.py'>

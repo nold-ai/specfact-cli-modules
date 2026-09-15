@@ -15,13 +15,16 @@ import stat
 import subprocess
 import tempfile
 import tomllib
-from collections.abc import Callable, Iterable, Sequence
-from contextlib import ExitStack
-from dataclasses import dataclass, field, replace
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import ExitStack, contextmanager
+from dataclasses import asdict, dataclass, field, replace
+from functools import partial
 from pathlib import Path, PurePosixPath
 from typing import Literal, cast
 
 from icontract import ensure, require
+
+from specfact_code_review.run.runtime_sources import source_link_target
 
 
 ScopeKind = Literal["worktree", "index", "range", "full", "explicit_files"]
@@ -368,6 +371,7 @@ class ScopeRequest:
     pr_context_file: Path | None = None
     repository_slug: str | None = None
     project_runtime_source_lock_paths: tuple[Path, ...] = ()
+    portable_project_runtime: bool = False
 
 
 @dataclass(frozen=True)
@@ -379,6 +383,8 @@ class Snapshot:
     tree: str
     contents: dict[str, bytes]
     entries: dict[str, TreeEntry]
+    repository: Path | None = None
+    vcs_commit: str = ""
 
     @require(lambda relative_path: bool(str(relative_path)), "relative path must not be empty")
     @ensure(lambda result: isinstance(result, bytes))
@@ -626,27 +632,53 @@ def _safe_snapshot_path(root: Path, relative: str) -> Path:
     return root.joinpath(*path.parts)
 
 
-def _materialize_tree(repository: Path, revision: str, *, snapshot_identity: str) -> Snapshot:
+def _materialize_project_links(root: Path, entries: dict[str, TreeEntry], contents: dict[str, bytes]) -> None:
+    """Recreate tracked links only after writing blobs, then validate the entire graph."""
+    links = [entry for entry in entries.values() if entry.object_type == "blob" and entry.git_mode == "120000"]
+    try:
+        for entry in links:
+            destination = _safe_snapshot_path(root, entry.path)
+            if any(parent.is_symlink() for parent in destination.parents if parent.is_relative_to(root)):
+                raise GitResolutionError(f"Git link has a symlink parent: {entry.path}")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.symlink_to(os.fsdecode(contents[entry.path]))
+        for entry in links:
+            source_link_target(_safe_snapshot_path(root, entry.path), root)
+    except (OSError, ValueError) as exc:
+        raise GitResolutionError(f"Unsafe project link in Git snapshot: {exc}") from exc
+
+
+def _materialize_tree(
+    repository: Path, revision: str, *, snapshot_identity: str, preserve_links: bool = False
+) -> Snapshot:
     tree = _resolve_tree(repository, revision)
-    root = Path(tempfile.mkdtemp(prefix=f"specfact-review-{snapshot_identity[:12]}-"))
-    contents: dict[str, bytes] = {}
-    entries = {entry.path: entry for entry in _tree_entries(repository, revision)}
-    for entry in entries.values():
-        if entry.object_type != "blob":
-            continue
-        payload = _git_bytes(repository, ["cat-file", "blob", entry.object_id])
-        contents[entry.path] = payload
-        if entry.git_mode not in _REGULAR_GIT_MODES:
-            continue
-        destination = _safe_snapshot_path(root, entry.path)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(payload)
-        destination.chmod(0o755 if entry.git_mode == "100755" else 0o644)
-    return Snapshot(root=root, commit=snapshot_identity, tree=tree, contents=contents, entries=entries)
+    root = Path(tempfile.mkdtemp(prefix=f"specfact-review-{snapshot_identity[:12]}-")).resolve()
+    with ExitStack() as cleanup:
+        cleanup.callback(shutil.rmtree, root, ignore_errors=True)
+        contents: dict[str, bytes] = {}
+        entries = {entry.path: entry for entry in _tree_entries(repository, revision)}
+        for entry in entries.values():
+            if entry.object_type != "blob":
+                continue
+            payload = _git_bytes(repository, ["cat-file", "blob", entry.object_id])
+            contents[entry.path] = payload
+            if entry.git_mode not in _REGULAR_GIT_MODES:
+                continue
+            destination = _safe_snapshot_path(root, entry.path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(payload)
+            destination.chmod(0o755 if entry.git_mode == "100755" else 0o644)
+        if preserve_links:
+            _materialize_project_links(root, entries, contents)
+        snapshot = Snapshot(
+            root=root, commit=snapshot_identity, tree=tree, contents=contents, entries=entries, repository=repository
+        )
+        cleanup.pop_all()
+        return snapshot
 
 
-def _materialize_commit(repository: Path, commit: str) -> Snapshot:
-    return _materialize_tree(repository, commit, snapshot_identity=commit)
+def _materialize_commit(repository: Path, commit: str, *, preserve_links: bool = False) -> Snapshot:
+    return _materialize_tree(repository, commit, snapshot_identity=commit, preserve_links=preserve_links)
 
 
 def _is_test_path(path: Path) -> bool:
@@ -2085,6 +2117,38 @@ def _context_failure(reason: str, diagnostics: str, resolved: _ResolvedRange) ->
     )
 
 
+def _portable_source_locks(base: Snapshot, head: Snapshot) -> frozenset[str]:
+    from specfact_code_review.run.runtime_discovery import PROJECT_INPUT_NAMES
+
+    return frozenset(
+        path
+        for path in set(base.contents) | set(head.contents)
+        if Path(path).name in PROJECT_INPUT_NAMES
+        or Path(path).suffix == ".lock"
+        or Path(path).name.startswith(("requirements", "constraints"))
+    )
+
+
+def _range_policy_paths(root: Path) -> frozenset[str]:
+    with ExitStack() as cleanup:
+        ruff_policy = resolve_ruff_policy(root, expected_version="0.15.12")
+        if ruff_policy.bundle_root is not None:
+            cleanup.callback(shutil.rmtree, ruff_policy.bundle_root, ignore_errors=True)
+        if ruff_policy.status != "PASS":
+            raise PolicyResolutionError(ruff_policy.reason)
+        basedpyright_policy = resolve_basedpyright_policy(root, expected_version="1.39.10")
+        if basedpyright_policy.bundle_root is not None:
+            cleanup.callback(shutil.rmtree, basedpyright_policy.bundle_root, ignore_errors=True)
+        if basedpyright_policy.status != "PASS":
+            raise PolicyResolutionError(basedpyright_policy.reason)
+        return frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths))
+
+
+def _range_policy_closure(request: ScopeRequest, target: Path, head: Path) -> frozenset[str]:
+    paths = _range_policy_paths(target)
+    return paths | _range_policy_paths(head) if request.portable_project_runtime else paths
+
+
 def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResolution:
     claimed_context = _load_claimed_context(request)
     base = _resolve_commit(request.repository, cast(str, request.base_ref))
@@ -2099,28 +2163,24 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             candidate_identities=identities,
         )
     merge_base = candidates[0]
+    materialize = partial(_materialize_commit, request.repository, preserve_links=request.portable_project_runtime)
     with ExitStack() as cleanup:
-        base_snapshot = _materialize_commit(request.repository, merge_base)
+        base_snapshot = materialize(merge_base)
         cleanup.callback(shutil.rmtree, base_snapshot.root, ignore_errors=True)
-        head_snapshot = _materialize_commit(request.repository, head)
+        head_snapshot = materialize(head)
         cleanup.callback(shutil.rmtree, head_snapshot.root, ignore_errors=True)
         source_locks = frozenset(PurePosixPath(path).as_posix() for path in request.project_runtime_source_lock_paths)
         source_locks |= _context_source_lock_paths(claimed_context)
-        target_snapshot = base_snapshot if base == merge_base else _materialize_commit(request.repository, base)
+        if request.portable_project_runtime and claimed_context is None:
+            source_locks |= _portable_source_locks(base_snapshot, head_snapshot)
+        target_snapshot = base_snapshot if base == merge_base else materialize(base)
         if target_snapshot is not base_snapshot:
             cleanup.callback(shutil.rmtree, target_snapshot.root, ignore_errors=True)
-        project_runtime_source_locks = _snapshot_source_lock_identities(target_snapshot, source_locks)
-        ruff_policy = resolve_ruff_policy(target_snapshot.root, expected_version="0.15.12")
-        if ruff_policy.bundle_root is not None:
-            cleanup.callback(shutil.rmtree, ruff_policy.bundle_root, ignore_errors=True)
-        if ruff_policy.status != "PASS":
-            raise PolicyResolutionError(ruff_policy.reason)
-        basedpyright_policy = resolve_basedpyright_policy(target_snapshot.root, expected_version="1.39.10")
-        if basedpyright_policy.bundle_root is not None:
-            cleanup.callback(shutil.rmtree, basedpyright_policy.bundle_root, ignore_errors=True)
-        if basedpyright_policy.status != "PASS":
-            raise PolicyResolutionError(basedpyright_policy.reason)
-        additional_policy_paths = frozenset((*ruff_policy.closure_paths, *basedpyright_policy.reference_paths))
+        identity_locks = source_locks
+        if request.portable_project_runtime and claimed_context is None:
+            identity_locks = frozenset(path for path in source_locks if path in target_snapshot.contents)
+        project_runtime_source_locks = _snapshot_source_lock_identities(target_snapshot, identity_locks)
+        additional_policy_paths = _range_policy_closure(request, target_snapshot.root, head_snapshot.root)
         selected = tuple(
             path
             for path in _range_paths(request.repository, merge_base, head)
@@ -2144,16 +2204,6 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             statuses,
             additional_policy_paths,
         )
-        rename_projection = [
-            {
-                "blob_sha": item.blob_sha,
-                "disposition": item.disposition,
-                "git_mode": item.git_mode,
-                "new_path": item.new_path,
-                "old_path": item.old_path,
-            }
-            for item in renames
-        ]
         result = _ResolvedRange(
             candidates,
             base,
@@ -2165,7 +2215,7 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
             project_runtime_source_locks,
             statuses,
             renames,
-            _canonical_json_digest(rename_projection),
+            _canonical_json_digest([asdict(item) for item in renames]),
             _source_manifest_digest(base_snapshot),
             _source_manifest_digest(head_snapshot),
             policy_bundle,
@@ -2176,10 +2226,6 @@ def _materialized_range(request: ScopeRequest) -> _ResolvedRange | ScopeResoluti
         )
         if target_snapshot is not base_snapshot:
             shutil.rmtree(target_snapshot.root, ignore_errors=True)
-        if ruff_policy.bundle_root is not None:
-            shutil.rmtree(ruff_policy.bundle_root, ignore_errors=True)
-        if basedpyright_policy.bundle_root is not None:
-            shutil.rmtree(basedpyright_policy.bundle_root, ignore_errors=True)
         cleanup.pop_all()
         return result
 
@@ -2239,7 +2285,8 @@ def _range_result(request: ScopeRequest, resolved: _ResolvedRange) -> ScopeResol
         head_manifest,
         claimed_context=claimed_context,
     )
-    if any(path in resolved.source_lock_paths for path in resolved.selected_paths):
+    portable = request.portable_project_runtime and claimed_context is None
+    if not portable and any(path in resolved.source_lock_paths for path in resolved.selected_paths):
         return _range_resolution(
             context,
             status="UNKNOWN",
@@ -2247,7 +2294,7 @@ def _range_result(request: ScopeRequest, resolved: _ResolvedRange) -> ScopeResol
             ci_exit_code=1,
             diagnostics="Candidate source-lock bytes are governed evidence and cannot build the project-runtime layer.",
         )
-    if resolved.candidate_policy_paths:
+    if resolved.candidate_policy_paths and not portable:
         return _range_resolution(
             context,
             status="UNKNOWN",
@@ -2526,7 +2573,7 @@ def _index_unknown(
 
 def _resolve_index(request: ScopeRequest) -> ScopeResolution:
     try:
-        context = _materialized_index_context(request.repository)
+        context = _materialized_index_context(request.repository, preserve_links=request.portable_project_runtime)
     except GitResolutionError as exc:
         return _index_unknown("git_resolution_failed", str(exc))
     if isinstance(context, ScopeResolution):
@@ -2541,10 +2588,12 @@ def _resolve_index(request: ScopeRequest) -> ScopeResolution:
     return _resolved_index(context)
 
 
-def _materialized_index_context(repository: Path) -> _IndexResolutionContext | ScopeResolution:
+def _materialized_index_context(
+    repository: Path, *, preserve_links: bool = False
+) -> _IndexResolutionContext | ScopeResolution:
     capture = _capture_index(repository)
     try:
-        return _materialized_index_context_from_capture(repository, capture)
+        return _materialized_index_context_from_capture(repository, capture, preserve_links=preserve_links)
     finally:
         shutil.rmtree(capture.path.parent, ignore_errors=True)
 
@@ -2678,8 +2727,23 @@ def _snapshot_input_manifest(snapshot: Snapshot, paths: Iterable[str]) -> dict[s
     return {path: identity for path in paths if (identity := _input_identity(snapshot, path)) is not None}
 
 
+@contextmanager
+def _materialized_index_snapshots(
+    repository: Path, tree: str, identity: str, *, preserve_links: bool
+) -> Iterator[tuple[Snapshot, Snapshot]]:
+    with ExitStack() as cleanup:
+        head = _resolve_commit(repository, "HEAD")
+        base = _materialize_commit(repository, head, preserve_links=preserve_links)
+        cleanup.callback(shutil.rmtree, base.root, ignore_errors=True)
+        index = _materialize_tree(repository, tree, snapshot_identity=identity, preserve_links=preserve_links)
+        index = replace(index, vcs_commit=head)
+        cleanup.callback(shutil.rmtree, index.root, ignore_errors=True)
+        yield base, index
+        cleanup.pop_all()
+
+
 def _materialized_index_context_from_capture(
-    repository: Path, capture: _IndexCapture
+    repository: Path, capture: _IndexCapture, *, preserve_links: bool = False
 ) -> _IndexResolutionContext | ScopeResolution:
     _after_index_capture()
     stage_entries = _index_stage_entries(repository, capture)
@@ -2688,81 +2752,87 @@ def _materialized_index_context_from_capture(
     tree = _write_index_tree(repository, capture)
     tree_entries = {entry.path: entry for entry in _tree_entries(repository, tree)}
     metadata = _index_metadata(stage_entries, _index_flag_tags(repository, capture), tree_entries)
-    head_commit = _resolve_commit(repository, "HEAD")
-    base_snapshot = _materialize_commit(repository, head_commit)
-    index_snapshot = _materialize_tree(repository, tree, snapshot_identity=f"index-{capture.digest[7:]}")
-    changed_paths = set(_range_paths(repository, head_commit, tree))
-    changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
-    base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
-    discovered_policy_paths = _discovered_index_policy_paths(index_snapshot)
-    preliminary_policy_paths = base_policy_paths | discovered_policy_paths
-    preliminary_candidates = changed_paths | set(
-        _unsafe_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
-        | _missing_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
-    )
-    preliminary_paths = tuple(
-        path
-        for path in sorted(preliminary_candidates)
-        if _governed_path(
-            path,
-            frozenset(),
-            base=base_snapshot,
-            head=index_snapshot,
-            additional_policy_paths=preliminary_policy_paths,
+    with _materialized_index_snapshots(
+        repository, tree, f"index-{capture.digest[7:]}", preserve_links=preserve_links
+    ) as (base_snapshot, index_snapshot):
+        head_commit = base_snapshot.commit
+        changed_paths = set(_range_paths(repository, head_commit, tree))
+        changed_paths.update(path for path, item in metadata.items() if item.intent_to_add)
+        base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
+        discovered_policy_paths = _discovered_index_policy_paths(index_snapshot)
+        preliminary_policy_paths = base_policy_paths | discovered_policy_paths
+        preliminary_candidates = changed_paths | set(
+            _unsafe_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
+            | _missing_snapshot_policy_paths(index_snapshot, discovered_policy_paths)
         )
-    )
-    preliminary_manifest = _snapshot_input_manifest(index_snapshot, preliminary_paths)
-    preliminary_base_manifest = _snapshot_input_manifest(base_snapshot, preliminary_paths)
-    preliminary_context = _IndexResolutionContext(
-        base_snapshot,
-        index_snapshot,
-        preliminary_paths,
-        metadata,
-        tree,
-        preliminary_base_manifest,
-        preliminary_manifest,
-        tuple(
+        preliminary_paths = tuple(
             path
-            for path in preliminary_paths
-            if _is_policy_path(
+            for path in sorted(preliminary_candidates)
+            if _governed_path(
                 path,
                 frozenset(),
                 base=base_snapshot,
                 head=index_snapshot,
                 additional_policy_paths=preliminary_policy_paths,
             )
-        ),
-    )
-    if _unsafe_index_path(preliminary_context) is not None:
-        return preliminary_context
+        )
+        preliminary_context = _IndexResolutionContext(
+            base_snapshot,
+            index_snapshot,
+            preliminary_paths,
+            metadata,
+            tree,
+            _snapshot_input_manifest(base_snapshot, preliminary_paths),
+            _snapshot_input_manifest(index_snapshot, preliminary_paths),
+            tuple(
+                path
+                for path in preliminary_paths
+                if _is_policy_path(
+                    path,
+                    frozenset(),
+                    base=base_snapshot,
+                    head=index_snapshot,
+                    additional_policy_paths=preliminary_policy_paths,
+                )
+            ),
+        )
+        if _unsafe_index_path(preliminary_context) is not None:
+            return preliminary_context
 
-    additional_policy_paths, policy_error = _resolved_index_policy_paths(index_snapshot.root)
-    if policy_error:
-        shutil.rmtree(base_snapshot.root, ignore_errors=True)
-        shutil.rmtree(index_snapshot.root, ignore_errors=True)
-        return _index_unknown("policy_parse_failure", policy_error)
+        additional_policy_paths, policy_error = _resolved_index_policy_paths(index_snapshot.root)
+        if policy_error:
+            shutil.rmtree(base_snapshot.root, ignore_errors=True)
+            shutil.rmtree(index_snapshot.root, ignore_errors=True)
+            return _index_unknown("policy_parse_failure", policy_error)
+        return _index_context_with_policy_evidence(
+            preliminary_context, changed_paths, base_policy_paths, additional_policy_paths
+        )
+
+
+def _index_context_with_policy_evidence(
+    context: _IndexResolutionContext,
+    changed_paths: set[str],
+    base_policy_paths: frozenset[str],
+    additional_policy_paths: frozenset[str],
+) -> _IndexResolutionContext:
     selected_paths = tuple(
         path
         for path in sorted(changed_paths)
         if _governed_path(
             path,
             frozenset(),
-            base=base_snapshot,
-            head=index_snapshot,
+            base=context.base_snapshot,
+            head=context.index_snapshot,
             additional_policy_paths=additional_policy_paths,
         )
     )
-    manifest = _snapshot_input_manifest(index_snapshot, selected_paths)
-    base_manifest = _snapshot_input_manifest(base_snapshot, selected_paths)
-    return _IndexResolutionContext(
-        base_snapshot,
-        index_snapshot,
-        selected_paths,
-        metadata,
-        tree,
-        base_manifest,
-        manifest,
-        tuple(sorted(additional_policy_paths)),
+    manifest_paths = sorted(set(selected_paths) | base_policy_paths | additional_policy_paths)
+    return replace(
+        context,
+        selected_paths=selected_paths,
+        base_manifest=_snapshot_input_manifest(context.base_snapshot, manifest_paths),
+        manifest=_snapshot_input_manifest(context.index_snapshot, manifest_paths),
+        policy_paths=tuple(sorted(additional_policy_paths)),
     )
 
 

@@ -1,0 +1,50 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-delivery
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 22 items / 21 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py F    [100%]
+
+=================================== FAILURES ===================================
+_______ test_pipe_readiness_race_retries_without_blocking_past_deadline ________
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_pipe_readiness_race_retri0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a871e00>
+
+    def test_pipe_readiness_race_retries_without_blocking_past_deadline(tmp_path: Path, monkeypatch) -> None:
+        plan, runtime, cache, _ = _builder(
+            tmp_path, monkeypatch, "print('before', flush=True); time.sleep(0.05); print('after', flush=True); sys.exit(1)"
+        )
+        native_popen = subprocess.Popen
+        native_read = os.read
+        stdout_descriptors = []
+        observed_blocking = []
+
+        @contextmanager
+        def record_stdout(*args, **kwargs):
+            with native_popen(*args, **kwargs) as process:
+                stdout_descriptors.append(process.stdout.fileno())
+                yield process
+
+        def transiently_drained(fd, size):
+            if fd in stdout_descriptors and not observed_blocking:
+                observed_blocking.append(os.get_blocking(fd))
+                raise BlockingIOError("another reader drained the pipe after readiness")
+            return native_read(fd, size)
+
+        monkeypatch.setattr(subprocess, "Popen", record_stdout)
+        monkeypatch.setattr(os, "read", transiently_drained)
+        _failed_build(plan, runtime, cache)
+>       assert _retained_logs(cache)[0].read_text() == "before\nafter\n"
+E       AssertionError: assert '' == 'before\nafter\n'
+E
+E         - before
+E         - after
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:338: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_pipe_readiness_race_retries_without_blocking_past_deadline
+======================= 1 failed, 21 deselected in 0.14s =======================

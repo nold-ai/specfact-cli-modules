@@ -1,0 +1,113 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- <temporary>/worktree/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 23 items / 20 deselected / 3 selected
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_python_version_only_project_routes_preparation_and_preserves_static_fallback[None] PASSED [ 33%]
+tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_python_version_only_project_routes_preparation_and_preserves_static_fallback[3.12] FAILED [ 66%]
+tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_python_version_only_project_routes_preparation_and_preserves_static_fallback[3.99] FAILED [100%]
+
+=================================== FAILURES ===================================
+_ test_python_version_only_project_routes_preparation_and_preserves_static_fallback[3.12] _
+
+tmp_path = PosixPath('<temporary>/test_python_version_only_proje1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108bfba80>
+python_pin = '3.12'
+
+    @pytest.mark.parametrize("python_pin", [None, "3.12", "3.99"])
+    def test_python_version_only_project_routes_preparation_and_preserves_static_fallback(
+        tmp_path: Path, monkeypatch, python_pin: str | None
+    ) -> None:
+        source = tmp_path / "app.py"
+        source.write_text("VALUE = 1\n")
+        if python_pin is not None:
+            (tmp_path / ".python-version").write_text(python_pin + "\n")
+        monkeypatch.chdir(tmp_path)
+        prepared_pins = []
+        members = []
+        local_snapshot = runner.CapsuleSnapshotResult({}, {})
+    
+        def prepare_project(plan, **_kwargs):
+            prepared_pins.append(plan.python)
+            raise ProjectRuntimeError("project_native_library_missing:libfixture.so")
+    
+        def dispatch(request, **_kwargs):
+            members.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+    
+        monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare_project)
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        monkeypatch.setattr(runner, "_run_local_capsule_snapshot", lambda *_args, **_kwargs: local_snapshot)
+        monkeypatch.setattr(runner, "_finalize_local_capsule_snapshot", lambda snapshot, _context: snapshot)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+        evidence = {"assurance_kind": "explicit_files"}
+        snapshot = runner._run_local_capsule_context(runtime, [source], runner.ReviewOptions(), evidence, "explicit_files")
+        if python_pin is None:
+            assert snapshot is local_snapshot
+            assert not prepared_pins and not members
+            assert "project_runtime" not in evidence
+        else:
+>           assert prepared_pins == (["3.12"] if python_pin == "3.12" else [])
+E           AssertionError: assert [] == ['3.12']
+E             
+E             Right contains one more item: '3.12'
+E             
+E             Full diff:
+E             + []
+E             - [
+E             -     '3.12',
+E             - ]
+
+<workspace>/tests/unit/specfact_code_review/run/test_portable_snapshot.py:163: AssertionError
+_ test_python_version_only_project_routes_preparation_and_preserves_static_fallback[3.99] _
+
+tmp_path = PosixPath('<temporary>/test_python_version_only_proje2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ade8950>
+python_pin = '3.99'
+
+    @pytest.mark.parametrize("python_pin", [None, "3.12", "3.99"])
+    def test_python_version_only_project_routes_preparation_and_preserves_static_fallback(
+        tmp_path: Path, monkeypatch, python_pin: str | None
+    ) -> None:
+        source = tmp_path / "app.py"
+        source.write_text("VALUE = 1\n")
+        if python_pin is not None:
+            (tmp_path / ".python-version").write_text(python_pin + "\n")
+        monkeypatch.chdir(tmp_path)
+        prepared_pins = []
+        members = []
+        local_snapshot = runner.CapsuleSnapshotResult({}, {})
+    
+        def prepare_project(plan, **_kwargs):
+            prepared_pins.append(plan.python)
+            raise ProjectRuntimeError("project_native_library_missing:libfixture.so")
+    
+        def dispatch(request, **_kwargs):
+            members.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+    
+        monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare_project)
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        monkeypatch.setattr(runner, "_run_local_capsule_snapshot", lambda *_args, **_kwargs: local_snapshot)
+        monkeypatch.setattr(runner, "_finalize_local_capsule_snapshot", lambda snapshot, _context: snapshot)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+        evidence = {"assurance_kind": "explicit_files"}
+        snapshot = runner._run_local_capsule_context(runtime, [source], runner.ReviewOptions(), evidence, "explicit_files")
+        if python_pin is None:
+            assert snapshot is local_snapshot
+            assert not prepared_pins and not members
+            assert "project_runtime" not in evidence
+        else:
+            assert prepared_pins == (["3.12"] if python_pin == "3.12" else [])
+>           assert "ruff" in members and not set(members) & DEPENDENT_MEMBERS
+E           AssertionError: assert ('ruff' in [])
+
+<workspace>/tests/unit/specfact_code_review/run/test_portable_snapshot.py:164: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_python_version_only_project_routes_preparation_and_preserves_static_fallback[3.12]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_python_version_only_project_routes_preparation_and_preserves_static_fallback[3.99]
+================== 2 failed, 1 passed, 20 deselected in 0.79s ==================

@@ -1,0 +1,149 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/unit/specfact_code_review/run/test_runtime_cli.py FFF              [100%]
+
+=================================== FAILURES ===================================
+______________________ test_runtime_inspect_is_read_only _______________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-3/test_runtime_inspect_is_read_o0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108efeb10>
+
+    def test_runtime_inspect_is_read_only(tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / 'pyproject.toml').write_text('[project]\nname="consumer"\n')
+        result = CliRunner().invoke(app, ['review', 'runtime', 'inspect', '--json'])
+>       assert result.exit_code == 0, result.output
+E       AssertionError: Usage: root review [OPTIONS] COMMAND [ARGS]...
+E         Try 'root review --help' for help.
+E         ╭─ Error ──────────────────────────────────────────────────────────────────────╮
+E         │ No such command 'runtime'. Did you mean 'run'?                               │
+E         ╰──────────────────────────────────────────────────────────────────────────────╯
+E
+E       assert 2 == 0
+E        +  where 2 = <Result SystemExit(2)>.exit_code
+
+<USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime/tests/unit/specfact_code_review/run/test_runtime_cli.py:17: AssertionError
+___________________ test_review_help_exposes_project_handoff ___________________
+
+    def test_review_help_exposes_project_handoff() -> None:
+        result = CliRunner().invoke(app, ['review', 'run', '--help'], env={'TERM': 'dumb', 'NO_COLOR': '1'})
+        assert result.exit_code == 0
+>       assert '--project-config' in result.output
+E       AssertionError: assert '--project-config' in '                                                                                \n Usage: root review run [OPTIONS] [...        exit.                  │\n╰──────────────────────────────────────────────────────────────────────────────╯\n\n'
+E        +  where '                                                                                \n Usage: root review run [OPTIONS] [...        exit.                  │\n╰──────────────────────────────────────────────────────────────────────────────╯\n\n' = <Result okay>.output
+
+tests/unit/specfact_code_review/run/test_runtime_cli.py:25: AssertionError
+_________________ test_review_request_carries_runtime_options __________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-3/test_review_request_carries_ru0')
+
+    def test_review_request_carries_runtime_options(tmp_path: Path) -> None:
+        config, descriptor = tmp_path / 'review.toml', tmp_path / 'project-runtime.json'
+>       request = _build_review_run_request([], {'project_config': config, 'project_runtime': descriptor})
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_cli.py:31:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+files = []
+kwargs = {'project_config': PosixPath('<TMPDIR>/pytest-of-dom/pytest-3/test_rev...ders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-3/test_review_request_carries_ru0/project-runtime.json')}
+
+    def _build_review_run_request(
+        files: list[Path],
+        kwargs: dict[str, object],
+    ) -> ReviewRunRequest:
+        # Validate files is a list of Path instances
+        if not isinstance(files, list):
+            raise RunCommandError(f"files must be a list, got {type(files).__name__}")
+        if not all(isinstance(file_path, Path) for file_path in files):
+            raise RunCommandError("files must contain only Path instances")
+
+        request_kwargs = dict(kwargs)
+
+        # Validate and extract known boolean flags with proper type checking
+        def _get_bool_param(name: str, default: bool = False) -> bool:
+            value = request_kwargs.pop(name, default)
+            if value is None:
+                return default
+            if not isinstance(value, bool):
+                raise RunCommandError(f"{name} must be a boolean, got {type(value).__name__}")
+            return value
+
+        # Validate and extract known path/scope parameters
+        def _get_optional_param(name: str, validator: Callable[[object], object], default: object = None) -> object:
+            value = request_kwargs.pop(name, default)
+            if value is None or value == default:
+                return default
+            return validator(value)
+
+        # Get include_tests with proper default
+        include_tests_value = request_kwargs.pop("include_tests", None)
+        include_tests = False  # default value
+        if include_tests_value is not None:
+            if not isinstance(include_tests_value, bool):
+                raise RunCommandError(f"include_tests must be a boolean, got {type(include_tests_value).__name__}")
+            include_tests = include_tests_value
+
+        # Get optional parameters with proper type casting
+        scope_value = _get_optional_param("scope", _as_auto_scope)
+        path_filters_value = _get_optional_param("path_filters", _as_path_filters)
+        out_value = _get_optional_param("out", _as_optional_path)
+        requirements_evidence_value = _get_optional_param("requirements_evidence", _as_optional_path)
+        base_ref_value = request_kwargs.pop("base_ref", None)
+        head_ref_value = request_kwargs.pop("head_ref", None)
+        if base_ref_value is not None and not isinstance(base_ref_value, str):
+            raise RunCommandError("base_ref must be a string")
+        if head_ref_value is not None and not isinstance(head_ref_value, str):
+            raise RunCommandError("head_ref must be a string")
+        pr_context_file_value = _get_optional_param("pr_context_file", _as_optional_path)
+
+        # Cast the optional parameters to their proper types
+        scope = cast(AutoScope | None, scope_value)
+        path_filters = cast(list[Path] | None, path_filters_value)
+        out = cast(Path | None, out_value)
+        requirements_evidence = cast(Path | None, requirements_evidence_value)
+
+        focus_facets = cast(tuple[str, ...], _as_focus_facets(request_kwargs.pop("focus_facets", None)))
+
+        request = ReviewRunRequest(
+            files=files,
+            include_tests=include_tests,
+            scope=scope,
+            path_filters=path_filters,
+            base_ref=cast(str | None, base_ref_value),
+            head_ref=cast(str | None, head_ref_value),
+            pr_context_file=cast(Path | None, pr_context_file_value),
+            include_noise=_get_bool_param("include_noise"),
+            json_output=_get_bool_param("json_output"),
+            out=out,
+            score_only=_get_bool_param("score_only"),
+            no_tests=_get_bool_param("no_tests"),
+            fix=_get_bool_param("fix"),
+            preview_fixes=_get_bool_param("preview_fixes"),
+            with_mutation=_get_bool_param("with_mutation"),
+            bug_hunt=_get_bool_param("bug_hunt"),
+            review_mode=_as_review_mode(request_kwargs.pop("review_mode", "changed")),
+            review_level=_as_review_level(request_kwargs.pop("review_level", None)),
+            focus_facets=focus_facets,
+            review_focus=_review_focus_from_facets(focus_facets),
+            requirements_evidence=requirements_evidence,
+        )
+
+        # Reject any unexpected keyword arguments
+        if request_kwargs:
+            unexpected = ", ".join(sorted(request_kwargs))
+>           raise RunCommandError(f"Unexpected keyword arguments: {unexpected}")
+E           specfact_code_review.run.scope.RunCommandError: Unexpected keyword arguments: project_config, project_runtime
+
+packages/specfact-code-review/src/specfact_code_review/run/commands.py:752: RunCommandError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_cli.py::test_runtime_inspect_is_read_only
+FAILED tests/unit/specfact_code_review/run/test_runtime_cli.py::test_review_help_exposes_project_handoff
+FAILED tests/unit/specfact_code_review/run/test_runtime_cli.py::test_review_request_carries_runtime_options
+============================== 3 failed in 0.85s ===============================

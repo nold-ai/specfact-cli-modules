@@ -1,0 +1,357 @@
+Recorded before the artifact topology validator or integration call existed. Temporary checkout paths normalized; failure results unchanged.
+
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py FF [ 25%]
+FFFF.F                                                                   [100%]
+
+=================================== FAILURES ===================================
+_____ test_prepare_rejects_artifact_topology_before_inventory_access[root] _____
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bf25f30>
+mutation = 'root'
+
+    @pytest.mark.parametrize("mutation", ["root", "native-directory", "inventory", "nested-file", "fifo"])
+    def test_prepare_rejects_artifact_topology_before_inventory_access(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+    ) -> None:
+        plan, runtime = _prepare_fixture(tmp_path, monkeypatch)
+        outside = tmp_path / "simulated-host"
+        outside.mkdir()
+        sentinel = outside / "sentinel.json"
+        sentinel.write_text('{"private": "disposable sentinel"}')
+        original = sentinel.read_bytes()
+
+        def build(_plan, _runtime, staging, **_kwargs):
+            return _mutate_artifact(_artifact(staging), outside, mutation)
+
+        read_text = Path.read_text
+
+        def guarded_read(path, *args, **kwargs):
+            if path.name == "inventory.json":
+                raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+            return read_text(path, *args, **kwargs)
+
+        def forbidden_native(*_args, **_kwargs):
+            raise AssertionError("controller entered native enrichment before rejecting untrusted artifact topology")
+
+        monkeypatch.setattr(runtime_builder, "_build", build)
+        monkeypatch.setattr(Path, "read_text", guarded_read)
+        monkeypatch.setattr(runtime_builder, "inventory_native", forbidden_native)
+        with pytest.raises(ProjectRuntimeError) as error:
+>           runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache")
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:80:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:248: in prepare_runtime
+    inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_0/cache/.preparing-p29ze2xy/artifact/inventory.json')
+args = (), kwargs = {'encoding': 'utf-8'}
+
+    def guarded_read(path, *args, **kwargs):
+        if path.name == "inventory.json":
+>           raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+E           AssertionError: controller read inventory before rejecting untrusted artifact topology
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:70: AssertionError
+_ test_prepare_rejects_artifact_topology_before_inventory_access[native-directory] _
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bf26650>
+mutation = 'native-directory'
+
+    @pytest.mark.parametrize("mutation", ["root", "native-directory", "inventory", "nested-file", "fifo"])
+    def test_prepare_rejects_artifact_topology_before_inventory_access(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+    ) -> None:
+        plan, runtime = _prepare_fixture(tmp_path, monkeypatch)
+        outside = tmp_path / "simulated-host"
+        outside.mkdir()
+        sentinel = outside / "sentinel.json"
+        sentinel.write_text('{"private": "disposable sentinel"}')
+        original = sentinel.read_bytes()
+
+        def build(_plan, _runtime, staging, **_kwargs):
+            return _mutate_artifact(_artifact(staging), outside, mutation)
+
+        read_text = Path.read_text
+
+        def guarded_read(path, *args, **kwargs):
+            if path.name == "inventory.json":
+                raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+            return read_text(path, *args, **kwargs)
+
+        def forbidden_native(*_args, **_kwargs):
+            raise AssertionError("controller entered native enrichment before rejecting untrusted artifact topology")
+
+        monkeypatch.setattr(runtime_builder, "_build", build)
+        monkeypatch.setattr(Path, "read_text", guarded_read)
+        monkeypatch.setattr(runtime_builder, "inventory_native", forbidden_native)
+        with pytest.raises(ProjectRuntimeError) as error:
+>           runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache")
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:80:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:248: in prepare_runtime
+    inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_1/cache/.preparing-wl7rs41l/artifact/inventory.json')
+args = (), kwargs = {'encoding': 'utf-8'}
+
+    def guarded_read(path, *args, **kwargs):
+        if path.name == "inventory.json":
+>           raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+E           AssertionError: controller read inventory before rejecting untrusted artifact topology
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:70: AssertionError
+__ test_prepare_rejects_artifact_topology_before_inventory_access[inventory] ___
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bfd5130>
+mutation = 'inventory'
+
+    @pytest.mark.parametrize("mutation", ["root", "native-directory", "inventory", "nested-file", "fifo"])
+    def test_prepare_rejects_artifact_topology_before_inventory_access(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+    ) -> None:
+        plan, runtime = _prepare_fixture(tmp_path, monkeypatch)
+        outside = tmp_path / "simulated-host"
+        outside.mkdir()
+        sentinel = outside / "sentinel.json"
+        sentinel.write_text('{"private": "disposable sentinel"}')
+        original = sentinel.read_bytes()
+
+        def build(_plan, _runtime, staging, **_kwargs):
+            return _mutate_artifact(_artifact(staging), outside, mutation)
+
+        read_text = Path.read_text
+
+        def guarded_read(path, *args, **kwargs):
+            if path.name == "inventory.json":
+                raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+            return read_text(path, *args, **kwargs)
+
+        def forbidden_native(*_args, **_kwargs):
+            raise AssertionError("controller entered native enrichment before rejecting untrusted artifact topology")
+
+        monkeypatch.setattr(runtime_builder, "_build", build)
+        monkeypatch.setattr(Path, "read_text", guarded_read)
+        monkeypatch.setattr(runtime_builder, "inventory_native", forbidden_native)
+        with pytest.raises(ProjectRuntimeError) as error:
+>           runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache")
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:80:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:248: in prepare_runtime
+    inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_2/cache/.preparing-bjd7pq86/artifact/inventory.json')
+args = (), kwargs = {'encoding': 'utf-8'}
+
+    def guarded_read(path, *args, **kwargs):
+        if path.name == "inventory.json":
+>           raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+E           AssertionError: controller read inventory before rejecting untrusted artifact topology
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:70: AssertionError
+_ test_prepare_rejects_artifact_topology_before_inventory_access[nested-file] __
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bf7a9c0>
+mutation = 'nested-file'
+
+    @pytest.mark.parametrize("mutation", ["root", "native-directory", "inventory", "nested-file", "fifo"])
+    def test_prepare_rejects_artifact_topology_before_inventory_access(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+    ) -> None:
+        plan, runtime = _prepare_fixture(tmp_path, monkeypatch)
+        outside = tmp_path / "simulated-host"
+        outside.mkdir()
+        sentinel = outside / "sentinel.json"
+        sentinel.write_text('{"private": "disposable sentinel"}')
+        original = sentinel.read_bytes()
+
+        def build(_plan, _runtime, staging, **_kwargs):
+            return _mutate_artifact(_artifact(staging), outside, mutation)
+
+        read_text = Path.read_text
+
+        def guarded_read(path, *args, **kwargs):
+            if path.name == "inventory.json":
+                raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+            return read_text(path, *args, **kwargs)
+
+        def forbidden_native(*_args, **_kwargs):
+            raise AssertionError("controller entered native enrichment before rejecting untrusted artifact topology")
+
+        monkeypatch.setattr(runtime_builder, "_build", build)
+        monkeypatch.setattr(Path, "read_text", guarded_read)
+        monkeypatch.setattr(runtime_builder, "inventory_native", forbidden_native)
+        with pytest.raises(ProjectRuntimeError) as error:
+>           runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache")
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:80:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:248: in prepare_runtime
+    inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_3/cache/.preparing-1vj0vnn9/artifact/inventory.json')
+args = (), kwargs = {'encoding': 'utf-8'}
+
+    def guarded_read(path, *args, **kwargs):
+        if path.name == "inventory.json":
+>           raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+E           AssertionError: controller read inventory before rejecting untrusted artifact topology
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:70: AssertionError
+_____ test_prepare_rejects_artifact_topology_before_inventory_access[fifo] _____
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bf78f30>
+mutation = 'fifo'
+
+    @pytest.mark.parametrize("mutation", ["root", "native-directory", "inventory", "nested-file", "fifo"])
+    def test_prepare_rejects_artifact_topology_before_inventory_access(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+    ) -> None:
+        plan, runtime = _prepare_fixture(tmp_path, monkeypatch)
+        outside = tmp_path / "simulated-host"
+        outside.mkdir()
+        sentinel = outside / "sentinel.json"
+        sentinel.write_text('{"private": "disposable sentinel"}')
+        original = sentinel.read_bytes()
+
+        def build(_plan, _runtime, staging, **_kwargs):
+            return _mutate_artifact(_artifact(staging), outside, mutation)
+
+        read_text = Path.read_text
+
+        def guarded_read(path, *args, **kwargs):
+            if path.name == "inventory.json":
+                raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+            return read_text(path, *args, **kwargs)
+
+        def forbidden_native(*_args, **_kwargs):
+            raise AssertionError("controller entered native enrichment before rejecting untrusted artifact topology")
+
+        monkeypatch.setattr(runtime_builder, "_build", build)
+        monkeypatch.setattr(Path, "read_text", guarded_read)
+        monkeypatch.setattr(runtime_builder, "inventory_native", forbidden_native)
+        with pytest.raises(ProjectRuntimeError) as error:
+>           runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache")
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:80:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:248: in prepare_runtime
+    inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_artifact_4/cache/.preparing-8f809vcz/artifact/inventory.json')
+args = (), kwargs = {'encoding': 'utf-8'}
+
+    def guarded_read(path, *args, **kwargs):
+        if path.name == "inventory.json":
+>           raise AssertionError("controller read inventory before rejecting untrusted artifact topology")
+E           AssertionError: controller read inventory before rejecting untrusted artifact topology
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:70: AssertionError
+______ test_prepare_native_directory_cannot_overwrite_external_sentinels _______
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_prepare_native_directory_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bfc2950>
+
+    def test_prepare_native_directory_cannot_overwrite_external_sentinels(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        plan, runtime = _prepare_fixture(tmp_path, monkeypatch)
+        outside, system = tmp_path / "simulated-host", tmp_path / "system-fixtures"
+        outside.mkdir()
+        system.mkdir()
+        payload = bytearray(64)
+        payload[:6] = b"\x7fELF\x02\x01"
+        struct.pack_into("<H", payload, 18, 62)
+        names = ("libreviewfixture.so", "ld-linux-x86-64.so.2")
+        for name in names:
+            (system / name).write_bytes(payload)
+            (outside / name).write_bytes(b"UNCHANGED-SENTINEL")
+
+        def build(_plan, _runtime, staging, **_kwargs):
+            return _mutate_artifact(_artifact(staging), outside, "native-directory")
+
+        def native(artifact, **kwargs):
+            return runtime_native.inventory_native(
+                artifact,
+                capsule_root=kwargs["capsule_root"],
+                declared=(names[0],),
+                system_roots=(system,),
+                target_loader=True,
+            )
+
+        monkeypatch.setattr(runtime_builder, "_build", build)
+        monkeypatch.setattr(runtime_builder, "inventory_native", native)
+        with pytest.raises(ProjectRuntimeError):
+            runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache")
+>       assert all((outside / name).read_bytes() == b"UNCHANGED-SENTINEL" for name in names)
+E       assert False
+E        +  where False = all(<generator object test_prepare_native_directory_cannot_overwrite_external_sentinels.<locals>.<genexpr> at 0x10bfa2c00>)
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:116: AssertionError
+_____________ test_build_artifact_validation_never_reads_payloads ______________
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_build_artifact_validation0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b115310>
+
+    def test_build_artifact_validation_never_reads_payloads(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        artifact = _artifact(tmp_path)
+
+        def forbidden_read(*_args, **_kwargs):
+            raise AssertionError("topology validation must not read payload bytes")
+
+        monkeypatch.setattr(Path, "read_bytes", forbidden_read)
+        monkeypatch.setattr(Path, "read_text", forbidden_read)
+>       runtime_artifacts.validate_build_artifact(artifact)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.runtime_artifacts' has no attribute 'validate_build_artifact'
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py:137: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py::test_prepare_rejects_artifact_topology_before_inventory_access[root]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py::test_prepare_rejects_artifact_topology_before_inventory_access[native-directory]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py::test_prepare_rejects_artifact_topology_before_inventory_access[inventory]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py::test_prepare_rejects_artifact_topology_before_inventory_access[nested-file]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py::test_prepare_rejects_artifact_topology_before_inventory_access[fifo]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py::test_prepare_native_directory_cannot_overwrite_external_sentinels
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py::test_build_artifact_validation_never_reads_payloads
+========================= 7 failed, 1 passed in 0.17s ==========================

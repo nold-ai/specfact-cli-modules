@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+tests/unit/specfact_code_review/run/test_target_launch.py ...F           [100%]
+
+=================================== FAILURES ===================================
+_____________ test_offline_target_has_private_localhost_resolution _____________
+
+    def test_offline_target_has_private_localhost_resolution() -> None:
+        from specfact_code_review.run.target_launch import target_command
+
+        command = target_command("pytest-observe", [])
+>       assert "/opt/specfact/project-runtime/worker-config" in command
+E       AssertionError: assert '/opt/specfact/project-runtime/worker-config' in ['/opt/specfact/bin/bwrap-static', '--die-with-parent', '--new-session', '--unshare-all', '--ro-bind', '/', ...]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:54: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_offline_target_has_private_localhost_resolution
+========================= 1 failed, 3 passed in 0.09s ==========================

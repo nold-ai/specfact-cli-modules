@@ -1,0 +1,61 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 15 items
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py .......... [ 66%]
+..FFF                                                                    [100%]
+
+=================================== FAILURES ===================================
+__________________ test_pyproject_pytest_config_precedes_tox ___________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-9/test_pyproject_pytest_config_p0')
+
+    def test_pyproject_pytest_config_precedes_tox(tmp_path: Path) -> None:
+        (tmp_path / 'pyproject.toml').write_text('[tool.pytest.ini_options]\naddopts="--import-mode=importlib"\n')
+        (tmp_path / 'tox.ini').write_text('[pytest]\naddopts=--collect-only\n')
+>       assert discover_project(tmp_path).pytest_config['addopts'] == '--import-mode=importlib'
+E       AssertionError: assert '--collect-only' == '--import-mode=importlib'
+E
+E         - --import-mode=importlib
+E         + --collect-only
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:105: AssertionError
+___________ test_changed_local_workspace_source_invalidates_runtime ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-9/test_changed_local_workspace_s0')
+
+    def test_changed_local_workspace_source_invalidates_runtime(tmp_path: Path) -> None:
+        (tmp_path / 'pyproject.toml').write_text('[project]\nname="consumer"\n')
+        workspace = tmp_path / 'components' / 'local'
+        workspace.mkdir(parents=True)
+        source = workspace / 'library.py'
+        source.write_text('VALUE = 1\n')
+        before = discover_project(tmp_path)
+        source.write_text('VALUE = 2\n')
+>       assert before.identity != discover_project(tmp_path).identity
+E       AssertionError: assert 'sha256:1b349ddec1db6145ffcbdbdc3b992ea94312dc6ea0a91d4b02d3a0d1437c4642' != 'sha256:1b349ddec1db6145ffcbdbdc3b992ea94312dc6ea0a91d4b02d3a0d1437c4642'
+E        +  where 'sha256:1b349ddec1db6145ffcbdbdc3b992ea94312dc6ea0a91d4b02d3a0d1437c4642' = ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-9/test_chang...inputs={'pyproject.toml': 'sha256:2a272a03e24cd0556a28c509db721ce1c78a2ea398f3d8d301ee54c9f9a1a692'}, pytest_config={}).identity
+E        +  and   'sha256:1b349ddec1db6145ffcbdbdc3b992ea94312dc6ea0a91d4b02d3a0d1437c4642' = ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-9/test_chang...inputs={'pyproject.toml': 'sha256:2a272a03e24cd0556a28c509db721ce1c78a2ea398f3d8d301ee54c9f9a1a692'}, pytest_config={}).identity
+E        +    where ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-9/test_chang...inputs={'pyproject.toml': 'sha256:2a272a03e24cd0556a28c509db721ce1c78a2ea398f3d8d301ee54c9f9a1a692'}, pytest_config={}) = discover_project(PosixPath('<TMPDIR>/pytest-of-dom/pytest-9/test_changed_local_workspace_s0'))
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:116: AssertionError
+___________________ test_pytest_paths_cannot_escape_snapshot ___________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-9/test_pytest_paths_cannot_escap0')
+
+    def test_pytest_paths_cannot_escape_snapshot(tmp_path: Path) -> None:
+        (tmp_path / 'pytest.ini').write_text('[pytest]\ntestpaths=../outside\n')
+>       with pytest.raises(ProjectRuntimeError, match='escape'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:121: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_pyproject_pytest_config_precedes_tox
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_changed_local_workspace_source_invalidates_runtime
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_pytest_paths_cannot_escape_snapshot
+========================= 3 failed, 12 passed in 0.36s =========================

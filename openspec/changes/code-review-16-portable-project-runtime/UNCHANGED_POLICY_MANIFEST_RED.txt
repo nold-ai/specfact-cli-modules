@@ -1,0 +1,583 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 151 items / 141 deselected / 10 selected
+
+tests/unit/specfact_code_review/run/test_scope.py FFFFFFFFFF             [100%]
+
+=================================== FAILURES ===================================
+_ test_index_unchanged_policy_manifest_preserves_selection[ruff-clean-index-existing] _
+
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma0/repo')
+portable = False, changed = False, primary_path = 'ruff.toml'
+primary_content = "extend='config/base.toml'\n"
+reference_path = 'config/base.toml', reference_content = "extend='leaf.toml'\n"
+leaf_path = 'config/leaf.toml', leaf_content = 'line-length=80\n'
+
+    @pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+    @pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+    @pytest.mark.parametrize(
+        ("primary_path", "primary_content", "reference_path", "reference_content", "leaf_path", "leaf_content"),
+        [
+            (
+                "ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "extend='leaf.toml'\n",
+                "config/leaf.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/base.json"}\n', "config/base.json",
+                '{"extends":"leaf.json"}\n', "config/leaf.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_unchanged_policy_manifest_preserves_selection(
+        git_repo: Path,
+        portable: bool,
+        changed: bool,
+        primary_path: str,
+        primary_content: str,
+        reference_path: str,
+        reference_content: str,
+        leaf_path: str,
+        leaf_content: str,
+    ) -> None:
+        """Harden pre-existing evidence omission without widening index review selection."""
+        (git_repo / "config").mkdir()
+        for path, content in ((primary_path, primary_content), (reference_path, reference_content), (leaf_path, leaf_content)):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add transitive policy closure")
+        if changed:
+            (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _git(git_repo, "add", "src/app.py")
+    
+        result = scope.resolve_scope(
+            scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+        )
+        try:
+            assert result.selected_paths == (("src/app.py",) if changed else ())
+            assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+            assert result.reason == ("resolved" if changed else "no_governed_impact")
+            assert result.assurance_kind == result.effective_assurance_kind == "index"
+            for path in (reference_path, leaf_path):
+                assert path in result.policy_paths
+>               assert result.input_manifest[path] == result.base_input_manifest[path]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/base.toml'
+
+tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
+_ test_index_unchanged_policy_manifest_preserves_selection[ruff-clean-index-portable] _
+
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma1/repo')
+portable = True, changed = False, primary_path = 'ruff.toml'
+primary_content = "extend='config/base.toml'\n"
+reference_path = 'config/base.toml', reference_content = "extend='leaf.toml'\n"
+leaf_path = 'config/leaf.toml', leaf_content = 'line-length=80\n'
+
+    @pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+    @pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+    @pytest.mark.parametrize(
+        ("primary_path", "primary_content", "reference_path", "reference_content", "leaf_path", "leaf_content"),
+        [
+            (
+                "ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "extend='leaf.toml'\n",
+                "config/leaf.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/base.json"}\n', "config/base.json",
+                '{"extends":"leaf.json"}\n', "config/leaf.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_unchanged_policy_manifest_preserves_selection(
+        git_repo: Path,
+        portable: bool,
+        changed: bool,
+        primary_path: str,
+        primary_content: str,
+        reference_path: str,
+        reference_content: str,
+        leaf_path: str,
+        leaf_content: str,
+    ) -> None:
+        """Harden pre-existing evidence omission without widening index review selection."""
+        (git_repo / "config").mkdir()
+        for path, content in ((primary_path, primary_content), (reference_path, reference_content), (leaf_path, leaf_content)):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add transitive policy closure")
+        if changed:
+            (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _git(git_repo, "add", "src/app.py")
+    
+        result = scope.resolve_scope(
+            scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+        )
+        try:
+            assert result.selected_paths == (("src/app.py",) if changed else ())
+            assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+            assert result.reason == ("resolved" if changed else "no_governed_impact")
+            assert result.assurance_kind == result.effective_assurance_kind == "index"
+            for path in (reference_path, leaf_path):
+                assert path in result.policy_paths
+>               assert result.input_manifest[path] == result.base_input_manifest[path]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/base.toml'
+
+tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
+_ test_index_unchanged_policy_manifest_preserves_selection[ruff-changed-source-existing] _
+
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma2/repo')
+portable = False, changed = True, primary_path = 'ruff.toml'
+primary_content = "extend='config/base.toml'\n"
+reference_path = 'config/base.toml', reference_content = "extend='leaf.toml'\n"
+leaf_path = 'config/leaf.toml', leaf_content = 'line-length=80\n'
+
+    @pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+    @pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+    @pytest.mark.parametrize(
+        ("primary_path", "primary_content", "reference_path", "reference_content", "leaf_path", "leaf_content"),
+        [
+            (
+                "ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "extend='leaf.toml'\n",
+                "config/leaf.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/base.json"}\n', "config/base.json",
+                '{"extends":"leaf.json"}\n', "config/leaf.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_unchanged_policy_manifest_preserves_selection(
+        git_repo: Path,
+        portable: bool,
+        changed: bool,
+        primary_path: str,
+        primary_content: str,
+        reference_path: str,
+        reference_content: str,
+        leaf_path: str,
+        leaf_content: str,
+    ) -> None:
+        """Harden pre-existing evidence omission without widening index review selection."""
+        (git_repo / "config").mkdir()
+        for path, content in ((primary_path, primary_content), (reference_path, reference_content), (leaf_path, leaf_content)):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add transitive policy closure")
+        if changed:
+            (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _git(git_repo, "add", "src/app.py")
+    
+        result = scope.resolve_scope(
+            scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+        )
+        try:
+            assert result.selected_paths == (("src/app.py",) if changed else ())
+            assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+            assert result.reason == ("resolved" if changed else "no_governed_impact")
+            assert result.assurance_kind == result.effective_assurance_kind == "index"
+            for path in (reference_path, leaf_path):
+                assert path in result.policy_paths
+>               assert result.input_manifest[path] == result.base_input_manifest[path]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/base.toml'
+
+tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
+_ test_index_unchanged_policy_manifest_preserves_selection[ruff-changed-source-portable] _
+
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma3/repo')
+portable = True, changed = True, primary_path = 'ruff.toml'
+primary_content = "extend='config/base.toml'\n"
+reference_path = 'config/base.toml', reference_content = "extend='leaf.toml'\n"
+leaf_path = 'config/leaf.toml', leaf_content = 'line-length=80\n'
+
+    @pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+    @pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+    @pytest.mark.parametrize(
+        ("primary_path", "primary_content", "reference_path", "reference_content", "leaf_path", "leaf_content"),
+        [
+            (
+                "ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "extend='leaf.toml'\n",
+                "config/leaf.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/base.json"}\n', "config/base.json",
+                '{"extends":"leaf.json"}\n', "config/leaf.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_unchanged_policy_manifest_preserves_selection(
+        git_repo: Path,
+        portable: bool,
+        changed: bool,
+        primary_path: str,
+        primary_content: str,
+        reference_path: str,
+        reference_content: str,
+        leaf_path: str,
+        leaf_content: str,
+    ) -> None:
+        """Harden pre-existing evidence omission without widening index review selection."""
+        (git_repo / "config").mkdir()
+        for path, content in ((primary_path, primary_content), (reference_path, reference_content), (leaf_path, leaf_content)):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add transitive policy closure")
+        if changed:
+            (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _git(git_repo, "add", "src/app.py")
+    
+        result = scope.resolve_scope(
+            scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+        )
+        try:
+            assert result.selected_paths == (("src/app.py",) if changed else ())
+            assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+            assert result.reason == ("resolved" if changed else "no_governed_impact")
+            assert result.assurance_kind == result.effective_assurance_kind == "index"
+            for path in (reference_path, leaf_path):
+                assert path in result.policy_paths
+>               assert result.input_manifest[path] == result.base_input_manifest[path]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/base.toml'
+
+tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
+_ test_index_unchanged_policy_manifest_preserves_selection[basedpyright-clean-index-existing] _
+
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma4/repo')
+portable = False, changed = False, primary_path = 'pyrightconfig.json'
+primary_content = '{"extends":"config/base.json"}\n'
+reference_path = 'config/base.json'
+reference_content = '{"extends":"leaf.json"}\n', leaf_path = 'config/leaf.json'
+leaf_content = '{"typeCheckingMode":"basic"}\n'
+
+    @pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+    @pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+    @pytest.mark.parametrize(
+        ("primary_path", "primary_content", "reference_path", "reference_content", "leaf_path", "leaf_content"),
+        [
+            (
+                "ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "extend='leaf.toml'\n",
+                "config/leaf.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/base.json"}\n', "config/base.json",
+                '{"extends":"leaf.json"}\n', "config/leaf.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_unchanged_policy_manifest_preserves_selection(
+        git_repo: Path,
+        portable: bool,
+        changed: bool,
+        primary_path: str,
+        primary_content: str,
+        reference_path: str,
+        reference_content: str,
+        leaf_path: str,
+        leaf_content: str,
+    ) -> None:
+        """Harden pre-existing evidence omission without widening index review selection."""
+        (git_repo / "config").mkdir()
+        for path, content in ((primary_path, primary_content), (reference_path, reference_content), (leaf_path, leaf_content)):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add transitive policy closure")
+        if changed:
+            (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _git(git_repo, "add", "src/app.py")
+    
+        result = scope.resolve_scope(
+            scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+        )
+        try:
+            assert result.selected_paths == (("src/app.py",) if changed else ())
+            assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+            assert result.reason == ("resolved" if changed else "no_governed_impact")
+            assert result.assurance_kind == result.effective_assurance_kind == "index"
+            for path in (reference_path, leaf_path):
+                assert path in result.policy_paths
+>               assert result.input_manifest[path] == result.base_input_manifest[path]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/base.json'
+
+tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
+_ test_index_unchanged_policy_manifest_preserves_selection[basedpyright-clean-index-portable] _
+
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma5/repo')
+portable = True, changed = False, primary_path = 'pyrightconfig.json'
+primary_content = '{"extends":"config/base.json"}\n'
+reference_path = 'config/base.json'
+reference_content = '{"extends":"leaf.json"}\n', leaf_path = 'config/leaf.json'
+leaf_content = '{"typeCheckingMode":"basic"}\n'
+
+    @pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+    @pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+    @pytest.mark.parametrize(
+        ("primary_path", "primary_content", "reference_path", "reference_content", "leaf_path", "leaf_content"),
+        [
+            (
+                "ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "extend='leaf.toml'\n",
+                "config/leaf.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/base.json"}\n', "config/base.json",
+                '{"extends":"leaf.json"}\n', "config/leaf.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_unchanged_policy_manifest_preserves_selection(
+        git_repo: Path,
+        portable: bool,
+        changed: bool,
+        primary_path: str,
+        primary_content: str,
+        reference_path: str,
+        reference_content: str,
+        leaf_path: str,
+        leaf_content: str,
+    ) -> None:
+        """Harden pre-existing evidence omission without widening index review selection."""
+        (git_repo / "config").mkdir()
+        for path, content in ((primary_path, primary_content), (reference_path, reference_content), (leaf_path, leaf_content)):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add transitive policy closure")
+        if changed:
+            (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _git(git_repo, "add", "src/app.py")
+    
+        result = scope.resolve_scope(
+            scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+        )
+        try:
+            assert result.selected_paths == (("src/app.py",) if changed else ())
+            assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+            assert result.reason == ("resolved" if changed else "no_governed_impact")
+            assert result.assurance_kind == result.effective_assurance_kind == "index"
+            for path in (reference_path, leaf_path):
+                assert path in result.policy_paths
+>               assert result.input_manifest[path] == result.base_input_manifest[path]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/base.json'
+
+tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
+_ test_index_unchanged_policy_manifest_preserves_selection[basedpyright-changed-source-existing] _
+
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma6/repo')
+portable = False, changed = True, primary_path = 'pyrightconfig.json'
+primary_content = '{"extends":"config/base.json"}\n'
+reference_path = 'config/base.json'
+reference_content = '{"extends":"leaf.json"}\n', leaf_path = 'config/leaf.json'
+leaf_content = '{"typeCheckingMode":"basic"}\n'
+
+    @pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+    @pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+    @pytest.mark.parametrize(
+        ("primary_path", "primary_content", "reference_path", "reference_content", "leaf_path", "leaf_content"),
+        [
+            (
+                "ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "extend='leaf.toml'\n",
+                "config/leaf.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/base.json"}\n', "config/base.json",
+                '{"extends":"leaf.json"}\n', "config/leaf.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_unchanged_policy_manifest_preserves_selection(
+        git_repo: Path,
+        portable: bool,
+        changed: bool,
+        primary_path: str,
+        primary_content: str,
+        reference_path: str,
+        reference_content: str,
+        leaf_path: str,
+        leaf_content: str,
+    ) -> None:
+        """Harden pre-existing evidence omission without widening index review selection."""
+        (git_repo / "config").mkdir()
+        for path, content in ((primary_path, primary_content), (reference_path, reference_content), (leaf_path, leaf_content)):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add transitive policy closure")
+        if changed:
+            (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _git(git_repo, "add", "src/app.py")
+    
+        result = scope.resolve_scope(
+            scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+        )
+        try:
+            assert result.selected_paths == (("src/app.py",) if changed else ())
+            assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+            assert result.reason == ("resolved" if changed else "no_governed_impact")
+            assert result.assurance_kind == result.effective_assurance_kind == "index"
+            for path in (reference_path, leaf_path):
+                assert path in result.policy_paths
+>               assert result.input_manifest[path] == result.base_input_manifest[path]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/base.json'
+
+tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
+_ test_index_unchanged_policy_manifest_preserves_selection[basedpyright-changed-source-portable] _
+
+git_repo = PosixPath('<temporary>/test_index_unchanged_policy_ma7/repo')
+portable = True, changed = True, primary_path = 'pyrightconfig.json'
+primary_content = '{"extends":"config/base.json"}\n'
+reference_path = 'config/base.json'
+reference_content = '{"extends":"leaf.json"}\n', leaf_path = 'config/leaf.json'
+leaf_content = '{"typeCheckingMode":"basic"}\n'
+
+    @pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+    @pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+    @pytest.mark.parametrize(
+        ("primary_path", "primary_content", "reference_path", "reference_content", "leaf_path", "leaf_content"),
+        [
+            (
+                "ruff.toml", "extend='config/base.toml'\n", "config/base.toml", "extend='leaf.toml'\n",
+                "config/leaf.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/base.json"}\n', "config/base.json",
+                '{"extends":"leaf.json"}\n', "config/leaf.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_unchanged_policy_manifest_preserves_selection(
+        git_repo: Path,
+        portable: bool,
+        changed: bool,
+        primary_path: str,
+        primary_content: str,
+        reference_path: str,
+        reference_content: str,
+        leaf_path: str,
+        leaf_content: str,
+    ) -> None:
+        """Harden pre-existing evidence omission without widening index review selection."""
+        (git_repo / "config").mkdir()
+        for path, content in ((primary_path, primary_content), (reference_path, reference_content), (leaf_path, leaf_content)):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add transitive policy closure")
+        if changed:
+            (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _git(git_repo, "add", "src/app.py")
+    
+        result = scope.resolve_scope(
+            scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+        )
+        try:
+            assert result.selected_paths == (("src/app.py",) if changed else ())
+            assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+            assert result.reason == ("resolved" if changed else "no_governed_impact")
+            assert result.assurance_kind == result.effective_assurance_kind == "index"
+            for path in (reference_path, leaf_path):
+                assert path in result.policy_paths
+>               assert result.input_manifest[path] == result.base_input_manifest[path]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/base.json'
+
+tests/unit/specfact_code_review/run/test_scope.py:827: KeyError
+__ test_index_policy_manifest_retains_base_and_head_reference_closures[ruff] ___
+
+git_repo = PosixPath('<temporary>/test_index_policy_manifest_ret0/repo')
+primary_path = 'ruff.toml', before = "extend='config/old.toml'\n"
+after = "extend='config/new.toml'\n", old_path = 'config/old.toml'
+new_path = 'config/new.toml', content = 'line-length=80\n'
+
+    @pytest.mark.parametrize(
+        ("primary_path", "before", "after", "old_path", "new_path", "content"),
+        [
+            (
+                "ruff.toml", "extend='config/old.toml'\n", "extend='config/new.toml'\n",
+                "config/old.toml", "config/new.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/old.json"}\n', '{"extends":"config/new.json"}\n',
+                "config/old.json", "config/new.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_policy_manifest_retains_base_and_head_reference_closures(
+        git_repo: Path, primary_path: str, before: str, after: str, old_path: str, new_path: str, content: str
+    ) -> None:
+        (git_repo / "config").mkdir()
+        (git_repo / primary_path).write_text(before, encoding="utf-8")
+        for path in (old_path, new_path):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add alternative policy references")
+        (git_repo / primary_path).write_text(after, encoding="utf-8")
+        _git(git_repo, "add", primary_path)
+    
+        result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index"))
+        try:
+            assert result.status == "PASS"
+            assert result.selected_paths == (primary_path,)
+            for path in (old_path, new_path):
+>               assert result.base_input_manifest[path].blob_sha == _git(git_repo, "rev-parse", f"HEAD:{path}")
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/old.toml'
+
+tests/unit/specfact_code_review/run/test_scope.py:864: KeyError
+_ test_index_policy_manifest_retains_base_and_head_reference_closures[basedpyright] _
+
+git_repo = PosixPath('<temporary>/test_index_policy_manifest_ret1/repo')
+primary_path = 'pyrightconfig.json', before = '{"extends":"config/old.json"}\n'
+after = '{"extends":"config/new.json"}\n', old_path = 'config/old.json'
+new_path = 'config/new.json', content = '{"typeCheckingMode":"basic"}\n'
+
+    @pytest.mark.parametrize(
+        ("primary_path", "before", "after", "old_path", "new_path", "content"),
+        [
+            (
+                "ruff.toml", "extend='config/old.toml'\n", "extend='config/new.toml'\n",
+                "config/old.toml", "config/new.toml", "line-length=80\n",
+            ),
+            (
+                "pyrightconfig.json", '{"extends":"config/old.json"}\n', '{"extends":"config/new.json"}\n',
+                "config/old.json", "config/new.json", '{"typeCheckingMode":"basic"}\n',
+            ),
+        ],
+        ids=["ruff", "basedpyright"],
+    )
+    def test_index_policy_manifest_retains_base_and_head_reference_closures(
+        git_repo: Path, primary_path: str, before: str, after: str, old_path: str, new_path: str, content: str
+    ) -> None:
+        (git_repo / "config").mkdir()
+        (git_repo / primary_path).write_text(before, encoding="utf-8")
+        for path in (old_path, new_path):
+            (git_repo / path).write_text(content, encoding="utf-8")
+        _commit(git_repo, "add alternative policy references")
+        (git_repo / primary_path).write_text(after, encoding="utf-8")
+        _git(git_repo, "add", primary_path)
+    
+        result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index"))
+        try:
+            assert result.status == "PASS"
+            assert result.selected_paths == (primary_path,)
+            for path in (old_path, new_path):
+>               assert result.base_input_manifest[path].blob_sha == _git(git_repo, "rev-parse", f"HEAD:{path}")
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'config/old.json'
+
+tests/unit/specfact_code_review/run/test_scope.py:864: KeyError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_unchanged_policy_manifest_preserves_selection[ruff-clean-index-existing]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_unchanged_policy_manifest_preserves_selection[ruff-clean-index-portable]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_unchanged_policy_manifest_preserves_selection[ruff-changed-source-existing]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_unchanged_policy_manifest_preserves_selection[ruff-changed-source-portable]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_unchanged_policy_manifest_preserves_selection[basedpyright-clean-index-existing]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_unchanged_policy_manifest_preserves_selection[basedpyright-clean-index-portable]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_unchanged_policy_manifest_preserves_selection[basedpyright-changed-source-existing]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_unchanged_policy_manifest_preserves_selection[basedpyright-changed-source-portable]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_policy_manifest_retains_base_and_head_reference_closures[ruff]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_policy_manifest_retains_base_and_head_reference_closures[basedpyright]
+====================== 10 failed, 141 deselected in 1.89s ======================

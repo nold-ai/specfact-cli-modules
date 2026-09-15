@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items / 2 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_target_launch.py F              [100%]
+
+=================================== FAILURES ===================================
+_____ test_native_worker_uses_matching_loader_without_mutating_supervisor ______
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-81/test_native_worker_uses_matchi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108717e10>
+
+    def test_native_worker_uses_matching_loader_without_mutating_supervisor(tmp_path, monkeypatch) -> None:
+        from specfact_code_review.run import target_launch
+
+        loader = tmp_path / 'native/ld-linux-x86-64.so.2'
+        loader.parent.mkdir()
+        loader.touch()
+>       monkeypatch.setattr(target_launch, 'PROJECT', tmp_path)
+E       AttributeError: <module 'specfact_code_review.run.target_launch' from '<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/target_launch.py'> has no attribute 'PROJECT'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:34: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_native_worker_uses_matching_loader_without_mutating_supervisor
+======================= 1 failed, 2 deselected in 0.08s ========================

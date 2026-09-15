@@ -199,6 +199,12 @@ specfact code review run --scope changed --enforcement shadow --focus simplify -
 
 Simplify-focused reports keep advisory `ai_bloat` findings plus high-confidence `dry` and `kiss` findings that include deterministic simplification metadata. Metadata fields such as `rewrite_hint`, `canonical_pattern`, `intent_key`, `estimated_deletion_lines`, `related_locations`, `signal_trace`, `preserve_reasons`, and `remediation_packet` are additive; legacy consumers can keep reading the original finding fields. The report-level `cleanup_forecast` summarizes reviewed LOC, estimated deletion ranges, guidance-kind totals, normalized AI-bloat density, weighted bloat points, and cleanup-yield LOC per KLOC. Simplification findings remain score-neutral; enforce mode blocks only unresolved safe-mechanical cleanup candidates.
 
+## External project runtimes
+
+Dependency-sensitive review automatically prepares an isolated project runtime. Use `--project-config PATH` to select a package manager, environment, extras, or test groups, and `--project-runtime PATH` to attach the descriptor returned by `specfact code review runtime prepare --json`. Inspect discovery without installation using `specfact code review runtime inspect --json`.
+
+See [Review external Python projects](/guides/portable-project-runtime/) for pip, Hatch, uv, Poetry, offline reuse, and incomplete-evidence diagnostics. Local runtime provenance cannot authorize protected `pr_range` evidence.
+
 ## Related
 
 - [Code review ledger](/bundles/code-review/ledger/)

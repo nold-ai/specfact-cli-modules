@@ -1,0 +1,698 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-delivery
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 47 items / 27 deselected / 20 selected
+
+tests/unit/specfact_code_review/run/test_target_launch.py FFFFFFFFFFFFFF [ 70%]
+FFFFFF                                                                   [100%]
+
+=================================== FAILURES ===================================
+_ test_nested_pythonpath_matches_native_imports[False-absolute-project-python] _
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109eeaea0>
+domain = 'project-python', path_case = 'absolute', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches0/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...s0/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_____ test_nested_pythonpath_matches_native_imports[False-absolute-pylint] _____
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109eead70>
+domain = 'pylint', path_case = 'absolute', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches1/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...s1/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_ test_nested_pythonpath_matches_native_imports[False-relative-project-python] _
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a590050>
+domain = 'project-python', path_case = 'relative', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches2/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...s2/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_____ test_nested_pythonpath_matches_native_imports[False-relative-pylint] _____
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a4e9590>
+domain = 'pylint', path_case = 'relative', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches3/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...s3/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_ test_nested_pythonpath_matches_native_imports[False-empty-component-project-python] _
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a4e9d00>
+domain = 'project-python', path_case = 'empty-component', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches4/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...s4/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_ test_nested_pythonpath_matches_native_imports[False-empty-component-pylint] __
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5bd850>
+domain = 'pylint', path_case = 'empty-component', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches5/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...s5/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+__ test_nested_pythonpath_matches_native_imports[False-empty-project-python] ___
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5bde50>
+domain = 'project-python', path_case = 'empty', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+        assert attached.returncode == 0, attached.stderr
+>       assert attached.stdout == native.stdout
+E       assert '["/private/v...eview/run"]\n' == '[""]\n'
+E
+E         - [""]
+E         + ["<PYTEST_TMP>/test_nested_pythonpath_matches6/builtin/specfact_code_review/run"]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:332: AssertionError
+______ test_nested_pythonpath_matches_native_imports[False-empty-pylint] _______
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5a1f40>
+domain = 'pylint', path_case = 'empty', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+        assert attached.returncode == 0, attached.stderr
+>       assert attached.stdout == native.stdout
+E       assert '["/private/v...eview/run"]\n' == '[""]\n'
+E
+E         - [""]
+E         + ["<PYTEST_TMP>/test_nested_pythonpath_matches7/builtin/specfact_code_review/run"]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:332: AssertionError
+_ test_nested_pythonpath_matches_native_imports[False-omitted-project-python] __
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5a2c60>
+domain = 'project-python', path_case = 'omitted', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+        assert attached.returncode == 0, attached.stderr
+>       assert attached.stdout == native.stdout
+E       assert '["/private/v...eview/run"]\n' == '[null]\n'
+E
+E         - [null]
+E         + ["<PYTEST_TMP>/test_nested_pythonpath_matches8/builtin/specfact_code_review/run"]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:332: AssertionError
+_____ test_nested_pythonpath_matches_native_imports[False-omitted-pylint] ______
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a541c50>
+domain = 'pylint', path_case = 'omitted', inherited = False
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+        assert attached.returncode == 0, attached.stderr
+>       assert attached.stdout == native.stdout
+E       assert '["/private/v...eview/run"]\n' == '[null]\n'
+E
+E         - [null]
+E         + ["<PYTEST_TMP>/test_nested_pythonpath_matches9/builtin/specfact_code_review/run"]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:332: AssertionError
+_ test_nested_pythonpath_matches_native_imports[True-absolute-project-python] __
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches10')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5119b0>
+domain = 'project-python', path_case = 'absolute', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches10/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...10/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_____ test_nested_pythonpath_matches_native_imports[True-absolute-pylint] ______
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches11')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a62be10>
+domain = 'pylint', path_case = 'absolute', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches11/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...11/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_ test_nested_pythonpath_matches_native_imports[True-relative-project-python] __
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches12')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f03a10>
+domain = 'project-python', path_case = 'relative', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches12/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...12/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_____ test_nested_pythonpath_matches_native_imports[True-relative-pylint] ______
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches13')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f03890>
+domain = 'pylint', path_case = 'relative', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches13/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...13/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+_ test_nested_pythonpath_matches_native_imports[True-empty-component-project-python] _
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches14')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5c9bd0>
+domain = 'project-python', path_case = 'empty-component', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches14/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...14/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+__ test_nested_pythonpath_matches_native_imports[True-empty-component-pylint] __
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches15')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5c9180>
+domain = 'pylint', path_case = 'empty-component', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+>       assert attached.returncode == 0, attached.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<PYTEST_TMP>/test_nested_pythonpath_matches15/probe.py", line 3, in <module>
+E             import caller_module
+E         ModuleNotFoundError: No module named 'caller_module'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<PYTEST_TMP>/test_nested_...15/probe.py", line 3, in <module>\n    import caller_module\nModuleNotFoundError: No module named \'caller_module\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_launch.py:331: AssertionError
+___ test_nested_pythonpath_matches_native_imports[True-empty-project-python] ___
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches16')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a583cf0>
+domain = 'project-python', path_case = 'empty', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+        assert attached.returncode == 0, attached.stderr
+>       assert attached.stdout == native.stdout
+E       assert '["/private/v...eview/run"]\n' == '[""]\n'
+E
+E         - [""]
+E         + ["<PYTEST_TMP>/test_nested_pythonpath_matches16/builtin/specfact_code_review/run"]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:332: AssertionError
+_______ test_nested_pythonpath_matches_native_imports[True-empty-pylint] _______
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches17')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5fc9b0>
+domain = 'pylint', path_case = 'empty', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+        assert attached.returncode == 0, attached.stderr
+>       assert attached.stdout == native.stdout
+E       assert '["/private/v...eview/run"]\n' == '[""]\n'
+E
+E         - [""]
+E         + ["<PYTEST_TMP>/test_nested_pythonpath_matches17/builtin/specfact_code_review/run"]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:332: AssertionError
+__ test_nested_pythonpath_matches_native_imports[True-omitted-project-python] __
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches18')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1097dc170>
+domain = 'project-python', path_case = 'omitted', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+        assert attached.returncode == 0, attached.stderr
+>       assert attached.stdout == native.stdout
+E       assert '["/private/v...eview/run"]\n' == '[null]\n'
+E
+E         - [null]
+E         + ["<PYTEST_TMP>/test_nested_pythonpath_matches18/builtin/specfact_code_review/run"]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:332: AssertionError
+______ test_nested_pythonpath_matches_native_imports[True-omitted-pylint] ______
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_nested_pythonpath_matches19')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5b44d0>
+domain = 'pylint', path_case = 'omitted', inherited = True
+
+    @pytest.mark.parametrize("domain", ["project-python", "pylint"])
+    @pytest.mark.parametrize("path_case", ["absolute", "relative", "empty-component", "empty", "omitted"])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_nested_pythonpath_matches_native_imports(tmp_path, monkeypatch, domain, path_case, inherited):
+        wrapper = _native_nested_wrapper(tmp_path, domain)
+        cwd, probe, pythonpath = _pythonpath_probe(tmp_path, path_case)
+        monkeypatch.delenv("PYTHONHOME", raising=False)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        if pythonpath is not None:
+            monkeypatch.setenv("PYTHONPATH", pythonpath)
+        environment = None if inherited else ({} if pythonpath is None else {"PYTHONPATH": pythonpath})
+        options = dict(cwd=cwd, env=environment, capture_output=True, text=True, timeout=30, check=False)
+        native = subprocess.run([sys.executable, "-s", str(probe)], **options)
+        assert native.returncode == 0, native.stderr
+        if domain == "pylint":
+            with probe.open("a") as stream:
+                stream.write("import analyzer_only\nassert analyzer_only.VALUE == 'member-owned'\n")
+        attached = subprocess.run([str(wrapper), str(probe)], **options)
+        assert attached.returncode == 0, attached.stderr
+>       assert attached.stdout == native.stdout
+E       assert '["/private/v...eview/run"]\n' == '[null]\n'
+E
+E         - [null]
+E         + ["<PYTEST_TMP>/test_nested_pythonpath_matches19/builtin/specfact_code_review/run"]
+
+tests/unit/specfact_code_review/run/test_target_launch.py:332: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-absolute-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-absolute-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-relative-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-relative-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-empty-component-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-empty-component-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-empty-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-empty-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-omitted-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[False-omitted-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-absolute-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-absolute-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-relative-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-relative-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-empty-component-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-empty-component-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-empty-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-empty-pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-omitted-project-python]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_pythonpath_matches_native_imports[True-omitted-pylint]
+====================== 20 failed, 27 deselected in 8.78s =======================

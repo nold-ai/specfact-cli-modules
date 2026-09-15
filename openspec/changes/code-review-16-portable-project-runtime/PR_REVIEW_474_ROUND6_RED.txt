@@ -1,0 +1,296 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 23 items
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py ....F            [ 21%]
+tests/unit/specfact_code_review/run/test_portable_worker.py ..........FF [ 73%]
+F                                                                        [ 78%]
+tests/unit/specfact_code_review/run/test_runtime_git.py ..FFF            [100%]
+
+=================================== FAILURES ===================================
+______________ test_analyzer_copy_excludes_reachable_git_history _______________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-192/test_analyzer_copy_excludes_re0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ce6b230>
+
+    def test_analyzer_copy_excludes_reachable_git_history(tmp_path: Path, monkeypatch) -> None:
+        root = tmp_path / "project"
+        _repository(root)
+        observed = []
+
+        def analyze(_runtime, *, snapshot_root, **_kwargs):
+            assert not (snapshot_root / ".git").exists()
+            assert (snapshot_root / "app.py").read_text() == "VALUE = 1\n"
+            observed.append(snapshot_root)
+
+        monkeypatch.setattr(runner, "_run_capsule_snapshot", analyze)
+        request = portable_snapshot.ProjectSnapshotRequest(root, [root / "app.py"], runner.ReviewOptions(), "explicit_files")
+>       portable_snapshot._run_in_private_source(object(), request, runner.CapsuleSnapshotSettings())
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:99:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:119: in _run_in_private_source
+    return _run_capsule_snapshot(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_runtime = <object object at 0x10481fe20>
+snapshot_root = PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-project-source-1ghax8nk/source')
+_kwargs = {'files': [PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-project-source-1ghax8nk/source/app.py'...s=(), member_argv=None, project_runtime_root=None, scope_paths=None, portable_runtime=False, unavailable_members=None)}
+
+    def analyze(_runtime, *, snapshot_root, **_kwargs):
+>       assert not (snapshot_root / ".git").exists()
+E       AssertionError: assert not True
+E        +  where True = exists()
+E        +    where exists = (PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-project-source-1ghax8nk/source') / '.git').exists
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:93: AssertionError
+_________ test_pytest_native_default_root_is_preserved[configuration0] _________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-192/test_pytest_native_default_roo0')
+configuration = {}
+
+    @pytest.mark.parametrize("configuration", [{}, {"testpaths": []}, {"testpaths": ""}])
+    def test_pytest_native_default_root_is_preserved(tmp_path: Path, configuration: dict) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config=configuration)
+>       assert select_test_paths(plan, [source], full=True) == (".",)
+E       AssertionError: assert ('tests',) == ('.',)
+E
+E         At index 0 diff: 'tests' != '.'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:126: AssertionError
+_________ test_pytest_native_default_root_is_preserved[configuration1] _________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-192/test_pytest_native_default_roo1')
+configuration = {'testpaths': []}
+
+    @pytest.mark.parametrize("configuration", [{}, {"testpaths": []}, {"testpaths": ""}])
+    def test_pytest_native_default_root_is_preserved(tmp_path: Path, configuration: dict) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config=configuration)
+        assert select_test_paths(plan, [source], full=True) == (".",)
+>       assert select_test_paths(plan, [source], full=False) == ("test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:127:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('<temporary>/pytest-of-user/pytest-192/test_pyt... requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={'testpaths': []})
+files = [PosixPath('<temporary>/pytest-of-user/pytest-192/test_pytest_native_default_roo1/app.py')]
+full = False
+
+    @ensure(lambda result: bool(result) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        roots = _strings(plan.pytest_config.get("testpaths", ["tests"]))
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        if full:
+            return roots or (".",)
+        candidates = {
+            path.relative_to(plan.root).as_posix()
+            for root in roots
+            for path in (plan.root / root).rglob("*.py")
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
+        }
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:59: ProjectRuntimeError
+_________ test_pytest_native_default_root_is_preserved[configuration2] _________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-192/test_pytest_native_default_roo2')
+configuration = {'testpaths': ''}
+
+    @pytest.mark.parametrize("configuration", [{}, {"testpaths": []}, {"testpaths": ""}])
+    def test_pytest_native_default_root_is_preserved(tmp_path: Path, configuration: dict) -> None:
+        source = tmp_path / "app.py"
+        source.touch()
+        (tmp_path / "test_app.py").touch()
+        plan = ProjectPlan(tmp_path, manager="pip", pytest_config=configuration)
+        assert select_test_paths(plan, [source], full=True) == (".",)
+>       assert select_test_paths(plan, [source], full=False) == ("test_app.py",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:127:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('<temporary>/pytest-of-user/pytest-192/test_pyt... requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={'testpaths': ''})
+files = [PosixPath('<temporary>/pytest-of-user/pytest-192/test_pytest_native_default_roo2/app.py')]
+full = False
+
+    @ensure(lambda result: bool(result) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        roots = _strings(plan.pytest_config.get("testpaths", ["tests"]))
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        if full:
+            return roots or (".",)
+        candidates = {
+            path.relative_to(plan.root).as_posix()
+            for root in roots
+            for path in (plan.root / root).rglob("*.py")
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
+        }
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:59: ProjectRuntimeError
+_________ test_git_identity_failures_use_runtime_diagnostic[failure0] __________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-192/test_git_identity_failures_use0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10cfc5b50>
+failure = CalledProcessError(1, 'git')
+
+    @pytest.mark.parametrize("failure", [subprocess.CalledProcessError(1, "git"), subprocess.TimeoutExpired("git", 10), OSError("unavailable")])
+    def test_git_identity_failures_use_runtime_diagnostic(tmp_path: Path, monkeypatch, failure: Exception) -> None:
+        git = tmp_path / "git"
+        git.write_bytes(b"\x7fELFgit")
+        monkeypatch.setattr(runtime_git, "GIT", git)
+
+        def fail(*_args, **_kwargs):
+            raise failure
+
+        monkeypatch.setattr(runtime_git.subprocess, "run", fail)
+        with pytest.raises(ProjectRuntimeError, match="project_builder_git_identity_failed") as caught:
+>           runtime_git.git_identity()
+
+tests/unit/specfact_code_review/run/test_runtime_git.py:55:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:43: in git_identity
+    return {name: content_digest(path.read_bytes()) for name, path in _programs().items()}
+                                                                      ^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:22: in _programs
+    result = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (['<temporary>/pytest-of-user/pytest-192/test_git_identity_failures_use0/git', '--exec-path'],)
+_kwargs = {'env': {'PATH': '/usr/bin:/bin'}, 'capture_output': True, 'text': True, 'check': True, ...}
+
+    def fail(*_args, **_kwargs):
+>       raise failure
+E       subprocess.CalledProcessError: Command 'git' returned non-zero exit status 1.
+
+tests/unit/specfact_code_review/run/test_runtime_git.py:51: CalledProcessError
+_________ test_git_identity_failures_use_runtime_diagnostic[failure1] __________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-192/test_git_identity_failures_use1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10cfc6950>
+failure = TimeoutExpired('git', 10)
+
+    @pytest.mark.parametrize("failure", [subprocess.CalledProcessError(1, "git"), subprocess.TimeoutExpired("git", 10), OSError("unavailable")])
+    def test_git_identity_failures_use_runtime_diagnostic(tmp_path: Path, monkeypatch, failure: Exception) -> None:
+        git = tmp_path / "git"
+        git.write_bytes(b"\x7fELFgit")
+        monkeypatch.setattr(runtime_git, "GIT", git)
+
+        def fail(*_args, **_kwargs):
+            raise failure
+
+        monkeypatch.setattr(runtime_git.subprocess, "run", fail)
+        with pytest.raises(ProjectRuntimeError, match="project_builder_git_identity_failed") as caught:
+>           runtime_git.git_identity()
+
+tests/unit/specfact_code_review/run/test_runtime_git.py:55:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:43: in git_identity
+    return {name: content_digest(path.read_bytes()) for name, path in _programs().items()}
+                                                                      ^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:22: in _programs
+    result = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (['<temporary>/pytest-of-user/pytest-192/test_git_identity_failures_use1/git', '--exec-path'],)
+_kwargs = {'env': {'PATH': '/usr/bin:/bin'}, 'capture_output': True, 'text': True, 'check': True, ...}
+
+    def fail(*_args, **_kwargs):
+>       raise failure
+E       subprocess.TimeoutExpired: Command 'git' timed out after 10 seconds
+
+tests/unit/specfact_code_review/run/test_runtime_git.py:51: TimeoutExpired
+_________ test_git_identity_failures_use_runtime_diagnostic[failure2] __________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-192/test_git_identity_failures_use2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d0d45f0>
+failure = OSError('unavailable')
+
+    @pytest.mark.parametrize("failure", [subprocess.CalledProcessError(1, "git"), subprocess.TimeoutExpired("git", 10), OSError("unavailable")])
+    def test_git_identity_failures_use_runtime_diagnostic(tmp_path: Path, monkeypatch, failure: Exception) -> None:
+        git = tmp_path / "git"
+        git.write_bytes(b"\x7fELFgit")
+        monkeypatch.setattr(runtime_git, "GIT", git)
+
+        def fail(*_args, **_kwargs):
+            raise failure
+
+        monkeypatch.setattr(runtime_git.subprocess, "run", fail)
+        with pytest.raises(ProjectRuntimeError, match="project_builder_git_identity_failed") as caught:
+>           runtime_git.git_identity()
+
+tests/unit/specfact_code_review/run/test_runtime_git.py:55:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:43: in git_identity
+    return {name: content_digest(path.read_bytes()) for name, path in _programs().items()}
+                                                                      ^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:22: in _programs
+    result = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (['<temporary>/pytest-of-user/pytest-192/test_git_identity_failures_use2/git', '--exec-path'],)
+_kwargs = {'env': {'PATH': '/usr/bin:/bin'}, 'capture_output': True, 'text': True, 'check': True, ...}
+
+    def fail(*_args, **_kwargs):
+>       raise failure
+E       OSError: unavailable
+
+tests/unit/specfact_code_review/run/test_runtime_git.py:51: OSError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_analyzer_copy_excludes_reachable_git_history
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_native_default_root_is_preserved[configuration0]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_native_default_root_is_preserved[configuration1]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_pytest_native_default_root_is_preserved[configuration2]
+FAILED tests/unit/specfact_code_review/run/test_runtime_git.py::test_git_identity_failures_use_runtime_diagnostic[failure0]
+FAILED tests/unit/specfact_code_review/run/test_runtime_git.py::test_git_identity_failures_use_runtime_diagnostic[failure1]
+FAILED tests/unit/specfact_code_review/run/test_runtime_git.py::test_git_identity_failures_use_runtime_diagnostic[failure2]
+========================= 7 failed, 16 passed in 0.65s =========================

@@ -1,0 +1,141 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items / 9 deselected / 3 selected
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py FFF              [100%]
+
+=================================== FAILURES ===================================
+__ test_real_cached_analysis_snapshot_preserves_portable_vcs_provenance[head] __
+
+staged_project = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_real_cached_analysi...manifest_digest='', policy_bundle=None, policy_paths=(), policy_manifest_digest='', candidate_policy_change_digest=''))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_real_cached_analysis_snap0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d123950>
+changed_state = 'head'
+
+    @pytest.mark.parametrize("changed_state", ["head", "index"])
+    def test_real_cached_analysis_snapshot_preserves_portable_vcs_provenance(
+        staged_project, tmp_path: Path, monkeypatch, changed_state: str
+    ) -> None:
+        root, resolution = staged_project
+        monkeypatch.chdir(root)
+        destination = tmp_path / "cached"
+        destination.mkdir()
+        snapshot = runner._cached_analysis_snapshot([Path("renamed.py")], destination)
+        assert snapshot is not None
+        if changed_state == "head":
+            _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "-c", "commit.gpgsign=false", "commit", "-qm", "advance HEAD")
+        else:
+            _git(root, "read-tree", "HEAD")
+>       plan = discover_snapshot(snapshot.root, config_path=None, source_snapshot=snapshot)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+<workspace>/tests/unit/specfact_code_review/run/test_runtime_vcs.py:200: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+<workspace>/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_real_cached_analysis_snap0/cached')
+config_path = None
+source_snapshot = CachedAnalysisSnapshot(repository=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/py...e='ae7df65c33f278677e0d7eb633690c0053ddf0b7', index_tree='14dd0b830997655370b92b481566b173120d1c06', caller_prefix=''))
+
+    @require(lambda root: root.is_dir())
+    def discover_snapshot(root: Path, *, config_path: Path | None, source_snapshot: Any = None) -> ProjectPlan:
+        """Attach selected VCS metadata without changing the immutable source tree."""
+        plan = discover_project(root, config_path=config_path)
+        repository = getattr(source_snapshot, "repository", None)
+        if repository is None:
+            return plan
+        commit = getattr(source_snapshot, "vcs_commit", "") or source_snapshot.commit
+        if commit.startswith(("index:", "index-")):
+>           raise ProjectRuntimeError("project_index_vcs_commit_missing: recapture the review index")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_index_vcs_commit_missing: recapture the review index
+
+<workspace>/packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:56: ProjectRuntimeError
+_ test_real_cached_analysis_snapshot_preserves_portable_vcs_provenance[index] __
+
+staged_project = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_real_cached_analysi...manifest_digest='', policy_bundle=None, policy_paths=(), policy_manifest_digest='', candidate_policy_change_digest=''))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_real_cached_analysis_snap1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d384050>
+changed_state = 'index'
+
+    @pytest.mark.parametrize("changed_state", ["head", "index"])
+    def test_real_cached_analysis_snapshot_preserves_portable_vcs_provenance(
+        staged_project, tmp_path: Path, monkeypatch, changed_state: str
+    ) -> None:
+        root, resolution = staged_project
+        monkeypatch.chdir(root)
+        destination = tmp_path / "cached"
+        destination.mkdir()
+        snapshot = runner._cached_analysis_snapshot([Path("renamed.py")], destination)
+        assert snapshot is not None
+        if changed_state == "head":
+            _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "-c", "commit.gpgsign=false", "commit", "-qm", "advance HEAD")
+        else:
+            _git(root, "read-tree", "HEAD")
+>       plan = discover_snapshot(snapshot.root, config_path=None, source_snapshot=snapshot)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+<workspace>/tests/unit/specfact_code_review/run/test_runtime_vcs.py:200: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+<workspace>/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_real_cached_analysis_snap1/cached')
+config_path = None
+source_snapshot = CachedAnalysisSnapshot(repository=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/py...e='ae7df65c33f278677e0d7eb633690c0053ddf0b7', index_tree='14dd0b830997655370b92b481566b173120d1c06', caller_prefix=''))
+
+    @require(lambda root: root.is_dir())
+    def discover_snapshot(root: Path, *, config_path: Path | None, source_snapshot: Any = None) -> ProjectPlan:
+        """Attach selected VCS metadata without changing the immutable source tree."""
+        plan = discover_project(root, config_path=config_path)
+        repository = getattr(source_snapshot, "repository", None)
+        if repository is None:
+            return plan
+        commit = getattr(source_snapshot, "vcs_commit", "") or source_snapshot.commit
+        if commit.startswith(("index:", "index-")):
+>           raise ProjectRuntimeError("project_index_vcs_commit_missing: recapture the review index")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_index_vcs_commit_missing: recapture the review index
+
+<workspace>/packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:56: ProjectRuntimeError
+______ test_cached_capture_rejects_head_commit_change_with_identical_tree ______
+
+staged_project = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_cached_capture_reje...manifest_digest='', policy_bundle=None, policy_paths=(), policy_manifest_digest='', candidate_policy_change_digest=''))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_cached_capture_rejects_he0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d54c3b0>
+
+    def test_cached_capture_rejects_head_commit_change_with_identical_tree(staged_project, tmp_path: Path, monkeypatch) -> None:
+        root, _resolution = staged_project
+        monkeypatch.chdir(root)
+        destination = tmp_path / "cached-race"
+        destination.mkdir()
+        original = runner._git_tree_identity
+    
+        def move_head_after_index(repository: Path, revision: str):
+            result = original(repository, revision)
+            if revision == "index":
+                previous = _git(root, "rev-parse", "HEAD")
+                tree = _git(root, "rev-parse", "HEAD^{tree}")
+                commit = _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit-tree", tree, "-p", previous, "-m", "same tree new commit")
+                _git(root, "update-ref", "HEAD", commit)
+            return result
+    
+        monkeypatch.setattr(runner, "_git_tree_identity", move_head_after_index)
+>       assert runner._cached_analysis_snapshot([Path("renamed.py")], destination) is None
+E       AssertionError: assert CachedAnalysisSnapshot(repository=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/py...e='ae7df65c33f278677e0d7eb633690c0053ddf0b7', index_tree='14dd0b830997655370b92b481566b173120d1c06', caller_prefix='')) is None
+E        +  where CachedAnalysisSnapshot(repository=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/py...e='ae7df65c33f278677e0d7eb633690c0053ddf0b7', index_tree='14dd0b830997655370b92b481566b173120d1c06', caller_prefix='')) = <function _cached_analysis_snapshot at 0x10d280ca0>([PosixPath('renamed.py')], PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-254/test_cached_capture_rejects_he0/cached-race'))
+E        +    where <function _cached_analysis_snapshot at 0x10d280ca0> = runner._cached_analysis_snapshot
+
+<workspace>/tests/unit/specfact_code_review/run/test_runtime_vcs.py:229: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_real_cached_analysis_snapshot_preserves_portable_vcs_provenance[head]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_real_cached_analysis_snapshot_preserves_portable_vcs_provenance[index]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_cached_capture_rejects_head_commit_change_with_identical_tree
+======================= 3 failed, 9 deselected in 0.57s ========================

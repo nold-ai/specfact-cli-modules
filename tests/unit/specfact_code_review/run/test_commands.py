@@ -1793,3 +1793,15 @@ def test_run_command_rejects_missing_files() -> None:
 
     assert result.exit_code == 2
     assert "not found" in result.output.lower()
+
+
+def test_normalized_simplify_request_preserves_project_runtime_paths() -> None:
+    request = run_commands.ReviewRunRequest(
+        files=[],
+        focus_facets=("simplify",),
+        project_config=Path("project.toml"),
+        project_runtime=Path("project-runtime.json"),
+    )
+    normalized = run_commands._normalize_review_request(request)
+    assert normalized.project_config == request.project_config
+    assert normalized.project_runtime == request.project_runtime

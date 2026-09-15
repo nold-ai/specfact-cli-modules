@@ -1,0 +1,48 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 19 items
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py ............ [ 63%]
+.....FF                                                                  [100%]
+
+=================================== FAILURES ===================================
+_ test_source_package_named_venv_is_retained_but_real_environments_are_excluded _
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-197/test_source_package_named_venv0')
+
+    def test_source_package_named_venv_is_retained_but_real_environments_are_excluded(tmp_path: Path) -> None:
+        source = tmp_path / "project"
+        package = source / "src/customer/venv"
+        package.mkdir(parents=True)
+        (package / "core.py").write_text("VALUE = 1\n")
+        before = source_identity(source)
+        (package / "core.py").write_text("VALUE = 2\n")
+>       assert source_identity(source) != before
+E       AssertionError: assert 'sha256:9c24107acb765ef69a15395d1db9b0eaa009aa470c2f64214636a3b24a8ce076' != 'sha256:9c24107acb765ef69a15395d1db9b0eaa009aa470c2f64214636a3b24a8ce076'
+E        +  where 'sha256:9c24107acb765ef69a15395d1db9b0eaa009aa470c2f64214636a3b24a8ce076' = source_identity(PosixPath('<temporary>/pytest-of-user/pytest-197/test_source_package_named_venv0/project'))
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:146: AssertionError
+___________ test_alias_cannot_import_actual_custom_named_environment ___________
+
+tmp_path = PosixPath('<temporary>/pytest-of-user/pytest-197/test_alias_cannot_import_actua0')
+
+    def test_alias_cannot_import_actual_custom_named_environment(tmp_path: Path) -> None:
+        source = tmp_path / "project"
+        environment = source / "custom-python"
+        environment.mkdir(parents=True)
+        (environment / "pyvenv.cfg").write_text("home = /usr/bin\n")
+        (environment / "private.txt").write_text("excluded fixture")
+        (source / "alias.txt").symlink_to("custom-python/private.txt")
+>       with pytest.raises(ProjectRuntimeError, match="symlink_excluded"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:165: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_source_package_named_venv_is_retained_but_real_environments_are_excluded
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_alias_cannot_import_actual_custom_named_environment
+========================= 2 failed, 17 passed in 0.75s =========================

@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 63 items / 61 deselected / 2 selected
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py FF          [100%]
+
+=================================== FAILURES ===================================
+_ test_startup_rejection_has_distinct_exit_despite_analyzer_shaped_stdout[pylint] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pylint'
+
+    @pytest.mark.parametrize("module", ["pylint", "pytest-observe"])
+    def test_startup_rejection_has_distinct_exit_despite_analyzer_shaped_stdout(
+        collision_runtime: dict[str, Path], module: str
+    ) -> None:
+        completed = _probe_member_dispatch(
+            collision_runtime, module, "print('[]'); runpy._run_code = lambda *a, **k: None"
+        )
+>       assert completed.returncode == 78
+E       assert 1 == 78
+E        +  where 1 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...ntimeError: project_worker_startup_import_state_changed; target .pth hooks must preserve protected import machinery\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:546: AssertionError
+_ test_startup_rejection_has_distinct_exit_despite_analyzer_shaped_stdout[pytest-observe] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pytest-observe'
+
+    @pytest.mark.parametrize("module", ["pylint", "pytest-observe"])
+    def test_startup_rejection_has_distinct_exit_despite_analyzer_shaped_stdout(
+        collision_runtime: dict[str, Path], module: str
+    ) -> None:
+        completed = _probe_member_dispatch(
+            collision_runtime, module, "print('[]'); runpy._run_code = lambda *a, **k: None"
+        )
+>       assert completed.returncode == 78
+E       assert 1 == 78
+E        +  where 1 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...ntimeError: project_worker_startup_import_state_changed; target .pth hooks must preserve protected import machinery\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:546: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_startup_rejection_has_distinct_exit_despite_analyzer_shaped_stdout[pylint]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_startup_rejection_has_distinct_exit_despite_analyzer_shaped_stdout[pytest-observe]
+======================= 2 failed, 61 deselected in 0.21s =======================

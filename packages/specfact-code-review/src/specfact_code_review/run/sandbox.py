@@ -57,6 +57,7 @@ class SnapshotInvocationContext:
     control_root: Path | None
     environment_id: str = ""
     reserved_import_prefixes: tuple[str, ...] = _DEFAULT_RESERVED_IMPORT_PREFIXES
+    import_domain: Literal["sealed", "portable"] = "sealed"
 
     @property
     def digest(self) -> str:
@@ -67,6 +68,7 @@ class SnapshotInvocationContext:
                 "config_roots": [str(path) for path in self.config_roots],
                 "control_root": None if self.control_root is None else str(self.control_root),
                 "interpreter": self.interpreter,
+                "import_domain": self.import_domain,
                 "environment_id": self.environment_id,
                 "member": self.member,
                 "network": self.network,
@@ -623,6 +625,10 @@ def _signed_reserved_import_prefixes(environment_id: str) -> frozenset[str]:
 def preflight_reserved_imports(context: SnapshotInvocationContext) -> PreflightResult:
     """Reject top-level module, stub, package, or namespace-package collisions."""
 
+    if context.import_domain == "portable":
+        # The sealed bootstrap excludes the snapshot from supervisor startup.
+        # Target imports occur only in a separate offline child interpreter.
+        return PreflightResult("PASS")
     try:
         prefixes = _signed_reserved_import_prefixes(context.environment_id) | frozenset(
             context.reserved_import_prefixes

@@ -1,0 +1,217 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 34 items / 19 deselected / 15 selected
+
+tests/unit/test_external_capsule_corpus.py FFFFFFFFFFFF...               [100%]
+
+=================================== FAILURES ===================================
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0401-7-cold] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109048c30>
+phase = 'cold', line = 7, rule = 'E0401'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0401-7-warm] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1090482b0>
+phase = 'warm', line = 7, rule = 'E0401'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0401-9-cold] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109076450>
+phase = 'cold', line = 9, rule = 'E0401'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0401-9-warm] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108fa3ac0>
+phase = 'warm', line = 9, rule = 'E0401'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0401-10-cold] _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108fa3680>
+phase = 'cold', line = 10, rule = 'E0401'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0401-10-warm] _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10905e350>
+phase = 'warm', line = 10, rule = 'E0401'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0611-7-cold] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10905d250>
+phase = 'cold', line = 7, rule = 'E0611'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0611-7-warm] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1090bd6d0>
+phase = 'warm', line = 7, rule = 'E0611'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0611-9-cold] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1090bef30>
+phase = 'cold', line = 9, rule = 'E0611'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0611-9-warm] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109064590>
+phase = 'warm', line = 9, rule = 'E0611'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0611-10-cold] _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno10')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109065470>
+phase = 'cold', line = 10, rule = 'E0611'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+_____ test_poetry_corpus_rejects_known_import_misresolution[E0611-10-warm] _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-448/test_poetry_corpus_rejects_kno11')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1091065b0>
+phase = 'warm', line = 10, rule = 'E0611'
+
+    @pytest.mark.parametrize("phase", ["cold", "warm"])
+    @pytest.mark.parametrize("line", [7, 9, 10])
+    @pytest.mark.parametrize("rule", ["E0401", "E0611"])
+    def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkeypatch, phase, line, rule) -> None:
+        finding = {"tool": "pylint", "rule": rule, "file": "tests/utils/test_extras.py", "line": line}
+>       with pytest.raises(ValueError, match="verified import"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:259: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0401-7-cold]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0401-7-warm]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0401-9-cold]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0401-9-warm]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0401-10-cold]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0401-10-warm]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0611-7-cold]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0611-7-warm]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0611-9-cold]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0611-9-warm]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0611-10-cold]
+FAILED tests/unit/test_external_capsule_corpus.py::test_poetry_corpus_rejects_known_import_misresolution[E0611-10-warm]
+================= 12 failed, 3 passed, 19 deselected in 0.11s ==================

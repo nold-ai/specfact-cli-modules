@@ -1,0 +1,645 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 31 items / 23 deselected / 8 selected
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py FF.FFF.F   [100%]
+
+=================================== FAILURES ===================================
+_ test_portable_range_keeps_absent_selection_out_of_unrelated_findings[False-deleted] _
+
+tmp_path = PosixPath('<temporary>/test_portable_range_keeps_abse0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108f7b6f0>
+change = 'deleted', preparation_fails = False
+
+    @pytest.mark.parametrize("change", ["deleted", "added", "metadata", "empty"])
+    @pytest.mark.parametrize("preparation_fails", [False, True])
+    def test_portable_range_keeps_absent_selection_out_of_unrelated_findings(
+        tmp_path: Path, monkeypatch, change: str, preparation_fails: bool
+    ) -> None:
+        source = b"def check():\n    return missing_name\n"
+        base_contents = {"unrelated.py": source, "pyproject.toml": b"[project]\nname='fixture'\n"}
+        head_contents = dict(base_contents)
+        selected = () if change == "empty" else ("pyproject.toml",)
+        if change in {"deleted", "added"}:
+            selected = (f"{change}.py",)
+            (base_contents if change == "deleted" else head_contents)[selected[0]] = source
+            (head_contents if change == "deleted" else base_contents).pop("pyproject.toml")
+        snapshots = []
+        for side, contents in (("base", base_contents), ("head", head_contents)):
+            root = tmp_path / side
+            root.mkdir()
+            for name, content in contents.items():
+                (root / name).write_bytes(content)
+            snapshots.append(SimpleNamespace(root=root, contents=contents))
+        resolution = SimpleNamespace(
+            base_snapshot=snapshots[0],
+            head_snapshot=snapshots[1],
+            selected_paths=selected,
+            path_statuses={selected[0]: "D" if change == "deleted" else "A"} if change in {"deleted", "added"} else {},
+        )
+        artifact = tmp_path / "artifact"
+        artifact.mkdir()
+        prepared = PreparedRuntime(artifact, artifact / "project-runtime.json", "sha256:" + "b" * 64, {"inventory": {}})
+
+        def prepare(plan, **_context):
+            if preparation_fails and not (plan.root / "pyproject.toml").exists():
+                raise ProjectRuntimeError("project_fixture_preparation_unavailable")
+            return prepared
+
+        executed = []
+
+        def analyze(request):
+            findings = []
+            if request.member == "ruff":
+                for path in request.files:
+                    assert path.read_bytes() == source
+                    relative = path.relative_to(request.snapshot_root).as_posix()
+                    executed.append(relative)
+                    findings.append(
+                        {
+                            "category": "style",
+                            "severity": "warning",
+                            "tool": "ruff",
+                            "rule": "F821",
+                            "file": relative,
+                            "line": 2,
+                            "message": "Undefined name missing_name",
+                            "fixable": False,
+                        }
+                    )
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": findings}
+
+        monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare)
+        monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_context: prepared)
+        monkeypatch.setattr(runner, "_execute_capsule_member", analyze)
+        runtime = runner.CapsuleRuntime(
+            tmp_path,
+            "sha256:" + "a" * 64,
+            "linux-x86_64-cp312",
+            "python",
+            "bootstrap",
+            runner.BubblewrapIdentity(
+                path="bwrap",
+                format="ELF",
+                architecture="x86_64",
+                linkage="static",
+                interpreter=(),
+                needed=(),
+                sha256="a" * 64,
+                descriptor_digest="b" * 64,
+            ),
+        )
+        report = portable_snapshot.run_project_scope_pair(
+            resolution,
+            runtime=runtime,
+            options=runner.ReviewOptions(no_tests=True),
+            scope_evidence={"assurance_kind": "range_preview"},
+        )
+        expected = {
+            "deleted": (["deleted.py"], [("deleted.py", "fixed")]),
+            "added": (["added.py"], [("added.py", "introduced")]),
+            "metadata": (["unrelated.py", "unrelated.py"], [("unrelated.py", "unchanged")]),
+            "empty": ([], []),
+        }
+        expected_files, expected_findings = expected[change]
+>       assert [(finding.file, finding.differential_state) for finding in report.findings] == expected_findings
+E       AssertionError: assert [('unrelated....py', 'fixed')] == [('deleted.py', 'fixed')]
+E
+E         At index 0 diff: ('unrelated.py', 'introduced') != ('deleted.py', 'fixed')
+E         Left contains one more item: ('deleted.py', 'fixed')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:177: AssertionError
+_ test_portable_range_keeps_absent_selection_out_of_unrelated_findings[False-added] _
+
+tmp_path = PosixPath('<temporary>/test_portable_range_keeps_abse1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1096f0e90>
+change = 'added', preparation_fails = False
+
+    @pytest.mark.parametrize("change", ["deleted", "added", "metadata", "empty"])
+    @pytest.mark.parametrize("preparation_fails", [False, True])
+    def test_portable_range_keeps_absent_selection_out_of_unrelated_findings(
+        tmp_path: Path, monkeypatch, change: str, preparation_fails: bool
+    ) -> None:
+        source = b"def check():\n    return missing_name\n"
+        base_contents = {"unrelated.py": source, "pyproject.toml": b"[project]\nname='fixture'\n"}
+        head_contents = dict(base_contents)
+        selected = () if change == "empty" else ("pyproject.toml",)
+        if change in {"deleted", "added"}:
+            selected = (f"{change}.py",)
+            (base_contents if change == "deleted" else head_contents)[selected[0]] = source
+            (head_contents if change == "deleted" else base_contents).pop("pyproject.toml")
+        snapshots = []
+        for side, contents in (("base", base_contents), ("head", head_contents)):
+            root = tmp_path / side
+            root.mkdir()
+            for name, content in contents.items():
+                (root / name).write_bytes(content)
+            snapshots.append(SimpleNamespace(root=root, contents=contents))
+        resolution = SimpleNamespace(
+            base_snapshot=snapshots[0],
+            head_snapshot=snapshots[1],
+            selected_paths=selected,
+            path_statuses={selected[0]: "D" if change == "deleted" else "A"} if change in {"deleted", "added"} else {},
+        )
+        artifact = tmp_path / "artifact"
+        artifact.mkdir()
+        prepared = PreparedRuntime(artifact, artifact / "project-runtime.json", "sha256:" + "b" * 64, {"inventory": {}})
+
+        def prepare(plan, **_context):
+            if preparation_fails and not (plan.root / "pyproject.toml").exists():
+                raise ProjectRuntimeError("project_fixture_preparation_unavailable")
+            return prepared
+
+        executed = []
+
+        def analyze(request):
+            findings = []
+            if request.member == "ruff":
+                for path in request.files:
+                    assert path.read_bytes() == source
+                    relative = path.relative_to(request.snapshot_root).as_posix()
+                    executed.append(relative)
+                    findings.append(
+                        {
+                            "category": "style",
+                            "severity": "warning",
+                            "tool": "ruff",
+                            "rule": "F821",
+                            "file": relative,
+                            "line": 2,
+                            "message": "Undefined name missing_name",
+                            "fixable": False,
+                        }
+                    )
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": findings}
+
+        monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare)
+        monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_context: prepared)
+        monkeypatch.setattr(runner, "_execute_capsule_member", analyze)
+        runtime = runner.CapsuleRuntime(
+            tmp_path,
+            "sha256:" + "a" * 64,
+            "linux-x86_64-cp312",
+            "python",
+            "bootstrap",
+            runner.BubblewrapIdentity(
+                path="bwrap",
+                format="ELF",
+                architecture="x86_64",
+                linkage="static",
+                interpreter=(),
+                needed=(),
+                sha256="a" * 64,
+                descriptor_digest="b" * 64,
+            ),
+        )
+        report = portable_snapshot.run_project_scope_pair(
+            resolution,
+            runtime=runtime,
+            options=runner.ReviewOptions(no_tests=True),
+            scope_evidence={"assurance_kind": "range_preview"},
+        )
+        expected = {
+            "deleted": (["deleted.py"], [("deleted.py", "fixed")]),
+            "added": (["added.py"], [("added.py", "introduced")]),
+            "metadata": (["unrelated.py", "unrelated.py"], [("unrelated.py", "unchanged")]),
+            "empty": ([], []),
+        }
+        expected_files, expected_findings = expected[change]
+>       assert [(finding.file, finding.differential_state) for finding in report.findings] == expected_findings
+E       AssertionError: assert [('added.py',...py', 'fixed')] == [('added.py', 'introduced')]
+E
+E         Left contains one more item: ('unrelated.py', 'fixed')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:177: AssertionError
+_ test_portable_range_keeps_absent_selection_out_of_unrelated_findings[False-empty] _
+
+tmp_path = PosixPath('<temporary>/test_portable_range_keeps_abse3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ae738a0>
+change = 'empty', preparation_fails = False
+
+    @pytest.mark.parametrize("change", ["deleted", "added", "metadata", "empty"])
+    @pytest.mark.parametrize("preparation_fails", [False, True])
+    def test_portable_range_keeps_absent_selection_out_of_unrelated_findings(
+        tmp_path: Path, monkeypatch, change: str, preparation_fails: bool
+    ) -> None:
+        source = b"def check():\n    return missing_name\n"
+        base_contents = {"unrelated.py": source, "pyproject.toml": b"[project]\nname='fixture'\n"}
+        head_contents = dict(base_contents)
+        selected = () if change == "empty" else ("pyproject.toml",)
+        if change in {"deleted", "added"}:
+            selected = (f"{change}.py",)
+            (base_contents if change == "deleted" else head_contents)[selected[0]] = source
+            (head_contents if change == "deleted" else base_contents).pop("pyproject.toml")
+        snapshots = []
+        for side, contents in (("base", base_contents), ("head", head_contents)):
+            root = tmp_path / side
+            root.mkdir()
+            for name, content in contents.items():
+                (root / name).write_bytes(content)
+            snapshots.append(SimpleNamespace(root=root, contents=contents))
+        resolution = SimpleNamespace(
+            base_snapshot=snapshots[0],
+            head_snapshot=snapshots[1],
+            selected_paths=selected,
+            path_statuses={selected[0]: "D" if change == "deleted" else "A"} if change in {"deleted", "added"} else {},
+        )
+        artifact = tmp_path / "artifact"
+        artifact.mkdir()
+        prepared = PreparedRuntime(artifact, artifact / "project-runtime.json", "sha256:" + "b" * 64, {"inventory": {}})
+
+        def prepare(plan, **_context):
+            if preparation_fails and not (plan.root / "pyproject.toml").exists():
+                raise ProjectRuntimeError("project_fixture_preparation_unavailable")
+            return prepared
+
+        executed = []
+
+        def analyze(request):
+            findings = []
+            if request.member == "ruff":
+                for path in request.files:
+                    assert path.read_bytes() == source
+                    relative = path.relative_to(request.snapshot_root).as_posix()
+                    executed.append(relative)
+                    findings.append(
+                        {
+                            "category": "style",
+                            "severity": "warning",
+                            "tool": "ruff",
+                            "rule": "F821",
+                            "file": relative,
+                            "line": 2,
+                            "message": "Undefined name missing_name",
+                            "fixable": False,
+                        }
+                    )
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": findings}
+
+        monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare)
+        monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_context: prepared)
+        monkeypatch.setattr(runner, "_execute_capsule_member", analyze)
+        runtime = runner.CapsuleRuntime(
+            tmp_path,
+            "sha256:" + "a" * 64,
+            "linux-x86_64-cp312",
+            "python",
+            "bootstrap",
+            runner.BubblewrapIdentity(
+                path="bwrap",
+                format="ELF",
+                architecture="x86_64",
+                linkage="static",
+                interpreter=(),
+                needed=(),
+                sha256="a" * 64,
+                descriptor_digest="b" * 64,
+            ),
+        )
+        report = portable_snapshot.run_project_scope_pair(
+            resolution,
+            runtime=runtime,
+            options=runner.ReviewOptions(no_tests=True),
+            scope_evidence={"assurance_kind": "range_preview"},
+        )
+        expected = {
+            "deleted": (["deleted.py"], [("deleted.py", "fixed")]),
+            "added": (["added.py"], [("added.py", "introduced")]),
+            "metadata": (["unrelated.py", "unrelated.py"], [("unrelated.py", "unchanged")]),
+            "empty": ([], []),
+        }
+        expected_files, expected_findings = expected[change]
+>       assert [(finding.file, finding.differential_state) for finding in report.findings] == expected_findings
+E       AssertionError: assert [('unrelated.... 'unchanged')] == []
+E
+E         Left contains one more item: ('unrelated.py', 'unchanged')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:177: AssertionError
+_ test_portable_range_keeps_absent_selection_out_of_unrelated_findings[True-deleted] _
+
+tmp_path = PosixPath('<temporary>/test_portable_range_keeps_abse4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ae73df0>
+change = 'deleted', preparation_fails = True
+
+    @pytest.mark.parametrize("change", ["deleted", "added", "metadata", "empty"])
+    @pytest.mark.parametrize("preparation_fails", [False, True])
+    def test_portable_range_keeps_absent_selection_out_of_unrelated_findings(
+        tmp_path: Path, monkeypatch, change: str, preparation_fails: bool
+    ) -> None:
+        source = b"def check():\n    return missing_name\n"
+        base_contents = {"unrelated.py": source, "pyproject.toml": b"[project]\nname='fixture'\n"}
+        head_contents = dict(base_contents)
+        selected = () if change == "empty" else ("pyproject.toml",)
+        if change in {"deleted", "added"}:
+            selected = (f"{change}.py",)
+            (base_contents if change == "deleted" else head_contents)[selected[0]] = source
+            (head_contents if change == "deleted" else base_contents).pop("pyproject.toml")
+        snapshots = []
+        for side, contents in (("base", base_contents), ("head", head_contents)):
+            root = tmp_path / side
+            root.mkdir()
+            for name, content in contents.items():
+                (root / name).write_bytes(content)
+            snapshots.append(SimpleNamespace(root=root, contents=contents))
+        resolution = SimpleNamespace(
+            base_snapshot=snapshots[0],
+            head_snapshot=snapshots[1],
+            selected_paths=selected,
+            path_statuses={selected[0]: "D" if change == "deleted" else "A"} if change in {"deleted", "added"} else {},
+        )
+        artifact = tmp_path / "artifact"
+        artifact.mkdir()
+        prepared = PreparedRuntime(artifact, artifact / "project-runtime.json", "sha256:" + "b" * 64, {"inventory": {}})
+
+        def prepare(plan, **_context):
+            if preparation_fails and not (plan.root / "pyproject.toml").exists():
+                raise ProjectRuntimeError("project_fixture_preparation_unavailable")
+            return prepared
+
+        executed = []
+
+        def analyze(request):
+            findings = []
+            if request.member == "ruff":
+                for path in request.files:
+                    assert path.read_bytes() == source
+                    relative = path.relative_to(request.snapshot_root).as_posix()
+                    executed.append(relative)
+                    findings.append(
+                        {
+                            "category": "style",
+                            "severity": "warning",
+                            "tool": "ruff",
+                            "rule": "F821",
+                            "file": relative,
+                            "line": 2,
+                            "message": "Undefined name missing_name",
+                            "fixable": False,
+                        }
+                    )
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": findings}
+
+        monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare)
+        monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_context: prepared)
+        monkeypatch.setattr(runner, "_execute_capsule_member", analyze)
+        runtime = runner.CapsuleRuntime(
+            tmp_path,
+            "sha256:" + "a" * 64,
+            "linux-x86_64-cp312",
+            "python",
+            "bootstrap",
+            runner.BubblewrapIdentity(
+                path="bwrap",
+                format="ELF",
+                architecture="x86_64",
+                linkage="static",
+                interpreter=(),
+                needed=(),
+                sha256="a" * 64,
+                descriptor_digest="b" * 64,
+            ),
+        )
+        report = portable_snapshot.run_project_scope_pair(
+            resolution,
+            runtime=runtime,
+            options=runner.ReviewOptions(no_tests=True),
+            scope_evidence={"assurance_kind": "range_preview"},
+        )
+        expected = {
+            "deleted": (["deleted.py"], [("deleted.py", "fixed")]),
+            "added": (["added.py"], [("added.py", "introduced")]),
+            "metadata": (["unrelated.py", "unrelated.py"], [("unrelated.py", "unchanged")]),
+            "empty": ([], []),
+        }
+        expected_files, expected_findings = expected[change]
+>       assert [(finding.file, finding.differential_state) for finding in report.findings] == expected_findings
+E       AssertionError: assert [('unrelated....py', 'fixed')] == [('deleted.py', 'fixed')]
+E
+E         At index 0 diff: ('unrelated.py', 'introduced') != ('deleted.py', 'fixed')
+E         Left contains one more item: ('deleted.py', 'fixed')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:177: AssertionError
+_ test_portable_range_keeps_absent_selection_out_of_unrelated_findings[True-added] _
+
+tmp_path = PosixPath('<temporary>/test_portable_range_keeps_abse5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10afab750>
+change = 'added', preparation_fails = True
+
+    @pytest.mark.parametrize("change", ["deleted", "added", "metadata", "empty"])
+    @pytest.mark.parametrize("preparation_fails", [False, True])
+    def test_portable_range_keeps_absent_selection_out_of_unrelated_findings(
+        tmp_path: Path, monkeypatch, change: str, preparation_fails: bool
+    ) -> None:
+        source = b"def check():\n    return missing_name\n"
+        base_contents = {"unrelated.py": source, "pyproject.toml": b"[project]\nname='fixture'\n"}
+        head_contents = dict(base_contents)
+        selected = () if change == "empty" else ("pyproject.toml",)
+        if change in {"deleted", "added"}:
+            selected = (f"{change}.py",)
+            (base_contents if change == "deleted" else head_contents)[selected[0]] = source
+            (head_contents if change == "deleted" else base_contents).pop("pyproject.toml")
+        snapshots = []
+        for side, contents in (("base", base_contents), ("head", head_contents)):
+            root = tmp_path / side
+            root.mkdir()
+            for name, content in contents.items():
+                (root / name).write_bytes(content)
+            snapshots.append(SimpleNamespace(root=root, contents=contents))
+        resolution = SimpleNamespace(
+            base_snapshot=snapshots[0],
+            head_snapshot=snapshots[1],
+            selected_paths=selected,
+            path_statuses={selected[0]: "D" if change == "deleted" else "A"} if change in {"deleted", "added"} else {},
+        )
+        artifact = tmp_path / "artifact"
+        artifact.mkdir()
+        prepared = PreparedRuntime(artifact, artifact / "project-runtime.json", "sha256:" + "b" * 64, {"inventory": {}})
+
+        def prepare(plan, **_context):
+            if preparation_fails and not (plan.root / "pyproject.toml").exists():
+                raise ProjectRuntimeError("project_fixture_preparation_unavailable")
+            return prepared
+
+        executed = []
+
+        def analyze(request):
+            findings = []
+            if request.member == "ruff":
+                for path in request.files:
+                    assert path.read_bytes() == source
+                    relative = path.relative_to(request.snapshot_root).as_posix()
+                    executed.append(relative)
+                    findings.append(
+                        {
+                            "category": "style",
+                            "severity": "warning",
+                            "tool": "ruff",
+                            "rule": "F821",
+                            "file": relative,
+                            "line": 2,
+                            "message": "Undefined name missing_name",
+                            "fixable": False,
+                        }
+                    )
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": findings}
+
+        monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare)
+        monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_context: prepared)
+        monkeypatch.setattr(runner, "_execute_capsule_member", analyze)
+        runtime = runner.CapsuleRuntime(
+            tmp_path,
+            "sha256:" + "a" * 64,
+            "linux-x86_64-cp312",
+            "python",
+            "bootstrap",
+            runner.BubblewrapIdentity(
+                path="bwrap",
+                format="ELF",
+                architecture="x86_64",
+                linkage="static",
+                interpreter=(),
+                needed=(),
+                sha256="a" * 64,
+                descriptor_digest="b" * 64,
+            ),
+        )
+        report = portable_snapshot.run_project_scope_pair(
+            resolution,
+            runtime=runtime,
+            options=runner.ReviewOptions(no_tests=True),
+            scope_evidence={"assurance_kind": "range_preview"},
+        )
+        expected = {
+            "deleted": (["deleted.py"], [("deleted.py", "fixed")]),
+            "added": (["added.py"], [("added.py", "introduced")]),
+            "metadata": (["unrelated.py", "unrelated.py"], [("unrelated.py", "unchanged")]),
+            "empty": ([], []),
+        }
+        expected_files, expected_findings = expected[change]
+>       assert [(finding.file, finding.differential_state) for finding in report.findings] == expected_findings
+E       AssertionError: assert [('added.py',...py', 'fixed')] == [('added.py', 'introduced')]
+E
+E         Left contains one more item: ('unrelated.py', 'fixed')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:177: AssertionError
+_ test_portable_range_keeps_absent_selection_out_of_unrelated_findings[True-empty] _
+
+tmp_path = PosixPath('<temporary>/test_portable_range_keeps_abse7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10afae4e0>
+change = 'empty', preparation_fails = True
+
+    @pytest.mark.parametrize("change", ["deleted", "added", "metadata", "empty"])
+    @pytest.mark.parametrize("preparation_fails", [False, True])
+    def test_portable_range_keeps_absent_selection_out_of_unrelated_findings(
+        tmp_path: Path, monkeypatch, change: str, preparation_fails: bool
+    ) -> None:
+        source = b"def check():\n    return missing_name\n"
+        base_contents = {"unrelated.py": source, "pyproject.toml": b"[project]\nname='fixture'\n"}
+        head_contents = dict(base_contents)
+        selected = () if change == "empty" else ("pyproject.toml",)
+        if change in {"deleted", "added"}:
+            selected = (f"{change}.py",)
+            (base_contents if change == "deleted" else head_contents)[selected[0]] = source
+            (head_contents if change == "deleted" else base_contents).pop("pyproject.toml")
+        snapshots = []
+        for side, contents in (("base", base_contents), ("head", head_contents)):
+            root = tmp_path / side
+            root.mkdir()
+            for name, content in contents.items():
+                (root / name).write_bytes(content)
+            snapshots.append(SimpleNamespace(root=root, contents=contents))
+        resolution = SimpleNamespace(
+            base_snapshot=snapshots[0],
+            head_snapshot=snapshots[1],
+            selected_paths=selected,
+            path_statuses={selected[0]: "D" if change == "deleted" else "A"} if change in {"deleted", "added"} else {},
+        )
+        artifact = tmp_path / "artifact"
+        artifact.mkdir()
+        prepared = PreparedRuntime(artifact, artifact / "project-runtime.json", "sha256:" + "b" * 64, {"inventory": {}})
+
+        def prepare(plan, **_context):
+            if preparation_fails and not (plan.root / "pyproject.toml").exists():
+                raise ProjectRuntimeError("project_fixture_preparation_unavailable")
+            return prepared
+
+        executed = []
+
+        def analyze(request):
+            findings = []
+            if request.member == "ruff":
+                for path in request.files:
+                    assert path.read_bytes() == source
+                    relative = path.relative_to(request.snapshot_root).as_posix()
+                    executed.append(relative)
+                    findings.append(
+                        {
+                            "category": "style",
+                            "severity": "warning",
+                            "tool": "ruff",
+                            "rule": "F821",
+                            "file": relative,
+                            "line": 2,
+                            "message": "Undefined name missing_name",
+                            "fixable": False,
+                        }
+                    )
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": findings}
+
+        monkeypatch.setattr(portable_snapshot, "prepare_runtime", prepare)
+        monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_context: prepared)
+        monkeypatch.setattr(runner, "_execute_capsule_member", analyze)
+        runtime = runner.CapsuleRuntime(
+            tmp_path,
+            "sha256:" + "a" * 64,
+            "linux-x86_64-cp312",
+            "python",
+            "bootstrap",
+            runner.BubblewrapIdentity(
+                path="bwrap",
+                format="ELF",
+                architecture="x86_64",
+                linkage="static",
+                interpreter=(),
+                needed=(),
+                sha256="a" * 64,
+                descriptor_digest="b" * 64,
+            ),
+        )
+        report = portable_snapshot.run_project_scope_pair(
+            resolution,
+            runtime=runtime,
+            options=runner.ReviewOptions(no_tests=True),
+            scope_evidence={"assurance_kind": "range_preview"},
+        )
+        expected = {
+            "deleted": (["deleted.py"], [("deleted.py", "fixed")]),
+            "added": (["added.py"], [("added.py", "introduced")]),
+            "metadata": (["unrelated.py", "unrelated.py"], [("unrelated.py", "unchanged")]),
+            "empty": ([], []),
+        }
+        expected_files, expected_findings = expected[change]
+>       assert [(finding.file, finding.differential_state) for finding in report.findings] == expected_findings
+E       AssertionError: assert [('unrelated.... 'unchanged')] == []
+E
+E         Left contains one more item: ('unrelated.py', 'unchanged')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:177: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_portable_range_keeps_absent_selection_out_of_unrelated_findings[False-deleted]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_portable_range_keeps_absent_selection_out_of_unrelated_findings[False-added]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_portable_range_keeps_absent_selection_out_of_unrelated_findings[False-empty]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_portable_range_keeps_absent_selection_out_of_unrelated_findings[True-deleted]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_portable_range_keeps_absent_selection_out_of_unrelated_findings[True-added]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_portable_range_keeps_absent_selection_out_of_unrelated_findings[True-empty]
+================== 6 failed, 2 passed, 23 deselected in 0.29s ==================

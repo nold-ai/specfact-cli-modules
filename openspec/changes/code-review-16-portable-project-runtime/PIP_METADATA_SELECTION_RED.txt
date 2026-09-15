@@ -1,0 +1,145 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 25 items
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py .......... [ 40%]
+..........FFFFF                                                          [100%]
+
+=================================== FAILURES ===================================
+_________________ test_unlocked_pip_tools_input_is_discovered __________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-142/test_unlocked_pip_tools_input_0')
+
+    def test_unlocked_pip_tools_input_is_discovered(tmp_path: Path) -> None:
+        (tmp_path / "requirements.in").write_text("requests<3\n")
+        plan = discover_project(tmp_path)
+>       assert plan.requirements == ("requirements.in",)
+E       AssertionError: assert () == ('requirements.in',)
+E
+E         Right contains one more item: 'requirements.in'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:171: AssertionError
+_______________ test_legacy_static_python_constraint_is_imported _______________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-142/test_legacy_static_python_cons0')
+
+    def test_legacy_static_python_constraint_is_imported(tmp_path: Path) -> None:
+        (tmp_path / "setup.cfg").write_text("[options]\npython_requires = >=3.11,<3.12\n")
+>       assert discover_project(tmp_path).requires_python == ">=3.11,<3.12"
+E       AssertionError: assert '' == '>=3.11,<3.12'
+E
+E         - >=3.11,<3.12
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:179: AssertionError
+________________ test_one_test_extra_is_prepared_automatically _________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-142/test_one_test_extra_is_prepare0')
+
+    def test_one_test_extra_is_prepared_automatically(tmp_path: Path) -> None:
+        (tmp_path / "pyproject.toml").write_text('[project.optional-dependencies]\ntest=["pytest"]\n')
+>       assert discover_project(tmp_path).extras == ("test",)
+E       AssertionError: assert () == ('test',)
+E
+E         Right contains one more item: 'test'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:184: AssertionError
+_______________ test_group_and_extra_require_explicit_selection ________________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-142/test_group_and_extra_require_e0')
+
+    def test_group_and_extra_require_explicit_selection(tmp_path: Path) -> None:
+        (tmp_path / "pyproject.toml").write_text('[project.optional-dependencies]\ntest=["pytest"]\n[dependency-groups]\ntest=["pytest<9"]\n')
+>       with pytest.raises(ProjectRuntimeError, match="test_dependencies_ambiguous"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:189: Failed
+___________ test_executable_source_mode_is_part_of_runtime_identity ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-142/test_executable_source_mode_is0')
+
+    def test_executable_source_mode_is_part_of_runtime_identity(tmp_path: Path) -> None:
+        script = tmp_path / "manage"
+        script.write_text("#!/usr/bin/env python\nprint('ready')\n")
+        script.chmod(0o644)
+        before = discover_project(tmp_path).identity
+        script.chmod(0o755)
+>       assert discover_project(tmp_path).identity != before
+E       AssertionError: assert 'sha256:66295c9551e122e11574b6c4b47fd29cb86881d7c0f9eac36ffe087770cf5fae' != 'sha256:66295c9551e122e11574b6c4b47fd29cb86881d7c0f9eac36ffe087770cf5fae'
+E        +  where 'sha256:66295c9551e122e11574b6c4b47fd29cb86881d7c0f9eac36ffe087770cf5fae' = ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-142/test_exe...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}).identity
+E        +    where ProjectPlan(root=PosixPath('<TMPDIR>/pytest-of-dom/pytest-142/test_exe...=(), extras=(), requirements=(), constraints=(), source_roots=('.',), native_libraries=(), inputs={}, pytest_config={}) = discover_project(PosixPath('<TMPDIR>/pytest-of-dom/pytest-142/test_executable_source_mode_is0'))
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:203: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_unlocked_pip_tools_input_is_discovered
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_legacy_static_python_constraint_is_imported
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_one_test_extra_is_prepared_automatically
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_group_and_extra_require_explicit_selection
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_executable_source_mode_is_part_of_runtime_identity
+========================= 5 failed, 20 passed in 0.34s =========================
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 32 items
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py .......... [ 31%]
+...............FF                                                        [ 84%]
+tests/unit/specfact_code_review/run/test_portable_snapshot.py ....F      [100%]
+
+=================================== FAILURES ===================================
+______ test_pylock_uses_native_pip_input_without_requirement_line_parsing ______
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-144/test_pylock_uses_native_pip_in0')
+
+    def test_pylock_uses_native_pip_input_without_requirement_line_parsing(tmp_path: Path) -> None:
+        (tmp_path / "pylock.toml").write_text('lock-version="1.0"\ncreated-by="pip"\n[[packages]]\nname="requests"\nversion="2.32.5"\n')
+>       assert discover_project(tmp_path).requirements == ("pylock.toml",)
+E       AssertionError: assert () == ('pylock.toml',)
+E
+E         Right contains one more item: 'pylock.toml'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:208: AssertionError
+_________ test_remote_requirement_include_diagnostic_omits_credentials _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-144/test_remote_requirement_includ0')
+
+    def test_remote_requirement_include_diagnostic_omits_credentials(tmp_path: Path) -> None:
+        (tmp_path / "requirements.txt").write_text("-r https://username:secret-token@example.invalid/requirements.txt\n")
+        with pytest.raises(ProjectRuntimeError) as error:
+            discover_project(tmp_path)
+>       assert "remote_include" in str(error.value)
+E       AssertionError: assert 'remote_include' in 'project_input_missing:https:/username:secret-token@example.invalid/requirements.txt'
+E        +  where 'project_input_missing:https:/username:secret-token@example.invalid/requirements.txt' = str(ProjectRuntimeError('project_input_missing:https:/username:secret-token@example.invalid/requirements.txt'))
+E        +    where ProjectRuntimeError('project_input_missing:https:/username:secret-token@example.invalid/requirements.txt') = <ExceptionInfo ProjectRuntimeError('project_input_missing:https:/username:secret-token@example.invalid/requirements.txt') tblen=6>.value
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:218: AssertionError
+____________ test_pip_tools_source_input_triggers_automatic_runtime ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-144/test_pip_tools_source_input_tr0')
+
+    def test_pip_tools_source_input_triggers_automatic_runtime(tmp_path: Path) -> None:
+        from types import SimpleNamespace
+        from specfact_code_review.run.portable_snapshot import project_runtime_requested
+
+        (tmp_path / "requirements.in").write_text("requests\n")
+>       assert project_runtime_requested(tmp_path, SimpleNamespace(project_config=None, project_runtime=None))
+E       AssertionError: assert False
+E        +  where False = <function project_runtime_requested at 0x10b19c9e0>(PosixPath('<TMPDIR>/pytest-of-dom/pytest-144/test_pip_tools_source_input_tr0'), namespace(project_config=None, project_runtime=None))
+E        +    where namespace(project_config=None, project_runtime=None) = <class 'types.SimpleNamespace'>(project_config=None, project_runtime=None)
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:126: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_pylock_uses_native_pip_input_without_requirement_line_parsing
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_remote_requirement_include_diagnostic_omits_credentials
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_pip_tools_source_input_triggers_automatic_runtime
+========================= 3 failed, 29 passed in 0.74s =========================

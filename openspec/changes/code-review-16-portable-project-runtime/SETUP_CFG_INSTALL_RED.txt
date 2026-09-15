@@ -1,0 +1,106 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <modules-checkout>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 18 items / 10 deselected / 8 selected
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py FFF...FF    [100%]
+
+=================================== FAILURES ===================================
+____ test_tool_only_setup_cfg_prepares_requirements_without_installing_root ____
+
+tmp_path = PosixPath('<temporary>/test_tool_only_setup_cfg_prepa0')
+
+    def test_tool_only_setup_cfg_prepares_requirements_without_installing_root(tmp_path: Path) -> None:
+        (tmp_path / "setup.cfg").write_text("[tool:pytest]\naddopts = --strict-markers\npythonpath = .\n")
+        (tmp_path / "requirements.txt").write_text("packaging\n")
+        (tmp_path / "constraints.txt").write_text("packaging>=1\n")
+        config = tmp_path / "review.toml"
+        config.write_text('manager="pip"\nconstraints=["constraints.txt"]\n')
+        before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
+        plan = discover_project(tmp_path, config_path=config)
+        assert plan.pytest_config["addopts"] == "--strict-markers"
+        assert plan.source_roots == (".",)
+        commands = install_commands(plan, python=sys.executable)
+        # pip's no-index dry run validates the actual adapter command without installs.
+        completed = subprocess.run(
+            [*commands[0], "--no-index", "--no-deps", "--dry-run"],
+            cwd=tmp_path, capture_output=True, text=True, check=False,
+        )
+>       assert completed.returncode == 0, completed.stdout + completed.stderr
+E       AssertionError: WARNING: The directory '/Users/dom/Library/Caches/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+E         ERROR: Directory '.' is not installable. Neither 'setup.py' nor 'pyproject.toml' found.
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['<test-environment>/bin/python', '-m', 'pip', 'install', '--disable-pip-v...should use sudo's -H flag.\nERROR: Directory '.' is not installable. Neither 'setup.py' nor 'pyproject.toml' found.\n").returncode
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:80: AssertionError
+_ test_setup_cfg_without_package_entrypoint_requires_no_install[[tool:pytest]\naddopts = --strict-markers\n] _
+
+tmp_path = PosixPath('<temporary>/test_setup_cfg_without_package0')
+contents = '[tool:pytest]\naddopts = --strict-markers\n'
+
+    @pytest.mark.parametrize("contents", ["[tool:pytest]\naddopts = --strict-markers\n", "[metadata]\nname = example\n"])
+    def test_setup_cfg_without_package_entrypoint_requires_no_install(tmp_path: Path, contents: str) -> None:
+        (tmp_path / "setup.cfg").write_text(contents)
+>       assert install_commands(discover_project(tmp_path), python="python") == ()
+E       AssertionError: assert (('python', '...check', '.'),) == ()
+E
+E         Left contains one more item: ('python', '-m', 'pip', 'install', '--disable-pip-version-check', '.')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:88: AssertionError
+_ test_setup_cfg_without_package_entrypoint_requires_no_install[[metadata]\nname = example\n] _
+
+tmp_path = PosixPath('<temporary>/test_setup_cfg_without_package1')
+contents = '[metadata]\nname = example\n'
+
+    @pytest.mark.parametrize("contents", ["[tool:pytest]\naddopts = --strict-markers\n", "[metadata]\nname = example\n"])
+    def test_setup_cfg_without_package_entrypoint_requires_no_install(tmp_path: Path, contents: str) -> None:
+        (tmp_path / "setup.cfg").write_text(contents)
+>       assert install_commands(discover_project(tmp_path), python="python") == ()
+E       AssertionError: assert (('python', '...check', '.'),) == ()
+E
+E         Left contains one more item: ('python', '-m', 'pip', 'install', '--disable-pip-version-check', '.')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:88: AssertionError
+______ test_pip_package_entrypoint_must_be_a_regular_file[pyproject.toml] ______
+
+tmp_path = PosixPath('<temporary>/test_pip_package_entrypoint_mu0')
+name = 'pyproject.toml'
+
+    @pytest.mark.parametrize("name", ["pyproject.toml", "setup.py"])
+    def test_pip_package_entrypoint_must_be_a_regular_file(tmp_path: Path, name: str) -> None:
+        (tmp_path / name).mkdir()
+>       assert install_commands(ProjectPlan(root=tmp_path, manager="pip"), python="python") == ()
+E       AssertionError: assert (('python', '...check', '.'),) == ()
+E
+E         Left contains one more item: ('python', '-m', 'pip', 'install', '--disable-pip-version-check', '.')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:108: AssertionError
+_________ test_pip_package_entrypoint_must_be_a_regular_file[setup.py] _________
+
+tmp_path = PosixPath('<temporary>/test_pip_package_entrypoint_mu1')
+name = 'setup.py'
+
+    @pytest.mark.parametrize("name", ["pyproject.toml", "setup.py"])
+    def test_pip_package_entrypoint_must_be_a_regular_file(tmp_path: Path, name: str) -> None:
+        (tmp_path / name).mkdir()
+>       assert install_commands(ProjectPlan(root=tmp_path, manager="pip"), python="python") == ()
+E       AssertionError: assert (('python', '...check', '.'),) == ()
+E
+E         Left contains one more item: ('python', '-m', 'pip', 'install', '--disable-pip-version-check', '.')
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_adapters.py:108: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_tool_only_setup_cfg_prepares_requirements_without_installing_root
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_setup_cfg_without_package_entrypoint_requires_no_install[[tool:pytest]\naddopts = --strict-markers\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_setup_cfg_without_package_entrypoint_requires_no_install[[metadata]\nname = example\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_pip_package_entrypoint_must_be_a_regular_file[pyproject.toml]
+FAILED tests/unit/specfact_code_review/run/test_runtime_adapters.py::test_pip_package_entrypoint_must_be_a_regular_file[setup.py]
+================== 5 failed, 3 passed, 10 deselected in 0.89s ==================

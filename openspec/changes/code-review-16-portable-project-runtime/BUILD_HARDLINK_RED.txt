@@ -1,0 +1,284 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-delivery
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py F [ 14%]
+FFFFF.                                                                   [100%]
+
+=================================== FAILURES ===================================
+______________ test_linked_payload_is_rejected_before_read[build] ______________
+
+runtime_fixture = (ProjectPlan(root=PosixPath('<PYTEST_TMP>/test_linked_payload_is_rejecte0/artifact/site-packages/customer.py'))
+tmp_path = PosixPath('<PYTEST_TMP>/test_linked_payload_is_rejecte0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107d76650>
+phase = 'build'
+
+    @pytest.mark.parametrize("phase", ["build", "seal", "load"])
+    def test_linked_payload_is_rejected_before_read(runtime_fixture, tmp_path: Path, monkeypatch, phase: str) -> None:
+        plan, artifact, payload = runtime_fixture
+        prepared = _seal(plan, artifact) if phase == "load" else None
+        os.link(payload, tmp_path / "external-alias")
+        _guard_bytes(monkeypatch, payload)
+>       with pytest.raises(ProjectRuntimeError, match="hardlink"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:46: Failed
+______________ test_linked_payload_is_rejected_before_read[seal] _______________
+
+runtime_fixture = (ProjectPlan(root=PosixPath('<PYTEST_TMP>/test_linked_payload_is_rejecte1/artifact/site-packages/customer.py'))
+tmp_path = PosixPath('<PYTEST_TMP>/test_linked_payload_is_rejecte1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107d75a70>
+phase = 'seal'
+
+    @pytest.mark.parametrize("phase", ["build", "seal", "load"])
+    def test_linked_payload_is_rejected_before_read(runtime_fixture, tmp_path: Path, monkeypatch, phase: str) -> None:
+        plan, artifact, payload = runtime_fixture
+        prepared = _seal(plan, artifact) if phase == "load" else None
+        os.link(payload, tmp_path / "external-alias")
+        _guard_bytes(monkeypatch, payload)
+        with pytest.raises(ProjectRuntimeError, match="hardlink"):
+            if phase == "build":
+                runtime_artifacts.validate_build_artifact(artifact)
+            elif phase == "seal":
+>               _seal(plan, artifact)
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:50:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:26: in _seal
+    return runtime_artifacts.seal_runtime(artifact, plan=plan, environment_id="test-abi", worker_identity="worker")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_artifacts.py:91: in seal_runtime
+    "payload": _payload_manifest(root),
+               ^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_artifacts.py:66: in _payload_manifest
+    entries[name] = {"kind": "file", "mode": stat.S_IMODE(mode), "digest": content_digest(path.read_bytes())}
+                                                                                          ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_linked_payload_is_rejecte1/artifact/site-packages/customer.py')
+
+    def read(path):
+        if path == forbidden:
+>           raise AssertionError("linked payload read before rejection")
+E           AssertionError: linked payload read before rejection
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:34: AssertionError
+______________ test_linked_payload_is_rejected_before_read[load] _______________
+
+runtime_fixture = (ProjectPlan(root=PosixPath('<PYTEST_TMP>/test_linked_payload_is_rejecte2/artifact/site-packages/customer.py'))
+tmp_path = PosixPath('<PYTEST_TMP>/test_linked_payload_is_rejecte2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107e69250>
+phase = 'load'
+
+    @pytest.mark.parametrize("phase", ["build", "seal", "load"])
+    def test_linked_payload_is_rejected_before_read(runtime_fixture, tmp_path: Path, monkeypatch, phase: str) -> None:
+        plan, artifact, payload = runtime_fixture
+        prepared = _seal(plan, artifact) if phase == "load" else None
+        os.link(payload, tmp_path / "external-alias")
+        _guard_bytes(monkeypatch, payload)
+        with pytest.raises(ProjectRuntimeError, match="hardlink"):
+            if phase == "build":
+                runtime_artifacts.validate_build_artifact(artifact)
+            elif phase == "seal":
+                _seal(plan, artifact)
+            else:
+>               runtime_artifacts.load_runtime(
+                    prepared.descriptor_path, plan=plan, environment_id="test-abi", worker_identity="worker"
+                )
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:52:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_artifacts.py:181: in load_runtime
+    if descriptor.get("payload") != _payload_manifest(root):
+                                    ^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_artifacts.py:66: in _payload_manifest
+    entries[name] = {"kind": "file", "mode": stat.S_IMODE(mode), "digest": content_digest(path.read_bytes())}
+                                                                                          ^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_linked_payload_is_rejecte2/artifact/site-packages/customer.py')
+
+    def read(path):
+        if path == forbidden:
+>           raise AssertionError("linked payload read before rejection")
+E           AssertionError: linked payload read before rejection
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:34: AssertionError
+________________ test_linked_descriptor_is_rejected_before_read ________________
+
+runtime_fixture = (ProjectPlan(root=PosixPath('<PYTEST_TMP>/test_linked_descriptor_is_reje0/artifact/site-packages/customer.py'))
+tmp_path = PosixPath('<PYTEST_TMP>/test_linked_descriptor_is_reje0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107de3020>
+
+    def test_linked_descriptor_is_rejected_before_read(runtime_fixture, tmp_path: Path, monkeypatch) -> None:
+        plan, artifact, _ = runtime_fixture
+        prepared = _seal(plan, artifact)
+        os.link(prepared.descriptor_path, tmp_path / "descriptor-alias")
+        original = Path.read_text
+
+        def read(path, *args, **kwargs):
+            if path == prepared.descriptor_path:
+                raise AssertionError("linked descriptor read before rejection")
+            return original(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "read_text", read)
+        with pytest.raises(ProjectRuntimeError, match="hardlink"):
+>           runtime_artifacts.load_runtime(
+                prepared.descriptor_path, plan=plan, environment_id="test-abi", worker_identity="worker"
+            )
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:70:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_artifacts.py:178: in load_runtime
+    descriptor = _read_descriptor(path)
+                 ^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_artifacts.py:150: in _read_descriptor
+    descriptor = json.loads(path.read_text(encoding="utf-8"))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_linked_descriptor_is_reje0/artifact/project-runtime.json')
+args = (), kwargs = {'encoding': 'utf-8'}
+
+    def read(path, *args, **kwargs):
+        if path == prepared.descriptor_path:
+>           raise AssertionError("linked descriptor read before rejection")
+E           AssertionError: linked descriptor read before rejection
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:65: AssertionError
+_______ test_prepare_rejects_log_alias_before_inventory[inventory.json] ________
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_log_alias0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107de3570>
+linked_name = 'inventory.json'
+
+    @pytest.mark.parametrize("linked_name", ["inventory.json", "site-packages/retained.log"])
+    def test_prepare_rejects_log_alias_before_inventory(tmp_path: Path, monkeypatch, linked_name: str) -> None:
+        source = tmp_path / "source"
+        source.mkdir()
+        plan = discover_project(source)
+        runtime = SimpleNamespace(environment_id="linux-x86_64-cp312", identity="worker", root=tmp_path / "capsule")
+        cache = tmp_path / "cache"
+
+        def build(_plan, _runtime, staging, *, build_log):
+            artifact = staging / "artifact"
+            (artifact / "site-packages").mkdir(parents=True)
+            (artifact / "inventory.json").write_text("{}", encoding="utf-8")
+            build_log.write("DISPOSABLE_PRIVATE_DIAGNOSTIC\n")
+            build_log.flush()
+            target = artifact / linked_name
+            target.unlink(missing_ok=True)
+            # Reconstruct the topology; this does not simulate Linux bind-mount traversal.
+            os.link(build_log.name, target)
+            return artifact
+
+        original = Path.read_text
+
+        def read(path, *args, **kwargs):
+            if path.name == "inventory.json":
+                raise AssertionError("inventory read before linked artifact rejection")
+            return original(path, *args, **kwargs)
+
+        monkeypatch.setattr(runtime_builder, "_build", build)
+        monkeypatch.setattr(Path, "read_text", read)
+        with pytest.raises(ProjectRuntimeError) as error:
+>           runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=cache)
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:105:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:249: in prepare_runtime
+    inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_log_alias0/cache/.preparing-3p018vww/artifact/inventory.json')
+args = (), kwargs = {'encoding': 'utf-8'}
+
+    def read(path, *args, **kwargs):
+        if path.name == "inventory.json":
+>           raise AssertionError("inventory read before linked artifact rejection")
+E           AssertionError: inventory read before linked artifact rejection
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:99: AssertionError
+_ test_prepare_rejects_log_alias_before_inventory[site-packages/retained.log] __
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_log_alias1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107e3f550>
+linked_name = 'site-packages/retained.log'
+
+    @pytest.mark.parametrize("linked_name", ["inventory.json", "site-packages/retained.log"])
+    def test_prepare_rejects_log_alias_before_inventory(tmp_path: Path, monkeypatch, linked_name: str) -> None:
+        source = tmp_path / "source"
+        source.mkdir()
+        plan = discover_project(source)
+        runtime = SimpleNamespace(environment_id="linux-x86_64-cp312", identity="worker", root=tmp_path / "capsule")
+        cache = tmp_path / "cache"
+
+        def build(_plan, _runtime, staging, *, build_log):
+            artifact = staging / "artifact"
+            (artifact / "site-packages").mkdir(parents=True)
+            (artifact / "inventory.json").write_text("{}", encoding="utf-8")
+            build_log.write("DISPOSABLE_PRIVATE_DIAGNOSTIC\n")
+            build_log.flush()
+            target = artifact / linked_name
+            target.unlink(missing_ok=True)
+            # Reconstruct the topology; this does not simulate Linux bind-mount traversal.
+            os.link(build_log.name, target)
+            return artifact
+
+        original = Path.read_text
+
+        def read(path, *args, **kwargs):
+            if path.name == "inventory.json":
+                raise AssertionError("inventory read before linked artifact rejection")
+            return original(path, *args, **kwargs)
+
+        monkeypatch.setattr(runtime_builder, "_build", build)
+        monkeypatch.setattr(Path, "read_text", read)
+        with pytest.raises(ProjectRuntimeError) as error:
+>           runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=cache)
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:105:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:249: in prepare_runtime
+    inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<PYTEST_TMP>/test_prepare_rejects_log_alias1/cache/.preparing-u455xh1j/artifact/inventory.json')
+args = (), kwargs = {'encoding': 'utf-8'}
+
+    def read(path, *args, **kwargs):
+        if path.name == "inventory.json":
+>           raise AssertionError("inventory read before linked artifact rejection")
+E           AssertionError: inventory read before linked artifact rejection
+
+tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py:99: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py::test_linked_payload_is_rejected_before_read[build]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py::test_linked_payload_is_rejected_before_read[seal]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py::test_linked_payload_is_rejected_before_read[load]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py::test_linked_descriptor_is_rejected_before_read
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py::test_prepare_rejects_log_alias_before_inventory[inventory.json]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py::test_prepare_rejects_log_alias_before_inventory[site-packages/retained.log]
+========================= 6 failed, 1 passed in 1.31s ==========================

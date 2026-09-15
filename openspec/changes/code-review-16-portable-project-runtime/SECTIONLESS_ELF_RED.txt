@@ -1,0 +1,128 @@
+Synthetic ELF64 dependency inventory regression before implementation. Host: macOS; byte parsing only, no ELF execution.
+Command: PYTHONPATH=packages/specfact-code-review/src:src .venv/bin/python -m pytest tests/unit/specfact_code_review/run/test_runtime_native.py -q
+
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <repository>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 19 items
+
+tests/unit/specfact_code_review/run/test_runtime_native.py .....FF...... [ 68%]
+.....F                                                                   [100%]
+
+=================================== FAILURES ===================================
+_______ test_dependency_inventory_survives_removed_elf_section_table[0] ________
+
+tmp_path = PosixPath('<pytest-temp>')
+entry_size = 0
+
+    @pytest.mark.parametrize("entry_size", [0, 64])
+    def test_dependency_inventory_survives_removed_elf_section_table(tmp_path: Path, entry_size: int) -> None:
+        artifact, system = tmp_path / "artifact", tmp_path / "system"
+        artifact.mkdir()
+        system.mkdir()
+        binary = artifact / "extension.so"
+        payload = _segmented_elf()
+        binary.write_bytes(payload)
+        assert elf_dependencies(binary) == ("libcustomer.so.1",)
+        binary.write_bytes(_remove_section_table(payload, entry_size))
+>       assert elf_dependencies(binary) == ("libcustomer.so.1",)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_native.py:127:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_native.py:60: in elf_dependencies
+    sections = _elf_sections(payload, path.name)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+payload = b'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00>\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00...00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+name = 'extension.so'
+
+    def _elf_sections(payload: bytes, name: str) -> list[tuple[int, ...]]:
+        if len(payload) < 64 or payload[4:6] != b"\x02\x01":
+            raise ProjectRuntimeError(f"project_native_elf_unsupported:{name}")
+        machine = struct.unpack_from("<H", payload, 18)[0]
+        if machine != 62:  # EM_X86_64
+            raise ProjectRuntimeError(
+                f"project_native_elf_architecture_unsupported:{name}:machine={machine}; require x86_64"
+            )
+        offset = struct.unpack_from("<Q", payload, 40)[0]
+        size, count = struct.unpack_from("<HH", payload, 58)
+        if size != 64 or offset + size * count > len(payload):
+>           raise ProjectRuntimeError(f"project_native_elf_invalid:{name}")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_native_elf_invalid:extension.so
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_native.py:30: ProjectRuntimeError
+_______ test_dependency_inventory_survives_removed_elf_section_table[64] _______
+
+tmp_path = PosixPath('<pytest-temp>')
+entry_size = 64
+
+    @pytest.mark.parametrize("entry_size", [0, 64])
+    def test_dependency_inventory_survives_removed_elf_section_table(tmp_path: Path, entry_size: int) -> None:
+        artifact, system = tmp_path / "artifact", tmp_path / "system"
+        artifact.mkdir()
+        system.mkdir()
+        binary = artifact / "extension.so"
+        payload = _segmented_elf()
+        binary.write_bytes(payload)
+        assert elf_dependencies(binary) == ("libcustomer.so.1",)
+        binary.write_bytes(_remove_section_table(payload, entry_size))
+>       assert elf_dependencies(binary) == ("libcustomer.so.1",)
+E       AssertionError: assert () == ('libcustomer.so.1',)
+E
+E         Right contains one more item: 'libcustomer.so.1'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_native.py:127: AssertionError
+_______________ test_sectionless_static_elf_has_no_dependencies ________________
+
+tmp_path = PosixPath('<pytest-temp>')
+
+    def test_sectionless_static_elf_has_no_dependencies(tmp_path: Path) -> None:
+        payload = _remove_section_table(_segmented_elf())
+        struct.pack_into("<H", payload, 56, 1)
+        binary = tmp_path / "static"
+        binary.write_bytes(payload)
+>       assert elf_dependencies(binary) == ()
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_native.py:166:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_native.py:60: in elf_dependencies
+    sections = _elf_sections(payload, path.name)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+payload = b'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00>\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00...00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+name = 'static'
+
+    def _elf_sections(payload: bytes, name: str) -> list[tuple[int, ...]]:
+        if len(payload) < 64 or payload[4:6] != b"\x02\x01":
+            raise ProjectRuntimeError(f"project_native_elf_unsupported:{name}")
+        machine = struct.unpack_from("<H", payload, 18)[0]
+        if machine != 62:  # EM_X86_64
+            raise ProjectRuntimeError(
+                f"project_native_elf_architecture_unsupported:{name}:machine={machine}; require x86_64"
+            )
+        offset = struct.unpack_from("<Q", payload, 40)[0]
+        size, count = struct.unpack_from("<HH", payload, 58)
+        if size != 64 or offset + size * count > len(payload):
+>           raise ProjectRuntimeError(f"project_native_elf_invalid:{name}")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_native_elf_invalid:static
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_native.py:30: ProjectRuntimeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_native.py::test_dependency_inventory_survives_removed_elf_section_table[0]
+FAILED tests/unit/specfact_code_review/run/test_runtime_native.py::test_dependency_inventory_survives_removed_elf_section_table[64]
+FAILED tests/unit/specfact_code_review/run/test_runtime_native.py::test_sectionless_static_elf_has_no_dependencies
+========================= 3 failed, 16 passed in 1.01s =========================

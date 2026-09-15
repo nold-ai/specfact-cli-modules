@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <implementation-worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/specfact_code_review/run/test_target_pytest_selection.py .... [ 57%]
+..F                                                                      [100%]
+
+=================================== FAILURES ===================================
+__ test_empty_distributed_selection_has_controller_only_deselection_inventory __
+
+    def test_empty_distributed_selection_has_controller_only_deselection_inventory() -> None:
+        observer = target_pytest.Observer()
+        observer.pytest_xdist_node_collection_finished(None, [])
+        assert not observer.collected
+>       assert observer.deselection_inventory == "controller_observed"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'Observer' object has no attribute 'deselection_inventory'
+
+tests/unit/specfact_code_review/run/test_target_pytest_selection.py:97: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_pytest_selection.py::test_empty_distributed_selection_has_controller_only_deselection_inventory
+========================= 1 failed, 6 passed in 0.50s ==========================

@@ -1,0 +1,76 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-implementation
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 9 items
+
+tests/unit/specfact_code_review/run/test_target_pylint.py FFF....F.      [100%]
+
+=================================== FAILURES ===================================
+______ test_attached_namespace_root_prevents_leaf_shadowing[roots0-True] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-441/test_attached_namespace_root_p0')
+roots = [], editable = True
+
+    @pytest.mark.parametrize("roots,editable", [([], True), (["src"], False), (["."], True)])
+    def test_attached_namespace_root_prevents_leaf_shadowing(tmp_path: Path, roots: list[str], editable: bool) -> None:
+        paths = _runtime(tmp_path, roots, editable)
+>       assert _import_findings(paths, []) == []
+E       AssertionError: assert [{'type': 'er...ine': 1, ...}] == []
+E         
+E         Left contains 2 more items, first extra item: {'type': 'error', 'module': 'tests.test_values', 'obj': '', 'line': 1, ...}
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_target_pylint.py:82: AssertionError
+______ test_attached_namespace_root_prevents_leaf_shadowing[roots1-False] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-441/test_attached_namespace_root_p1')
+roots = ['src'], editable = False
+
+    @pytest.mark.parametrize("roots,editable", [([], True), (["src"], False), (["."], True)])
+    def test_attached_namespace_root_prevents_leaf_shadowing(tmp_path: Path, roots: list[str], editable: bool) -> None:
+        paths = _runtime(tmp_path, roots, editable)
+>       assert _import_findings(paths, []) == []
+E       AssertionError: assert [{'type': 'er...ine': 1, ...}] == []
+E         
+E         Left contains 2 more items, first extra item: {'type': 'error', 'module': 'tests.test_values', 'obj': '', 'line': 1, ...}
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_target_pylint.py:82: AssertionError
+______ test_attached_namespace_root_prevents_leaf_shadowing[roots2-True] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-441/test_attached_namespace_root_p2')
+roots = ['.'], editable = True
+
+    @pytest.mark.parametrize("roots,editable", [([], True), (["src"], False), (["."], True)])
+    def test_attached_namespace_root_prevents_leaf_shadowing(tmp_path: Path, roots: list[str], editable: bool) -> None:
+        paths = _runtime(tmp_path, roots, editable)
+>       assert _import_findings(paths, []) == []
+E       AssertionError: assert [{'type': 'er...ine': 1, ...}] == []
+E         
+E         Left contains 2 more items, first extra item: {'type': 'error', 'module': 'tests.test_values', 'obj': '', 'line': 1, ...}
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_target_pylint.py:82: AssertionError
+_____________ test_missing_import_is_preserved_with_attached_roots _____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-441/test_missing_import_is_preserv0')
+
+    def test_missing_import_is_preserved_with_attached_roots(tmp_path: Path) -> None:
+        paths = _runtime(tmp_path, [], True)
+        test = paths["SNAPSHOT"] / "tests/test_values.py"
+        test.write_text(test.read_text() + "import genuinely_missing_customer_dependency\n")
+        findings = _import_findings(paths, [])
+>       assert len(findings) == 1
+E       AssertionError: assert 3 == 1
+E        +  where 3 = len([{'type': 'error', 'module': 'tests.test_values', 'obj': '', 'line': 1, ...}, {'type': 'error', 'module': 'tests.test_values', 'obj': '', 'line': 1, ...}, {'type': 'error', 'module': 'tests.test_values', 'obj': '', 'line': 2, ...}])
+
+tests/unit/specfact_code_review/run/test_target_pylint.py:104: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_pylint.py::test_attached_namespace_root_prevents_leaf_shadowing[roots0-True]
+FAILED tests/unit/specfact_code_review/run/test_target_pylint.py::test_attached_namespace_root_prevents_leaf_shadowing[roots1-False]
+FAILED tests/unit/specfact_code_review/run/test_target_pylint.py::test_attached_namespace_root_prevents_leaf_shadowing[roots2-True]
+FAILED tests/unit/specfact_code_review/run/test_target_pylint.py::test_missing_import_is_preserved_with_attached_roots
+========================= 4 failed, 5 passed in 1.78s ==========================

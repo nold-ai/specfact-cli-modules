@@ -1,0 +1,318 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 18 items
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py ...FFF...FF [ 61%]
+FF.....                                                                  [100%]
+
+=================================== FAILURES ===================================
+_ test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload[pylint-none] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-265/test_analyzer_dependency_origi0')
+preload = 'none', module = 'pylint'
+
+    @pytest.mark.parametrize("preload", ["none", "pth", "before"])
+    @pytest.mark.parametrize("module", ["pylint", "project-python"])
+    def test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload(
+        tmp_path: Path, preload: str, module: str
+    ) -> None:
+        project = tmp_path / "project"
+        installed = project / "site-packages"
+        snapshot = tmp_path / "snapshot"
+        analyzers = tmp_path / "analyzers"
+        for directory in (installed, snapshot, analyzers):
+            directory.mkdir(parents=True)
+        (snapshot / "packaging.py").write_text('OWNER = "snapshot"\n')
+        (analyzers / "packaging.py").write_text('OWNER = "analyzer"\n')
+        (installed / "project_owned.py").write_text('OWNER = "project"\n')
+        (analyzers / "project_owned.py").write_text('OWNER = "wrong-analyzer"\n')
+        if preload == "pth":
+            (installed / "preload.pth").write_text("import packaging; import project_owned\n")
+        descriptor = {
+            "project": {"source_roots": ["."]},
+            "inventory": {
+                "member_graphs": {
+                    "pylint": {
+                        "sealed_imports": ["packaging"],
+                        "installed": [
+                            {"name": "packaging", "origin": "analyzer"},
+                            {"name": "project-owned", "origin": "project"},
+                        ],
+                    }
+                }
+            },
+        }
+        (project / "project-runtime.json").write_text(json.dumps(descriptor))
+        script = f"""
+    import json, runpy, sys
+    from pathlib import Path
+    bootstrap = runpy.run_path({str(Path(target_bootstrap.__file__))!r})
+    configure = bootstrap['_configure_runtime']
+    configure.__globals__.update(PROJECT=Path({str(project)!r}), SNAPSHOT=Path({str(snapshot)!r}), ANALYZERS=Path({str(analyzers)!r}))
+    if {preload!r} == 'before':
+        sys.path.insert(0, {str(snapshot)!r})
+        import packaging
+        sys.path.pop(0)
+    configure({module!r})
+    preloaded = 'packaging' in sys.modules
+    import packaging, project_owned
+    print(json.dumps([packaging.OWNER, packaging.__file__, project_owned.OWNER, preloaded]))
+    """
+        completed = subprocess.run([sys.executable, "-I", "-S", "-c", script], capture_output=True, text=True, check=False)
+        if module == "pylint" and preload == "before":
+            assert completed.returncode != 0
+            assert "project_worker_analyzer_origin_mismatch:packaging" in completed.stderr
+            return
+        assert completed.returncode == 0, completed.stderr
+        owner, origin, project_owner, preloaded = json.loads(completed.stdout)
+        expected_root = analyzers if module == "pylint" else snapshot
+>       assert owner == ("analyzer" if module == "pylint" else "snapshot")
+E       AssertionError: assert 'snapshot' == 'analyzer'
+E         
+E         - analyzer
+E         + snapshot
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:105: AssertionError
+_ test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload[pylint-pth] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-265/test_analyzer_dependency_origi1')
+preload = 'pth', module = 'pylint'
+
+    @pytest.mark.parametrize("preload", ["none", "pth", "before"])
+    @pytest.mark.parametrize("module", ["pylint", "project-python"])
+    def test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload(
+        tmp_path: Path, preload: str, module: str
+    ) -> None:
+        project = tmp_path / "project"
+        installed = project / "site-packages"
+        snapshot = tmp_path / "snapshot"
+        analyzers = tmp_path / "analyzers"
+        for directory in (installed, snapshot, analyzers):
+            directory.mkdir(parents=True)
+        (snapshot / "packaging.py").write_text('OWNER = "snapshot"\n')
+        (analyzers / "packaging.py").write_text('OWNER = "analyzer"\n')
+        (installed / "project_owned.py").write_text('OWNER = "project"\n')
+        (analyzers / "project_owned.py").write_text('OWNER = "wrong-analyzer"\n')
+        if preload == "pth":
+            (installed / "preload.pth").write_text("import packaging; import project_owned\n")
+        descriptor = {
+            "project": {"source_roots": ["."]},
+            "inventory": {
+                "member_graphs": {
+                    "pylint": {
+                        "sealed_imports": ["packaging"],
+                        "installed": [
+                            {"name": "packaging", "origin": "analyzer"},
+                            {"name": "project-owned", "origin": "project"},
+                        ],
+                    }
+                }
+            },
+        }
+        (project / "project-runtime.json").write_text(json.dumps(descriptor))
+        script = f"""
+    import json, runpy, sys
+    from pathlib import Path
+    bootstrap = runpy.run_path({str(Path(target_bootstrap.__file__))!r})
+    configure = bootstrap['_configure_runtime']
+    configure.__globals__.update(PROJECT=Path({str(project)!r}), SNAPSHOT=Path({str(snapshot)!r}), ANALYZERS=Path({str(analyzers)!r}))
+    if {preload!r} == 'before':
+        sys.path.insert(0, {str(snapshot)!r})
+        import packaging
+        sys.path.pop(0)
+    configure({module!r})
+    preloaded = 'packaging' in sys.modules
+    import packaging, project_owned
+    print(json.dumps([packaging.OWNER, packaging.__file__, project_owned.OWNER, preloaded]))
+    """
+        completed = subprocess.run([sys.executable, "-I", "-S", "-c", script], capture_output=True, text=True, check=False)
+        if module == "pylint" and preload == "before":
+            assert completed.returncode != 0
+            assert "project_worker_analyzer_origin_mismatch:packaging" in completed.stderr
+            return
+        assert completed.returncode == 0, completed.stderr
+        owner, origin, project_owner, preloaded = json.loads(completed.stdout)
+        expected_root = analyzers if module == "pylint" else snapshot
+>       assert owner == ("analyzer" if module == "pylint" else "snapshot")
+E       AssertionError: assert 'snapshot' == 'analyzer'
+E         
+E         - analyzer
+E         + snapshot
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:105: AssertionError
+_ test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload[pylint-before] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-265/test_analyzer_dependency_origi2')
+preload = 'before', module = 'pylint'
+
+    @pytest.mark.parametrize("preload", ["none", "pth", "before"])
+    @pytest.mark.parametrize("module", ["pylint", "project-python"])
+    def test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload(
+        tmp_path: Path, preload: str, module: str
+    ) -> None:
+        project = tmp_path / "project"
+        installed = project / "site-packages"
+        snapshot = tmp_path / "snapshot"
+        analyzers = tmp_path / "analyzers"
+        for directory in (installed, snapshot, analyzers):
+            directory.mkdir(parents=True)
+        (snapshot / "packaging.py").write_text('OWNER = "snapshot"\n')
+        (analyzers / "packaging.py").write_text('OWNER = "analyzer"\n')
+        (installed / "project_owned.py").write_text('OWNER = "project"\n')
+        (analyzers / "project_owned.py").write_text('OWNER = "wrong-analyzer"\n')
+        if preload == "pth":
+            (installed / "preload.pth").write_text("import packaging; import project_owned\n")
+        descriptor = {
+            "project": {"source_roots": ["."]},
+            "inventory": {
+                "member_graphs": {
+                    "pylint": {
+                        "sealed_imports": ["packaging"],
+                        "installed": [
+                            {"name": "packaging", "origin": "analyzer"},
+                            {"name": "project-owned", "origin": "project"},
+                        ],
+                    }
+                }
+            },
+        }
+        (project / "project-runtime.json").write_text(json.dumps(descriptor))
+        script = f"""
+    import json, runpy, sys
+    from pathlib import Path
+    bootstrap = runpy.run_path({str(Path(target_bootstrap.__file__))!r})
+    configure = bootstrap['_configure_runtime']
+    configure.__globals__.update(PROJECT=Path({str(project)!r}), SNAPSHOT=Path({str(snapshot)!r}), ANALYZERS=Path({str(analyzers)!r}))
+    if {preload!r} == 'before':
+        sys.path.insert(0, {str(snapshot)!r})
+        import packaging
+        sys.path.pop(0)
+    configure({module!r})
+    preloaded = 'packaging' in sys.modules
+    import packaging, project_owned
+    print(json.dumps([packaging.OWNER, packaging.__file__, project_owned.OWNER, preloaded]))
+    """
+        completed = subprocess.run([sys.executable, "-I", "-S", "-c", script], capture_output=True, text=True, check=False)
+        if module == "pylint" and preload == "before":
+>           assert completed.returncode != 0
+E           assert 0 != 0
+E            +  where 0 = CompletedProcess(args=['<workspace>/.venv/bin/python', '-I', '-S', '-c', "\nimport json, runpy,...00gn/T/pytest-of-dom/pytest-265/test_analyzer_dependency_origi2/snapshot/packaging.py", "project", true]\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:99: AssertionError
+__________ test_sealed_dependency_rejects_unverified_origins[module] ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-265/test_sealed_dependency_rejects0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1083ffd10>
+form = 'module'
+
+    @pytest.mark.parametrize("form", ["module", "namespace", "symlink", "missing"])
+    def test_sealed_dependency_rejects_unverified_origins(tmp_path: Path, monkeypatch, form: str) -> None:
+        analyzers = tmp_path / "analyzers"
+        hostile = tmp_path / "hostile"
+        analyzers.mkdir()
+        hostile.mkdir()
+        monkeypatch.setattr(target_bootstrap, "ANALYZERS", analyzers)
+        if form == "namespace":
+            (hostile / "needed").mkdir()
+        elif form != "missing":
+            (hostile / "needed.py").write_text("VALUE = 1\n")
+        if form == "symlink":
+            (analyzers / "needed.py").symlink_to(hostile / "needed.py")
+        finder = target_bootstrap.DomainFinder({"sealed_imports": ["needed"], "installed": []})
+        search = [str(analyzers)] if form in {"symlink", "missing"} else [str(hostile)]
+>       with pytest.raises(ImportError, match="project_worker_analyzer_origin_mismatch:needed"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ImportError
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:126: Failed
+_________ test_sealed_dependency_rejects_unverified_origins[namespace] _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-265/test_sealed_dependency_rejects1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108a58270>
+form = 'namespace'
+
+    @pytest.mark.parametrize("form", ["module", "namespace", "symlink", "missing"])
+    def test_sealed_dependency_rejects_unverified_origins(tmp_path: Path, monkeypatch, form: str) -> None:
+        analyzers = tmp_path / "analyzers"
+        hostile = tmp_path / "hostile"
+        analyzers.mkdir()
+        hostile.mkdir()
+        monkeypatch.setattr(target_bootstrap, "ANALYZERS", analyzers)
+        if form == "namespace":
+            (hostile / "needed").mkdir()
+        elif form != "missing":
+            (hostile / "needed.py").write_text("VALUE = 1\n")
+        if form == "symlink":
+            (analyzers / "needed.py").symlink_to(hostile / "needed.py")
+        finder = target_bootstrap.DomainFinder({"sealed_imports": ["needed"], "installed": []})
+        search = [str(analyzers)] if form in {"symlink", "missing"} else [str(hostile)]
+>       with pytest.raises(ImportError, match="project_worker_analyzer_origin_mismatch:needed"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ImportError
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:126: Failed
+__________ test_sealed_dependency_rejects_unverified_origins[symlink] __________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-265/test_sealed_dependency_rejects2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108a587c0>
+form = 'symlink'
+
+    @pytest.mark.parametrize("form", ["module", "namespace", "symlink", "missing"])
+    def test_sealed_dependency_rejects_unverified_origins(tmp_path: Path, monkeypatch, form: str) -> None:
+        analyzers = tmp_path / "analyzers"
+        hostile = tmp_path / "hostile"
+        analyzers.mkdir()
+        hostile.mkdir()
+        monkeypatch.setattr(target_bootstrap, "ANALYZERS", analyzers)
+        if form == "namespace":
+            (hostile / "needed").mkdir()
+        elif form != "missing":
+            (hostile / "needed.py").write_text("VALUE = 1\n")
+        if form == "symlink":
+            (analyzers / "needed.py").symlink_to(hostile / "needed.py")
+        finder = target_bootstrap.DomainFinder({"sealed_imports": ["needed"], "installed": []})
+        search = [str(analyzers)] if form in {"symlink", "missing"} else [str(hostile)]
+>       with pytest.raises(ImportError, match="project_worker_analyzer_origin_mismatch:needed"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ImportError
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:126: Failed
+__________ test_sealed_dependency_rejects_unverified_origins[missing] __________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-265/test_sealed_dependency_rejects3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108a34b50>
+form = 'missing'
+
+    @pytest.mark.parametrize("form", ["module", "namespace", "symlink", "missing"])
+    def test_sealed_dependency_rejects_unverified_origins(tmp_path: Path, monkeypatch, form: str) -> None:
+        analyzers = tmp_path / "analyzers"
+        hostile = tmp_path / "hostile"
+        analyzers.mkdir()
+        hostile.mkdir()
+        monkeypatch.setattr(target_bootstrap, "ANALYZERS", analyzers)
+        if form == "namespace":
+            (hostile / "needed").mkdir()
+        elif form != "missing":
+            (hostile / "needed.py").write_text("VALUE = 1\n")
+        if form == "symlink":
+            (analyzers / "needed.py").symlink_to(hostile / "needed.py")
+        finder = target_bootstrap.DomainFinder({"sealed_imports": ["needed"], "installed": []})
+        search = [str(analyzers)] if form in {"symlink", "missing"} else [str(hostile)]
+>       with pytest.raises(ImportError, match="project_worker_analyzer_origin_mismatch:needed"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ImportError
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:126: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload[pylint-none]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload[pylint-pth]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload[pylint-before]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_sealed_dependency_rejects_unverified_origins[module]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_sealed_dependency_rejects_unverified_origins[namespace]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_sealed_dependency_rejects_unverified_origins[symlink]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_sealed_dependency_rejects_unverified_origins[missing]
+========================= 7 failed, 11 passed in 0.82s =========================

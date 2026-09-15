@@ -6,10 +6,14 @@ import json
 import os
 import subprocess
 import sys
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+from specfact_code_review.run import scope
+from specfact_code_review.run.runtime_builder import copy_project
 
 
 _GIT_LOCAL_ENV_VARS = frozenset(
@@ -49,8 +53,8 @@ def _commit(repo: Path, message: str) -> str:
     return _git(repo, "rev-parse", "HEAD")
 
 
-@pytest.fixture
-def git_repo(tmp_path: Path) -> Path:
+@pytest.fixture(name="git_repo")
+def git_repo_fixture(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-b", "main")
@@ -67,9 +71,8 @@ def git_repo(tmp_path: Path) -> Path:
     return repo
 
 
-@pytest.fixture
-def scope_api() -> Any:
-    from specfact_code_review.run import scope
+@pytest.fixture(name="scope_api")
+def scope_api_fixture() -> Any:
 
     return scope
 
@@ -289,7 +292,7 @@ def test_materialized_governed_input_uses_nofollow_regular_blob_identity(scope_a
 @pytest.mark.parametrize("scope_name", ["index", "range"])
 @pytest.mark.parametrize("option", ["fix", "preview_fixes", "with_mutation"])
 def test_index_and_range_reject_fix_preview_and_mutation_options(
-    scope_api: Any, git_repo: Path, scope_name: str, option: str
+    scope_api: Any, git_repo: Path, scope_name: scope.ScopeKind, option: str
 ) -> None:
     base, head = _make_range(git_repo)
     kwargs: dict[str, Any] = {option: True}
@@ -773,6 +776,130 @@ def test_index_change_to_transitive_policy_file_is_governed(
 
     assert result.status == "PASS"
     assert result.selected_paths == (referenced_path,)
+
+
+@dataclass(frozen=True)
+class _TransitivePolicyCase:
+    primary_path: str
+    primary_content: str
+    reference_path: str
+    reference_content: str
+    leaf_path: str
+    leaf_content: str
+
+
+@dataclass(frozen=True)
+class _PolicyReferenceChangeCase:
+    primary_path: str
+    before: str
+    after: str
+    old_path: str
+    new_path: str
+    content: str
+
+
+@pytest.mark.parametrize("portable", [False, True], ids=["existing", "portable"])
+@pytest.mark.parametrize("changed", [False, True], ids=["clean-index", "changed-source"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        _TransitivePolicyCase(
+            "ruff.toml",
+            "extend='config/base.toml'\n",
+            "config/base.toml",
+            "extend='leaf.toml'\n",
+            "config/leaf.toml",
+            "line-length=80\n",
+        ),
+        _TransitivePolicyCase(
+            "pyrightconfig.json",
+            '{"extends":"config/base.json"}\n',
+            "config/base.json",
+            '{"extends":"leaf.json"}\n',
+            "config/leaf.json",
+            '{"typeCheckingMode":"basic"}\n',
+        ),
+    ],
+    ids=["ruff", "basedpyright"],
+)
+def test_index_unchanged_policy_manifest_preserves_selection(
+    git_repo: Path,
+    portable: bool,
+    changed: bool,
+    case: _TransitivePolicyCase,
+) -> None:
+    """Harden pre-existing evidence omission without widening index review selection."""
+    (git_repo / "config").mkdir()
+    for path, content in (
+        (case.primary_path, case.primary_content),
+        (case.reference_path, case.reference_content),
+        (case.leaf_path, case.leaf_content),
+    ):
+        (git_repo / path).write_text(content, encoding="utf-8")
+    _commit(git_repo, "add transitive policy closure")
+    if changed:
+        (git_repo / "src/app.py").write_text("VALUE = 2\n", encoding="utf-8")
+        _git(git_repo, "add", "src/app.py")
+
+    result = scope.resolve_scope(
+        scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=portable)
+    )
+    try:
+        assert result.selected_paths == (("src/app.py",) if changed else ())
+        assert result.status == ("PASS" if changed else "NOT_APPLICABLE")
+        assert result.reason == ("resolved" if changed else "no_governed_impact")
+        assert result.assurance_kind == result.effective_assurance_kind == "index"
+        for path in (case.reference_path, case.leaf_path):
+            assert path in result.policy_paths
+            assert result.input_manifest[path] == result.base_input_manifest[path]
+            assert result.input_manifest[path].blob_sha == _git(git_repo, "rev-parse", f"HEAD:{path}")
+            assert result.input_manifest[path].open_policy == "descriptor-relative-nofollow"
+    finally:
+        scope.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        _PolicyReferenceChangeCase(
+            "ruff.toml",
+            "extend='config/old.toml'\n",
+            "extend='config/new.toml'\n",
+            "config/old.toml",
+            "config/new.toml",
+            "line-length=80\n",
+        ),
+        _PolicyReferenceChangeCase(
+            "pyrightconfig.json",
+            '{"extends":"config/old.json"}\n',
+            '{"extends":"config/new.json"}\n',
+            "config/old.json",
+            "config/new.json",
+            '{"typeCheckingMode":"basic"}\n',
+        ),
+    ],
+    ids=["ruff", "basedpyright"],
+)
+def test_index_policy_manifest_retains_base_and_head_reference_closures(
+    git_repo: Path, case: _PolicyReferenceChangeCase
+) -> None:
+    (git_repo / "config").mkdir()
+    (git_repo / case.primary_path).write_text(case.before, encoding="utf-8")
+    for path in (case.old_path, case.new_path):
+        (git_repo / path).write_text(case.content, encoding="utf-8")
+    _commit(git_repo, "add alternative policy references")
+    (git_repo / case.primary_path).write_text(case.after, encoding="utf-8")
+    _git(git_repo, "add", case.primary_path)
+
+    result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index"))
+    try:
+        assert result.status == "PASS"
+        assert result.selected_paths == (case.primary_path,)
+        for path in (case.old_path, case.new_path):
+            assert result.base_input_manifest[path].blob_sha == _git(git_repo, "rev-parse", f"HEAD:{path}")
+            assert result.input_manifest[path] == result.base_input_manifest[path]
+    finally:
+        scope.cleanup_scope_resolution(result)
 
 
 @pytest.mark.parametrize(
@@ -1347,3 +1474,157 @@ def test_semgrep_ai_bloat_rule_pack_is_governed_and_sealed(scope_api: Any, tmp_p
     assert bundle.clean.identity_kind == "signed_module_payload"
     assert bundle.ai_bloat.identity_kind == "signed_module_payload"
     assert bundle.bundle_digest.startswith("sha256:")
+
+
+def test_portable_lock_only_range_remains_analyzable_preview(scope_api: Any, git_repo: Path) -> None:
+
+    base, head = _make_range(git_repo, path="uv.lock", content="version = 1\n")
+    request = replace(_range_request(scope_api, git_repo, base, head), portable_project_runtime=True)
+    result = scope_api.resolve_scope(request)
+    try:
+        assert result.status == "PASS", (result.reason, result.diagnostics)
+        assert result.effective_assurance_kind == "range_preview"
+        assert "uv.lock" in result.selected_paths
+    finally:
+        scope_api.cleanup_scope_resolution(result)
+
+
+def test_portable_range_records_candidate_referenced_policy(scope_api: Any, git_repo: Path) -> None:
+    base = _git(git_repo, "rev-parse", "HEAD")
+    (git_repo / "config").mkdir()
+    (git_repo / "ruff.toml").write_text('extend="config/candidate.toml"\n')
+    (git_repo / "config/candidate.toml").write_text("line-length=99\n")
+    head = _commit(git_repo, "candidate policy closure")
+    result = scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head, portable_project_runtime=True))
+    try:
+        assert result.status == "PASS", result.diagnostics
+        assert "config/candidate.toml" in result.selected_paths
+        assert "config/candidate.toml" in result.policy_paths
+    finally:
+        scope_api.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize("scope_name", ["range", "index"])
+def test_portable_immutable_snapshots_retain_package_and_data_links(
+    git_repo: Path, tmp_path: Path, scope_name: scope.ScopeKind
+) -> None:
+    package = git_repo / "src/customer"
+    package.mkdir()
+    (package / "__init__.py").write_text("VALUE = 1\n")
+    (package / "data.txt").write_text("original")
+    (git_repo / "customer").symlink_to("src/customer", target_is_directory=True)
+    (git_repo / "data-link").symlink_to("src/customer/data.txt")
+    base = _commit(git_repo, "project links")
+    (git_repo / "src/app.py").write_text("VALUE = 2\n")
+    (package / "data.txt").write_text("updated")
+    _git(git_repo, "add", "-A")
+    head = _commit(git_repo, "update project") if scope_name == "range" else None
+    request = scope.ScopeRequest(
+        repository=git_repo,
+        scope=scope_name,
+        base_ref=base if head else None,
+        head_ref=head,
+        portable_project_runtime=True,
+    )
+    result = scope.resolve_scope(request)
+    try:
+        assert result.status == "PASS"
+        for side, snapshot in (("base", result.base_snapshot), ("head", result.head_snapshot)):
+            assert snapshot is not None
+            assert (snapshot.root / "customer").is_symlink()
+            assert os.readlink(snapshot.root / "data-link") == "src/customer/data.txt"
+            copied = tmp_path / side
+            copy_project(snapshot.root, copied, include_vcs=False)
+            assert (copied / "customer/__init__.py").read_text() == "VALUE = 1\n"
+            assert (copied / "data-link").read_text() == ("original" if side == "base" else "updated")
+    finally:
+        scope.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize("scope_name", ["range", "index"])
+@pytest.mark.parametrize(
+    "link_name,target", [("data-link", "../outside.toml"), ("pyproject.toml", "../outside.toml"), ("setup.cfg", ".env")]
+)
+def test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads(
+    git_repo: Path, scope_name: scope.ScopeKind, link_name: str, target: str, monkeypatch
+) -> None:
+    base = _git(git_repo, "rev-parse", "HEAD")
+    (git_repo.parent / "outside.toml").write_text('[project]\nname="private"\n')
+    (git_repo / ".env").write_text("private fixture")
+    (git_repo / link_name).symlink_to(target)
+    _git(git_repo, "add", "-A")
+    head = _commit(git_repo, "unsafe project link") if scope_name == "range" else None
+
+    def forbid_policy_read(*_args, **_kwargs):
+        pytest.fail("unsafe source links reached policy discovery")
+
+    monkeypatch.setattr(scope, "_range_policy_closure", forbid_policy_read)
+    monkeypatch.setattr(scope, "_resolved_index_policy_paths", forbid_policy_read)
+    result = scope.resolve_scope(
+        scope.ScopeRequest(
+            repository=git_repo,
+            scope=scope_name,
+            base_ref=base if head else None,
+            head_ref=head,
+            portable_project_runtime=True,
+        )
+    )
+    try:
+        assert result.status == "UNKNOWN"
+        assert "project_source_symlink_" in result.diagnostics
+    finally:
+        scope.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize("scope_name", ["range", "index"])
+def test_portable_governed_python_links_remain_rejected(git_repo: Path, scope_name: scope.ScopeKind) -> None:
+    base = _git(git_repo, "rev-parse", "HEAD")
+    (git_repo / "README.md").write_text("VALUE = 1\n")
+    (git_repo / "src/app.py").unlink()
+    (git_repo / "src/app.py").symlink_to("../README.md")
+    _git(git_repo, "add", "-A")
+    head = _commit(git_repo, "governed link") if scope_name == "range" else None
+    result = scope.resolve_scope(
+        scope.ScopeRequest(
+            repository=git_repo,
+            scope=scope_name,
+            base_ref=base if head else None,
+            head_ref=head,
+            portable_project_runtime=True,
+        )
+    )
+    try:
+        assert result.status == "UNKNOWN"
+        assert result.reason == "unsafe_governed_input"
+    finally:
+        scope.cleanup_scope_resolution(result)
+
+
+@pytest.mark.parametrize(
+    "failure_stage", ["_range_paths", "_discovered_index_policy_paths", "_snapshot_input_manifest"]
+)
+def test_index_discovery_failure_removes_both_materialized_roots(
+    git_repo: Path, tmp_path: Path, monkeypatch, failure_stage: str
+) -> None:
+    (git_repo / "src/app.py").write_text("VALUE = 2\n")
+    _git(git_repo, "add", "-A")
+    created = []
+
+    def tracked_mkdtemp(*, prefix: str) -> str:
+        root = tmp_path / f"{prefix}{len(created)}"
+        root.mkdir()
+        created.append(root)
+        return str(root)
+
+    def fail_discovery(*_args, **_kwargs):
+        raise scope.GitResolutionError("simulated immutable input read failure")
+
+    monkeypatch.setattr(scope.tempfile, "mkdtemp", tracked_mkdtemp)
+    monkeypatch.setattr(scope, failure_stage, fail_discovery)
+    result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=True))
+    assert result.status == "UNKNOWN"
+    assert result.reason == "git_resolution_failed"
+    assert "simulated immutable input read failure" in result.diagnostics
+    snapshots = [root for root in created if root.name.startswith("specfact-review-")]
+    assert len(snapshots) == 2
+    assert all(not root.exists() for root in created)

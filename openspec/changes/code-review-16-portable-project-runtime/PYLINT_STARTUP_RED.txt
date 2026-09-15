@@ -1,0 +1,34 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 15 items / 14 deselected / 1 selected
+
+tests/unit/specfact_code_review/tools/test_pylint_runner.py F            [100%]
+
+=================================== FAILURES ===================================
+___________ test_run_pylint_rejects_startup_failure_with_clean_json ____________
+
+tmp_path = PosixPath('<pytest-temp>')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c051cd0>
+
+    def test_run_pylint_rejects_startup_failure_with_clean_json(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+        diagnostic = "project_worker_startup_import_state_changed"
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            Mock(return_value=completed_process("pylint", stdout="[]", stderr=diagnostic, returncode=78)),
+        )
+
+        findings = run_pylint([tmp_path / "target.py"])
+
+>       assert len(findings) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/specfact_code_review/tools/test_pylint_runner.py:286: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/tools/test_pylint_runner.py::test_run_pylint_rejects_startup_failure_with_clean_json
+======================= 1 failed, 14 deselected in 0.12s =======================

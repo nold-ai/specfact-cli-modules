@@ -1,0 +1,432 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 59 items / 45 deselected / 14 selected
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py FFFFFFFFFFF [ 78%]
+F..                                                                      [100%]
+
+=================================== FAILURES ===================================
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pylint'
+operation = "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...= ['target_bootstrap.py', 'pylint']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pytest-observe'
+operation = "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...et_bootstrap.py', 'pytest-observe']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pylint'
+operation = "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...= ['target_bootstrap.py', 'pylint']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pylint'
+operation = "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...= ['target_bootstrap.py', 'pylint']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pylint'
+operation = "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...= ['target_bootstrap.py', 'pylint']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-runpy._get_code_from_file = lambda *a: compile('print("COUNTERFEIT_DISPATCH")', '<fake>', 'exec')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pytest-observe'
+operation = 'runpy._get_code_from_file = lambda *a: compile(\'print("COUNTERFEIT_DISPATCH")\', \'<fake>\', \'exec\')'
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...et_bootstrap.py', 'pytest-observe']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-pkgutil.read_code = lambda *a: compile('print("COUNTERFEIT_DISPATCH")', '<fake>', 'exec')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pytest-observe'
+operation = 'pkgutil.read_code = lambda *a: compile(\'print("COUNTERFEIT_DISPATCH")\', \'<fake>\', \'exec\')'
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...et_bootstrap.py', 'pytest-observe']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-io.open_code = lambda *a: io.BytesIO(b'print("COUNTERFEIT_DISPATCH")')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pytest-observe'
+operation = 'io.open_code = lambda *a: io.BytesIO(b\'print("COUNTERFEIT_DISPATCH")\')'
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...et_bootstrap.py', 'pytest-observe']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pylint'
+operation = "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+        assert completed.returncode != 0, completed.stdout
+>       assert "project_worker_startup_import_state_changed" in completed.stderr
+E       assert 'project_worker_startup_import_state_changed' in 'Traceback (most recent call last):\n  File "<string>", line 8, in <module>\n    bootstrap[\'main\']()\n    ~~~~~~~~~~...string>", line 1, in <lambda>\nNameError: name \'importlib\' is not defined. Did you forget to import \'importlib\'?\n'
+E        +  where 'Traceback (most recent call last):\n  File "<string>", line 8, in <module>\n    bootstrap[\'main\']()\n    ~~~~~~~~~~...string>", line 1, in <lambda>\nNameError: name \'importlib\' is not defined. Did you forget to import \'importlib\'?\n' = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...tring>", line 1, in <lambda>\nNameError: name \'importlib\' is not defined. Did you forget to import \'importlib\'?\n').stderr
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:507: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print("COUNTERFEIT_DISPATCH")', '<fake>', 'exec')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pylint'
+operation = 'importlib.machinery.SourceFileLoader.get_code = lambda *a: compile(\'print("COUNTERFEIT_DISPATCH")\', \'<fake>\', \'exec\')'
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...= ['target_bootstrap.py', 'pylint']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pylint'
+operation = "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+>       assert completed.returncode != 0, completed.stdout
+E       AssertionError: COUNTERFEIT_DISPATCH
+E
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...= ['target_bootstrap.py', 'pylint']\nbootstrap['main']()\n"], returncode=0, stdout='COUNTERFEIT_DISPATCH\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:506: AssertionError
+_ test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')] _
+
+collision_runtime = {'PROJECT': PosixPath('<pytest-temp>')}
+module = 'pytest-observe'
+operation = "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"
+
+    @pytest.mark.parametrize(
+        "module,operation",
+        [
+            ("pylint", "runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pylint", "runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pylint", "runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__"),
+            ("pytest-observe", "runpy._get_code_from_file = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "pkgutil.read_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pytest-observe", "io.open_code = lambda *a: io.BytesIO(b'print(\"COUNTERFEIT_DISPATCH\")')"),
+            ("pylint", "importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')"),
+            ("pylint", "importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print(\"COUNTERFEIT_DISPATCH\")', '<fake>', 'exec')"),
+            ("pylint", "builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')"),
+            ("pytest-observe", "next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')"),
+        ],
+    )
+    def test_executable_pth_cannot_substitute_analyzer_dispatch(
+        collision_runtime: dict[str, Path], module: str, operation: str
+    ) -> None:
+        completed = _probe_member_dispatch(collision_runtime, module, operation)
+        assert completed.returncode != 0, completed.stdout
+>       assert "project_worker_startup_import_state_changed" in completed.stderr
+E       assert 'project_worker_startup_import_state_changed' in 'Traceback (most recent call last):\n  File "<string>", line 8, in <module>\n    bootstrap[\'main\']()\n    ~~~~~~~~~~...t-of-dom/pytest-357/test_executable_pth_cannot_sub11/snapshot/unverified/specfact_code_review/run/target_pytest.py\'\n'
+E        +  where 'Traceback (most recent call last):\n  File "<string>", line 8, in <module>\n    bootstrap[\'main\']()\n    ~~~~~~~~~~...t-of-dom/pytest-357/test_executable_pth_cannot_sub11/snapshot/unverified/specfact_code_review/run/target_pytest.py\'\n' = CompletedProcess(args=['/private/tmp/specfact-473-worktree/.venv/bin/python', '-I', '-S', '-c', "\nimport runpy, sys\n...-of-dom/pytest-357/test_executable_pth_cannot_sub11/snapshot/unverified/specfact_code_review/run/target_pytest.py\'\n').stderr
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:507: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-runpy.run_module = lambda *a, **k: print('COUNTERFEIT_DISPATCH')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-runpy.run_path = lambda *a, **k: print('COUNTERFEIT_DISPATCH')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-runpy._run_code = lambda *a, **k: print('COUNTERFEIT_DISPATCH')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-runpy.run_module.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-runpy._run_code.__code__ = (lambda *a, **k: print('COUNTERFEIT_DISPATCH')).__code__]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-runpy._get_code_from_file = lambda *a: compile('print("COUNTERFEIT_DISPATCH")', '<fake>', 'exec')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-pkgutil.read_code = lambda *a: compile('print("COUNTERFEIT_DISPATCH")', '<fake>', 'exec')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-io.open_code = lambda *a: io.BytesIO(b'print("COUNTERFEIT_DISPATCH")')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-importlib.util.find_spec = lambda name: importlib.util.spec_from_file_location(name, 'counterfeit.py')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-importlib.machinery.SourceFileLoader.get_code = lambda *a: compile('print("COUNTERFEIT_DISPATCH")', '<fake>', 'exec')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pylint-builtins.exec = lambda *a, **k: print('COUNTERFEIT_DISPATCH')]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_executable_pth_cannot_substitute_analyzer_dispatch[pytest-observe-next(entry for entry in sys.meta_path if hasattr(entry, 'names')).find_spec.__func__.__globals__['BUILTIN'] = __import__('pathlib').Path('unverified')]
+================= 12 failed, 2 passed, 45 deselected in 0.85s ==================
