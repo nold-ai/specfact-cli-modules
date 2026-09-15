@@ -225,3 +225,27 @@ def test_invalid_pytest_quoting_names_configuration_option(tmp_path: Path, optio
     (tmp_path / "pytest.ini").write_text(f'[pytest]\n{option} = "unterminated\n')
     with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:pytest.ini:{option}"):
         discover_project(tmp_path)
+
+
+def test_expanded_testpaths_reject_escaping_symlinks(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    (root / "tests").mkdir(parents=True)
+    source = root / "app.py"
+    source.touch()
+    outside = tmp_path / "external"
+    outside.mkdir()
+    (outside / "test_app.py").touch()
+    (root / "tests/external").symlink_to(outside, target_is_directory=True)
+    plan = ProjectPlan(root, manager="pip", pytest_config={"testpaths": ["tests/*"]})
+    with pytest.raises(ProjectRuntimeError, match="project_test_path_escape"):
+        select_test_paths(plan, [source], full=False)
+
+
+def test_glob_testpaths_do_not_admit_excluded_environment(tmp_path: Path) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    (tmp_path / ".venv").mkdir()
+    (tmp_path / ".venv/test_app.py").touch()
+    plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"testpaths": [".venv/*.py"]})
+    with pytest.raises(ProjectRuntimeError, match="project_test_selection_empty"):
+        select_test_paths(plan, [source], full=False)

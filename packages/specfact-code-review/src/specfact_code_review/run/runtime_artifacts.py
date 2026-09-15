@@ -8,7 +8,8 @@ import stat
 from pathlib import Path
 from typing import Any
 
-from icontract import ensure
+from beartype import beartype
+from icontract import ensure, require
 
 from specfact_code_review.run.runtime_models import (
     PreparedRuntime,
@@ -20,6 +21,32 @@ from specfact_code_review.run.runtime_models import (
 
 
 _DESCRIPTOR = "project-runtime.json"
+
+
+def _validate_build_directory(directory: Path, root: Path) -> list[Path]:
+    """Check immediate nodes without reading payloads, returning directories to visit."""
+    children = []
+    with os.scandir(directory) as entries:
+        for entry in entries:
+            mode = entry.stat(follow_symlinks=False).st_mode
+            if stat.S_ISDIR(mode):
+                children.append(Path(entry.path))
+                continue
+            if not stat.S_ISREG(mode):
+                name = Path(entry.path).relative_to(root).as_posix()
+                raise ProjectRuntimeError(f"project_runtime_build_artifact_invalid:{name}; regular nodes required")
+    return children
+
+
+@beartype
+@require(lambda root: bool(root.name))
+def validate_build_artifact(root: Path) -> None:
+    """Reject indirection and special nodes before reading untrusted build output."""
+    if not stat.S_ISDIR(root.lstat().st_mode):
+        raise ProjectRuntimeError("project_runtime_build_artifact_invalid: root must be a regular directory")
+    pending = [root]
+    while pending:
+        pending.extend(_validate_build_directory(pending.pop(), root))
 
 
 def _payload_manifest(root: Path) -> dict[str, dict[str, object]]:

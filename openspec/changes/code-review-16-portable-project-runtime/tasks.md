@@ -31,3 +31,17 @@
 - [x] Specify verified Pylint fallback source roots and native configuration precedence.
 - [x] Record real namespace-shadowing RED, implement fallback defaults, and pass focused regression/dispatch tests.
 - [ ] Confirm corrected Poetry import findings through the Linux signed candidate and public release corpus.
+
+## PR #475 review follow-up
+- [x] Specify pip installable-directory markers and targeted pytest file/glob discovery before regression tests.
+- [x] Record both real failures, implement the fixes and pass focused plus required combined gates.
+- [ ] Push verified Git ancestry with CI-produced publisher signatures, then reply and resolve findings 4010452407 and 4010452417.
+- [x] Specify controller-owned build-log capture before the P1 security regression.
+- [ ] Validate safe failure/timeout log retention and success cleanup, then resolve security finding 4010477055 after the validated signed update is pushed.
+- [x] Specify artifact topology validation before controller-side inventory and native-library enrichment.
+- [x] Reproduce and reject artifact redirection before host reads or writes, with independent safety review and combined gates.
+
+## Late nested-process findings from superseded PR #474
+- [x] Specify and reproduce lost nested Python environment, working directory and private temporary files without weakening first-entry isolation.
+- [ ] Preserve verified runtime domain for nested children, including explicit replacement environments; run focused regressions and the reconstructed Hatch corpus.
+- [ ] Complete fresh combined gates and signed push to PR #475 before replying and resolving findings 4010422180 and 4010422190 on #474.

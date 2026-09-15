@@ -10,6 +10,15 @@ from pathlib import Path
 
 
 PROJECT = Path("/opt/specfact/project-runtime")
+BUILTIN = Path(globals().get("BUILTIN", "/opt/specfact/builtin"))
+CONTEXT = Path(globals().get("CONTEXT", "/opt/specfact/config/python-context"))
+DOMAIN_FILES = {
+    "project-python": "specfact_code_review/run/target_bootstrap.py",
+    "pytest-observe": "specfact_code_review/run/target_pytest.py",
+    "pylint": "specfact_code_review/run/target_pylint.py",
+    "basedpyright": "specfact_code_review/tools/basedpyright_runner.py",
+    "crosshair": "specfact_code_review/tools/contract_runner.py",
+}
 SEALED = Path("/opt/specfact/analyzers")
 MEMBER = Path("/opt/specfact/config/member-analyzers")
 
@@ -17,7 +26,7 @@ MEMBER = Path("/opt/specfact/config/member-analyzers")
 def member_mounts(module: str) -> list[str]:
     """Expose a real import directory containing only the verified member closure."""
     if module == "python-argv":
-        module = "pytest-observe" if os.environ.get("SPECFACT_TARGET_PYTEST") == "1" else "project-python"
+        module = "project-python"
     mounts = ["--tmpfs", str(MEMBER)]
     if module == "project-python":
         return mounts
@@ -35,6 +44,17 @@ def member_mounts(module: str) -> list[str]:
         if admitted:
             mounts.extend(["--ro-bind", str(entry), str(MEMBER / entry.name)])
     return mounts
+
+
+def execution_domain() -> str:
+    """Read the inherited member identity; environment variables cannot change it."""
+    for module, relative in DOMAIN_FILES.items():
+        try:
+            if CONTEXT.samefile(BUILTIN / relative):
+                return module
+        except OSError:
+            continue
+    raise RuntimeError("project_python_context_missing_or_invalid; launch Python inside an attached target worker")
 
 
 def interpreter_command(arguments: list[str]) -> list[str]:
@@ -75,6 +95,9 @@ def target_command(module: str, arguments: list[str]) -> list[str]:
         "--dev",
         "/dev",
         *member_mounts(module),
+        "--ro-bind",
+        str(BUILTIN / DOMAIN_FILES.get(module, DOMAIN_FILES["project-python"])),
+        str(CONTEXT),
         "--clearenv",
         "--setenv",
         "HOME",
@@ -93,9 +116,7 @@ def target_command(module: str, arguments: list[str]) -> list[str]:
         "1",
         "--setenv",
         "SPECFACT_TARGET_PYTEST",
-        "1"
-        if module == "pytest-observe" or (module == "python-argv" and os.environ.get("SPECFACT_TARGET_PYTEST") == "1")
-        else "0",
+        "1" if module == "pytest-observe" else "0",
         "--chdir",
         "/opt/specfact/snapshot",
         *interpreter_command(
@@ -105,7 +126,11 @@ def target_command(module: str, arguments: list[str]) -> list[str]:
 
 
 def main() -> None:
-    command = target_command("python-argv", sys.argv[1:])
+    # This generated executable is called only from an already isolated worker.
+    # First-entry callers always use target_command and cannot select this via env.
+    command = interpreter_command(
+        ["-I", "-S", str(BUILTIN / DOMAIN_FILES["project-python"]), "python-argv", *sys.argv[1:]]
+    )
     os.execv(command[0], command)
 
 

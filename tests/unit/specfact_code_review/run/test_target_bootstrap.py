@@ -278,11 +278,16 @@ def test_member_metadata_lookup_cannot_expand_explicit_target_inventory(tmp_path
     assert [dist.version for dist in finder.find_distributions(default_context)] == ["1.0"]
 
 
-def test_only_pytest_children_receive_the_pytest_dependency_domain(monkeypatch) -> None:
-
-    monkeypatch.delenv("SPECFACT_TARGET_PYTEST", raising=False)
-    assert python_execution_domain() == "project-python"
+def test_nested_python_domain_uses_namespace_identity(tmp_path: Path, monkeypatch) -> None:
+    context = tmp_path / "context"
+    monkeypatch.setattr(target_bootstrap, "CONTEXT", context)
+    monkeypatch.setattr(target_bootstrap, "BUILTIN", Path(target_bootstrap.__file__).parents[2])
+    context.symlink_to(Path(target_bootstrap.__file__))
     monkeypatch.setenv("SPECFACT_TARGET_PYTEST", "1")
+    assert python_execution_domain() == "project-python"
+    context.unlink()
+    context.symlink_to(Path(target_bootstrap.__file__).with_name("target_pytest.py"))
+    monkeypatch.delenv("SPECFACT_TARGET_PYTEST")
     assert python_execution_domain() == "pytest-observe"
 
 
@@ -421,12 +426,16 @@ def test_native_python_path_zero_survives_runtime_startup(tmp_path: Path, pytest
     _write_pytest_runtime(project, snapshot)
     startup = tmp_path / "startup"
     startup.mkdir()
+    context = tmp_path / "python-context"
+    token = "target_pytest.py" if pytest_child else "target_bootstrap.py"
+    context.symlink_to(Path(target_bootstrap.__file__).with_name(token))
     (startup / "sitecustomize.py").write_text(f"""
 import runpy
 from pathlib import Path
 bootstrap = runpy.run_path({str(Path(target_bootstrap.__file__))!r})
 configure = bootstrap['_configure_runtime']
 configure.__globals__.update(PROJECT=Path({str(project)!r}), SNAPSHOT=Path({str(snapshot)!r}),
+    CONTEXT=Path({str(context)!r}), BUILTIN=Path({str(Path(target_bootstrap.__file__).parents[2])!r}),
     ANALYZERS=Path({str(Path(pytest.__file__).parent.parent)!r}))
 configure(bootstrap['python_execution_domain']())
 """)

@@ -23,6 +23,7 @@ PROJECT = Path("/opt/specfact/project-runtime")
 SNAPSHOT = Path("/opt/specfact/snapshot")
 ANALYZERS = Path("/opt/specfact/config/member-analyzers")
 BUILTIN = Path("/opt/specfact/builtin")
+CONTEXT = Path("/opt/specfact/config/python-context")
 _TOOL_IMPORTS = {
     "pylint": {"pylint", "astroid"},
     "crosshair": {"crosshair", "z3"},
@@ -204,8 +205,11 @@ def _configure_runtime(module: str) -> None:
 
 
 def python_execution_domain() -> str:
-    """Keep pytest subprocesses in the same recorded dependency domain."""
-    return "pytest-observe" if os.environ.get("SPECFACT_TARGET_PYTEST") == "1" else "project-python"
+    """Keep subprocesses in the recorded domain even with an empty environment."""
+    launcher = runpy.run_path(
+        str(Path(__file__).with_name("target_launch.py")), init_globals={"CONTEXT": CONTEXT, "BUILTIN": BUILTIN}
+    )
+    return launcher["execution_domain"]()
 
 
 def _validate_python_arguments(arguments: list[str]) -> None:

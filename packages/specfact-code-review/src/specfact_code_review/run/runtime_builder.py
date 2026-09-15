@@ -9,14 +9,14 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from icontract import ensure, require
 from packaging.specifiers import SpecifierSet
 
 from specfact_code_review.run import sandbox
 from specfact_code_review.run.runtime_adapters import MANAGER_REQUIREMENTS, install_commands
-from specfact_code_review.run.runtime_artifacts import load_runtime, seal_runtime
+from specfact_code_review.run.runtime_artifacts import load_runtime, seal_runtime, validate_build_artifact
 from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts
 from specfact_code_review.run.runtime_domains import member_dependency_graphs
 from specfact_code_review.run.runtime_git import git_identity, stage_git
@@ -35,6 +35,22 @@ from specfact_code_review.run.runtime_sources import (
     verify_inputs,
 )
 from specfact_code_review.run.runtime_vcs import copy_vcs_context
+
+
+_BUILDER_FILES = (
+    "runtime_build_driver.py",
+    "runtime_builder.py",
+    "runtime_native.py",
+    "runtime_adapters.py",
+    "runtime_domains.py",
+    "runtime_vcs.py",
+    "runtime_git.py",
+    "target_bootstrap.py",
+    "target_launch.py",
+    "target_pytest.py",
+    "target_pylint.py",
+    "sitecustomize.py",
+)
 
 
 @require(lambda source, destination: source.is_dir() and not destination.exists())
@@ -116,7 +132,7 @@ def builder_command(runtime: Any, *, staging: Path, executable: str) -> list[str
     return command
 
 
-def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
+def _build(plan: ProjectPlan, runtime: Any, staging: Path, *, build_log: IO[str] | None = None) -> Path:
     verify_inputs(plan)
     copy_project(plan.root, staging / "project", include_vcs=False)
     if source_identity(staging / "project") != plan.source_identity:
@@ -146,7 +162,8 @@ def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
         completed = subprocess.run(
             builder_command(runtime, staging=staging, executable=f"/proc/self/fd/{descriptor}"),
             pass_fds=(descriptor,),
-            capture_output=True,
+            stdout=build_log if build_log is not None else subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
             check=False,
             timeout=4500,
@@ -154,13 +171,7 @@ def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
     finally:
         os.close(descriptor)
     if completed.returncode:
-        with (staging / "build.log").open("a", encoding="utf-8") as stream:
-            stream.write(completed.stdout + completed.stderr)
-        # Build logs stay private; repository-controlled errors may contain index credentials.
-        raise ProjectRuntimeError(
-            f"project_runtime_prepare_failed:exit={completed.returncode}; "
-            f"inspect private build log {staging / 'build.log'}"
-        )
+        raise ProjectRuntimeError(f"project_runtime_prepare_failed:exit={completed.returncode}")
     if not (staging / "artifact/site-packages").is_dir():
         raise ProjectRuntimeError("project_runtime_prepare_incomplete")
     return staging / "artifact"
@@ -209,23 +220,7 @@ def prepare_runtime(
             "environment": environment,
             "worker": runtime.identity,
             "manager": MANAGER_REQUIREMENTS[plan.manager],
-            "builder": {
-                name: content_digest(Path(__file__).with_name(name).read_bytes())
-                for name in (
-                    "runtime_build_driver.py",
-                    "runtime_builder.py",
-                    "runtime_native.py",
-                    "runtime_adapters.py",
-                    "runtime_domains.py",
-                    "runtime_vcs.py",
-                    "runtime_git.py",
-                    "target_bootstrap.py",
-                    "target_launch.py",
-                    "target_pytest.py",
-                    "target_pylint.py",
-                    "sitecustomize.py",
-                )
-            },
+            "builder": {name: content_digest(Path(__file__).with_name(name).read_bytes()) for name in _BUILDER_FILES},
             "git": git_identity(),
         }
     )[7:]
@@ -237,29 +232,37 @@ def prepare_runtime(
         raise ProjectRuntimeError("project_runtime_offline_cache_miss: run runtime prepare with network first")
     with tempfile.TemporaryDirectory(prefix=".preparing-", dir=cache) as directory:
         staging = Path(directory)
+        # The exclusive 0600 file is outside the builder's writable staging mount.
+        # Never reopen a path supplied by the builder, including for log retention.
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", prefix=f"failed-{key}-", suffix=".log", dir=cache, delete=False
+        ) as build_log:
+            try:
+                artifact = _build(plan, runtime, staging, build_log=build_log.file)
+                validate_build_artifact(artifact)
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                raise ProjectRuntimeError(
+                    f"project_runtime_prepare_failed; private log: {build_log.name}; {type(exc).__name__}"
+                ) from exc
         try:
-            artifact = _build(plan, runtime, staging)
+            verify_inputs(plan)
+            inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
+            inventory["native_libraries"] = inventory_native(
+                artifact, capsule_root=runtime.root, declared=plan.native_libraries, target_loader=True
+            )
+            inventory["analyzer_conflicts"] = analyzer_dependency_conflicts(
+                inventory, runtime.root / "opt/specfact/analyzers"
+            )
+            inventory["member_graphs"] = member_dependency_graphs(inventory, runtime.root / "opt/specfact/analyzers")
+            seal_runtime(
+                artifact, plan=plan, environment_id=environment, worker_identity=runtime.identity, inventory=inventory
+            )
+            publish_artifact(artifact, destination)
+            # A concurrent preparation must still pass full verification.
+            prepared = load_runtime(
+                descriptor_path, plan=plan, environment_id=environment, worker_identity=runtime.identity
+            )
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
-            log = staging / "build.log"
-            retained = cache / f"failed-{key}.log"
-            if log.is_file():
-                shutil.copyfile(log, retained)
-                retained.chmod(0o600)
-            raise ProjectRuntimeError(
-                f"project_runtime_prepare_failed; private log: {retained}; {type(exc).__name__}"
-            ) from exc
-        verify_inputs(plan)
-        inventory = json.loads((artifact / "inventory.json").read_text(encoding="utf-8"))
-        inventory["native_libraries"] = inventory_native(
-            artifact, capsule_root=runtime.root, declared=plan.native_libraries, target_loader=True
-        )
-        inventory["analyzer_conflicts"] = analyzer_dependency_conflicts(
-            inventory, runtime.root / "opt/specfact/analyzers"
-        )
-        inventory["member_graphs"] = member_dependency_graphs(inventory, runtime.root / "opt/specfact/analyzers")
-        seal_runtime(
-            artifact, plan=plan, environment_id=environment, worker_identity=runtime.identity, inventory=inventory
-        )
-        publish_artifact(artifact, destination)
-        # A concurrent preparation must still pass full verification below.
-    return load_runtime(descriptor_path, plan=plan, environment_id=environment, worker_identity=runtime.identity)
+            raise ProjectRuntimeError(f"{exc}; private log: {build_log.name}") from exc
+    Path(build_log.name).unlink()
+    return prepared

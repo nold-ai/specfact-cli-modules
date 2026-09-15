@@ -60,12 +60,23 @@ def clean_inventory(raw: dict) -> dict:
     )
 
 
+def _log_output(stdout: str | bytes | None, stderr: str | bytes | None) -> None:
+    """Forward native diagnostics to the controller's already-open private log."""
+    for output in (stdout, stderr):
+        if output:
+            sys.stdout.write(output.decode("utf-8", errors="replace") if isinstance(output, bytes) else output)
+    sys.stdout.flush()
+
+
 def _run(command: list[str], *, env: dict[str, str] | None = None) -> str:
-    result = subprocess.run(
-        command, cwd=ROOT / "project", env=env, text=True, capture_output=True, check=False, timeout=3600
-    )
-    with (ROOT / "build.log").open("a", encoding="utf-8") as stream:
-        stream.write(result.stdout + result.stderr)
+    try:
+        result = subprocess.run(
+            command, cwd=ROOT / "project", env=env, text=True, capture_output=True, check=False, timeout=3600
+        )
+    except subprocess.TimeoutExpired as exc:
+        _log_output(exc.stdout, exc.stderr)
+        raise
+    _log_output(result.stdout, result.stderr)
     if result.returncode:
         raise RuntimeError(f"project_manager_failed:{command[2:4]}:exit={result.returncode}")
     return result.stdout.strip()

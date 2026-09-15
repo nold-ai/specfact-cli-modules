@@ -31,7 +31,7 @@ def _pip_commands(plan: ProjectPlan, python: str) -> tuple[tuple[str, ...], ...]
     for option, values in (("--group", plan.groups), ("-r", plan.requirements), ("-c", plan.constraints)):
         for value in values:
             arguments.extend((option, value))
-    if any((plan.root / name).exists() for name in ("pyproject.toml", "setup.py", "setup.cfg")):
+    if any((plan.root / name).is_file() for name in ("pyproject.toml", "setup.py")):
         arguments.append("." + ("[" + ",".join(plan.extras) + "]" if plan.extras else ""))
     return (tuple(arguments),) if len(arguments) > 5 else ()
 

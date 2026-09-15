@@ -1,0 +1,113 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 16 items / 12 deselected / 4 selected
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py FFFF [100%]
+
+=================================== FAILURES ===================================
+_ test_downstream_failure_retains_log_and_original_diagnostic[inventory_native] _
+
+tmp_path = PosixPath('<temporary>/test_downstream_failure_retain0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c82d6e0>
+stage = 'inventory_native'
+
+    @pytest.mark.parametrize("stage", ["inventory_native", "seal_runtime", "publish_artifact", "load_runtime"])
+    def test_downstream_failure_retains_log_and_original_diagnostic(tmp_path: Path, monkeypatch, stage: str) -> None:
+        plan, runtime, cache, captures = _builder(tmp_path, monkeypatch, SUCCESS_SCRIPT)
+        monkeypatch.setattr(runtime_builder, "inventory_native", lambda *_args, **_kwargs: [])
+        monkeypatch.setattr(runtime_builder, "analyzer_dependency_conflicts", lambda *_args: {})
+        monkeypatch.setattr(runtime_builder, "member_dependency_graphs", lambda *_args: {})
+
+        def failed_stage(*_args, **_kwargs):
+            raise ProjectRuntimeError("project_native_library_missing:libcustomer.so")
+
+        monkeypatch.setattr(runtime_builder, stage, failed_stage)
+        error = _failed_build(plan, runtime, cache)
+        logs = _retained_logs(cache)
+>       assert len(logs) == 1 and logs[0].read_text() == "success\n"
+E       assert (0 == 1)
+E        +  where 0 = len([])
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:192: AssertionError
+__ test_downstream_failure_retains_log_and_original_diagnostic[seal_runtime] ___
+
+tmp_path = PosixPath('<temporary>/test_downstream_failure_retain1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c82d940>
+stage = 'seal_runtime'
+
+    @pytest.mark.parametrize("stage", ["inventory_native", "seal_runtime", "publish_artifact", "load_runtime"])
+    def test_downstream_failure_retains_log_and_original_diagnostic(tmp_path: Path, monkeypatch, stage: str) -> None:
+        plan, runtime, cache, captures = _builder(tmp_path, monkeypatch, SUCCESS_SCRIPT)
+        monkeypatch.setattr(runtime_builder, "inventory_native", lambda *_args, **_kwargs: [])
+        monkeypatch.setattr(runtime_builder, "analyzer_dependency_conflicts", lambda *_args: {})
+        monkeypatch.setattr(runtime_builder, "member_dependency_graphs", lambda *_args: {})
+
+        def failed_stage(*_args, **_kwargs):
+            raise ProjectRuntimeError("project_native_library_missing:libcustomer.so")
+
+        monkeypatch.setattr(runtime_builder, stage, failed_stage)
+        error = _failed_build(plan, runtime, cache)
+        logs = _retained_logs(cache)
+>       assert len(logs) == 1 and logs[0].read_text() == "success\n"
+E       assert (0 == 1)
+E        +  where 0 = len([])
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:192: AssertionError
+_ test_downstream_failure_retains_log_and_original_diagnostic[publish_artifact] _
+
+tmp_path = PosixPath('<temporary>/test_downstream_failure_retain2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c7a7ad0>
+stage = 'publish_artifact'
+
+    @pytest.mark.parametrize("stage", ["inventory_native", "seal_runtime", "publish_artifact", "load_runtime"])
+    def test_downstream_failure_retains_log_and_original_diagnostic(tmp_path: Path, monkeypatch, stage: str) -> None:
+        plan, runtime, cache, captures = _builder(tmp_path, monkeypatch, SUCCESS_SCRIPT)
+        monkeypatch.setattr(runtime_builder, "inventory_native", lambda *_args, **_kwargs: [])
+        monkeypatch.setattr(runtime_builder, "analyzer_dependency_conflicts", lambda *_args: {})
+        monkeypatch.setattr(runtime_builder, "member_dependency_graphs", lambda *_args: {})
+
+        def failed_stage(*_args, **_kwargs):
+            raise ProjectRuntimeError("project_native_library_missing:libcustomer.so")
+
+        monkeypatch.setattr(runtime_builder, stage, failed_stage)
+        error = _failed_build(plan, runtime, cache)
+        logs = _retained_logs(cache)
+>       assert len(logs) == 1 and logs[0].read_text() == "success\n"
+E       assert (0 == 1)
+E        +  where 0 = len([])
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:192: AssertionError
+__ test_downstream_failure_retains_log_and_original_diagnostic[load_runtime] ___
+
+tmp_path = PosixPath('<temporary>/test_downstream_failure_retain3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c8658c0>
+stage = 'load_runtime'
+
+    @pytest.mark.parametrize("stage", ["inventory_native", "seal_runtime", "publish_artifact", "load_runtime"])
+    def test_downstream_failure_retains_log_and_original_diagnostic(tmp_path: Path, monkeypatch, stage: str) -> None:
+        plan, runtime, cache, captures = _builder(tmp_path, monkeypatch, SUCCESS_SCRIPT)
+        monkeypatch.setattr(runtime_builder, "inventory_native", lambda *_args, **_kwargs: [])
+        monkeypatch.setattr(runtime_builder, "analyzer_dependency_conflicts", lambda *_args: {})
+        monkeypatch.setattr(runtime_builder, "member_dependency_graphs", lambda *_args: {})
+
+        def failed_stage(*_args, **_kwargs):
+            raise ProjectRuntimeError("project_native_library_missing:libcustomer.so")
+
+        monkeypatch.setattr(runtime_builder, stage, failed_stage)
+        error = _failed_build(plan, runtime, cache)
+        logs = _retained_logs(cache)
+>       assert len(logs) == 1 and logs[0].read_text() == "success\n"
+E       assert (0 == 1)
+E        +  where 0 = len([])
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:192: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_downstream_failure_retains_log_and_original_diagnostic[inventory_native]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_downstream_failure_retains_log_and_original_diagnostic[seal_runtime]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_downstream_failure_retains_log_and_original_diagnostic[publish_artifact]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_downstream_failure_retains_log_and_original_diagnostic[load_runtime]
+======================= 4 failed, 12 deselected in 0.23s =======================

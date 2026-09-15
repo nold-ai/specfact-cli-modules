@@ -1,5 +1,7 @@
 """Native adapters preserve lock and explicit dependency-group selection."""
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -56,3 +58,55 @@ def test_native_adapter_rejects_unconsumed_dependency_inputs(tmp_path: Path, man
     with pytest.raises(ProjectRuntimeError, match=f"project_manager_inputs_unsupported:{manager}") as error:
         install_commands(plan, python="python")
     assert field in str(error.value)
+
+
+def test_tool_only_setup_cfg_prepares_requirements_without_installing_root(tmp_path: Path) -> None:
+    (tmp_path / "setup.cfg").write_text("[tool:pytest]\naddopts = --strict-markers\npythonpath = .\n")
+    (tmp_path / "requirements.txt").write_text("packaging\n")
+    (tmp_path / "constraints.txt").write_text("packaging>=1\n")
+    config = tmp_path / "review.toml"
+    config.write_text('manager="pip"\nconstraints=["constraints.txt"]\n')
+    before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
+    plan = discover_project(tmp_path, config_path=config)
+    assert plan.pytest_config["addopts"] == "--strict-markers"
+    assert plan.source_roots == (".",)
+    commands = install_commands(plan, python=sys.executable)
+    # pip's no-index dry run validates the actual adapter command without installs.
+    completed = subprocess.run(
+        [*commands[0], "--no-index", "--no-deps", "--dry-run"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert commands[0][-4:] == ("-r", "requirements.txt", "-c", "constraints.txt")
+    assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == before
+
+
+@pytest.mark.parametrize("contents", ["[tool:pytest]\naddopts = --strict-markers\n", "[metadata]\nname = example\n"])
+def test_setup_cfg_without_package_entrypoint_requires_no_install(tmp_path: Path, contents: str) -> None:
+    (tmp_path / "setup.cfg").write_text(contents)
+    assert install_commands(discover_project(tmp_path), python="python") == ()
+
+
+@pytest.mark.parametrize(
+    "name,contents",
+    [
+        ("setup.py", 'raise AssertionError("discovery must not execute setup.py")\n'),
+        ("pyproject.toml", '[project]\nname="example"\nversion="1.0"\n'),
+        ("pyproject.toml", '[tool.pytest.ini_options]\naddopts="--strict-markers"\n'),
+    ],
+)
+def test_pip_native_package_entrypoints_retain_root_install_and_extras(
+    tmp_path: Path, name: str, contents: str
+) -> None:
+    (tmp_path / name).write_text(contents)
+    plan = ProjectPlan(root=tmp_path, manager="pip", extras=("speed",))
+    assert install_commands(plan, python="python")[0][-1] == ".[speed]"
+
+
+@pytest.mark.parametrize("name", ["pyproject.toml", "setup.py"])
+def test_pip_package_entrypoint_must_be_a_regular_file(tmp_path: Path, name: str) -> None:
+    (tmp_path / name).mkdir()
+    assert install_commands(ProjectPlan(root=tmp_path, manager="pip"), python="python") == ()

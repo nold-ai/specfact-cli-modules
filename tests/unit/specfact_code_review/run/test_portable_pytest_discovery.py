@@ -220,3 +220,57 @@ def test_intentional_setup_outcomes_retain_existing_policy(tmp_path: Path, outco
         for row in observation["records"]
     )
     validate_observation(observation, 0)
+
+
+@pytest.mark.parametrize(
+    "testpaths,relative,patterns",
+    [
+        ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+        ("tests/*.py", "tests/test_app.py", "test_*.py"),
+        ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+        ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+        ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+        ("absent*", "tests/test_app.py", "test_*.py"),
+        ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+        ("tests/*.py", "tests/app_test.py", "*_test.py"),
+    ],
+)
+def test_source_review_expands_native_testpaths(tmp_path: Path, testpaths: str, relative: str, patterns: str) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+    # Native pytest.ini precedence must also remain the discovery authority.
+    (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+    source = root / "app.py"
+    source.write_text("VALUE = 1\n")
+    test = root / relative
+    test.parent.mkdir(parents=True)
+    test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+    native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+    assert native["exit_code"] == 0, native_output
+    expected = [f"{relative}::test_selected"]
+    assert native["collected"] == expected
+    selectors = select_test_paths(discover_project(root), [source], full=False)
+    assert selectors == (relative,)
+    portable, output = _observe_discovery(root, tmp_path / "portable-source.json", selectors)
+    assert portable["exit_code"] == 0, output
+    assert portable["collected"] == expected
+    validate_observation(portable, 0)
+
+
+@pytest.mark.parametrize("selection", ["test", "mixed"])
+def test_glob_testpaths_preserve_explicit_selection(tmp_path: Path, selection: str) -> None:
+    (tmp_path / "pytest.ini").write_text("[pytest]\ntestpaths = tests/*.py\n")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests/test_other.py").write_text("def test_other(): assert False\n")
+    source = tmp_path / "app.py"
+    source.touch()
+    test = tmp_path / "test_app.py"
+    test.write_text("def test_selected(): assert True\n")
+    files = [test] if selection == "test" else [source, test]
+    selectors = select_test_paths(discover_project(tmp_path), files, full=False)
+    assert selectors == ("test_app.py",)
+    observation, output = _observe_discovery(tmp_path, tmp_path / "explicit-glob.json", selectors)
+    assert observation["exit_code"] == 0, output
+    assert observation["collected"] == ["test_app.py::test_selected"]
+    validate_observation(observation, 0)

@@ -211,6 +211,36 @@ requirements:
       intent: Allow localhost plugin coordination while external networking remains disabled.
       observable: Focused regression assertions and actual Linux corpus execution must pass; local component results
         do not confer signed release acceptance.
+    - case_id: 473-7-7
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Preserve tool-only setup.cfg configuration without attempting a root package installation, while retaining native pip installable-directory behavior.
+      observable: Adapter regressions retain requirements and constraints, omit an unbuildable root, and keep pyproject.toml or setup.py installation and extras controls passing.
+    - case_id: 473-7-8
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Match targeted source tests through configured pytest directories, literal files and glob paths.
+      observable: Real pytest-compatible cases select corresponding tests after path expansion, retain native no-match fallback and reject escaping roots without changing explicit selection or full native discovery.
+    - case_id: 473-7-9
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Isolate controller diagnostic capture from builder-controlled filesystem paths.
+      observable: Disposable sentinel tests reject symlink and special-file redirection, retain private failure and timeout diagnostics through a pre-created controller file descriptor, and close and remove successful logs without exposing captured output.
+    - case_id: 473-7-10
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Validate untrusted builder artifact topology before controller-side reads or enrichment.
+      observable: Disposable sentinel regressions reject root, native-directory, inventory and nested-file symlinks and special nodes before inventory access or native writes, while valid regular artifacts and final sealing remain accepted.
+    - case_id: 473-7-11
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Preserve nested Python environment additions, overrides and removals, working directory and caller-private temporary files.
+      observable: Real nested subprocess regressions retain caller context and relative file access; the reconstructed Hatch corpus exercises the same behavior through host, cold capsule and offline warm capsule execution.
+    - case_id: 473-7-12
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Preserve the verified member dependency domain independently of mutable environment markers while retaining initial worker isolation.
+      observable: Nested launch controls retain the mounted member domain under replacement environments; first-entry commands always clear inherited supervisor state and establish private process, mount and network namespaces.
   openspec:code-review-16-portable-project-runtime:portable-project-runtime:pylint-preserves-attached-namespace-source-roots:
     rationale: Attached editable namespace imports must not be shadowed by Pylint's legacy file-root discovery.
     stakeholder_refs:

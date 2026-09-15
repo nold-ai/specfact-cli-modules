@@ -520,6 +520,55 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **AND** failures during a completed call or its subsequent teardown SHALL retain genuine failure evidence without incorrectly claiming that the observed call never ran
 - **AND** intentional pytest skips SHALL remain visible and preserve existing selection semantics
 
+#### Scenario: Targeted source reviews expand native pytest test paths
+
+- **GIVEN** repository pytest configuration selects test paths as directories, individual files, or glob patterns
+- **WHEN** a targeted source-only or mixed source/test review resolves corresponding test files
+- **THEN** candidate discovery SHALL expand configured glob paths and include matched individual Python files while retaining native configuration precedence and Python filename patterns
+- **AND** when no configured path matches, corresponding-test discovery SHALL use the repository fallback rather than silently treating the configured pattern as a literal directory
+- **AND** expanded paths SHALL remain inside the reviewed repository and preserve exclusion/recursion controls; escaping configured or matched paths SHALL remain explicit diagnostics
+- **AND** explicit test selections, targeted ambiguity checks, full-review native discovery, and actual collection/execution/coverage requirements SHALL remain effective
+
+#### Scenario: Pip preparation distinguishes configuration from an installable root
+
+- **GIVEN** a Python repository contains tool configuration in `setup.cfg` but has neither a regular `pyproject.toml` nor `setup.py` file
+- **WHEN** the pip adapter prepares the selected runtime
+- **THEN** it SHALL install the selected requirements and constraints without appending the repository root as a package requirement
+- **AND** when no dependency installation is needed it SHALL emit no pip install command
+- **AND** it SHALL retain and import the repository's pytest/tool configuration independently of root-package installation
+- **AND** a regular `pyproject.toml` or `setup.py` SHALL retain pip's native root-project installation behavior, including selected extras, without independently reimplementing backend metadata decisions
+
+#### Scenario: Build diagnostics cannot redirect controller filesystem access
+
+- **GIVEN** runtime preparation executes untrusted package-manager or build-hook code in its disposable namespace
+- **WHEN** the controller captures or retains build diagnostics
+- **THEN** it SHALL create a private regular log with an exclusive controller-owned file descriptor outside all builder-writable directory mounts before starting the builder
+- **AND** builder and native-manager stdout/stderr SHALL be captured through that descriptor without the controller opening or copying a builder-chosen log path after execution
+- **AND** symlink, directory, or FIFO substitutions at the former staging log path or a predictable failure-log path SHALL NOT cause host-file writes, reads, permission changes, or blocking opens
+- **AND** failed and timed-out preparation SHALL retain the trusted private diagnostic log, close its descriptor, and remove disposable staging storage
+- **AND** successful preparation SHALL close and remove its temporary diagnostic log
+- **AND** public errors SHALL identify the private log without publishing raw build output or credentials
+
+#### Scenario: Builder artifacts are validated before controller enrichment
+
+- **GIVEN** the isolated builder has exited and left a candidate runtime artifact
+- **WHEN** the controller is about to read inventory JSON, enumerate native extensions, copy or change permissions on libraries, or derive member inventories
+- **THEN** it SHALL first validate that the artifact root is a nonsymlink directory and every descendant is a regular directory or regular file, without reading payload contents during this validation
+- **AND** symlinks at the artifact root, inventory JSON, native directory or nested files, and FIFO or other special nodes SHALL fail preparation before any host-following read or write
+- **AND** final sealing SHALL revalidate the complete tree after controller enrichment
+- **AND** ordinary valid artifacts SHALL remain accepted
+
+#### Scenario: Nested project Python preserves caller context
+
+- **GIVEN** a project process already executing inside a verified isolated target worker
+- **WHEN** it invokes the attached Python executable with inherited or explicitly replaced environment and a working directory
+- **THEN** the nested process SHALL preserve application environment additions, overrides and removals, the caller-selected working directory, and files in the caller's private temporary filesystem
+- **AND** the already-attached member dependency domain SHALL remain stable even when an explicit child environment removes runtime marker variables
+- **AND** required runtime startup controls SHALL remain enforced and any unsupported execution control SHALL receive an explicit diagnostic
+- **AND** nested execution SHALL retain isolation from supervisor output, control state, processes and external networking
+- **AND** ordinary first-entry workers SHALL continue to clear the supervisor environment and establish the original isolation boundary
+- **AND** an environment marker alone SHALL NOT grant permission to reuse target context or bypass first-entry isolation
+
 ### Requirement: Pylint preserves attached namespace source roots
 
 The portable Pylint worker SHALL use already verified snapshot import paths as fallback source roots before native Pylint configuration parsing. It SHALL NOT infer import roots merely from analyzed file locations, add undeclared raw source over an installed package, or suppress missing-import diagnostics.

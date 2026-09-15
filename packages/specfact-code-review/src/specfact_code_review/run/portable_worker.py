@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fnmatch
+import glob
 import json
 import os
 import shlex
@@ -68,13 +69,46 @@ def _candidate_test_files(root: Path, norecursedirs: tuple[str, ...]) -> Iterato
                 yield Path(directory) / name
 
 
+def _test_root_files(root: Path, norecursedirs: tuple[str, ...]) -> Iterator[Path]:
+    """Explicit file roots and directory roots use the same Python-file boundary."""
+    if root.is_file():
+        if root.suffix == ".py":
+            yield root
+    else:
+        yield from _candidate_test_files(root, norecursedirs)
+
+
+def _contained_test_path(root: Path, relative: str) -> Path:
+    """Check literal patterns and expanded paths before walking candidate roots."""
+    path = root / relative
+    if not path.resolve().is_relative_to(root.resolve()):
+        raise ProjectRuntimeError(f"project_test_path_escape:{relative}; keep testpaths inside the reviewed repository")
+    return path
+
+
+def _expanded_test_roots(plan: ProjectPlan, roots: tuple[str, ...]) -> tuple[Path, ...]:
+    """Match native pytest's glob expansion and all-missing-path fallback."""
+    expanded = set()
+    for pattern in roots:
+        _contained_test_path(plan.root, pattern)
+        for relative in glob.iglob(pattern, root_dir=plan.root, recursive=True):
+            expanded.add(_contained_test_path(plan.root, relative))
+    return tuple(sorted(expanded)) or (plan.root,)
+
+
+def _excluded_test_root(path: Path, project: Path) -> bool:
+    """Expanded file roots must retain excluded-directory ancestry."""
+    return any(is_excluded_source(entry) for entry in (path, *path.parents) if entry.is_relative_to(project))
+
+
 def _test_candidates(plan: ProjectPlan, roots: tuple[str, ...], patterns: tuple[str, ...]) -> set[str]:
     recursion = plan.pytest_config.get("norecursedirs", DEFAULT_NORECURSEDIRS)
     norecursedirs = tuple(shlex.split(recursion)) if isinstance(recursion, str) else _strings(recursion)
     return {
         path.relative_to(plan.root).as_posix()
-        for root in roots
-        for path in _candidate_test_files(plan.root / root, norecursedirs)
+        for root in _expanded_test_roots(plan, roots)
+        if not _excluded_test_root(root, plan.root)
+        for path in _test_root_files(root, norecursedirs)
         if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns)
     }
 
