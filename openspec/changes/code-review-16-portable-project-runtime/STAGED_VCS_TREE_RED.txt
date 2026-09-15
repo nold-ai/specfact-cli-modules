@@ -1,0 +1,154 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 9 items
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py .....FFFF        [100%]
+
+=================================== FAILURES ===================================
+_____ test_staged_snapshot_binds_captured_tree_independently_of_live_index _____
+
+staged_project = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-245/test_staged_snapshot_bin...manifest_digest='', policy_bundle=None, policy_paths=(), policy_manifest_digest='', candidate_policy_change_digest=''))
+
+    def test_staged_snapshot_binds_captured_tree_independently_of_live_index(staged_project) -> None:
+        root, resolution = staged_project
+        snapshot = resolution.head_snapshot
+        plan = discover_snapshot(snapshot.root, config_path=None, source_snapshot=snapshot)
+>       assert plan.vcs["tree"] == snapshot.tree
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'tree'
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:126: KeyError
+___________ test_private_build_index_retains_staged_rename_and_head ____________
+
+staged_project = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-245/test_private_build_index...manifest_digest='', policy_bundle=None, policy_paths=(), policy_manifest_digest='', candidate_policy_change_digest=''))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-245/test_private_build_index_retai0')
+
+    def test_private_build_index_retains_staged_rename_and_head(staged_project, tmp_path: Path) -> None:
+        root, resolution = staged_project
+        snapshot = resolution.head_snapshot
+        copied = tmp_path / "build-copy"
+        copy_project(snapshot.root, copied, include_vcs=False)
+>       copy_vcs_context(root, copied, resolution.base_snapshot.commit, tree=snapshot.tree)
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-245/test_private_build_index...gn/T/pytest-of-dom/pytest-245/test_private_build_index_retai0/build-copy'), '4a944466ac95a51758a9e4cf5ab1617349a5569f')
+kwargs = {'tree': '14dd0b830997655370b92b481566b173120d1c06'}
+
+    def wrapper(*args, **kwargs):  # type: ignore
+        """Wrap func by checking the preconditions and postconditions."""
+        kwargs_error = _assert_no_invalid_kwargs(kwargs)
+        if kwargs_error:
+            raise kwargs_error
+    
+        # We need to create a new in-progress set if it is None as the ``ContextVar`` does not accept
+        # a factory function for the default argument. If we didn't do this, and simply set an empty
+        # set as the default, ``ContextVar`` would always point to the same set by copying the default
+        # by reference.
+        in_progress = _IN_PROGRESS.get()
+        if in_progress is None:
+            in_progress = set()
+            _IN_PROGRESS.set(in_progress)
+    
+        # Use try-finally instead of ExitStack for performance.
+        try:
+            # If the wrapper is already checking the contracts for the wrapped function, avoid a recursive loop
+            # by skipping any subsequent contract checks for the same function.
+            if id_func in in_progress:
+                return func(*args, **kwargs)
+    
+            in_progress.add(id_func)
+    
+            (preconditions, snapshots, postconditions) = _unpack_pre_snap_posts(
+                wrapper
+            )
+    
+            resolved_kwargs = kwargs_from_call(
+                param_names=param_names,
+                kwdefaults=kwdefaults,
+                args=args,
+                kwargs=kwargs,
+            )
+    
+            type_error = _assert_resolved_kwargs_valid(
+                postconditions=postconditions, resolved_kwargs=resolved_kwargs
+            )
+            if type_error:
+                raise type_error
+    
+            violation_error = _assert_preconditions(
+                preconditions=preconditions,
+                resolved_kwargs=resolved_kwargs,
+                func=func,
+            )
+            if violation_error:
+                raise violation_error
+    
+            # Capture the snapshots
+            if postconditions and snapshots:
+                resolved_kwargs["OLD"] = _capture_old(
+                    snapshots=snapshots, resolved_kwargs=resolved_kwargs, func=func
+                )
+    
+            # Ideally, we would catch any exception here and strip the checkers from the traceback.
+            # Unfortunately, this can not be done in Python 3, see
+            # https://stackoverflow.com/questions/44813333/how-can-i-elide-a-function-wrapper-from-the-traceback-in-python-3
+>           result = func(*args, **kwargs)
+                     ^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: copy_vcs_context() got an unexpected keyword argument 'tree'
+
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: TypeError
+_____ test_index_snapshot_keeps_captured_commit_when_repository_head_moves _____
+
+staged_project = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-245/test_index_snapshot_keep...manifest_digest='', policy_bundle=None, policy_paths=(), policy_manifest_digest='', candidate_policy_change_digest=''))
+
+    def test_index_snapshot_keeps_captured_commit_when_repository_head_moves(staged_project) -> None:
+        root, resolution = staged_project
+        _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "-c", "commit.gpgsign=false", "commit", "-qm", "advance HEAD")
+        assert _git(root, "rev-parse", "HEAD") != resolution.base_snapshot.commit
+        snapshot = resolution.head_snapshot
+        plan = discover_snapshot(snapshot.root, config_path=None, source_snapshot=snapshot)
+>       assert plan.vcs["commit"] == resolution.base_snapshot.commit
+E       AssertionError: assert '5ae693dc3959...c68b5e92622d0' == '4a944466ac95...1617349a5569f'
+E         
+E         - 4a944466ac95a51758a9e4cf5ab1617349a5569f
+E         + 5ae693dc39598279b3090c20ee9c68b5e92622d0
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:152: AssertionError
+_______ test_builder_attaches_captured_tree_before_package_manager_runs ________
+
+staged_project = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-245/test_builder_attaches_ca...manifest_digest='', policy_bundle=None, policy_paths=(), policy_manifest_digest='', candidate_policy_change_digest=''))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-245/test_builder_attaches_captured0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d55b890>
+
+    def test_builder_attaches_captured_tree_before_package_manager_runs(staged_project, tmp_path: Path, monkeypatch) -> None:
+        _root, resolution = staged_project
+        snapshot = resolution.head_snapshot
+        plan = discover_snapshot(snapshot.root, config_path=None, source_snapshot=snapshot)
+        staging = tmp_path / "staging"
+        staging.mkdir()
+    
+        def stop_after_vcs(*_args, **_kwargs):
+            raise RuntimeError("stop before dependency acquisition")
+    
+        monkeypatch.setattr(runtime_builder, "stage_git", stop_after_vcs)
+        with pytest.raises(RuntimeError, match="stop before dependency acquisition"):
+            runtime_builder._build(plan, object(), staging)
+>       assert _git(staging / "project", "write-tree") == snapshot.tree
+E       AssertionError: assert 'ae7df65c33f2...90c0053ddf0b7' == '14dd0b830997...6b173120d1c06'
+E         
+E         - 14dd0b830997655370b92b481566b173120d1c06
+E         + ae7df65c33f278677e0d7eb633690c0053ddf0b7
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:169: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_staged_snapshot_binds_captured_tree_independently_of_live_index
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_private_build_index_retains_staged_rename_and_head
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_index_snapshot_keeps_captured_commit_when_repository_head_moves
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_builder_attaches_captured_tree_before_package_manager_runs
+========================= 4 failed, 5 passed in 1.11s ==========================

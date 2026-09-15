@@ -1,0 +1,207 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 15 items
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py .......FFFFF [ 80%]
+FFF                                                                      [100%]
+
+=================================== FAILURES ===================================
+________ test_concurrent_cache_publication_accepts_existing_winner[39] _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_concurrent_cache_publicat1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a340fc0>
+number = 39
+
+    @pytest.mark.parametrize("number", [17, 39])
+    def test_concurrent_cache_publication_accepts_existing_winner(tmp_path, monkeypatch, number) -> None:
+        from specfact_code_review.run import runtime_builder
+
+        def raced(source, destination):
+            raise OSError(number, "concurrent publication")
+
+        monkeypatch.setattr(runtime_builder.os, "rename", raced)
+>       runtime_builder.publish_artifact(tmp_path / "candidate", tmp_path / "winner")
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:73:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:178: in publish_artifact
+    os.rename(artifact, destination)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_concurrent_cache_publicat1/candidate')
+destination = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_concurrent_cache_publicat1/winner')
+
+    def raced(source, destination):
+>       raise OSError(number, "concurrent publication")
+E       OSError: [Errno 39] concurrent publication
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:70: OSError
+____________ test_project_links_cannot_alias_excluded_inputs[.env] _____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_project_links_cannot_alia0')
+target = '.env'
+
+    @pytest.mark.parametrize("target", [".env", ".venv/private.txt", ".venv", ".git/config", "nested/.env"])
+    def test_project_links_cannot_alias_excluded_inputs(tmp_path: Path, target: str) -> None:
+        from specfact_code_review.run.runtime_sources import source_identity
+
+        source = tmp_path / "source"
+        source.mkdir()
+        secret = source / target
+        if target == ".venv":
+            secret.mkdir()
+            (secret / "private.txt").write_text("synthetic excluded fixture")
+        else:
+            secret.parent.mkdir(parents=True, exist_ok=True)
+            secret.write_text("synthetic excluded fixture")
+        (source / "alias").symlink_to(target)
+>       with pytest.raises(ProjectRuntimeError, match="symlink.*excluded"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:90: Failed
+______ test_project_links_cannot_alias_excluded_inputs[.venv/private.txt] ______
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_project_links_cannot_alia1')
+target = '.venv/private.txt'
+
+    @pytest.mark.parametrize("target", [".env", ".venv/private.txt", ".venv", ".git/config", "nested/.env"])
+    def test_project_links_cannot_alias_excluded_inputs(tmp_path: Path, target: str) -> None:
+        from specfact_code_review.run.runtime_sources import source_identity
+
+        source = tmp_path / "source"
+        source.mkdir()
+        secret = source / target
+        if target == ".venv":
+            secret.mkdir()
+            (secret / "private.txt").write_text("synthetic excluded fixture")
+        else:
+            secret.parent.mkdir(parents=True, exist_ok=True)
+            secret.write_text("synthetic excluded fixture")
+        (source / "alias").symlink_to(target)
+>       with pytest.raises(ProjectRuntimeError, match="symlink.*excluded"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:90: Failed
+____________ test_project_links_cannot_alias_excluded_inputs[.venv] ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_project_links_cannot_alia2')
+target = '.venv'
+
+    @pytest.mark.parametrize("target", [".env", ".venv/private.txt", ".venv", ".git/config", "nested/.env"])
+    def test_project_links_cannot_alias_excluded_inputs(tmp_path: Path, target: str) -> None:
+        from specfact_code_review.run.runtime_sources import source_identity
+
+        source = tmp_path / "source"
+        source.mkdir()
+        secret = source / target
+        if target == ".venv":
+            secret.mkdir()
+            (secret / "private.txt").write_text("synthetic excluded fixture")
+        else:
+            secret.parent.mkdir(parents=True, exist_ok=True)
+            secret.write_text("synthetic excluded fixture")
+        (source / "alias").symlink_to(target)
+>       with pytest.raises(ProjectRuntimeError, match="symlink.*excluded"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:90: Failed
+_________ test_project_links_cannot_alias_excluded_inputs[.git/config] _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_project_links_cannot_alia3')
+target = '.git/config'
+
+    @pytest.mark.parametrize("target", [".env", ".venv/private.txt", ".venv", ".git/config", "nested/.env"])
+    def test_project_links_cannot_alias_excluded_inputs(tmp_path: Path, target: str) -> None:
+        from specfact_code_review.run.runtime_sources import source_identity
+
+        source = tmp_path / "source"
+        source.mkdir()
+        secret = source / target
+        if target == ".venv":
+            secret.mkdir()
+            (secret / "private.txt").write_text("synthetic excluded fixture")
+        else:
+            secret.parent.mkdir(parents=True, exist_ok=True)
+            secret.write_text("synthetic excluded fixture")
+        (source / "alias").symlink_to(target)
+>       with pytest.raises(ProjectRuntimeError, match="symlink.*excluded"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:90: Failed
+_________ test_project_links_cannot_alias_excluded_inputs[nested/.env] _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_project_links_cannot_alia4')
+target = 'nested/.env'
+
+    @pytest.mark.parametrize("target", [".env", ".venv/private.txt", ".venv", ".git/config", "nested/.env"])
+    def test_project_links_cannot_alias_excluded_inputs(tmp_path: Path, target: str) -> None:
+        from specfact_code_review.run.runtime_sources import source_identity
+
+        source = tmp_path / "source"
+        source.mkdir()
+        secret = source / target
+        if target == ".venv":
+            secret.mkdir()
+            (secret / "private.txt").write_text("synthetic excluded fixture")
+        else:
+            secret.parent.mkdir(parents=True, exist_ok=True)
+            secret.write_text("synthetic excluded fixture")
+        (source / "alias").symlink_to(target)
+>       with pytest.raises(ProjectRuntimeError, match="symlink.*excluded"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:90: Failed
+_ test_source_copy_preserves_directory_alias_without_copying_excluded_children _
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_source_copy_preserves_dir0')
+
+    def test_source_copy_preserves_directory_alias_without_copying_excluded_children(tmp_path: Path) -> None:
+        source = tmp_path / "source"
+        (source / "package").mkdir(parents=True)
+        (source / "package/app.py").write_text("VALUE = 1\n")
+        (source / "package/.env").write_text("synthetic excluded fixture")
+        (source / "alias").symlink_to("package")
+        target = tmp_path / "copy"
+        copy_project(source, target)
+>       assert (target / "alias").is_symlink()
+E       AssertionError: assert False
+E        +  where False = is_symlink()
+E        +    where is_symlink = (PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_source_copy_preserves_dir0/copy') / 'alias').is_symlink
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:104: AssertionError
+_______________ test_source_copy_rebases_absolute_internal_alias _______________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_source_copy_rebases_absol0')
+
+    def test_source_copy_rebases_absolute_internal_alias(tmp_path: Path) -> None:
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "app.py").write_text("VALUE = 1\n")
+        (source / "alias.py").symlink_to(source / "app.py")
+        target = tmp_path / "copy"
+        copy_project(source, target)
+>       assert (target / "alias.py").is_symlink()
+E       AssertionError: assert False
+E        +  where False = is_symlink()
+E        +    where is_symlink = (PosixPath('<TMPDIR>/pytest-of-dom/pytest-132/test_source_copy_rebases_absol0/copy') / 'alias.py').is_symlink
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:116: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_concurrent_cache_publication_accepts_existing_winner[39]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_project_links_cannot_alias_excluded_inputs[.env]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_project_links_cannot_alias_excluded_inputs[.venv/private.txt]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_project_links_cannot_alias_excluded_inputs[.venv]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_project_links_cannot_alias_excluded_inputs[.git/config]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_project_links_cannot_alias_excluded_inputs[nested/.env]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_source_copy_preserves_directory_alias_without_copying_excluded_children
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_source_copy_rebases_absolute_internal_alias
+========================= 8 failed, 7 passed in 0.14s ==========================

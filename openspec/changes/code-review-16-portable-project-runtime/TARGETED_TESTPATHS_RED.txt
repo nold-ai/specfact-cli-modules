@@ -1,0 +1,610 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-delivery
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 68 items / 56 deselected / 12 selected
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py FF [ 16%]
+FFFFFF..                                                                 [ 83%]
+tests/unit/specfact_code_review/run/test_portable_worker.py F.           [100%]
+
+=================================== FAILURES ===================================
+_ test_source_review_expands_native_testpaths[tests/test_app.py-tests/test_app.py-test_*.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat0')
+testpaths = 'tests/test_app.py', relative = 'tests/test_app.py'
+patterns = 'test_*.py'
+
+    @pytest.mark.parametrize(
+        "testpaths,relative,patterns",
+        [
+            ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+            ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+            ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("absent*", "tests/test_app.py", "test_*.py"),
+            ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/app_test.py", "*_test.py"),
+        ],
+    )
+    def test_source_review_expands_native_testpaths(
+        tmp_path: Path, testpaths: str, relative: str, patterns: str
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+        # Native pytest.ini precedence must also remain the discovery authority.
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+        source = root / "app.py"
+        source.write_text("VALUE = 1\n")
+        test = root / relative
+        test.parent.mkdir(parents=True)
+        test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+        assert native["exit_code"] == 0, native_output
+        expected = [f"{relative}::test_selected"]
+        assert native["collected"] == expected
+>       selectors = select_test_paths(discover_project(root), [source], full=False)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:255:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_sou...add7ec246cc73abeb134bafd4106e08b1e8fd'}, pytest_config={'testpaths': 'tests/test_app.py', 'python_files': 'test_*.py'})
+files = [PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat0/project/app.py')]
+full = False
+
+    @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        if full:
+            # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+            return ()
+        roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        candidates = _test_candidates(plan, roots, patterns)
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:99: ProjectRuntimeError
+_ test_source_review_expands_native_testpaths[tests/*.py-tests/test_app.py-test_*.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat1')
+testpaths = 'tests/*.py', relative = 'tests/test_app.py', patterns = 'test_*.py'
+
+    @pytest.mark.parametrize(
+        "testpaths,relative,patterns",
+        [
+            ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+            ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+            ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("absent*", "tests/test_app.py", "test_*.py"),
+            ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/app_test.py", "*_test.py"),
+        ],
+    )
+    def test_source_review_expands_native_testpaths(
+        tmp_path: Path, testpaths: str, relative: str, patterns: str
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+        # Native pytest.ini precedence must also remain the discovery authority.
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+        source = root / "app.py"
+        source.write_text("VALUE = 1\n")
+        test = root / relative
+        test.parent.mkdir(parents=True)
+        test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+        assert native["exit_code"] == 0, native_output
+        expected = [f"{relative}::test_selected"]
+        assert native["collected"] == expected
+>       selectors = select_test_paths(discover_project(root), [source], full=False)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:255:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_sou...f84c21b986de0c5b21865e77ad75c8c21e0a88c98109'}, pytest_config={'testpaths': 'tests/*.py', 'python_files': 'test_*.py'})
+files = [PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat1/project/app.py')]
+full = False
+
+    @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        if full:
+            # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+            return ()
+        roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        candidates = _test_candidates(plan, roots, patterns)
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:99: ProjectRuntimeError
+_ test_source_review_expands_native_testpaths[tests/*-tests/unit/test_app.py-test_*.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat2')
+testpaths = 'tests/*', relative = 'tests/unit/test_app.py'
+patterns = 'test_*.py'
+
+    @pytest.mark.parametrize(
+        "testpaths,relative,patterns",
+        [
+            ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+            ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+            ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("absent*", "tests/test_app.py", "test_*.py"),
+            ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/app_test.py", "*_test.py"),
+        ],
+    )
+    def test_source_review_expands_native_testpaths(
+        tmp_path: Path, testpaths: str, relative: str, patterns: str
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+        # Native pytest.ini precedence must also remain the discovery authority.
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+        source = root / "app.py"
+        source.write_text("VALUE = 1\n")
+        test = root / relative
+        test.parent.mkdir(parents=True)
+        test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+        assert native["exit_code"] == 0, native_output
+        expected = [f"{relative}::test_selected"]
+        assert native["collected"] == expected
+>       selectors = select_test_paths(discover_project(root), [source], full=False)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:255:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_sou...262e55ad02850eb4ae0ab0601fa88403eb88e8f10d6cb35'}, pytest_config={'testpaths': 'tests/*', 'python_files': 'test_*.py'})
+files = [PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat2/project/app.py')]
+full = False
+
+    @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        if full:
+            # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+            return ()
+        roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        candidates = _test_candidates(plan, roots, patterns)
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:99: ProjectRuntimeError
+_ test_source_review_expands_native_testpaths[tests/**/test_app.py-tests/unit/test_app.py-test_*.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat3')
+testpaths = 'tests/**/test_app.py', relative = 'tests/unit/test_app.py'
+patterns = 'test_*.py'
+
+    @pytest.mark.parametrize(
+        "testpaths,relative,patterns",
+        [
+            ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+            ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+            ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("absent*", "tests/test_app.py", "test_*.py"),
+            ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/app_test.py", "*_test.py"),
+        ],
+    )
+    def test_source_review_expands_native_testpaths(
+        tmp_path: Path, testpaths: str, relative: str, patterns: str
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+        # Native pytest.ini precedence must also remain the discovery authority.
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+        source = root / "app.py"
+        source.write_text("VALUE = 1\n")
+        test = root / relative
+        test.parent.mkdir(parents=True)
+        test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+        assert native["exit_code"] == 0, native_output
+        expected = [f"{relative}::test_selected"]
+        assert native["collected"] == expected
+>       selectors = select_test_paths(discover_project(root), [source], full=False)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:255:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_sou...0a4abb3ec4615c56b4916f6945c3b2de24'}, pytest_config={'testpaths': 'tests/**/test_app.py', 'python_files': 'test_*.py'})
+files = [PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat3/project/app.py')]
+full = False
+
+    @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        if full:
+            # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+            return ()
+        roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        candidates = _test_candidates(plan, roots, patterns)
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:99: ProjectRuntimeError
+_ test_source_review_expands_native_testpaths[absent tests/*.py-tests/test_app.py-test_*.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat4')
+testpaths = 'absent tests/*.py', relative = 'tests/test_app.py'
+patterns = 'test_*.py'
+
+    @pytest.mark.parametrize(
+        "testpaths,relative,patterns",
+        [
+            ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+            ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+            ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("absent*", "tests/test_app.py", "test_*.py"),
+            ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/app_test.py", "*_test.py"),
+        ],
+    )
+    def test_source_review_expands_native_testpaths(
+        tmp_path: Path, testpaths: str, relative: str, patterns: str
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+        # Native pytest.ini precedence must also remain the discovery authority.
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+        source = root / "app.py"
+        source.write_text("VALUE = 1\n")
+        test = root / relative
+        test.parent.mkdir(parents=True)
+        test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+        assert native["exit_code"] == 0, native_output
+        expected = [f"{relative}::test_selected"]
+        assert native["collected"] == expected
+>       selectors = select_test_paths(discover_project(root), [source], full=False)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:255:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_sou...32b040791164cc43490143cd757e3557fdb67'}, pytest_config={'testpaths': 'absent tests/*.py', 'python_files': 'test_*.py'})
+files = [PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat4/project/app.py')]
+full = False
+
+    @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        if full:
+            # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+            return ()
+        roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        candidates = _test_candidates(plan, roots, patterns)
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:99: ProjectRuntimeError
+_ test_source_review_expands_native_testpaths[absent*-tests/test_app.py-test_*.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat5')
+testpaths = 'absent*', relative = 'tests/test_app.py', patterns = 'test_*.py'
+
+    @pytest.mark.parametrize(
+        "testpaths,relative,patterns",
+        [
+            ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+            ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+            ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("absent*", "tests/test_app.py", "test_*.py"),
+            ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/app_test.py", "*_test.py"),
+        ],
+    )
+    def test_source_review_expands_native_testpaths(
+        tmp_path: Path, testpaths: str, relative: str, patterns: str
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+        # Native pytest.ini precedence must also remain the discovery authority.
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+        source = root / "app.py"
+        source.write_text("VALUE = 1\n")
+        test = root / relative
+        test.parent.mkdir(parents=True)
+        test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+        assert native["exit_code"] == 0, native_output
+        expected = [f"{relative}::test_selected"]
+        assert native["collected"] == expected
+>       selectors = select_test_paths(discover_project(root), [source], full=False)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:255:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_sou...dcd2af121b9159c90c8cfed85b629938b3fe6d02ea41dd7'}, pytest_config={'testpaths': 'absent*', 'python_files': 'test_*.py'})
+files = [PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat5/project/app.py')]
+full = False
+
+    @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        if full:
+            # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+            return ()
+        roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        candidates = _test_candidates(plan, roots, patterns)
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:99: ProjectRuntimeError
+_ test_source_review_expands_native_testpaths["integration tests/*.py"-integration tests/test_app.py-test_*.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat6')
+testpaths = '"integration tests/*.py"'
+relative = 'integration tests/test_app.py', patterns = 'test_*.py'
+
+    @pytest.mark.parametrize(
+        "testpaths,relative,patterns",
+        [
+            ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+            ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+            ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("absent*", "tests/test_app.py", "test_*.py"),
+            ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/app_test.py", "*_test.py"),
+        ],
+    )
+    def test_source_review_expands_native_testpaths(
+        tmp_path: Path, testpaths: str, relative: str, patterns: str
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+        # Native pytest.ini precedence must also remain the discovery authority.
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+        source = root / "app.py"
+        source.write_text("VALUE = 1\n")
+        test = root / relative
+        test.parent.mkdir(parents=True)
+        test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+        assert native["exit_code"] == 0, native_output
+        expected = [f"{relative}::test_selected"]
+        assert native["collected"] == expected
+>       selectors = select_test_paths(discover_project(root), [source], full=False)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:255:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_sou...260d8e84c49d18e783fa4f6f893290'}, pytest_config={'testpaths': '"integration tests/*.py"', 'python_files': 'test_*.py'})
+files = [PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat6/project/app.py')]
+full = False
+
+    @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        if full:
+            # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+            return ()
+        roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        candidates = _test_candidates(plan, roots, patterns)
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:99: ProjectRuntimeError
+_ test_source_review_expands_native_testpaths[tests/*.py-tests/app_test.py-*_test.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat7')
+testpaths = 'tests/*.py', relative = 'tests/app_test.py', patterns = '*_test.py'
+
+    @pytest.mark.parametrize(
+        "testpaths,relative,patterns",
+        [
+            ("tests/test_app.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("tests/*", "tests/unit/test_app.py", "test_*.py"),
+            ("tests/**/test_app.py", "tests/unit/test_app.py", "test_*.py"),
+            ("absent tests/*.py", "tests/test_app.py", "test_*.py"),
+            ("absent*", "tests/test_app.py", "test_*.py"),
+            ('"integration tests/*.py"', "integration tests/test_app.py", "test_*.py"),
+            ("tests/*.py", "tests/app_test.py", "*_test.py"),
+        ],
+    )
+    def test_source_review_expands_native_testpaths(
+        tmp_path: Path, testpaths: str, relative: str, patterns: str
+    ) -> None:
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / "pytest.ini").write_text(f"[pytest]\ntestpaths = {testpaths}\npython_files = {patterns}\n")
+        # Native pytest.ini precedence must also remain the discovery authority.
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths = ["wrong"]\n')
+        source = root / "app.py"
+        source.write_text("VALUE = 1\n")
+        test = root / relative
+        test.parent.mkdir(parents=True)
+        test.write_text("def test_selected(): assert 2 + 2 == 4\n")
+        native, native_output = _observe_discovery(root, tmp_path / "native-source.json", ())
+        assert native["exit_code"] == 0, native_output
+        expected = [f"{relative}::test_selected"]
+        assert native["collected"] == expected
+>       selectors = select_test_paths(discover_project(root), [source], full=False)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:255:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_sou...0c5a554530b223184f97912de744ac1fb1968689f845'}, pytest_config={'testpaths': 'tests/*.py', 'python_files': '*_test.py'})
+files = [PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_source_review_expands_nat7/project/app.py')]
+full = False
+
+    @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
+    def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
+        """Select real native test paths without rewriting the customer's pytest policy."""
+        if full:
+            # Let target pytest resolve testpaths, fallback discovery and positional addopts.
+            return ()
+        roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        candidates = _test_candidates(plan, roots, patterns)
+        selected = set()
+        for path in files:
+            relative = path.resolve().relative_to(plan.root).as_posix()
+            if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
+                selected.add(relative)
+            else:
+                selected.update(_matching_source_tests(relative, candidates))
+        if not selected:
+>           raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_test_selection_empty: include corresponding test files
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py:99: ProjectRuntimeError
+_______________ test_expanded_testpaths_reject_escaping_symlinks _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-466/test_expanded_testpaths_reject0')
+
+    def test_expanded_testpaths_reject_escaping_symlinks(tmp_path: Path) -> None:
+        root = tmp_path / "project"
+        (root / "tests").mkdir(parents=True)
+        source = root / "app.py"
+        source.touch()
+        outside = tmp_path / "external"
+        outside.mkdir()
+        (outside / "test_app.py").touch()
+        (root / "tests/external").symlink_to(outside, target_is_directory=True)
+        plan = ProjectPlan(root, manager="pip", pytest_config={"testpaths": ["tests/*"]})
+>       with pytest.raises(ProjectRuntimeError, match="project_test_path_escape"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'project_test_path_escape'
+E         Actual message: 'project_test_selection_empty: include corresponding test files'
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:240: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_source_review_expands_native_testpaths[tests/test_app.py-tests/test_app.py-test_*.py]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_source_review_expands_native_testpaths[tests/*.py-tests/test_app.py-test_*.py]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_source_review_expands_native_testpaths[tests/*-tests/unit/test_app.py-test_*.py]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_source_review_expands_native_testpaths[tests/**/test_app.py-tests/unit/test_app.py-test_*.py]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_source_review_expands_native_testpaths[absent tests/*.py-tests/test_app.py-test_*.py]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_source_review_expands_native_testpaths[absent*-tests/test_app.py-test_*.py]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_source_review_expands_native_testpaths["integration tests/*.py"-integration tests/test_app.py-test_*.py]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_source_review_expands_native_testpaths[tests/*.py-tests/app_test.py-*_test.py]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_expanded_testpaths_reject_escaping_symlinks
+================== 9 failed, 3 passed, 56 deselected in 1.69s ==================

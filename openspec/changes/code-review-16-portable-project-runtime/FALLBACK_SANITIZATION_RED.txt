@@ -1,0 +1,211 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <implementation-worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 13 items
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py .......... [ 76%]
+FFF                                                                      [100%]
+
+=================================== FAILURES ===================================
+_ test_preparation_fallback_uses_only_sanitized_source[project_config_invalid:setup.cfg] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_preparation_fallback_uses0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10892fe30>
+reason = 'project_config_invalid:setup.cfg'
+
+    @pytest.mark.parametrize("reason", ["project_config_invalid:setup.cfg", "project_native_library_missing:libodbc.so.2"])
+    def test_preparation_fallback_uses_only_sanitized_source(tmp_path: Path, monkeypatch, reason: str) -> None:
+        source = tmp_path / "app.py"
+        source.write_text("VALUE = 1\n")
+        (tmp_path / ".env").write_text("PRIVATE=fixture\n")
+        (tmp_path / ".git/objects").mkdir(parents=True)
+        observed = []
+
+        def dispatch(request, **_kwargs):
+            assert request.snapshot_root != tmp_path
+            assert not (request.snapshot_root / ".env").exists()
+            assert not (request.snapshot_root / ".git").exists()
+            assert request.files[0].read_text() == "VALUE = 1\n"
+            observed.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+>       snapshot, evidence = portable_snapshot._failed_project_snapshot(
+            runtime, snapshot_root=tmp_path, files=[source], options=runner.ReviewOptions(), reason=reason
+        )
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:206:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:92: in _failed_project_snapshot
+    snapshot = _run_capsule_snapshot(
+packages/specfact-code-review/src/specfact_code_review/run/runner.py:1294: in _run_capsule_snapshot
+    raw = _dispatch_capsule_member(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+request = CapsuleMemberExecutionRequest(runtime=namespace(identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...), config_roots=(), adapter_argv=(), complete_pytest_inventory=False, project_runtime_root=None, portable_runtime=True)
+_kwargs = {'applicability': SnapshotInputClassification(members=(SnapshotMemberState(id='ruff', status='PASS', required=True), S...SnapshotMemberState(id='contracts.icontract-static-scan', status='PASS', required=True))), 'sealed_bugs_policy': False}
+
+    def dispatch(request, **_kwargs):
+>       assert request.snapshot_root != tmp_path
+E       AssertionError: assert PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_preparation_fallback_uses0') != PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_preparation_fallback_uses0')
+E        +  where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_preparation_fallback_uses0') = CapsuleMemberExecutionRequest(runtime=namespace(identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...), config_roots=(), adapter_argv=(), complete_pytest_inventory=False, project_runtime_root=None, portable_runtime=True).snapshot_root
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:197: AssertionError
+_ test_preparation_fallback_uses_only_sanitized_source[project_native_library_missing:libodbc.so.2] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_preparation_fallback_uses1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108b0d630>
+reason = 'project_native_library_missing:libodbc.so.2'
+
+    @pytest.mark.parametrize("reason", ["project_config_invalid:setup.cfg", "project_native_library_missing:libodbc.so.2"])
+    def test_preparation_fallback_uses_only_sanitized_source(tmp_path: Path, monkeypatch, reason: str) -> None:
+        source = tmp_path / "app.py"
+        source.write_text("VALUE = 1\n")
+        (tmp_path / ".env").write_text("PRIVATE=fixture\n")
+        (tmp_path / ".git/objects").mkdir(parents=True)
+        observed = []
+
+        def dispatch(request, **_kwargs):
+            assert request.snapshot_root != tmp_path
+            assert not (request.snapshot_root / ".env").exists()
+            assert not (request.snapshot_root / ".git").exists()
+            assert request.files[0].read_text() == "VALUE = 1\n"
+            observed.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+>       snapshot, evidence = portable_snapshot._failed_project_snapshot(
+            runtime, snapshot_root=tmp_path, files=[source], options=runner.ReviewOptions(), reason=reason
+        )
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:206:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:92: in _failed_project_snapshot
+    snapshot = _run_capsule_snapshot(
+packages/specfact-code-review/src/specfact_code_review/run/runner.py:1294: in _run_capsule_snapshot
+    raw = _dispatch_capsule_member(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+request = CapsuleMemberExecutionRequest(runtime=namespace(identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...), config_roots=(), adapter_argv=(), complete_pytest_inventory=False, project_runtime_root=None, portable_runtime=True)
+_kwargs = {'applicability': SnapshotInputClassification(members=(SnapshotMemberState(id='ruff', status='PASS', required=True), S...SnapshotMemberState(id='contracts.icontract-static-scan', status='PASS', required=True))), 'sealed_bugs_policy': False}
+
+    def dispatch(request, **_kwargs):
+>       assert request.snapshot_root != tmp_path
+E       AssertionError: assert PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_preparation_fallback_uses1') != PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_preparation_fallback_uses1')
+E        +  where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_preparation_fallback_uses1') = CapsuleMemberExecutionRequest(runtime=namespace(identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...), config_roots=(), adapter_argv=(), complete_pytest_inventory=False, project_runtime_root=None, portable_runtime=True).snapshot_root
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:197: AssertionError
+____________ test_unsafe_fallback_source_never_dispatches_analyzer _____________
+
+runtime = namespace(identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', environment_id='linux-x86_64-cp312')
+request = ProjectSnapshotRequest(snapshot_root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom...='full', focus=None, project_config=None, project_runtime=None), assurance_kind='explicit_files', source_snapshot=None)
+
+    @require(lambda request: request.snapshot_root.is_dir())
+    def run_project_snapshot(runtime: Any, request: ProjectSnapshotRequest) -> tuple[Any, dict[str, Any]]:
+        """Bind every review side to its selected signed Python worker."""
+        snapshot_root, files, options = request.snapshot_root, request.files, request.options
+        source_snapshot = request.source_snapshot
+        try:
+>           plan = discover_snapshot(snapshot_root, config_path=options.project_config, source_snapshot=source_snapshot)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:77:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:50: in discover_snapshot
+    plan = discover_project(root, config_path=config_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:323: in discover_project
+    source_identity=source_identity(root),
+                    ^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_sources.py:75: in source_identity
+    identity = _source_entry(path, root)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_sources.py:58: in _source_entry
+    return "link:" + source_link_target(path, root).relative_to(root).as_posix()
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_unsafe_fallback_source_ne0/alias.py')
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_unsafe_fallback_source_ne0')
+
+    @ensure(lambda result, root: result.is_relative_to(root))
+    def source_link_target(path: Path, root: Path) -> Path:
+        """Apply the same exclusion boundary to aliases and ordinary source paths."""
+        relative = path.relative_to(root).as_posix()
+        try:
+            target = path.resolve(strict=True)
+        except (OSError, RuntimeError) as exc:
+            raise ProjectRuntimeError(f"project_source_symlink_invalid:{relative}") from exc
+        if not target.is_relative_to(root) or target == root or path.is_relative_to(target):
+            raise ProjectRuntimeError(f"project_source_symlink_escape:{relative}")
+        if any(
+            is_excluded_source(entry) for entry in (target, *target.parents) if entry != root and entry.is_relative_to(root)
+        ):
+>           raise ProjectRuntimeError(f"project_source_symlink_excluded:{relative}")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_source_symlink_excluded:alias.py
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_sources.py:51: ProjectRuntimeError
+
+During handling of the above exception, another exception occurred:
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-210/test_unsafe_fallback_source_ne0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108b0cf30>
+
+    def test_unsafe_fallback_source_never_dispatches_analyzer(tmp_path: Path, monkeypatch) -> None:
+        source = tmp_path / "app.py"
+        source.write_text("VALUE = 1\n")
+        (tmp_path / ".env").write_text("PRIVATE=fixture\n")
+        (tmp_path / "alias.py").symlink_to(".env")
+
+        def dispatch(*_args, **_kwargs):
+            pytest.fail("unsafe original source reached an analyzer")
+
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+>       snapshot, evidence = run_project_snapshot(
+            runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
+        )
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:225:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:81: in run_project_snapshot
+    return _failed_project_snapshot(
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:92: in _failed_project_snapshot
+    snapshot = _run_capsule_snapshot(
+packages/specfact-code-review/src/specfact_code_review/run/runner.py:1294: in _run_capsule_snapshot
+    raw = _dispatch_capsule_member(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (CapsuleMemberExecutionRequest(runtime=namespace(identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa... config_roots=(), adapter_argv=(), complete_pytest_inventory=False, project_runtime_root=None, portable_runtime=True),)
+_kwargs = {'applicability': SnapshotInputClassification(members=(SnapshotMemberState(id='ruff', status='PASS', required=True), S...SnapshotMemberState(id='contracts.icontract-static-scan', status='PASS', required=True))), 'sealed_bugs_policy': False}
+
+    def dispatch(*_args, **_kwargs):
+>       pytest.fail("unsafe original source reached an analyzer")
+E       Failed: unsafe original source reached an analyzer
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:221: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_preparation_fallback_uses_only_sanitized_source[project_config_invalid:setup.cfg]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_preparation_fallback_uses_only_sanitized_source[project_native_library_missing:libodbc.so.2]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_unsafe_fallback_source_never_dispatches_analyzer
+========================= 3 failed, 10 passed in 0.93s =========================

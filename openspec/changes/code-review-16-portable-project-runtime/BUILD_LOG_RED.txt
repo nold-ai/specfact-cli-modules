@@ -1,0 +1,606 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 10 items
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py FFFF [ 40%]
+FFFFFF                                                                   [100%]
+
+=================================== FAILURES ===================================
+_________ test_staging_log_symlink_cannot_write_or_read_host_sentinel __________
+
+tmp_path = PosixPath('<temporary>/test_staging_log_symlink_canno0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a56d5b0>
+
+    def test_staging_log_symlink_cannot_write_or_read_host_sentinel(tmp_path: Path, monkeypatch) -> None:
+        sentinel = tmp_path / "sentinel"
+        sentinel.write_text("PRIVATE_SENTINEL_UNCHANGED\n")
+        script = f"(staging/'build.log').symlink_to({str(sentinel)!r}); print('private-builder-output'); sys.exit(1)"
+        plan, runtime, cache, captures = _builder(tmp_path, monkeypatch, script)
+        error = _failed_build(plan, runtime, cache)
+>       assert sentinel.read_text() == "PRIVATE_SENTINEL_UNCHANGED\n"
+E       AssertionError: assert 'PRIVATE_SENT...lder-output\n' == 'PRIVATE_SENTINEL_UNCHANGED\n'
+E
+E           PRIVATE_SENTINEL_UNCHANGED
+E         + private-builder-output
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:64: AssertionError
+____________ test_controller_never_opens_special_staging_log[fifo] _____________
+
+tmp_path = PosixPath('<temporary>/test_controller_never_opens_sp0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a56ce90>
+kind = 'fifo'
+
+    @pytest.mark.parametrize("kind", ["fifo", "directory"])
+    def test_controller_never_opens_special_staging_log(tmp_path: Path, monkeypatch, kind: str) -> None:
+        operation = "os.mkfifo(staging/'build.log')" if kind == "fifo" else "(staging/'build.log').mkdir()"
+        plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, operation + "; print('build-failed'); sys.exit(1)")
+        native_open = Path.open
+
+        def checked_open(path, *args, **kwargs):
+            if path.name == "build.log" and path.parent.name.startswith(".preparing-"):
+                raise AssertionError("controller attempted an untrusted special-file open")
+            return native_open(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "open", checked_open)
+>       _failed_build(plan, runtime, cache)
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:86:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:53: in _failed_build
+    runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=cache)
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:241: in prepare_runtime
+    artifact = _build(plan, runtime, staging)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:157: in _build
+    with (staging / "build.log").open("a", encoding="utf-8") as stream:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<temporary>/test_controller_never_opens_sp0/cache/.preparing-elf33638/build.log')
+args = ('a',), kwargs = {'encoding': 'utf-8'}
+
+    def checked_open(path, *args, **kwargs):
+        if path.name == "build.log" and path.parent.name.startswith(".preparing-"):
+>           raise AssertionError("controller attempted an untrusted special-file open")
+E           AssertionError: controller attempted an untrusted special-file open
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:82: AssertionError
+__________ test_controller_never_opens_special_staging_log[directory] __________
+
+tmp_path = PosixPath('<temporary>/test_controller_never_opens_sp1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a4dfbf0>
+kind = 'directory'
+
+    @pytest.mark.parametrize("kind", ["fifo", "directory"])
+    def test_controller_never_opens_special_staging_log(tmp_path: Path, monkeypatch, kind: str) -> None:
+        operation = "os.mkfifo(staging/'build.log')" if kind == "fifo" else "(staging/'build.log').mkdir()"
+        plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, operation + "; print('build-failed'); sys.exit(1)")
+        native_open = Path.open
+
+        def checked_open(path, *args, **kwargs):
+            if path.name == "build.log" and path.parent.name.startswith(".preparing-"):
+                raise AssertionError("controller attempted an untrusted special-file open")
+            return native_open(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "open", checked_open)
+>       _failed_build(plan, runtime, cache)
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:86:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:53: in _failed_build
+    runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=cache)
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:241: in prepare_runtime
+    artifact = _build(plan, runtime, staging)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:157: in _build
+    with (staging / "build.log").open("a", encoding="utf-8") as stream:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('<temporary>/test_controller_never_opens_sp1/cache/.preparing-4phz4s1z/build.log')
+args = ('a',), kwargs = {'encoding': 'utf-8'}
+
+    def checked_open(path, *args, **kwargs):
+        if path.name == "build.log" and path.parent.name.startswith(".preparing-"):
+>           raise AssertionError("controller attempted an untrusted special-file open")
+E           AssertionError: controller attempted an untrusted special-file open
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:82: AssertionError
+____ test_failure_retention_never_reopens_predictable_destination[symlink] _____
+
+tmp_path = PosixPath('<temporary>/test_failure_retention_never_r0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a59d8c0>
+kind = 'symlink'
+
+    @pytest.mark.parametrize("kind", ["symlink", "fifo", "directory"])
+    def test_failure_retention_never_reopens_predictable_destination(tmp_path: Path, monkeypatch, kind: str) -> None:
+        sentinel = tmp_path / "sentinel"
+        sentinel.write_text("UNCHANGED\n")
+        plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, "print('build-failed'); sys.exit(1)")
+        cache.mkdir()
+        old_name = cache / f"failed-{KEY}.log"
+        if kind == "symlink":
+            old_name.symlink_to(sentinel)
+        elif kind == "fifo":
+            os.mkfifo(old_name)
+        else:
+            old_name.mkdir()
+        error = _failed_build(plan, runtime, cache)
+>       assert sentinel.read_text() == "UNCHANGED\n"
+E       AssertionError: assert 'build-failed\n' == 'UNCHANGED\n'
+E
+E         - UNCHANGED
+E         + build-failed
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:104: AssertionError
+______ test_failure_retention_never_reopens_predictable_destination[fifo] ______
+
+plan = ProjectPlan(root=PosixPath('<temporary>/test_fai...oups=(), extras=(), requirements=(), constraints=(), source_roots=(), native_libraries=(), inputs={}, pytest_config={})
+runtime = namespace(root=PosixPath('<temporary>/test_failu...nvironment_id='linux-x86_64-cp312', identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+cache_root = PosixPath('<temporary>/test_failure_retention_never_r1/cache')
+offline = False
+
+    @ensure(lambda result, plan: result.descriptor["project_identity"] == plan.identity)
+    def prepare_runtime(
+        plan: ProjectPlan,
+        *,
+        runtime: Any,
+        cache_root: Path | None = None,
+        offline: bool = False,
+    ) -> PreparedRuntime:
+        """Build or validate reusable local dependencies for the exact capsule ABI."""
+        environment = str(runtime.environment_id)
+        _validate_python(plan, environment)
+        cache = cache_root or Path.home() / ".cache/specfact/code-review/project-runtimes-v2"
+        cache.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if cache.is_symlink():
+            raise ProjectRuntimeError("project_runtime_cache_symlink")
+        key = document_digest(
+            {
+                "project": plan.identity,
+                "environment": environment,
+                "worker": runtime.identity,
+                "manager": MANAGER_REQUIREMENTS[plan.manager],
+                "builder": {
+                    name: content_digest(Path(__file__).with_name(name).read_bytes())
+                    for name in (
+                        "runtime_build_driver.py",
+                        "runtime_builder.py",
+                        "runtime_native.py",
+                        "runtime_adapters.py",
+                        "runtime_domains.py",
+                        "runtime_vcs.py",
+                        "runtime_git.py",
+                        "target_bootstrap.py",
+                        "target_launch.py",
+                        "target_pytest.py",
+                        "target_pylint.py",
+                        "sitecustomize.py",
+                    )
+                },
+                "git": git_identity(),
+            }
+        )[7:]
+        destination = cache / key
+        descriptor_path = destination / "project-runtime.json"
+        if destination.exists():
+            return load_runtime(descriptor_path, plan=plan, environment_id=environment, worker_identity=runtime.identity)
+        if offline:
+            raise ProjectRuntimeError("project_runtime_offline_cache_miss: run runtime prepare with network first")
+        with tempfile.TemporaryDirectory(prefix=".preparing-", dir=cache) as directory:
+            staging = Path(directory)
+            try:
+>               artifact = _build(plan, runtime, staging)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:241:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('<temporary>/test_fai...oups=(), extras=(), requirements=(), constraints=(), source_roots=(), native_libraries=(), inputs={}, pytest_config={})
+runtime = namespace(root=PosixPath('<temporary>/test_failu...nvironment_id='linux-x86_64-cp312', identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+staging = PosixPath('<temporary>/test_failure_retention_never_r1/cache/.preparing-lvfq7u0n')
+
+    def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
+        verify_inputs(plan)
+        copy_project(plan.root, staging / "project", include_vcs=False)
+        if source_identity(staging / "project") != plan.source_identity:
+            raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
+        if plan.vcs:
+            copy_vcs_context(
+                plan.vcs_repository or plan.root,
+                staging / "project",
+                plan.vcs["commit"],
+                tree=plan.vcs.get("tree"),
+                bound_vcs=plan.vcs,
+            )
+        stage_git(staging)
+        (staging / "home").mkdir()
+        driver = Path(__file__).with_name("runtime_build_driver.py")
+        shutil.copyfile(driver, staging / "build_driver.py")
+        config = {
+            "manager": plan.manager,
+            "environment": plan.environment,
+            "interpreter": runtime.interpreter,
+            "manager_requirements": MANAGER_REQUIREMENTS[plan.manager],
+            "commands": install_commands(plan, python="/opt/specfact/output/tools/bin/python"),
+        }
+        (staging / "build.json").write_text(json.dumps(config), encoding="utf-8")
+        descriptor = sandbox._verified_bubblewrap_descriptor(runtime.root, runtime.bubblewrap)
+        try:
+            completed = subprocess.run(
+                builder_command(runtime, staging=staging, executable=f"/proc/self/fd/{descriptor}"),
+                pass_fds=(descriptor,),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=4500,
+            )
+        finally:
+            os.close(descriptor)
+        if completed.returncode:
+            with (staging / "build.log").open("a", encoding="utf-8") as stream:
+                stream.write(completed.stdout + completed.stderr)
+            # Build logs stay private; repository-controlled errors may contain index credentials.
+>           raise ProjectRuntimeError(
+                f"project_runtime_prepare_failed:exit={completed.returncode}; "
+                f"inspect private build log {staging / 'build.log'}"
+            )
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_runtime_prepare_failed:exit=1; inspect private build log <temporary>/test_failure_retention_never_r1/cache/.preparing-lvfq7u0n/build.log
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:160: ProjectRuntimeError
+
+During handling of the above exception, another exception occurred:
+
+tmp_path = PosixPath('<temporary>/test_failure_retention_never_r1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a59dd00>
+kind = 'fifo'
+
+    @pytest.mark.parametrize("kind", ["symlink", "fifo", "directory"])
+    def test_failure_retention_never_reopens_predictable_destination(tmp_path: Path, monkeypatch, kind: str) -> None:
+        sentinel = tmp_path / "sentinel"
+        sentinel.write_text("UNCHANGED\n")
+        plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, "print('build-failed'); sys.exit(1)")
+        cache.mkdir()
+        old_name = cache / f"failed-{KEY}.log"
+        if kind == "symlink":
+            old_name.symlink_to(sentinel)
+        elif kind == "fifo":
+            os.mkfifo(old_name)
+        else:
+            old_name.mkdir()
+>       error = _failed_build(plan, runtime, cache)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:103:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:53: in _failed_build
+    runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=cache)
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:246: in prepare_runtime
+    shutil.copyfile(log, retained)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+src = PosixPath('<temporary>/test_failure_retention_never_r1/cache/.preparing-lvfq7u0n/build.log')
+dst = PosixPath('<temporary>/test_failure_retention_never_r1/cache/failed-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.log')
+follow_symlinks = True
+
+    def copyfile(src, dst, *, follow_symlinks=True):
+        """Copy data from src to dst in the most efficient way possible.
+
+        If follow_symlinks is not set and src is a symbolic link, a new
+        symlink will be created instead of copying the file it points to.
+
+        """
+        sys.audit("shutil.copyfile", src, dst)
+
+        if _samefile(src, dst):
+            raise SameFileError("{!r} and {!r} are the same file".format(src, dst))
+
+        file_size = 0
+        for i, fn in enumerate([src, dst]):
+            try:
+                st = _stat(fn)
+            except OSError:
+                # File most likely does not exist
+                pass
+            else:
+                # XXX What about other special files? (sockets, devices...)
+                if stat.S_ISFIFO(st.st_mode):
+                    fn = fn.path if isinstance(fn, os.DirEntry) else fn
+>                   raise SpecialFileError("`%s` is a named pipe" % fn)
+E                   shutil.SpecialFileError: `<temporary>/test_failure_retention_never_r1/cache/failed-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.log` is a named pipe
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py:306: SpecialFileError
+___ test_failure_retention_never_reopens_predictable_destination[directory] ____
+
+plan = ProjectPlan(root=PosixPath('<temporary>/test_fai...oups=(), extras=(), requirements=(), constraints=(), source_roots=(), native_libraries=(), inputs={}, pytest_config={})
+runtime = namespace(root=PosixPath('<temporary>/test_failu...nvironment_id='linux-x86_64-cp312', identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+cache_root = PosixPath('<temporary>/test_failure_retention_never_r2/cache')
+offline = False
+
+    @ensure(lambda result, plan: result.descriptor["project_identity"] == plan.identity)
+    def prepare_runtime(
+        plan: ProjectPlan,
+        *,
+        runtime: Any,
+        cache_root: Path | None = None,
+        offline: bool = False,
+    ) -> PreparedRuntime:
+        """Build or validate reusable local dependencies for the exact capsule ABI."""
+        environment = str(runtime.environment_id)
+        _validate_python(plan, environment)
+        cache = cache_root or Path.home() / ".cache/specfact/code-review/project-runtimes-v2"
+        cache.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if cache.is_symlink():
+            raise ProjectRuntimeError("project_runtime_cache_symlink")
+        key = document_digest(
+            {
+                "project": plan.identity,
+                "environment": environment,
+                "worker": runtime.identity,
+                "manager": MANAGER_REQUIREMENTS[plan.manager],
+                "builder": {
+                    name: content_digest(Path(__file__).with_name(name).read_bytes())
+                    for name in (
+                        "runtime_build_driver.py",
+                        "runtime_builder.py",
+                        "runtime_native.py",
+                        "runtime_adapters.py",
+                        "runtime_domains.py",
+                        "runtime_vcs.py",
+                        "runtime_git.py",
+                        "target_bootstrap.py",
+                        "target_launch.py",
+                        "target_pytest.py",
+                        "target_pylint.py",
+                        "sitecustomize.py",
+                    )
+                },
+                "git": git_identity(),
+            }
+        )[7:]
+        destination = cache / key
+        descriptor_path = destination / "project-runtime.json"
+        if destination.exists():
+            return load_runtime(descriptor_path, plan=plan, environment_id=environment, worker_identity=runtime.identity)
+        if offline:
+            raise ProjectRuntimeError("project_runtime_offline_cache_miss: run runtime prepare with network first")
+        with tempfile.TemporaryDirectory(prefix=".preparing-", dir=cache) as directory:
+            staging = Path(directory)
+            try:
+>               artifact = _build(plan, runtime, staging)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:241:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+plan = ProjectPlan(root=PosixPath('<temporary>/test_fai...oups=(), extras=(), requirements=(), constraints=(), source_roots=(), native_libraries=(), inputs={}, pytest_config={})
+runtime = namespace(root=PosixPath('<temporary>/test_failu...nvironment_id='linux-x86_64-cp312', identity='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+staging = PosixPath('<temporary>/test_failure_retention_never_r2/cache/.preparing-wvbop8va')
+
+    def _build(plan: ProjectPlan, runtime: Any, staging: Path) -> Path:
+        verify_inputs(plan)
+        copy_project(plan.root, staging / "project", include_vcs=False)
+        if source_identity(staging / "project") != plan.source_identity:
+            raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
+        if plan.vcs:
+            copy_vcs_context(
+                plan.vcs_repository or plan.root,
+                staging / "project",
+                plan.vcs["commit"],
+                tree=plan.vcs.get("tree"),
+                bound_vcs=plan.vcs,
+            )
+        stage_git(staging)
+        (staging / "home").mkdir()
+        driver = Path(__file__).with_name("runtime_build_driver.py")
+        shutil.copyfile(driver, staging / "build_driver.py")
+        config = {
+            "manager": plan.manager,
+            "environment": plan.environment,
+            "interpreter": runtime.interpreter,
+            "manager_requirements": MANAGER_REQUIREMENTS[plan.manager],
+            "commands": install_commands(plan, python="/opt/specfact/output/tools/bin/python"),
+        }
+        (staging / "build.json").write_text(json.dumps(config), encoding="utf-8")
+        descriptor = sandbox._verified_bubblewrap_descriptor(runtime.root, runtime.bubblewrap)
+        try:
+            completed = subprocess.run(
+                builder_command(runtime, staging=staging, executable=f"/proc/self/fd/{descriptor}"),
+                pass_fds=(descriptor,),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=4500,
+            )
+        finally:
+            os.close(descriptor)
+        if completed.returncode:
+            with (staging / "build.log").open("a", encoding="utf-8") as stream:
+                stream.write(completed.stdout + completed.stderr)
+            # Build logs stay private; repository-controlled errors may contain index credentials.
+>           raise ProjectRuntimeError(
+                f"project_runtime_prepare_failed:exit={completed.returncode}; "
+                f"inspect private build log {staging / 'build.log'}"
+            )
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_runtime_prepare_failed:exit=1; inspect private build log <temporary>/test_failure_retention_never_r2/cache/.preparing-wvbop8va/build.log
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:160: ProjectRuntimeError
+
+During handling of the above exception, another exception occurred:
+
+tmp_path = PosixPath('<temporary>/test_failure_retention_never_r2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a7d9050>
+kind = 'directory'
+
+    @pytest.mark.parametrize("kind", ["symlink", "fifo", "directory"])
+    def test_failure_retention_never_reopens_predictable_destination(tmp_path: Path, monkeypatch, kind: str) -> None:
+        sentinel = tmp_path / "sentinel"
+        sentinel.write_text("UNCHANGED\n")
+        plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, "print('build-failed'); sys.exit(1)")
+        cache.mkdir()
+        old_name = cache / f"failed-{KEY}.log"
+        if kind == "symlink":
+            old_name.symlink_to(sentinel)
+        elif kind == "fifo":
+            os.mkfifo(old_name)
+        else:
+            old_name.mkdir()
+>       error = _failed_build(plan, runtime, cache)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:103:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:53: in _failed_build
+    runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=cache)
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:246: in prepare_runtime
+    shutil.copyfile(log, retained)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+src = PosixPath('<temporary>/test_failure_retention_never_r2/cache/.preparing-wvbop8va/build.log')
+dst = PosixPath('<temporary>/test_failure_retention_never_r2/cache/failed-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.log')
+follow_symlinks = True
+
+    def copyfile(src, dst, *, follow_symlinks=True):
+        """Copy data from src to dst in the most efficient way possible.
+
+        If follow_symlinks is not set and src is a symbolic link, a new
+        symlink will be created instead of copying the file it points to.
+
+        """
+        sys.audit("shutil.copyfile", src, dst)
+
+        if _samefile(src, dst):
+            raise SameFileError("{!r} and {!r} are the same file".format(src, dst))
+
+        file_size = 0
+        for i, fn in enumerate([src, dst]):
+            try:
+                st = _stat(fn)
+            except OSError:
+                # File most likely does not exist
+                pass
+            else:
+                # XXX What about other special files? (sockets, devices...)
+                if stat.S_ISFIFO(st.st_mode):
+                    fn = fn.path if isinstance(fn, os.DirEntry) else fn
+                    raise SpecialFileError("`%s` is a named pipe" % fn)
+                if _WINDOWS and i == 0:
+                    file_size = st.st_size
+
+        if not follow_symlinks and _islink(src):
+            os.symlink(os.readlink(src), dst)
+        else:
+            with open(src, 'rb') as fsrc:
+                try:
+>                   with open(dst, 'wb') as fdst:
+                         ^^^^^^^^^^^^^^^
+E                   IsADirectoryError: [Errno 21] Is a directory: '<temporary>/test_failure_retention_never_r2/cache/failed-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.log'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/shutil.py:315: IsADirectoryError
+______ test_timeout_retains_private_partial_output_and_closes_descriptor _______
+
+tmp_path = PosixPath('<temporary>/test_timeout_retains_private_p0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a597350>
+
+    def test_timeout_retains_private_partial_output_and_closes_descriptor(tmp_path: Path, monkeypatch) -> None:
+        plan, runtime, cache, captures = _builder(
+            tmp_path, monkeypatch, "print('partial-builder-output', flush=True); time.sleep(10)", timeout=True
+        )
+        error = _failed_build(plan, runtime, cache)
+        logs = _retained_logs(cache)
+>       assert len(logs) == 1 and logs[0].read_text() == "partial-builder-output\n"
+E       assert (0 == 1)
+E        +  where 0 = len([])
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:117: AssertionError
+______________ test_success_closes_and_removes_private_build_log _______________
+
+tmp_path = PosixPath('<temporary>/test_success_closes_and_remove0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5af020>
+
+    def test_success_closes_and_removes_private_build_log(tmp_path: Path, monkeypatch) -> None:
+        script = "(staging/'artifact/site-packages').mkdir(parents=True); (staging/'artifact/inventory.json').write_text('{}'); print('success')"
+        plan, runtime, cache, captures = _builder(tmp_path, monkeypatch, script)
+        monkeypatch.setattr(runtime_builder, "inventory_native", lambda *_args, **_kwargs: [])
+        monkeypatch.setattr(runtime_builder, "analyzer_dependency_conflicts", lambda *_args: {})
+        monkeypatch.setattr(runtime_builder, "member_dependency_graphs", lambda *_args: {})
+        prepared = runtime_builder.prepare_runtime(plan, runtime=runtime, cache_root=cache)
+        assert prepared.descriptor_path.is_file()
+        assert not list(cache.glob("failed-*.log")) and not list(cache.glob(".preparing-*"))
+>       assert captures[0] is not None and captures[0].closed
+E       assert (None is not None)
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:131: AssertionError
+_________ test_driver_forwards_diagnostics_without_opening_builder_log _________
+
+tmp_path = PosixPath('<temporary>/test_driver_forwards_diagnosti0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a7cc140>
+capsys = <_pytest.capture.CaptureFixture object at 0x10a52dd30>
+
+    def test_driver_forwards_diagnostics_without_opening_builder_log(tmp_path: Path, monkeypatch, capsys) -> None:
+        (tmp_path / "project").mkdir()
+        sentinel = tmp_path / "sentinel"
+        sentinel.write_text("UNCHANGED\n")
+        (tmp_path / "build.log").symlink_to(sentinel)
+        monkeypatch.setattr(runtime_build_driver, "ROOT", tmp_path)
+        output = runtime_build_driver._run([sys.executable, "-c", "import sys; print('native-out'); print('native-err', file=sys.stderr)"])
+        assert output == "native-out"
+>       assert sentinel.read_text() == "UNCHANGED\n"
+E       AssertionError: assert 'UNCHANGED\nn...nnative-err\n' == 'UNCHANGED\n'
+E
+E           UNCHANGED
+E         + native-out
+E         + native-err
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:142: AssertionError
+______________ test_driver_forwards_native_timeout_partial_output ______________
+
+tmp_path = PosixPath('<temporary>/test_driver_forwards_native_ti0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a5db150>
+capsys = <_pytest.capture.CaptureFixture object at 0x10a759950>
+
+    def test_driver_forwards_native_timeout_partial_output(tmp_path: Path, monkeypatch, capsys) -> None:
+        (tmp_path / "project").mkdir()
+        monkeypatch.setattr(runtime_build_driver, "ROOT", tmp_path)
+        native_run = subprocess.run
+
+        def timed_run(command, **kwargs):
+            return native_run(command, **{**kwargs, "timeout": 0.3})
+
+        monkeypatch.setattr(runtime_build_driver.subprocess, "run", timed_run)
+        with pytest.raises(subprocess.TimeoutExpired):
+            runtime_build_driver._run([sys.executable, "-c", "import time; print('native-partial', flush=True); time.sleep(10)"])
+>       assert capsys.readouterr().out == "native-partial\n"
+E       AssertionError: assert '' == 'native-partial\n'
+E
+E         - native-partial
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:157: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_staging_log_symlink_cannot_write_or_read_host_sentinel
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_controller_never_opens_special_staging_log[fifo]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_controller_never_opens_special_staging_log[directory]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_failure_retention_never_reopens_predictable_destination[symlink]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_failure_retention_never_reopens_predictable_destination[fifo]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_failure_retention_never_reopens_predictable_destination[directory]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_timeout_retains_private_partial_output_and_closes_descriptor
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_success_closes_and_removes_private_build_log
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_driver_forwards_diagnostics_without_opening_builder_log
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_driver_forwards_native_timeout_partial_output
+============================== 10 failed in 1.02s ==============================

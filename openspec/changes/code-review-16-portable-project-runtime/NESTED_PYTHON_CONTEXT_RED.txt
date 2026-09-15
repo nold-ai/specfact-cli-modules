@@ -1,0 +1,256 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-delivery
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 17 items / 6 deselected / 11 selected
+
+tests/unit/specfact_code_review/run/test_target_launch.py FFFF.FFFFFF    [100%]
+
+=================================== FAILURES ===================================
+_ test_nested_python_preserves_caller_environment_cwd_and_files[False-snapshot/subdirectory] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_python_preserves_c0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bc168b0>
+location = 'snapshot/subdirectory', remove_home = False
+
+    @pytest.mark.parametrize("location", ["snapshot/subdirectory", "private-tmp/case"])
+    @pytest.mark.parametrize("remove_home", [False, True])
+    def test_nested_python_preserves_caller_environment_cwd_and_files(tmp_path, monkeypatch, location, remove_home):
+        observed, cwd = _nested_child_policy(tmp_path, monkeypatch, location, remove_home)
+>       assert observed == ["caller-overlay", None if remove_home else "caller-home", cwd, "parent-data"]
+E       AssertionError: assert [None, '/opt/...apshot', None] == ['caller-over...'parent-data']
+E
+E         At index 0 diff: None != 'caller-overlay'
+E         Use -v to get more diff
+
+/private/tmp/specfact-473-delivery/tests/unit/specfact_code_review/run/test_target_launch.py:170: AssertionError
+_ test_nested_python_preserves_caller_environment_cwd_and_files[False-private-tmp/case] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_python_preserves_c1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bc16c40>
+location = 'private-tmp/case', remove_home = False
+
+    @pytest.mark.parametrize("location", ["snapshot/subdirectory", "private-tmp/case"])
+    @pytest.mark.parametrize("remove_home", [False, True])
+    def test_nested_python_preserves_caller_environment_cwd_and_files(tmp_path, monkeypatch, location, remove_home):
+        observed, cwd = _nested_child_policy(tmp_path, monkeypatch, location, remove_home)
+>       assert observed == ["caller-overlay", None if remove_home else "caller-home", cwd, "parent-data"]
+E       AssertionError: assert [None, '/opt/...apshot', None] == ['caller-over...'parent-data']
+E
+E         At index 0 diff: None != 'caller-overlay'
+E         Use -v to get more diff
+
+/private/tmp/specfact-473-delivery/tests/unit/specfact_code_review/run/test_target_launch.py:170: AssertionError
+_ test_nested_python_preserves_caller_environment_cwd_and_files[True-snapshot/subdirectory] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_python_preserves_c2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bc5bad0>
+location = 'snapshot/subdirectory', remove_home = True
+
+    @pytest.mark.parametrize("location", ["snapshot/subdirectory", "private-tmp/case"])
+    @pytest.mark.parametrize("remove_home", [False, True])
+    def test_nested_python_preserves_caller_environment_cwd_and_files(tmp_path, monkeypatch, location, remove_home):
+        observed, cwd = _nested_child_policy(tmp_path, monkeypatch, location, remove_home)
+>       assert observed == ["caller-overlay", None if remove_home else "caller-home", cwd, "parent-data"]
+E       AssertionError: assert [None, '/opt/...apshot', None] == ['caller-over...'parent-data']
+E
+E         At index 0 diff: None != 'caller-overlay'
+E         Use -v to get more diff
+
+/private/tmp/specfact-473-delivery/tests/unit/specfact_code_review/run/test_target_launch.py:170: AssertionError
+_ test_nested_python_preserves_caller_environment_cwd_and_files[True-private-tmp/case] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_python_preserves_c3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c231040>
+location = 'private-tmp/case', remove_home = True
+
+    @pytest.mark.parametrize("location", ["snapshot/subdirectory", "private-tmp/case"])
+    @pytest.mark.parametrize("remove_home", [False, True])
+    def test_nested_python_preserves_caller_environment_cwd_and_files(tmp_path, monkeypatch, location, remove_home):
+        observed, cwd = _nested_child_policy(tmp_path, monkeypatch, location, remove_home)
+>       assert observed == ["caller-overlay", None if remove_home else "caller-home", cwd, "parent-data"]
+E       AssertionError: assert [None, '/opt/...apshot', None] == ['caller-over...'parent-data']
+E
+E         At index 0 diff: None != 'caller-overlay'
+E         Use -v to get more diff
+
+/private/tmp/specfact-473-delivery/tests/unit/specfact_code_review/run/test_target_launch.py:170: AssertionError
+_ test_nested_member_domain_survives_environment_replacement[project-python-run/target_bootstrap.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_member_domain_surv0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c25ea50>
+domain = 'project-python', relative = 'run/target_bootstrap.py'
+
+    @pytest.mark.parametrize(
+        "domain,relative",
+        [
+            ("project-python", "run/target_bootstrap.py"),
+            ("pytest-observe", "run/target_pytest.py"),
+            ("pylint", "run/target_pylint.py"),
+            ("basedpyright", "tools/basedpyright_runner.py"),
+            ("crosshair", "tools/contract_runner.py"),
+        ],
+    )
+    def test_nested_member_domain_survives_environment_replacement(tmp_path, monkeypatch, domain, relative):
+        from pathlib import Path
+
+        builtin = Path(target_launch.__file__).parents[2]
+        context = tmp_path / "context"
+        context.symlink_to(builtin / "specfact_code_review" / relative)
+        monkeypatch.setattr(target_launch, "CONTEXT", context, raising=False)
+        monkeypatch.setattr(target_launch, "BUILTIN", builtin, raising=False)
+        monkeypatch.delenv("SPECFACT_TARGET_PYTEST", raising=False)
+>       assert target_launch.execution_domain() == domain
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.target_launch' has no attribute 'execution_domain'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:202: AttributeError
+_ test_nested_member_domain_survives_environment_replacement[pytest-observe-run/target_pytest.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_member_domain_surv1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c25f350>
+domain = 'pytest-observe', relative = 'run/target_pytest.py'
+
+    @pytest.mark.parametrize(
+        "domain,relative",
+        [
+            ("project-python", "run/target_bootstrap.py"),
+            ("pytest-observe", "run/target_pytest.py"),
+            ("pylint", "run/target_pylint.py"),
+            ("basedpyright", "tools/basedpyright_runner.py"),
+            ("crosshair", "tools/contract_runner.py"),
+        ],
+    )
+    def test_nested_member_domain_survives_environment_replacement(tmp_path, monkeypatch, domain, relative):
+        from pathlib import Path
+
+        builtin = Path(target_launch.__file__).parents[2]
+        context = tmp_path / "context"
+        context.symlink_to(builtin / "specfact_code_review" / relative)
+        monkeypatch.setattr(target_launch, "CONTEXT", context, raising=False)
+        monkeypatch.setattr(target_launch, "BUILTIN", builtin, raising=False)
+        monkeypatch.delenv("SPECFACT_TARGET_PYTEST", raising=False)
+>       assert target_launch.execution_domain() == domain
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.target_launch' has no attribute 'execution_domain'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:202: AttributeError
+_ test_nested_member_domain_survives_environment_replacement[pylint-run/target_pylint.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_member_domain_surv2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c2c3d40>
+domain = 'pylint', relative = 'run/target_pylint.py'
+
+    @pytest.mark.parametrize(
+        "domain,relative",
+        [
+            ("project-python", "run/target_bootstrap.py"),
+            ("pytest-observe", "run/target_pytest.py"),
+            ("pylint", "run/target_pylint.py"),
+            ("basedpyright", "tools/basedpyright_runner.py"),
+            ("crosshair", "tools/contract_runner.py"),
+        ],
+    )
+    def test_nested_member_domain_survives_environment_replacement(tmp_path, monkeypatch, domain, relative):
+        from pathlib import Path
+
+        builtin = Path(target_launch.__file__).parents[2]
+        context = tmp_path / "context"
+        context.symlink_to(builtin / "specfact_code_review" / relative)
+        monkeypatch.setattr(target_launch, "CONTEXT", context, raising=False)
+        monkeypatch.setattr(target_launch, "BUILTIN", builtin, raising=False)
+        monkeypatch.delenv("SPECFACT_TARGET_PYTEST", raising=False)
+>       assert target_launch.execution_domain() == domain
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.target_launch' has no attribute 'execution_domain'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:202: AttributeError
+_ test_nested_member_domain_survives_environment_replacement[basedpyright-tools/basedpyright_runner.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_member_domain_surv3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c2e4aa0>
+domain = 'basedpyright', relative = 'tools/basedpyright_runner.py'
+
+    @pytest.mark.parametrize(
+        "domain,relative",
+        [
+            ("project-python", "run/target_bootstrap.py"),
+            ("pytest-observe", "run/target_pytest.py"),
+            ("pylint", "run/target_pylint.py"),
+            ("basedpyright", "tools/basedpyright_runner.py"),
+            ("crosshair", "tools/contract_runner.py"),
+        ],
+    )
+    def test_nested_member_domain_survives_environment_replacement(tmp_path, monkeypatch, domain, relative):
+        from pathlib import Path
+
+        builtin = Path(target_launch.__file__).parents[2]
+        context = tmp_path / "context"
+        context.symlink_to(builtin / "specfact_code_review" / relative)
+        monkeypatch.setattr(target_launch, "CONTEXT", context, raising=False)
+        monkeypatch.setattr(target_launch, "BUILTIN", builtin, raising=False)
+        monkeypatch.delenv("SPECFACT_TARGET_PYTEST", raising=False)
+>       assert target_launch.execution_domain() == domain
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.target_launch' has no attribute 'execution_domain'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:202: AttributeError
+_ test_nested_member_domain_survives_environment_replacement[crosshair-tools/contract_runner.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_nested_member_domain_surv4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c258750>
+domain = 'crosshair', relative = 'tools/contract_runner.py'
+
+    @pytest.mark.parametrize(
+        "domain,relative",
+        [
+            ("project-python", "run/target_bootstrap.py"),
+            ("pytest-observe", "run/target_pytest.py"),
+            ("pylint", "run/target_pylint.py"),
+            ("basedpyright", "tools/basedpyright_runner.py"),
+            ("crosshair", "tools/contract_runner.py"),
+        ],
+    )
+    def test_nested_member_domain_survives_environment_replacement(tmp_path, monkeypatch, domain, relative):
+        from pathlib import Path
+
+        builtin = Path(target_launch.__file__).parents[2]
+        context = tmp_path / "context"
+        context.symlink_to(builtin / "specfact_code_review" / relative)
+        monkeypatch.setattr(target_launch, "CONTEXT", context, raising=False)
+        monkeypatch.setattr(target_launch, "BUILTIN", builtin, raising=False)
+        monkeypatch.delenv("SPECFACT_TARGET_PYTEST", raising=False)
+>       assert target_launch.execution_domain() == domain
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.target_launch' has no attribute 'execution_domain'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:202: AttributeError
+_______________ test_unrecognized_namespace_context_is_rejected ________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-484/test_unrecognized_namespace_co0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c2583d0>
+
+    def test_unrecognized_namespace_context_is_rejected(tmp_path, monkeypatch):
+        context = tmp_path / "context"
+        context.write_text("pytest-observe")
+        monkeypatch.setattr(target_launch, "CONTEXT", context, raising=False)
+        with pytest.raises(RuntimeError, match="project_python_context"):
+>           target_launch.execution_domain()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_launch' has no attribute 'execution_domain'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:212: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_python_preserves_caller_environment_cwd_and_files[False-snapshot/subdirectory]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_python_preserves_caller_environment_cwd_and_files[False-private-tmp/case]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_python_preserves_caller_environment_cwd_and_files[True-snapshot/subdirectory]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_python_preserves_caller_environment_cwd_and_files[True-private-tmp/case]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_member_domain_survives_environment_replacement[project-python-run/target_bootstrap.py]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_member_domain_survives_environment_replacement[pytest-observe-run/target_pytest.py]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_member_domain_survives_environment_replacement[pylint-run/target_pylint.py]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_member_domain_survives_environment_replacement[basedpyright-tools/basedpyright_runner.py]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_nested_member_domain_survives_environment_replacement[crosshair-tools/contract_runner.py]
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_unrecognized_namespace_context_is_rejected
+================== 10 failed, 1 passed, 6 deselected in 0.28s ==================

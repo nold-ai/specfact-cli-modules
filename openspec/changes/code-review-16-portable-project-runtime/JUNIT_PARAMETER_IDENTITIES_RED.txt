@@ -1,0 +1,63 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <temporary>/repository
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/specfact_code_review/run/test_runner.py F                     [100%]
+
+=================================== FAILURES ===================================
+_______ test_pytest_parameter_delimiters_preserve_real_junit_identities ________
+
+tmp_path = PosixPath('<temporary>/test_pytest_parameter_delimite0')
+
+    def test_pytest_parameter_delimiters_preserve_real_junit_identities(tmp_path: Path) -> None:
+        runner_api = _c14_runner()
+        tests_root = tmp_path / "tests"
+        tests_root.mkdir()
+        test_file = tests_root / "test_param.py"
+        test_file.write_text(
+            "import pytest\n"
+            "parameters = pytest.mark.parametrize('value', ['plain', 'left::right', '[left::right]'])\n"
+            "@parameters\n"
+            "def test_value(value):\n"
+            "    assert value\n"
+            "class TestValues:\n"
+            "    @parameters\n"
+            "    def test_value(self, value):\n"
+            "        assert value\n",
+            encoding="utf-8",
+        )
+    
+        process, coverage_path, observer_path, junit_path = runner_api._run_pytest_selection_with_coverage(
+            (str(test_file),),
+            coverage_source=tmp_path,
+            policy_argv=("--rootdir", str(tmp_path)),
+        )
+        try:
+            observer, junit = runner_api._load_pytest_outcome_evidence(observer_path, junit_path)
+            result = runner_api.reconcile_pytest_outcomes(
+                observer=observer,
+                junit=junit,
+                process_exit=process.returncode,
+                planned=("tests/test_param.py::test_value", "tests/test_param.py::TestValues::test_value"),
+            )
+        finally:
+            coverage_path.unlink(missing_ok=True)
+            observer_path.unlink(missing_ok=True)
+            junit_path.unlink(missing_ok=True)
+    
+        assert process.returncode == 0, process.stdout + process.stderr
+        assert len(junit) == 6
+>       assert result.status == "PASS"
+E       AssertionError: assert 'UNKNOWN' == 'PASS'
+E         
+E         - PASS
+E         + UNKNOWN
+
+tests/unit/specfact_code_review/run/test_runner.py:7336: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runner.py::test_pytest_parameter_delimiters_preserve_real_junit_identities
+============================== 1 failed in 1.18s ===============================

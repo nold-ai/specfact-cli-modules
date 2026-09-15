@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 17 items
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py .......... [ 58%]
+.....FF                                                                  [100%]
+
+=================================== FAILURES ===================================
+__________ test_single_declared_test_group_is_prepared_automatically ___________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-25/test_single_declared_test_grou0')
+
+    def test_single_declared_test_group_is_prepared_automatically(tmp_path: Path) -> None:
+        (tmp_path / 'pyproject.toml').write_text('[dependency-groups]\ntest=["pytest"]\ndocs=["sphinx"]\n')
+>       assert discover_project(tmp_path).groups == ('test',)
+E       AssertionError: assert () == ('test',)
+E
+E         Right contains one more item: 'test'
+E         Use -v to get more diff
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:127: AssertionError
+_____________ test_competing_hatch_environments_require_selection ______________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-25/test_competing_hatch_environme0')
+
+    def test_competing_hatch_environments_require_selection(tmp_path: Path) -> None:
+        (tmp_path / 'hatch.toml').write_text('[envs.default]\ndependencies=["pytest<8"]\n[envs.test]\ndependencies=["pytest>=9"]\n')
+>       with pytest.raises(ProjectRuntimeError, match=r'environment_ambiguous.*default.*test'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:132: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_single_declared_test_group_is_prepared_automatically
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_competing_hatch_environments_require_selection
+========================= 2 failed, 15 passed in 0.13s =========================

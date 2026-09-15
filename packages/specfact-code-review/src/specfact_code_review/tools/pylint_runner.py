@@ -97,6 +97,8 @@ def _finding_from_item(item: object, *, allowed_paths: set[str]) -> ReviewFindin
 
 
 def _payload_from_output(stdout: str, *, stderr: str, returncode: int | None) -> list[object]:
+    if returncode == 78:
+        raise ValueError(f"pylint worker startup failed; {returncode=}, stderr={stderr[:4096]!r}")
     stripped = stdout.strip()
     if not stripped:
         out = stdout

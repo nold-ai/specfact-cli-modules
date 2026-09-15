@@ -1,0 +1,132 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/specfact_code_review/run/test_runtime_git.py FF....           [ 85%]
+tests/unit/specfact_code_review/run/test_runtime_builder.py F            [100%]
+
+=================================== FAILURES ===================================
+______________ test_missing_git_https_helper_only_fails_when_used ______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-244/test_missing_git_https_helper_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bd109d0>
+
+    def test_missing_git_https_helper_only_fails_when_used(tmp_path: Path, monkeypatch) -> None:
+        git = tmp_path / "git"
+        git.write_bytes(b"\x7fELFgit")
+        (tmp_path / "git-remote-http").write_bytes(b"\x7fELFhttp")
+        monkeypatch.setattr(runtime_git, "GIT", git)
+        run = subprocess.run
+        monkeypatch.setattr(runtime_git.subprocess, "run", lambda *_args, **_kwargs: SimpleNamespace(stdout=str(tmp_path)))
+>       assert set(runtime_git.git_identity()) == {"bin/git", "git-core/git-remote-http"}
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_git.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:44: in git_identity
+    return {name: content_digest(path.read_bytes()) for name, path in _programs().items()}
+                                                                      ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _programs() -> dict[str, Path]:
+        if not GIT.is_file():
+            raise ProjectRuntimeError("project_builder_tool_missing:git; install Git on the builder")
+        result = subprocess.run(
+            [str(GIT), "--exec-path"], env={"PATH": "/usr/bin:/bin"}, capture_output=True, text=True, check=True, timeout=10
+        )
+        directory = Path(result.stdout.strip())
+        programs = {"bin/git": GIT}
+        for name in ("git-remote-http", "git-remote-https"):
+            path = directory / name
+            if not path.is_file():
+>               raise ProjectRuntimeError(f"project_builder_tool_missing:{name}; install Git HTTP transport helpers")
+E               specfact_code_review.run.runtime_models.ProjectRuntimeError: project_builder_tool_missing:git-remote-https; install Git HTTP transport helpers
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:30: ProjectRuntimeError
+____________ test_missing_git_is_optional_for_identity_and_staging _____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-244/test_missing_git_is_optional_f0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bd10b00>
+
+    def test_missing_git_is_optional_for_identity_and_staging(tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.setattr(runtime_git, "GIT", tmp_path / "unavailable-git")
+        assert runtime_git.git_identity() == {}
+>       runtime_git.stage_git(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_git.py:36: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:57: in stage_git
+    for name, source in _programs().items():
+                        ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _programs() -> dict[str, Path]:
+        if not GIT.is_file():
+>           raise ProjectRuntimeError("project_builder_tool_missing:git; install Git on the builder")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_builder_tool_missing:git; install Git on the builder
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:21: ProjectRuntimeError
+____________________ test_plain_pip_build_runs_without_git _____________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-244/test_plain_pip_build_runs_with0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10be34850>
+
+    def test_plain_pip_build_runs_without_git(tmp_path: Path, monkeypatch) -> None:
+        from specfact_code_review.run import runtime_builder, runtime_git
+        from specfact_code_review.run.runtime_sources import source_identity
+    
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "requirements.txt").write_text("example-package==1.0\n")
+        plan = ProjectPlan(source, manager="pip", requirements=("requirements.txt",), source_identity=source_identity(source))
+        staging = tmp_path / "staging"
+        staging.mkdir()
+        runtime = SimpleNamespace(root=tmp_path / "capsule", interpreter="/opt/specfact/python/bin/python", bubblewrap="bwrap")
+        monkeypatch.setattr(runtime_git, "GIT", tmp_path / "unavailable-git")
+        monkeypatch.setattr(
+            runtime_builder.sandbox, "_verified_bubblewrap_descriptor", lambda *_args: os.open(os.devnull, os.O_RDONLY)
+        )
+        launched = []
+    
+        def acquire(command, **_kwargs):
+            launched.append(command)
+            (staging / "artifact/site-packages").mkdir(parents=True)
+            return SimpleNamespace(returncode=0)
+    
+        monkeypatch.setattr(runtime_builder.subprocess, "run", acquire)
+>       assert runtime_builder._build(plan, runtime, staging) == staging / "artifact"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+packages/specfact-code-review/src/specfact_code_review/run/runtime_builder.py:126: in _build
+    stage_git(staging)
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:57: in stage_git
+    for name, source in _programs().items():
+                        ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _programs() -> dict[str, Path]:
+        if not GIT.is_file():
+>           raise ProjectRuntimeError("project_builder_tool_missing:git; install Git on the builder")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_builder_tool_missing:git; install Git on the builder
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_git.py:21: ProjectRuntimeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_git.py::test_missing_git_https_helper_only_fails_when_used
+FAILED tests/unit/specfact_code_review/run/test_runtime_git.py::test_missing_git_is_optional_for_identity_and_staging
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_plain_pip_build_runs_without_git
+========================= 3 failed, 4 passed in 0.77s ==========================

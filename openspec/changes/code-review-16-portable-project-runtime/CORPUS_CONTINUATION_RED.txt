@@ -1,0 +1,134 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items / 4 deselected / 1 selected
+
+tests/unit/test_external_capsule_corpus.py F                             [100%]
+
+=================================== FAILURES ===================================
+_________ test_corpus_attempts_remaining_repositories_after_a_failure __________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-77/test_corpus_attempts_remaining0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108ff7e10>
+
+    def test_corpus_attempts_remaining_repositories_after_a_failure(tmp_path: Path, monkeypatch) -> None:
+        import json
+
+        module = _load()
+        manifest = tmp_path / 'corpus.json'
+        manifest.write_text(json.dumps({'python': ['3.12'], 'repositories': [{'name': 'first'}, {'name': 'second'}]}))
+        monkeypatch.setattr(module, 'MANIFEST', manifest)
+        monkeypatch.setattr(module.sys, 'argv', ['corpus', '--workspace', str(tmp_path / 'work')])
+        monkeypatch.setattr(module.sys, 'version_info', type('Version', (), {'major': 3, 'minor': 12})())
+        monkeypatch.setattr(module.platform, 'system', lambda: 'Linux')
+        monkeypatch.setattr(module.platform, 'machine', lambda: 'x86_64')
+        monkeypatch.setattr(module.os, 'getuid', lambda: 1000)
+        attempted = []
+
+        def run_entry(entry, workspace):
+            attempted.append(entry['name'])
+            if entry['name'] == 'first':
+                raise ValueError('controlled incomplete analysis')
+
+        monkeypatch.setattr(module, 'run_entry', run_entry)
+>       assert module.main() == 1
+               ^^^^^^^^^^^^^
+
+tests/unit/test_external_capsule_corpus.py:82:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts/external_capsule_corpus.py:293: in main
+    run_entry(entry, args.workspace.resolve())
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+entry = {'name': 'first'}
+workspace = PosixPath('<TMPDIR>/pytest-of-dom/pytest-77/test_corpus_attempts_remaining0/work')
+
+    def run_entry(entry, workspace):
+        attempted.append(entry['name'])
+        if entry['name'] == 'first':
+>           raise ValueError('controlled incomplete analysis')
+E           ValueError: controlled incomplete analysis
+
+tests/unit/test_external_capsule_corpus.py:79: ValueError
+
+During handling of the above exception, another exception occurred:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x1096cd6f0>
+when = 'call'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/_pytest/runner.py:361:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/pluggy/_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/pluggy/_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/_pytest/logging.py:865: in pytest_runtest_call
+    yield
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/_pytest/capture.py:900: in pytest_runtest_call
+    return (yield)
+            ^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/_pytest/skipping.py:268: in pytest_runtest_call
+    return (yield)
+            ^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+item = <Function test_corpus_attempts_remaining_repositories_after_a_failure>
+
+    def pytest_runtest_call(item: Item) -> None:
+        _update_current_test_var(item, "call")
+        try:
+            del sys.last_type
+            del sys.last_value
+            del sys.last_traceback
+            if sys.version_info >= (3, 12, 0):
+                del sys.last_exc  # type:ignore[attr-defined]
+        except AttributeError:
+            pass
+        try:
+            item.runtest()
+        except Exception as e:
+            # Store trace info to allow postmortem debugging
+            sys.last_type = type(e)
+            sys.last_value = e
+>           if sys.version_info >= (3, 12, 0):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: '>=' not supported between instances of 'Version' and 'tuple'
+
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/_pytest/runner.py:189: TypeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_corpus_attempts_remaining_repositories_after_a_failure
+======================= 1 failed, 4 deselected in 0.04s ========================

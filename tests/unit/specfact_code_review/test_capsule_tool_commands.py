@@ -1,8 +1,14 @@
 """Child analyzer commands retain sealed startup and private writable state."""
 
+import json
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from specfact_code_review import _review_utils
+from specfact_code_review._review_utils import analyzer_command, development_runtime
 
 
 @pytest.mark.parametrize(
@@ -42,3 +48,27 @@ def test_host_tool_commands_keep_existing_behavior() -> None:
     """Ordinary compatibility execution keeps the caller's executable and flags."""
     for command in (["pylint", "example.py"], ["ruff", "check", "example.py"]):
         assert _review_utils.analyzer_command(command) == command
+
+
+def test_development_snapshot_uses_its_verified_runtime_without_leaking_context() -> None:
+
+    original = ["basedpyright", "--outputjson", "src/app.py"]
+    with development_runtime(Path("/private/development/.venv")):
+        command = analyzer_command(original)
+        assert "--venvpath" not in command
+        assert command[command.index("--pythonpath") + 1] == "/private/development/.venv/bin/python"
+    assert analyzer_command(original) == original
+
+
+def test_development_context_runs_basedpyright_with_import_resolution(tmp_path) -> None:
+
+    source = tmp_path / "app.py"
+    source.write_text(
+        "from icontract import require\n@require(lambda x: x > 0)\ndef positive(x: int) -> int:\n    return x\n"
+    )
+    with _review_utils.development_runtime(Path(sys.prefix)):
+        command = _review_utils.analyzer_command(["basedpyright", "--outputjson", str(source)])
+    result = subprocess.run(command, cwd=tmp_path, text=True, capture_output=True, check=False)
+    assert result.returncode in (0, 1), result.stderr
+    report = json.loads(result.stdout)
+    assert not [item for item in report["generalDiagnostics"] if item["severity"] == "error"]

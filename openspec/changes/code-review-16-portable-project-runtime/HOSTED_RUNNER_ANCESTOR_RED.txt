@@ -1,0 +1,52 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/test_external_capsule_corpus.py F                             [100%]
+
+=================================== FAILURES ===================================
+_______ test_offline_provisioning_avoids_writable_hosted_runner_ancestor _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10becc3e0>
+
+    def test_offline_provisioning_avoids_writable_hosted_runner_ancestor(monkeypatch) -> None:
+        module = _load()
+        payload = b"administrator-provisioned launcher fixture"
+
+        def permissions(path):
+            mode = 0o100555 if path.name in {"bwrap", "bwrap.sha256"} else 0o40755
+            if path == Path("/opt"):
+                mode = 0o40775
+            return SimpleNamespace(st_uid=0, st_mode=mode)
+
+        monkeypatch.setattr(Path, "lstat", permissions)
+        monkeypatch.setattr(Path, "read_bytes", lambda _path: payload)
+        monkeypatch.setattr(Path, "read_text", lambda _path, **_kwargs: hashlib.sha256(payload).hexdigest())
+        monkeypatch.setattr(module.os, "access", lambda *_args: True)
+        launcher = module.OFFLINE_ROOT / "bwrap"
+>       assert module._verified_offline_launcher(str(launcher)) == launcher
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_external_capsule_corpus.py:229:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts/external_capsule_corpus.py:103: in _verified_offline_launcher
+    _check_offline_path(directory, directory=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('/opt'), directory = True
+
+    def _check_offline_path(path: Path, *, directory: bool = False) -> None:
+        metadata = path.lstat()
+        expected_type = stat.S_ISDIR if directory else stat.S_ISREG
+        if metadata.st_uid != 0 or metadata.st_mode & 0o022 or not expected_type(metadata.st_mode):
+>           raise ValueError(f"offline_launcher_untrusted:{path.name}")
+E           ValueError: offline_launcher_untrusted:opt
+
+scripts/external_capsule_corpus.py:94: ValueError
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_offline_provisioning_avoids_writable_hosted_runner_ancestor
+============================== 1 failed in 0.03s ===============================

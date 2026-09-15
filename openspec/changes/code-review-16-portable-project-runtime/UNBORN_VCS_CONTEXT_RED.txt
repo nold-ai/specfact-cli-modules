@@ -1,0 +1,276 @@
+Sanitized RED transcript: local worktree/temp paths and object addresses replaced; diagnostics and outcomes unchanged.
+Command: PYTHONPATH=packages/specfact-code-review/src:src .venv/bin/python -m pytest tests/unit/specfact_code_review/run/test_runtime_vcs.py -k "unborn or invalid_git_metadata" -q
+
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 41 items / 27 deselected / 14 selected
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py FFF...........   [100%]
+
+=================================== FAILURES ===================================
+_____ test_unborn_head_allows_discovery_inspection_and_private_copy[fresh] _____
+
+tmp_path = PosixPath('<pytest-temp>/test_unborn_head_allows_discov0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at <address>>
+state = 'fresh'
+
+    @pytest.mark.parametrize("state", ["fresh", "staged", "orphan"])
+    def test_unborn_head_allows_discovery_inspection_and_private_copy(tmp_path: Path, monkeypatch, state: str) -> None:
+        root = tmp_path / "project"
+        if state == "orphan":
+            _repository(root)
+            _git(root, "tag", "unrelated-v1")
+            _git(root, "checkout", "--orphan", "new-branch")
+        else:
+            root.mkdir()
+            _git(root, "init", "-q", "--initial-branch=main")
+        (root / "pyproject.toml").write_text('[project]\nname="fixture"\n')
+        if state == "staged":
+            _git(root, "add", "pyproject.toml")
+>       plan = discover_project(root)
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:81:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:394: in discover_project
+    vcs=vcs_context(root),
+        ^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:65: in vcs_context
+    selected = _git(root, "rev-parse", "--verify", commit + "^{commit}")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:57: in _git
+    return _git_bytes(root, *arguments).decode("utf-8").strip()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('<pytest-temp>/test_unborn_head_allows_discov0/project')
+input_data = None, shallow_file = None
+arguments = ('rev-parse', '--verify', 'HEAD^{commit}')
+
+    def _git_bytes(root: Path, *arguments: str, input_data: bytes | None = None, shallow_file: Path | None = None) -> bytes:
+        try:
+            result = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "core.hooksPath=/dev/null",
+                    *(["--shallow-file", str(shallow_file)] if shallow_file is not None else []),
+                    *arguments,
+                ],
+                env={
+                    "PATH": os.defpath,
+                    "GIT_CONFIG_NOSYSTEM": "1",
+                    "GIT_CONFIG_GLOBAL": "/dev/null",
+                    "GIT_NO_REPLACE_OBJECTS": "1",
+                    "GIT_GRAFT_FILE": os.devnull,
+                    "GIT_NO_LAZY_FETCH": "1",
+                    "GIT_ALLOW_PROTOCOL": "",
+                    "GIT_TERMINAL_PROMPT": "0",
+                },
+                input=input_data,
+                capture_output=True,
+                check=False,
+                timeout=120,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise ProjectRuntimeError(
+                f"project_git_snapshot_failed:{arguments[0]}:{type(exc).__name__}; retry local metadata export"
+            ) from exc
+        if result.returncode:
+>           raise ProjectRuntimeError(
+                "project_git_snapshot_failed:"
+                + arguments[0]
+                + "; ensure required Git objects are available locally; metadata export disables network acquisition"
+            )
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_git_snapshot_failed:rev-parse; ensure required Git objects are available locally; metadata export disables network acquisition
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:48: ProjectRuntimeError
+____ test_unborn_head_allows_discovery_inspection_and_private_copy[staged] _____
+
+tmp_path = PosixPath('<pytest-temp>/test_unborn_head_allows_discov1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at <address>>
+state = 'staged'
+
+    @pytest.mark.parametrize("state", ["fresh", "staged", "orphan"])
+    def test_unborn_head_allows_discovery_inspection_and_private_copy(tmp_path: Path, monkeypatch, state: str) -> None:
+        root = tmp_path / "project"
+        if state == "orphan":
+            _repository(root)
+            _git(root, "tag", "unrelated-v1")
+            _git(root, "checkout", "--orphan", "new-branch")
+        else:
+            root.mkdir()
+            _git(root, "init", "-q", "--initial-branch=main")
+        (root / "pyproject.toml").write_text('[project]\nname="fixture"\n')
+        if state == "staged":
+            _git(root, "add", "pyproject.toml")
+>       plan = discover_project(root)
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:81:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:394: in discover_project
+    vcs=vcs_context(root),
+        ^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:65: in vcs_context
+    selected = _git(root, "rev-parse", "--verify", commit + "^{commit}")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:57: in _git
+    return _git_bytes(root, *arguments).decode("utf-8").strip()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('<pytest-temp>/test_unborn_head_allows_discov1/project')
+input_data = None, shallow_file = None
+arguments = ('rev-parse', '--verify', 'HEAD^{commit}')
+
+    def _git_bytes(root: Path, *arguments: str, input_data: bytes | None = None, shallow_file: Path | None = None) -> bytes:
+        try:
+            result = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "core.hooksPath=/dev/null",
+                    *(["--shallow-file", str(shallow_file)] if shallow_file is not None else []),
+                    *arguments,
+                ],
+                env={
+                    "PATH": os.defpath,
+                    "GIT_CONFIG_NOSYSTEM": "1",
+                    "GIT_CONFIG_GLOBAL": "/dev/null",
+                    "GIT_NO_REPLACE_OBJECTS": "1",
+                    "GIT_GRAFT_FILE": os.devnull,
+                    "GIT_NO_LAZY_FETCH": "1",
+                    "GIT_ALLOW_PROTOCOL": "",
+                    "GIT_TERMINAL_PROMPT": "0",
+                },
+                input=input_data,
+                capture_output=True,
+                check=False,
+                timeout=120,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise ProjectRuntimeError(
+                f"project_git_snapshot_failed:{arguments[0]}:{type(exc).__name__}; retry local metadata export"
+            ) from exc
+        if result.returncode:
+>           raise ProjectRuntimeError(
+                "project_git_snapshot_failed:"
+                + arguments[0]
+                + "; ensure required Git objects are available locally; metadata export disables network acquisition"
+            )
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_git_snapshot_failed:rev-parse; ensure required Git objects are available locally; metadata export disables network acquisition
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:48: ProjectRuntimeError
+____ test_unborn_head_allows_discovery_inspection_and_private_copy[orphan] _____
+
+tmp_path = PosixPath('<pytest-temp>/test_unborn_head_allows_discov2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at <address>>
+state = 'orphan'
+
+    @pytest.mark.parametrize("state", ["fresh", "staged", "orphan"])
+    def test_unborn_head_allows_discovery_inspection_and_private_copy(tmp_path: Path, monkeypatch, state: str) -> None:
+        root = tmp_path / "project"
+        if state == "orphan":
+            _repository(root)
+            _git(root, "tag", "unrelated-v1")
+            _git(root, "checkout", "--orphan", "new-branch")
+        else:
+            root.mkdir()
+            _git(root, "init", "-q", "--initial-branch=main")
+        (root / "pyproject.toml").write_text('[project]\nname="fixture"\n')
+        if state == "staged":
+            _git(root, "add", "pyproject.toml")
+>       plan = discover_project(root)
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:81:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:394: in discover_project
+    vcs=vcs_context(root),
+        ^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:65: in vcs_context
+    selected = _git(root, "rev-parse", "--verify", commit + "^{commit}")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:57: in _git
+    return _git_bytes(root, *arguments).decode("utf-8").strip()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('<pytest-temp>/test_unborn_head_allows_discov2/project')
+input_data = None, shallow_file = None
+arguments = ('rev-parse', '--verify', 'HEAD^{commit}')
+
+    def _git_bytes(root: Path, *arguments: str, input_data: bytes | None = None, shallow_file: Path | None = None) -> bytes:
+        try:
+            result = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "core.hooksPath=/dev/null",
+                    *(["--shallow-file", str(shallow_file)] if shallow_file is not None else []),
+                    *arguments,
+                ],
+                env={
+                    "PATH": os.defpath,
+                    "GIT_CONFIG_NOSYSTEM": "1",
+                    "GIT_CONFIG_GLOBAL": "/dev/null",
+                    "GIT_NO_REPLACE_OBJECTS": "1",
+                    "GIT_GRAFT_FILE": os.devnull,
+                    "GIT_NO_LAZY_FETCH": "1",
+                    "GIT_ALLOW_PROTOCOL": "",
+                    "GIT_TERMINAL_PROMPT": "0",
+                },
+                input=input_data,
+                capture_output=True,
+                check=False,
+                timeout=120,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise ProjectRuntimeError(
+                f"project_git_snapshot_failed:{arguments[0]}:{type(exc).__name__}; retry local metadata export"
+            ) from exc
+        if result.returncode:
+>           raise ProjectRuntimeError(
+                "project_git_snapshot_failed:"
+                + arguments[0]
+                + "; ensure required Git objects are available locally; metadata export disables network acquisition"
+            )
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_git_snapshot_failed:rev-parse; ensure required Git objects are available locally; metadata export disables network acquisition
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:48: ProjectRuntimeError
+----------------------------- Captured stderr call -----------------------------
+Switched to a new branch 'new-branch'
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_unborn_head_allows_discovery_inspection_and_private_copy[fresh]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_unborn_head_allows_discovery_inspection_and_private_copy[staged]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_unborn_head_allows_discovery_inspection_and_private_copy[orphan]
+================= 3 failed, 11 passed, 27 deselected in 1.34s ==================

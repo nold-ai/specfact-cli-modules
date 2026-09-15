@@ -1,0 +1,52 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 15 items
+
+tests/unit/specfact_code_review/run/test_target_launch.py ....F          [ 33%]
+tests/unit/specfact_code_review/run/test_target_bootstrap.py ....F       [ 66%]
+tests/unit/specfact_code_review/run/test_target_pytest.py ....F          [100%]
+
+=================================== FAILURES ===================================
+______ test_pytest_children_keep_private_coverage_and_their_member_domain ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1099d6e70>
+
+    def test_pytest_children_keep_private_coverage_and_their_member_domain(monkeypatch) -> None:
+        from specfact_code_review.run.target_launch import target_command
+
+        def environment(command):
+            return {command[index + 1]: command[index + 2] for index, arg in enumerate(command) if arg == '--setenv'}
+
+        parent = environment(target_command('pytest-observe', []))
+>       assert parent['COVERAGE_FILE'] == '/opt/specfact/tmp/.coverage'
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'COVERAGE_FILE'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:67: KeyError
+________ test_only_pytest_children_receive_the_pytest_dependency_domain ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f13b60>
+
+    def test_only_pytest_children_receive_the_pytest_dependency_domain(monkeypatch) -> None:
+>       from specfact_code_review.run.target_bootstrap import _python_execution_domain
+E       ImportError: cannot import name '_python_execution_domain' from 'specfact_code_review.run.target_bootstrap' (<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/target_bootstrap.py)
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:66: ImportError
+______________ test_observer_retains_xdist_worker_startup_failure ______________
+
+    def test_observer_retains_xdist_worker_startup_failure() -> None:
+        observer = target_pytest.Observer()
+>       observer.pytest_testnodedown(None, 'coverage storage is read-only')
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'Observer' object has no attribute 'pytest_testnodedown'
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:53: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_pytest_children_keep_private_coverage_and_their_member_domain
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_only_pytest_children_receive_the_pytest_dependency_domain
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_observer_retains_xdist_worker_startup_failure
+========================= 3 failed, 12 passed in 0.10s =========================

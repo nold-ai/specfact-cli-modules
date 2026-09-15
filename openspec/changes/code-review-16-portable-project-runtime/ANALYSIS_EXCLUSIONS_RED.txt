@@ -1,0 +1,44 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py F          [100%]
+
+=================================== FAILURES ===================================
+__________ test_analysis_source_copy_excludes_local_environment_files __________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-152/test_analysis_source_copy_excl0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109dca650>
+
+    def test_analysis_source_copy_excludes_local_environment_files(tmp_path: Path, monkeypatch) -> None:
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "app.py").write_text("VALUE = 1\n")
+        (source / ".env").write_text("SYNTHETIC_SECRET=fixture\n")
+        (source / ".venv").mkdir()
+        (source / ".venv/private.txt").write_text("synthetic excluded fixture")
+        observed = []
+
+        def analyze(_runtime, *, snapshot_root, files, options, settings):
+            assert snapshot_root != source
+            assert not (snapshot_root / ".env").exists()
+            assert not (snapshot_root / ".venv").exists()
+            assert files == [snapshot_root / "app.py"]
+            assert files[0].read_text() == "VALUE = 1\n"
+            observed.append(snapshot_root)
+            return runner.CapsuleSnapshotResult({}, {})
+
+        monkeypatch.setattr(runner, "_run_capsule_snapshot", analyze)
+        request = ProjectSnapshotRequest(source, [source / "app.py"], runner.ReviewOptions(), "explicit_files")
+>       portable_snapshot._run_in_private_source(object(), request, runner.CapsuleSnapshotSettings())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.portable_snapshot' has no attribute '_run_in_private_source'
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:148: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_analysis_source_copy_excludes_local_environment_files
+============================== 1 failed in 0.83s ===============================

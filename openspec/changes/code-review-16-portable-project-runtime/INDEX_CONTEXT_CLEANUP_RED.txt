@@ -1,0 +1,127 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 141 items / 138 deselected / 3 selected
+
+tests/unit/specfact_code_review/run/test_scope.py FFF                    [100%]
+
+=================================== FAILURES ===================================
+__ test_index_discovery_failure_removes_both_materialized_roots[_range_paths] __
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-251/test_index_discovery_failure_r0/repo')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-251/test_index_discovery_failure_r0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109c20b00>
+failure_stage = '_range_paths'
+
+    @pytest.mark.parametrize("failure_stage", ["_range_paths", "_discovered_index_policy_paths", "_snapshot_input_manifest"])
+    def test_index_discovery_failure_removes_both_materialized_roots(
+        git_repo: Path, tmp_path: Path, monkeypatch, failure_stage: str
+    ) -> None:
+        (git_repo / "src/app.py").write_text("VALUE = 2\n")
+        _git(git_repo, "add", "-A")
+        created = []
+    
+        def tracked_mkdtemp(*, prefix: str) -> str:
+            root = tmp_path / f"{prefix}{len(created)}"
+            root.mkdir()
+            created.append(root)
+            return str(root)
+    
+        def fail_discovery(*_args, **_kwargs):
+            raise scope.GitResolutionError("simulated immutable input read failure")
+    
+        monkeypatch.setattr(scope.tempfile, "mkdtemp", tracked_mkdtemp)
+        monkeypatch.setattr(scope, failure_stage, fail_discovery)
+        result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=True))
+        assert result.status == "UNKNOWN"
+        assert result.reason == "git_resolution_failed"
+        assert "simulated immutable input read failure" in result.diagnostics
+        snapshots = [root for root in created if root.name.startswith("specfact-review-")]
+        assert len(snapshots) == 2
+>       assert all(not root.exists() for root in created)
+E       assert False
+E        +  where False = all(<generator object test_index_discovery_failure_removes_both_materialized_roots.<locals>.<genexpr> at 0x109c64fb0>)
+
+tests/unit/specfact_code_review/run/test_scope.py:1504: AssertionError
+_ test_index_discovery_failure_removes_both_materialized_roots[_discovered_index_policy_paths] _
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-251/test_index_discovery_failure_r1/repo')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-251/test_index_discovery_failure_r1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109c209d0>
+failure_stage = '_discovered_index_policy_paths'
+
+    @pytest.mark.parametrize("failure_stage", ["_range_paths", "_discovered_index_policy_paths", "_snapshot_input_manifest"])
+    def test_index_discovery_failure_removes_both_materialized_roots(
+        git_repo: Path, tmp_path: Path, monkeypatch, failure_stage: str
+    ) -> None:
+        (git_repo / "src/app.py").write_text("VALUE = 2\n")
+        _git(git_repo, "add", "-A")
+        created = []
+    
+        def tracked_mkdtemp(*, prefix: str) -> str:
+            root = tmp_path / f"{prefix}{len(created)}"
+            root.mkdir()
+            created.append(root)
+            return str(root)
+    
+        def fail_discovery(*_args, **_kwargs):
+            raise scope.GitResolutionError("simulated immutable input read failure")
+    
+        monkeypatch.setattr(scope.tempfile, "mkdtemp", tracked_mkdtemp)
+        monkeypatch.setattr(scope, failure_stage, fail_discovery)
+        result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=True))
+        assert result.status == "UNKNOWN"
+        assert result.reason == "git_resolution_failed"
+        assert "simulated immutable input read failure" in result.diagnostics
+        snapshots = [root for root in created if root.name.startswith("specfact-review-")]
+        assert len(snapshots) == 2
+>       assert all(not root.exists() for root in created)
+E       assert False
+E        +  where False = all(<generator object test_index_discovery_failure_removes_both_materialized_roots.<locals>.<genexpr> at 0x109c658a0>)
+
+tests/unit/specfact_code_review/run/test_scope.py:1504: AssertionError
+_ test_index_discovery_failure_removes_both_materialized_roots[_snapshot_input_manifest] _
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-251/test_index_discovery_failure_r2/repo')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-251/test_index_discovery_failure_r2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109bc6b10>
+failure_stage = '_snapshot_input_manifest'
+
+    @pytest.mark.parametrize("failure_stage", ["_range_paths", "_discovered_index_policy_paths", "_snapshot_input_manifest"])
+    def test_index_discovery_failure_removes_both_materialized_roots(
+        git_repo: Path, tmp_path: Path, monkeypatch, failure_stage: str
+    ) -> None:
+        (git_repo / "src/app.py").write_text("VALUE = 2\n")
+        _git(git_repo, "add", "-A")
+        created = []
+    
+        def tracked_mkdtemp(*, prefix: str) -> str:
+            root = tmp_path / f"{prefix}{len(created)}"
+            root.mkdir()
+            created.append(root)
+            return str(root)
+    
+        def fail_discovery(*_args, **_kwargs):
+            raise scope.GitResolutionError("simulated immutable input read failure")
+    
+        monkeypatch.setattr(scope.tempfile, "mkdtemp", tracked_mkdtemp)
+        monkeypatch.setattr(scope, failure_stage, fail_discovery)
+        result = scope.resolve_scope(scope.ScopeRequest(repository=git_repo, scope="index", portable_project_runtime=True))
+        assert result.status == "UNKNOWN"
+        assert result.reason == "git_resolution_failed"
+        assert "simulated immutable input read failure" in result.diagnostics
+        snapshots = [root for root in created if root.name.startswith("specfact-review-")]
+        assert len(snapshots) == 2
+>       assert all(not root.exists() for root in created)
+E       assert False
+E        +  where False = all(<generator object test_index_discovery_failure_removes_both_materialized_roots.<locals>.<genexpr> at 0x109c660c0>)
+
+tests/unit/specfact_code_review/run/test_scope.py:1504: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_discovery_failure_removes_both_materialized_roots[_range_paths]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_discovery_failure_removes_both_materialized_roots[_discovered_index_policy_paths]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_index_discovery_failure_removes_both_materialized_roots[_snapshot_input_manifest]
+====================== 3 failed, 138 deselected in 0.53s =======================
