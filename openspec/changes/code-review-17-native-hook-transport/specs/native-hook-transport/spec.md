@@ -41,7 +41,8 @@ The transport SHALL execute every unchanged pre-commit stage in a credential-fre
 #### Scenario: Bounded development dependency alignment
 - **GIVEN** the exact reviewed Pylint and basedpyright declarations in the immutable base
 - **WHEN** a snapshot updates pyproject.toml
-- **THEN** only those two approved pin replacements are accepted, and any other byte change fails before preparation or hooks
+- **THEN** only those two approved pin replacements, the explicit nodejs-wheel-binaries==24.16.0 dependency, and the reviewed native_tools declaration for git/uname/sed are accepted
+- **AND** any other byte change fails before preparation or hooks
 
 #### Scenario: Inventory the actual hook interpreter after preparation
 - **GIVEN** Hatch preparation may synchronize declared development dependencies
@@ -71,3 +72,10 @@ The transport SHALL execute every unchanged pre-commit stage in a credential-fre
 - **AND** a bounded offline replay retains raw output, exit and identities as diagnostic-only evidence, never replacing the hook failure
 - **AND** mismatched identities or unavailable cached state produce an incomplete diagnostic without executing an approximate runtime
 - **AND** the diagnostic is disabled by default and no customer-corpus selection changes
+
+#### Scenario: Replay retains the private immutable snapshot root permissions
+
+- **GIVEN** the original review materializes its Git index in a private temporary root whose permissions enter source identity
+- **WHEN** a diagnostic reconstructs the same index
+- **THEN** it uses the same private root permissions before discovery so identical Git inputs retain the original source and project identities
+- **AND** production identity rules remain unchanged; the diagnostic SHALL NOT normalize or waive permission differences

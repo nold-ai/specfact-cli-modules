@@ -25,6 +25,17 @@ _ALLOWED = frozenset(
         _CHANGE + name
         for name in (
             "PR478_DEV_ALIGNMENT_RED.txt",
+            "PR478_NATIVE_TOOLS_RED.txt",
+            "PR478_NATIVE_TOOLS_CLOSURE_RED.txt",
+            "PR478_NATIVE_TOOLS_GIT_RED.txt",
+            "PR478_NATIVE_TOOLS_COLLISION_RED.txt",
+            "PR478_NATIVE_TOOLS_LINUX_SMOKE.json",
+            "PR478_SEALED_SHELL_AUDIT.json",
+            "PR478_IMPLICIT_HATCH_DEFAULT_RED.txt",
+            "PR478_CASE_IDENTITIES_EVIDENCE.md",
+            "PR478_NODE_DOMAIN_RED.txt",
+            "PR478_NODE_DOMAIN_EVIDENCE.md",
+            "PR478_NODE_POLICY_CACHE_RED.txt",
             "PR478_INDEX_ACTIVATION_RED.txt",
             "PR478_SEMGREP_DIAGNOSTICS_RED.txt",
             "PR478_NATIVE_ENVIRONMENT_PACKAGES.txt",
@@ -50,11 +61,18 @@ _ALLOWED = frozenset(
             "portable_worker.py",
             "runner.py",
             "runtime_builder.py",
+            "runtime_models.py",
+            "runtime_tools.py",
+            "runtime_compatibility.py",
             "target_pytest.py",
         )
     ]
     + [
         "pyproject.toml",
+        "docs/guides/portable-project-runtime.md",
+        "tests/unit/specfact_code_review/run/test_runtime_tools.py",
+        "tests/unit/specfact_code_review/run/test_runner.py",
+        "tests/unit/specfact_code_review/run/test_runtime_builder.py",
         "tests/unit/specfact_code_review/run/test_runtime_compatibility.py",
         "tests/unit/specfact_code_review/run/test_snapshot_activation.py",
         "packages/specfact-code-review/src/specfact_code_review/tools/semgrep_runner.py",
@@ -148,7 +166,11 @@ def _verify_development_alignment(repository: Path, paths: list[str]) -> None:
     expected = _git(repository, "show", "HEAD:pyproject.toml")
     for original, replacement in (
         (b'"pylint>=4.0.2"', b'"pylint==4.0.7"'),
-        (b'"basedpyright>=1.32.1"', b'"basedpyright==1.39.10"'),
+        (b'"basedpyright>=1.32.1"', b'"basedpyright==1.39.10",\n    "nodejs-wheel-binaries==24.16.0"'),
+        (
+            b"[tool.hatch.envs.default]\n",
+            b'[tool.specfact.code-review]\nnative_tools = ["git", "uname", "sed"]\n\n[tool.hatch.envs.default]\n',
+        ),
     ):
         if expected.count(original) != 1:
             raise ValueError("unexpected base development dependency declaration")

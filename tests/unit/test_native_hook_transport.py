@@ -433,6 +433,13 @@ def test_only_reviewed_development_pins_are_admitted(
     changed = original.replace("pylint>=4.0.2", "pylint==4.0.7").replace(
         "basedpyright>=1.32.1", "basedpyright==1.39.10"
     )
+    changed = changed.replace(
+        '"basedpyright==1.39.10"', '"basedpyright==1.39.10",\n    "nodejs-wheel-binaries==24.16.0"'
+    )
+    changed = changed.replace(
+        "[tool.hatch.envs.default]\n",
+        '[tool.specfact.code-review]\nnative_tools = ["git", "uname", "sed"]\n\n[tool.hatch.envs.default]\n',
+    )
     config.write_text(changed + ("# unrelated mutation\n" if extra_change else ""), encoding="utf-8")
     _git(repo, "add", "pyproject.toml")
     request = _request_for_staged_snapshot(repo)

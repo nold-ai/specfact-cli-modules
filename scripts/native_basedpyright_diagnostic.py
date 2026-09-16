@@ -146,7 +146,7 @@ def replay(repository: Path, evidence: Path, expected: dict[str, str]) -> None:
     try:
         with tempfile.TemporaryDirectory(prefix="specfact-basedpyright-index-") as temporary:
             root = Path(temporary)
-            (root / "index").mkdir()
+            (root / "index").mkdir(mode=0o700)
             snapshot = runner._cached_analysis_snapshot(files, root / "index")
             if snapshot is None:
                 raise ValueError("cached_snapshot_materialization_unavailable")

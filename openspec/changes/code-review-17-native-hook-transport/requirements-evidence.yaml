@@ -22,7 +22,7 @@ requirements:
       - case_id: 473-hook-7
         scenario_id: validate-the-exact-staged-snapshot-before-running-unchanged-hooks
         method: test
-        intent: Permit only the exact reviewed two dependency pin replacements in pyproject.toml.
+        intent: Permit only the exact reviewed analyzer pin replacements, Node dependency insertion and native-tools metadata insertion in pyproject.toml.
         observable: A real Git patch with just those replacements passes; one extra byte change fails before hooks.
   openspec:code-review-17-native-hook-transport:native-hook-transport:preserve-real-execution-authority-and-hook-outcome:
     rationale: Developer evidence cannot silently become publisher authority or a successful result after hook failure.
@@ -78,3 +78,8 @@ requirements:
         method: test
         intent: Preserve genuine manager activation and hook failure during opt-in replay.
         observable: A real detached Hatch environment with a competing hatch-test environment supplies default activation and excludes credentials; diagnostic exit seven leaves original hook exit twenty-three unchanged.
+      - case_id: 473-hook-15
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Reconstruct the same private immutable index root before offline cache lookup.
+        observable: test_replay_preserves_real_cached_snapshot_identity uses a real Git index and controller materializer; replay must preserve production source and project identities including root permissions.

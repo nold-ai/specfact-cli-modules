@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import tempfile
 from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 import yaml
+
+from specfact_code_review.run.runtime_models import ProjectPlan
+from specfact_code_review.run.runtime_sources import source_identity
 
 
 _SCRIPT = Path(__file__).resolve().parents[2] / "scripts/native_basedpyright_diagnostic.py"
@@ -176,3 +181,52 @@ def test_replay_requires_offline_exact_snapshot_context(tmp_path: Path, monkeypa
     else:
         diagnostic.replay(repository, tmp_path, expected)
         assert calls == ["execute", "cleanup"]
+
+
+def test_replay_preserves_real_cached_snapshot_identity(tmp_path: Path, monkeypatch) -> None:
+    """Real index materialization retains production's private root mode in identity."""
+    diagnostic = _diagnostic()
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    for arguments in (
+        ["init", "-q"],
+        ["config", "user.name", "Diagnostic fixture"],
+        ["config", "user.email", "diagnostic@example.invalid"],
+    ):
+        subprocess.run(["git", "-C", str(repository), *arguments], check=True, capture_output=True)
+    target = repository / "app.py"
+    target.write_text("VALUE = 1\n")
+    subprocess.run(["git", "-C", str(repository), "add", "app.py"], check=True)
+    subprocess.run(["git", "-C", str(repository), "-c", "commit.gpgsign=false", "commit", "-qm", "fixture"], check=True)
+    target.write_text("VALUE = 2\n")
+    subprocess.run(["git", "-C", str(repository), "add", "app.py"], check=True)
+    monkeypatch.chdir(repository)
+    with tempfile.TemporaryDirectory() as original:
+        # Exercise the actual immutable-index controller API, not a synthetic tree.
+        snapshot = diagnostic.runner._cached_analysis_snapshot([target], Path(original))  # pylint: disable=protected-access
+        assert snapshot is not None
+        expected_source = source_identity(snapshot.root)
+    runtime = SimpleNamespace(environment_id="cp312", identity="capsule")
+    monkeypatch.setattr(diagnostic.runner, "_prepare_capsule_runtime", lambda **kwargs: (runtime, ""))
+    monkeypatch.setattr(diagnostic.runner, "_cleanup_capsule_runtime", lambda _: None)
+    monkeypatch.setattr(diagnostic, "project_worker", lambda runtime, plan: nullcontext(runtime))
+    expected_plan = ProjectPlan(root=repository, manager="pip", source_identity=expected_source)
+
+    def discover(root, **kwargs):
+        assert kwargs["source_snapshot"].root == root and kwargs["config_path"] is None
+        return ProjectPlan(root=root, manager="pip", source_identity=source_identity(root))
+
+    def cached_runtime(plan, *, runtime, offline):
+        assert runtime.identity == "capsule"
+        assert offline is True
+        assert plan.source_identity == expected_source, "diagnostic changed the actual cached source root identity"
+        assert plan.identity == expected_plan.identity
+        return SimpleNamespace(identity="runtime", descriptor={"project_identity": plan.identity})
+
+    monkeypatch.setattr(diagnostic, "discover_snapshot", discover)
+    monkeypatch.setattr(diagnostic, "prepare_runtime", cached_runtime)
+    monkeypatch.setattr(diagnostic, "document_digest", lambda _: "bound")
+    called = []
+    monkeypatch.setattr(diagnostic, "capture_replay", lambda *args: called.append(True))
+    diagnostic.replay(repository, tmp_path, {**_identities(), "project_identity": expected_plan.identity})
+    assert called == [True]
